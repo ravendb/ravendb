@@ -3,60 +3,44 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using System.Linq;
-using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class Lindblom : IDisposable
+	public class Lindblom : RavenTest
 	{
-		private IDocumentStore _store;
-
-		public Lindblom()
-		{
-			_store = new EmbeddableDocumentStore { RunInMemory = true };
-			_store.Initialize();
-			new AllPages().Execute(_store);
-		}
-
-		public void Dispose()
-		{
-			_store.Dispose();
-		}
-
 		[Fact]
 		public void Test()
 		{
-
 			// Arrange
 			IPageModel data;
 
 			// Act
-			using (var session = _store.OpenSession())
+			using (var store = NewDocumentStore())
 			{
-
-				var pageModel = new PageModel
+				new AllPages().Execute(store);
+				using (var session = store.OpenSession())
 				{
-					Parent = null
-				};
-				session.Store(pageModel);
-				session.SaveChanges();
-			}
+					var pageModel = new PageModel
+					{
+						Parent = null
+					};
+					session.Store(pageModel);
+					session.SaveChanges();
+				}
 
-			using (var session = _store.OpenSession())
-			{
-				data = session.Query<IPageModel, AllPages>()
-					.Customize(x=>x.WaitForNonStaleResults())
-					.SingleOrDefault(x => x.Parent == null);
+				using (var session = store.OpenSession())
+				{
+					data = session.Query<IPageModel, AllPages>()
+					              .Customize(x => x.WaitForNonStaleResults())
+					              .SingleOrDefault(x => x.Parent == null);
+				}
 			}
 
 			// Assert
 			Assert.NotNull(data);
-
 		}
 
 		public class DocumentReference<T> where T : IPageModel
@@ -66,11 +50,13 @@ namespace Raven.Tests.MailingList
 			/// </summary>
 			/// <value></value>
 			public string Id { get; set; }
+
 			/// <summary>
 			/// Get/Sets the Slug of the DocumentReference
 			/// </summary>
 			/// <value></value>
 			public string Slug { get; set; }
+
 			/// <summary>
 			/// Gets or sets the URL.
 			/// </summary>
@@ -112,7 +98,6 @@ namespace Raven.Tests.MailingList
 			/// </summary>
 			public AllPages()
 			{
-
 				AddMapForAll<IPageModel>(pages => from page in pages
 												  select new
 												  {
