@@ -7,7 +7,6 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -381,7 +380,7 @@ namespace Raven.Smuggler
             };
         }
 
-        [StringFormatMethod("format")]
+        // [StringFormatMethod("format")]
         private static void ShowProgress(string format, params object[] args)
         {
             Console.WriteLine(format, args);
