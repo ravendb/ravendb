@@ -194,7 +194,8 @@ namespace Raven.Tests.Helpers
 			bool runInMemory = true, 
 			string requestedStorage = null,
 			bool enableAuthentication = false,
-			string activeBundles = null)
+			string activeBundles = null,
+			Action<RavenConfiguration> configureServer = null)
 		{
 		    checkPorts = true;
 			if (dataDirectory != null)
@@ -223,6 +224,8 @@ namespace Raven.Tests.Helpers
 			}
 
 			ModifyConfiguration(ravenConfiguration);
+			if (configureServer != null) 
+				configureServer(ravenConfiguration);
 
 			ravenConfiguration.PostInit();
 
