@@ -10,7 +10,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -89,7 +88,6 @@ import net.ravendb.imports.json.JsonConvert;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.util.EntityUtils;
@@ -111,7 +109,7 @@ public class ServerClient implements IDatabaseCommands {
   private final IDocumentConflictListener[] conflictListeners;
   private final ProfilingInformation profilingInformation;
   private int readStripingBase;
-  private OperationCredentials credentials;
+  private OperationCredentials credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
 
   private boolean resolvingConflict;
   private boolean resolvingConflictRetries;
@@ -137,7 +135,7 @@ public class ServerClient implements IDatabaseCommands {
     this.currentSessionId = currentSessionId;
     this.conflictListeners = conflictListeners;
     this.url = url;
-    this.credentials = operationCredentials;
+    this.credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication = operationCredentials;
 
     if (url.endsWith("/")) {
       this.url = url.substring(0, url.length() - 1);
@@ -216,7 +214,7 @@ public class ServerClient implements IDatabaseCommands {
       public RavenJToken apply(OperationMetadata operationMetadata) {
         RavenJObject metadata = new RavenJObject();
         HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
-          new CreateHttpJsonRequestParams(ServerClient.this, operationMetadata.getUrl() + requestUrl, HttpMethods.GET, metadata, credentials, convention).
+          new CreateHttpJsonRequestParams(ServerClient.this, operationMetadata.getUrl() + requestUrl, HttpMethods.GET, metadata, operationMetadata.getCredentials(), convention).
           addOperationHeaders(operationsHeaders));
         try {
           return jsonRequest.readResponseJson();
@@ -233,7 +231,7 @@ public class ServerClient implements IDatabaseCommands {
 
   public HttpJsonRequest createRequest(HttpMethods method, String requestUrl, boolean disableRequestCompression) {
     RavenJObject metadata = new RavenJObject();
-    CreateHttpJsonRequestParams createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentials, convention).addOperationHeaders(operationsHeaders);
+    CreateHttpJsonRequestParams createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention).addOperationHeaders(operationsHeaders);
     createHttpJsonRequestParams.setDisableRequestCompression(disableRequestCompression);
     return jsonRequestFactory.createHttpJsonRequest(createHttpJsonRequestParams);
   }
@@ -246,7 +244,7 @@ public class ServerClient implements IDatabaseCommands {
     RavenJObject metadata = new RavenJObject();
 
     CreateHttpJsonRequestParams createHttpJsonRequestParams =
-      new CreateHttpJsonRequestParams(this,  RavenUrlExtensions.noCache(url + requestUrl), method, metadata, credentials, convention)
+      new CreateHttpJsonRequestParams(this,  RavenUrlExtensions.noCache(url + requestUrl), method, metadata, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
     .addOperationHeaders(operationsHeaders);
     createHttpJsonRequestParams.setDisableRequestCompression(disableRequestCompression);
     return jsonRequestFactory.createHttpJsonRequest(createHttpJsonRequestParams).addReplicationStatusHeaders(url, currentServerUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
@@ -256,7 +254,7 @@ public class ServerClient implements IDatabaseCommands {
 
   <T> T executeWithReplication(HttpMethods method, Function1<OperationMetadata, T> operation) throws ServerClientException {
     int currentRequest = convention.incrementRequestCount();
-    return replicationInformer.executeWithReplication(method, url, credentials, currentRequest, readStripingBase, operation);
+    return replicationInformer.executeWithReplication(method, url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, currentRequest, readStripingBase, operation);
   }
 
   public boolean isInFailoverMode() {
@@ -290,7 +288,7 @@ public class ServerClient implements IDatabaseCommands {
     }
 
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, actualUrl, HttpMethods.GET, metadata, credentials, convention)
+      new CreateHttpJsonRequestParams(this, actualUrl, HttpMethods.GET, metadata, operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
     try {
@@ -423,7 +421,7 @@ public class ServerClient implements IDatabaseCommands {
         try {
           RavenJToken responseJson = jsonRequestFactory
             .createHttpJsonRequest(new CreateHttpJsonRequestParams(ServerClient.this, RavenUrlExtensions.noCache(requestUri), HttpMethods.GET,
-              new RavenJObject(), credentials, convention)
+              new RavenJObject(), operationMetadata.getCredentials(), convention)
             .addOperationHeaders(operationsHeaders)).readResponseJson();
 
           return SerializationHelper.ravenJObjectsToJsonDocuments(responseJson);
@@ -466,7 +464,7 @@ public class ServerClient implements IDatabaseCommands {
     }
 
     HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, actualUrl, HttpMethods.GET, metadata, credentials, convention).
+      new CreateHttpJsonRequestParams(this, actualUrl, HttpMethods.GET, metadata, operationMetadata.getCredentials(), convention).
       addOperationHeaders(operationsHeaders)).
       addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -502,7 +500,7 @@ public class ServerClient implements IDatabaseCommands {
     String requestUrl = operationMetadata.getUrl() + "/docs/" + ((key != null) ? key : "");
 
     HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, requestUrl, method, metadata, credentials, convention)
+      new CreateHttpJsonRequestParams(this, requestUrl, method, metadata, operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -566,7 +564,7 @@ public class ServerClient implements IDatabaseCommands {
     }
 
     HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/static/" + key, HttpMethods.POST, metadata, credentials, convention))
+      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/static/" + key, HttpMethods.POST, metadata, operationMetadata.getCredentials(), convention))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
     try {
@@ -600,7 +598,7 @@ public class ServerClient implements IDatabaseCommands {
     }
 
     HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/static/" + key, HttpMethods.PUT, metadata, credentials, convention))
+      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/static/" + key, HttpMethods.PUT, metadata, operationMetadata.getCredentials(), convention))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
     try {
       jsonRequest.write(data);
@@ -639,7 +637,7 @@ public class ServerClient implements IDatabaseCommands {
 
   protected List<Attachment> directGetAttachmentHeadersStartingWith(HttpMethods method, String idPrefix, int start, int pageSize, OperationMetadata operationMetadata) {
     HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/static/?startsWith=" + idPrefix + "&start=" + start + "&pageSize=" + pageSize, method, new RavenJObject(), credentials,
+      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/static/?startsWith=" + idPrefix + "&start=" + start + "&pageSize=" + pageSize, method, new RavenJObject(), operationMetadata.getCredentials(),
         convention))
         .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
     try {
@@ -674,7 +672,7 @@ public class ServerClient implements IDatabaseCommands {
 
   protected Attachment directGetAttachment(HttpMethods method, String key, OperationMetadata operationMetadata) {
     HttpJsonRequest webRequest = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/static/" + key, method, new RavenJObject(), credentials, convention))
+      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/static/" + key, method, new RavenJObject(), operationMetadata.getCredentials(), convention))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
     byte[] data = null;
@@ -771,7 +769,7 @@ public class ServerClient implements IDatabaseCommands {
   protected AttachmentInformation[] directGetAttachments(Etag startEtag, int pageSize,
     OperationMetadata operationMetadata) {
     HttpJsonRequest webRequest = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, RavenUrlExtensions.noCache(operationMetadata.getUrl() + "/static/?pageSize=" + pageSize + "&etag=" + startEtag), HttpMethods.GET, new RavenJObject(), credentials, convention))
+      new CreateHttpJsonRequestParams(this, RavenUrlExtensions.noCache(operationMetadata.getUrl() + "/static/?pageSize=" + pageSize + "&etag=" + startEtag), HttpMethods.GET, new RavenJObject(), operationMetadata.getCredentials(), convention))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
     try {
@@ -788,7 +786,7 @@ public class ServerClient implements IDatabaseCommands {
       metadata.add("ETag", RavenJToken.fromObject(etag.toString()));
     }
     HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/static/" + key, HttpMethods.DELETE, metadata, credentials, convention))
+      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/static/" + key, HttpMethods.DELETE, metadata, operationMetadata.getCredentials(), convention))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
     try {
       jsonRequest.executeRequest();
@@ -819,7 +817,7 @@ public class ServerClient implements IDatabaseCommands {
 
   protected Collection<IndexDefinition> directGetIndexes(int start, int pageSize, OperationMetadata operationMetadata) {
     String url2 = RavenUrlExtensions.noCache(operationMetadata.getUrl() + "/indexes/?start=" + start + "&pageSize=" + pageSize);
-    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, HttpMethods.GET, new RavenJObject(), credentials, convention));
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, HttpMethods.GET, new RavenJObject(), operationMetadata.getCredentials(), convention));
     request.addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
     try {
@@ -845,7 +843,7 @@ public class ServerClient implements IDatabaseCommands {
 
   protected Collection<TransformerDefinition> directGetTransformers(OperationMetadata operationMetadata, int start, int pageSize) {
     String url2 = RavenUrlExtensions.noCache(operationMetadata.getUrl() + "/transformers?start=" + start + "&pageSize=" + pageSize);
-    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, HttpMethods.GET, new RavenJObject(), credentials, convention));
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, HttpMethods.GET, new RavenJObject(), operationMetadata.getCredentials(), convention));
     request.addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
     try {
@@ -881,7 +879,7 @@ public class ServerClient implements IDatabaseCommands {
   }
   private void directDeleteTransformer(final String name, OperationMetadata operationMetadata) {
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/transformers/" + name, HttpMethods.DELETE, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/transformers/" + name, HttpMethods.DELETE, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -890,7 +888,7 @@ public class ServerClient implements IDatabaseCommands {
 
   private TransformerDefinition directGetTransformer(final String transformerName, final OperationMetadata operationMetadata) {
     HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/transformers/" + transformerName, HttpMethods.GET, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/transformers/" + transformerName, HttpMethods.GET, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -929,7 +927,7 @@ public class ServerClient implements IDatabaseCommands {
 
   private void directResetIndex(String name, OperationMetadata operationMetadata) {
     HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/indexes/" + name, HttpMethods.RESET, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/indexes/" + name, HttpMethods.RESET, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -939,7 +937,7 @@ public class ServerClient implements IDatabaseCommands {
 
   private Collection<String> directGetIndexNames(int start, int pageSize, OperationMetadata operationMetadata) {
     HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, HttpMethods.GET, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, HttpMethods.GET, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -961,7 +959,7 @@ public class ServerClient implements IDatabaseCommands {
 
   private IndexDefinition directGetIndex(String indexName, OperationMetadata operationMetadata) {
     HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/indexes/" + indexName + "?definition=yes", HttpMethods.GET, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/indexes/" + indexName + "?definition=yes", HttpMethods.GET, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -994,7 +992,7 @@ public class ServerClient implements IDatabaseCommands {
       metadata.add("ETag", RavenJToken.fromObject(etag.toString()));
     }
     HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/docs/" + UrlUtils.escapeDataString(key), HttpMethods.DELETE, metadata, credentials, convention).addOperationHeaders(operationsHeaders))
+      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/docs/" + UrlUtils.escapeDataString(key), HttpMethods.DELETE, metadata, operationMetadata.getCredentials(), convention).addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
     try {
       jsonRequest.executeRequest();
@@ -1071,7 +1069,7 @@ public class ServerClient implements IDatabaseCommands {
     String requestUri = operationMetadata.getUrl() + "/transformers/" + name;
 
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.PUT, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.PUT, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -1134,7 +1132,7 @@ public class ServerClient implements IDatabaseCommands {
     String requestUri = operationMetadata.getUrl() + "/indexes/" + name;
 
     HttpJsonRequest checkIndexExists = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.HEAD,new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.HEAD,new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -1161,7 +1159,7 @@ public class ServerClient implements IDatabaseCommands {
       throw new ServerClientException(e);
     }
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.PUT, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.PUT, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -1223,7 +1221,7 @@ public class ServerClient implements IDatabaseCommands {
     ensureIsNotNullOrEmpty(index, "index");
     String path = query.getIndexQueryUrl(url, index, "streams/query", false);
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, path,  HttpMethods.GET, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, path,  HttpMethods.GET, new RavenJObject(), credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, url, replicationInformer,
         convention.getFailoverBehavior(),
@@ -1340,7 +1338,7 @@ public class ServerClient implements IDatabaseCommands {
 
 
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, sb.toString(), HttpMethods.GET, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, sb.toString(), HttpMethods.GET, new RavenJObject(), credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, url, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -1393,7 +1391,7 @@ public class ServerClient implements IDatabaseCommands {
       }
     }
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, path, HttpMethods.GET, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, path, HttpMethods.GET, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .setAvoidCachingRequest(query.isDisableCaching())
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer,
@@ -1453,7 +1451,7 @@ public class ServerClient implements IDatabaseCommands {
 
   private void directDeleteIndex(String name, OperationMetadata operationMetadata) {
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/indexes/" + name, HttpMethods.DELETE, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/indexes/" + name, HttpMethods.DELETE, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -1532,13 +1530,13 @@ public class ServerClient implements IDatabaseCommands {
         path += "&id=" + UrlUtils.escapeDataString(uniqueId);
       }
       request = jsonRequestFactory.createHttpJsonRequest(
-        new CreateHttpJsonRequestParams(this, path, HttpMethods.GET, metadata, credentials, convention)
+        new CreateHttpJsonRequestParams(this, path, HttpMethods.GET, metadata, operationMetadata.getCredentials(), convention)
         .addOperationHeaders(operationsHeaders))
         .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
     } else {
       request = jsonRequestFactory.createHttpJsonRequest(
-        new CreateHttpJsonRequestParams(this, path, HttpMethods.POST, metadata, credentials, convention)
+        new CreateHttpJsonRequestParams(this, path, HttpMethods.POST, metadata, operationMetadata.getCredentials(), convention)
         .addOperationHeaders(operationsHeaders))
         .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
       request.write(RavenJArray.fromObject(uniqueIds).toString());
@@ -1635,7 +1633,7 @@ public class ServerClient implements IDatabaseCommands {
   private BatchResult[] directBatch(List<ICommandData> commandDatas, OperationMetadata operationMetadata) {
     RavenJObject metadata = new RavenJObject();
     HttpJsonRequest req = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/bulk_docs", HttpMethods.POST, metadata, credentials, convention)
+      new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/bulk_docs", HttpMethods.POST, metadata, operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -1697,7 +1695,7 @@ public class ServerClient implements IDatabaseCommands {
     if (databaseUrl.equals(url)) {
       return this;
     }
-    ServerClient client = new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, database, jsonRequestFactory, currentSessionId, conflictListeners);
+    ServerClient client = new ServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, replicationInformerGetter, database, jsonRequestFactory, currentSessionId, conflictListeners);
     client.setOperationsHeaders(operationsHeaders);
     return client;
   }
@@ -1708,7 +1706,7 @@ public class ServerClient implements IDatabaseCommands {
     if (databaseUrl.equals(url)) {
       return this;
     }
-    ServerClient client = new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, null, jsonRequestFactory, currentSessionId, conflictListeners);
+    ServerClient client = new ServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, replicationInformerGetter, null, jsonRequestFactory, currentSessionId, conflictListeners);
     client.setOperationsHeaders(operationsHeaders);
     return client;
   }
@@ -1740,7 +1738,7 @@ public class ServerClient implements IDatabaseCommands {
   private Operation directDeleteByIndex(OperationMetadata operationMetadata, String indexName, IndexQuery queryToDelete, boolean allowStale) {
     String path = queryToDelete.getIndexQueryUrl(operationMetadata.getUrl(), indexName, "bulk_docs") + "&allowStale=" + allowStale;
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, path, HttpMethods.DELETE, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, path, HttpMethods.DELETE, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
     RavenJToken jsonResponse;
@@ -1840,7 +1838,7 @@ public class ServerClient implements IDatabaseCommands {
   protected Operation directUpdateByIndexImpl(OperationMetadata operationMetadata, String indexName, IndexQuery queryToUpdate, boolean allowStale, String requestData, HttpMethods method) {
     String path = queryToUpdate.getIndexQueryUrl(operationMetadata.getUrl(), indexName, "bulk_docs") + "&allowStale=" + allowStale;
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, path, method, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, path, method, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -1917,7 +1915,7 @@ public class ServerClient implements IDatabaseCommands {
     }
 
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.GET, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.GET, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -1941,7 +1939,7 @@ public class ServerClient implements IDatabaseCommands {
   @Override
   public DatabaseStatistics getStatistics() {
     HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, url + "/stats", HttpMethods.GET, new RavenJObject(), credentials, convention));
+      new CreateHttpJsonRequestParams(this, url + "/stats", HttpMethods.GET, new RavenJObject(), credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
 
     try {
       RavenJObject jo = (RavenJObject)httpJsonRequest.readResponseJson();
@@ -1965,7 +1963,7 @@ public class ServerClient implements IDatabaseCommands {
   protected Long directNextIdentityFor(String name, OperationMetadata operationMetadata) {
     HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
       new CreateHttpJsonRequestParams(this, operationMetadata.getUrl() + "/identity/next?name=" + UrlUtils.escapeDataString(name),
-        HttpMethods.POST, new RavenJObject(), credentials, convention)
+        HttpMethods.POST, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders));
     try {
       RavenJToken ravenJToken = jsonRequest.readResponseJson();
@@ -1993,7 +1991,7 @@ public class ServerClient implements IDatabaseCommands {
 
   private long directSeedIdentityFor(String url, String name, long value) {
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, url + "/identity/seed?name=" + UrlUtils.escapeDataString(name)+ "&value=" + value, HttpMethods.POST, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, url + "/identity/seed?name=" + UrlUtils.escapeDataString(name)+ "&value=" + value, HttpMethods.POST, new RavenJObject(), credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
       .addOperationHeaders(operationsHeaders));
 
     try {
@@ -2022,7 +2020,7 @@ public class ServerClient implements IDatabaseCommands {
 
   protected JsonDocumentMetadata directHead(OperationMetadata operationMetadata, String key) {
     HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(ServerClient.this, operationMetadata.getUrl() + "/docs/" + key, HttpMethods.HEAD, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(ServerClient.this, operationMetadata.getUrl() + "/docs/" + key, HttpMethods.HEAD, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -2073,7 +2071,7 @@ public class ServerClient implements IDatabaseCommands {
       MultiGetOperation multiGetOperation = new MultiGetOperation(this, convention, operationMetadata.getUrl(), requests);
 
       HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(this, multiGetOperation.getRequestUri(),
-        HttpMethods.POST, new RavenJObject(), credentials, convention));
+        HttpMethods.POST, new RavenJObject(), operationMetadata.getCredentials(), convention));
 
       GetRequest[] requestsForServer =
         multiGetOperation.preparingForCachingRequest(jsonRequestFactory);
@@ -2126,7 +2124,7 @@ public class ServerClient implements IDatabaseCommands {
       UrlUtils.escapeDataString(fromValue != null ? fromValue : ""));
 
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.GET, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.GET, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -2192,7 +2190,7 @@ public class ServerClient implements IDatabaseCommands {
       pageSize != null ? pageSize : "");
 
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.GET, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.GET, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -2238,7 +2236,7 @@ public class ServerClient implements IDatabaseCommands {
     }
 
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, requestUri, method, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, requestUri, method, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -2266,7 +2264,7 @@ public class ServerClient implements IDatabaseCommands {
   protected FacetResults[] directGetMultiFacets(OperationMetadata operationMetadata, FacetQuery[] facetedQueries) {
     String requestUri = operationMetadata.getUrl() + "/facets/multisearch";
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, RavenUrlExtensions.noCache(requestUri), HttpMethods.POST, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, RavenUrlExtensions.noCache(requestUri), HttpMethods.POST, new RavenJObject(), operationMetadata.getCredentials(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
@@ -2438,7 +2436,7 @@ public class ServerClient implements IDatabaseCommands {
 
   public RavenJToken getOperationStatus(long id) {
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
-      new CreateHttpJsonRequestParams(this, url + "/operation/status?id=" + id, HttpMethods.GET, new RavenJObject(), credentials, convention)
+      new CreateHttpJsonRequestParams(this, url + "/operation/status?id=" + id, HttpMethods.GET, new RavenJObject(), credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
       .addOperationHeaders(operationsHeaders));
     try {
       return request.readResponseJson();
