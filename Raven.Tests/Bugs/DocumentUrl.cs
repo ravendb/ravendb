@@ -30,7 +30,7 @@ namespace Raven.Tests.Bugs
 					//replace machine name with localhost
 					var correctedStoredUrl = storedUrl.Replace(Environment.MachineName.ToLower(),"localhost");
 
-					Assert.Equal("http://localhost:8079/docs/users/1", correctedStoredUrl);
+                    Assert.Equal("http://localhost:8079/databases/CanGetFullUrl_WithSlashOnTheEnd/docs/users/1", correctedStoredUrl);
 				}
 			}
 		}

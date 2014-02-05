@@ -12,6 +12,7 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -71,10 +72,11 @@ namespace Raven.Tests.Helpers
 			string activeBundles = null,
 			int? port = null,
 			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin,
-			Action<DocumentStore> configureStore = null)
+			Action<DocumentStore> configureStore = null,
+            [CallerMemberName] string databaseName = null)
 		{
 			var storageType = GetDefaultStorageType(requestedStorage);
-			var dataDirectory = dataDir ?? NewDataPath();
+			var dataDirectory = dataDir ?? NewDataPath(databaseName);
 			var documentStore = new EmbeddableDocumentStore
 			{
 				UseEmbeddedHttpServer = port.HasValue,
@@ -140,7 +142,7 @@ namespace Raven.Tests.Helpers
 		}
 
 		public DocumentStore
-			NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
+			NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, [CallerMemberName] string databaseName = null,
 				bool runInMemory = true,
 				string dataDirectory = null,
 				string requestedStorage = null,

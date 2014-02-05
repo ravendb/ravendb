@@ -29,7 +29,7 @@ namespace Raven.Tests.Issues
 				WaitForBackup(store.DatabaseCommands, true);
 
 				// restore as a new database
-				await store.AsyncDatabaseCommands.Admin.StartRestoreAsync(backupDir, restoreDir, RestoredDatabaseName);
+				await store.AsyncDatabaseCommands.GlobalAdmin.StartRestoreAsync(backupDir, restoreDir, RestoredDatabaseName);
 
 				// get restore status and wait for finish
 				WaitForRestore(store.DatabaseCommands);

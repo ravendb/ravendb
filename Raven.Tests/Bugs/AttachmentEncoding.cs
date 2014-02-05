@@ -22,7 +22,7 @@ namespace Raven.Tests.Bugs
 
 				using (var wc = new WebClient())
 				{
-					var staticJson = wc.DownloadString("http://localhost:8079/static");
+                    var staticJson = wc.DownloadString("http://localhost:8079/databases/Can_get_proper_attachment_names/static");
 					var value = RavenJArray.Parse(staticJson)[0].Value<string>("Key");
 					Assert.Equal("test/hello/world", value);
 				}
