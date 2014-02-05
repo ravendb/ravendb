@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Connection.Async;
@@ -28,7 +27,7 @@ namespace Raven.Tests.Document
         public AsyncEmbeddedDocumentStoreServerTests()
         {
             ravenTest = new RavenTest();
-            DocumentStore = ravenTest.NewDocumentStore().Initialize();
+            DocumentStore = ravenTest.NewDocumentStore();
         }
 
         public override void Dispose()
@@ -40,14 +39,12 @@ namespace Raven.Tests.Document
 
     public class AsyncRemoteDocumentStoreServerTests : AsyncDocumentStoreServerTests
     {
-        private readonly string path;
         private readonly RemoteClientTest ravenTest;
 
         public AsyncRemoteDocumentStoreServerTests()
         {
             ravenTest = new RemoteClientTest();
-            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
-            DocumentStore = ravenTest.NewRemoteDocumentStore().Initialize();
+            DocumentStore = ravenTest.NewRemoteDocumentStore();
         }
 
         public override void Dispose()

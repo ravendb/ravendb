@@ -2,18 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Document;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class Daniel
+	public class Daniel : RavenTest
 	{
 		[Fact]
 		public void Run()
 		{
-			using (var store = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
+			using (var store = NewDocumentStore())
 			{
 				new Matches_PlayerStats().Execute(store);
 				store.Conventions.DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites;
