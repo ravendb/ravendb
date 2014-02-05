@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using Lucene.Net.Util;
 using Raven.Client.Document;
 using Xunit;
 

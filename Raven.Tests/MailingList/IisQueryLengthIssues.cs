@@ -1,8 +1,4 @@
 using System;
-using System.Net.Http;
-using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Client;
 using Raven.Tests.Bugs.Identifiers;
 using System.Linq;
 using Xunit;
@@ -12,10 +8,10 @@ namespace Raven.Tests.MailingList
 	public class IisQueryLengthIssues : IisExpressTestClient
 	{
 		private readonly string[] errorOptions = new[]
-										{
-											"configuration/system.webServer/security/requestFiltering/requestLimits@maxQueryString",
-											"maxQueryStringLength"
-										};
+		{
+			"configuration/system.webServer/security/requestFiltering/requestLimits@maxQueryString",
+			"maxQueryStringLength"
+		};
 
 		[IISExpressInstalledFact]
 		public void ShouldFailGracefully()

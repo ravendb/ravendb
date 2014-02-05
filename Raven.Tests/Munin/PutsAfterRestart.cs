@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-
 using Raven.Json.Linq;
 using Xunit;
 
@@ -20,8 +19,6 @@ namespace Raven.Munin.Tests
 		[Fact]
 		public void RestartBeforeTxCommitMeansNoData()
 		{
-
-
 			Assert.True(Table.Put(RavenJToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 			
 			Reopen();
@@ -34,8 +31,6 @@ namespace Raven.Munin.Tests
 		[Fact]
 		public void AfterCommitValueIsVisibleToAllTxEvenAfterReopen()
 		{
-
-
 			Assert.True(Table.Put(RavenJToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 			Assert.True(Table.Put(RavenJToken.FromObject("431"), new byte[] { 1, 3, 4, 5 }));
 

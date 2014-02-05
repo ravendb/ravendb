@@ -4,23 +4,16 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
 using Xunit;
-using Raven.Database.Data;
-using Raven.Client;
-using System.IO;
-using Raven.Client.Document;
-using Raven.Client.Linq;
-using System.Threading;
-using System.Diagnostics;
 
 /*
  * Different test using where clause
@@ -32,13 +25,12 @@ namespace Raven.Tests.Linq
 		[Fact]
 		public void Can_Use_Where()
 		{
-
 			//When running in the XUnit GUI strange things happen is we just create a path relative to 
 			//the .exe itself, so make our folder in the System temp folder instead ("<user>\AppData\Local\Temp")
 			string directoryName =  Path.Combine(Path.GetTempPath(), "ravendb.RavenWhereTests");
 			IOExtensions.DeleteDirectory(directoryName);
 
-			using (var db = new EmbeddableDocumentStore() { DataDirectory = directoryName })
+			using (var db = new EmbeddableDocumentStore { DataDirectory = directoryName })
 			{
 				db.Initialize();
 
@@ -49,7 +41,7 @@ namespace Raven.Tests.Linq
 
 					db.DatabaseCommands.DeleteIndex(indexName);
 					var result = db.DatabaseCommands.PutIndex<CommitInfo, CommitInfo>(indexName,
-							new IndexDefinitionBuilder<CommitInfo, CommitInfo>()
+							new IndexDefinitionBuilder<CommitInfo, CommitInfo>
 							{
 								Map = docs => from doc in docs
 											  select new { doc.Revision},
