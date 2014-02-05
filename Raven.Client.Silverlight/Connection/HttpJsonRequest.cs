@@ -205,6 +205,7 @@ namespace Raven.Client.Silverlight.Connection
                         }
                         break;
                     case HttpStatusCode.Unauthorized:
+                    case HttpStatusCode.PreconditionFailed:
                         authorizeResponse = HandleUnauthorizedResponseAsync(webResponse);
                         if (authorizeResponse == null)
                         {
@@ -212,7 +213,6 @@ namespace Raven.Client.Silverlight.Connection
                         }
                         break;
                     case HttpStatusCode.Forbidden:
-					case HttpStatusCode.PreconditionFailed:
 						HandleForbiddenResponseAsync(webResponse);
                         break;
                 }
