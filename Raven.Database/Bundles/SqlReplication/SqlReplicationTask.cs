@@ -174,7 +174,9 @@ namespace Raven.Database.Bundles.SqlReplication
 				
 				if (documents.Count != 0)
 					latestEtag = documents[documents.Count - 1].Etag;
-				
+
+				documents.RemoveAll(x => prefetchingBehavior.FilterDocuments(x) == false);
+
 				var deletedDocsByConfig = new Dictionary<SqlReplicationConfig, List<ListItem>>();
 
 				foreach (var relevantConfig in relevantConfigs)
