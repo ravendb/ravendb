@@ -104,9 +104,17 @@ namespace Raven.Abstractions.Smuggler
 			if(incremental)
 				throw new NotSupportedException("Incremental exports are not supported in SL.");
 #endif
-			await DetectServerSupportedFeatures();
+			try
+			{
+				await DetectServerSupportedFeatures();
+			}
+			catch (WebException e)
+			{
+				ShowProgress("Failed to query server for supported features. Reason : " + e.Message);
+				SetLegacyMode();//could not detect supported features, then run in legacy mode			
+			}
 
-		    SmugglerExportException lastException = null;
+			SmugglerExportException lastException = null;
 
 			bool ownedStream = stream == null;
 			try
@@ -717,9 +725,7 @@ namespace Raven.Abstractions.Smuggler
 			var serverVersion = await GetVersion();
 			if (string.IsNullOrEmpty(serverVersion))
 			{
-				IsTransformersSupported = false;
-				IsDocsStreamingSupported = false;
-				ShowProgress("Server version is not available. Running in legacy mode which does not support transformers.");
+				SetLegacyMode();
 				return;
 			}
 
@@ -742,6 +748,13 @@ namespace Raven.Abstractions.Smuggler
 
 			IsTransformersSupported = true;
 			IsDocsStreamingSupported = true;
+		}
+
+		private void SetLegacyMode()
+		{
+			IsTransformersSupported = false;
+			IsDocsStreamingSupported = false;
+			ShowProgress("Server version is not available. Running in legacy mode which does not support transformers.");
 		}
 
 		public bool IsTransformersSupported { get; private set; }
