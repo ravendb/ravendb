@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class DataSetIndexTests : RavenTestBase
+	public class DataSetIndexTest : RavenTestBase
 	{
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
