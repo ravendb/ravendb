@@ -324,7 +324,6 @@
     <Compile Include="Server\Controllers\RavenDbApiController.cs" />
     <Compile Include="Server\Controllers\RavenDbUiController.cs" />
     <Compile Include="Server\Controllers\SilverlightController.cs" />
-    <Compile Include="Server\Controllers\SimpleTestController.cs" />
     <Compile Include="Server\Controllers\SingleAuthTokenController.cs" />
     <Compile Include="Server\Controllers\StaticController.cs" />
     <Compile Include="Server\Controllers\StatisticsController.cs" />
