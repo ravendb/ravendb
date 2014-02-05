@@ -212,9 +212,8 @@ namespace Raven.Client.Silverlight.Connection
                         }
                         break;
                     case HttpStatusCode.Forbidden:
-                        HandleForbiddenResponseAsync(webResponse);
-                        break;
-                    case HttpStatusCode.PreconditionFailed:
+					case HttpStatusCode.PreconditionFailed:
+						HandleForbiddenResponseAsync(webResponse);
                         break;
                 }
                 if (authorizeResponse == null)
@@ -294,9 +293,8 @@ namespace Raven.Client.Silverlight.Connection
                         }
                         break;
                     case HttpStatusCode.Forbidden:
-                        HandleForbiddenResponseAsync(webResponse);
-                        break;
-                    case HttpStatusCode.PreconditionFailed:
+					case HttpStatusCode.PreconditionFailed:
+						HandleForbiddenResponseAsync(webResponse);
                         break;
                 }
                 if (authorizeResponse == null)

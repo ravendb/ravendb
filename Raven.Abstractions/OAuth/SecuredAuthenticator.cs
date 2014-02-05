@@ -194,8 +194,23 @@ namespace Raven.Abstractions.OAuth
 						return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", CurrentOauthToken));
 					}
 				}
-				catch (WebException ex)
+				catch (Exception e)
 				{
+					WebException ex;
+
+					var ae = e as AggregateException;
+					if (ae != null)
+					{
+						ex = ae.ExtractSingleInnerException() as WebException;
+					}
+					else
+					{
+						ex = e as WebException;
+					}
+
+					if (ex == null)
+						throw;
+
 					if (tries > 2)
 						// We've already tried three times and failed
 						throw;
@@ -222,6 +237,7 @@ namespace Raven.Abstractions.OAuth
 				}
 			}
 		}
+
 #if SILVERLIGHT
 		private void BrowserCookieToAllowUserToUseStandardRequests(string baseUrl, string currentOauthToken)
 		{
