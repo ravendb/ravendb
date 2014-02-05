@@ -19,7 +19,6 @@ namespace Raven.Tests.Issues
 		[Theory]
 		[InlineData("esent")]
 		[InlineData("voron")] //TODO : investigate already disposed pager issue at voron,happened once
-		[InlineData("munin")]
 		public void ShouldWork(string requestedStorage)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))

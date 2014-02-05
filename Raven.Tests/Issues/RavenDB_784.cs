@@ -15,7 +15,6 @@ namespace Raven.Tests.Issues
         int b = 200;
 
 		[Theory]
-		[InlineData("munin")]
 		[InlineData("esent")]
 		[InlineData("voron")]
 		public void ShouldRemoveDataFromReduceKeysCountsOnIndexDelete(string storageType)
@@ -63,7 +62,6 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
-		[InlineData("munin")]
 		[InlineData("esent")]
 		[InlineData("voron")]
 		public void ShouldRemoveDataFromReduceKeysCountsWhenReduceKeyIsGone(string storageType)
@@ -112,7 +110,6 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
-		[InlineData("munin")]
 		[InlineData("esent")]
 		[InlineData("voron")]
 		public void ShouldRemoveDataFromReduceKeysCountsOnDeletingAllMappedResultsForView(string storageType)
@@ -151,7 +148,6 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
-		[InlineData("munin")]
 		[InlineData("esent")]
 		[InlineData("voron")]
 		public void ShouldRemoveDataFromReduceKeysStatusOnIndexDelete(string storageType)
@@ -193,7 +189,6 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
-		[InlineData("munin")]
 		[InlineData("esent")]
 		[InlineData("voron")]
 		public void ShouldRemoveDataFromReduceKeysStatusWhenReduceKeyIsGone(string storageType)

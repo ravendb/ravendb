@@ -10,7 +10,6 @@ namespace Raven.Tests.Bugs.DTC
 	{
 		[Theory]
 		[InlineData("esent")]
-		[InlineData("munin")]
 		[InlineData("voron")]
 		public void can_update_a_doc_within_transaction_scope(string storage)
 		{
