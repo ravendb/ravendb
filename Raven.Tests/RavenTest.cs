@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
@@ -12,8 +13,6 @@ using System.Diagnostics;
 
 namespace Raven.Tests
 {
-	using System.Collections.Generic;
-
 	public class RavenTest : RavenTestBase
 	{
 		static RavenTest()
@@ -45,10 +44,10 @@ namespace Raven.Tests
 			get
 			{
 				return new[]
-                                       {
-                                                   new object[] { "voron" }, 
-                                                   new object[] { "esent" }
-                                       };
+				{
+					new object[] {"voron"},
+					new object[] {"esent"}
+				};
 			}
 		}
 	}
