@@ -80,7 +80,6 @@ namespace Voron.Impl
 
         private void BackgroundWriter()
         {
-            var self = this;
             var cancellationToken = _cancellationTokenSource.Token;
             while (cancellationToken.IsCancellationRequested == false)
             {
@@ -92,7 +91,7 @@ namespace Voron.Impl
                 {
                     HandleActualWrites(write);
                 }
-
+                _hasWrites.Wait(cancellationToken);
             }
         }
 
