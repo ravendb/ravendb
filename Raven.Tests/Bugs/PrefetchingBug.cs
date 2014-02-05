@@ -84,5 +84,29 @@ namespace Raven.Tests.Bugs
 				Assert.Equal(putResult3.ETag, docs[1].Etag);
 			}
 		}
+
+
+		[Fact]
+		public void ShouldFilterOutDeletedDocsIfDeletedDocsListContainsAnyItemWithHigherEtag()
+		{
+			using (var store = NewDocumentStore())
+			{
+				store.DocumentDatabase.WorkContext.StopIndexing(); // stop indexing to be able manually manage the prefetcher
+				store.DocumentDatabase.WorkContext.Configuration.MaxNumberOfItemsToPreFetchForIndexing = 1;
+
+				var putResult1 = store.DocumentDatabase.Put("key/1", null, new RavenJObject(), new RavenJObject(), null); // will go to prefetching queue
+				var putResult2 = store.DocumentDatabase.Put("key/1", null, new RavenJObject(), new RavenJObject(), null); // update - will not go into prefetching queue because MaxNumberOfItemsToPreFetchForIndexing = 1;
+
+				var deleted = store.DocumentDatabase.Delete("key/1", null, null); // delete
+
+				Assert.True(deleted);
+
+				var prefetchingBehavior = store.DocumentDatabase.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer, null);
+				var docs = prefetchingBehavior.GetDocumentsBatchFrom(putResult1.ETag.IncrementBy(-1)); // here we can get a document
+				var filteredDocs = docs.Where(prefetchingBehavior.FilterDocuments).ToList(); // but here we should filter it out because it's already deleted!!!
+
+				Assert.Equal(0, filteredDocs.Count);
+			}
+		}
 	}
 }
