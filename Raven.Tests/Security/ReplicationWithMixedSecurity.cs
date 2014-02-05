@@ -53,7 +53,7 @@ namespace Raven.Tests.Security
 			_storeCounter++;
 		}
 
-		protected override void ConfigureDatabase(Database.DocumentDatabase database)
+        protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)
 		{
 			var isApiDatabase = _databaseCounter % 2 == 0;
 
@@ -73,6 +73,7 @@ namespace Raven.Tests.Security
 								{
 									new DatabaseAccess { TenantId = "*" },
 									new DatabaseAccess { TenantId = Constants.SystemDatabase },
+                                    new DatabaseAccess {TenantId = databaseName}
 								}
 						}),
 					new RavenJObject(),
@@ -93,6 +94,7 @@ namespace Raven.Tests.Security
 						                                   {
 							                                   new DatabaseAccess {TenantId = "*"},
 															   new DatabaseAccess {TenantId = Constants.SystemDatabase},
+                                                               new DatabaseAccess {TenantId = databaseName}
 						                                   }
 					                                   }
 				                                   }

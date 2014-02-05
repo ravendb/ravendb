@@ -504,6 +504,11 @@ namespace Raven.Client.Connection
 		/// </summary>
 		void CompactDatabase(string databaseName);
 
+        /// <summary>
+        /// Begins a restore operation
+        /// </summary>
+        void StartRestore(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false);
+
         IDatabaseCommands Commands { get; }
 	}
 
@@ -523,11 +528,6 @@ namespace Raven.Client.Connection
 		/// Begins a backup operation
 		/// </summary>
 		void StartBackup(string backupLocation, DatabaseDocument databaseDocument);
-
-		/// <summary>
-		/// Begins a restore operation
-		/// </summary>
-		void StartRestore(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false);
 
 		/// <summary>
 		/// Get the indexing status

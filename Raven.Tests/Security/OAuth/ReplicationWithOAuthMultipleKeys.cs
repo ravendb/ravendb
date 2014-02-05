@@ -37,7 +37,7 @@ namespace Raven.Tests.Security.OAuth
 			store.ApiKey = apiKeys[storeCounter++];
 		}
 
-		protected override void ConfigureDatabase(Database.DocumentDatabase database)
+        protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)
 		{
 			var apiKey = apiKeys[databaseCounter++];
 			database.Put("Raven/ApiKeys/" + apiKey.Split('/')[0], null, RavenJObject.FromObject(new ApiKeyDefinition
@@ -49,6 +49,7 @@ namespace Raven.Tests.Security.OAuth
 				{
 					new DatabaseAccess {TenantId = "*"},
 					new DatabaseAccess {TenantId = Constants.SystemDatabase},
+                    new DatabaseAccess {TenantId = databaseName}
 				}
 			}), new RavenJObject(), null);
 		}
