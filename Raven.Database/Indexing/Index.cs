@@ -83,7 +83,7 @@ namespace Raven.Database.Indexing
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
-		    currentIndexSearcherHolder = new IndexSearcherHolder(this);
+		    currentIndexSearcherHolder = new IndexSearcherHolder(context);
 		    if (directory == null) throw new ArgumentNullException("directory");
 			if (name == null) throw new ArgumentNullException("name");
 			if (indexDefinition == null) throw new ArgumentNullException("indexDefinition");

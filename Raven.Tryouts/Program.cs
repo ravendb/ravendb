@@ -1,17 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using NetTopologySuite.GeometriesGraph.Index;
 using Raven.Client.Document;
 using Raven.Json.Linq;
+using Raven.Tests;
+using Raven.Tests.Helpers;
 using Raven.Tests.Indexes;
 using Raven.Tests.Issues;
 using Raven.Tests.Notifications;
 using Raven.Tests.Track;
 using SpellChecker.Net.Search.Spell;
+using Xunit;
 
 namespace Raven.Tryouts
 {
@@ -19,6 +23,9 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
+            
+
+            
 		    var ramDirectory = new RAMDirectory();
 		    var spellChecker = new SpellChecker.Net.Search.Spell.SpellChecker(ramDirectory);
 		    var ms = new MemoryStream();

@@ -34,8 +34,8 @@ namespace Raven.Database.Config
 			MemoryCacheLimitCheckInterval =
 				new TimeSpanSetting(settings["Raven/MemoryCacheLimitCheckInterval"], MemoryCache.Default.PollingInterval,
 				                    TimeSpanArgumentType.FromParse);
-            
-            PrewarmFacetsOnIndexingMaxAge =
+
+            PrewarmFacetsSyncronousWaitTime =
                 new TimeSpanSetting(settings["Raven/PrewarmFacetsSyncronousWaitTime"], TimeSpan.FromSeconds(3),
                                     TimeSpanArgumentType.FromParse);
 

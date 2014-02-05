@@ -4,7 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Linq;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
+using Raven.Tests.Issues;
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -17,6 +19,7 @@ namespace Raven.Tests.Bugs
             using (var documentStore = NewRemoteDocumentStore())
             {
                 documentStore.Initialize();
+                documentStore.DatabaseCommands.EnsureDatabaseExists("Demo");
                 new MiniMemberTransformer().Execute(documentStore.DatabaseCommands.ForDatabase("Demo"),
                     documentStore.Conventions);
 
