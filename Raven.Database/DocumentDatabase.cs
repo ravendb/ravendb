@@ -1060,7 +1060,7 @@ namespace Raven.Database
                                 task.Keys.Add(key);
                             }
                             if (deletedETag != null)
-                                prefetcher .AfterDelete(key, deletedETag);
+                                prefetcher.AfterDelete(key, deletedETag);
                             DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
                         }
 
