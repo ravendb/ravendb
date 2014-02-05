@@ -12,13 +12,13 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class RoundCrisis : IDisposable
+	public class RoundCrisis : RavenTest
 	{
 		private readonly DocumentStore documentStore;
 
 		public RoundCrisis()
 		{
-			documentStore = new DocumentStore();
+			documentStore = NewDocumentStore();
 			IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(PriceDocuments_ByDateBySource))), documentStore);
 		}
 

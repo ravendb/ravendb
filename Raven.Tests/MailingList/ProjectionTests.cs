@@ -19,7 +19,7 @@ namespace Raven.Tests.MailingList
 
 		public ProjectionTests()
 		{
-			documentStore = NewDocumentStore(configureStore: store => documentStore.RegisterListener(new NoStaleQueriesAllowed()));
+			documentStore = NewDocumentStore(configureStore: store => store.RegisterListener(new NoStaleQueriesAllowed()));
 			session = documentStore.OpenSession();
 
 			Setup();
