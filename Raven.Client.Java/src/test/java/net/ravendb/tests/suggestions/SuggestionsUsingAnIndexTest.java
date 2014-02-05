@@ -200,7 +200,6 @@ public class SuggestionsUsingAnIndexTest extends RemoteClientTest {
   }
 
   @Test
-  @Ignore("server currently has bug - supports variant numbers only - see RavenDB-1382")
   public void withTypo() throws Exception {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
       store.executeIndex(new SuggestionIndex());
@@ -220,8 +219,8 @@ public class SuggestionsUsingAnIndexTest extends RemoteClientTest {
       try (IDocumentSession session = store.openSession()) {
         SuggestionQuery suggestionQuery = new SuggestionQuery("Name", "Oern");// intentional typo
         suggestionQuery.setMaxSuggestions(10);
-        suggestionQuery.setAccuracy(0.4f);
-        suggestionQuery.setDistance(StringDistanceTypes.N_GRAM);
+        suggestionQuery.setAccuracy(0.2f);
+        suggestionQuery.setDistance(StringDistanceTypes.LEVENSHTEIN);
         SuggestionQueryResult suggestionQueryResult = store.getDatabaseCommands().suggest("SuggestionIndex", suggestionQuery);
         assertEquals(1, suggestionQueryResult.getSuggestions().length);
         assertEquals("oren", suggestionQueryResult.getSuggestions()[0]);

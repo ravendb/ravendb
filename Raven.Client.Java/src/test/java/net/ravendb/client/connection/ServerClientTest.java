@@ -43,6 +43,7 @@ import net.ravendb.client.connection.IDatabaseCommands;
 import net.ravendb.samples.Developer;
 
 import org.apache.commons.lang.StringUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
 
@@ -491,6 +492,7 @@ public class ServerClientTest extends RavenDBAwareTests {
   }
 
   @Test
+  @Ignore("RavenDB-1666 DatabaseCommands.NextIdentityFor is not working for non-system DB")
   public void testNextIdentityFor() throws Exception {
     IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
     try {
