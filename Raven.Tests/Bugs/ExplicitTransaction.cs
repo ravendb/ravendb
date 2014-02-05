@@ -14,6 +14,7 @@ namespace Raven.Tests.Bugs
 	public class ExplicitTransaction : RavenTest
 	{
 		[Theory]
+		[InlineData("munin")]
 		[InlineData("esent")]
 		[InlineData("voron")]
 		public void Can_use_transactions_to_isolate_saves(string storage)
@@ -41,6 +42,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Theory]
+		[InlineData("munin")]
 		[InlineData("esent")]
 		[InlineData("voron")]
 		public void Will_process_all_different_documents_enlisted_in_a_transaction(string storage)

@@ -7,6 +7,7 @@ namespace Raven.Tests.Bugs
 {
 	using System.Linq;
 	using Client.Indexes;
+	using Raven.Storage.Managed;
 	using Xunit;
 
 	public class NotUpdatedReduceKeyStatsIssue : RavenTest

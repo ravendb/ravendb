@@ -22,6 +22,7 @@ namespace Raven.Tests.Issues
 	    private int b = 200;
 
 		[Theory]
+		[InlineData("munin")]
 		[InlineData("esent")]
 		[InlineData("voron")]
 		public void ShouldRemoveAllMapResultsAfterDeletingIndex(string storageType)
@@ -53,6 +54,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
+		[InlineData("munin")]
 		[InlineData("esent")]
 		[InlineData("voron")]
 		public void ShouldRemoveAllReduceResultsAfterDeletingIndex(string storageType)
@@ -84,6 +86,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
+		[InlineData("munin")]
 		[InlineData("esent")]
 		[InlineData("voron")]
 		public void ShouldRemoveAllScheduledReductionsAfterDeletingIndex(string storageType)

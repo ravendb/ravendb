@@ -619,7 +619,7 @@ namespace Raven.Database.Config
 
 		/// <summary>
 		/// What storage type to use (see: RavenDB Storage engines)
-		/// Allowed values: esent, voron
+		/// Allowed values: esent, voron, munin
 		/// Default: esent
 		/// </summary>
 		public string DefaultStorageTypeName
@@ -901,6 +901,9 @@ namespace Raven.Database.Config
 				case "esent":
 					storageEngine = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 					break;
+				case "munin":
+					storageEngine = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
+					break;
                 case "voron":
                     storageEngine = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
                     break;
@@ -916,10 +919,14 @@ namespace Raven.Database.Config
 		public string SelectStorageEngine()
 		{
 			if (RunInMemory)
-				return typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+				return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 
 			if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
 			{
+				if (File.Exists(Path.Combine(DataDirectory, "Raven.ravendb")))
+				{
+					return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
+				}
 				if (File.Exists(Path.Combine(DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
                 {
                     return typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
@@ -928,7 +935,7 @@ namespace Raven.Database.Config
 					return typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 			}
 
-			return DefaultStorageTypeName ?? typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+			return DefaultStorageTypeName ?? typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 		}
 
 		public void Dispose()

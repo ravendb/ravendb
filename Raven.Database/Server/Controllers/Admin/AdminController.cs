@@ -113,8 +113,8 @@ namespace Raven.Database.Server.Controllers.Admin
 				}
 			}
 
-            if (File.Exists(Path.Combine(restoreRequest.RestoreLocation, "Raven.voron")))
-				ravenConfiguration.DefaultStorageTypeName = typeof (Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+			if (File.Exists(Path.Combine(restoreRequest.RestoreLocation, "Raven.ravendb")))
+				ravenConfiguration.DefaultStorageTypeName = typeof (Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 			else if (Directory.Exists(Path.Combine(restoreRequest.RestoreLocation, "new")))
 				ravenConfiguration.DefaultStorageTypeName = typeof (Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 

@@ -20,6 +20,7 @@ namespace Raven.Tests.Issues
 	    private int test = 100;
 
 		[Theory]
+		[InlineData("munin")]
 		[InlineData("esent")]
 		[InlineData("voron")]
 		public void NumberOfLoadedItemsToReduceShouldBeLimited(string storageType)
@@ -49,6 +50,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
+		[InlineData("munin")]
 		[InlineData("esent")]
 		[InlineData("voron")]
 		public void LimitOfLoadedItemsShouldNotBreakInTheMiddleOfBucket(string storageType)

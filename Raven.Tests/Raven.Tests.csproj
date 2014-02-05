@@ -1436,6 +1436,7 @@
     <Compile Include="Storage\Attachments.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Storage\Bugs\OpenAfterCompaction.cs" />
     <Compile Include="Storage\DocEtag.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -1463,6 +1464,19 @@
     <Compile Include="MultiGet\MultiGetProfiling.cs" />
     <Compile Include="MultiGet\MultiGetQueries.cs" />
     <Compile Include="MultiGet\MultiGetSecurity.cs" />
+    <Compile Include="Munin\Bugs\Compaction.cs" />
+    <Compile Include="Munin\Bugs\MultiThreadedWrites.cs" />
+    <Compile Include="Munin\CanWorkWithTwoDicsInSameFile.cs" />
+    <Compile Include="Munin\Conflicts.cs" />
+    <Compile Include="Munin\MultiDicInSingleFile.cs" />
+    <Compile Include="Munin\MyToDoList.cs" />
+    <Compile Include="Munin\Optimize.cs" />
+    <Compile Include="Munin\Puts.cs" />
+    <Compile Include="Munin\PutsAfterRestart.cs" />
+    <Compile Include="Munin\Removes.cs" />
+    <Compile Include="Munin\SimpleFileTest.cs" />
+    <Compile Include="Munin\ToDo.cs" />
+    <Compile Include="Munin\ToDoRepository.cs" />
     <Compile Include="NotModified\DocumentNotModified.cs" />
     <Compile Include="Patching\MetadataPatching.cs" />
     <Compile Include="MailingList\Phil-Updated.cs" />
