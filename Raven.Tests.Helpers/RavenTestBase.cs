@@ -72,7 +72,6 @@ namespace Raven.Tests.Helpers
 			string activeBundles = null,
 			int? port = null,
 			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin,
-			Action<DocumentStore> configureStore = null,
 			Action<EmbeddableDocumentStore> configureStore = null,
             [CallerMemberName] string databaseName = null)
 		{
@@ -200,7 +199,7 @@ namespace Raven.Tests.Helpers
 			string requestedStorage = null,
 			bool enableAuthentication = false,
 			string activeBundles = null,
-			Action<RavenConfiguration> configureServer = null
+			Action<RavenConfiguration> configureServer = null,
             [CallerMemberName] string databaseName = null)
 		{
 		    checkPorts = true;

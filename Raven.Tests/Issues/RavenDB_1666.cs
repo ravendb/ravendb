@@ -74,7 +74,6 @@ namespace Raven.Tests.Issues
             RegisterRouteForOnlySysDb<FilesController>(a => a.Patch(string.Empty, string.Empty));
             RegisterRouteForOnlySysDb<FilesController>(a => a.Post(string.Empty));
             RegisterRouteForOnlySysDb<FoldersController>(a => a.Subdirectories(null));
-            RegisterRouteForOnlySysDb<Database.Server.RavenFS.Controllers.LogsController>(a => a.Get(string.Empty));
             RegisterRouteForOnlySysDb<RdcController>(a => a.Signatures(string.Empty));
             RegisterRouteForOnlySysDb<RdcController>(a => a.Stats());
             RegisterRouteForOnlySysDb<RdcController>(a => a.Manifest(string.Empty));
