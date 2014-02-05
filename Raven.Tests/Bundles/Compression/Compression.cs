@@ -14,7 +14,6 @@ namespace Raven.Tests.Bundles.Compression
 		private readonly string path;
 		private readonly RavenDbServer ravenDbServer;
 		protected readonly DocumentStore documentStore;
-		private bool closed = false;
 
 		public Compression()
 		{
@@ -23,7 +22,6 @@ namespace Raven.Tests.Bundles.Compression
 			ravenDbServer = GetNewServer(activeBundles: "Compression", dataDirectory: path);
 			documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer);
 		}
-
 
 		protected void AssertPlainTextIsNotSavedInDatabase_ExceptIndexes(params string[] plaintext)
 		{

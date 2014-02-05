@@ -101,10 +101,10 @@ namespace Raven.Tests.Helpers
 
 			try
 			{
-				ModifyStore(documentStore);
-				ModifyConfiguration(documentStore.Configuration);
 				if (configureStore != null) 
 					configureStore(documentStore);
+				ModifyStore(documentStore);
+				ModifyConfiguration(documentStore.Configuration);
 
 				documentStore.Initialize();
 
@@ -157,9 +157,11 @@ namespace Raven.Tests.Helpers
 			};
 			stores.Add(store);
 			store.AfterDispose += (sender, args) => ravenDbServer.Dispose();
+
 			if (configureStore != null)
 				configureStore(store);
 			ModifyStore(store);
+
 			store.Initialize();
 			return store;
 		}
@@ -223,9 +225,9 @@ namespace Raven.Tests.Helpers
 				ravenConfiguration.Settings["Raven/ActiveBundles"] = activeBundles;
 			}
 
-			ModifyConfiguration(ravenConfiguration);
-			if (configureServer != null) 
+			if (configureServer != null)
 				configureServer(ravenConfiguration);
+			ModifyConfiguration(ravenConfiguration);
 
 			ravenConfiguration.PostInit();
 
