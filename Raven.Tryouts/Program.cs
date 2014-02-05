@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-
+using System.Globalization;
 using Raven.Tests.Faceted;
 using Raven.Tests.Issues;
+using System.Threading;
+using Raven.Tests.Suggestions;
 
 namespace Raven.Tryouts
 {
@@ -10,13 +12,15 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
+			CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("pl-PL");
+			CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("pl-PL");
 			for (int i = 0; i < 10000; i++)
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new RavenDB_1603())
+				using (var x = new Suggestions())
 				{
-					x.CanHandleAttachmentExceptionsGracefully_Smuggler();
+					x.WithTypo();
 				}
 			}
 			
