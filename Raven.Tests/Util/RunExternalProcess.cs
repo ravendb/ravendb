@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -46,7 +45,6 @@ namespace Raven.Tests.Util
 			}
 		}
 
-
 		[Fact]
 		public void can_use_RavenDB_in_a_remote_process_for_batch_operations()
 		{
@@ -77,7 +75,6 @@ namespace Raven.Tests.Util
 				}
 			}
 		}
-
 
 		[Fact]
 		public void can_use_RavenDB_in_a_remote_process_to_post_batch_operations()

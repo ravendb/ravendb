@@ -1,21 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Xml;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
+using Raven.Tests.Helpers;
 
 namespace Raven.Tests.Util
 {
-	using Raven.Tests.Helpers;
-
 	[CLSCompliant(false)]
-	public class RavenDBDriver : ProcessDriver, IDisposable
+	public class RavenDBDriver : ProcessDriver
 	{
 		readonly string _shardName;
 		readonly DocumentConvention _conventions;
@@ -56,10 +51,10 @@ namespace Raven.Tests.Util
 
 		public IDocumentStore GetDocumentStore()
 		{
-			var documentStore = new DocumentStore()
+			var documentStore = new DocumentStore
 			{
 				Identifier = _shardName,
-				Url = this.Url,
+				Url = Url,
 				Conventions = _conventions
 			};
 
