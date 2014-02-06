@@ -100,11 +100,11 @@ namespace Raven.Tests.Issues
 					Assert.Equal(3, results.Count);
 				}
 
-				var csvString = new WebClient().DownloadString("http://localhost:8079/streams/query/SimpleIndex?format=excel");
+				var csvString = new WebClient().DownloadString(string.Format("http://localhost:8079/databases/{0}/streams/query/SimpleIndex?format=excel", store.DefaultDatabase));
 
 				Assert.Equal("Name,Value,Date,\r\nname1,1,2000-05-09T00:00:00.0000000,\r\nname2,2,2000-05-08T00:00:00.0000000,\r\nname3,3,2000-05-07T00:00:00.0000000,\r\n", csvString);
 
-				csvString = new WebClient().DownloadString("http://localhost:8079/streams/query/SimpleIndex?format=excel&query=Value:1");
+				csvString = new WebClient().DownloadString(string.Format("http://localhost:8079/databases/{0}/streams/query/SimpleIndex?format=excel&query=Value:1", store.DefaultDatabase));
 
 				Assert.Equal("Name,Value,Date,\r\nname1,1,2000-05-09T00:00:00.0000000,\r\n", csvString);
 			}
@@ -164,11 +164,11 @@ namespace Raven.Tests.Issues
 					Assert.Equal(3, results.Count);
 				}
 
-				var csvString = new WebClient().DownloadString("http://localhost:8079/streams/query/ComplexIndex?format=excel");
+				var csvString = new WebClient().DownloadString(string.Format("http://localhost:8079/databases/{0}/streams/query/ComplexIndex?format=excel", store.DefaultDatabase));
 
 				Assert.Equal("Field,Class.Name,Class.Value,Class.Date,\r\nfield1,name1,1,2000-05-09T00:00:00.0000000,\r\nfield2,name2,2,2000-05-08T00:00:00.0000000,\r\nfield3,name3,3,2000-05-07T00:00:00.0000000,\r\n", csvString);
 
-				csvString = new WebClient().DownloadString("http://localhost:8079/streams/query/ComplexIndex?format=excel&query=Value:1");
+				csvString = new WebClient().DownloadString(string.Format("http://localhost:8079/databases/{0}/streams/query/ComplexIndex?format=excel&query=Value:1", store.DefaultDatabase));
 
 				Assert.Equal("Field,Class.Name,Class.Value,Class.Date,\r\nfield1,name1,1,2000-05-09T00:00:00.0000000,\r\n", csvString);
 			}

@@ -1,5 +1,7 @@
 ﻿using Raven.Abstractions.Replication;
 using Raven.Client;
+using Raven.Client.Document;
+
 using Xunit;
 
 namespace Raven.Tests.Bundles.Replication
@@ -35,7 +37,9 @@ namespace Raven.Tests.Bundles.Replication
 		{
 			Can_run_replication_through_multiple_instances();
 
-			store1 = ResetDatabase(0);
+		    var store1DatabaseName = ((DocumentStore)store1).DefaultDatabase;
+
+            store1 = ResetDatabase(0, databaseName: store1DatabaseName);
 
 			RunReplication(store3, store1, TransitiveReplicationOptions.Replicate);
 

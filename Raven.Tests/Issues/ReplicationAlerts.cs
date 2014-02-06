@@ -48,7 +48,8 @@ namespace Raven.Tests.Issues
 
 	        var smuggler = new SmugglerApi(new RavenConnectionStringOptions
 	        {
-		        Url = store1.Url
+		        Url = store1.Url,
+                DefaultDatabase = store1.DefaultDatabase
 	        });
 
             smuggler.ExportData(new SmugglerExportOptions { ToFile = DumpFile }, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
@@ -56,7 +57,8 @@ namespace Raven.Tests.Issues
 
 	        smuggler = new SmugglerApi(new RavenConnectionStringOptions
 	        {
-		        Url = store3.Url
+		        Url = store3.Url,
+                DefaultDatabase = store3.DefaultDatabase
 	        });
             smuggler.ImportData(new SmugglerImportOptions { FromFile = DumpFile }, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
 

@@ -50,7 +50,7 @@ namespace Raven.Tests.Issues
 			var master = CreateStore();
 			var slave = CreateStore();
 
-			SetupReplication(master.DatabaseCommands, slave.Url);
+			SetupReplication(master.DatabaseCommands, slave);
 
 			using (var session = slave.OpenSession())
 			{
@@ -100,7 +100,7 @@ namespace Raven.Tests.Issues
 			var master = CreateStore();
 			var slave = CreateStore();
 
-			SetupReplication(master.DatabaseCommands, slave.Url);
+			SetupReplication(master.DatabaseCommands, slave);
 
 			using (var session = slave.OpenSession())
 			{

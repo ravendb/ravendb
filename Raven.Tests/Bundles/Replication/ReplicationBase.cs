@@ -192,6 +192,16 @@ namespace Raven.Tests.Bundles.Replication
 
         }
 
+        protected void SetupReplication(IDatabaseCommands source, params DocumentStore[] destinations)
+        {
+            Assert.NotEmpty(destinations);
+            SetupReplication(source, destinations.Select(destination => new RavenJObject
+                                                                        {
+                                                                            { "Url", destination.Url },
+                                                                            { "Database", destination.DefaultDatabase }
+                                                                        }));
+        }
+
         protected void SetupReplication(IDatabaseCommands source, params string[] urls)
         {
             Assert.NotEmpty(urls);

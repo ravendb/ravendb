@@ -20,7 +20,7 @@ namespace Raven.Tests.Issues
 			string backupDir = NewDataPath("BackupDatabase");
 			string restoreDir = NewDataPath("RestoredDatabase");
 
-			using (var store = NewRemoteDocumentStore(runInMemory: false, requestedStorage:"esent"))
+			using (var store = NewRemoteDocumentStore(runInMemory: false, requestedStorage:"esent", databaseName: Constants.SystemDatabase))
 			{
 				store.DatabaseCommands.Put("keys/1", null, new RavenJObject { { "Key", 1 } }, new RavenJObject());
 

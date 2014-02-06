@@ -30,8 +30,8 @@ namespace Raven.Tests.Issues
 			var store2 = CreateStore();
 
 			// master - master
-			SetupReplication(store1.DatabaseCommands, store2.Url);
-			SetupReplication(store2.DatabaseCommands, store1.Url);
+			SetupReplication(store1.DatabaseCommands, store2);
+			SetupReplication(store2.DatabaseCommands, store1);
 
 			using (var session = store1.OpenSession())
 			{
@@ -85,13 +85,16 @@ namespace Raven.Tests.Issues
 			Assert.NotEqual(Etag.Empty, replicatedEtag);
 		}
 
-		private static Etag GetReplicatedEtag(IDocumentStore source, IDocumentStore dest)
+		private static Etag GetReplicatedEtag(DocumentStore source, DocumentStore dest)
 		{
+		    var sourceUrl = source.Url + "/databases/" + source.DefaultDatabase;
+		    var destinationUrl = dest.Url + "/databases/" + dest.DefaultDatabase;
+
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(
 				null,
-				source.Url.LastReplicatedEtagFor(dest.Url),
+                sourceUrl.LastReplicatedEtagFor(destinationUrl),
 				"GET",
-				new OperationCredentials(((DocumentStore) source).ApiKey, ((DocumentStore) source).Credentials),
+				new OperationCredentials(source.ApiKey, source.Credentials),
 				source.Conventions);
 			var httpJsonRequest = source.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 
