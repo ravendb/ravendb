@@ -13,10 +13,13 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -75,6 +78,8 @@ namespace Raven.Tests.Helpers
 			Action<EmbeddableDocumentStore> configureStore = null,
             [CallerMemberName] string databaseName = null)
 		{
+		    databaseName = NormalizeDatabaseName(databaseName);
+
 			var storageType = GetDefaultStorageType(requestedStorage);
 			var dataDirectory = dataDir ?? NewDataPath(databaseName);
 			var documentStore = new EmbeddableDocumentStore
@@ -149,6 +154,8 @@ namespace Raven.Tests.Helpers
 				bool enableAuthentication = false,
 				Action<DocumentStore> configureStore = null)
 		{
+		    databaseName = NormalizeDatabaseName(databaseName);
+
 		    checkPorts = true;
 			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication, databaseName: databaseName);
 			ModifyServer(ravenDbServer);
@@ -202,6 +209,8 @@ namespace Raven.Tests.Helpers
 			Action<RavenConfiguration> configureServer = null,
             [CallerMemberName] string databaseName = null)
 		{
+		    databaseName = NormalizeDatabaseName(databaseName);
+
 		    checkPorts = true;
 			if (dataDirectory != null)
 				pathsToDelete.Add(dataDirectory);
@@ -600,5 +609,20 @@ namespace Raven.Tests.Helpers
 
 			return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
 		}
+
+        protected string NormalizeDatabaseName(string databaseName)
+        {
+            if (string.IsNullOrEmpty(databaseName)) 
+                return null;
+
+            if (databaseName.Length < 60)
+                return databaseName;
+
+            var prefix = databaseName.Substring(0, 30);
+            var suffix = databaseName.Substring(databaseName.Length - 10, 10);
+            var hash = new Guid(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(databaseName))).ToString("N").Substring(0, 18);
+
+            return string.Format("{0}_{1}_{2}", prefix, hash, suffix);
+        }
 	}
 }
