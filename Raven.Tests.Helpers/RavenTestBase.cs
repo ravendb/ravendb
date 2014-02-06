@@ -209,7 +209,7 @@ namespace Raven.Tests.Helpers
 			Action<RavenConfiguration> configureServer = null,
             [CallerMemberName] string databaseName = null)
 		{
-		    databaseName = NormalizeDatabaseName(databaseName);
+		    databaseName = NormalizeDatabaseName(databaseName != Constants.SystemDatabase ? databaseName : null);
 
 		    checkPorts = true;
 			if (dataDirectory != null)
