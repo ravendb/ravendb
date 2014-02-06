@@ -54,7 +54,8 @@ namespace Raven.Tests.Issues
 	            }
 	            var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
 	            {
-	                Url = store.Url
+	                Url = store.Url,
+                    DefaultDatabase = store.DefaultDatabase
 	            });
 	            await smugglerApi.ExportData(new SmugglerExportOptions
 	            {
@@ -73,7 +74,8 @@ namespace Raven.Tests.Issues
 	        {
 	            var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
 	            {
-	                Url = documentStore.Url
+	                Url = documentStore.Url,
+                    DefaultDatabase = documentStore.DefaultDatabase
 	            });
 	            await smugglerApi.ImportData(new SmugglerImportOptions
 	            {
@@ -115,7 +117,8 @@ namespace Raven.Tests.Issues
 	            }
 	            var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
 	            {
-	                Url = store.Url
+	                Url = store.Url,
+                    DefaultDatabase = store.DefaultDatabase
 	            });
 	            await smugglerApi.ExportData(new SmugglerExportOptions
 	            {
@@ -133,7 +136,8 @@ namespace Raven.Tests.Issues
 	        {
 	            var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
 	            {
-	                Url = store.Url
+	                Url = store.Url,
+                    DefaultDatabase = store.DefaultDatabase
 	            });
 	            await smugglerApi.ImportData(new SmugglerImportOptions
 	            {
