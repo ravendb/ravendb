@@ -666,7 +666,15 @@ task CreateNugetPackages -depends Compile {
 		
 		# Push to nuget repository
 		$packages | ForEach-Object {
-			Exec { &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.nupkg" $accessKey -Source $sourceFeed }
+			$tries = 0
+			while ($tries -lt 10)
+				try {
+					&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.nupkg" $accessKey -Source $sourceFeed -Timeout 4800
+					$tries = 100
+				} catch {
+					$tries++
+				}
+			}
 		}
 		
 	}
