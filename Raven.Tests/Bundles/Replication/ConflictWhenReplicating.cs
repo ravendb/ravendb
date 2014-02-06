@@ -200,8 +200,8 @@ namespace Raven.Tests.Bundles.Replication
 		[Fact]
 		public void Tombstone_deleted_after_conflict_resolved()
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
+			var store1 = CreateStore(databaseName: Constants.SystemDatabase);
+            var store2 = CreateStore(databaseName: Constants.SystemDatabase);
 			using (var session = store1.OpenSession())
 			{
 				session.Store(new Company());
