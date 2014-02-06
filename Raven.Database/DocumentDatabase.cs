@@ -184,7 +184,7 @@ namespace Raven.Database
                 AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
 
                 Name = configuration.DatabaseName;
-                backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Current;
+                backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Default;
 
                 ExtensionsState = new AtomicDictionary<object>();
                 Configuration = configuration;
