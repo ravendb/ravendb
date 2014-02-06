@@ -229,10 +229,6 @@ task TestWinRT -depends Compile, CopyServer {
 	}
 }
 
-task ReleaseNoTests -depends Stable,DoRelease {
-
-}
-
 task Vnext3 {
 	$global:uploadCategory = "RavenDB-Unstable"
 	$global:uploadMode = "Vnext3"
@@ -251,8 +247,6 @@ task Stable {
 task RunTests -depends Test,TestSilverlight
 
 task RunAllTests -depends FullStorageTest,Test,TestSilverlight,StressTest
-
-task Release -depends RunTests,DoRelease
 
 task CopySamples {
 	Remove-Item "$build_dir\Output\Samples\" -recurse -force -ErrorAction SilentlyContinue 
@@ -452,10 +446,6 @@ task ZipOutput {
 	cd $old
 }
 
-task ResetBuildArtifcats {
-	git checkout "Raven.Database\RavenDB.snk"
-}
-
 task DoRelease -depends Compile, `
 	CleanOutputDirectory, `
 	CreateOutpuDirectories, `
@@ -472,14 +462,15 @@ task DoRelease -depends Compile, `
 	ZipOutput, `
 	CopyInstaller, `
 	SignInstaller, `
+	Upload, `
 	CreateNugetPackages, `
-	PublishSymbolSources, `
-	ResetBuildArtifcats {	
+	PublishSymbolSources {	
+	
 	Write-Host "Done building RavenDB"
 }
 
 
-task Upload -depends DoRelease {
+task Upload {
 	Write-Host "Starting upload"
 	if (Test-Path $uploader) {
 		$log = $env:push_msg 
@@ -524,11 +515,11 @@ task Upload -depends DoRelease {
 	}
 }	
 
-task UploadStable -depends Stable, DoRelease, Upload	
+task UploadStable -depends Stable, DoRelease	
 
-task UploadUnstable -depends Unstable, DoRelease, Upload
+task UploadUnstable -depends Unstable, DoRelease
 
-task UploadVnext3 -depends Vnext3, DoRelease, Upload
+task UploadVnext3 -depends Vnext3, DoRelease
 
 task CreateNugetPackages -depends Compile {
 
