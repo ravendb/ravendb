@@ -535,7 +535,11 @@ task PushNugetPackages {
 		$accessKey = Get-Content $accessPath
 		$accessKey = $accessKey.Trim()
 		
+		$nuget_dir = "$build_dir\NuGet"
+			
 		# Push to nuget repository
+		$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
+
 		$packages | ForEach-Object {
 			$tries = 0
 			while ($tries -lt 10) {
