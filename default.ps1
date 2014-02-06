@@ -461,20 +461,20 @@ task DoRelease -depends Compile, `
 	CopySamples, `
 	ZipOutput, `
 	CopyInstaller, `
-	SignInstaller {	
+	SignInstaller,
+	CreateNugetPackages,
+	CreateSymbolSources {	
 	
 	Write-Host "Done building RavenDB"
 }
 
-task UploadStable -depends Stable, DoRelease, UploadS3, UploadNuget
+task UploadStable -depends Stable, DoRelease, Upload, UploadNuget
 
-task UploadUnstable -depends Unstable, DoRelease, UploadS3, UploadNuget
+task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
 
-task UploadVnext3 -depends Vnext3, DoRelease, UploadS3, UploadNuget
+task UploadVnext3 -depends Vnext3, DoRelease, Upload, UploadNuget
 
-task UploadNuget -depends CreateNugetPackages, PublishSymbolSources
-
-task UploadS3 -depends Upload
+task UploadNuget -depends PushNugetPackages, PushSymbolSources
 
 task Upload {
 	Write-Host "Starting upload"
@@ -518,6 +518,39 @@ task Upload {
 	}
 	else {
 		Write-Host "could not find upload script $uploadScript, skipping upload"
+	}
+}
+
+task PushNugetPackages {
+	# Upload packages
+	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
+	$sourceFeed = "https://nuget.org/"
+	
+	if ($global:uploadMode -eq "Vnext3") {
+		$accessPath = "$base_dir\..\MyGet-Access-Key.txt"
+		$sourceFeed = "http://www.myget.org/F/ravendb3/api/v2/package"
+	}
+	
+	if ( (Test-Path $accessPath) ) {
+		$accessKey = Get-Content $accessPath
+		$accessKey = $accessKey.Trim()
+		
+		# Push to nuget repository
+		$packages | ForEach-Object {
+			$tries = 0
+			while ($tries -lt 10) {
+				try {
+					&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.nupkg" $accessKey -Source $sourceFeed -Timeout 4800
+					$tries = 100
+				} catch {
+					$tries++
+				}
+			}
+		}
+		
+	}
+	else {
+		Write-Host "$accessPath does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
 	}
 }
 
@@ -639,8 +672,9 @@ task CreateNugetPackages -depends Compile {
 		$nuspec.Save($_.FullName);
 		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName }
 	}
-	
-	
+}
+
+task PushSymbolSources -depends CreateNugetPackages {
 	
 	# Upload packages
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
@@ -655,16 +689,17 @@ task CreateNugetPackages -depends Compile {
 		$accessKey = Get-Content $accessPath
 		$accessKey = $accessKey.Trim()
 		
-		# Push to nuget repository
+		$nuget_dir = "$build_dir\NuGet"
+	
+		$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
+
 		$packages | ForEach-Object {
-			$tries = 0
-			while ($tries -lt 10) {
-				try {
-					&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.nupkg" $accessKey -Source $sourceFeed -Timeout 4800
-					$tries = 100
-				} catch {
-					$tries++
-				}
+			try {
+				Write-Host "Publish symbol package $($_.BaseName).$global:nugetVersion.symbols.nupkg"
+				&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 4800
+			} catch {
+				Write-Host $error[0]
+				$LastExitCode = 0
 			}
 		}
 		
@@ -672,9 +707,10 @@ task CreateNugetPackages -depends Compile {
 	else {
 		Write-Host "$accessPath does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
 	}
+
 }
 
-task PublishSymbolSources -depends CreateNugetPackages {
+task CreateSymbolSources -depends CreateNugetPackages {
 	
 	if ($global:uploadMode -ne "Stable"){
 		return; # this takes 20 minutes to run
@@ -809,34 +845,6 @@ task PublishSymbolSources -depends CreateNugetPackages {
 		Remove-Item "$nuget_dir\$dirName\src\obj" -force -recurse -ErrorAction SilentlyContinue
 		
 		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName -Symbols }
-	}
-	
-	# Upload packages
-	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
-	$sourceFeed = "https://nuget.org/"
-	
-	if ($global:uploadMode -eq "Vnext3") {
-		$accessPath = "$base_dir\..\MyGet-Access-Key.txt"
-		$sourceFeed = "http://www.myget.org/F/ravendb3/api/v2/package"
-	}
-	
-	if ( (Test-Path $accessPath) ) {
-		$accessKey = Get-Content $accessPath
-		$accessKey = $accessKey.Trim()
-		
-		$packages | ForEach-Object {
-			try {
-				Write-Host "Publish symbol package $($_.BaseName).$global:nugetVersion.symbols.nupkg"
-				&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 4800
-			} catch {
-				Write-Host $error[0]
-				$LastExitCode = 0
-			}
-		}
-		
-	}
-	else {
-		Write-Host "$accessPath does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
 	}
 }
 
