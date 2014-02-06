@@ -55,9 +55,8 @@ namespace Raven.Client.Document
 				return -1;
 
 			var destinationsToCheck = replicationDocument.Destinations
-			                                             .Where(
-				                                             x => x.Disabled == false && x.IgnoredClient == false)
-			                                             .Select(x => x.ClientVisibleUrl ?? x.Url)
+			                                             .Where(x => x.Disabled == false && x.IgnoredClient == false)
+			                                             .Select(x => x.ClientVisibleUrl ?? x.Url.ForDatabase(x.Database))
 			                                             .ToList();
 
 
@@ -71,7 +70,7 @@ namespace Raven.Client.Document
 
 			foreach (var url in destinationsToCheck)
 			{
-				WaitForReplicationFromServerAsync(url, countDown, etag, errors);
+                WaitForReplicationFromServerAsync(url, database, countDown, etag, errors);
 			}
 
 			if (await countDown.WaitAsync().WaitWithTimeout(timeout) == false)
@@ -89,13 +88,13 @@ namespace Raven.Client.Document
 			return countDown.Count;
 		}
 
-		private async void WaitForReplicationFromServerAsync(string url, AsyncCountdownEvent countDown, Etag etag, BlockingCollection<Exception> errors)
+		private async void WaitForReplicationFromServerAsync(string url, string database, AsyncCountdownEvent countDown, Etag etag, BlockingCollection<Exception> errors)
 		{
 			try
 			{
 				while (countDown.Active)
 				{
-					var etags = await GetReplicatedEtagsFor(url);
+					var etags = await GetReplicatedEtagsFor(url, database);
 
 					var replicated = etag.CompareTo(etags.DocumentEtag) <= 0 || etag.CompareTo(etags.AttachmentEtag) <= 0;
 
@@ -122,11 +121,11 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private async Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl)
+		private async Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl, string database)
 		{
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(
 				null,
-				destinationUrl.LastReplicatedEtagFor(documentStore.Url),
+				destinationUrl.LastReplicatedEtagFor(documentStore.Url.ForDatabase(database ?? documentStore.DefaultDatabase)),
 				"GET",
 				new OperationCredentials(documentStore.ApiKey, documentStore.Credentials), 
 				documentStore.Conventions);

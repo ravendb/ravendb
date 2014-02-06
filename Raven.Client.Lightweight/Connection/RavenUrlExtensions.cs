@@ -19,6 +19,14 @@ namespace Raven.Client.Connection
 
 	public static class RavenUrlExtensions
 	{
+        public static string ForDatabase(this string url, string database)
+        {
+            if (!string.IsNullOrEmpty(database) && !url.Contains("/databases/"))
+                return url + "/databases/" + database;
+
+            return url;
+        }
+
 		public static string Indexes(this string url, string index)
 		{
 			return url + "/indexes/" + index;

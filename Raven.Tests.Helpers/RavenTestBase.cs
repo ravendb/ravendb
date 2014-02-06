@@ -615,12 +615,12 @@ namespace Raven.Tests.Helpers
             if (string.IsNullOrEmpty(databaseName)) 
                 return null;
 
-            if (databaseName.Length < 60)
+            if (databaseName.Length < 50)
                 return databaseName;
 
             var prefix = databaseName.Substring(0, 30);
             var suffix = databaseName.Substring(databaseName.Length - 10, 10);
-            var hash = new Guid(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(databaseName))).ToString("N").Substring(0, 18);
+            var hash = new Guid(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(databaseName))).ToString("N").Substring(0, 8);
 
             return string.Format("{0}_{1}_{2}", prefix, hash, suffix);
         }
