@@ -676,6 +676,10 @@ task CreateNugetPackages -depends Compile {
 
 task PushSymbolSources -depends CreateNugetPackages {
 	
+	if ($global:uploadMode -ne "Stable") {
+		return; # this takes 20 minutes to run
+	}
+	
 	# Upload packages
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
 	$sourceFeed = "https://nuget.org/"
@@ -712,7 +716,7 @@ task PushSymbolSources -depends CreateNugetPackages {
 
 task CreateSymbolSources -depends CreateNugetPackages {
 	
-	if ($global:uploadMode -ne "Stable"){
+	if ($global:uploadMode -ne "Stable") {
 		return; # this takes 20 minutes to run
 	}
 
