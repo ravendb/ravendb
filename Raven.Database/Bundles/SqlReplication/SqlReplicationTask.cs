@@ -548,7 +548,8 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		public void Dispose()
 		{
-			prefetchingBehavior.Dispose();
+			if(prefetchingBehavior != null)
+				prefetchingBehavior.Dispose();
 		}
 	}
 }

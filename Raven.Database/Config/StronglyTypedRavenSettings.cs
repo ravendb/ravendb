@@ -74,7 +74,7 @@ namespace Raven.Database.Config
 			FileSystemDataDir =
 				new StringSetting(settings["Raven/FileSystem/DataDir"], @"~\Data\FileSystem");
 			FileSystemIndexStoragePath =
-				new StringSetting(settings["Raven/FileSystem/DataDir"], (string)null);
+				new StringSetting(settings["Raven/FileSystem/IndexStoragePath"], (string)null);
 			
 			HostName =
 				new StringSetting(settings["Raven/HostName"], (string) null);
