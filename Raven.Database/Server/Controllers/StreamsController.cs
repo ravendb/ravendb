@@ -116,7 +116,7 @@ namespace Raven.Database.Server.Controllers
                 var isHeadRequest = InnerRequest.Method == HttpMethod.Head;
                 if (isHeadRequest) query.PageSize = 0;
 
-			var accessor = Database.TransactionalStorage.CreateAccessor(); //accessor will be disposed in the StreamQueryContent!
+				var accessor = Database.TransactionalStorage.CreateAccessor(); //accessor will be disposed in the StreamQueryContent.SerializeToStreamAsync!
 
                 try
                 {
@@ -161,12 +161,15 @@ namespace Raven.Database.Server.Controllers
 
 			protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
 			{
+				using (queryOp)
+				using (accessor)
 				using (var writer = GetOutputWriter(req, stream))
 				{
 					writer.WriteHeader();
 					queryOp.Execute(writer.Write);
 					outputContentTypeSetter(writer.ContentType);					
 				}
+
 				return Task.FromResult(true);
 			}
 
@@ -174,13 +177,6 @@ namespace Raven.Database.Server.Controllers
 			{
 				length = -1;
 				return false;
-			}
-
-			protected override void Dispose(bool disposing)
-			{
-				base.Dispose(disposing);
-				accessor.Dispose();
-				queryOp.Dispose();
 			}
 		}
 
