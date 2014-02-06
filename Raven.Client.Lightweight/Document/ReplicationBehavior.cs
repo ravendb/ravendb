@@ -56,7 +56,7 @@ namespace Raven.Client.Document
 
 			var destinationsToCheck = replicationDocument.Destinations
 			                                             .Where(x => x.Disabled == false && x.IgnoredClient == false)
-			                                             .Select(x => x.ClientVisibleUrl ?? x.Url.ForDatabase(x.Database))
+			                                             .Select(x => string.IsNullOrEmpty(x.ClientVisibleUrl) ? x.Url.ForDatabase(x.Database) : x.ClientVisibleUrl.ForDatabase(x.Database))
 			                                             .ToList();
 
 
