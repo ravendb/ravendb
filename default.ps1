@@ -492,7 +492,7 @@ task Upload {
 			write-host "Executing: $uploader ""$currentUploadCategory"" ""$env:buildlabel"" $file ""$log"""
 			
 			$uploadTryCount = 0
-			while ($uploadTryCount -lt 5){
+			while ($uploadTryCount -lt 5) {
 				$uploadTryCount += 1
 				Exec { &$uploader "$currentUploadCategory" "$env:buildlabel" $file "$log" }
 				
@@ -658,7 +658,7 @@ task CreateNugetPackages -depends Compile {
 		# Push to nuget repository
 		$packages | ForEach-Object {
 			$tries = 0
-			while ($tries -lt 10)
+			while ($tries -lt 10) {
 				try {
 					&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.nupkg" $accessKey -Source $sourceFeed -Timeout 4800
 					$tries = 100
