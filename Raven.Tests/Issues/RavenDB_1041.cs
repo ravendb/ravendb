@@ -80,7 +80,7 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-			await ((DocumentStore)store1).Replication.WaitAsync();
+		    await store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(10));
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
@@ -142,7 +142,7 @@ namespace Raven.Tests.Issues
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, "http://localhost:1234", "http://localhost:1235"); // non of them is running
+			SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234", "http://localhost:1235"); // non of them is running
 
 			using (var session = store1.OpenSession())
 			{
@@ -162,7 +162,7 @@ namespace Raven.Tests.Issues
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, "http://localhost:1234"); // the last one is not running
+            SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
 
 			using (var session = store1.OpenSession())
 			{
