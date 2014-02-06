@@ -461,14 +461,20 @@ task DoRelease -depends Compile, `
 	CopySamples, `
 	ZipOutput, `
 	CopyInstaller, `
-	SignInstaller, `
-	Upload, `
-	CreateNugetPackages, `
-	PublishSymbolSources {	
+	SignInstaller {	
 	
 	Write-Host "Done building RavenDB"
 }
 
+task UploadStable -depends Stable, DoRelease, UploadS3, UploadNuget
+
+task UploadUnstable -depends Unstable, DoRelease, UploadS3, UploadNuget
+
+task UploadVnext3 -depends Vnext3, DoRelease, UploadS3, UploadNuget
+
+task UploadNuget -depends CreateNugetPackages, PublishSymbolSources
+
+task UploadS3 -depends Upload
 
 task Upload {
 	Write-Host "Starting upload"
@@ -513,13 +519,7 @@ task Upload {
 	else {
 		Write-Host "could not find upload script $uploadScript, skipping upload"
 	}
-}	
-
-task UploadStable -depends Stable, DoRelease	
-
-task UploadUnstable -depends Unstable, DoRelease
-
-task UploadVnext3 -depends Vnext3, DoRelease
+}
 
 task CreateNugetPackages -depends Compile {
 
