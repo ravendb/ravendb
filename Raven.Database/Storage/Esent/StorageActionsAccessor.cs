@@ -25,6 +25,8 @@ namespace Raven.Storage.Esent
 			get { return inner; }
 		}
 
+		public event Action OnDispose;
+
 		private readonly DateTime createdAt = SystemTime.UtcNow;
 		[CLSCompliant(false)]
 		public StorageActionsAccessor(DocumentStorageActions inner)
@@ -138,7 +140,9 @@ namespace Raven.Storage.Esent
 
 		public void Dispose()
 	    {
-			// nothing to do here
+			var onDispose = OnDispose;
+			if (onDispose != null)
+				onDispose();
 	    }
 	}
 }

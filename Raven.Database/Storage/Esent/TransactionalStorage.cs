@@ -683,7 +683,12 @@ namespace Raven.Storage.Esent
 	    {
 		    var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator,
 			    documentCacher, null, this);
-			return new StorageActionsAccessor(pht);
+
+		    var accessor = new StorageActionsAccessor(pht);
+
+		    accessor.OnDispose += pht.Dispose;
+
+			return accessor;
 	    }
 
 	    public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
