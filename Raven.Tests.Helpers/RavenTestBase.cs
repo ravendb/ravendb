@@ -216,7 +216,7 @@ namespace Raven.Tests.Helpers
 				pathsToDelete.Add(dataDirectory);
 
 			var storageType = GetDefaultStorageType(requestedStorage);
-			var directory = dataDirectory ?? NewDataPath(databaseName);
+			var directory = dataDirectory ?? NewDataPath(databaseName == Constants.SystemDatabase ? null : databaseName);
 			var ravenConfiguration = new RavenConfiguration
 			{
 				Port = port,

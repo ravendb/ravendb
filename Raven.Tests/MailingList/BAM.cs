@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Xunit;
 using Raven.Client.Extensions;
@@ -11,7 +12,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void get_dbnames_test()
 		{
-			using (var server = GetNewServer())
+			using (var server = GetNewServer(databaseName: Constants.SystemDatabase))
 			using (var docStore = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
 			{
 				var dbNames = docStore.DatabaseCommands.GetDatabaseNames(25, 0);
