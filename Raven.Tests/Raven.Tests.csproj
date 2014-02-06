@@ -641,7 +641,7 @@
     <Compile Include="Bundles\Replication\Bugs\SameInstanceIdUsedForMultipleDatabases.cs" />
     <Compile Include="Bundles\Replication\FailoverDisabled.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB693_Embeddable.cs" />
-    <Compile Include="Bundles\Replication\Issues\RavenDB677.cs" />
+    <Compile Include="Bundles\Replication\Issues\RavenDB_677.cs" />
     <Compile Include="Bundles\Replication\Issues\RavenDB693.cs" />
     <Compile Include="Bundles\Replication\Issues\ReplicationWithReferencedIndexes.cs" />
     <Compile Include="Bundles\ScriptedIndexResults\Animal.cs" />
