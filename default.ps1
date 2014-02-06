@@ -1,5 +1,12 @@
 Include ".\build_utils.ps1"
 
+if($env:BUILD_NUMBER -ne $null) {
+	$env:buildlabel = $env:BUILD_NUMBER
+}
+else {
+	$env:buildlabel = "13"
+}
+
 properties {
 	$base_dir  = resolve-path .
 	$lib_dir = "$base_dir\SharedLibs"
@@ -82,13 +89,6 @@ task Clean {
 
 task Init -depends Verify40, Clean {
 
-	if($env:BUILD_NUMBER -ne $null) {
-		$env:buildlabel  = $env:BUILD_NUMBER
-	}
-	if($env:buildlabel -eq $null) {
-		$env:buildlabel = "13"
-	}
-	
 	$commit = Get-Git-Commit
 	(Get-Content "$base_dir\CommonAssemblyInfo.cs") | 
 		Foreach-Object { $_ -replace ".13", ".$($env:buildlabel)" } |
@@ -679,7 +679,7 @@ task PushSymbolSources -depends CreateNugetPackages {
 	if ($global:uploadMode -ne "Stable") {
 		return; # this takes 20 minutes to run
 	}
-	
+
 	# Upload packages
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
 	$sourceFeed = "https://nuget.org/"
