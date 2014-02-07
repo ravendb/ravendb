@@ -30,12 +30,15 @@ class shell {
     buildVersion = ko.observable<buildVersionDto>();
     licenseStatus = ko.observable<licenseStatusDto>();
     windowHeightObservable: KnockoutObservable<number>;
+    appUrls: computedAppUrls;
 
     constructor() {
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("ActivateDatabase", (db: database) => this.databaseChanged(db));
-        NProgress.set(.5);
+        
+        this.appUrls = appUrl.forCurrentDatabase();
+
         new dynamicHeightBindingHandler().install();
 	}
 
@@ -43,24 +46,17 @@ class shell {
         NProgress.set(.8);
         router.map([
 			{ route: ['', 'databases'],	    title: 'Databases',		moduleId: 'viewmodels/databases',		nav: false },
-            { route: 'documents',		    title: 'Documents',		moduleId: 'viewmodels/documents',		nav: true,	hash: appUrl.forCurrentDatabase().documents },
-			{ route: 'indexes*details',		title: 'Indexes',		moduleId: 'viewmodels/indexes',			nav: true,  hash: appUrl.forCurrentDatabase().indexes },
-            { route: 'query(/:indexName)',	title: 'Query',			moduleId: 'viewmodels/query',			nav: true },
-			{ route: 'tasks',			    title: 'Tasks',			moduleId: 'viewmodels/tasks',			nav: true },
-			{ route: 'settings*details',    title: 'Settings',		moduleId: 'viewmodels/settings',		nav: true,  hash: appUrl.forCurrentDatabase().settings },
-            { route: 'status*details',	    title: 'Status',		moduleId: 'viewmodels/status',			nav: true,	hash: appUrl.forCurrentDatabase().status },
+            { route: 'documents',           title: 'Documents',     moduleId: 'viewmodels/documents',       nav: true,  hash: this.appUrls.documents },
+		    { route: 'indexes*details',     title: 'Indexes',       moduleId: 'viewmodels/indexes',         nav: true,  hash: this.appUrls.indexes },	
+            { route: 'query(/:indexName)',	title: 'Query',			moduleId: 'viewmodels/query',			nav: true,  hash: this.appUrls.query },
+			{ route: 'tasks',			    title: 'Tasks',			moduleId: 'viewmodels/tasks',			nav: true,  hash: this.appUrls.tasks, },
+			{ route: 'settings*details',    title: 'Settings',		moduleId: 'viewmodels/settings',		nav: true,  hash: this.appUrls.settings },
+            { route: 'status*details',	    title: 'Status',		moduleId: 'viewmodels/status',			nav: true,	hash: this.appUrls.status },
 			{ route: 'edit',			    title: 'Edit Document', moduleId: 'viewmodels/editDocument',	nav: false }
         ]).buildNavigationModel();
 
         // Show progress whenever we navigate.
-        router.isNavigating.subscribe(isNavigating => {
-            if (isNavigating) {
-                NProgress.start();
-                NProgress.set(.5);
-            } else {
-                NProgress.done();
-            }
-        });
+        router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
 
         this.connectToRavenServer();
 	}
@@ -72,6 +68,15 @@ class shell {
 			e.preventDefault();
 			this.newDocument();
         });
+    }
+
+    showNavigationProgress(isNavigating: boolean) {
+        if (isNavigating) {
+            NProgress.start();
+            NProgress.set(.5);
+        } else {
+            NProgress.done();
+        }
     }
 
     databasesLoaded(databases) {
@@ -114,10 +119,10 @@ class shell {
 	showAlert(alert: alertArgs) {
 		var currentAlert = this.currentAlert();
 		if (currentAlert) {
-			// Maintain a 500ms time between alerts; otherwise successive alerts can fly by too quickly.
+			// Maintain a 1000ms time between alerts; otherwise successive alerts can fly by too quickly.
 			this.queuedAlerts.push(alert);
 			if (currentAlert.type !== alertType.danger) {
-				setTimeout(() => this.closeAlertAndShowNext(this.currentAlert()), 500);
+				setTimeout(() => this.closeAlertAndShowNext(this.currentAlert()), 1000);
 			}
 		} else {
 			this.currentAlert(alert);
@@ -132,7 +137,7 @@ class shell {
 	closeAlertAndShowNext(alertToClose: alertArgs) {
 		$('#' + alertToClose.id).alert('close');
 		var nextAlert = this.queuedAlerts.pop();
-		setTimeout(() => this.currentAlert(nextAlert), 500); // Give the alert a chance to fade out before we push in the new alert.
+		setTimeout(() => this.currentAlert(nextAlert), 1000); // Give the alert a chance to fade out before we push in the new alert.
 	}
 
 	newDocument() {

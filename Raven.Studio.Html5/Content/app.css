@@ -44,6 +44,13 @@ body {
   padding: 0 10px 20px 10px;
   width: 98%;
 }
+.navbar-splitbutton > a {
+  padding-right: 5px !important;
+}
+.navbar-splitbutton + .dropdown > a {
+  padding-left: 6px;
+  padding-right: 8px;
+}
 .database-page .btn-toolbar {
   margin-bottom: 20px;
 }

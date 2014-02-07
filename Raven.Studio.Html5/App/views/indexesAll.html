@@ -75,9 +75,12 @@
                                             Locked (Error)
                                         </label>
                                     </div>
-                                    <button class="btn btn-default btn-warning" title="Make index persistent" data-bind="click: $root.makeIndexPersistent.bind($root, $data), visible: isOnRam() !== 'false'">
+                                    <!--
+                                        COMMENTED OUT: In 3.0, this doesn't seem to do anything. Is it because the index creation and saving has changed?
+                                    
+                                        <button class="btn btn-default btn-warning" title="Make index persistent" data-bind="click: $root.makeIndexPersistent.bind($root, $data), visible: isOnRam() !== 'false'">
                                         <i class="fa fa-download"></i>
-                                    </button>
+                                    </button>-->
                                     <a class="btn btn-primary" title="Edit the index" data-bind="attr: { href: editUrl }">
                                         <i class="fa fa-pencil"></i>
                                     </a>

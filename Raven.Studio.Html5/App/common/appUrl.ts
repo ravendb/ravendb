@@ -12,10 +12,15 @@ class appUrl {
 	// Stores some computed values that update whenever the current database updates.
 	private static currentDbComputeds: computedAppUrls = {
         documents: ko.computed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
+        patch: ko.computed(() => appUrl.forPatch(appUrl.currentDatabase())),
         indexes: ko.computed(() => appUrl.forIndexes(appUrl.currentDatabase())),
+        transformers: ko.computed(() => appUrl.forTransformers(appUrl.currentDatabase())),
         newIndex: ko.computed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         editIndex: (indexName: string) => ko.computed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
         query: ko.computed(() => appUrl.forQuery(appUrl.currentDatabase())),
+        dynamicQuery: ko.computed(() => appUrl.forDynamicQuery(appUrl.currentDatabase())),
+        reporting: ko.computed(() => appUrl.forReporting(appUrl.currentDatabase())),
+        tasks: ko.computed(() => appUrl.forTasks(appUrl.currentDatabase())),
         status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
         settings: ko.computed(() => appUrl.forSettings(appUrl.currentDatabase())),
         logs: ko.computed(() => appUrl.forLogs(appUrl.currentDatabase())),
@@ -24,7 +29,9 @@ class appUrl {
         replicationStats: ko.computed(() => appUrl.forReplicationStats(appUrl.currentDatabase())),
         userInfo: ko.computed(() => appUrl.forUserInfo(appUrl.currentDatabase())),
         databaseSettings: ko.computed(() => appUrl.forDatabaseSettings(appUrl.currentDatabase())),
-        periodicBackup: ko.computed(() => appUrl.forPeriodicBackup(appUrl.currentDatabase()))
+        periodicBackup: ko.computed(() => appUrl.forPeriodicBackup(appUrl.currentDatabase())),
+
+        isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null)
 	};
 
     static forDatabases(): string {
@@ -106,6 +113,11 @@ class appUrl {
 		return "#documents?" + collectionPart + databasePart;
     }
 
+    static forPatch(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#patch?" + databasePart;
+    }
+
     static forIndexes(db: database = appUrl.getDatabase()): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#indexes?" + databasePart;
@@ -121,10 +133,30 @@ class appUrl {
         return "#indexes/edit/" + indexName + "?" + databasePart;
     }
 
+    static forTransformers(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#transformers?" + databasePart;
+    }
+
     static forQuery(db: database, indexToQuery?: string): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         var indexPart = indexToQuery ? "/" + encodeURIComponent(indexToQuery) : "";
         return "#query" + indexPart + "?" + databasePart;
+    }
+
+    static forDynamicQuery(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#dynamicQuery?" + databasePart;
+    }
+
+    static forReporting(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#reporting?" + databasePart;
+    }
+
+    static forTasks(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#tasks?" + databasePart;
     }
 
     static forDatabaseQuery(db: database) {

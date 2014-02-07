@@ -1,11 +1,74 @@
 ﻿<div>
     <div class="navbar navbar-fixed-top navbar-default">
         <div class="navbar-inner">
-            <ul class="nav navbar-nav" data-bind="foreach: router.navigationModel">
-                <li data-bind="css: { active: isActive }">
-                    <a data-bind="attr: { href: hash }, html: title"></a>
+            <ul class="nav navbar-nav">
+                <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
+                    <a data-bind="attr: { href: appUrls.documents }">Documents</a>
+                </li>
+                <li class="dropdown" data-bind="css: { active: appUrls.isActive('Documents') }">
+                    <a class="dropdown-toggle caret-after" data-toggle="dropdown">
+                        <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a tabindex="-1" data-bind="attr: { href: appUrls.documents }">Documents</a>
+                        </li>
+                        <li>
+                            <a tabindex="-1" data-bind="attr: { href: appUrls.patch }">Patch</a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Indexes') }">
+                    <a data-bind="attr: { href: appUrls.indexes }">Indexes</a>
+                </li>
+                <li class="dropdown" data-bind="css: { active: appUrls.isActive('Indexes') }">
+                    <a class="dropdown-toggle caret-after" data-toggle="dropdown">
+                        <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a tabindex="-1" data-bind="attr: { href: appUrls.indexes }">Indexes</a>
+                        </li>
+                        <li>
+                            <a tabindex="-1" data-bind="attr: { href: appUrls.transformers }">Transformers</a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Query') }">
+                    <a data-bind="attr: { href: appUrls.query }">Query</a>
+                </li>
+                <li class="dropdown" data-bind="css: { active: appUrls.isActive('Query') }">
+                    <a class="dropdown-toggle caret-after" data-toggle="dropdown">
+                        <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a tabindex="-1" data-bind="attr: { href: appUrls.query }">Query</a>
+                        </li>
+                        <li>
+                            <a tabindex="-1" data-bind="attr: { href: appUrls.dynamicQuery }">Dynamic Query</a>
+                        </li>
+                        <li>
+                            <a tabindex="-1" data-bind="attr: { href: appUrls.reporting }">Reporting</a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li data-bind="css: { active: appUrls.isActive('Tasks') }">
+                    <a data-bind="attr: { href: appUrls.tasks }">Tasks</a>
+                </li>
+
+                <li data-bind="css: { active: appUrls.isActive('Settings') }">
+                    <a data-bind="attr: { href: appUrls.settings }">Settings</a>
+                </li>
+
+                <li data-bind="css: { active: appUrls.isActive('Status') }">
+                    <a data-bind="attr: { href: appUrls.status }">Status</a>
                 </li>
             </ul>
+
             <ul class="nav navbar-nav">
                 <li class="dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">

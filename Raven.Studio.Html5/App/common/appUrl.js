@@ -91,6 +91,11 @@ define(["require", "exports", "models/database", "common/pagedList", "plugins/ro
             return "#documents?" + collectionPart + databasePart;
         };
 
+        appUrl.forPatch = function (db) {
+            var databasePart = appUrl.getEncodedDbPart(db);
+            return "#patch?" + databasePart;
+        };
+
         appUrl.forIndexes = function (db) {
             if (typeof db === "undefined") { db = appUrl.getDatabase(); }
             var databasePart = appUrl.getEncodedDbPart(db);
@@ -107,10 +112,30 @@ define(["require", "exports", "models/database", "common/pagedList", "plugins/ro
             return "#indexes/edit/" + indexName + "?" + databasePart;
         };
 
+        appUrl.forTransformers = function (db) {
+            var databasePart = appUrl.getEncodedDbPart(db);
+            return "#transformers?" + databasePart;
+        };
+
         appUrl.forQuery = function (db, indexToQuery) {
             var databasePart = appUrl.getEncodedDbPart(db);
             var indexPart = indexToQuery ? "/" + encodeURIComponent(indexToQuery) : "";
             return "#query" + indexPart + "?" + databasePart;
+        };
+
+        appUrl.forDynamicQuery = function (db) {
+            var databasePart = appUrl.getEncodedDbPart(db);
+            return "#dynamicQuery?" + databasePart;
+        };
+
+        appUrl.forReporting = function (db) {
+            var databasePart = appUrl.getEncodedDbPart(db);
+            return "#reporting?" + databasePart;
+        };
+
+        appUrl.forTasks = function (db) {
+            var databasePart = appUrl.getEncodedDbPart(db);
+            return "#tasks?" + databasePart;
         };
 
         appUrl.forDatabaseQuery = function (db) {
@@ -211,8 +236,14 @@ define(["require", "exports", "models/database", "common/pagedList", "plugins/ro
             documents: ko.computed(function () {
                 return appUrl.forDocuments(null, appUrl.currentDatabase());
             }),
+            patch: ko.computed(function () {
+                return appUrl.forPatch(appUrl.currentDatabase());
+            }),
             indexes: ko.computed(function () {
                 return appUrl.forIndexes(appUrl.currentDatabase());
+            }),
+            transformers: ko.computed(function () {
+                return appUrl.forTransformers(appUrl.currentDatabase());
             }),
             newIndex: ko.computed(function () {
                 return appUrl.forNewIndex(appUrl.currentDatabase());
@@ -224,6 +255,15 @@ define(["require", "exports", "models/database", "common/pagedList", "plugins/ro
             },
             query: ko.computed(function () {
                 return appUrl.forQuery(appUrl.currentDatabase());
+            }),
+            dynamicQuery: ko.computed(function () {
+                return appUrl.forDynamicQuery(appUrl.currentDatabase());
+            }),
+            reporting: ko.computed(function () {
+                return appUrl.forReporting(appUrl.currentDatabase());
+            }),
+            tasks: ko.computed(function () {
+                return appUrl.forTasks(appUrl.currentDatabase());
             }),
             status: ko.computed(function () {
                 return appUrl.forStatus(appUrl.currentDatabase());
@@ -251,7 +291,14 @@ define(["require", "exports", "models/database", "common/pagedList", "plugins/ro
             }),
             periodicBackup: ko.computed(function () {
                 return appUrl.forPeriodicBackup(appUrl.currentDatabase());
-            })
+            }),
+            isActive: function (routeTitle) {
+                return ko.computed(function () {
+                    return router.navigationModel().first(function (m) {
+                        return m.isActive() && m.title === routeTitle;
+                    }) != null;
+                });
+            }
         };
         return appUrl;
     })();
