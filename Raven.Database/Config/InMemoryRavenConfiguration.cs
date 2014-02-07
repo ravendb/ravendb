@@ -919,7 +919,12 @@ namespace Raven.Database.Config
 		public string SelectStorageEngine()
 		{
 			if (RunInMemory)
-				return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
+			{
+                if (!string.IsNullOrEmpty(DefaultStorageTypeName) && DefaultStorageTypeName.Equals("voron", StringComparison.InvariantCultureIgnoreCase))
+                    return typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+
+                return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
+			}
 
 			if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
 			{

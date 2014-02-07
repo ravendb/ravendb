@@ -54,7 +54,8 @@ namespace Raven.Tests.Bundles.Replication.Issues
             store1.DatabaseCommands.Delete("rahien", null);
             servers[0].SystemDatabase.TransactionalStorage.Batch(accessor =>
             {
-                Assert.Equal(2, accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Etag.Empty, null, 10).Count());
+                var count = accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Etag.Empty, null, 10).Count();
+                Assert.Equal(2, count);
             });
 
             Etag last = Etag.Empty.Setup(UuidType.Documents, 1).IncrementBy(3);
