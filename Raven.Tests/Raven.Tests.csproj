@@ -989,6 +989,7 @@
     <Compile Include="Notifications\ReplicationConflicts_Embedded.cs" />
     <Compile Include="Patching\BigDoc.cs" />
     <Compile Include="PreFetching.cs" />
+    <Compile Include="Properties\TestAssemblyInfo.cs" />
     <Compile Include="Querying\SkipDuplicates.cs" />
     <Compile Include="RavenDB_1033.cs" />
     <Compile Include="ResultsTransformer\AsyncTransformWith.cs" />

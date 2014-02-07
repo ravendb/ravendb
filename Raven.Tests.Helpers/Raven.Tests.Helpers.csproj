@@ -46,6 +46,7 @@
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Net" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -64,6 +65,7 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="CommonInitializationUtil.cs" />
+    <Compile Include="EnsureTestCleanup.cs" />
     <Compile Include="RavenTestBase.cs" />
     <Compile Include="SettingsHelper.cs" />
   </ItemGroup>
