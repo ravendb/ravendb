@@ -7,6 +7,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Transactions;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
@@ -510,10 +511,9 @@ namespace Raven.Tests.Document
 		}
 
 		[Fact]
-		public void When_document_does_not_exist_Then_metadata_should_be_null_Async()
+		public async Task When_document_does_not_exist_Then_metadata_should_be_null_Async()
 		{
-			documentStore.AsyncDatabaseCommands.HeadAsync("rhino1")
-						 .ContinueWith(task => Assert.Null(task.Result));
+			Assert.Null(await documentStore.AsyncDatabaseCommands.HeadAsync("rhino1"));
 		}
 
 		[Fact]
