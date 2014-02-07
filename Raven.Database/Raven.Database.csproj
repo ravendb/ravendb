@@ -1081,6 +1081,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Server\WebUI\Raven.Studio.xap" />
     <EmbeddedResource Include="Json\ToJson.js" />
     <EmbeddedResource Include="Json\RavenDB.js" />
     <EmbeddedResource Include="Json\lodash.js" />
