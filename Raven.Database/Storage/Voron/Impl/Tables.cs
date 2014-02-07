@@ -114,6 +114,8 @@ namespace Raven.Database.Storage.Voron.Impl
 			public class Indices
 			{
 				public const string ByEtag = "key_by_etag";
+
+                public const string Metadata = "metadata";
 			}
 		}
 
