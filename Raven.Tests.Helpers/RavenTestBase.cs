@@ -527,9 +527,6 @@ namespace Raven.Tests.Helpers
 			GC.Collect(2);
 			GC.WaitForPendingFinalizers();
 
-		    if (checkPorts)
-		        AssertPortsNotInUse(8079, 8078, 8077, 8076, 8075);
-
 			foreach (var pathToDelete in pathsToDelete)
 			{
 				try
@@ -554,20 +551,6 @@ namespace Raven.Tests.Helpers
 			if (errors.Count > 0)
 				throw new AggregateException(errors);
 		}
-
-        public static void AssertPortsNotInUse(params int[] ports)
-        {
-            IPGlobalProperties ipProperties = IPGlobalProperties.GetIPGlobalProperties();
-            IPEndPoint[] ipEndPoints = ipProperties.GetActiveTcpListeners();
-
-
-            foreach (IPEndPoint endPoint in ipEndPoints)
-            {
-                Assert.False(ports.Contains(endPoint.Port), "Port " + endPoint.Port  + " is in used but shouldn't be. Did we leak a connection?");    
-            }
-
-        }
- 
 
 		protected static void PrintServerErrors(ServerError[] serverErrors)
 		{

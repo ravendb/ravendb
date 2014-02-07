@@ -125,8 +125,7 @@ task Test -depends Compile {
 	
 	Write-Host $test_prjs
 	
-	$xUnit = Get-PackagePath xunit.runners
-	$xUnit = "$xUnit\tools\xunit.console.clr4.exe"
+	$xUnit = "$lib_dir\xunit\xunit.console.clr4.exe"
 	Write-Host "xUnit location: $xUnit"
 	
 	$test_prjs | ForEach-Object { 
