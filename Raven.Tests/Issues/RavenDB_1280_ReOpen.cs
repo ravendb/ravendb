@@ -28,7 +28,7 @@ namespace Raven.Tests.Bugs
 		public void Can_Index_With_Missing_LoadDocument_References(string storageTypeName)
         {
             const int iterations = 8000;
-
+	        var sp = Stopwatch.StartNew();
 			using (var store = NewRemoteDocumentStore(requestedStorage: storageTypeName))
             {
                 new EmailIndex().Execute(store);
@@ -42,8 +42,9 @@ namespace Raven.Tests.Bugs
                     }
                 });
                 
+
                 // Test that the indexing can complete, without being in an infinite indexing run due to touches to documents increasing the etag.
-                WaitForIndexing(store, timeout: Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(45));
+				WaitForIndexing(store, timeout: Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(sp.Elapsed.TotalSeconds / 2));
             }
         }
 
