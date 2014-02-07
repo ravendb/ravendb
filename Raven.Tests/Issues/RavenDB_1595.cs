@@ -20,12 +20,12 @@ namespace Raven.Tests.Issues
         [Fact]
         public void ProperlyHandleDataDirectoryWhichEndsWithSlash()
         {
-            server1 = CreateServer(8111, "D1");
+            server1 = CreateServer(8079, "D1");
 
             store1 = new DocumentStore
             {
                 DefaultDatabase = "Northwind",
-                Url = "http://localhost:8111"
+                Url = "http://localhost:8079"
             };
 
             store1.Initialize();
