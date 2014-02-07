@@ -15,11 +15,6 @@ namespace Raven.Tests.Bundles.Replication.Issues
 
     public class RavenDB_677 : ReplicationBase
     {
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
-        {
-            configuration.RunInMemory = false;
-        }
-
         [Theory]
         [PropertyData("Storages")]
         public void CanDeleteTombstones(string requestedStorage)
