@@ -41,10 +41,13 @@ namespace Raven.Database.Server.Controllers
 				return true;
 			});
 
+		    string matchingPath = null;
+
+#if DEBUG
 			var fileName = id;
 			var paths = GetPaths(fileName, Database.Configuration.WebDir);
 			
-			var matchingPath = paths.FirstOrDefault(path =>
+			matchingPath = paths.FirstOrDefault(path =>
 			{
 				try
 				{
@@ -55,6 +58,7 @@ namespace Raven.Database.Server.Controllers
 					return false;
 				}
 			});
+#endif
 			
 			return matchingPath != null ? WriteFile(matchingPath) : WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.WebDir, "Raven.Studio.xap");
 		}
