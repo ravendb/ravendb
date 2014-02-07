@@ -123,8 +123,6 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
     }
   }
 
-  //TODO: break during stream query and stream docs (using close method)
-  @Ignore("waiting for RavenDB-1650 Too many active database users")
   @Test
   public void testStreamQuery() throws Exception {
     try {
@@ -158,7 +156,6 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
     }
   }
 
-  @Ignore("waiting for RavenDB-1650 Too many active database users")
   @Test
   public void testStreamDocs() throws Exception {
     try {
