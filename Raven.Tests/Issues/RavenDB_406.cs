@@ -19,8 +19,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void LoadResultShouldBeUpToDateEvenIfAggressiveCacheIsEnabled()
 		{
-			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			using (var store = NewRemoteDocumentStore())
 			{
 				store.Conventions.ShouldSaveChangesForceAggressiveCacheCheck = false;
 				using (var session = store.OpenSession())
@@ -74,8 +73,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void QueryResultShouldBeUpToDateEvenIfAggressiveCacheIsEnabled()
 		{
-			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			using (var store = NewRemoteDocumentStore())
 			{
 				store.Conventions.ShouldSaveChangesForceAggressiveCacheCheck = false;
 				new RavenDocumentsByEntityName().Execute(store);
@@ -97,7 +95,7 @@ namespace Raven.Tests.Issues
 					// make sure that object is cached
 					using (var session = store.OpenSession())
 					{
-						var users = session.Query<User>()
+						var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults())
 							.ToList(); 
 
 						Assert.Equal("John", users[0].Name);
@@ -120,8 +118,9 @@ namespace Raven.Tests.Issues
 
 					using (var session = store.OpenSession())
 					{
-						var users = session.Query<User>().ToList();
+						var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).ToList();
 
+						Assert.Equal(1, users.Count);
 						Assert.Equal("Adam", users[0].Name);
 					}
 				}
@@ -131,8 +130,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CacheClearingShouldTakeIntoAccountTenantDatabases()
 		{
-			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079"}.Initialize())
+			using (var store = NewRemoteDocumentStore())
 			{
 				store.Conventions.ShouldSaveChangesForceAggressiveCacheCheck = false;
 
