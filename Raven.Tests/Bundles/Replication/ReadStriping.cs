@@ -25,6 +25,10 @@ namespace Raven.Tests.Bundles.Replication
 			WaitForDocument(store2.DatabaseCommands, "companies/1");
 			WaitForDocument(store3.DatabaseCommands, "companies/1");
 
+            PauseReplicationAsync(0, store1.DefaultDatabase).Wait();
+            PauseReplicationAsync(1, store2.DefaultDatabase).Wait();
+            PauseReplicationAsync(2, store3.DefaultDatabase).Wait();
+
 			using(var store = new DocumentStore
 			{
 				Url = store1.Url,
@@ -77,6 +81,10 @@ namespace Raven.Tests.Bundles.Replication
 
 			WaitForDocument(store2.DatabaseCommands, "companies/1");
 			WaitForDocument(store3.DatabaseCommands, "companies/1");
+
+            PauseReplicationAsync(0, store1.DefaultDatabase).Wait();
+            PauseReplicationAsync(1, store2.DefaultDatabase).Wait();
+            PauseReplicationAsync(2, store3.DefaultDatabase).Wait();
 
 			using (var store = new DocumentStore
 			{
