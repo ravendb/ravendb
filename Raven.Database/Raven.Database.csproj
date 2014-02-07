@@ -1036,7 +1036,6 @@
     <Compile Include="Storage\Voron\Impl\TableStorage.cs" />
     <Compile Include="Storage\Voron\StorageActions\StorageActionsBase.cs" />
     <Compile Include="Storage\Voron\StorageActions\TasksStorageActions.cs" />
-    <Compile Include="Storage\Voron\StorageActions\Util.cs" />
     <Compile Include="Storage\Voron\TransactionalStorage.cs" />
     <Compile Include="Storage\Voron\UndisposableStream.cs" />
     <Compile Include="Storage\Voron\VoronInFlightTransactionalState.cs" />

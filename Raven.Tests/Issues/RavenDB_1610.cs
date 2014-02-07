@@ -20,11 +20,16 @@ namespace Raven.Tests.Issues
         {
             using (var store = NewDocumentStore(requestedStorage: requestedStorage))
             {
+                var stats = store.DatabaseCommands.GetStatistics();
+                Assert.NotNull(stats);
+                Assert.Equal(0, stats.CountOfDocuments);
+                Assert.Equal(0, stats.CountOfAttachments);
+
                 store.DatabaseCommands.Put("docs/1", null, new RavenJObject(), new RavenJObject());
                 store.DatabaseCommands.PutAttachment("static/1", null, new MemoryStream(), new RavenJObject());
                 store.DatabaseCommands.PutAttachment("static/2", null, new MemoryStream(), new RavenJObject());
 
-                var stats = store.DatabaseCommands.GetStatistics();
+                stats = store.DatabaseCommands.GetStatistics();
                 Assert.NotNull(stats);
                 Assert.Equal(1, stats.CountOfDocuments);
                 Assert.Equal(2, stats.CountOfAttachments);

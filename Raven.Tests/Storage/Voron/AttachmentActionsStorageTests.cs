@@ -20,6 +20,32 @@
 	[Trait("VoronTest", "AttachementStorage")]
 	public class AttachmentActionsStorageTests : TransactionalStorageTestBase
 	{
+        [Theory]
+        [PropertyData("Storages")]
+        public void AttachmentCount(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => Assert.Equal(0, accessor.Attachments.GetAttachmentsCount()));
+
+                storage.Batch(accessor =>
+                {
+                    accessor.Attachments.AddAttachment("key/1", null, new MemoryStream(), new RavenJObject());
+                    accessor.Attachments.AddAttachment("key/2", null, new MemoryStream(), new RavenJObject());
+                });
+
+                storage.Batch(accessor => Assert.Equal(2, accessor.Attachments.GetAttachmentsCount()));
+
+                storage.Batch(accessor => accessor.Attachments.DeleteAttachment("key/1", null));
+
+                storage.Batch(accessor => Assert.Equal(1, accessor.Attachments.GetAttachmentsCount()));
+
+                storage.Batch(accessor => accessor.Attachments.DeleteAttachment("key/2", null));
+
+                storage.Batch(accessor => Assert.Equal(0, accessor.Attachments.GetAttachmentsCount()));
+            }
+        }
+
 		[Theory]
 		[PropertyData("Storages")]
 		public void Storage_Initialized_AttachmentActionsStorage_Is_NotNull(string requestedStorage)

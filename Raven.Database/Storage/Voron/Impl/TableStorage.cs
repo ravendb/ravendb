@@ -207,6 +207,7 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			env.CreateTree(tx, Tables.Attachments.TableName);
 			env.CreateTree(tx, Attachments.GetIndexKey(Tables.Attachments.Indices.ByEtag));
+            env.CreateTree(tx, Attachments.GetIndexKey(Tables.Attachments.Indices.Metadata));
 		}
 
 		private void CreateMappedResultsSchema(Transaction tx)
@@ -303,7 +304,7 @@ namespace Raven.Database.Storage.Voron.Impl
 			MappedResults = new Table(Tables.MappedResults.TableName, Tables.MappedResults.Indices.ByView, Tables.MappedResults.Indices.ByViewAndDocumentId, Tables.MappedResults.Indices.ByViewAndReduceKey, Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket, Tables.MappedResults.Indices.Data);
 			ReduceKeyCounts = new Table(Tables.ReduceKeyCounts.TableName, Tables.ReduceKeyCounts.Indices.ByView);
 			ReduceKeyTypes = new Table(Tables.ReduceKeyTypes.TableName, Tables.ReduceKeyTypes.Indices.ByView);
-			Attachments = new Table(Tables.Attachments.TableName, Tables.Attachments.Indices.ByEtag);
+			Attachments = new Table(Tables.Attachments.TableName, Tables.Attachments.Indices.ByEtag, Tables.Attachments.Indices.Metadata);
 			ReduceResults = new Table(Tables.ReduceResults.TableName, Tables.ReduceResults.Indices.ByView, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket, Tables.ReduceResults.Indices.Data);
 			General = new Table(Tables.General.TableName);
 			ReduceStats = new Table(Tables.ReduceStats.TableName);
