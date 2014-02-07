@@ -71,7 +71,8 @@ namespace Raven.Tests.Issues
 		            }
 	            });
 
-                Assert.Equal("Illegal duplicate key foos/1", e.Message);
+                Assert.True(e.Message.StartsWith("Illegal duplicate key foos/1") || //esent
+                        e.Message.StartsWith("InsertDocument() - checkForUpdates is false and document with key = 'foos/1' already exists")); //voron
             }
         }
 
