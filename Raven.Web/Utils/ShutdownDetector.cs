@@ -6,15 +6,18 @@
     using System.Web;
     using System.Web.Hosting;
 
+    using Raven.Abstractions.Logging;
+
     internal class ShutdownDetector : IRegisteredObject, IDisposable
     {
-        public static ShutdownDetector Instance = new ShutdownDetector();
+        private readonly ILog log;
 
         private readonly CancellationTokenSource _cts;
         private IDisposable _checkAppPoolTimer;
 
-        private ShutdownDetector()
+        internal ShutdownDetector(ILog log)
         {
+            this.log = log;
             _cts = new CancellationTokenSource();
         }
 
@@ -43,12 +46,15 @@
                     {
                         // Create a timer for polling when the app pool has been requested for shutdown.
 
+                        log.Info("Initialized ShutdownDetector.Timer");
+
                         _checkAppPoolTimer = new Timer(CheckForAppDomainRestart, state: null, dueTime: TimeSpan.FromSeconds(10), period: TimeSpan.FromSeconds(10));
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                log.ErrorException("Failed to initialize ShutdownDetector", e);
             }
         }
 
@@ -58,10 +64,12 @@
         {
             EventInfo stopEvent = typeof(HostingEnvironment).GetEvent("StopListening");
             if (stopEvent == null)
-            {
                 return false;
-            }
+
             stopEvent.AddEventHandler(null, new EventHandler(StopListening));
+
+            log.Info("Initialized ShutdownDetector.StopListening");
+
             return true;
         }
 
@@ -98,6 +106,7 @@
             }
             catch (AggregateException ag)
             {
+                log.ErrorException("ShutdownDetector.Cancel error", ag);
             }
         }
 
