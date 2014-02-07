@@ -52,7 +52,7 @@ namespace Raven.Tests
 	        db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 	    }
 
-        [Theory(Skip = "not yet implemented in Voron")]
+        [Theory]
         [PropertyData("Storages")]
         public void NonIncrementalBackup_Restore_CanReadDocument(string storageName)
         {
@@ -92,7 +92,7 @@ namespace Raven.Tests
             db.Dispose();
         }
 
-		[Theory(Skip = "not yet implemented in Voron")]
+		[Theory]
 		[PropertyData("Storages")]
         public void NonIncrementalBackup_Restore_DataDirectoryAlreadyExists_ExceptionThrown(string storageName)
         {
