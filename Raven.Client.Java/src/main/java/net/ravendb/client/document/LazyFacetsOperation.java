@@ -77,7 +77,7 @@ public class LazyFacetsOperation implements ILazyOperation {
 
     GetRequest getRequest = new GetRequest();
     getRequest.setUrl("/facets/" + index);
-    getRequest.setQuery(String.format("&query=%s&facetStart=%d&facetPageSize=%d&%s", query.getMinimalQueryString(), start, pageSize, addition));
+    getRequest.setQuery(String.format("%s&facetStart=%d&facetPageSize=%d&%s", query.getMinimalQueryString(), start, pageSize, addition));
     return getRequest;
   }
 

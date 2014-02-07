@@ -2,10 +2,19 @@ package net.ravendb.client.connection;
 
 import java.util.UUID;
 
+import org.apache.commons.lang.StringUtils;
+
 import net.ravendb.client.utils.UrlUtils;
 
 
 public class RavenUrlExtensions {
+
+  public static String forDatabase(String url, String database) {
+    if (StringUtils.isNotEmpty(database) && !url.contains("/databases/")){
+      return url + "/databases/" + database;
+    }
+    return url;
+  }
 
   public static String indexes(String url, String index) {
     return url + "/indexes/" + index;

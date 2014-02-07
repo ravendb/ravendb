@@ -1,5 +1,7 @@
 package net.ravendb.abstractions.replication;
 
+import net.ravendb.abstractions.basic.UseSharpEnum;
+
 import org.apache.commons.lang.builder.HashCodeBuilder;
 
 public class ReplicationDestination {
@@ -95,6 +97,7 @@ public class ReplicationDestination {
     this.username = username;
   }
 
+  @UseSharpEnum
   public enum TransitiveReplicationOptions {
 
     // Don't replicate replicated documents

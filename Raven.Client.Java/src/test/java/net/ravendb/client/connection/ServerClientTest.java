@@ -43,6 +43,7 @@ import net.ravendb.client.connection.IDatabaseCommands;
 import net.ravendb.samples.Developer;
 
 import org.apache.commons.lang.StringUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
 

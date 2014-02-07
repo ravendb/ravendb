@@ -6,22 +6,25 @@ import java.util.Iterator;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.util.EntityUtils;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 
 
-public class RavenJObjectIterator implements Iterator<RavenJObject> {
+public class RavenJObjectIterator implements Iterator<RavenJObject>, AutoCloseable {
 
   private HttpEntity httpEntity;
+  private CloseableHttpResponse httpResponse;
   private JsonParser jsonParser;
   private boolean hasNext;
   private RavenJObject currentObject;
 
-  public RavenJObjectIterator(HttpEntity httpEntity, JsonParser jsonParser) {
+  public RavenJObjectIterator(CloseableHttpResponse httpResponse, JsonParser jsonParser) {
     try {
-      this.httpEntity = httpEntity;
+      this.httpResponse = httpResponse;
+      this.httpEntity = httpResponse.getEntity();
       this.jsonParser = jsonParser;
       fetchNextObject();
     } catch (IOException e) {
@@ -33,6 +36,7 @@ public class RavenJObjectIterator implements Iterator<RavenJObject> {
     JsonToken token = jsonParser.nextToken();
     if (token == JsonToken.END_ARRAY) {
       hasNext = false;
+      //TODO:httpResponse.close();
       EntityUtils.consumeQuietly(httpEntity);
       this.currentObject = null;
     } else {
@@ -61,6 +65,11 @@ public class RavenJObjectIterator implements Iterator<RavenJObject> {
   @Override
   public void remove() {
     throw new IllegalStateException("You can't remove entries");
+  }
+
+  @Override
+  public void close() throws Exception {
+    EntityUtils.consumeQuietly(httpEntity);
   }
 
 }

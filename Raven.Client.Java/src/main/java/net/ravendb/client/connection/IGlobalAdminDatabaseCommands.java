@@ -43,6 +43,28 @@ public interface IGlobalAdminDatabaseCommands {
   public IDatabaseCommands getCommands();
 
   /**
+   * Begins a restore operation
+   * @param restoreLocation
+   * @param databaseLocation
+   */
+  public void startRestore(String restoreLocation, String databaseLocation);
+
+  /**
+   * Begins a restore operation
+   * @param restoreLocation
+   * @param databaseLocation
+   */
+  public void startRestore(String restoreLocation, String databaseLocation, String databaseName);
+
+  /**
+   * Begins a restore operation
+   * @param restoreLocation
+   * @param databaseLocation
+   */
+  public void startRestore(String restoreLocation, String databaseLocation, String databaseName, boolean defrag);
+
+
+  /**
    * Ensures that the database exists, creating it if needed
    * @param name
    * @param ignoreFailures

@@ -21,27 +21,6 @@ public interface IAdminDatabaseCommands {
   public void startBackup(String backupLocation, DatabaseDocument databaseDocument);
 
   /**
-   * Begins a restore operation
-   * @param restoreLocation
-   * @param databaseLocation
-   */
-  public void startRestore(String restoreLocation, String databaseLocation);
-
-  /**
-   * Begins a restore operation
-   * @param restoreLocation
-   * @param databaseLocation
-   */
-  public void startRestore(String restoreLocation, String databaseLocation, String databaseName);
-
-  /**
-   * Begins a restore operation
-   * @param restoreLocation
-   * @param databaseLocation
-   */
-  public void startRestore(String restoreLocation, String databaseLocation, String databaseName, boolean defrag);
-
-  /**
    *  Get the indexing status
    * @return
    */

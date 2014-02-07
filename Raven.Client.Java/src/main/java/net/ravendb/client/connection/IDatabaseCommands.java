@@ -2,7 +2,6 @@ package net.ravendb.client.connection;
 
 import java.io.InputStream;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -367,41 +366,31 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @param queryHeaderInfo
    * @return
    */
-  public Iterator<RavenJObject> streamQuery(String index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo) ;
+  public RavenJObjectIterator streamQuery(String index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo) ;
 
   /**
    * Streams the documents by etag OR starts with the prefix and match the matches
    * Will return *all* results, regardless of the number of items that might be returned.
    * @return
    */
-  public Iterator<RavenJObject> streamDocs();
-
-  /**
-   * Streams the documents by etag OR starts with the prefix and match the matches
-   * Will return *all* results, regardless of the number of items that might be returned.
-   * @param fromEtag
-   * @return
-   */
-  public Iterator<RavenJObject> streamDocs(Etag fromEtag);
+  public RavenJObjectIterator streamDocs();
 
   /**
    * Streams the documents by etag OR starts with the prefix and match the matches
    * Will return *all* results, regardless of the number of items that might be returned.
    * @param fromEtag
-   * @param startsWith
    * @return
    */
-  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith);
+  public RavenJObjectIterator streamDocs(Etag fromEtag);
 
   /**
    * Streams the documents by etag OR starts with the prefix and match the matches
    * Will return *all* results, regardless of the number of items that might be returned.
    * @param fromEtag
    * @param startsWith
-   * @param matches
    * @return
    */
-  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches);
+  public RavenJObjectIterator streamDocs(Etag fromEtag, String startsWith);
 
   /**
    * Streams the documents by etag OR starts with the prefix and match the matches
@@ -409,10 +398,9 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @param fromEtag
    * @param startsWith
    * @param matches
-   * @param start
    * @return
    */
-  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start);
+  public RavenJObjectIterator streamDocs(Etag fromEtag, String startsWith, String matches);
 
   /**
    * Streams the documents by etag OR starts with the prefix and match the matches
@@ -421,10 +409,9 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @param startsWith
    * @param matches
    * @param start
-   * @param pageSize
    * @return
    */
-  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize);
+  public RavenJObjectIterator streamDocs(Etag fromEtag, String startsWith, String matches, int start);
 
   /**
    * Streams the documents by etag OR starts with the prefix and match the matches
@@ -436,7 +423,19 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @param pageSize
    * @return
    */
-  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize, String exclude);
+  public RavenJObjectIterator streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize);
+
+  /**
+   * Streams the documents by etag OR starts with the prefix and match the matches
+   * Will return *all* results, regardless of the number of items that might be returned.
+   * @param fromEtag
+   * @param startsWith
+   * @param matches
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public RavenJObjectIterator streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize, String exclude);
 
   /**
    * Streams the documents by etag OR starts with the prefix and match the matches
@@ -449,7 +448,7 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @param pagingInformation
    * @return
    */
-  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize, String exclude, RavenPagingInformation pagingInformation);
+  public RavenJObjectIterator streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize, String exclude, RavenPagingInformation pagingInformation);
 
   /**
    * Delete index
