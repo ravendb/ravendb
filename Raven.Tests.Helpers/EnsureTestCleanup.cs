@@ -23,9 +23,9 @@ namespace Raven.Tests.Helpers
 			IPGlobalProperties ipProperties = IPGlobalProperties.GetIPGlobalProperties();
 			IPEndPoint[] ipEndPoints = ipProperties.GetActiveTcpListeners();
 
-
 			var sb = new StringBuilder();
-			foreach (IPEndPoint endPoint in ipEndPoints)
+
+			foreach (IPEndPoint endPoint in ipEndPoints.Where(x => ports.Contains(x.Port)))
 			{
 				sb.AppendLine("Port " + endPoint.Port + " is in used but shouldn't be. Did we leak a connection in: " + test);
 			}
