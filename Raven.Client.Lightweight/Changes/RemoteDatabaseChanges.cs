@@ -97,7 +97,8 @@ namespace Raven.Client.Changes
 			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials,
 																conventions)
 			{
-				AvoidCachingRequest = true
+				AvoidCachingRequest = true,
+				DisableRequestCompression = true
 			};
 
 			logger.Info("Trying to connect to {0} with id {1}", requestParams.Url, id);

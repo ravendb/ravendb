@@ -4,6 +4,7 @@ using System.Globalization;
 using Raven.Tests.Faceted;
 using Raven.Tests.Issues;
 using System.Threading;
+using Raven.Tests.Notifications;
 using Raven.Tests.Suggestions;
 
 namespace Raven.Tryouts
@@ -18,9 +19,9 @@ namespace Raven.Tryouts
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new Suggestions())
+				using (var x = new WithIIS())
 				{
-					x.WithTypo();
+					x.CheckNotificationInIIS();
 				}
 			}
 			
