@@ -27,7 +27,7 @@
 
 	public class DocumentsStorageActions : StorageActionsBase, IDocumentStorageActions
 	{
-		private readonly WriteBatch writeBatch;
+		private readonly Reference<WriteBatch> writeBatch;
 
 		private readonly IUuidGenerator uuidGenerator;
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
@@ -42,7 +42,7 @@
 		public DocumentsStorageActions(IUuidGenerator uuidGenerator,
 			OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
 			IDocumentCacher documentCacher,
-			WriteBatch writeBatch,
+			Reference<WriteBatch> writeBatch,
 			SnapshotReader snapshot,
 			TableStorage tableStorage)
 			: base(snapshot)
@@ -65,7 +65,7 @@
 			if (take == 0) yield break;
 
 			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
-											.Iterate(Snapshot, writeBatch))
+											.Iterate(Snapshot, writeBatch.Value))
 			{
 				int fetchedDocumentCount = 0;
 				if (!iterator.Seek(Slice.AfterAllKeys))
@@ -103,7 +103,7 @@
 				throw new ArgumentNullException("etag");
 
 			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
-											.Iterate(Snapshot, writeBatch))
+											.Iterate(Snapshot, writeBatch.Value))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 				{
@@ -173,7 +173,7 @@
 			if (take == 0)
 				yield break;
 
-			using (var iterator = tableStorage.Documents.Iterate(Snapshot, writeBatch))
+			using (var iterator = tableStorage.Documents.Iterate(Snapshot, writeBatch.Value))
 			{
 				iterator.RequiredPrefix = idPrefix.ToLowerInvariant();
 				if (iterator.Seek(iterator.RequiredPrefix) == false || !iterator.Skip(start))
@@ -207,7 +207,7 @@
 			}
 
 			var lowerKey = CreateKey(key);
-			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch))
+			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch.Value))
 			{
 				logger.Debug("Document with key='{0}' was not found", key);
 				return null;
@@ -246,7 +246,7 @@
 
 			var lowerKey = CreateKey(key);
 
-			if (tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch))
+			if (tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch.Value))
 				return ReadDocumentMetadata(key);
 
 			logger.Debug("Document with key='{0}' was not found", key);
@@ -261,7 +261,7 @@
 			var lowerKey = CreateKey(key);
 
 			ushort? existingVersion;
-			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch, out existingVersion))
+			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch.Value, out existingVersion))
 			{
 				logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
 				metadata = null;
@@ -269,7 +269,7 @@
 				return false;
 			}
 
-			if (!metadataIndex.Contains(Snapshot, lowerKey, writeBatch)) //data exists, but metadata is not --> precaution, should never be true
+			if (!metadataIndex.Contains(Snapshot, lowerKey, writeBatch.Value)) //data exists, but metadata is not --> precaution, should never be true
 			{
 				var errorString = string.Format("Document with key '{0}' was found, but its metadata wasn't found --> possible data corruption", key);
 				throw new ApplicationException(errorString);
@@ -281,11 +281,11 @@
 
 			deletedETag = etag != null ? existingEtag : documentMetadata.Etag;
 
-			tableStorage.Documents.Delete(writeBatch, lowerKey, existingVersion);
-			metadataIndex.Delete(writeBatch, lowerKey);
+			tableStorage.Documents.Delete(writeBatch.Value, lowerKey, existingVersion);
+			metadataIndex.Delete(writeBatch.Value, lowerKey);
 
 			tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
-						  .Delete(writeBatch, deletedETag);
+						  .Delete(writeBatch.Value, deletedETag);
 
 			documentCacher.RemoveCachedDocument(lowerKey, etag);
 
@@ -341,7 +341,7 @@
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			if (!checkForUpdates && tableStorage.Documents.Contains(Snapshot, CreateKey(key), writeBatch))
+			if (!checkForUpdates && tableStorage.Documents.Contains(Snapshot, CreateKey(key), writeBatch.Value))
 			{
 				throw new ConcurrencyException(string.Format("InsertDocument() - checkForUpdates is false and document with key = '{0}' already exists", key));
 			}
@@ -356,7 +356,7 @@
 
 			var lowerKey = CreateKey(key);
 
-			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch))
+			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch.Value))
 			{
 				logger.Debug("Document with dataKey='{0}' was not found", key);
 				preTouchEtag = null;
@@ -375,8 +375,8 @@
 
 			var keyByEtagIndex = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
 
-			keyByEtagIndex.Delete(writeBatch, preTouchEtag);
-			keyByEtagIndex.Add(writeBatch, newEtag, lowerKey);
+			keyByEtagIndex.Delete(writeBatch.Value, preTouchEtag);
+			keyByEtagIndex.Add(writeBatch.Value, newEtag, lowerKey);
 
 			logger.Debug("TouchDocument() - document with key = '{0}'", key);
 		}
@@ -386,7 +386,7 @@
 			if (etag == null) throw new ArgumentNullException("etag");
 
 			using (var iter = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
-											.Iterate(Snapshot, writeBatch))
+											.Iterate(Snapshot, writeBatch.Value))
 			{
 				if (!iter.Seek(etag.ToString()) &&
 					!iter.Seek(Slice.BeforeAllKeys)) //if parameter etag not found, scan from beginning. if empty --> return original etag
@@ -457,8 +457,8 @@
 			var loweredKey = CreateKey(metadata.Key);
 
 			ushort? existingVersion;
-			var isUpdate = metadataIndex.Contains(Snapshot, loweredKey, writeBatch, out existingVersion);
-			metadataIndex.Add(writeBatch, loweredKey, metadataStream, existingVersion);
+			var isUpdate = metadataIndex.Contains(Snapshot, loweredKey, writeBatch.Value, out existingVersion);
+			metadataIndex.Add(writeBatch.Value, loweredKey, metadataStream, existingVersion);
 
 			return isUpdate;
 		}
@@ -467,7 +467,7 @@
 		{
 			var loweredKey = CreateKey(key);
 
-			var metadataReadResult = metadataIndex.Read(Snapshot, loweredKey, writeBatch);
+			var metadataReadResult = metadataIndex.Read(Snapshot, loweredKey, writeBatch.Value);
 			if (metadataReadResult == null)
 				return null;
 
@@ -499,13 +499,13 @@
 			var loweredKey = CreateKey(key);
 
 			ushort? existingVersion;
-			var isUpdate = tableStorage.Documents.Contains(Snapshot, loweredKey, writeBatch, out existingVersion);
+			var isUpdate = tableStorage.Documents.Contains(Snapshot, loweredKey, writeBatch.Value, out existingVersion);
 			existingEtag = null;
 
 			if (isUpdate)
 			{
 				existingEtag = EnsureDocumentEtagMatch(loweredKey, etag, "PUT");
-				keyByEtagDocumentIndex.Delete(writeBatch, existingEtag);
+				keyByEtagDocumentIndex.Delete(writeBatch.Value, existingEtag);
 			}
 			else if (etag != null && etag != Etag.Empty)
 			{
@@ -527,14 +527,14 @@
 			}
  
 			dataStream.Position = 0;
-			tableStorage.Documents.Add(writeBatch, loweredKey, dataStream, existingVersion); 
+			tableStorage.Documents.Add(writeBatch.Value, loweredKey, dataStream, existingVersion); 
 
 			newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			savedAt = SystemTime.UtcNow;
 
 			var isUpdated = PutDocumentMetadataInternal(key, metadata, newEtag, savedAt);
 
-			keyByEtagDocumentIndex.Add(writeBatch, newEtag, loweredKey);
+			keyByEtagDocumentIndex.Add(writeBatch.Value, newEtag, loweredKey);
 
 			return isUpdated;
 		}
@@ -547,7 +547,7 @@
 			if (existingCachedDocument != null)
 				return existingCachedDocument.Document;
 
-			var documentReadResult = tableStorage.Documents.Read(Snapshot, loweredKey, writeBatch);
+			var documentReadResult = tableStorage.Documents.Read(Snapshot, loweredKey, writeBatch.Value);
 			if (documentReadResult == null) //non existing document
 				return null;
 

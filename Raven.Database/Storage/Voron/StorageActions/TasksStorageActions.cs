@@ -6,6 +6,7 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
@@ -29,9 +30,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private readonly IUuidGenerator generator;
 
-		private readonly WriteBatch writeBatch;
+		private readonly Reference<WriteBatch> writeBatch;
 
-		public TasksStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, WriteBatch writeBatch)
+		public TasksStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, Reference<WriteBatch> writeBatch)
 			: base(snapshot)
 		{
 			this.tableStorage = tableStorage;
@@ -51,7 +52,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var idAsString = id.ToString();
 
 			tableStorage.Tasks.Add(
-				writeBatch,
+				writeBatch.Value,
 				idAsString,
 				new RavenJObject
 				{
@@ -62,9 +63,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					{ "task", task.AsBytes() }
 				}, 0);
 
-			tasksByType.MultiAdd(writeBatch, CreateKey(type), idAsString);
-			tasksByIndex.MultiAdd(writeBatch, CreateKey(index), idAsString);
-			tasksByIndexAndType.MultiAdd(writeBatch, CreateKey(index, type), idAsString);
+			tasksByType.MultiAdd(writeBatch.Value, CreateKey(type), idAsString);
+			tasksByIndex.MultiAdd(writeBatch.Value, CreateKey(index), idAsString);
+			tasksByIndexAndType.MultiAdd(writeBatch.Value, CreateKey(index, type), idAsString);
 		}
 
 		public bool HasTasks
@@ -93,7 +94,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, writeBatch, out version);
+					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
 
 					DatabaseTask task;
 					try
@@ -139,7 +140,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						continue;
 
 					ushort version;
-					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, writeBatch, out version);
+					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
 
 					DatabaseTask existingTask;
 					try
@@ -172,10 +173,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var tasksByIndex = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
 			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
 
-			tableStorage.Tasks.Delete(writeBatch, taskId);
-			tasksByType.MultiDelete(writeBatch, CreateKey(type), taskId);
-			tasksByIndex.MultiDelete(writeBatch, CreateKey(index), taskId);
-			tasksByIndexAndType.MultiDelete(writeBatch, CreateKey(index, type), taskId);
+			tableStorage.Tasks.Delete(writeBatch.Value, taskId);
+			tasksByType.MultiDelete(writeBatch.Value, CreateKey(type), taskId);
+			tasksByIndex.MultiDelete(writeBatch.Value, CreateKey(index), taskId);
+			tasksByIndexAndType.MultiDelete(writeBatch.Value, CreateKey(index, type), taskId);
 		}
 
 
@@ -184,7 +185,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if(!HasTasks)
 				yield break;
 
-			using (var taskIterator = tableStorage.Tasks.Iterate(Snapshot, writeBatch))
+			using (var taskIterator = tableStorage.Tasks.Iterate(Snapshot, writeBatch.Value))
 			{
 				if(!taskIterator.Seek(Slice.BeforeAllKeys))
 					yield break;
@@ -192,7 +193,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var taskData = LoadJson(tableStorage.Tasks, taskIterator.CurrentKey, writeBatch, out version); 
+					var taskData = LoadJson(tableStorage.Tasks, taskIterator.CurrentKey, writeBatch.Value, out version); 
 					if (taskData == null) 
 							throw new InvalidOperationException("Retrieved a pending task object, but was unable to parse it. This is probably a data corruption or a bug.");
 

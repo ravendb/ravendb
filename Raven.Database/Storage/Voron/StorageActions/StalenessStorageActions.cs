@@ -1,4 +1,6 @@
 ﻿
+using Raven.Abstractions.Extensions;
+
 namespace Raven.Database.Storage.Voron.StorageActions
 {
 	using global::Voron;
@@ -11,9 +13,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	public class StalenessStorageActions : StorageActionsBase, IStalenessStorageActions
 	{
 		private readonly TableStorage tableStorage;
-		private readonly WriteBatch writeBatch;
+		private readonly Reference<WriteBatch> writeBatch;
 
-		public StalenessStorageActions(TableStorage tableStorage, SnapshotReader snapshot, WriteBatch writeBatch)
+		public StalenessStorageActions(TableStorage tableStorage, SnapshotReader snapshot, Reference<WriteBatch> writeBatch)
 			: base(snapshot)
 		{
 			this.tableStorage = tableStorage;
@@ -25,11 +27,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch, out version);
+			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch.Value, out version);
 			if (indexingStats == null)
 				return false; // index does not exists
 
-			var reduceStats = LoadJson(tableStorage.ReduceStats, key, writeBatch, out version);
+			var reduceStats = LoadJson(tableStorage.ReduceStats, key, writeBatch.Value, out version);
 			if (reduceStats == null)
 				throw new ArgumentException("reduceStats");
 
@@ -37,7 +39,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			if (IsMapStale(id) || hasReduce && IsReduceStale(id))
 			{
-				var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch, out version);
+				var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch.Value, out version);
 
 				if (cutOff != null)
 				{
@@ -73,7 +75,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 				do
 				{
-					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, writeBatch, out version);
+					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
 					var time = value.Value<DateTime>("time");
 
 					if (time <= cutOff.Value)
@@ -102,7 +104,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var read = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch, out version);
+			var read = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch.Value, out version);
 			if (read == null)
 				return false;
 
@@ -117,11 +119,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch, out version);
+			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch.Value, out version);
 			if (indexingStats == null)
 				throw new IndexDoesNotExistsException("Could not find index named: " + id);
 
-			var reduceStats = LoadJson(tableStorage.ReduceStats, key, writeBatch, out version);
+			var reduceStats = LoadJson(tableStorage.ReduceStats, key, writeBatch.Value, out version);
 			if (reduceStats == null)
 				throw new ArgumentException("reduceStats");
 
@@ -132,7 +134,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					Etag.Parse(reduceStats.Value<byte[]>("lastReducedEtag")));
 			}
 
-			var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch, out version);
+			var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch.Value, out version);
 
 			return Tuple.Create(lastIndexedEtags.Value<DateTime>("lastTimestamp"),
 				Etag.Parse(lastIndexedEtags.Value<byte[]>("lastEtag")));
@@ -141,7 +143,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public Etag GetMostRecentDocumentEtag()
 		{
 			var documentsByEtag = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
-			using (var iterator = documentsByEtag.Iterate(Snapshot, writeBatch))
+			using (var iterator = documentsByEtag.Iterate(Snapshot, writeBatch.Value))
 			{
 				if (!iterator.Seek(Slice.AfterAllKeys))
 					return Etag.Empty;
@@ -153,7 +155,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public Etag GetMostRecentAttachmentEtag()
 		{
 			var attachmentsByEtag = tableStorage.Attachments.GetIndex(Tables.Attachments.Indices.ByEtag);
-			using (var iterator = attachmentsByEtag.Iterate(Snapshot, writeBatch))
+			using (var iterator = attachmentsByEtag.Iterate(Snapshot, writeBatch.Value))
 			{
 				if (!iterator.Seek(Slice.AfterAllKeys))
 					return Etag.Empty;
@@ -167,7 +169,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			ushort version;
-			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch, out version);
+			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch.Value, out version);
 
 			if (indexingStats == null)
 				return -1;

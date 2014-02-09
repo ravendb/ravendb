@@ -20,7 +20,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	{
 		private readonly Table attachmentsTable;
 
-		private readonly WriteBatch writeBatch;
+		private readonly Reference<WriteBatch> writeBatch;
 		private readonly IUuidGenerator uuidGenerator;
 
 	    private readonly TableStorage tableStorage;
@@ -31,8 +31,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
-		public AttachmentsStorageActions(Table attachmentsTable, 
-										 WriteBatch writeBatch, 
+		public AttachmentsStorageActions(Table attachmentsTable,
+										 Reference<WriteBatch> writeBatch, 
 										 SnapshotReader snapshot, 
 									     IUuidGenerator uuidGenerator, 
                                          TableStorage tableStorage,
@@ -56,10 +56,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var loweredKey = CreateKey(key);
 
 			var keyByETagIndice = attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag);
-            var isUpdate = attachmentsTable.Contains(Snapshot, loweredKey, writeBatch);
+            var isUpdate = attachmentsTable.Contains(Snapshot, loweredKey, writeBatch.Value);
 			if (isUpdate)
 			{
-				if (!metadataIndex.Contains(Snapshot, loweredKey, writeBatch)) //precaution
+				if (!metadataIndex.Contains(Snapshot, loweredKey, writeBatch.Value)) //precaution
 				{
 					throw new ApplicationException(String.Format(@"Headers for attachment with key = '{0}' were not found,
 but the attachment itself was found. Data corruption?", key));
@@ -77,11 +77,11 @@ but the attachment itself was found. Data corruption?", key));
 				}
 
 				if (existingEtag != null) //existingEtag can be null if etag parameter is null
-					keyByETagIndice.Delete(writeBatch, existingEtag.ToString());
+					keyByETagIndice.Delete(writeBatch.Value, existingEtag.ToString());
 				else
 				{
 					var currentEtag = ReadCurrentEtag(loweredKey);
-					keyByETagIndice.Delete(writeBatch, currentEtag.ToString());
+					keyByETagIndice.Delete(writeBatch.Value, currentEtag.ToString());
 				}
 			}
 			else
@@ -100,7 +100,7 @@ but the attachment itself was found. Data corruption?", key));
 				if (data.CanSeek)
 				{
 					data.Seek(0, SeekOrigin.Begin);
-					attachmentsTable.Add(writeBatch, loweredKey, data);
+					attachmentsTable.Add(writeBatch.Value, loweredKey, data);
 				}
 				else //handle streams like GzipStream
 				{
@@ -109,7 +109,7 @@ but the attachment itself was found. Data corruption?", key));
 						var tempStream = new MemoryStream();
 						data.CopyTo(tempStream);
 						tempStream.Seek(0, SeekOrigin.Begin);
-						attachmentsTable.Add(writeBatch, loweredKey, tempStream);
+						attachmentsTable.Add(writeBatch.Value, loweredKey, tempStream);
 					}
 					finally
 					{
@@ -118,7 +118,7 @@ but the attachment itself was found. Data corruption?", key));
 				}
 			}
 
-			keyByETagIndice.Add(writeBatch, newETag.ToString(), key);
+			keyByETagIndice.Add(writeBatch.Value, newETag.ToString(), key);
 
 			WriteAttachmentMetadata(loweredKey, newETag, headers);
 
@@ -137,7 +137,7 @@ but the attachment itself was found. Data corruption?", key));
 
             var loweredKey = CreateKey(key);
 
-            if (!attachmentsTable.Contains(Snapshot, loweredKey, writeBatch))
+            if (!attachmentsTable.Contains(Snapshot, loweredKey, writeBatch.Value))
 			{
 				logger.Debug("Attachment with key '{0}' was not found, and considered deleted", key);
 				return;
@@ -156,10 +156,10 @@ but the attachment itself was found. Data corruption?", key));
 				};
 			}
 
-            attachmentsTable.Delete(writeBatch, loweredKey);
-            metadataIndex.Delete(writeBatch, loweredKey);
+            attachmentsTable.Delete(writeBatch.Value, loweredKey);
+            metadataIndex.Delete(writeBatch.Value, loweredKey);
 			attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag)
-							.Delete(writeBatch, existingEtag);
+							.Delete(writeBatch.Value, existingEtag);
 
 			logger.Debug("Deleted document attachment (key = '{0}')", key);
 		}
@@ -168,10 +168,10 @@ but the attachment itself was found. Data corruption?", key));
 		{
             var loweredKey = CreateKey(key);
 
-            if (!attachmentsTable.Contains(Snapshot, loweredKey, writeBatch))
+            if (!attachmentsTable.Contains(Snapshot, loweredKey, writeBatch.Value))
 				return null;
 
-            var dataReadResult = attachmentsTable.Read(Snapshot, loweredKey, writeBatch);
+            var dataReadResult = attachmentsTable.Read(Snapshot, loweredKey, writeBatch.Value);
 			if (dataReadResult == null) return null;
 
 			Etag currentEtag;
@@ -211,10 +211,10 @@ but the attachment itself was found. Data corruption?", key));
 
 	    internal Stream GetAttachmentStream(string key)
 		{
-            if (!attachmentsTable.Contains(Snapshot, key, writeBatch))
+            if (!attachmentsTable.Contains(Snapshot, key, writeBatch.Value))
 				return new MemoryStream();
 
-            var dataReadResult = attachmentsTable.Read(Snapshot, key, writeBatch);
+            var dataReadResult = attachmentsTable.Read(Snapshot, key, writeBatch.Value);
 			return dataReadResult.Reader.AsStream();
 		}
 
@@ -224,7 +224,7 @@ but the attachment itself was found. Data corruption?", key));
 				throw new ArgumentException("must have zero or positive value", "start");
 
 			using (var iter = attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag)
-											  .Iterate(Snapshot, writeBatch))
+											  .Iterate(Snapshot, writeBatch.Value))
 			{
 				if (!iter.Seek(Slice.AfterAllKeys))
 					yield break;
@@ -261,7 +261,7 @@ but the attachment itself was found. Data corruption?", key));
 			if (take == 0) yield break; //edge case
 
 			using (var iter = attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag)
-											  .Iterate(Snapshot, writeBatch))
+											  .Iterate(Snapshot, writeBatch.Value))
 			{
 				if (!iter.Seek(Slice.BeforeAllKeys))
 					yield break;
@@ -314,7 +314,7 @@ but the attachment itself was found. Data corruption?", key));
 			if (pageSize == 0) //edge case
 				yield break;
 
-			using (var iter = attachmentsTable.Iterate(Snapshot, writeBatch))
+			using (var iter = attachmentsTable.Iterate(Snapshot, writeBatch.Value))
 			{
 				iter.RequiredPrefix = idPrefix.ToLowerInvariant();
 				if (iter.Seek(iter.RequiredPrefix) == false)
@@ -354,7 +354,7 @@ but the attachment itself was found. Data corruption?", key));
 
 		private Etag ReadCurrentEtag(string key)
 		{
-            var metadataReadResult = metadataIndex.Read(Snapshot, key, writeBatch);
+            var metadataReadResult = metadataIndex.Read(Snapshot, key, writeBatch.Value);
 			if (metadataReadResult == null)
 				return null;
 			using (var stream = metadataReadResult.Reader.AsStream())
@@ -365,7 +365,7 @@ but the attachment itself was found. Data corruption?", key));
 
         private RavenJObject ReadAttachmentMetadata(string key, out Etag etag)
 		{
-            var metadataReadResult = metadataIndex.Read(Snapshot, key, writeBatch);
+            var metadataReadResult = metadataIndex.Read(Snapshot, key, writeBatch.Value);
 			if (metadataReadResult == null) //precaution
 			{
 				etag = null;
@@ -387,7 +387,7 @@ but the attachment itself was found. Data corruption?", key));
 			headers.WriteTo(memoryStream);
 
 			memoryStream.Position = 0;
-            metadataIndex.Add(writeBatch, key, memoryStream);
+            metadataIndex.Add(writeBatch.Value, key, memoryStream);
 		}
 
         private bool IsAttachmentEtagMatch(string key, Etag etag, out Etag existingEtag)
