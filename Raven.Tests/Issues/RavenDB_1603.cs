@@ -12,6 +12,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Client;
@@ -35,7 +36,7 @@ namespace Raven.Tests.Issues
         private readonly int targetPort;
         private Func<int, byte[], int, int, bool> shouldThrow;
         private readonly CancellationTokenSource cancellationTokenSource;
-        private TcpListener server;
+        private TcpListener proxySourceListener;
 
         public PortForwarder(int listenPort, int targetPort, Func<int, byte[], int, int, bool> shouldThrow)
         {
@@ -47,85 +48,70 @@ namespace Raven.Tests.Issues
 
         public void Stop()
         {
-            server.Stop();
+            proxySourceListener.Stop();
             cancellationTokenSource.Cancel();
         }
 
         public void Forward()
         {
             var localAddr = IPAddress.Parse("127.0.0.1");
-            server = new TcpListener(localAddr, listenPort);
-            server.Start();
+            proxySourceListener = new TcpListener(localAddr, listenPort);
+            proxySourceListener.Start();
 
-            Task.Run(() =>
+			var token = cancellationTokenSource.Token;
+			Task.Run(() =>
             {
-                var token = cancellationTokenSource.Token;
                 while (true)
                 {
-                    var tcpClient = server.AcceptTcpClient();
-                    Task.Run(() => HandleClient(tcpClient));
+					if(cancellationTokenSource.IsCancellationRequested)
+						cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                    var proxySourceClient = proxySourceListener.AcceptTcpClient();
+                    Task.Run(() => RunProxy(proxySourceClient));
+	                Thread.Sleep(1);
                 }
+// ReSharper disable once FunctionNeverReturns
             });
         }
 
-        private void HandleClient(TcpClient tcpClient)
+        private void RunProxy(TcpClient proxySourceClient)
         {
-            var incomingStream = tcpClient.GetStream();
+            var proxySourceStream = proxySourceClient.GetStream();
 
             // now connect to target
 
-            var targetClient = new TcpClient("127.0.0.1", targetPort);
-            var targetStream = targetClient.GetStream();
+            var proxyTargetClient = new TcpClient("127.0.0.1", targetPort);
+            var proxyTargetStream = proxyTargetClient.GetStream();
 
-            var readTask = Task.Run(async () =>
-            {
-                var buffer = new byte[4096];
-                var totalRead = 0;
-                var token = cancellationTokenSource.Token;
-                while (true)
-                {
-                    var read = await incomingStream.ReadAsync(buffer, 0, 4096, token);
-                    if (read == 0)
-                    {
-                        tcpClient.Close();
-                        break;
-                    }
-                    totalRead += read;
-                    if (shouldThrow(totalRead, buffer,0, read))
-                    {
-                        incomingStream.Close();
-                        targetStream.Close();
-                    }
-                    await targetStream.WriteAsync(buffer, 0, read, token);
-                    targetStream.Flush();
-                }
-            });
+			var transferDataFromSourceToTargetTask = StartDataTransfer(proxySourceClient, proxySourceStream, proxyTargetStream);
+            var transferResponseFromTargetToSourceTask = StartDataTransfer(proxyTargetClient,proxyTargetStream,proxySourceStream);
 
-            var writeTask = Task.Run(async () =>
-            {
-                var token = cancellationTokenSource.Token;
-                var buffer = new byte[4096];
-                var totalRead = 0;
-                while (true)
-                {
-                    var read = await targetStream.ReadAsync(buffer, 0, 4096, token);
-                    if (read == 0)
-                    {
-                        targetClient.Close();
-                    }
-                    totalRead += read;
-                    if (shouldThrow(totalRead, buffer, 0, read))
-                    {
-                        incomingStream.Close();
-                        targetStream.Close();
-                    }
-                    await incomingStream.WriteAsync(buffer, 0, read, token);
-                    incomingStream.Flush();
-                }
-            });
-
-            Task.WaitAll(readTask, writeTask);
+            Task.WaitAll(transferDataFromSourceToTargetTask, transferResponseFromTargetToSourceTask);
         }
+
+	    private async Task StartDataTransfer(TcpClient tcpClient, NetworkStream sourceStream, NetworkStream targetStream)
+	    {
+		    var buffer = new byte[4096];
+		    var totalRead = 0;
+		    var token = cancellationTokenSource.Token;
+		    while (true)
+		    {
+			    var read = await sourceStream.ReadAsync(buffer, 0, 4096, token);
+			    if (read == 0)
+			    {
+				    tcpClient.Close();
+					cancellationTokenSource.Cancel(true);
+				    break;
+			    }
+			    totalRead += read;
+			    if (shouldThrow(totalRead, buffer, 0, read))
+			    {
+				    sourceStream.Close();
+				    targetStream.Close();
+			    }
+			    await targetStream.WriteAsync(buffer, 0, read, token);
+			    targetStream.Flush();
+		    }
+	    }
     }
 
     public class RavenDB_1603 : RavenTest
