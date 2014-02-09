@@ -474,7 +474,7 @@ task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
 
 task UploadVnext3 -depends Vnext3, DoRelease, Upload, UploadNuget
 
-task UploadNuget -depends PushNugetPackages, PushSymbolSources
+task UploadNuget -depends InitNuget, PushNugetPackages, PushSymbolSources
 
 task Upload {
 	Write-Host "Starting upload"
@@ -521,6 +521,15 @@ task Upload {
 	}
 }
 
+task InitNuget {
+
+	$global:nugetVersion = "$version.$env:buildlabel"
+	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
+		$global:nugetVersion += "-Unstable"
+	}
+
+}
+
 task PushNugetPackages {
 	# Upload packages
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
@@ -536,7 +545,7 @@ task PushNugetPackages {
 		$accessKey = $accessKey.Trim()
 		
 		$nuget_dir = "$build_dir\NuGet"
-			
+
 		# Push to nuget repository
 		$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
 
@@ -558,7 +567,7 @@ task PushNugetPackages {
 	}
 }
 
-task CreateNugetPackages -depends Compile {
+task CreateNugetPackages -depends Compile, InitNuget {
 
 	Remove-Item $base_dir\RavenDB*.nupkg
 	
@@ -658,11 +667,6 @@ task CreateNugetPackages -depends Compile {
 	New-Item $nuget_dir\RavenDB.Tests.Helpers\content -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenTests $nuget_dir\RavenDB.Tests.Helpers\content\RavenTests -Recurse
 	
-	$global:nugetVersion = "$version.$env:buildlabel"
-	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
-		$global:nugetVersion += "-Unstable"
-	}
-	
 	# Sets the package version in all the nuspec as well as any RavenDB package dependency versions
 	$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
 	$packages |% { 
@@ -678,7 +682,7 @@ task CreateNugetPackages -depends Compile {
 	}
 }
 
-task PushSymbolSources -depends CreateNugetPackages {
+task PushSymbolSources -depends InitNuget {
 	
 	if ($global:uploadMode -ne "Stable") {
 		return; # this takes 20 minutes to run
