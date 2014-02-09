@@ -184,7 +184,7 @@ namespace Raven.Database
                 AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
 
                 Name = configuration.DatabaseName;
-                backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Current;
+                backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Default;
 
                 ExtensionsState = new AtomicDictionary<object>();
                 Configuration = configuration;
@@ -1060,7 +1060,7 @@ namespace Raven.Database
                                 task.Keys.Add(key);
                             }
                             if (deletedETag != null)
-                                prefetcher .AfterDelete(key, deletedETag);
+                                prefetcher.AfterDelete(key, deletedETag);
                             DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
                         }
 

@@ -1,5 +1,12 @@
 Include ".\build_utils.ps1"
 
+if($env:BUILD_NUMBER -ne $null) {
+	$env:buildlabel = $env:BUILD_NUMBER
+}
+else {
+	$env:buildlabel = "13"
+}
+
 properties {
 	$base_dir  = resolve-path .
 	$lib_dir = "$base_dir\SharedLibs"
@@ -66,7 +73,7 @@ properties {
 		$test_prjs = @("Raven.Tests.dll","Raven.Bundles.Tests.dll" )
 }
 
-task default -depends Stable,Release
+task default -depends Stable,Test, DoReleasePart1
 
 task Verify40 {
 	if( (ls "$env:windir\Microsoft.NET\Framework\v4.0*") -eq $null ) {
@@ -82,13 +89,6 @@ task Clean {
 
 task Init -depends Verify40, Clean {
 
-	if($env:BUILD_NUMBER -ne $null) {
-		$env:buildlabel  = $env:BUILD_NUMBER
-	}
-	if($env:buildlabel -eq $null) {
-		$env:buildlabel = "13"
-	}
-	
 	$commit = Get-Git-Commit
 	(Get-Content "$base_dir\CommonAssemblyInfo.cs") | 
 		Foreach-Object { $_ -replace ".13", ".$($env:buildlabel)" } |
@@ -229,10 +229,6 @@ task TestWinRT -depends Compile, CopyServer {
 	}
 }
 
-task ReleaseNoTests -depends Stable,DoRelease {
-
-}
-
 task Vnext3 {
 	$global:uploadCategory = "RavenDB-Unstable"
 	$global:uploadMode = "Vnext3"
@@ -251,8 +247,6 @@ task Stable {
 task RunTests -depends Test,TestSilverlight
 
 task RunAllTests -depends FullStorageTest,Test,TestSilverlight,StressTest
-
-task Release -depends RunTests,DoRelease
 
 task CopySamples {
 	Remove-Item "$build_dir\Output\Samples\" -recurse -force -ErrorAction SilentlyContinue 
@@ -452,11 +446,8 @@ task ZipOutput {
 	cd $old
 }
 
-task ResetBuildArtifcats {
-	git checkout "Raven.Database\RavenDB.snk"
-}
 
-task DoRelease -depends Compile, `
+task DoReleasePart1 -depends Compile, `
 	CleanOutputDirectory, `
 	CreateOutpuDirectories, `
 	CopyEmbeddedClient, `
@@ -469,17 +460,28 @@ task DoRelease -depends Compile, `
 	CopyServer, `
 	CopyRootFiles, `
 	CopySamples, `
-	ZipOutput, `
+	ZipOutput {	
+	
+	Write-Host "Done building RavenDB"
+}
+task DoRelease -depends DoReleasePart1, `
 	CopyInstaller, `
-	SignInstaller, `
-	CreateNugetPackages, `
-	PublishSymbolSources, `
-	ResetBuildArtifcats {	
+	SignInstaller,
+	CreateNugetPackages,
+	CreateSymbolSources {	
+	
 	Write-Host "Done building RavenDB"
 }
 
+task UploadStable -depends Stable, DoRelease, Upload, UploadNuget
 
-task Upload -depends DoRelease {
+task UploadUnstable -depends Unstable, DoRelease, Upload, UploadNuget
+
+task UploadVnext3 -depends Vnext3, DoRelease, Upload, UploadNuget
+
+task UploadNuget -depends InitNuget, PushNugetPackages, PushSymbolSources
+
+task Upload {
 	Write-Host "Starting upload"
 	if (Test-Path $uploader) {
 		$log = $env:push_msg 
@@ -501,7 +503,7 @@ task Upload -depends DoRelease {
 			write-host "Executing: $uploader ""$currentUploadCategory"" ""$env:buildlabel"" $file ""$log"""
 			
 			$uploadTryCount = 0
-			while ($uploadTryCount -lt 5){
+			while ($uploadTryCount -lt 5) {
 				$uploadTryCount += 1
 				Exec { &$uploader "$currentUploadCategory" "$env:buildlabel" $file "$log" }
 				
@@ -522,15 +524,55 @@ task Upload -depends DoRelease {
 	else {
 		Write-Host "could not find upload script $uploadScript, skipping upload"
 	}
-}	
+}
 
-task UploadStable -depends Stable, DoRelease, Upload	
+task InitNuget {
 
-task UploadUnstable -depends Unstable, DoRelease, Upload
+	$global:nugetVersion = "$version.$env:buildlabel"
+	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
+		$global:nugetVersion += "-Unstable"
+	}
 
-task UploadVnext3 -depends Vnext3, DoRelease, Upload
+}
 
-task CreateNugetPackages -depends Compile {
+task PushNugetPackages {
+	# Upload packages
+	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
+	$sourceFeed = "https://nuget.org/"
+	
+	if ($global:uploadMode -eq "Vnext3") {
+		$accessPath = "$base_dir\..\MyGet-Access-Key.txt"
+		$sourceFeed = "http://www.myget.org/F/ravendb3/api/v2/package"
+	}
+	
+	if ( (Test-Path $accessPath) ) {
+		$accessKey = Get-Content $accessPath
+		$accessKey = $accessKey.Trim()
+		
+		$nuget_dir = "$build_dir\NuGet"
+
+		# Push to nuget repository
+		$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
+
+		$packages | ForEach-Object {
+			$tries = 0
+			while ($tries -lt 10) {
+				try {
+					&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.nupkg" $accessKey -Source $sourceFeed -Timeout 4800
+					$tries = 100
+				} catch {
+					$tries++
+				}
+			}
+		}
+		
+	}
+	else {
+		Write-Host "$accessPath does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
+	}
+}
+
+task CreateNugetPackages -depends Compile, InitNuget {
 
 	Remove-Item $base_dir\RavenDB*.nupkg
 	
@@ -630,11 +672,6 @@ task CreateNugetPackages -depends Compile {
 	New-Item $nuget_dir\RavenDB.Tests.Helpers\content -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenTests $nuget_dir\RavenDB.Tests.Helpers\content\RavenTests -Recurse
 	
-	$global:nugetVersion = "$version.$env:buildlabel"
-	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
-		$global:nugetVersion += "-Unstable"
-	}
-	
 	# Sets the package version in all the nuspec as well as any RavenDB package dependency versions
 	$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
 	$packages |% { 
@@ -648,9 +685,14 @@ task CreateNugetPackages -depends Compile {
 		$nuspec.Save($_.FullName);
 		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName }
 	}
+}
+
+task PushSymbolSources -depends InitNuget {
 	
-	
-	
+	if ($global:uploadMode -ne "Stable") {
+		return; # this takes 20 minutes to run
+	}
+
 	# Upload packages
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
 	$sourceFeed = "https://nuget.org/"
@@ -664,20 +706,30 @@ task CreateNugetPackages -depends Compile {
 		$accessKey = Get-Content $accessPath
 		$accessKey = $accessKey.Trim()
 		
-		# Push to nuget repository
+		$nuget_dir = "$build_dir\NuGet"
+	
+		$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
+
 		$packages | ForEach-Object {
-			Exec { &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.nupkg" $accessKey -Source $sourceFeed }
+			try {
+				Write-Host "Publish symbol package $($_.BaseName).$global:nugetVersion.symbols.nupkg"
+				&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 4800
+			} catch {
+				Write-Host $error[0]
+				$LastExitCode = 0
+			}
 		}
 		
 	}
 	else {
 		Write-Host "$accessPath does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
 	}
+
 }
 
-task PublishSymbolSources -depends CreateNugetPackages {
+task CreateSymbolSources -depends CreateNugetPackages {
 	
-	if ($global:uploadMode -ne "Stable"){
+	if ($global:uploadMode -ne "Stable") {
 		return; # this takes 20 minutes to run
 	}
 
@@ -810,34 +862,6 @@ task PublishSymbolSources -depends CreateNugetPackages {
 		Remove-Item "$nuget_dir\$dirName\src\obj" -force -recurse -ErrorAction SilentlyContinue
 		
 		Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName -Symbols }
-	}
-	
-	# Upload packages
-	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
-	$sourceFeed = "https://nuget.org/"
-	
-	if ($global:uploadMode -eq "Vnext3") {
-		$accessPath = "$base_dir\..\MyGet-Access-Key.txt"
-		$sourceFeed = "http://www.myget.org/F/ravendb3/api/v2/package"
-	}
-	
-	if ( (Test-Path $accessPath) ) {
-		$accessKey = Get-Content $accessPath
-		$accessKey = $accessKey.Trim()
-		
-		$packages | ForEach-Object {
-			try {
-				Write-Host "Publish symbol package $($_.BaseName).$global:nugetVersion.symbols.nupkg"
-				&"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 4800
-			} catch {
-				Write-Host $error[0]
-				$LastExitCode = 0
-			}
-		}
-		
-	}
-	else {
-		Write-Host "$accessPath does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
 	}
 }
 
