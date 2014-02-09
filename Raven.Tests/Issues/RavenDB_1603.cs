@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
@@ -252,9 +253,10 @@ namespace Raven.Tests.Issues
         public async Task CanPerformDumpWithLimit_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (var store = NewRemoteDocumentStore())
+			List<User> generatedUsers;
+			using (var store = NewRemoteDocumentStore())
             {
-                InsertUsers(store, 0, 2000);
+	            InsertUsers(store, 0, 2000, out generatedUsers);
 
                 var options = new SmugglerOptions
                               {
@@ -282,7 +284,17 @@ namespace Raven.Tests.Issues
             {
                 using (var session = store.OpenSession())
                 {
-                    Assert.Equal(1500, session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
+	                var importedRecords = session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).ToList();
+	                if (importedRecords.Count > 1500)
+	                {
+		                var extraRecords = importedRecords.OrderBy(x => x.Id).Skip(1500);
+
+						Trace.WriteLine("Smuggler exported extra records - thus ignoring Limit parameter:");
+		                foreach (var record in extraRecords)
+			                Trace.WriteLine("Id " + record.Id);
+	                }
+
+	                Assert.Equal(1500, importedRecords.Count);
                 }
             });
             IOExtensions.DeleteDirectory(backupPath);
@@ -424,13 +436,35 @@ namespace Raven.Tests.Issues
                     for (var j = 0; j < 25; j++)
                     {
                         counter++;
-                        session.Store(new User { Name = "User #" + counter });
+	                    var user = new User { Name = "User #" + counter };
+	                    session.Store(user);
                     }
                     session.SaveChanges();
                 }
             }
             return counter;
         }
+
+		private static int InsertUsers(IDocumentStore store, int counter, int amount,out List<User> generatedUsers)
+		{
+			generatedUsers = new List<User>();
+			for (var i = 0; i < amount / 25; i++)
+			{
+				using (var session = store.OpenSession())
+				{
+					for (var j = 0; j < 25; j++)
+					{
+						counter++;
+						var user = new User { Name = "User #" + counter };
+						generatedUsers.Add(user);
+						session.Store(user);
+					}
+					session.SaveChanges();
+				}
+			}
+			return counter;
+		}
+
 
         [Fact]
         public async Task CanDumpWhenHiddenDocs_Dumper()
