@@ -73,7 +73,7 @@ properties {
 		$test_prjs = @("Raven.Tests.dll","Raven.Bundles.Tests.dll" )
 }
 
-task default -depends Stable,Release
+task default -depends Stable,Test, DoReleasePart1
 
 task Verify40 {
 	if( (ls "$env:windir\Microsoft.NET\Framework\v4.0*") -eq $null ) {
@@ -446,7 +446,8 @@ task ZipOutput {
 	cd $old
 }
 
-task DoRelease -depends Compile, `
+
+task DoReleasePart1 -depends Compile, `
 	CleanOutputDirectory, `
 	CreateOutpuDirectories, `
 	CopyEmbeddedClient, `
@@ -459,7 +460,11 @@ task DoRelease -depends Compile, `
 	CopyServer, `
 	CopyRootFiles, `
 	CopySamples, `
-	ZipOutput, `
+	ZipOutput {	
+	
+	Write-Host "Done building RavenDB"
+}
+task DoRelease -depends DoReleasePart1, `
 	CopyInstaller, `
 	SignInstaller,
 	CreateNugetPackages,
