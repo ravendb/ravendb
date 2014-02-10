@@ -48,7 +48,15 @@ namespace Voron.Debugging
                 Value = value;
             }
 
-            public string ToCsvLine()
+            public string ToCsvLine(bool recordOnlyValueLength)
+            {
+                if (recordOnlyValueLength)
+                    return ToCsvWithValueLengthOnly();
+
+                return ToCsv();
+            }
+
+            private string ToCsv()
             {
                 string entryValue = null;
 
@@ -70,7 +78,9 @@ namespace Voron.Debugging
                     entryValue = Encoding.UTF8.GetString(ms.ToArray());
 
                     if (ownsStream)
+                    {
                         ms.Dispose();
+                    }
                 }
                 else
                 {
@@ -96,7 +106,17 @@ namespace Voron.Debugging
                 return string.Format("{0},{1},{2},{3}", ActionType, TreeName, Key, entryValue);
             }
 
-            public static ActivityEntry FromCsvLine(string csvLine)
+            private string ToCsvWithValueLengthOnly()
+            {
+                long? length;
+                if (Value is Stream && Value != Stream.Null)
+                    length = ((Stream)Value).Length;
+                else return ToCsv();
+
+                return string.Format("{0},{1},{2},{3}", ActionType, TreeName, Key, length);
+            }
+
+            public static ActivityEntry FromCsvLine(string csvLine, bool recordOnlyValueLength)
             {
                 var columnArray = csvLine.Split(new[] { ',' }).ToList();
                 if (columnArray.Count != 4)
@@ -125,16 +145,27 @@ namespace Voron.Debugging
                         return activityEntry;
                     }
 
+                    var random = new Random();
+
                     var type = GenericUtil.ParseEnum<DebugActionType>(columnArray[0]);
                     object value;
                     switch (type)
                     {
                         case DebugActionType.MultiAdd:
                         case DebugActionType.MultiDelete:
-                            value = new Slice(Encoding.UTF8.GetBytes(columnArray[3]));
+                               value = new Slice(Encoding.UTF8.GetBytes(columnArray[3]));
                             break;
                         default:
-                            value = new MemoryStream(Encoding.UTF8.GetBytes(columnArray[3]));
+                            if (recordOnlyValueLength)
+                            {
+                                var length = long.Parse(columnArray[3]);
+                                var bytes = new byte[length];
+                                random.NextBytes(bytes);
+
+                                value = new MemoryStream(bytes);
+                            }
+                            else
+                                value = new MemoryStream(Encoding.UTF8.GetBytes(columnArray[3]));
                             break;
                     }
 
@@ -158,6 +189,8 @@ namespace Voron.Debugging
         private const string FileExtension = ".djrs";
 
         public bool IsRecording { get; set; }
+
+        public bool RecordOnlyValueLength { get; set; }
 
         public ConcurrentQueue<ActivityEntry> WriteQueue { get; private set; }
 
@@ -185,7 +218,7 @@ namespace Voron.Debugging
                 {
                     var csvLine = journalReader.ReadLine();
                     if (!string.IsNullOrWhiteSpace(csvLine))
-                        WriteQueue.Enqueue(ActivityEntry.FromCsvLine(csvLine));
+                        WriteQueue.Enqueue(ActivityEntry.FromCsvLine(csvLine, RecordOnlyValueLength));
                 }
             }
 
@@ -207,7 +240,7 @@ namespace Voron.Debugging
             {
                 var newAction = new ActivityEntry(actionType, key, treeName, value);
                 WriteQueue.Enqueue(newAction);
-                _journalWriter.WriteLine(newAction.ToCsvLine());
+                _journalWriter.WriteLine(newAction.ToCsvLine(RecordOnlyValueLength));
             }
         }
 
