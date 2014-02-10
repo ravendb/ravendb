@@ -4,9 +4,9 @@ interface computedAppUrls {
     patch: KnockoutComputed<string>;
     indexes: KnockoutComputed<string>;
     newIndex: KnockoutComputed<string>;
-    editIndex: (indexName: string) => KnockoutComputed<string>;
+    editIndex: (indexName?: string) => KnockoutComputed<string>;
     transformers: KnockoutComputed<string>;
-    query: KnockoutComputed<string>;
+    query: (indexName?: string) => KnockoutComputed<string>;
     dynamicQuery: KnockoutComputed<string>;
     reporting: KnockoutComputed<string>;
     tasks: KnockoutComputed<string>;

@@ -112,7 +112,8 @@ class editDocument extends viewModelBase {
     }
 
     deactivate() {
-        $(editDocument.editDocSelector).unbind('keydown.jwerty');
+        super.deactivate();
+        this.removeKeyboardShortcuts(editDocument.editDocSelector);
     }
 
     initializeDocEditor() {
@@ -126,23 +127,16 @@ class editDocument extends viewModelBase {
     }
 
     setupKeyboardShortcuts() {        
-        this.createKeyboardShortcut("alt+s", () => this.saveDocument());
-        this.createKeyboardShortcut("alt+r", () => this.refreshDocument());
-        this.createKeyboardShortcut("shift+d", () => this.isEditingMetadata(false));
-        this.createKeyboardShortcut("shift+m", () => this.isEditingMetadata(true));
-        this.createKeyboardShortcut("home", () => this.firstDocument());
-        this.createKeyboardShortcut("end", () => this.lastDocument());
-        this.createKeyboardShortcut("alt+←", () => this.previousDocumentOrLast());
-        this.createKeyboardShortcut("alt+→", () => this.nextDocumentOrFirst());
-        this.createKeyboardShortcut("alt+[", () => this.formatDocument());
-        this.createKeyboardShortcut("delete", () => this.deleteDocument());
-    }
-
-    private createKeyboardShortcut(keys: string, handler: () => void) {
-        jwerty.key(keys, e => {
-            e.preventDefault();
-            handler();
-        }, this, editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+s", () => this.saveDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+r", () => this.refreshDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("shift+d", () => this.isEditingMetadata(false), editDocument.editDocSelector);
+        this.createKeyboardShortcut("shift+m", () => this.isEditingMetadata(true), editDocument.editDocSelector);
+        this.createKeyboardShortcut("home", () => this.firstDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("end", () => this.lastDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+←", () => this.previousDocumentOrLast(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+→", () => this.nextDocumentOrFirst(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+[", () => this.formatDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("delete", () => this.deleteDocument(), editDocument.editDocSelector);
     }
 
     editNewDocument() {

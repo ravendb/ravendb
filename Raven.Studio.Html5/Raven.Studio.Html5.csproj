@@ -119,10 +119,12 @@
     <TypeScriptCompile Include="App\viewmodels\editDocument.ts" />
     <TypeScriptCompile Include="App\viewmodels\editIndex.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexErrors.ts" />
+    <TypeScriptCompile Include="App\viewmodels\indexesShell.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexes.ts" />
-    <TypeScriptCompile Include="App\viewmodels\indexesAll.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexTerms.ts" />
     <TypeScriptCompile Include="App\viewmodels\logs.ts" />
+    <TypeScriptCompile Include="App\viewmodels\query.ts" />
+    <TypeScriptCompile Include="App\viewmodels\queryShell.ts" />
     <TypeScriptCompile Include="App\viewmodels\replicationStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
@@ -143,10 +145,11 @@
     <Content Include="App\views\dialog.html" />
     <Content Include="App\views\editIndex.html" />
     <Content Include="App\views\indexErrors.html" />
-    <Content Include="App\views\indexes.html" />
+    <Content Include="App\views\indexesShell.html" />
     <Content Include="App\views\indexTerms.html" />
     <Content Include="App\views\logs.html" />
     <Content Include="App\views\periodicBackup.html" />
+    <Content Include="App\views\query.html" />
     <Content Include="App\views\replicationStats.html" />
     <Content Include="App\views\settings.html" />
     <Content Include="App\views\userInfo.html" />
@@ -1040,7 +1043,6 @@
     <TypeScriptCompile Include="App\models\collection.ts" />
     <TypeScriptCompile Include="App\models\collectionInfo.ts" />
     <TypeScriptCompile Include="App\models\database.ts" />
-    <TypeScriptCompile Include="App\viewmodels\query.ts" />
     <TypeScriptCompile Include="App\viewmodels\settings.ts" />
     <TypeScriptCompile Include="App\viewmodels\status.ts" />
     <TypeScriptCompile Include="App\viewmodels\tasks.ts" />
@@ -1053,8 +1055,8 @@
     <Content Include="App\views\deleteDocuments.html" />
     <Content Include="App\views\documents.html" />
     <Content Include="App\views\editDocument.html" />
-    <Content Include="App\views\indexesAll.html" />
-    <Content Include="App\views\query.html" />
+    <Content Include="App\views\indexes.html" />
+    <Content Include="App\views\queryShell.html" />
     <Content Include="App\views\statistics.html" />
     <Content Include="App\views\status.html" />
     <Content Include="App\views\tasks.html" />

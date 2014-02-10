@@ -47,6 +47,9 @@ body {
 .navbar-splitbutton > a {
   padding-right: 5px !important;
 }
+.navbar-splitbutton + .dropdown {
+  cursor: pointer;
+}
 .navbar-splitbutton + .dropdown > a {
   padding-left: 6px;
   padding-right: 8px;
@@ -187,6 +190,12 @@ body {
 #editIndex .map {
   height: 120px;
 }
+#queryContainer .editor {
+  height: 120px;
+}
+#queryContainer .popover {
+  max-width: 500px;
+}
 .ko-grid {
   position: absolute;
   right: 0;
@@ -242,6 +251,9 @@ body {
 }
 .code-keyword {
   color: blue;
+}
+.help-cursor {
+  cursor: help;
 }
 .breadcrumb {
   padding: 0 10px 0 10px;
@@ -355,3 +367,4 @@ footer ul {
     margin-bottom: 0;
   }
 }
+/*# sourceMappingURL=app.css.map */

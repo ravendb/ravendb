@@ -1,4 +1,4 @@
-define(["require", "exports", "models/database", "common/pagedList", "plugins/router"], function(require, exports, database, pagedList, router) {
+define(["require", "exports", "models/database", "plugins/router"], function(require, exports, database, router) {
     // Helper class with static methods for generating app URLs.
     var appUrl = (function () {
         function appUrl() {
@@ -109,7 +109,7 @@ define(["require", "exports", "models/database", "common/pagedList", "plugins/ro
 
         appUrl.forEditIndex = function (indexName, db) {
             var databasePart = appUrl.getEncodedDbPart(db);
-            return "#indexes/edit/" + indexName + "?" + databasePart;
+            return "#indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
         };
 
         appUrl.forTransformers = function (db) {
@@ -253,9 +253,11 @@ define(["require", "exports", "models/database", "common/pagedList", "plugins/ro
                     return appUrl.forEditIndex(indexName, appUrl.currentDatabase());
                 });
             },
-            query: ko.computed(function () {
-                return appUrl.forQuery(appUrl.currentDatabase());
-            }),
+            query: function (indexName) {
+                return ko.computed(function () {
+                    return appUrl.forQuery(appUrl.currentDatabase(), indexName);
+                });
+            },
             dynamicQuery: ko.computed(function () {
                 return appUrl.forDynamicQuery(appUrl.currentDatabase());
             }),

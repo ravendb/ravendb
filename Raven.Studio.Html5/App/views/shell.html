@@ -37,7 +37,7 @@
                 </li>
 
                 <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Query') }">
-                    <a data-bind="attr: { href: appUrls.query }">Query</a>
+                    <a data-bind="attr: { href: appUrls.query(null) }">Query</a>
                 </li>
                 <li class="dropdown" data-bind="css: { active: appUrls.isActive('Query') }">
                     <a class="dropdown-toggle caret-after" data-toggle="dropdown">
@@ -96,7 +96,7 @@
             </form>
             <ul class="nav navbar-nav pull-right">
                 <li>
-                    <a style="padding-right: 0; display: inline-block;" href="#">Databases &gt;</a>
+                    <a style="padding-right: 0; display: inline-block;" href="#">Databases &nbsp;<i class="fa fa-caret-right"></i>&nbsp;</a>
                 </li>
                 <li class="dropdown">
                     <a class="dropdown-toggle" data-bind="with: activeDatabase" data-toggle="dropdown" href="#" style="padding-left: 5px;">

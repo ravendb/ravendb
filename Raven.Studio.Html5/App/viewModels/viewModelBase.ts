@@ -25,6 +25,17 @@ class viewModelBase {
             container: 'body'
         });
     }
+
+    createKeyboardShortcut(keys: string, handler: () => void, elementSelector: string) {
+        jwerty.key(keys, e => {
+            e.preventDefault();
+            handler();
+        }, this, elementSelector);
+    }
+
+    removeKeyboardShortcuts(elementSelector: string) {
+        $(elementSelector).unbind('keydown.jwerty');
+    }
 }
 
 export = viewModelBase;

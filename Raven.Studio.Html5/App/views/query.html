@@ -1,3 +1,93 @@
-﻿<h2 data-bind="html: displayName"></h2>
+﻿<div id="queryContainer">
+    <ul class="breadcrumb">
+        <li>
+            <h3>
+                <a href="#databases">
+                    Databases
+                </a>
+            </h3>
+        </li>
+        <li data-bind="with: activeDatabase">
+            <a data-bind="text: name"></a>
+        </li>
+        <li>
+            <a>Indexes</a>
+        </li>
+        <li>
+            <div class="btn-group">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    <span data-bind="text: selectedIndex"></span>
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" role="menu" data-bind="foreach: indexNames">
+                    <li data-bind="click: $root.selectedIndex.bind($data)"><a href="#" data-bind="text: $data"></a></li>
+                </ul>
+            </div>
+        </li>
+        <li class="active">
+            <a>Query</a>
+        </li>
+    </ul>
 
-queries
+    <div class="btn-toolbar" role="toolbar">
+        <div class="btn-group">
+            <button class="btn btn-primary use-bootstrap-tooltip" title="Run the query (Alt+R)" accesskey="R" data-bind="enable: hasSelectedIndex"><i class="fa fa-play"></i></button>
+            <div class="btn-group">
+                <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-toggle="dropdown" title="Add a transformer or sorting option to the query (Alt+A)" accesskey="A" data-bind="enable: hasSelectedIndex">
+                    <i class="fa fa-plus"></i> Add <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a href="#">Sort By</a></li>
+                    <li><a href="#">Transformer</a></li>
+                </ul>
+            </div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-toggle="dropdown" title="Configure advanced query options (Alt+C)" accesskey="C" data-bind="enable: hasSelectedIndex">
+                    <i class="fa fa-cog"></i> <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a href="#">TODO: Default operator</a></li>
+                    <li><a href="#">Show Fields</a></li>
+                    <li><a href="#">Index Entries</a></li>
+                </ul>
+            </div>
+            <a class="btn btn-default use-bootstrap-tooltip" data-bind="attr: { href: editIndexUrl }, enable: hasSelectedIndex" title="Edit the index (F2)"><i class="fa fa-pencil"></i></a>
+        </div>
+        <div class="btn-group">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                Recent Queries <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" role="menu">
+                <li><a href="#">Sort By</a></li>
+                <li><a href="#">Transformer</a></li>
+            </ul>
+        </div>
+
+        <div class="btn-group">
+            <a class="btn btn-default use-bootstrap-tooltip" data-bind="attr: { href: termsUrl }, enable: hasSelectedIndex" title="Navigate to index terms">Terms</a>
+            <a class="btn btn-default use-bootstrap-tooltip" data-bind="attr: { href: statsUrl }, enable: hasSelectedIndex" title="Navigate to index stats">Stats</a>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-danger use-bootstrap-tooltip" title="Delete all documents matching the query" data-bind="enable: hasSelectedIndex"><i class="fa fa-trash-o"></i></button>
+        </div>
+    </div>
+    <br />
+
+    <form class="form-horizontal" role="form">
+        <div class="form-group">
+            <label id="indexQueryLabel" class="col-sm-1 control-label help-cursor" data-placement="auto right" data-original-title="Index Query" data-trigger="hover">
+                Query
+                <i class="fa fa-info-circle text-info"></i>
+                <a target="_blank" title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><i class="fa fa-question-circle text-muted"></i></a>
+            </label>
+            <div class="col-md-11">
+                <div class="row">
+                    <div class="col-md-11">
+                        <pre class="form-control editor" data-bind="aceEditor: { code: queryText }"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

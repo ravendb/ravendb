@@ -28,6 +28,7 @@ class index {
     isAbandoned = ko.observable(false);
     isDisabled = ko.observable(false);
     editUrl: KnockoutComputed<string>;
+    queryUrl: KnockoutComputed<string>;
 
     static priorityNormal = "Normal";
     static priorityIdle = "Idle";
@@ -64,6 +65,7 @@ class index {
         this.isDisabled(this.priority && this.priority.indexOf(index.priorityDisabled) !== -1);
         this.isIdle(this.priority && this.priority.indexOf(index.priorityIdle) !== -1);
         this.editUrl = appUrl.forCurrentDatabase().editIndex(encodeURIComponent(this.name));
+        this.queryUrl = appUrl.forCurrentDatabase().query(this.name);
     }
 
     static priorityFromString(priority: string): indexPriority {

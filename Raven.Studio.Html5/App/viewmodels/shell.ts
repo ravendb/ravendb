@@ -43,12 +43,12 @@ class shell {
 	}
 
     activate() {
-        NProgress.set(.8);
+        NProgress.set(.7);
         router.map([
 			{ route: ['', 'databases'],	    title: 'Databases',		moduleId: 'viewmodels/databases',		nav: false },
             { route: 'documents',           title: 'Documents',     moduleId: 'viewmodels/documents',       nav: true,  hash: this.appUrls.documents },
-		    { route: 'indexes*details',     title: 'Indexes',       moduleId: 'viewmodels/indexes',         nav: true,  hash: this.appUrls.indexes },	
-            { route: 'query(/:indexName)',	title: 'Query',			moduleId: 'viewmodels/query',			nav: true,  hash: this.appUrls.query },
+		    { route: 'indexes*details',     title: 'Indexes',       moduleId: 'viewmodels/indexesShell',    nav: true,  hash: this.appUrls.indexes },	
+            { route: 'query(/:indexName)',	title: 'Query',			moduleId: 'viewmodels/queryShell',		nav: true,  hash: this.appUrls.query(null) },
 			{ route: 'tasks',			    title: 'Tasks',			moduleId: 'viewmodels/tasks',			nav: true,  hash: this.appUrls.tasks, },
 			{ route: 'settings*details',    title: 'Settings',		moduleId: 'viewmodels/settings',		nav: true,  hash: this.appUrls.settings },
             { route: 'status*details',	    title: 'Status',		moduleId: 'viewmodels/status',			nav: true,	hash: this.appUrls.status },
@@ -73,7 +73,10 @@ class shell {
     showNavigationProgress(isNavigating: boolean) {
         if (isNavigating) {
             NProgress.start();
-            NProgress.set(.5);
+
+            var currentProgress = parseFloat(NProgress.status);
+            var newProgress = isNaN(currentProgress) ? 0.5 : currentProgress + (currentProgress / 2);
+            NProgress.set(newProgress);
         } else {
             NProgress.done();
         }

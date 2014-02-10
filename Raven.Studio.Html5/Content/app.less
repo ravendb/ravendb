@@ -37,11 +37,11 @@ html, body {
 .loader {
     margin: 6px 8px 4px 8px;
     visibility: hidden;
-}
 
-    .loader.active {
+    &.active {
         visibility: visible;
     }
+}
 
 @media (max-width: 979px) {
     .page-host {
@@ -65,6 +65,7 @@ html, body {
     }
 
     + .dropdown {
+        cursor: pointer;
 
         > a {
             padding-left: 6px;
@@ -247,6 +248,16 @@ html, body {
     }
 }
 
+#queryContainer {
+    .editor {
+        height: 120px;
+    }
+
+    .popover {
+        max-width: 500px;
+    }
+}
+
 .ko-grid {
     position: absolute;
     right: 0;
@@ -314,6 +325,10 @@ html, body {
 
 .code-keyword {
     color: blue;
+}
+
+.help-cursor {
+    cursor: help;
 }
 
 .breadcrumb {

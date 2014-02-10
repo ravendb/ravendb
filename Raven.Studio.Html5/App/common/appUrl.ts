@@ -16,8 +16,8 @@ class appUrl {
         indexes: ko.computed(() => appUrl.forIndexes(appUrl.currentDatabase())),
         transformers: ko.computed(() => appUrl.forTransformers(appUrl.currentDatabase())),
         newIndex: ko.computed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
-        editIndex: (indexName: string) => ko.computed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
-        query: ko.computed(() => appUrl.forQuery(appUrl.currentDatabase())),
+        editIndex: (indexName?: string) => ko.computed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
+        query: (indexName?: string) => ko.computed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         dynamicQuery: ko.computed(() => appUrl.forDynamicQuery(appUrl.currentDatabase())),
         reporting: ko.computed(() => appUrl.forReporting(appUrl.currentDatabase())),
         tasks: ko.computed(() => appUrl.forTasks(appUrl.currentDatabase())),
@@ -130,7 +130,7 @@ class appUrl {
 
     static forEditIndex(indexName: string, db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#indexes/edit/" + indexName + "?" + databasePart;
+        return "#indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
     }
 
     static forTransformers(db: database): string {

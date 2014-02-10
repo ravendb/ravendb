@@ -10,7 +10,7 @@ import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand
 import appUrl = require("common/appUrl");
 import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import dialog = require("plugins/dialog");
-import acedEditorBindingHandler = require("common/aceEditorBindingHandler");
+import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class editIndex extends viewModelBase { 
 
@@ -29,7 +29,7 @@ class editIndex extends viewModelBase {
     constructor() {
         super();
 
-        acedEditorBindingHandler.install();
+        aceEditorBindingHandler.install();
 
         this.priorityFriendlyName = ko.computed(() => this.getPriorityFriendlyName());
         this.priorityLabel = ko.computed(() => this.priorityFriendlyName() ? "Priority: " + this.priorityFriendlyName() : "Priority");

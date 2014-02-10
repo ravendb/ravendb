@@ -1,33 +1,147 @@
-import durandalRouter = require("plugins/router");
-import database = require("models/database");
+﻿import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
+import index = require("models/index");
 import appUrl = require("common/appUrl");
+import saveIndexLockModeCommand = require("commands/saveIndexLockModeCommand");
+import saveIndexAsPersistentCommand = require("commands/saveIndexAsPersistentCommand");
+import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
+import app = require("durandal/app");
 
 class indexes extends viewModelBase {
-    router: DurandalRootRouter;
-    currentBreadcrumbTitle: KnockoutComputed<string>;
-    indexesUrl = appUrl.forCurrentDatabase().indexes;
 
-    constructor() {
-        super();
+    indexGroups = ko.observableArray<{ entityName: string; indexes: KnockoutObservableArray<index> }>();
+    dynamicQueryUrl: KnockoutComputed<string>;
+    newIndexUrl = appUrl.forCurrentDatabase().newIndex;
+    containerSelector = "#indexesContainer";
+    
+    activate(args) {
+        super.activate(args);
 
-        this.router = durandalRouter.createChildRouter()
-            .map([
-                { route: 'indexes', moduleId: 'viewmodels/indexesAll', title: 'Indexes', nav: true },
-                { route: 'indexes/edit(/:indexName)', moduleId: 'viewmodels/editIndex', title: 'Edit Index', nav: true },
-                { route: 'indexes/terms/(:indexName)', moduleId: 'viewmodels/indexTerms', title: 'Terms', nav: true }
-            ])
-            .buildNavigationModel();
+        this.fetchIndexes();
+        this.activeDatabase.subscribe(() => this.onDatabaseChanged());
+        this.dynamicQueryUrl = appUrl.forCurrentDatabase().dynamicQuery;
+    }
 
-        this.currentBreadcrumbTitle = ko.computed(() => {
-            // Is there a better way to get the active route?
-            var activeRoute = this.router.navigationModel().first(r => r.isActive());
-            if (activeRoute && activeRoute.title === "Indexes") {
-                return "All";
-            }
+    attached() {
+        this.useBootstrapTooltips();
 
-            return activeRoute != null ? activeRoute.title : "";
+        // Alt+Minus and Alt+Plus are already setup. Since laptops don't have a dedicated key for plus, we'll also use the equal sign key (co-opted for plus).
+        this.createKeyboardShortcut("Alt+=", () => this.expandAll(), this.containerSelector);
+    }
+
+    deactivate() {
+        this.removeKeyboardShortcuts(this.containerSelector);
+    }
+
+    fetchIndexes() {
+        new getDatabaseStatsCommand(this.activeDatabase())
+            .execute()
+            .done((stats: databaseStatisticsDto) => this.processDbStats(stats));
+    }
+
+    onDatabaseChanged() {
+        this.indexGroups([]);
+        this.fetchIndexes();
+    }
+
+    processDbStats(stats: databaseStatisticsDto) {
+        stats.Indexes
+            .map(i => new index(i))
+            .forEach(i => this.putIndexIntoGroups(i));
+    }
+
+    putIndexIntoGroups(i: index) {
+        if (i.forEntityName.length === 0) {
+            this.putIndexIntoGroupNamed(i, "Other");
+        } else {
+            i.forEntityName.forEach(e => this.putIndexIntoGroupNamed(i, e));
+        }
+    }
+
+    putIndexIntoGroupNamed(i: index, groupName: string) {
+        var group = this.indexGroups.first(g => g.entityName === groupName);
+        if (group) {
+            group.indexes.push(i);
+        } else {
+            this.indexGroups.push({ entityName: groupName, indexes: ko.observableArray([i]) });
+        }
+    }
+
+    collapseAll() {
+        $(".index-group-content").collapse('hide');
+    }
+
+    expandAll() {
+        $(".index-group-content").collapse('show');
+    }
+
+    deleteIdleIndexes() {
+        var idleIndexes = this.getAllIndexes().filter(i => i.priority && i.priority.indexOf("Idle") !== -1);
+        this.promptDeleteIndexes(idleIndexes);
+    }
+
+    deleteDisabledIndexes() {
+        var abandonedIndexes = this.getAllIndexes().filter(i => i.priority && i.priority.indexOf("Disabled") !== -1);
+        this.promptDeleteIndexes(abandonedIndexes);
+    }
+
+    deleteAbandonedIndexes() {
+        var abandonedIndexes = this.getAllIndexes().filter(i => i.priority && i.priority.indexOf("Abandoned") !== -1);
+        this.promptDeleteIndexes(abandonedIndexes);
+    }
+
+    deleteAllIndexes() {
+        this.promptDeleteIndexes(this.getAllIndexes());
+    }
+
+    promptDeleteIndexes(indexes: index[]) {
+        if (indexes.length > 0) {
+            var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
+            app.showDialog(deleteIndexesVm);
+            deleteIndexesVm.deleteTask.done(() => this.removeIndexesFromAllGroups(indexes));
+        }
+    }
+
+    removeIndexesFromAllGroups(indexes: index[]) {
+        this.indexGroups().forEach(g => {
+            g.indexes.removeAll(indexes);
         });
+    }
+
+    unlockIndex(i: index) {
+        this.updateIndexLockMode(i, "Unlock");
+    }
+
+    lockIndex(i: index) { 
+        this.updateIndexLockMode(i, "LockedIgnore");
+    }
+
+    lockErrorIndex(i: index) {
+        this.updateIndexLockMode(i, "LockedError");
+    }
+
+    updateIndexLockMode(i: index, newLockMode: string) {
+        // The old Studio would prompt if you were sure.
+        // However, changing the lock status is easily reversible, so we're skipping the prompt.
+
+        var originalLockMode = i.lockMode();
+        if (originalLockMode !== newLockMode) {
+            i.lockMode(newLockMode);
+
+            new saveIndexLockModeCommand(i, newLockMode, this.activeDatabase())
+                .execute()
+                .fail(() => i.lockMode(originalLockMode));
+        }
+    }
+
+    getAllIndexes(): index[]{
+        var all: index[] = [];
+        this.indexGroups().forEach(g => all.pushAll(g.indexes()));
+        return all.distinct();
+    }
+
+    makeIndexPersistent(index: index) {
+        new saveIndexAsPersistentCommand(index, this.activeDatabase()).execute();
     }
 }
 
