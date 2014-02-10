@@ -31,10 +31,39 @@ namespace Voron.Impl.Journal
 
         public class PagePosition
         {
+            protected bool Equals(PagePosition other)
+            {
+                return ScratchPos == other.ScratchPos && JournalPos == other.JournalPos && TransactionId == other.TransactionId && JournalNumber == other.JournalNumber;
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hashCode = ScratchPos.GetHashCode();
+                    hashCode = (hashCode * 397) ^ JournalPos.GetHashCode();
+                    hashCode = (hashCode * 397) ^ TransactionId.GetHashCode();
+                    hashCode = (hashCode * 397) ^ JournalNumber.GetHashCode();
+                    return hashCode;
+                }
+            }
+
             public long ScratchPos;
             public long JournalPos;
             public long TransactionId;
 	        public long JournalNumber;
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj))
+                    return false;
+                if (ReferenceEquals(this, obj))
+                    return true;
+                if (obj.GetType() != GetType())
+                    return false;
+
+                return Equals((PagePosition)obj);
+            }
         }
 
         public JournalFile(IJournalWriter journalWriter, long journalNumber)
@@ -144,7 +173,7 @@ namespace Voron.Impl.Journal
             var txPages = tx.GetTransactionPages();
 
             var ptt = new Dictionary<long, PagePosition>();
-            var unused = new List<PagePosition>();
+            var unused = new HashSet<PagePosition>();
             var writePagePos = _writePage;
 
             UpdatePageTranslationTable(tx, txPages, unused, ptt);
@@ -159,7 +188,7 @@ namespace Voron.Impl.Journal
             _journalWriter.WriteGather(writePagePos * AbstractPager.PageSize, pages);
         }
 
-	    private unsafe void UpdatePageTranslationTable(Transaction tx, List<PageFromScratchBuffer> txPages, List<PagePosition> unused, Dictionary<long, PagePosition> ptt)
+	    private unsafe void UpdatePageTranslationTable(Transaction tx, List<PageFromScratchBuffer> txPages, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
 	    {
 		    for (int index = 1; index < txPages.Count; index++)
 		    {
@@ -168,9 +197,10 @@ namespace Voron.Impl.Journal
 			    var pageNumber = ((PageHeader*)scratchPage.Base)->PageNumber;
 			    PagePosition value;
 			    if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
-			    {
 				    unused.Add(value);
-			    }
+
+                if (ptt.ContainsKey(pageNumber))
+                    unused.Add(ptt[pageNumber]);
 
 			    ptt[pageNumber] = new PagePosition
 			    {
@@ -181,7 +211,6 @@ namespace Voron.Impl.Journal
 			    };
 		    }
 	    }
-
 
         public void InitFrom(JournalReader journalReader)
         {
