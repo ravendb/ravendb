@@ -11,9 +11,10 @@ namespace Raven.Tryouts
 		{
 			CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("pl-PL");
 			CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("pl-PL");
-			for (int i = 0; i < 10000; i++)
+			for (int i = 0; i < 1000; i++)
 			{
 				Console.WriteLine(i);
+
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
 				using (var x = new Embedded())
 				{

@@ -102,6 +102,11 @@ namespace Raven.Abstractions.Smuggler
 			if(options.Incremental)
 				throw new NotSupportedException("Incremental exports are not supported in SL.");
 #endif
+			SmugglerExportException lastException = null;
+
+			bool ownedStream = exportOptions.ToStream == null;
+			var stream = exportOptions.ToStream ?? File.Create(result.FilePath);
+
 			try
 			{
 				await DetectServerSupportedFeatures();
@@ -110,12 +115,13 @@ namespace Raven.Abstractions.Smuggler
 			{				
 				ShowProgress("Failed to query server for supported features. Reason : " + e.Message);
 				SetLegacyMode(); //could not detect supported features, then run in legacy mode
+//				lastException = new SmugglerExportException
+//				{
+//					LastEtag = Etag.Empty,
+//					File = ownedStream ? result.FilePath : null
+//				};
 			}
 
-			SmugglerExportException lastException = null;
-
-			bool ownedStream = exportOptions.ToStream == null;
-			var stream = exportOptions.ToStream ?? File.Create(result.FilePath);
 			try
 			{
 				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,
