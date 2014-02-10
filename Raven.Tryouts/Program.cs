@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Raven.Tests.Faceted;
-using Raven.Tests.Issues;
-using System.Threading;
-using Raven.Tests.Notifications;
-using Raven.Tests.Suggestions;
+using Raven.Tests.Bugs.DTC;
 
 namespace Raven.Tryouts
 {
@@ -19,9 +15,9 @@ namespace Raven.Tryouts
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new WithIIS())
+				using (var x = new Embedded())
 				{
-					x.CheckNotificationInIIS();
+					x.AllowNonAuthoritativeInformationAlwaysWorks();
 				}
 			}
 			
