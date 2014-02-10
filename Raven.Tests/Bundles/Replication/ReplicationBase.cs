@@ -8,8 +8,11 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -192,6 +195,16 @@ namespace Raven.Tests.Bundles.Replication
 
         }
 
+        protected void SetupReplication(IDatabaseCommands source, params DocumentStore[] destinations)
+        {
+            Assert.NotEmpty(destinations);
+            SetupReplication(source, destinations.Select(destination => new RavenJObject
+                                                                        {
+                                                                            { "Url", destination.Url },
+                                                                            { "Database", destination.DefaultDatabase }
+                                                                        }));
+        }
+
         protected void SetupReplication(IDatabaseCommands source, params string[] urls)
         {
             Assert.NotEmpty(urls);
@@ -355,6 +368,28 @@ namespace Raven.Tests.Bundles.Replication
                 };
                 return true;
             }
+        }
+
+        protected async Task PauseReplicationAsync(int serverIndex, string databaseName, bool waitToStop = true)
+        {
+            var database = await servers[serverIndex].Server.GetDatabaseInternal(databaseName);
+            var replicationTask = database.StartupTasks.OfType<ReplicationTask>().First();
+
+            replicationTask.Pause();
+
+            if (waitToStop)
+                SpinWait.SpinUntil(() => replicationTask.IsRunning == false, TimeSpan.FromSeconds(10));
+        }
+
+        protected async Task ContinueReplicationAsync(int serverIndex, string databaseName, bool waitToStart = true)
+        {
+            var database = await servers[serverIndex].Server.GetDatabaseInternal(databaseName);
+            var replicationTask = database.StartupTasks.OfType<ReplicationTask>().First();
+
+            replicationTask.Continue();
+
+            if (waitToStart)
+                SpinWait.SpinUntil(() => replicationTask.IsRunning, TimeSpan.FromSeconds(10));
         }
     }
 }

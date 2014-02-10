@@ -20,10 +20,14 @@ namespace Raven.Tests.Bundles.Replication
 				session.SaveChanges();
 			}
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
+            SetupReplication(store1.DatabaseCommands, store2, store3);
 
 			WaitForDocument(store2.DatabaseCommands, "companies/1");
 			WaitForDocument(store3.DatabaseCommands, "companies/1");
+
+            PauseReplicationAsync(0, store1.DefaultDatabase).Wait();
+            PauseReplicationAsync(1, store2.DefaultDatabase).Wait();
+            PauseReplicationAsync(2, store3.DefaultDatabase).Wait();
 
 			using(var store = new DocumentStore
 			{
@@ -31,7 +35,8 @@ namespace Raven.Tests.Bundles.Replication
 				Conventions =
 					{
 						FailoverBehavior = FailoverBehavior.ReadFromAllServers
-					}
+					},
+                    DefaultDatabase = store1.DefaultDatabase
 			})
 			{
 				store.Initialize();
@@ -72,10 +77,14 @@ namespace Raven.Tests.Bundles.Replication
 				session.SaveChanges();
 			}
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
+            SetupReplication(store1.DatabaseCommands, store2, store3);
 
 			WaitForDocument(store2.DatabaseCommands, "companies/1");
 			WaitForDocument(store3.DatabaseCommands, "companies/1");
+
+            PauseReplicationAsync(0, store1.DefaultDatabase).Wait();
+            PauseReplicationAsync(1, store2.DefaultDatabase).Wait();
+            PauseReplicationAsync(2, store3.DefaultDatabase).Wait();
 
 			using (var store = new DocumentStore
 			{
@@ -83,7 +92,8 @@ namespace Raven.Tests.Bundles.Replication
 				Conventions =
 				{
 					FailoverBehavior = FailoverBehavior.ReadFromAllServers
-				}
+				},
+                DefaultDatabase = store1.DefaultDatabase
 			})
 			{
 				store.Initialize();

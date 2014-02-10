@@ -45,6 +45,10 @@ namespace Raven.Bundles.Replication.Tasks
 			public int Value;
 		}
 
+        public bool IsRunning { get; private set; }
+
+        private bool shouldPause;
+
 		public const int SystemDocsLimitForRemoteEtagUpdate = 15;
 		public const int DestinationDocsLimitForRemoteEtagUpdate = 15;
 
@@ -97,6 +101,16 @@ namespace Raven.Bundles.Replication.Tasks
 
 		}
 
+        public void Pause()
+        {
+            shouldPause = true;
+        }
+
+        public void Continue()
+        {
+            shouldPause = false;
+        }
+
 		private void Execute()
 		{
 			using (LogContext.WithDatabase(docDb.Name))
@@ -109,95 +123,101 @@ namespace Raven.Bundles.Replication.Tasks
 				NotifySiblings();
 				while (context.DoWork)
 				{
-					try
-					{
-						using (docDb.DisableAllTriggersForCurrentThread())
-						{
-							var destinations = GetReplicationDestinations();
+				    IsRunning = !shouldPause;
 
-							if (destinations.Length == 0)
-							{
-								WarnIfNoReplicationTargetsWereFound();
-							}
-							else
-							{
-								var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
+				    if (IsRunning)
+				    {
+				        try
+				        {
+				            using (docDb.DisableAllTriggersForCurrentThread())
+				            {
+				                var destinations = GetReplicationDestinations();
 
-								var copyOfrunningBecauseOfDataModifications = runningBecauseOfDataModifications;
-								var destinationForReplication = destinations
-									.Where(dest =>
-									{
-										if (copyOfrunningBecauseOfDataModifications == false)
-											return true;
-										return IsNotFailing(dest, currentReplicationAttempts);
-									});
+				                if (destinations.Length == 0)
+				                {
+				                    WarnIfNoReplicationTargetsWereFound();
+				                }
+				                else
+				                {
+				                    var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
 
-								var startedTasks = new List<Task>();
+				                    var copyOfrunningBecauseOfDataModifications = runningBecauseOfDataModifications;
+				                    var destinationForReplication = destinations.Where(
+				                        dest =>
+				                        {
+				                            if (copyOfrunningBecauseOfDataModifications == false) return true;
+				                            return IsNotFailing(dest, currentReplicationAttempts);
+				                        });
 
-								foreach (var dest in destinationForReplication)
-								{
-									var destination = dest;
-									var holder = activeReplicationTasks.GetOrAdd(destination.ConnectionStringOptions.Url, new IntHolder());
-									if (Thread.VolatileRead(ref holder.Value) == 1)
-										continue;
-									Thread.VolatileWrite(ref holder.Value, 1);
-									var replicationTask = Task.Factory.StartNew(() =>
-									{
-										using (LogContext.WithDatabase(docDb.Name))
-										{
-											try
-											{
-												if (ReplicateTo(destination))
-													docDb.WorkContext.NotifyAboutWork();
-											}
-											catch (Exception e)
-											{
-												log.ErrorException("Could not replicate to " + destination, e);
-											}
-										}
-									});
+				                    var startedTasks = new List<Task>();
 
-									startedTasks.Add(replicationTask);
+				                    foreach (var dest in destinationForReplication)
+				                    {
+				                        var destination = dest;
+				                        var holder = activeReplicationTasks.GetOrAdd(destination.ConnectionStringOptions.Url, new IntHolder());
+				                        if (Thread.VolatileRead(ref holder.Value) == 1) continue;
+				                        Thread.VolatileWrite(ref holder.Value, 1);
+				                        var replicationTask = Task.Factory.StartNew(
+				                            () =>
+				                            {
+				                                using (LogContext.WithDatabase(docDb.Name))
+				                                {
+				                                    try
+				                                    {
+				                                        if (ReplicateTo(destination)) docDb.WorkContext.NotifyAboutWork();
+				                                    }
+				                                    catch (Exception e)
+				                                    {
+				                                        log.ErrorException("Could not replicate to " + destination, e);
+				                                    }
+				                                }
+				                            });
 
-									activeTasks.Enqueue(replicationTask);
-									replicationTask.ContinueWith(_ =>
-									{
-										// here we purge all the completed tasks at the head of the queue
-										Task task;
-										while (activeTasks.TryPeek(out task))
-										{
-											if (!task.IsCompleted && !task.IsCanceled && !task.IsFaulted)
-												break;
-											activeTasks.TryDequeue(out task); // remove it from end
-										}
-									});
-								}
+				                        startedTasks.Add(replicationTask);
 
-								Task.WhenAll(startedTasks.ToArray()).ContinueWith(t =>
-								{
-									if (destinationStats.Count != 0)
-									{
-										var minLastReplicatedEtag = destinationStats.Where(x => x.Value.LastReplicatedEtag != null)
-										                                            .Select(x => x.Value.LastReplicatedEtag)
-										                                            .Min(x => new ComparableByteArray(x.ToByteArray()));
-										                            
-                						if(minLastReplicatedEtag != null)
-											prefetchingBehavior.CleanupDocuments(minLastReplicatedEtag.ToEtag());
-									}
-								}).AssertNotFailed();
-							}
-						}
-					}
-					catch (Exception e)
-					{
-						log.ErrorException("Failed to perform replication", e);
-					}
+				                        activeTasks.Enqueue(replicationTask);
+				                        replicationTask.ContinueWith(
+				                            _ =>
+				                            {
+				                                // here we purge all the completed tasks at the head of the queue
+				                                Task task;
+				                                while (activeTasks.TryPeek(out task))
+				                                {
+				                                    if (!task.IsCompleted && !task.IsCanceled && !task.IsFaulted) break;
+				                                    activeTasks.TryDequeue(out task); // remove it from end
+				                                }
+				                            });
+				                    }
 
-					runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter, name);
+				                    Task.WhenAll(startedTasks.ToArray()).ContinueWith(
+				                        t =>
+				                        {
+				                            if (destinationStats.Count != 0)
+				                            {
+				                                var minLastReplicatedEtag =
+				                                    destinationStats.Where(x => x.Value.LastReplicatedEtag != null)
+				                                                    .Select(x => x.Value.LastReplicatedEtag)
+				                                                    .Min(x => new ComparableByteArray(x.ToByteArray()));
+
+				                                if (minLastReplicatedEtag != null) prefetchingBehavior.CleanupDocuments(minLastReplicatedEtag.ToEtag());
+				                            }
+				                        }).AssertNotFailed();
+				                }
+				            }
+				        }
+				        catch (Exception e)
+				        {
+				            log.ErrorException("Failed to perform replication", e);
+				        }
+				    }
+
+				    runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter, name);
 					timeToWaitInMinutes = runningBecauseOfDataModifications
 											? TimeSpan.FromSeconds(30)
 											: TimeSpan.FromMinutes(5);
 				}
+
+			    IsRunning = false;
 			}
 		}
 

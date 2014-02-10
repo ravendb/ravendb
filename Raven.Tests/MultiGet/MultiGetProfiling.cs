@@ -242,8 +242,8 @@ namespace Raven.Tests.MultiGet
 		[Fact]
 		public void CanProfileErrors()
 		{
-			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" })
+			using (var server = GetNewServer())
+            using (var store = NewRemoteDocumentStore(ravenDbServer: server))
 			{
 				store.Initialize();
 				store.InitializeProfiling(); 

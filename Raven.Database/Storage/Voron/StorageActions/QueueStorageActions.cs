@@ -21,11 +21,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	{
 		private readonly TableStorage tableStorage;
 
-		private readonly WriteBatch writeBatch;
+		private readonly Reference<WriteBatch> writeBatch;
 
 		private readonly IUuidGenerator generator;
 
-		public QueueStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, WriteBatch writeBatch)
+		public QueueStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, Reference<WriteBatch> writeBatch)
 			: base(snapshot)
 		{
 			this.tableStorage = tableStorage;
@@ -41,15 +41,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var id = generator.CreateSequentialUuid(UuidType.Queue);
 			var key = CreateKey(name, id);
 
-			tableStorage.Queues.Add(writeBatch, key, new RavenJObject
+			tableStorage.Queues.Add(writeBatch.Value, key, new RavenJObject
 			{
 				{"name", name},
 				{"id", id.ToByteArray()},
 				{"reads", 0}
 			}, 0);
 
-			queuesData.Add(writeBatch, key, data, 0);
-			queuesByName.MultiAdd(writeBatch, CreateKey(name), key);
+			queuesData.Add(writeBatch.Value, key, data, 0);
+			queuesByName.MultiAdd(writeBatch.Value, CreateKey(name), key);
 		}
 
 		public IEnumerable<Tuple<byte[], object>> PeekFromQueue(string name)
@@ -66,7 +66,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					var key = iterator.CurrentKey;
 
 					ushort version;
-					var value = LoadJson(tableStorage.Queues, key, writeBatch, out version);
+					var value = LoadJson(tableStorage.Queues, key, writeBatch.Value, out version);
 
 					if (value == null)
 						yield break;
@@ -79,7 +79,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					}
 
 					value["reads"] = reads + 1;
-					tableStorage.Queues.Add(writeBatch, key, value);
+					tableStorage.Queues.Add(writeBatch.Value, key, value);
 
 					yield return new Tuple<byte[], object>(ReadDataFromQueue(key), value.Value<byte[]>("id"));
 				}
@@ -92,8 +92,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var queuesByName = tableStorage.Queues.GetIndex(Tables.Queues.Indices.ByName);
 
 			var key = CreateKey(name, Etag.Parse((byte[])id));
-			tableStorage.Queues.Delete(writeBatch, key);
-			queuesByName.MultiDelete(writeBatch, CreateKey(name), key);
+			tableStorage.Queues.Delete(writeBatch.Value, key);
+			queuesByName.MultiDelete(writeBatch.Value, CreateKey(name), key);
 		}
 
 		private void DeleteQueue(Slice key, string name)
@@ -101,16 +101,16 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var queuesData = tableStorage.Queues.GetIndex(Tables.Queues.Indices.Data);
 			var queuesByName = tableStorage.Queues.GetIndex(Tables.Queues.Indices.ByName);
 
-			tableStorage.Queues.Delete(writeBatch, key);
-			queuesData.Delete(writeBatch, key);
-			queuesByName.MultiDelete(writeBatch, CreateKey(name), key);
+			tableStorage.Queues.Delete(writeBatch.Value, key);
+			queuesData.Delete(writeBatch.Value, key);
+			queuesByName.MultiDelete(writeBatch.Value, CreateKey(name), key);
 		}
 
 		private byte[] ReadDataFromQueue(Slice key)
 		{
 			var queuesData = tableStorage.Queues.GetIndex(Tables.Queues.Indices.Data);
 
-			var read = queuesData.Read(Snapshot, key, writeBatch);
+			var read = queuesData.Read(Snapshot, key, writeBatch.Value);
 			using (var stream = read.Reader.AsStream())
 			{
 				return stream.ReadData();

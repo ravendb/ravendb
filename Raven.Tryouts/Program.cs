@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Raven.Tests.Faceted;
-using Raven.Tests.Issues;
-using System.Threading;
-using Raven.Tests.Suggestions;
+using Raven.Tests.Bugs.DTC;
 
 namespace Raven.Tryouts
 {
@@ -18,9 +15,9 @@ namespace Raven.Tryouts
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new Suggestions())
+				using (var x = new Embedded())
 				{
-					x.WithTypo();
+					x.AllowNonAuthoritativeInformationAlwaysWorks();
 				}
 			}
 			

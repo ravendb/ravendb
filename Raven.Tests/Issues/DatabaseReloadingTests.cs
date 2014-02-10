@@ -95,7 +95,7 @@ namespace Raven.Tests.Issues
 				var tenantDb = GetDocumentDatabaseForTenant(server, TenantName);
 				tenantDb.Put("Foo/1", null, new RavenJObject { { "Test", "123" } }, new RavenJObject(), tx2);
 				
-				var tenantDatabaseDocument = store.DatabaseCommands.Get("Raven/Databases/" + TenantName);
+				var tenantDatabaseDocument = store.DatabaseCommands.ForSystemDatabase().Get("Raven/Databases/" + TenantName);
                 server.SystemDatabase.Put("Raven/Databases/" + TenantName, null, tenantDatabaseDocument.DataAsJson, tenantDatabaseDocument.Metadata, tx1);
 				server.SystemDatabase.PrepareTransaction(tx1.Id);
 				server.SystemDatabase.Commit(tx1.Id);

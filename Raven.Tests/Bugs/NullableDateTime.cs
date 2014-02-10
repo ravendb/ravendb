@@ -111,8 +111,7 @@ namespace Raven.Tests.Bugs
 			                                                   		AccessControlAllowOrigin = "*",
 			                                                   		AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
 			                                                   	}))
-			using (IDocumentStore documentStore = new
-				Raven.Client.Document.DocumentStore {Url = "http://localhost:8079/"}.Initialize())
+			using (IDocumentStore documentStore = NewRemoteDocumentStore(ravenDbServer: server))
 			{
 				using (IDocumentSession session = documentStore.OpenSession())
 				{

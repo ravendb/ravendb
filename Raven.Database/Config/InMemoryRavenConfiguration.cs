@@ -607,7 +607,7 @@ namespace Raven.Database.Config
 		}
 
 		/// <summary>
-		/// The directory for the RavenDB database. 
+		/// The directory for the RavenDB file system. 
 		/// You can use the ~\ prefix to refer to RavenDB's base directory. 
 		/// Default: ~\Data
 		/// </summary>
@@ -919,7 +919,12 @@ namespace Raven.Database.Config
 		public string SelectStorageEngine()
 		{
 			if (RunInMemory)
-				return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
+			{
+                if (!string.IsNullOrEmpty(DefaultStorageTypeName) && DefaultStorageTypeName.Equals("voron", StringComparison.InvariantCultureIgnoreCase))
+                    return typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+
+                return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
+			}
 
 			if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
 			{

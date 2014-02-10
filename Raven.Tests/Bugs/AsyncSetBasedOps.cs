@@ -4,10 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs
 {
@@ -20,10 +22,12 @@ namespace Raven.Tests.Bugs
 			public string FullName;
 		}
 
-		[Fact]
-		public async Task AwaitAsyncPatchByIndexShouldWork()
+		[Theory]
+		[InlineData("esent")]
+		[InlineData("voron")]
+		public async Task AwaitAsyncPatchByIndexShouldWork(string storageTypeName)
 		{
-			using (var store = NewRemoteDocumentStore())
+			using (var store = NewRemoteDocumentStore(fiddler:true,requestedStorage:storageTypeName))
 			{
 				string lastUserId = null;
 
@@ -38,12 +42,13 @@ namespace Raven.Tests.Bugs
 								LastName = "Last #" + i
 							}
 						);
-					}
+					}					
 				}
 
 				while (true)
 				{
 					var stats = await store.AsyncDatabaseCommands.GetStatisticsAsync();
+					
 					if (!stats.StaleIndexes.Contains("Raven/DocumentsByEntityName", StringComparer.OrdinalIgnoreCase))
 					{
 						break;

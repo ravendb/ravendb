@@ -69,11 +69,7 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-		public new IPrincipal User
-		{
-			get;
-			set;
-		}
+		public new IPrincipal User { get; set; }
 
 		protected virtual void InnerInitialization(HttpControllerContext controllerContext)
 		{
@@ -268,7 +264,7 @@ namespace Raven.Database.Server.Controllers
 		public void AddHeader(string key, string value, HttpResponseMessage msg)
 		{
 			if (msg.Content == null)
-				msg.Content = new JsonContent();
+				msg.Content = JsonContent();
 
             // Ensure we haven't already appended these values.
             IEnumerable<string> existingValues;
@@ -322,7 +318,7 @@ namespace Raven.Database.Server.Controllers
             
 			var msg = new HttpResponseMessage(code)
 			{
-				Content = new JsonContent(token),
+				Content = JsonContent(token),
 			};
 
 			WriteETag(etag, msg);
@@ -334,7 +330,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var resMsg = new HttpResponseMessage(code)
 			{
-				Content = new JsonContent(msg)
+				Content = JsonContent(msg)
 			};
 
 			WriteETag(etag, resMsg);
@@ -346,7 +342,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var resMsg = new HttpResponseMessage(code)
 			{
-				Content = new JsonContent()
+				Content = JsonContent()
 			};
 			WriteETag(etag, resMsg);
 			return resMsg;
@@ -507,6 +503,12 @@ namespace Raven.Database.Server.Controllers
 		public class Headers : HttpHeaders
 		{
 
+		}
+
+		public JsonContent JsonContent(RavenJToken data = null)
+		{
+			return new JsonContent(data)
+				.WithRequest(InnerRequest);
 		}
 	}
 }

@@ -23,7 +23,7 @@ public class OperationMetadata {
 
   public OperationMetadata(String url, OperationCredentials credentials) {
     this.url = url;
-    this.credentials = new OperationCredentials(credentials.getApiKey());
+    this.credentials = credentials != null ? new OperationCredentials(credentials.getApiKey()) : new OperationCredentials();
   }
 
   public OperationMetadata(OperationMetadata opMeta) {

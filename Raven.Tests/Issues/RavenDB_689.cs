@@ -45,8 +45,8 @@ namespace Raven.Tests.Issues
 			var store2 = CreateStore();
 			var store3 = CreateStore();
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
-			SetupReplication(store2.DatabaseCommands, store1.Url, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store2, store3);
+			SetupReplication(store2.DatabaseCommands, store1, store3);
 
 			store1.DatabaseCommands.PutAttachment("users/1", null, new MemoryStream(new byte[] { 1 }), new RavenJObject());
 
@@ -56,19 +56,22 @@ namespace Raven.Tests.Issues
 			RemoveReplication(store1.DatabaseCommands);
 			RemoveReplication(store2.DatabaseCommands);
 
-			SetupReplication(store2.DatabaseCommands, store3.Url);
+			SetupReplication(store2.DatabaseCommands, store3);
+
+			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
 			var attachment = store2.DatabaseCommands.GetAttachment("users/1");
 			store2.DatabaseCommands.PutAttachment("users/1", attachment.Etag, new MemoryStream(new byte[] { 2 }), attachment.Metadata);
 
-			WaitFor(store1.DatabaseCommands.GetAttachment, "users/1", a => Assert.Equal(new byte[] { 1 }, a.Data().ReadData()));
 			WaitFor(store3.DatabaseCommands.GetAttachment, "users/1", a => Assert.Equal(new byte[] { 2 }, a.Data().ReadData()));
 
+			WaitFor(store1.DatabaseCommands.GetAttachment, "users/1", a => Assert.Equal(new byte[] { 1 }, a.Data().ReadData()));
+			
 			attachment = store1.DatabaseCommands.GetAttachment("users/1");
 			store1.DatabaseCommands.PutAttachment("users/1", attachment.Etag, new MemoryStream(new byte[] { 3 }), attachment.Metadata);
 
 			RemoveReplication(store2.DatabaseCommands);
-			SetupReplication(store1.DatabaseCommands, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store3);
 
 			var conflictException = Assert.Throws<ConflictException>(() =>
 			{
@@ -83,8 +86,10 @@ namespace Raven.Tests.Issues
 
 			RemoveReplication(store1.DatabaseCommands);
 			RemoveReplication(store2.DatabaseCommands);
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
-			SetupReplication(store2.DatabaseCommands, store1.Url, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store2, store3);
+			SetupReplication(store2.DatabaseCommands, store1, store3);
+
+			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
 			IDocumentStore store;
 
@@ -145,8 +150,8 @@ namespace Raven.Tests.Issues
 			var store2 = CreateStore();
 			var store3 = CreateStore();
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
-			SetupReplication(store2.DatabaseCommands, store1.Url, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store2, store3);
+			SetupReplication(store2.DatabaseCommands, store1, store3);
 
 			using (var session = store1.OpenSession())
 			{
@@ -160,7 +165,9 @@ namespace Raven.Tests.Issues
 			RemoveReplication(store1.DatabaseCommands);
 			RemoveReplication(store2.DatabaseCommands);
 
-			SetupReplication(store2.DatabaseCommands, store3.Url);
+			SetupReplication(store2.DatabaseCommands, store3);
+
+			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
 			using (var session = store2.OpenSession())
 			{
@@ -201,7 +208,7 @@ namespace Raven.Tests.Issues
 			}
 
 			RemoveReplication(store2.DatabaseCommands);
-			SetupReplication(store1.DatabaseCommands, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store3);
 
 			var conflictException = Assert.Throws<ConflictException>(() =>
 			{
@@ -219,8 +226,10 @@ namespace Raven.Tests.Issues
 
 			RemoveReplication(store1.DatabaseCommands);
 			RemoveReplication(store2.DatabaseCommands);
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
-			SetupReplication(store2.DatabaseCommands, store1.Url, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store2, store3);
+			SetupReplication(store2.DatabaseCommands, store1, store3);
+
+			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
 			IDocumentStore store;
 

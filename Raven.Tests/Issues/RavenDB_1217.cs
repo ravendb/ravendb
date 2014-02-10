@@ -69,7 +69,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = new DocumentStore()
 			{
-				Url = "http://localhost:1234",
+                Url = "http://localhost:59234", // do not change this
 				FailoverServers = new FailoverServers
 				{
 					ForDefaultDatabase = new[]

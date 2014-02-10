@@ -49,8 +49,13 @@ namespace Raven.Client.RavenFS.Changes
 		{
 			//TODO: Fix not to use WebRequest
 			var request =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/changes/events?id=" + id,
-						"GET", new OperationCredentials("", new CredentialCache()), convention));
+				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/changes/events?id=" + id,
+					"GET", new OperationCredentials("", new CredentialCache()), convention)
+				{
+					DisableRequestCompression = true,
+					AvoidCachingRequest = true
+				})
+				;
 
 			while (true)
 			{
@@ -58,9 +63,9 @@ namespace Raven.Client.RavenFS.Changes
 				{
 					var result = await request.ServerPullAsync();
 					reconnectAttemptsRemaining = 3; // after the first successful try, we will retry 3 times before giving up
-					connection = (IDisposable)result;
+					connection = (IDisposable) result;
 					result.Subscribe(this);
-					
+
 					return;
 				}
 				catch (Exception)

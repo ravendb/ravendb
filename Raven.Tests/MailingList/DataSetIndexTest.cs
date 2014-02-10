@@ -12,6 +12,8 @@ namespace Raven.Tests.MailingList
 {
 	public class DataSetIndexTest : RavenTestBase
 	{
+		private const int MaxNumberOfItemsInDataSet = 50;
+
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
             configuration.MaxIndexOutputsPerDocument = 100;
@@ -116,7 +118,7 @@ namespace Raven.Tests.MailingList
 				Id = stationId + "/test/" + datasetKey,
 				StationId = stationId,
 				Date = DateTime.UtcNow,
-				Items = Enumerable.Range(1, 50).Select(x => new Item
+				Items = Enumerable.Range(1, MaxNumberOfItemsInDataSet).Select(x => new Item
 				{
 					SongId = "songs/" + x,
 					Attributes = new[]
@@ -181,6 +183,8 @@ namespace Raven.Tests.MailingList
 								 { e=>e.Attributes, FieldStorage.Yes},
 								 { e=>e.StationId, FieldStorage.Yes}
 							 };
+
+				MaxIndexOutputsPerDocument = MaxNumberOfItemsInDataSet;
 			}
 		}
 

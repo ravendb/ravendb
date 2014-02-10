@@ -55,7 +55,8 @@ namespace Raven.Tests.Issues
 
 					var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
 					{
-						Url = documentStore.Url
+						Url = documentStore.Url,
+                        DefaultDatabase = documentStore.DefaultDatabase
 					});
 
 					smugglerApi.ExportData(new SmugglerExportOptions{ToFile = file}, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
@@ -65,7 +66,8 @@ namespace Raven.Tests.Issues
 				{
 					var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
 					{
-						Url = documentStore.Url
+						Url = documentStore.Url,
+                        DefaultDatabase = documentStore.DefaultDatabase
 					});
 
 					smugglerApi.ImportData(new SmugglerImportOptions{FromFile = file}, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));

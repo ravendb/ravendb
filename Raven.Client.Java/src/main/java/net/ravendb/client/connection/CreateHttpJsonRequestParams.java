@@ -38,6 +38,7 @@ public class CreateHttpJsonRequestParams implements Serializable {
     this.url = url;
     this.owner = owner;
     this.metadata = metadata;
+    this.credentials = credentials;
     this.convention = convention;
     this.operationsHeadersCollection = new HashMap<>();
   }

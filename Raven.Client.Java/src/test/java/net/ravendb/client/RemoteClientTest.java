@@ -2,6 +2,7 @@ package net.ravendb.client;
 
 import static org.junit.Assert.assertEquals;
 
+import net.ravendb.abstractions.data.AdminStatistics;
 import net.ravendb.abstractions.json.linq.RavenJToken;
 
 import org.apache.http.HttpResponse;
@@ -20,13 +21,13 @@ public abstract class RemoteClientTest extends RavenDBAwareTests {
     return getDbName();
   }
 
-  protected RavenJToken getAdminStats(String serverUrl) {
-    return serverClient.executeGetRequest("/admin/stats");
+  protected AdminStatistics getAdminStats(String db) {
+    return serverClient.getGlobalAdmin().getStatistics();
   }
 
-  public int getNumberOfRequests() {
-    RavenJToken adminStats = getAdminStats(getDefaultUrl());
-    return adminStats.value(Integer.class, "TotalNumberOfRequests");
+  public Integer getNumberOfRequests() {
+    AdminStatistics adminStats = getAdminStats(getDefaultDb());
+    return adminStats.getTotalNumberOfRequests();
   }
 
   protected void assertNumberOfRequests(int i, int prevValue) {

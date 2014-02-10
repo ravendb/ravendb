@@ -13,10 +13,13 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -57,6 +60,9 @@ namespace Raven.Tests.Helpers
 
 		protected string NewDataPath(string prefix = null)
 		{
+			if(prefix != null)
+				prefix = prefix.Replace("<", "").Replace(">", "");
+
 			var newDataDir = Path.GetFullPath(string.Format(@".\{0}-{1}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "TestDatabase", Guid.NewGuid().ToString("N")));
 			Directory.CreateDirectory(newDataDir);
 			pathsToDelete.Add(newDataDir);
@@ -75,6 +81,8 @@ namespace Raven.Tests.Helpers
 			Action<EmbeddableDocumentStore> configureStore = null,
             [CallerMemberName] string databaseName = null)
 		{
+		    databaseName = NormalizeDatabaseName(databaseName);
+
 			var storageType = GetDefaultStorageType(requestedStorage);
 			var dataDirectory = dataDir ?? NewDataPath(databaseName);
 			var documentStore = new EmbeddableDocumentStore
@@ -149,6 +157,8 @@ namespace Raven.Tests.Helpers
 				bool enableAuthentication = false,
 				Action<DocumentStore> configureStore = null)
 		{
+		    databaseName = NormalizeDatabaseName(databaseName);
+
 		    checkPorts = true;
 			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication, databaseName: databaseName);
 			ModifyServer(ravenDbServer);
@@ -202,12 +212,14 @@ namespace Raven.Tests.Helpers
 			Action<RavenConfiguration> configureServer = null,
             [CallerMemberName] string databaseName = null)
 		{
+		    databaseName = NormalizeDatabaseName(databaseName != Constants.SystemDatabase ? databaseName : null);
+
 		    checkPorts = true;
 			if (dataDirectory != null)
 				pathsToDelete.Add(dataDirectory);
 
 			var storageType = GetDefaultStorageType(requestedStorage);
-			var directory = dataDirectory ?? NewDataPath();
+			var directory = dataDirectory ?? NewDataPath(databaseName == Constants.SystemDatabase ? null : databaseName);
 			var ravenConfiguration = new RavenConfiguration
 			{
 				Port = port,
@@ -515,9 +527,6 @@ namespace Raven.Tests.Helpers
 			GC.Collect(2);
 			GC.WaitForPendingFinalizers();
 
-		    if (checkPorts)
-		        AssertPortsNotInUse(8079, 8078, 8077, 8076, 8075);
-
 			foreach (var pathToDelete in pathsToDelete)
 			{
 				try
@@ -542,20 +551,6 @@ namespace Raven.Tests.Helpers
 			if (errors.Count > 0)
 				throw new AggregateException(errors);
 		}
-
-        public static void AssertPortsNotInUse(params int[] ports)
-        {
-            IPGlobalProperties ipProperties = IPGlobalProperties.GetIPGlobalProperties();
-            IPEndPoint[] ipEndPoints = ipProperties.GetActiveTcpListeners();
-
-
-            foreach (IPEndPoint endPoint in ipEndPoints)
-            {
-                Assert.False(ports.Contains(endPoint.Port), "Port " + endPoint.Port  + " is in used but shouldn't be. Did we leak a connection?");    
-            }
-
-        }
- 
 
 		protected static void PrintServerErrors(ServerError[] serverErrors)
 		{
@@ -600,5 +595,20 @@ namespace Raven.Tests.Helpers
 
 			return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
 		}
+
+        protected string NormalizeDatabaseName(string databaseName)
+        {
+            if (string.IsNullOrEmpty(databaseName)) 
+                return null;
+
+            if (databaseName.Length < 50)
+                return databaseName;
+
+            var prefix = databaseName.Substring(0, 30);
+            var suffix = databaseName.Substring(databaseName.Length - 10, 10);
+            var hash = new Guid(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(databaseName))).ToString("N").Substring(0, 8);
+
+            return string.Format("{0}_{1}_{2}", prefix, hash, suffix);
+        }
 	}
 }

@@ -32,8 +32,8 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ValidReplicationSetupTest()
 		{
-			server1 = CreateServer(8111, "D1");
-			server2 = CreateServer(8112, "D2");
+			server1 = CreateServer(8079, "D1");
+			server2 = CreateServer(8078, "D2");
 
 			store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false);
 			store2 = NewRemoteDocumentStore(false, server2, databaseName: "Northwind", runInMemory: false);
@@ -75,8 +75,8 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void DestinationServerWithReplicationDisabledTest()
 		{
-			server1 = CreateServer(8111, "D1");
-			server2 = CreateServer(8112, "D2");
+			server1 = CreateServer(8079, "D1");
+			server2 = CreateServer(8078, "D2");
 
 			store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false);
 			store2 = NewRemoteDocumentStore(false, server2, databaseName: "Northwind", runInMemory: false);
@@ -118,7 +118,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void DestinationServerDownTest()
 		{
-			server1 = CreateServer(8111, "D1");
+			server1 = CreateServer(8079, "D1");
 
 			store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false);
 
@@ -131,7 +131,7 @@ namespace Raven.Tests.Issues
 
 			var db1Url = store1.Url + "/databases/Northwind";
 
-			SetupReplication(store1.DatabaseCommands, "http://localhost:8112/databases/Northwind");
+			SetupReplication(store1.DatabaseCommands, "http://localhost:8078/databases/Northwind");
 
 			var replicationDocument = store1.DatabaseCommands.Get("Raven/Replication/Destinations");
 
@@ -152,7 +152,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void InvalidUrlTest()
 		{
-			server1 = CreateServer(8111, "D1");
+			server1 = CreateServer(8079, "D1");
 
 			store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false);
 
@@ -165,7 +165,7 @@ namespace Raven.Tests.Issues
 
 			var db1Url = store1.Url + "/databases/Northwind";
 
-			SetupReplication(store1.DatabaseCommands, "http://localhost:8112/databases/Northwind");
+			SetupReplication(store1.DatabaseCommands, "http://localhost:8078/databases/Northwind");
 
 			var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
 																							db1Url + "/admin/replicationInfo",

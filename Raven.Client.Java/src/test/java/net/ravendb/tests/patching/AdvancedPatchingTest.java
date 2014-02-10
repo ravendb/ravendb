@@ -22,7 +22,6 @@ import net.ravendb.client.IDocumentStore;
 import net.ravendb.client.RemoteClientTest;
 import net.ravendb.client.document.DocumentStore;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 
@@ -35,7 +34,7 @@ public class AdvancedPatchingTest extends RemoteClientTest {
       "this.Id = 'Something new';  " +
       "this.Value++; " +
       "this.newValue = \"err!!\"; " +
-      "this.Comments.Map(function(comment) { " +
+      "this.Comments = this.Comments.Map(function(comment) { " +
       "  return (comment == \"one\") ? comment + \" test\" : comment; " +
       "});";
 
@@ -143,7 +142,6 @@ public class AdvancedPatchingTest extends RemoteClientTest {
   // some tests were omitted as we don't want to test server here!
 
   @Test
-  @Ignore(".NET version is also spinning")
   public void shouldThrowConcurrencyExceptionIfNonCurrentEtagWasSpecified() throws Exception {
 
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {

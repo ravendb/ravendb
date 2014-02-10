@@ -105,7 +105,7 @@ public class AnyTest extends RemoteClientTest {
   }
 
   @Test
-  public void cannotCountNullArraysWithAnyIfThereIsNothingElseStoredInTheIndex() throws Exception {
+  public void emptyArraysShouldBeCountedProperlyWhenUsingAny() throws Exception {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
       try (IDocumentSession session = store.openSession()) {
         TestDoc doc1 = new TestDoc();
@@ -125,7 +125,7 @@ public class AnyTest extends RemoteClientTest {
 
       try (IDocumentSession session = store.openSession()) {
         QAnyTest_TestDoc x = QAnyTest_TestDoc.testDoc;
-        assertEquals(0, session.query(TestDoc.class)
+        assertEquals(2, session.query(TestDoc.class)
             .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
             .where(x.stringArray.isEmpty())
             .count());

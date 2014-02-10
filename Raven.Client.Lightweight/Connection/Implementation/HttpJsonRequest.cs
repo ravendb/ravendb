@@ -621,12 +621,13 @@ namespace Raven.Client.Connection
 		{
 			return await RunWithAuthRetry(async () =>
 			{
-				Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url), HttpCompletionOption.ResponseHeadersRead);
+				var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
+				Response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead);
 				SetResponseHeaders(Response);
 
 			    await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString: true);
 
-				var stream = await Response.GetResponseStreamWithHttpDecompression();
+				var stream = await Response.Content.ReadAsStreamAsync();
 				var observableLineStream = new ObservableLineStream(stream, () => Response.Dispose());
 				observableLineStream.Start();
 				return (IObservable<string>)observableLineStream;
@@ -637,14 +638,14 @@ namespace Raven.Client.Connection
         {
             postedToken = tokenToWrite;
             writeCalled = true;
-            await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
-                {
-                        Content = new JsonContent(tokenToWrite),
-                        Headers =
-                            {
-                                TransferEncodingChunked = true
-                            }
-                });
+	        await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
+	        {
+		        Content = new JsonContent(tokenToWrite),
+		        Headers =
+		        {
+			        TransferEncodingChunked = true
+		        }
+	        });
         }
 
 		public async Task WriteAsync(Stream streamToWrite)

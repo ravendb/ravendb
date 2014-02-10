@@ -12,8 +12,8 @@ namespace Raven.Tests.Bundles.Replication.Async
 		public async Task When_replicating_can_do_read_striping()
 		{
 			var store1 = CreateStore();
-			var store2 = CreateStore();
-			var store3 = CreateStore();
+            var store2 = CreateStore();
+            var store3 = CreateStore();
 
 			using (var session = store1.OpenAsyncSession())
 			{
@@ -21,18 +21,23 @@ namespace Raven.Tests.Bundles.Replication.Async
 				await session.SaveChangesAsync();
 			}
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store2, store3);
 
 			WaitForDocument(store2.DatabaseCommands, "companies/1");
 			WaitForDocument(store3.DatabaseCommands, "companies/1");
 
-			using(var store = new DocumentStore
+		    await PauseReplicationAsync(0, store1.DefaultDatabase);
+            await PauseReplicationAsync(1, store2.DefaultDatabase);
+            await PauseReplicationAsync(2, store3.DefaultDatabase);
+
+		    using(var store = new DocumentStore
 			{
 				Url = store1.Url,
 				Conventions =
 					{
 						FailoverBehavior = FailoverBehavior.ReadFromAllServers
-					}
+					},
+                    DefaultDatabase = store1.DefaultDatabase
 			})
 			{
 				store.Initialize();
@@ -43,6 +48,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 				foreach (var ravenDbServer in servers)
 				{
 					ravenDbServer.Server.ResetNumberOfRequests();
+                    Assert.Equal(0, ravenDbServer.Server.NumberOfRequests);
 				}
 
 				for (int i = 0; i < 6; i++)
@@ -55,7 +61,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 			}
 			foreach (var ravenDbServer in servers)
 			{
-				Assert.Equal(2, ravenDbServer.Server.NumberOfRequests);
+                Assert.True(2 == ravenDbServer.Server.NumberOfRequests, string.Format("Server at port: {0}. Requests: #{1}", ravenDbServer.SystemDatabase.Configuration.Port, ravenDbServer.Server.NumberOfRequests));
 			}
 		}
 
@@ -72,10 +78,14 @@ namespace Raven.Tests.Bundles.Replication.Async
 				await session.SaveChangesAsync();
 			}
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store2, store3);
 
 			WaitForDocument(store2.DatabaseCommands, "companies/1");
 			WaitForDocument(store3.DatabaseCommands, "companies/1");
+
+            await PauseReplicationAsync(0, store1.DefaultDatabase);
+            await PauseReplicationAsync(1, store2.DefaultDatabase);
+            await PauseReplicationAsync(2, store3.DefaultDatabase);
 
 			using (var store = new DocumentStore
 			{
@@ -83,7 +93,8 @@ namespace Raven.Tests.Bundles.Replication.Async
 				Conventions =
 				{
 					FailoverBehavior = FailoverBehavior.ReadFromAllServers
-				}
+				},
+                DefaultDatabase = store1.DefaultDatabase
 			})
 			{
 				store.Initialize();

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
+using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
@@ -27,11 +29,11 @@ namespace Raven.Tests.Shard.BlogModel
 			RavenDbServer posts3 = null;
 			try
 			{
-				users = GetNewServer(8079);
-				blogs = GetNewServer(8078);
-				posts1 = GetNewServer(8077);
-				posts2 = GetNewServer(8076);
-				posts3 = GetNewServer(8075);
+				users = GetNewServer(8079, databaseName: Constants.SystemDatabase);
+                blogs = GetNewServer(8078, databaseName: Constants.SystemDatabase);
+                posts1 = GetNewServer(8077, databaseName: Constants.SystemDatabase);
+                posts2 = GetNewServer(8076, databaseName: Constants.SystemDatabase);
+                posts3 = GetNewServer(8075, databaseName: Constants.SystemDatabase);
 			}
 			catch (Exception)
 			{
