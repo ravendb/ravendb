@@ -56,7 +56,8 @@ namespace Raven.Database.Server.WebApi.Filters
 
 		public static void SerializeError(HttpActionExecutedContext ctx, object error)
 		{
-			ctx.Response.Content = new JsonContent(RavenJObject.FromObject(error));
+			ctx.Response.Content = new JsonContent(RavenJObject.FromObject(error))
+				.WithRequest(ctx.Request);
 		}
 
 		private static void DefaultHandler(HttpActionExecutedContext ctx, Exception e)

@@ -377,7 +377,7 @@ namespace Raven.Database.Server.Controllers
 				
 				var target = entityName == null ? "all documents" : entityName + " documents";
 
-				msg.Content = new JsonContent(RavenJToken.FromObject(
+				msg.Content = JsonContent(RavenJToken.FromObject(
 					new
 					{
 						Error =

@@ -638,14 +638,14 @@ namespace Raven.Client.Connection
         {
             postedToken = tokenToWrite;
             writeCalled = true;
-            await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
-                {
-                        Content = new JsonContent(tokenToWrite),
-                        Headers =
-                            {
-                                TransferEncodingChunked = true
-                            }
-                });
+	        await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
+	        {
+		        Content = new JsonContent(tokenToWrite),
+		        Headers =
+		        {
+			        TransferEncodingChunked = true
+		        }
+	        });
         }
 
 		public async Task WriteAsync(Stream streamToWrite)

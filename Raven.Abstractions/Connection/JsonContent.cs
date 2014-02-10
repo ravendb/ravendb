@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -29,6 +30,8 @@ namespace Raven.Abstractions.Connection
 
 		public string Jsonp { get; set; }
 
+		public bool IsOutputHumanReadable { get; set; }
+
 		protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
 		{
 		    if (HasNoData())
@@ -46,7 +49,10 @@ namespace Raven.Abstractions.Connection
 				writer.Write("(");
 			}
 
-			Data.WriteTo(new JsonTextWriter(writer), Default.Converters);
+			Data.WriteTo(new JsonTextWriter(writer)
+			{
+				Formatting = IsOutputHumanReadable ? Formatting.Indented : Formatting.None,
+			}, Default.Converters);
 
 			if (string.IsNullOrEmpty(Jsonp) == false)
 				writer.Write(")");
@@ -65,6 +71,16 @@ namespace Raven.Abstractions.Connection
 			var hasNoData = HasNoData();
 			length = hasNoData ? 0 : -1;
 			return hasNoData;
+		}
+
+		public JsonContent WithRequest(HttpRequestMessage request)
+		{
+			if (request != null)
+			{
+				// Just a directly request from a browser should return human readable JSON, but not a request from a JavaScript application.
+				IsOutputHumanReadable = request.Headers.Accept.Any() && request.Headers.UserAgent.Any() && request.Headers.Referrer == null;
+			}
+			return this;
 		}
 	}
 }
