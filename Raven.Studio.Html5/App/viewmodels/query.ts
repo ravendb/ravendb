@@ -40,6 +40,7 @@ class query extends viewModelBase {
         $("#indexQueryLabel").popover({
             html: true,
             trigger: 'hover',
+            container: '#indexQueryLabelContainer',
             content: 'Queries use Lucene syntax. Examples:<pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
         });
     }

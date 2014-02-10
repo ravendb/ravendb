@@ -194,7 +194,8 @@ body {
   height: 120px;
 }
 #queryContainer .popover {
-  max-width: 500px;
+  max-width: 450px;
+  width: 450px;
 }
 .ko-grid {
   position: absolute;

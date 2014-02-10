@@ -76,10 +76,12 @@
 
     <form class="form-horizontal" role="form">
         <div class="form-group">
-            <label id="indexQueryLabel" class="col-sm-1 control-label help-cursor" data-placement="auto right" data-original-title="Index Query" data-trigger="hover">
-                Query
-                <i class="fa fa-info-circle text-info"></i>
-                <a target="_blank" title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><i class="fa fa-question-circle text-muted"></i></a>
+            <label id="indexQueryLabelContainer" class="col-sm-1 control-label" data-placement="auto right" data-original-title="Index Query" data-trigger="hover">
+                <span id="indexQueryLabel" class="help-cursor">
+                    Query
+                    <i class="fa fa-info-circle text-info"></i>
+                </span>
+                <a class="use-bootstrap-tooltip" target="_blank" title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><i class="fa fa-question-circle text-muted"></i></a>
             </label>
             <div class="col-md-11">
                 <div class="row">
