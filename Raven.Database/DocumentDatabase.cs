@@ -2000,9 +2000,12 @@ namespace Raven.Database
                 TransactionalStorage.Batch(actions =>
 				{
 					var doc = actions.Documents.DocumentByKey(docId, transactionInformation);
+					log.Debug(() => string.Format("Preparing to apply patch on ({0}). Document found?: {1}.", docId, doc != null));
+					
 					if (etag != null && doc != null && doc.Etag != etag)
 					{
 						Debug.Assert(doc.Etag != null);
+						log.Debug(() => string.Format("Got concurrent exception while tried to patch the following document ID: {0}", docId));
 						throw new ConcurrencyException("Could not patch document '" + docId + "' because non current etag was used")
 						{
 							ActualETag = doc.Etag,
@@ -2013,6 +2016,7 @@ namespace Raven.Database
 					var jsonDoc = (doc != null ? patcher(doc.ToJson(), doc.SerializedSizeOnDisk) : patcherIfMissing());
 					if (jsonDoc == null)
 					{
+						log.Debug(() => string.Format("Preparing to apply patch on ({0}). DocumentDoesNotExists.", docId));
 						result.PatchResult = PatchResult.DocumentDoesNotExists;
 					}
 					else
