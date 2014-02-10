@@ -135,6 +135,7 @@
     <TypeScriptCompile Include="App\commands\getDatabaseSettingsCommand.ts" />
     <TypeScriptCompile Include="App\models\periodicBackupSetup.ts" />
     <TypeScriptCompile Include="App\commands\savePeriodicBackupSetupCommand.ts" />
+    <TypeScriptCompile Include="App\viewmodels\periodicBackup.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\copyDocuments.html" />
