@@ -13,7 +13,7 @@ class savePeriodicBackupSetupCommand extends commandBase {
         this.reportInfo("Saving Periodic Backup setup.");
         return jQuery.when(this.saveAccountInformation(), this.saveSetup())
             .done(() => this.reportSuccess("Saved Periodic Backup setup."))
-            .fail(response => this.reportError("Failed to save Peridic Backup setup.", JSON.stringify(response)));
+            .fail((response: JQueryXHR) => this.reportError("Failed to save Peridic Backup setup.", response.responseText));
     }
 
     private saveAccountInformation(): JQueryPromise<any> {

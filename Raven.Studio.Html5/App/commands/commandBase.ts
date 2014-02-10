@@ -22,10 +22,10 @@ class commandBase {
         this.reportProgress(alertType.info, title, details);
     }
 
-    reportError(title: string, details?: string) {
+    reportError(title: string, details?: string, httpStatusText?: string) {
         this.reportProgress(alertType.danger, title, details);
-        if (details && console && console.log && typeof console.log === "function") {
-            console.log(details);
+        if (console && console.log && typeof console.log === "function") {
+            console.log("Error during command execution", title, details, httpStatusText);
         }
     }
 

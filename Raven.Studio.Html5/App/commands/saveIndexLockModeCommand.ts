@@ -22,7 +22,7 @@ class saveIndexLockModeCommand extends commandBase {
         var url = "/indexes/" + this.index.name + this.urlEncodeArgs(args);
         var saveTask = this.post(url, args, this.db);
         saveTask.done(() => this.reportSuccess("Saved " + this.index.name));
-        saveTask.fail(response => this.reportError("Failed to save " + this.index.name, JSON.stringify(response)));
+        saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save " + this.index.name, response.responseText));
 
         return saveTask;
     }

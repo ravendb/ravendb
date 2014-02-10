@@ -51,7 +51,8 @@ class editIndex extends viewModelBase {
         }
     }
 
-    editExistingIndex(indexName: string) {
+    editExistingIndex(unescapedIndexName: string) {
+        var indexName = decodeURIComponent(unescapedIndexName);
         this.fetchIndexToEdit(indexName);
         this.fetchIndexPriority(indexName);
         this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
@@ -165,6 +166,9 @@ class editIndex extends viewModelBase {
         // Instead of showing things like "Idle,Forced", just show Idle.
         
         var priority = this.priority();
+        if (!priority) {
+            return "";
+        }
         if (priority === indexPriority.idleForced) {
             return index.priorityToString(indexPriority.idle);
         }
