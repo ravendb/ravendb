@@ -1,6 +1,4 @@
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using Voron.Trees;
 using Voron.Util.Conversion;
 
@@ -28,10 +26,7 @@ namespace Voron.Impl.FreeSpace
 
 			using (var it = tx.State.FreeSpaceRoot.Iterate(tx))
 			{
-				var buffer = new byte[8];
-				var key = new Slice(buffer);
-
-				if (it.Seek(key) == false)
+				if (it.Seek(Slice.BeforeAllKeys) == false)
 					return null;
 
 				if (num < NumberOfPagesInSection)
