@@ -186,17 +186,7 @@ namespace Raven.Tests.Issues
             {
                 using (var session = store.OpenSession())
                 {
-	                var importedRecords = session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).ToList();
-	                if (importedRecords.Count > 1500)
-	                {
-		                var extraRecords = importedRecords.OrderBy(x => x.Id).Skip(1500);
-
-						Trace.WriteLine("Smuggler exported extra records - thus ignoring Limit parameter:");
-		                foreach (var record in extraRecords)
-			                Trace.WriteLine("Id " + record.Id);
-	                }
-
-	                Assert.Equal(1500, importedRecords.Count);
+                    Assert.Equal(1500, session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
                 }
             });
             IOExtensions.DeleteDirectory(backupPath);
@@ -672,9 +662,9 @@ namespace Raven.Tests.Issues
 		            if (alreadyReset == false && totalRead > 10000)
 		            {
 			            alreadyReset = true;
-			            return false;
+			            return true;
 		            }
-		            return true;
+		            return false;
 	            }
             };
 	        try
@@ -741,12 +731,12 @@ namespace Raven.Tests.Issues
 
                 Assert.Equal(2000, allDocs.Count(d => (d.Value<string>("Name") ?? String.Empty).StartsWith("User")));
                 
-                IOExtensions.DeleteDirectory(backupPath);
             }
             finally
             {
                 forwarder.Dispose();
                 server.Dispose();
+                IOExtensions.DeleteDirectory(backupPath);
             }
         }
 
@@ -756,20 +746,14 @@ namespace Raven.Tests.Issues
             var backupPath = NewDataPath("BackupFolder");
             var server = GetNewServer();
 
-            var resetCount = 0;
+            var allowDownload = false;
 
             var forwarder = new ProxyServer(8070, 8079)
             {
 				VetoTransfer = (totalRead, buffer) =>
 				{
 					var payload = System.Text.Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
-					//reset count is requred as raven can retry attachment download
-					if (payload.Contains("GET /static/users/678 ") && resetCount < 5)
-					{
-						Interlocked.Increment(ref resetCount);
-						return false;
-					}
-					return true;
+					return payload.Contains("GET /static/users/678 ") && allowDownload == false;
 				}
             };
             try
@@ -811,6 +795,7 @@ namespace Raven.Tests.Issues
                         FilePath = inner.File
                     };
                 }
+                allowDownload = true;
 
                 using (var fileStream = new FileStream(exportResult.FilePath, FileMode.Open))
                 using (var stream = new GZipStream(fileStream, CompressionMode.Decompress))
