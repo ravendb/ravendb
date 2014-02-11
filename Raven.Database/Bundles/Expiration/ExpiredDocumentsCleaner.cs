@@ -96,9 +96,12 @@ namespace Raven.Bundles.Expiration
 					if(queryResult.Results.Count == 0)
 						break;
 
-					start += pageSize;
-
 					list.AddRange(queryResult.Results.Select(result => result.Value<string>("__document_id")).Where(x=>string.IsNullOrEmpty(x) == false));
+
+                    if (queryResult.Results.Count < pageSize)
+                        break;
+
+                    start += pageSize;
 				}
 
 				if (list.Count == 0)
