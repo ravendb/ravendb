@@ -1571,6 +1571,7 @@
     <Compile Include="Util\IISConfig.cs" />
     <Compile Include="Util\IISExpressDriver.cs" />
     <Compile Include="Util\ProcessDriver.cs" />
+    <Compile Include="Util\ProxyServer.cs" />
     <Compile Include="Util\RavenDBDriver.cs" />
     <Compile Include="Util\ReflectionUtilTest.cs" />
     <Compile Include="Util\RunExternalProcess.cs" />
