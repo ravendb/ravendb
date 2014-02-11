@@ -154,7 +154,13 @@ namespace Voron.Impl.Paging
             Task.WaitAll(_tasks.ToArray());
 
             Disposed = true;
+			GC.SuppressFinalize(this);
         }
+
+		~AbstractPager()
+		{
+			Dispose();
+		}
 
         public abstract void AllocateMorePages(Transaction tx, long newLength);
 
