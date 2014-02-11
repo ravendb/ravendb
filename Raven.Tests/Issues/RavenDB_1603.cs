@@ -10,6 +10,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -59,7 +60,6 @@ namespace Raven.Tests.Issues
 
             Task.Run(() =>
             {
-                var token = cancellationTokenSource.Token;
                 while (true)
                 {
                     var tcpClient = server.AcceptTcpClient();
@@ -79,18 +79,18 @@ namespace Raven.Tests.Issues
 
             var readTask = Task.Run(async () =>
             {
-                var buffer = new byte[4096];
+                var buffer = new byte[1024];
                 var totalRead = 0;
                 var token = cancellationTokenSource.Token;
                 while (true)
                 {
-                    var read = await incomingStream.ReadAsync(buffer, 0, 4096, token);
+                    var read = await incomingStream.ReadAsync(buffer, 0, 1024, token);
                     if (read == 0)
                     {
                         tcpClient.Close();
                         break;
                     }
-                    totalRead += read;
+                    Interlocked.Add(ref totalRead, read);
                     if (shouldThrow(totalRead, buffer,0, read))
                     {
                         incomingStream.Close();
@@ -104,16 +104,16 @@ namespace Raven.Tests.Issues
             var writeTask = Task.Run(async () =>
             {
                 var token = cancellationTokenSource.Token;
-                var buffer = new byte[4096];
+                var buffer = new byte[1024];
                 var totalRead = 0;
                 while (true)
                 {
-                    var read = await targetStream.ReadAsync(buffer, 0, 4096, token);
+                    var read = await targetStream.ReadAsync(buffer, 0, 1024, token);
                     if (read == 0)
                     {
                         targetClient.Close();
                     }
-                    totalRead += read;
+                    Interlocked.Add(ref totalRead, read);
                     if (shouldThrow(totalRead, buffer, 0, read))
                     {
                         incomingStream.Close();
@@ -802,15 +802,25 @@ namespace Raven.Tests.Issues
             var backupPath = NewDataPath("BackupFolder");
             var server = GetNewServer();
 
-            var alreadyReset = false;
+            
+            var shouldBreak = true;
+            var afterStream = false;
+            var bytesCount = 0;
 
             var forwarder = new PortForwarder(8070, 8079, (totalRead, bytes, offset, count) =>
             {
-                if (alreadyReset == false && totalRead > 10000)
+                var str = Encoding.UTF8.GetString(bytes, offset, count);
+                if (str.StartsWith("GET /streams/docs") && shouldBreak)
                 {
-                    alreadyReset = true;
+                    afterStream = true;
+                    bytesCount = totalRead;
+                }
+                if (shouldBreak && totalRead > bytesCount + 14000 && afterStream)
+                {
+                    shouldBreak = false;
                     return true;
                 }
+              
                 return false;
             });
             forwarder.Forward();
