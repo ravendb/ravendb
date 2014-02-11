@@ -160,7 +160,7 @@
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />
     <Content Include="App\views\windowsAuth.html" />
     <Content Include="Content\app.min.css">
-      <DependentUpon>app.css</DependentUpon>
+      <DependentUpon>app.less</DependentUpon>
     </Content>
     <Content Include="Content\bootstrap-theme.css" />
     <Content Include="Content\bootstrap-theme.min.css" />

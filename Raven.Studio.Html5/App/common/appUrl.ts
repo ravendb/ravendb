@@ -201,12 +201,16 @@ class appUrl {
             return db;
         } else {
             // No database is specified in the URL. Assume it's the system database.
-            var db = new database("<system>");
-            db.isSystem = true;
-            return db;
+            return this.getSystemDatabase();
         } 
     }
 
+    static getSystemDatabase(): database {
+        var db = new database("<system>");
+        db.isSystem = true;
+        return db;
+    }
+ 
     /**
     * Gets the server URL.
     */
