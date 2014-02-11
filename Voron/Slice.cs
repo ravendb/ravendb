@@ -229,11 +229,18 @@ namespace Voron
 
 		public long ToInt64()
 		{
-			if (Size != sizeof (long))
+			if (Size != sizeof(long))
 				throw new NotSupportedException("Invalid size for int 64 key");
 			if (_array != null)
 				return EndianBitConverter.Big.ToInt64(_array, 0);
-			return *(long*) _pointer;
+
+			var buffer = new byte[Size];
+			fixed (byte* dest = buffer)
+			{
+				NativeMethods.memcpy(dest, _pointer, _pointerSize);
+			}
+
+			return EndianBitConverter.Big.ToInt64(buffer, 0);
 		}
 	}
 }
