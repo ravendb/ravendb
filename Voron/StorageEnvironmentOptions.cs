@@ -89,6 +89,11 @@ namespace Voron
 			return new PureMemoryStorageEnvironmentOptions();
 		}
 
+		public static StorageEnvironmentOptions GetInMemory(string memoryName)
+		{
+			return new PureMemoryStorageEnvironmentOptions(memoryName);
+		}
+
 		public static StorageEnvironmentOptions ForPath(string path)
 		{
 			return new DirectoryStorageEnvironmentOptions(path);
@@ -244,7 +249,7 @@ namespace Voron
 
 		public class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
 		{
-			private readonly Win32PureMemoryPager _dataPager;
+			private readonly IVirtualPager _dataPager;
 
 			private Dictionary<string, IJournalWriter> _logs =
 				new Dictionary<string, IJournalWriter>(StringComparer.OrdinalIgnoreCase);
@@ -255,7 +260,12 @@ namespace Voron
 
 			public PureMemoryStorageEnvironmentOptions()
 			{
-				_dataPager = new Win32PureMemoryPager();
+				_dataPager = new Win32PureMemoryPager(); //TODO : after Win32MemoryMapWithoutBackingPager is finished and works, change this to Win32MemoryMapWithoutBackingPager with Guid.New as memoryName
+			}
+
+			public PureMemoryStorageEnvironmentOptions(string memoryName)
+			{
+				_dataPager = new Win32MemoryMapWithoutBackingPager(memoryName);
 			}
 
 			public override IVirtualPager DataPager

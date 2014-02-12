@@ -15,55 +15,13 @@ namespace Voron.Impl.Paging
 
 		// ReSharper disable InconsistentNaming
 
-		[DllImport("kernel32.dll", SetLastError = true)]
-		public static extern byte* VirtualAlloc(byte* lpAddress, UIntPtr dwSize,
-		   AllocationType flAllocationType, MemoryProtection flProtect);
-
-		[DllImport("kernel32.dll", SetLastError = true)]
-		public static extern bool VirtualFree(byte* lpAddress, UIntPtr dwSize,
-		   FreeType dwFreeType);
-
-		[Flags]
-		public enum FreeType : uint
-		{
-			MEM_DECOMMIT = 0x4000,
-			MEM_RELEASE = 0x8000
-		}
-
-		[Flags]
-		public enum AllocationType : uint
-		{
-			COMMIT = 0x1000,
-			RESERVE = 0x2000,
-			RESET = 0x80000,
-			LARGE_PAGES = 0x20000000,
-			PHYSICAL = 0x400000,
-			TOP_DOWN = 0x100000,
-			WRITE_WATCH = 0x200000
-		}
-
-		[Flags]
-		public enum MemoryProtection : uint
-		{
-			EXECUTE = 0x10,
-			EXECUTE_READ = 0x20,
-			EXECUTE_READWRITE = 0x40,
-			EXECUTE_WRITECOPY = 0x80,
-			NOACCESS = 0x01,
-			READONLY = 0x02,
-			READWRITE = 0x04,
-			WRITECOPY = 0x08,
-			GUARD_Modifierflag = 0x100,
-			NOCACHE_Modifierflag = 0x200,
-			WRITECOMBINE_Modifierflag = 0x400
-		}
-		// ReSharper restore InconsistentNaming
+		
 
 		public Win32PureMemoryPager()
 		{
 			_reservedSize = Environment.Is64BitProcess ? 4 * 1024 * 1024 * 1024UL : 128 * 1024 * 1024UL;
 			var dwSize = new UIntPtr(_reservedSize);
-			_baseAddress = VirtualAlloc(null, dwSize, AllocationType.RESERVE, MemoryProtection.NOACCESS);
+			_baseAddress = NativeMethods.VirtualAlloc(null, dwSize, NativeMethods.AllocationType.RESERVE, NativeMethods.MemoryProtection.NOACCESS);
 			if (_baseAddress == null)
 				throw new Win32Exception();
 		    _rangesCount = 1;
@@ -100,7 +58,7 @@ namespace Voron.Impl.Paging
 
 			if (lpAddress + dwSize > _baseAddress + _reservedSize)
 			{
-                var extResult = VirtualAlloc(_baseAddress + _reservedSize, new UIntPtr(_reservedSize), AllocationType.RESERVE, MemoryProtection.NOACCESS);
+                var extResult = NativeMethods.VirtualAlloc(_baseAddress + _reservedSize, new UIntPtr(_reservedSize), NativeMethods.AllocationType.RESERVE, NativeMethods.MemoryProtection.NOACCESS);
 			    if (extResult == null)
 			        throw new InvalidOperationException(
 			            "Tried to allocated pages beyond the reserved space of: " + _reservedSize +
@@ -108,7 +66,7 @@ namespace Voron.Impl.Paging
 			    _rangesCount++;
 			}
 
-			var result = VirtualAlloc(lpAddress, new UIntPtr(dwSize), AllocationType.COMMIT, MemoryProtection.READWRITE);
+			var result = NativeMethods.VirtualAlloc(lpAddress, new UIntPtr(dwSize), NativeMethods.AllocationType.COMMIT, NativeMethods.MemoryProtection.READWRITE);
 			if (result == null)
 				throw new Win32Exception();
 
@@ -154,7 +112,7 @@ namespace Voron.Impl.Paging
 			base.Dispose();
 		    for (ulong i = 0; i < _rangesCount; i++)
 		    {
-                VirtualFree(_baseAddress +(i * _reservedSize), new UIntPtr(_reservedSize), FreeType.MEM_RELEASE);
+                NativeMethods.VirtualFree(_baseAddress +(i * _reservedSize), new UIntPtr(_reservedSize), NativeMethods.FreeType.MEM_RELEASE);
 		    }
 		}
 	}

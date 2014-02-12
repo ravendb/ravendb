@@ -1,4 +1,10 @@
-﻿namespace Voron.Impl
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
+
+namespace Voron.Impl
 {
     using System.Collections.Concurrent;
     using System.Diagnostics;
@@ -11,6 +17,13 @@
     public unsafe class PagerState
     {
 	    private readonly AbstractPager _pager;
+
+	    public class AllocationInfo
+	    {
+		    public MemoryMappedFile MappedFile;
+		    public byte* BaseAddress;
+		    public long Size;
+	    }
 
 #if DEBUG_PAGER_STATE
         public static ConcurrentDictionary<PagerState, StackTrace> Instances = new ConcurrentDictionary<PagerState, StackTrace>();
@@ -28,7 +41,9 @@
 
         public MemoryMappedViewAccessor Accessor;
 
-        public MemoryMappedFile File;
+        public ImmutableList<MemoryMappedFile> Files;
+
+		public ImmutableList<AllocationInfo> AllocationInfos = ImmutableList<AllocationInfo>.Empty;
 
         public byte* MapBase { get; set; }
 
@@ -56,11 +71,16 @@
                 Accessor = null;
             }
 
-            if (File != null)
+            if (Files != null)
             {
-                File.Dispose();
-                File = null;
+	            foreach (var file in Files)
+					file.Dispose();
+
+	            Files = null;
             }
+
+	        foreach (var allocationInfo in AllocationInfos)
+				MemoryMapNativeMethods.UnmapViewOfFile(allocationInfo.BaseAddress);
 
             Released = true;
         }

@@ -32,6 +32,11 @@ namespace Voron.Tests
 		    }
 		}
 
+		protected StorageTest(StorageEnvironmentOptions options)
+		{
+			_options = options;
+		}
+
 		protected StorageTest()
 		{
 			DeleteDirectory("test.data");
