@@ -54,9 +54,9 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task CanWaitForReplicationOfParticularEtag()
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
-			var store3 = CreateStore();
+			var store1 = CreateStore(requestedStorage:"esent");
+			var store2 = CreateStore(requestedStorage: "esent");
+			var store3 = CreateStore(requestedStorage: "esent");
 
 			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
 
