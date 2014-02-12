@@ -9,6 +9,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Util;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
@@ -33,6 +34,8 @@ namespace Raven.Database.Queries
             var rangeFacets = new Dictionary<string, List<ParsedRange>>();
 
             var viewGenerator = database.IndexDefinitionStorage.GetViewGenerator(index);
+            if(viewGenerator == null)
+                throw new IndexDoesNotExistsException("Index " + index + " does not exists");
             Index.AssertQueryDoesNotContainFieldsThatAreNotIndexed(indexQuery, viewGenerator);
 
             foreach (var facet in facets)
