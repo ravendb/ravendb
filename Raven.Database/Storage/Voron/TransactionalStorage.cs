@@ -146,7 +146,7 @@ namespace Raven.Storage.Voron
 		private IStorageActionsAccessor ExecuteBatch(Action<IStorageActionsAccessor> action)
 		{
 			using (var snapshot = tableStorage.CreateSnapshot())
-			using (var writeBatch = new WriteBatch())
+			using (var writeBatch = new WriteBatch() { DisposeAfterWrite = false }) // prevent from disposing after write to allow read from batch OnStorageCommit
 			{
 				var storageActionsAccessor = new StorageActionsAccessor(uuidGenerator, _documentCodecs,
 					documentCacher, writeBatch, snapshot, tableStorage,this);
@@ -159,7 +159,7 @@ namespace Raven.Storage.Voron
 
 			    tableStorage.Write(writeBatch);
 
-                storageActionsAccessor.ExecuteOnStorageCommit(); //tODO : check whether this should be done here
+                storageActionsAccessor.ExecuteOnStorageCommit();
 
 				return storageActionsAccessor;
 			}
