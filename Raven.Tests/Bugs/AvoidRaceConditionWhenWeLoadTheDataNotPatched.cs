@@ -8,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Tests;
+using Raven.Tests.MailingList;
 using Xunit;
 
 namespace Raven.Tryouts
@@ -36,7 +37,7 @@ namespace Raven.Tryouts
 				};
 
 				store.ExecuteIndex(new UserProfileIndex());
-				store.AlwaysWaitForNonStaleResults();
+				store.RegisterListener(new NoStaleQueriesAllowed());
 
 				using (var session = store.OpenSession())
 				{
@@ -51,7 +52,7 @@ namespace Raven.Tryouts
 					user => innovations.SelectMany(
 						inno => Establish(inno, user)));
 				Commit(patches.ToArray(), store);
-		
+
 				using (var session = store.OpenSession())
 				{
 					var user = session.Load<UserProfile>("users/1");
@@ -77,10 +78,10 @@ namespace Raven.Tryouts
 					Script = "addRelation(relationClrType, relation);",
 					Values = new Dictionary<string, object>
 					{
-						{ "relation", edge1 },
-						{ "relationClrType", ClrType(edge1.GetType()) },
-						{ "otherSideRelationType", edgeN.Type },
-						{ "otherSideRelationSubType", edgeN.SubType }
+						{"relation", edge1},
+						{"relationClrType", ClrType(edge1.GetType())},
+						{"otherSideRelationType", edgeN.Type},
+						{"otherSideRelationSubType", edgeN.SubType}
 					}
 				}
 			};
@@ -93,8 +94,8 @@ namespace Raven.Tryouts
 					Script = "addRelation(relationClrType, relation);",
 					Values = new Dictionary<string, object>
 					{
-						{ "relation", edgeN },
-						{ "relationClrType", ClrType(edgeN.GetType()) }
+						{"relation", edgeN},
+						{"relationClrType", ClrType(edgeN.GetType())}
 					}
 				}
 			};
@@ -243,21 +244,11 @@ namespace Raven.Tryouts
 			public CredentialsStatus Status { get; set; }
 		}
 
-		public static class RavenTestExtensions
+		public class NoStaleQueriesAllowed : IDocumentQueryListener
 		{
-			public static TDocumentStore AlwaysWaitForNonStaleResults<TDocumentStore>(TDocumentStore store)
-				where TDocumentStore : DocumentStoreBase
+			public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
 			{
-				store.RegisterListener(new NoStaleResultsQueryListener());
-				return store;
-			}
-
-			public class NoStaleResultsQueryListener : IDocumentQueryListener
-			{
-				public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
-				{
-					queryCustomization.WaitForNonStaleResults(TimeSpan.FromSeconds(60));
-				}
+				queryCustomization.WaitForNonStaleResults(TimeSpan.FromSeconds(60));
 			}
 		}
 	}
