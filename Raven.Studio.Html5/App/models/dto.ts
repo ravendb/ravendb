@@ -248,3 +248,19 @@ interface periodicBackupSetupDto {
     IntervalMilliseconds: number;
     FullBackupIntervalMilliseconds: number;
 }
+
+interface indexQueryResultsDto {
+    DurationMilliseconds: number;
+    Highlightings: any;
+    Includes: any;
+    IndexEtag: string;
+    IndexName: string;
+    IndexTimestamp: string;
+    IsStale: boolean;
+    LastQueryTime: string;
+    NonAuthoritativeInformation: boolean;
+    ResultEtag: string;
+    Results: documentDto[];
+    SkippedResults: number;
+    TotalResults: number;
+}

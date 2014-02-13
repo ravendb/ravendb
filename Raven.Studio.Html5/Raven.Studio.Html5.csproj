@@ -86,6 +86,7 @@
     <TypeScriptCompile Include="App\commands\getDocumentsByEntityNameCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentWithMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexDefinitionCommand.ts" />
+    <TypeScriptCompile Include="App\commands\queryIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexTermsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getLicenseStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getLogsCommand.ts" />
@@ -93,6 +94,7 @@
     <TypeScriptCompile Include="App\commands\getSystemDocumentsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getUserInfoCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveAlertsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexAsPersistentCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexLockModeCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexDefinitionCommand.ts" />
@@ -1036,10 +1038,6 @@
     <TypeScriptCompile Include="App\common\dialogResult.ts" />
     <TypeScriptCompile Include="App\common\alertType.ts" />
     <TypeScriptCompile Include="App\common\alertArgs.ts" />
-    <TypeScriptCompile Include="App\commands\saveDocumentCommand.ts" />
-    <Content Include="App\commands\saveDocumentCommand.js">
-      <DependentUpon>saveDocumentCommand.ts</DependentUpon>
-    </Content>
     <Content Include="App\main.js" />
     <TypeScriptCompile Include="App\models\collection.ts" />
     <TypeScriptCompile Include="App\models\collectionInfo.ts" />

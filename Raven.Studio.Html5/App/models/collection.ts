@@ -17,10 +17,12 @@ class collection {
     private documentsList: pagedList;
     private static allDocsCollectionName = "All Documents";
     private static systemDocsCollectionName = "System Documents";
+    private static styleMap: any = {};
 
     constructor(public name: string, public ownerDatabase: database) {
         this.isAllDocuments = name === collection.allDocsCollectionName;
         this.isSystemDocuments = name === collection.systemDocsCollectionName;
+        this.colorClass = collection.getCollectionCssClass(name);
 	}
 
 	// Notifies consumers that this collection should be the selected one.
@@ -70,6 +72,28 @@ class collection {
 
     static createAllDocsCollection(ownerDatabase: database): collection {
         return new collection(collection.allDocsCollectionName, ownerDatabase);
+    }
+
+    static getCollectionCssClass(entityName: string): string {
+        if (entityName === collection.allDocsCollectionName) {
+            return "all-documents-collection";
+        }
+
+        if (!entityName || entityName === collection.systemDocsCollectionName) {
+            return "system-documents-collection";
+        }
+
+        var existingStyle = collection.styleMap[entityName];
+        if (existingStyle) {
+            return existingStyle;
+        } 
+
+        // We don't have an existing style. Assign one in the form of 'collection-style-X', where X is a number between 0 and maxStyleCount. These styles are found in app.less.
+        var maxStyleCount = 16;
+        var styleNumber = Object.keys(collection.styleMap).length % maxStyleCount;
+        var style = "collection-style-" + styleNumber;
+        collection.styleMap[entityName] = style;
+        return style;
     }
 
     private createPagedList(): pagedList {

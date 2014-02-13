@@ -31,7 +31,6 @@ class ctor {
     grid: JQuery;
     gridSelector: string;
     focusableGridSelector: string;
-    collections: KnockoutObservableArray<collection>;
     columns = ko.observableArray<column>([
         new column("__IsChecked", 38),
         new column("Id", ctor.idColumnWidth)
@@ -40,17 +39,14 @@ class ctor {
     scrollThrottleTimeoutHandle = 0;
     firstVisibleRow: row = null;
     selectedIndices: KnockoutObservableArray<number>;
-    memoizedCollectionColorFetcher: Function;
 
     constructor() {
-        this.memoizedCollectionColorFetcher = this.getCollectionClassFromRavenEntityName.memoize(this);
     }
 
     activate(settings: any) {
         var docsSource: KnockoutObservable<pagedList> = settings.documentsSource;
         this.items = docsSource();
-        this.collections = settings.collections;
-        this.viewportHeight(settings.height);
+        //this.viewportHeight(settings.height);
         this.gridSelector = settings.gridSelector;
         this.focusableGridSelector = this.gridSelector + " .ko-grid";
         this.virtualHeight = ko.computed(() => this.rowHeight * this.virtualRowCount());
@@ -157,17 +153,19 @@ class ctor {
     }
 
     loadRowData() {
-        // The scrolling has paused for a minute. See if we have all the data needed.
-        var firstVisibleIndex = this.firstVisibleRow.rowIndex();
-        var fetchTask = this.items.fetch(firstVisibleIndex, this.recycleRows().length);
-        fetchTask.done((resultSet: pagedResultSet) => {
-            var firstVisibleRowIndexHasChanged = firstVisibleIndex !== this.firstVisibleRow.rowIndex();
-            if (!firstVisibleRowIndexHasChanged) {
-                this.virtualRowCount(resultSet.totalResultCount);
-                resultSet.items.forEach((r, i) => this.fillRow(r, i + firstVisibleIndex));
-                this.ensureColumnsForRows(resultSet.items);
-            }
-        });
+        if (this.items) {
+            // The scrolling has paused for a minute. See if we have all the data needed.
+            var firstVisibleIndex = this.firstVisibleRow.rowIndex();
+            var fetchTask = this.items.fetch(firstVisibleIndex, this.recycleRows().length);
+            fetchTask.done((resultSet: pagedResultSet) => {
+                var firstVisibleRowIndexHasChanged = firstVisibleIndex !== this.firstVisibleRow.rowIndex();
+                if (!firstVisibleRowIndexHasChanged) {
+                    this.virtualRowCount(resultSet.totalResultCount);
+                    resultSet.items.forEach((r, i) => this.fillRow(r, i + firstVisibleIndex));
+                    this.ensureColumnsForRows(resultSet.items);
+                }
+            });
+        }
     }
 
     fillRow(rowData: document, rowIndex: number) {
@@ -191,20 +189,7 @@ class ctor {
 
     getCollectionClassFromDocument(doc: document): string {
         var entityName = doc.__metadata.ravenEntityName;
-        return this.memoizedCollectionColorFetcher(entityName);
-    }
-
-    getCollectionClassFromRavenEntityName(entityName: string): string {
-        if (!entityName) {
-            return "system-documents-collection";
-        }
-
-        var collection = this.collections().first(c => c.name === entityName);
-        if (collection) {
-            return collection.colorClass;
-        }
-
-        return null;
+        return collection.getCollectionCssClass(entityName);
     }
 
     ensureColumnsForRows(rows: Array<document>) {

@@ -31,7 +31,7 @@
 
     <div class="btn-toolbar" role="toolbar">
         <div class="btn-group">
-            <button class="btn btn-primary use-bootstrap-tooltip" title="Run the query (Alt+R)" accesskey="R" data-bind="enable: hasSelectedIndex"><i class="fa fa-play"></i></button>
+            <button class="btn btn-primary use-bootstrap-tooltip" title="Run the query (Alt+R)" accesskey="R" data-bind="enable: hasSelectedIndex, click: runQuery"><i class="fa fa-play"></i></button>
             <div class="btn-group">
                 <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-toggle="dropdown" title="Add a transformer or sorting option to the query (Alt+A)" accesskey="A" data-bind="enable: hasSelectedIndex">
                     <i class="fa fa-plus"></i> Add <span class="caret"></span>
@@ -87,6 +87,19 @@
                 <div class="row">
                     <div class="col-md-11">
                         <pre class="form-control editor" data-bind="aceEditor: { code: queryText }"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label id="indexQueryLabelContainer" class="col-sm-1 control-label">
+                Results
+            </label>
+            <div class="col-md-11">
+                <div class="row">
+                    <div class="col-md-11">
+                        <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid' }"></div>
                     </div>
                 </div>
             </div>

@@ -4,6 +4,8 @@ import indexDefinition = require("models/indexDefinition");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import pagedList = require("common/pagedList");
+import queryIndexCommand = require("commands/queryIndexCommand");
 
 class query extends viewModelBase {
 
@@ -14,8 +16,11 @@ class query extends viewModelBase {
     statsUrl: KnockoutComputed<string>;
     hasSelectedIndex: KnockoutComputed<boolean>;
     queryText = ko.observable("");
+    queryResults = ko.observable<pagedList>();
+    selectedResultIndices = ko.observableArray<number>();
 
     static containerSelector = "#queryContainer";
+    static emptyResultsFetcher = (skip: number, take: number) => $.Deferred().resolve([]);
 
     constructor() {
         super();
@@ -61,6 +66,15 @@ class query extends viewModelBase {
                 this.indexNames(stats.Indexes.map(i => i.PublicName));
                 this.selectedIndex(indexToSelect || this.indexNames().first());
             });
+    }
+
+    runQuery() {
+        var selectedIndex = this.selectedIndex();
+        if (selectedIndex) {
+            var resultsFetcher = (skip: number, take: number) => new queryIndexCommand(selectedIndex, this.activeDatabase(), skip, take, this.queryText()).execute();
+            var resultsList = new pagedList(resultsFetcher);
+            this.queryResults(resultsList);
+        }
     }
 }
 

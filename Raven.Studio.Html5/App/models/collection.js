@@ -9,6 +9,7 @@ define(["require", "exports", "common/pagedList", "commands/getCollectionInfoCom
             this.isSystemDocuments = false;
             this.isAllDocuments = name === collection.allDocsCollectionName;
             this.isSystemDocuments = name === collection.systemDocsCollectionName;
+            this.colorClass = collection.getCollectionCssClass(name);
         }
         // Notifies consumers that this collection should be the selected one.
         // Called from the UI when a user clicks a collection the documents page.
@@ -64,6 +65,28 @@ define(["require", "exports", "common/pagedList", "commands/getCollectionInfoCom
             return new collection(collection.allDocsCollectionName, ownerDatabase);
         };
 
+        collection.getCollectionCssClass = function (entityName) {
+            if (entityName === collection.allDocsCollectionName) {
+                return "all-documents-collection";
+            }
+
+            if (!entityName || entityName === collection.systemDocsCollectionName) {
+                return "system-documents-collection";
+            }
+
+            var existingStyle = collection.styleMap[entityName];
+            if (existingStyle) {
+                return existingStyle;
+            }
+
+            // We don't have an existing style. Assign one in the form of 'collection-style-X', where X is a number between 0 and maxStyleCount. These styles are found in app.less.
+            var maxStyleCount = 16;
+            var styleNumber = Object.keys(collection.styleMap).length % maxStyleCount;
+            var style = "collection-style-" + styleNumber;
+            collection.styleMap[entityName] = style;
+            return style;
+        };
+
         collection.prototype.createPagedList = function () {
             var _this = this;
             var fetcher = function (skip, take) {
@@ -75,6 +98,7 @@ define(["require", "exports", "common/pagedList", "commands/getCollectionInfoCom
         };
         collection.allDocsCollectionName = "All Documents";
         collection.systemDocsCollectionName = "System Documents";
+        collection.styleMap = {};
         return collection;
     })();
 

@@ -52,15 +52,9 @@ class documents extends viewModelBase {
     }
 
     collectionsLoaded(collections: Array<collection>, db: database) {
-
-        // Set the color class for each of the collections.
-        // These styles are found in app.less.
-        var collectionStyleCount = 15;
-        collections.forEach((c, index) => c.colorClass = "collection-style-" + (index % collectionStyleCount));
-
+        
         // Create the "All Documents" pseudo collection.
         this.allDocumentsCollection = collection.createAllDocsCollection(db);
-        this.allDocumentsCollection.colorClass = "all-documents-collection";
         this.allDocumentsCollection.documentCount = ko.computed(() =>
             this.collections()
                 .filter(c => c !== this.allDocumentsCollection) // Don't include self, the all documents collection.
@@ -69,7 +63,6 @@ class documents extends viewModelBase {
 
         // Create the "System Documents" pseudo collection.
         var systemDocumentsCollection = collection.createSystemDocsCollection(db);
-        systemDocumentsCollection.colorClass = "system-documents-collection";
 
         // All systems a-go. Load them into the UI and select the first one.
         var collectionsWithSysCollection = [systemDocumentsCollection].concat(collections);

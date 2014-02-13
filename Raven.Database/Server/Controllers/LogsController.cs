@@ -8,6 +8,7 @@ using Raven.Database.Util;
 
 namespace Raven.Database.Server.Controllers
 {
+    [Route("databases/{databaseName}/logs/{action=logsget}")]
 	[Route("logs/{action=logsget}")]
 	[Route("logs/ravenfs/{action=RavenFSLogsGet}")]
 	public class LogsController : RavenDbApiController
