@@ -35,7 +35,7 @@ namespace Voron.Impl.Paging
 			PagerState.Release();
 			Debug.Assert(AllocationGranularity % PageSize == 0);
 			NumberOfAllocatedPages = _totalAllocationSize / PageSize;
-			PagerState = CreateInitialPagerState(memoryName, _totalAllocationSize, null);
+			PagerState = CreateInitialPagerState(_totalAllocationSize, null);
 		}
 
 		protected override string GetSourceName()
@@ -266,10 +266,10 @@ namespace Voron.Impl.Paging
 		    return ((size/AllocationGranularity) + 1)*AllocationGranularity;
 		}
 
-		private PagerState CreateInitialPagerState(string memoryName, long size, byte* requestedBaseAddress)
+		private PagerState CreateInitialPagerState(long size, byte* requestedBaseAddress)
 		{
 			var allocationSize = NearestSizeToAllocationGranularity(size);
-			var mmf = MemoryMappedFile.CreateNew(memoryName, allocationSize, MemoryMappedFileAccess.ReadWrite);
+			var mmf = MemoryMappedFile.CreateNew(_memoryName, allocationSize, MemoryMappedFileAccess.ReadWrite);
 
 			var fileMappingHandle = mmf.SafeMemoryMappedFileHandle.DangerousGetHandle();
 

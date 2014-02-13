@@ -92,7 +92,7 @@ namespace Voron.Tests.Storage
 			Assert.Equal(numberOfPagesBeforeAllocation * growthMultiplier, Env.Options.DataPager.NumberOfAllocatedPages);
 		}
 
-		[Theory(Timeout = 15000)]
+		[Theory]
 		[InlineData(2)]
 		[InlineData(5)]
 		[InlineData(15)]
@@ -100,25 +100,23 @@ namespace Voron.Tests.Storage
 		[InlineData(250)]
 		public void Should_be_able_to_allocate_new_pages_with_apply_logs_to_data_file(int growthMultiplier)
 		{
-			using (Env.Options.AllowManualFlushing())
-			{
-				Assert.DoesNotThrow(() => Env.Options.DataPager.AllocateMorePages(null, PagerInitialSize*growthMultiplier));
-				var testData = GenerateTestData().ToList();
-				CreatTestSchema();
-				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-				{
-					var tree = tx.ReadTree(TestTreeName);
-					foreach (var dataPair in testData)
-						tree.Add(tx,dataPair.Key,StreamFor(dataPair.Value));
-					
-					tx.Commit();
-					Env.FlushLogToDataFile();
-				}
-			}
+		    _options.ManualFlushing = true;
+		    Assert.DoesNotThrow(() => Env.Options.DataPager.AllocateMorePages(null, PagerInitialSize*growthMultiplier));
+		    var testData = GenerateTestData().ToList();
+		    CreatTestSchema();
+		    using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+		    {
+		        var tree = tx.ReadTree(TestTreeName);
+		        foreach (var dataPair in testData)
+		            tree.Add(tx, dataPair.Key, StreamFor(dataPair.Value));
+
+		        tx.Commit();
+		    }
+            Env.FlushLogToDataFile();
 		}
 
 
-		private void CreatTestSchema()
+	    private void CreatTestSchema()
 		{
 			using(var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
