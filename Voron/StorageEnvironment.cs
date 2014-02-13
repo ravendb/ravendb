@@ -341,14 +341,19 @@ namespace Voron
             }
         }
 
-        public Transaction NewTransaction(TransactionFlags flags)
+        public Transaction NewTransaction(TransactionFlags flags, TimeSpan? timeout = null)
         {
             bool txLockTaken = false;
             try
             {
                 if (flags == (TransactionFlags.ReadWrite))
                 {
-                    _txWriter.Wait();
+                    var wait = timeout ?? TimeSpan.FromSeconds(30);
+                    if (_txWriter.Wait(wait) == false)
+                    {
+                        throw new TimeoutException("Waited for " + wait +
+                                                   " for transaction write lock, but could not get it");
+                    }
                     txLockTaken = true;
 
 					if (_endOfDiskSpace != null)
@@ -489,7 +494,14 @@ namespace Voron
 					        // we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
 					        // while there isn't any other activity going on.
 
-					        _journal.Applicator.ApplyLogsToDataFile(OldestTransaction);
+				            try
+				            {
+				                _journal.Applicator.ApplyLogsToDataFile(OldestTransaction);
+				            }
+				            catch (TimeoutException)
+				            {
+                                // we can ignore this, we'll try next time
+				            }
 				        }
 			        }
 		        }, TaskCreationOptions.LongRunning);

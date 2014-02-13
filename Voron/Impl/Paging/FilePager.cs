@@ -1,19 +1,16 @@
-﻿namespace Voron.Impl
+﻿using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.IO.MemoryMappedFiles;
+using System.Threading;
+using Microsoft.Win32.SafeHandles;
+using Voron.Trees;
+using Voron.Util;
+
+namespace Voron.Impl.Paging
 {
-	using System;
-	using System.ComponentModel;
-	using System.Diagnostics;
-	using System.IO;
-	using System.IO.MemoryMappedFiles;
-	using System.Threading;
-
-	using Microsoft.Win32.SafeHandles;
-
-	using Voron.Impl.Paging;
-	using Voron.Trees;
-	using Voron.Util;
-
-	public unsafe class FilePager : AbstractPager
+    public unsafe class FilePager : AbstractPager
     {
         private readonly FileStream _fileStream;
         private readonly FileInfo _fileInfo;
@@ -117,7 +114,7 @@
             var newPager = new PagerState(this)
                  {
                      Accessor = accessor,
-                     File = mmf,
+					 Files = new[] { mmf },
                      MapBase = p
                  };
             newPager.AddRef(); // one for the pager

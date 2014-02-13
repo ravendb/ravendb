@@ -372,7 +372,8 @@ namespace Voron.Impl.Journal
                 bool locked = false;
                 if (_flushingSemaphore.IsWriteLockHeld == false)
                 {
-                    _flushingSemaphore.EnterWriteLock();
+                    if (_flushingSemaphore.TryEnterWriteLock(TimeSpan.FromSeconds(30)) == false)
+                        throw new TimeoutException("Could not acquire the write lock in 30 seconds");
                     locked = true;
                 }
 
@@ -535,10 +536,11 @@ namespace Voron.Impl.Journal
 					EnsureDataPagerSpacing(transaction, last, numberOfPagesInLastPage, alreadyInWriteTx);
 
 					long written = 0;
-
+					int index = 0;
 					foreach (var page in sortedPages)
 					{
 						written += _waj._dataPager.Write(page);
+						index++;
 					}
 
 					_totalWrittenButUnsyncedBytes += written;
@@ -572,18 +574,14 @@ namespace Voron.Impl.Journal
 
 			private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles, Transaction txw)
 			{
-				// we have to free pages of the unused journals before the remaining ones that are still in use
-				// to prevent reading from them by any read transaction (read transactions search journals from the newest
-				// to read the most updated version)
-				foreach (var journalFile in unusedJournalFiles.OrderBy(x => x.Number))
+				foreach (var jrnl in _waj._files)
+				{
+                    jrnl.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
+				}
+				foreach (var journalFile in unusedJournalFiles)
 				{
 					journalFile.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
 				}
-
-				foreach (var jrnl in _waj._files.OrderBy(x => x.Number))
-				{
-                    jrnl.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
-				}	
 			}
 
 			private List<JournalFile> GetUnusedJournalFiles(List<JournalSnapshot> jrnls)
