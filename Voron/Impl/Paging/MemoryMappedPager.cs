@@ -1,6 +1,4 @@
-﻿using System.Collections.Immutable;
-
-namespace Voron.Impl.Paging
+﻿namespace Voron.Impl.Paging
 {
 	using Microsoft.Win32.SafeHandles;
 	using System;
@@ -94,7 +92,7 @@ namespace Voron.Impl.Paging
             var newPager = new PagerState(this)
             {
                 Accessor = accessor,
-				Files = (new[] { mmf }).ToImmutableList(),
+				Files = new[] { mmf },
                 MapBase = p
             };
             newPager.AddRef(); // one for the pager

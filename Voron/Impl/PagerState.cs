@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
-
-namespace Voron.Impl
+﻿namespace Voron.Impl
 {
     using System.Collections.Concurrent;
     using System.Diagnostics;
@@ -43,9 +37,9 @@ namespace Voron.Impl
 
         public MemoryMappedViewAccessor Accessor;
 
-        public ImmutableList<MemoryMappedFile> Files;
+        public MemoryMappedFile[] Files;
 
-		public ImmutableList<AllocationInfo> AllocationInfos = ImmutableList<AllocationInfo>.Empty;
+		public AllocationInfo[] AllocationInfos;
 
         public byte* MapBase { get; set; }
 

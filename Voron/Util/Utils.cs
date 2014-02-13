@@ -1,7 +1,16 @@
-﻿namespace Voron.Util
+﻿using System;
+
+namespace Voron.Util
 {
-	public class Utils
+	public static class Utils
 	{
+	    public static T[] Concat<T>(this T[] array, T next)
+	    {
+	        var t = new T[array.Length + 1];
+	        Array.Copy(array, t, array.Length);
+	        t[array.Length] = next;
+	        return t;
+	    }
 		public static long NearestPowerOfTwo(long v)
 		{
 			v--;
