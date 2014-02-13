@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using Voron.Debugging;
 using Voron.Impl;
+using Voron.Impl.Paging;
 using Voron.Trees;
 
 namespace Voron.Tests
@@ -40,7 +41,7 @@ namespace Voron.Tests
 		protected StorageTest()
 		{
 			DeleteDirectory("test.data");
-			_options = StorageEnvironmentOptions.ForPath("test.data");
+		    _options = StorageEnvironmentOptions.GetInMemory();
 			Configure(_options);
 		}
 
@@ -50,6 +51,17 @@ namespace Voron.Tests
 
 			StartDatabase();
 		}
+
+	    protected void RequireFileBasedPager()
+	    {
+	        if(_storageEnvironment != null)
+                throw new InvalidOperationException("Too late");
+            if (_options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
+	            return;
+            DeleteDirectory("test.data");
+            _options = StorageEnvironmentOptions.ForPath("test.data");
+            Configure(_options);
+	    }
 
 		protected void StartDatabase()
 		{

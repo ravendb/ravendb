@@ -140,6 +140,7 @@ namespace Voron.Tests.Bugs
 		[Fact]
 		public void CanResetLogInfoAfterBigUncommitedTransactionWithRestart()
 		{
+		    RequireFileBasedPager();
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.CreateTree(tx, "tree").Add(tx, "exists", new MemoryStream(new byte[100]));
@@ -179,6 +180,7 @@ namespace Voron.Tests.Bugs
 		[Fact]
 		public void CanResetLogInfoAfterBigUncommitedTransactionWithRestart2()
 		{
+            RequireFileBasedPager();
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.CreateTree(tx, "tree");
@@ -221,6 +223,7 @@ namespace Voron.Tests.Bugs
 		[Fact]
 		public void CorruptingOneTransactionWillKillAllFutureTransactions()
 		{
+            RequireFileBasedPager();
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Env.CreateTree(tx, "tree");
