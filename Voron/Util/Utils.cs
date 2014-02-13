@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Voron.Util
 {
@@ -11,6 +12,14 @@ namespace Voron.Util
 	        t[array.Length] = next;
 	        return t;
 	    }
+
+        public static T[] Concat<T>(this List<T> array, T next)
+        {
+            var t = new T[array.Count + 1];
+            array.CopyTo(t);
+            t[array.Count] = next;
+            return t;
+        }
 		public static long NearestPowerOfTwo(long v)
 		{
 			v--;

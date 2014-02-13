@@ -54,8 +54,9 @@
             StackTrace value;
             Instances.TryRemove(this, out value);
 #endif
-
-			_pager.RegisterDisposal(Task.Run(() => ReleaseInternal()));
+         
+            ReleaseInternal();
+            //_pager.RegisterDisposal(Task.Run(() => ReleaseInternal()));
         }
 
         private void ReleaseInternal()
@@ -75,8 +76,11 @@
 	            Files = null;
             }
 
-	        foreach (var allocationInfo in AllocationInfos)
-				MemoryMapNativeMethods.UnmapViewOfFile(allocationInfo.BaseAddress);
+            if (AllocationInfos != null)
+            {
+                foreach (var allocationInfo in AllocationInfos)
+                    MemoryMapNativeMethods.UnmapViewOfFile(allocationInfo.BaseAddress);
+            }
 
             Released = true;
         }

@@ -26,9 +26,8 @@ namespace Voron.Impl.Paging
 			NativeMethods.SYSTEM_INFO systemInfo;
 			NativeMethods.GetSystemInfo(out systemInfo);
 
-            _memoryName = !String.IsNullOrWhiteSpace(memoryName) ? 
-                    memoryName : 
-                    Interlocked.Increment(ref _counter).ToString(CultureInfo.InvariantCulture);
+		    var s = Interlocked.Increment(ref _counter).ToString(CultureInfo.InvariantCulture);
+		    _memoryName = memoryName + s;
 
 			AllocationGranularity = systemInfo.allocationGranularity;
 			_totalAllocationSize = systemInfo.allocationGranularity;
@@ -46,7 +45,7 @@ namespace Voron.Impl.Paging
 
 		public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
 		{
-			return (pagerState ?? PagerState).MapBase + (pageNumber * PageSize);
+		    return (pagerState ?? PagerState).MapBase + (pageNumber * PageSize);
 		}
 
 		public override void Sync()
@@ -76,33 +75,32 @@ namespace Voron.Impl.Paging
 
 			var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-		    if (TryAllocateMoreContinuousPages(allocationSize))
-            {
-                _totalAllocationSize += allocationSize;
-                NumberOfAllocatedPages = _totalAllocationSize / PageSize;
-                return;
-            }
-
-		    var newPagerState = AllocateMorePagesAndRemapContinuously(allocationSize);
-		    if (newPagerState == null)
+		    if (TryAllocateMoreContinuousPages(allocationSize) == false)
 		    {
-		        var errorMessage = string.Format(
-		            "Unable to allocate more pages - unsucsessfully tried to allocate continuous block of virtual memory with size = {0:##,###;;0} bytes",
-		            (_totalAllocationSize + allocationSize));
+		        var newPagerState = AllocateMorePagesAndRemapContinuously(allocationSize);
+		      
+		        if (newPagerState == null)
+		        {
+		            var errorMessage = string.Format(
+		                "Unable to allocate more pages - unsucsessfully tried to allocate continuous block of virtual memory with size = {0:##,###;;0} bytes",
+		                (_totalAllocationSize + allocationSize));
 
-		        throw new OutOfMemoryException(errorMessage);
-		    }
+		            throw new OutOfMemoryException(errorMessage);
+		        }
 
-		    newPagerState.AddRef();
-		    if (tx != null)
-		    {
 		        newPagerState.AddRef();
-		        tx.AddPagerState(newPagerState);
-		    }
+		        if (tx != null)
+		        {
+		            newPagerState.AddRef();
+		            tx.AddPagerState(newPagerState);
+		        }
 
-		    PagerState.DisposeFilesOnDispose = false;
-		    PagerState.Release(); //replacing the pager state --> so one less reference for it
-		    PagerState = newPagerState;
+		        PagerState.DisposeFilesOnDispose = false;
+		        PagerState.Release(); //replacing the pager state --> so one less reference for it
+		        PagerState = newPagerState;
+		    }
+		    _totalAllocationSize += allocationSize;
+            NumberOfAllocatedPages = _totalAllocationSize / PageSize;
 		}
 
 	
@@ -147,7 +145,7 @@ namespace Voron.Impl.Paging
 					var newAlloctedBaseAddress = MemoryMapNativeMethods.MapViewOfFileEx(allocationInfo.MappedFile.SafeMemoryMappedFileHandle.DangerousGetHandle(),
 						MemoryMapNativeMethods.NativeFileMapAccessType.Read | MemoryMapNativeMethods.NativeFileMapAccessType.Write,
 						0, 0,
-						new UIntPtr((ulong)allocationInfo.Size),
+						UIntPtr.Zero, 
 						newBaseAddress + offset);
 
 					if (newAlloctedBaseAddress == null || newAlloctedBaseAddress == (byte*)0)
@@ -170,8 +168,8 @@ namespace Voron.Impl.Paging
 			    if (failedToAllocate) 
                     continue;
 
-			    var newAllocationInfo = TryCreateNewFileMappingAtAddress(allocationSize, newBaseAddress + _totalAllocationSize);
-			    if (newAllocationInfo == null)
+                var newAllocationInfo = TryCreateNewFileMappingAtAddress(allocationSize, newBaseAddress);
+                if (newAllocationInfo == null)
 			    {
                     UndoMappings(allocationInfoAfterReallocation); 
                     continue;
@@ -180,7 +178,7 @@ namespace Voron.Impl.Paging
 			    var newPagerState = new PagerState(this)
 			    {
                     Files = PagerState.Files.Concat(newAllocationInfo.MappedFile),
-                    AllocationInfos = PagerState.AllocationInfos.Concat(newAllocationInfo),
+                    AllocationInfos = allocationInfoAfterReallocation.Concat(newAllocationInfo),
 			        MapBase = PagerState.MapBase
 			    };
 			    return newPagerState;
