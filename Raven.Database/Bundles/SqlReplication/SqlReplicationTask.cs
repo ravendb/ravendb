@@ -231,7 +231,7 @@ namespace Raven.Database.Bundles.SqlReplication
 							var currentLatestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicate);
 
 							if (ReplicateDeletionsToDestination(replicationConfig, deletedDocs) &&
-								ReplicateChangesToDesintation(replicationConfig, docsToReplicate))
+								ReplicateChangesToDestination(replicationConfig, docsToReplicate))
 							{
 								if (deletedDocs.Count > 0)
 								{
@@ -400,7 +400,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			return calculateSynchronizationEtag;
 		}
 
-		private bool ReplicateChangesToDesintation(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
+		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
 		{
 			var scriptResult = ApplyConversionScript(cfg, docs);
 			if (scriptResult.Data.Count == 0)
