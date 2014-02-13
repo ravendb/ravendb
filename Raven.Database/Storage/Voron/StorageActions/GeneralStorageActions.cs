@@ -61,7 +61,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
         public void PulseTransaction()
         {
 			storage.Write(writeBatch.Value);
-			writeBatch.Value = new WriteBatch();
+            writeBatch.Value.Dispose();
+			writeBatch.Value = new WriteBatch {DisposeAfterWrite = writeBatch.Value.DisposeAfterWrite};
 		}
 
 		public void MaybePulseTransaction()

@@ -26,111 +26,13 @@ using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 using Raven.Smuggler;
 using Raven.Tests.Triggers;
+using Raven.Tests.Util;
 using Xunit;
 using Raven.Abstractions.Extensions;
 using System.Linq;
 
 namespace Raven.Tests.Issues
 {
-
-    public class PortForwarder
-    {
-        private readonly int listenPort;
-        private readonly int targetPort;
-        private Func<int, byte[], int, int, bool> shouldThrow;
-        private readonly CancellationTokenSource cancellationTokenSource;
-        private TcpListener server;
-
-        public PortForwarder(int listenPort, int targetPort, Func<int, byte[], int, int, bool> shouldThrow)
-        {
-            this.listenPort = listenPort;
-            this.targetPort = targetPort;
-            this.shouldThrow = shouldThrow;
-            cancellationTokenSource = new CancellationTokenSource();
-        }
-
-        public void Stop()
-        {
-            server.Stop();
-            cancellationTokenSource.Cancel();
-        }
-
-        public void Forward()
-        {
-            var localAddr = IPAddress.Parse("127.0.0.1");
-            server = new TcpListener(localAddr, listenPort);
-            server.Start();
-
-            Task.Run(() =>
-            {
-                var token = cancellationTokenSource.Token;
-                while (true)
-                {
-                    var tcpClient = server.AcceptTcpClient();
-                    Task.Run(() => HandleClient(tcpClient));
-                }
-            });
-        }
-
-        private void HandleClient(TcpClient tcpClient)
-        {
-            var incomingStream = tcpClient.GetStream();
-
-            // now connect to target
-
-            var targetClient = new TcpClient("127.0.0.1", targetPort);
-            var targetStream = targetClient.GetStream();
-
-            var readTask = Task.Run(async () =>
-            {
-                var buffer = new byte[4096];
-                var totalRead = 0;
-                var token = cancellationTokenSource.Token;
-                while (true)
-                {
-                    var read = await incomingStream.ReadAsync(buffer, 0, 4096, token);
-                    if (read == 0)
-                    {
-                        tcpClient.Close();
-                        break;
-                    }
-                    totalRead += read;
-                    if (shouldThrow(totalRead, buffer,0, read))
-                    {
-                        incomingStream.Close();
-                        targetStream.Close();
-                    }
-                    await targetStream.WriteAsync(buffer, 0, read, token);
-                    targetStream.Flush();
-                }
-            });
-
-            var writeTask = Task.Run(async () =>
-            {
-                var token = cancellationTokenSource.Token;
-                var buffer = new byte[4096];
-                var totalRead = 0;
-                while (true)
-                {
-                    var read = await targetStream.ReadAsync(buffer, 0, 4096, token);
-                    if (read == 0)
-                    {
-                        targetClient.Close();
-                    }
-                    totalRead += read;
-                    if (shouldThrow(totalRead, buffer, 0, read))
-                    {
-                        incomingStream.Close();
-                        targetStream.Close();
-                    }
-                    await incomingStream.WriteAsync(buffer, 0, read, token);
-                    incomingStream.Flush();
-                }
-            });
-
-            Task.WaitAll(readTask, writeTask);
-        }
-    }
 
     public class RavenDB_1603 : RavenTest
     {
@@ -284,17 +186,7 @@ namespace Raven.Tests.Issues
             {
                 using (var session = store.OpenSession())
                 {
-	                var importedRecords = session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).ToList();
-	                if (importedRecords.Count > 1500)
-	                {
-		                var extraRecords = importedRecords.OrderBy(x => x.Id).Skip(1500);
-
-						Trace.WriteLine("Smuggler exported extra records - thus ignoring Limit parameter:");
-		                foreach (var record in extraRecords)
-			                Trace.WriteLine("Id " + record.Id);
-	                }
-
-	                Assert.Equal(1500, importedRecords.Count);
+                    Assert.Equal(1500, session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count());
                 }
             });
             IOExtensions.DeleteDirectory(backupPath);
@@ -763,17 +655,19 @@ namespace Raven.Tests.Issues
 
             var alreadyReset = false;
 
-            var forwarder = new PortForwarder(8070, 8079, (totalRead, bytes, offset, count) =>
+            var forwarder = new ProxyServer(8070, 8079)
             {
-                if (alreadyReset == false && totalRead > 10000)
-                {
-                    alreadyReset = true;
-                    return true;
-                }
-                return false;
-            });
-            forwarder.Forward();
-            try
+	            VetoTransfer = (totalRead, buffer) =>
+	            {
+		            if (alreadyReset == false && totalRead > 10000)
+		            {
+			            alreadyReset = true;
+			            return true;
+		            }
+		            return false;
+	            }
+            };
+	        try
             {
                 string databaseName;
                 using (var store = new DocumentStore
@@ -837,12 +731,12 @@ namespace Raven.Tests.Issues
 
                 Assert.Equal(2000, allDocs.Count(d => (d.Value<string>("Name") ?? String.Empty).StartsWith("User")));
                 
-                IOExtensions.DeleteDirectory(backupPath);
             }
             finally
             {
-                forwarder.Stop();
+                forwarder.Dispose();
                 server.Dispose();
+                IOExtensions.DeleteDirectory(backupPath);
             }
         }
 
@@ -852,20 +746,16 @@ namespace Raven.Tests.Issues
             var backupPath = NewDataPath("BackupFolder");
             var server = GetNewServer();
 
-            var resetCount = 0;
+            var allowDownload = false;
 
-            var forwarder = new PortForwarder(8070, 8079, (totalRead, bytes, offset, count) =>
+            var forwarder = new ProxyServer(8070, 8079)
             {
-                var payload = System.Text.Encoding.UTF8.GetString(bytes, offset, count);
-                //reset count is requred as raven can retry attachment download
-                if (payload.Contains("GET /static/users/678 ") && resetCount < 5)
-                {
-                    resetCount++;
-                    return true;
-                }
-                return false;
-            });
-            forwarder.Forward();
+				VetoTransfer = (totalRead, buffer) =>
+				{
+					var payload = System.Text.Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
+					return payload.Contains("GET /static/users/678 ") && allowDownload == false;
+				}
+            };
             try
             {
                 string databaseName;
@@ -905,6 +795,7 @@ namespace Raven.Tests.Issues
                         FilePath = inner.File
                     };
                 }
+                allowDownload = true;
 
                 using (var fileStream = new FileStream(exportResult.FilePath, FileMode.Open))
                 using (var stream = new GZipStream(fileStream, CompressionMode.Decompress))
@@ -932,7 +823,7 @@ namespace Raven.Tests.Issues
             }
             finally
             {
-                forwarder.Stop();
+                forwarder.Dispose();
                 server.Dispose();
             }
         }

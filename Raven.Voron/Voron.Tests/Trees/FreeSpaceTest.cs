@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using Voron.Impl.FreeSpace;
 using Xunit;
 
 namespace Voron.Tests.Trees
@@ -50,6 +51,22 @@ namespace Voron.Tests.Trees
 			Assert.Equal(after.RootPages, before.RootPages);
 
 			Assert.True(Env.NextPageNumber - old < 2, "This test will not pass until we finish merging the free space branch");
+		}
+
+		[Fact]
+		public void ShouldReturnProperPageFromSecondSection()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.FreeSpaceHandling.FreePage(tx, FreeSpaceHandling.NumberOfPagesInSection + 1);
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Assert.Equal(FreeSpaceHandling.NumberOfPagesInSection + 1, Env.FreeSpaceHandling.TryAllocateFromFreeSpace(tx, 1));
+			}
 		}
 	}
 }

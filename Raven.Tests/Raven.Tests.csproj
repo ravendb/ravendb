@@ -284,6 +284,7 @@
     <Compile Include="Issues\RavenDB_1497.cs" />
     <Compile Include="Issues\RavenDB_1520.cs" />
     <Compile Include="Issues\RavenDB_1533.cs" />
+    <Compile Include="Issues\RavenDB_1537.cs" />
     <Compile Include="Issues\RavenDB_1561.cs" />
     <Compile Include="Issues\RavenDB_1560.cs" />
     <Compile Include="Issues\RavenDB_1595.cs" />
@@ -1571,6 +1572,7 @@
     <Compile Include="Util\IISConfig.cs" />
     <Compile Include="Util\IISExpressDriver.cs" />
     <Compile Include="Util\ProcessDriver.cs" />
+    <Compile Include="Util\ProxyServer.cs" />
     <Compile Include="Util\RavenDBDriver.cs" />
     <Compile Include="Util\ReflectionUtilTest.cs" />
     <Compile Include="Util\RunExternalProcess.cs" />

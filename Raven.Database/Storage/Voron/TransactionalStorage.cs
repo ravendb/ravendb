@@ -89,14 +89,14 @@ namespace Raven.Storage.Voron
 		public IStorageActionsAccessor CreateAccessor()
 		{
 			var snapshot = tableStorage.CreateSnapshot();
-			var writeBatch = new WriteBatch();
+			var writeBatchReference = new Reference<WriteBatch> { Value = new WriteBatch() };
 			
 			var accessor = new StorageActionsAccessor(uuidGenerator, _documentCodecs,
-					documentCacher, writeBatch, snapshot, tableStorage,this);
+                    documentCacher, writeBatchReference, snapshot, tableStorage, this);
 			accessor.OnDispose += () =>
 			{
 				snapshot.Dispose();
-				writeBatch.Dispose();
+                writeBatchReference.Value.Dispose();
 			};
 
 			return accessor;
@@ -118,6 +118,12 @@ namespace Raven.Storage.Voron
 			disposerLock.EnterReadLock();
 			try
 			{
+				if (disposed)
+				{
+					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
+					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
+				}
+
 				ExecuteBatch(action);
 			}
 			catch (Exception e)
@@ -146,22 +152,35 @@ namespace Raven.Storage.Voron
 		private IStorageActionsAccessor ExecuteBatch(Action<IStorageActionsAccessor> action)
 		{
 			using (var snapshot = tableStorage.CreateSnapshot())
-			using (var writeBatch = new WriteBatch())
 			{
-				var storageActionsAccessor = new StorageActionsAccessor(uuidGenerator, _documentCodecs,
-					documentCacher, writeBatch, snapshot, tableStorage,this);
+			    var writeBatchRef = new Reference<WriteBatch>();
+                try
+                {
+                    writeBatchRef.Value = new WriteBatch() {DisposeAfterWrite = false};// prevent from disposing after write to allow read from batch OnStorageCommit
+                    var storageActionsAccessor = new StorageActionsAccessor(uuidGenerator, _documentCodecs,
+                                                                            documentCacher, writeBatchRef, snapshot,
+                                                                            tableStorage, this);
 
-				if (disableBatchNesting.Value == null)
-					current.Value = storageActionsAccessor;
+                    if (disableBatchNesting.Value == null)
+                        current.Value = storageActionsAccessor;
 
-				action(storageActionsAccessor);
-				storageActionsAccessor.SaveAllTasks();
+                    action(storageActionsAccessor);
+                    storageActionsAccessor.SaveAllTasks();
 
-			    tableStorage.Write(writeBatch);
+                    tableStorage.Write(writeBatchRef.Value);
 
-                storageActionsAccessor.ExecuteOnStorageCommit(); //tODO : check whether this should be done here
+                    storageActionsAccessor.ExecuteOnStorageCommit();
 
-				return storageActionsAccessor;
+                    return storageActionsAccessor;
+                }
+                finally
+                {
+                    if (writeBatchRef.Value != null)
+                    {
+                        writeBatchRef.Value.Dispose();
+                    }
+                }
+			   
 			}
 		}
 

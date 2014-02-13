@@ -1,6 +1,4 @@
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using Voron.Trees;
 using Voron.Util.Conversion;
 
@@ -8,7 +6,7 @@ namespace Voron.Impl.FreeSpace
 {
 	public class FreeSpaceHandling : IFreeSpaceHandling
 	{
-		private const int NumberOfPagesInSection = 256 * 8; // 256 bytes, 8 bits per byte = 2,048 - each section 8 MB in size
+		internal const int NumberOfPagesInSection = 256 * 8; // 256 bytes, 8 bits per byte = 2,048 - each section 8 MB in size
 		private readonly StorageEnvironment _env;
 		private readonly Slice _freePagesCount;
 
@@ -28,10 +26,7 @@ namespace Voron.Impl.FreeSpace
 
 			using (var it = tx.State.FreeSpaceRoot.Iterate(tx))
 			{
-				var buffer = new byte[8];
-				var key = new Slice(buffer);
-
-				if (it.Seek(key) == false)
+				if (it.Seek(Slice.BeforeAllKeys) == false)
 					return null;
 
 				if (num < NumberOfPagesInSection)
