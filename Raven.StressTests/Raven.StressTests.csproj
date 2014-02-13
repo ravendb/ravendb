@@ -72,6 +72,7 @@
     </Compile>
     <Compile Include="Load\LoadBigFile.cs" />
     <Compile Include="Races\FailedIntermittently.cs" />
+    <Compile Include="Races\Georgios.cs" />
     <Compile Include="Storage\MultiThreaded\BatchOperation.cs" />
     <Compile Include="Storage\MultiThreaded\MultiThreaded.cs" />
     <Compile Include="Storage\MultiThreaded\PutAndBatchOperation.cs" />
