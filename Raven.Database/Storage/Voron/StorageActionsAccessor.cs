@@ -24,12 +24,9 @@ namespace Raven.Database.Storage.Voron
 	{
         private readonly DateTime createdAt = SystemTime.UtcNow;
 		public event Action OnDispose;
-		private Reference<WriteBatch> writeBatchReference;
 
-		public StorageActionsAccessor(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, IDocumentCacher documentCacher, WriteBatch writeBatch, SnapshotReader snapshot, TableStorage storage, TransactionalStorage transactionalStorage)
-		{
-			writeBatchReference = new Reference<WriteBatch> { Value = writeBatch};
-
+        public StorageActionsAccessor(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, IDocumentCacher documentCacher, Reference<WriteBatch> writeBatchReference, SnapshotReader snapshot, TableStorage storage, TransactionalStorage transactionalStorage)
+        {
 			Documents = new DocumentsStorageActions(generator, documentCodecs, documentCacher, writeBatchReference, snapshot, storage);
 			Indexing = new IndexingStorageActions(storage, generator, snapshot, writeBatchReference, this);
 			Queue = new QueueStorageActions(storage, generator, snapshot, writeBatchReference);

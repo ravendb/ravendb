@@ -17,6 +17,7 @@ namespace Voron.Util
 {
 	public static unsafe class NativeFileMethods
 	{
+
 		[DllImport("kernel32.dll", SetLastError = true)]
 		public static extern bool WriteFile(SafeFileHandle hFile, byte* lpBuffer, int nNumberOfBytesToWrite,
 		                                    out int lpNumberOfBytesWritten, NativeOverlapped* lpOverlapped);

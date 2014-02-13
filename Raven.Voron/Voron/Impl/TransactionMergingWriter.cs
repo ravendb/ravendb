@@ -261,7 +261,8 @@ namespace Voron.Impl
 
             public void Dispose()
             {
-                Batch.Dispose();
+				if(Batch.DisposeAfterWrite)
+					Batch.Dispose();
 
                 _transactionMergingWriter._eventsBuffer.Enqueue(_completed);
             }

@@ -33,6 +33,8 @@ namespace Voron.Tests.Backups
 		[Fact]
 		public void CanBackupAndRestoreOnEmptyStorage()
 		{
+            RequireFileBasedPager();
+
 			var random = new Random();
 			var buffer = new byte[8192];
 			random.NextBytes(buffer);
@@ -74,6 +76,8 @@ namespace Voron.Tests.Backups
 		[Fact]
 		public void CanDoMultipleIncrementalBackupsAndRestoreOneByOne()
 		{
+            RequireFileBasedPager();
+
 			var random = new Random();
 			var buffer = new byte[1024];
 			random.NextBytes(buffer);
@@ -144,7 +148,8 @@ namespace Voron.Tests.Backups
 
 		[Fact]
 		public void IncrementalBackupShouldCopyJustNewPagesSinceLastBackup()
-		{
+        {
+            RequireFileBasedPager();
 			var random = new Random();
 			var buffer = new byte[100];
 			random.NextBytes(buffer);

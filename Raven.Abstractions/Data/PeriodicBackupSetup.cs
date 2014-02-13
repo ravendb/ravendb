@@ -21,12 +21,15 @@ namespace Raven.Abstractions.Data
 
 		public int IntervalMilliseconds { get; set; }
 
+        public int FullBackupIntervalMilliseconds { get; set; }
+
 		protected bool Equals(PeriodicBackupSetup other)
 		{
 			return string.Equals(GlacierVaultName, other.GlacierVaultName) && string.Equals(S3BucketName, other.S3BucketName) &&
 			       string.Equals(AwsRegionEndpoint, other.AwsRegionEndpoint) &&
 			       string.Equals(AzureStorageContainer, other.AzureStorageContainer) &&
-			       string.Equals(LocalFolderName, other.LocalFolderName) && IntervalMilliseconds == other.IntervalMilliseconds;
+			       string.Equals(LocalFolderName, other.LocalFolderName) && 
+                   IntervalMilliseconds == other.IntervalMilliseconds && FullBackupIntervalMilliseconds == other.FullBackupIntervalMilliseconds;
 		}
 
 		public override bool Equals(object obj)
@@ -47,6 +50,7 @@ namespace Raven.Abstractions.Data
 				hashCode = (hashCode*397) ^ (AzureStorageContainer != null ? AzureStorageContainer.GetHashCode() : 0);
 				hashCode = (hashCode*397) ^ (LocalFolderName != null ? LocalFolderName.GetHashCode() : 0);
 				hashCode = (hashCode*397) ^ IntervalMilliseconds;
+			    hashCode = (hashCode*397) ^ FullBackupIntervalMilliseconds;
 				return hashCode;
 			}
 		}
@@ -56,6 +60,7 @@ namespace Raven.Abstractions.Data
 	{
 		public const string RavenDocumentKey = "Raven/Backup/Periodic/Status";
 		public DateTime LastBackup { get; set; }
+        public DateTime LastFullBackup { get; set; }
 		public Etag LastDocsEtag { get; set; }
 		public Etag LastAttachmentsEtag { get; set; }
 

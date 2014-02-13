@@ -29,7 +29,7 @@ namespace Raven.Tests
             
 		}
 
-		[Theory(Timeout = 30000,Skip = "Not supported in Voron yet")]
+		[Theory(Timeout = 30000)]
         [PropertyData("Storages")]
 		public void CreateIncrementalBackup(string storageName)
 		{
@@ -69,6 +69,7 @@ namespace Raven.Tests
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
 			configuration.Settings["Raven/Esent/CircularLog"] = "false";
+			configuration.Settings["Raven/Voron/AllowIncrementalBackups"] = "true";
 			configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
 		}
 
