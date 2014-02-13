@@ -16,7 +16,7 @@ namespace Voron.Impl.Paging
 		// ReSharper disable InconsistentNaming
 
 		
-
+		[Obsolete("Should not be used - needs to be phased away")]
 		public Win32PureMemoryPager()
 		{
 			_reservedSize = Environment.Is64BitProcess ? 4 * 1024 * 1024 * 1024UL : 128 * 1024 * 1024UL;
@@ -27,6 +27,7 @@ namespace Voron.Impl.Paging
 		    _rangesCount = 1;
 		}
 
+		[Obsolete("Should not be used - needs to be phased away")]
 		public Win32PureMemoryPager(byte[] data)
 			: this()
 		{

@@ -18,6 +18,8 @@ namespace Voron.Impl
     {
 	    private readonly AbstractPager _pager;
 
+	    public bool DisposeFilesOnDispose = true;
+
 	    public class AllocationInfo
 	    {
 		    public MemoryMappedFile MappedFile;
@@ -71,7 +73,7 @@ namespace Voron.Impl
                 Accessor = null;
             }
 
-            if (Files != null)
+			if (Files != null && DisposeFilesOnDispose)
             {
 	            foreach (var file in Files)
 					file.Dispose();

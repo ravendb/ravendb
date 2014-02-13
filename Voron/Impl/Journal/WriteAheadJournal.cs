@@ -535,10 +535,11 @@ namespace Voron.Impl.Journal
 					EnsureDataPagerSpacing(transaction, last, numberOfPagesInLastPage, alreadyInWriteTx);
 
 					long written = 0;
-
+					int index = 0;
 					foreach (var page in sortedPages)
 					{
 						written += _waj._dataPager.Write(page);
+						index++;
 					}
 
 					_totalWrittenButUnsyncedBytes += written;

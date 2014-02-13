@@ -9,11 +9,11 @@ namespace Voron.Tests.Storage
     public class Pagers
 	{
 #if DEBUG_PAGER_STATE
-        [Fact]
-        public void PureMemoryPagerReleasesPagerState()
-        {
-            PagerReleasesPagerState(() => new Win32PureMemoryPager());
-        }
+//        [Fact]
+//        public void PureMemoryPagerReleasesPagerState()
+//        {
+//            PagerReleasesPagerState(() => new Win32PureMemoryPager());
+//        }
 
         [Fact]
         public void MemoryMapPagerReleasesPagerState()
@@ -25,7 +25,7 @@ namespace Voron.Tests.Storage
 		[Fact]	
 	    public void MemoryMapWithoutBackingReleasePagerState()
 	    {
-		    PagerReleasesPagerState(() => /*new Win32MemoryMapWithoutBackingPager("testPager")*/ null);
+		    PagerReleasesPagerState(() => new Win32MemoryMapWithoutBackingPager("testPager"));
 	    }
 
         [Fact]

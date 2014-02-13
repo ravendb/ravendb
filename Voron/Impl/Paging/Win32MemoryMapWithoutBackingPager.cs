@@ -1,4 +1,5 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -21,16 +22,16 @@ namespace Voron.Impl.Paging
 		private long _totalAllocationSize;
 		private readonly string _memoryName;
 		private const int MaxAllocationRetries = 100;
+		private readonly ILog _log;
 
 		public Win32MemoryMapWithoutBackingPager(string memoryName = null)
 		{
+			_log = LogManager.GetLogger(typeof (Win32MemoryMapWithoutBackingPager));
+
 			NativeMethods.SYSTEM_INFO systemInfo;
 			NativeMethods.GetSystemInfo(out systemInfo);
 
-			if (!String.IsNullOrWhiteSpace(memoryName))
-				_memoryName = memoryName;
-			else
-				_memoryName = Guid.NewGuid().ToString();
+			_memoryName = !String.IsNullOrWhiteSpace(memoryName) ? memoryName : Guid.NewGuid().ToString();
 
 			AllocationGranularity = systemInfo.allocationGranularity;
 			_totalAllocationSize = systemInfo.allocationGranularity;
@@ -40,7 +41,6 @@ namespace Voron.Impl.Paging
 			NumberOfAllocatedPages = _totalAllocationSize / PageSize;
 			PagerState = CreateInitialPagerState(memoryName, _totalAllocationSize, null);
 		}
-
 
 		protected override string GetSourceName()
 		{
@@ -77,20 +77,31 @@ namespace Voron.Impl.Paging
 			if (newLengthAfterAdjustment == _totalAllocationSize)
 				return;
 
-			var allocationSize = NearestSizeToAllocationGranularity(newLength - _totalAllocationSize);
+			var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
 			if (!TryAllocateMoreContinuousPages(allocationSize))
 			{
 				var newPagerState = AllocateMorePagesAndRemapContinuously(allocationSize);
 				if (newPagerState == null)
-					throw new OutOfMemoryException(string.Format("Unable to allocate more pages - unsucsessfully tried to allocate continuous block of size = {0} bytes", (_totalAllocationSize + allocationSize)));
-				
+				{
+					var errorMessage = string.Format(
+						"Unable to allocate more pages - unsucsessfully tried to allocate continuous block of size = {0} bytes",
+						(_totalAllocationSize + allocationSize));
+					
+					_log.Error(errorMessage);
+
+					throw new OutOfMemoryException(errorMessage);
+				}
+
 				newPagerState.AddRef();
 				if (tx != null)
 				{
 					newPagerState.AddRef();
 					tx.AddPagerState(newPagerState);
-				}				
+				}
+
+				PagerState.DisposeFilesOnDispose = false;
+				PagerState.Release(); //replacing the pager state --> so one less reference for it
 				PagerState = newPagerState;
 			}
 
@@ -129,6 +140,7 @@ namespace Voron.Impl.Paging
 							"If you are running in 32 bits, this is expected, and you need to run in 64 bits to resume normal operations.\r\n" +
 							"If you are running in 64 bits, this is likely an error and should be reported."
 							, (_totalAllocationSize + allocationSize), Environment.Is64BitProcess);
+					_log.Error(message);
 					throw new OutOfMemoryException(message);
 				}
 
@@ -145,7 +157,7 @@ namespace Voron.Impl.Paging
 
 					if (newAlloctedBaseAddress == null || newAlloctedBaseAddress == (byte*)0)
 					{
-						// todo: log this out!
+						_log.Debug("Failed to remap file continuously. Unmapping already mapped files and re-trying");
 						UndoMappings(allocationInfoAfterReallocation);
 						failedToAllocate = true;
 						break;
@@ -176,8 +188,10 @@ namespace Voron.Impl.Paging
 				}
 			}
 
-			throw new InvalidOperationException("Something bad has happened, after " + MaxAllocationRetries + " tries, could not find any spot in virtual memory to " +
-												"remap continuously memory");
+			var errorMessage = "Something bad has happened, after " + MaxAllocationRetries + " tries, could not find any spot in virtual memory to " +
+			        "remap continuously memory";
+			_log.Error(errorMessage);
+			throw new InvalidOperationException(errorMessage);
 		}
 
 		private static void UndoMappings(IEnumerable<PagerState.AllocationInfo> newAllocationInfos)
