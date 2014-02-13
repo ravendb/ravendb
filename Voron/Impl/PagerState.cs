@@ -101,5 +101,27 @@
 			}
 #endif
 		}
+
+        [Conditional("VALIDATE")]
+        public void DebugVerify(long size)
+        {
+            if (AllocationInfos == null)
+                return;
+
+            foreach (var allocationInfo in AllocationInfos)
+            {
+                for (int i = 0; i < allocationInfo.Size; i++)
+                {
+                    var b = *(allocationInfo.BaseAddress + i);
+                    *(allocationInfo.BaseAddress + i) = b;
+                }
+            }
+
+            for (int i = 0; i < size; i++)
+            {
+                var b = *(MapBase + i);
+                *(MapBase + i) = b;
+            }
+        }
     }
 }

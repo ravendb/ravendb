@@ -78,7 +78,6 @@ namespace Voron.Impl.Paging
 		    if (TryAllocateMoreContinuousPages(allocationSize) == false)
 		    {
 		        var newPagerState = AllocateMorePagesAndRemapContinuously(allocationSize);
-		      
 		        if (newPagerState == null)
 		        {
 		            var errorMessage = string.Format(
@@ -87,6 +86,7 @@ namespace Voron.Impl.Paging
 
 		            throw new OutOfMemoryException(errorMessage);
 		        }
+                newPagerState.DebugVerify(newLengthAfterAdjustment);
 
 		        newPagerState.AddRef();
 		        if (tx != null)
@@ -168,7 +168,7 @@ namespace Voron.Impl.Paging
 			    if (failedToAllocate) 
                     continue;
 
-                var newAllocationInfo = TryCreateNewFileMappingAtAddress(allocationSize, newBaseAddress);
+                var newAllocationInfo = TryCreateNewFileMappingAtAddress(allocationSize, newBaseAddress + _totalAllocationSize);
                 if (newAllocationInfo == null)
 			    {
                     UndoMappings(allocationInfoAfterReallocation); 
@@ -179,7 +179,7 @@ namespace Voron.Impl.Paging
 			    {
                     Files = PagerState.Files.Concat(newAllocationInfo.MappedFile),
                     AllocationInfos = allocationInfoAfterReallocation.Concat(newAllocationInfo),
-			        MapBase = PagerState.MapBase
+                    MapBase = newBaseAddress
 			    };
 			    return newPagerState;
 			}
@@ -201,7 +201,7 @@ namespace Voron.Impl.Paging
 			Debug.Assert(PagerState != null);
 			Debug.Assert(PagerState.Files != null && PagerState.Files.Any());
 
-			var allocationInfo = TryCreateNewFileMappingAtAddress(allocationSize, PagerState.MapBase);
+            var allocationInfo = TryCreateNewFileMappingAtAddress(allocationSize, PagerState.MapBase + _totalAllocationSize);
 
 			if (allocationInfo == null)
 				return false;
@@ -220,7 +220,7 @@ namespace Voron.Impl.Paging
 				MemoryMapNativeMethods.NativeFileMapAccessType.Read | MemoryMapNativeMethods.NativeFileMapAccessType.Write,
 				0, 0,
 				UIntPtr.Zero,
-				baseAddress + _totalAllocationSize);
+				baseAddress);
 
 			var hasMappingSucceeded = newMappingBaseAddress != null && newMappingBaseAddress != (byte*)0;
 			if (!hasMappingSucceeded)
