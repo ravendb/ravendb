@@ -118,6 +118,12 @@ namespace Raven.Storage.Voron
 			disposerLock.EnterReadLock();
 			try
 			{
+				if (disposed)
+				{
+					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
+					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
+				}
+
 				ExecuteBatch(action);
 			}
 			catch (Exception e)
