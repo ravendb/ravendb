@@ -12,6 +12,15 @@
     {
 	    private readonly AbstractPager _pager;
 
+	    public bool DisposeFilesOnDispose = true;
+
+	    public class AllocationInfo
+	    {
+		    public MemoryMappedFile MappedFile;
+		    public byte* BaseAddress;
+		    public long Size;
+	    }
+
 #if DEBUG_PAGER_STATE
         public static ConcurrentDictionary<PagerState, StackTrace> Instances = new ConcurrentDictionary<PagerState, StackTrace>();
 #endif
@@ -28,7 +37,9 @@
 
         public MemoryMappedViewAccessor Accessor;
 
-        public MemoryMappedFile File;
+        public MemoryMappedFile[] Files;
+
+		public AllocationInfo[] AllocationInfos;
 
         public byte* MapBase { get; set; }
 
@@ -43,8 +54,9 @@
             StackTrace value;
             Instances.TryRemove(this, out value);
 #endif
-
-			_pager.RegisterDisposal(Task.Run(() => ReleaseInternal()));
+         
+            ReleaseInternal();
+            //_pager.RegisterDisposal(Task.Run(() => ReleaseInternal()));
         }
 
         private void ReleaseInternal()
@@ -56,10 +68,18 @@
                 Accessor = null;
             }
 
-            if (File != null)
+			if (Files != null && DisposeFilesOnDispose)
             {
-                File.Dispose();
-                File = null;
+	            foreach (var file in Files)
+					file.Dispose();
+
+	            Files = null;
+            }
+
+            if (AllocationInfos != null)
+            {
+                foreach (var allocationInfo in AllocationInfos)
+                    MemoryMapNativeMethods.UnmapViewOfFile(allocationInfo.BaseAddress);
             }
 
             Released = true;
@@ -81,5 +101,27 @@
 			}
 #endif
 		}
+
+        [Conditional("VALIDATE")]
+        public void DebugVerify(long size)
+        {
+            if (AllocationInfos == null)
+                return;
+
+            foreach (var allocationInfo in AllocationInfos)
+            {
+                for (int i = 0; i < allocationInfo.Size; i++)
+                {
+                    var b = *(allocationInfo.BaseAddress + i);
+                    *(allocationInfo.BaseAddress + i) = b;
+                }
+            }
+
+            for (int i = 0; i < size; i++)
+            {
+                var b = *(MapBase + i);
+                *(MapBase + i) = b;
+            }
+        }
     }
 }

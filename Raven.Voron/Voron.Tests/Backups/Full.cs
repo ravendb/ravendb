@@ -36,6 +36,7 @@ namespace Voron.Tests.Backups
 	    [Fact]
         public void CanBackupAndRestore()
         {
+            RequireFileBasedPager();
 			var random = new Random();
 			var buffer = new byte[8192];
 			random.NextBytes(buffer);

@@ -1,16 +1,14 @@
 ﻿namespace Voron.Impl.Paging
 {
-using System;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
-using System.IO.MemoryMappedFiles;
-using System.Runtime.InteropServices;
-
-using Microsoft.Win32.SafeHandles;
-
-using Voron.Trees;
-using Voron.Util;
+	using Microsoft.Win32.SafeHandles;
+	using System;
+	using System.ComponentModel;
+	using System.Diagnostics;
+	using System.IO;
+	using System.IO.MemoryMappedFiles;
+	using System.Runtime.InteropServices;
+	using Voron.Trees;
+	using Voron.Util;
 
     public unsafe class Win32MemoryMapPager : AbstractPager
     {
@@ -51,13 +49,7 @@ using Voron.Util;
             }
         }
 
-        [DllImport("kernel32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool FlushFileBuffers(SafeFileHandle hFile);
-
-
-        [DllImport("kernel32.dll")]
-        private static extern bool FlushViewOfFile(byte* lpBaseAddress, IntPtr dwNumberOfBytesToFlush);
+	
 
         public override void AllocateMorePages(Transaction tx, long newLength)
         {
@@ -96,12 +88,11 @@ using Voron.Util;
                 null, HandleInheritability.None, true);
             MemoryMappedViewAccessor accessor = mmf.CreateViewAccessor(0, _fileStream.Length, memoryMappedFileAccess);
             byte* p = null;
-            accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref p);
-
+            accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref p);			
             var newPager = new PagerState(this)
             {
                 Accessor = accessor,
-                File = mmf,
+				Files = new[] { mmf },
                 MapBase = p
             };
             newPager.AddRef(); // one for the pager
@@ -122,9 +113,9 @@ using Voron.Util;
 
         public override void Sync()
         {
-            if (FlushViewOfFile(PagerState.MapBase, new IntPtr(PagerState.Accessor.Capacity)) == false)
+            if (MemoryMapNativeMethods.FlushViewOfFile(PagerState.MapBase, new IntPtr(PagerState.Accessor.Capacity)) == false)
                 throw new Win32Exception();
-            if (FlushFileBuffers(_handle) == false)
+			if (MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
                 throw new Win32Exception();
         }
 
