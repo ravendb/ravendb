@@ -164,6 +164,7 @@ namespace Raven.Database.Config
 			TimeToWaitBeforeRunningAbandonedIndexes = ravenSettings.TimeToWaitBeforeRunningAbandonedIndexes.Value;
 
 			ResetIndexOnUncleanShutdown = ravenSettings.ResetIndexOnUncleanShutdown.Value;
+			DisableInMemoryIndexing = ravenSettings.DisableInMemoryIndexing.Value;
 
 			SetupTransactionMode();
 
@@ -626,6 +627,11 @@ namespace Raven.Database.Config
 				Settings["Raven/RunInMemory"] = value.ToString();
 			}
 		}
+
+		/// <summary>
+		/// Prevent index from being kept in memory. Default: false
+		/// </summary>
+		public bool DisableInMemoryIndexing { get; set; }
 
 		/// <summary>
 		/// What sort of transaction mode to use. 
