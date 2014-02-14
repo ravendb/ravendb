@@ -12,11 +12,11 @@ namespace Raven.Database.Tasks
     public class TouchMissingReferenceDocumentTask : Task
     {
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
-        public HashSet<string> Keys { get; set; }
+		public IDictionary<string, HashSet<string>> MissingReferences { get; set; }
 
         public override string ToString()
         {
-            return string.Format("Index: {0}, Keys: {1}", Index, string.Join(", ", Keys));
+            return string.Format("Index: {0}, MissingReferences: {1}", Index, string.Join(", ", MissingReferences.Keys));
         }
 
         
@@ -28,7 +28,8 @@ namespace Raven.Database.Tasks
         public override void Merge(Task task)
         {
             var t = (TouchMissingReferenceDocumentTask)task;
-            Keys.UnionWith(t.Keys);
+
+			MissingReferences = MissingReferences.Union(t.MissingReferences).ToDictionary(x => x.Key, x => x.Value);
         }
 
         public override void Execute(WorkContext context)
@@ -36,23 +37,46 @@ namespace Raven.Database.Tasks
             if (logger.IsDebugEnabled)
             {
                 logger.Debug("Going to touch the following documents (missing references, need to check for concurrent transactions): {0}",
-                    string.Join(", ", Keys));
+                    string.Join(", ", MissingReferences));
             }
           
             context.TransactionalStorage.Batch(accessor =>
             {
-                foreach (var key in Keys)
+                foreach (var docWithMissingRef in MissingReferences)
                 {
                     foreach (var index in context.IndexStorage.Indexes)
                     {
                         var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(index, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
-                        set.Add(key);
+                        set.Add(docWithMissingRef.Key);
                     }
+
+	                bool foundReference = false;
+
+					using (context.TransactionalStorage.DisableBatchNesting())
+					{
+						context.TransactionalStorage.Batch(freshAccessor =>
+						{
+							foreach (var missingRef in docWithMissingRef.Value)
+							{
+								var doc = freshAccessor.Documents.DocumentMetadataByKey(missingRef, null);
+
+								if (doc == null) 
+									continue;
+								
+								foundReference = true;
+								break;
+							}
+						});
+					}
+
+					if(foundReference == false)
+						continue;
+
                     try
                     {
                         Etag preTouchEtag;
                         Etag afterTouchEtag;
-                        accessor.Documents.TouchDocument(key, out preTouchEtag, out afterTouchEtag);
+                        accessor.Documents.TouchDocument(docWithMissingRef.Key, out preTouchEtag, out afterTouchEtag);
                     }
                     catch (ConcurrencyException)
                     {
@@ -66,7 +90,7 @@ namespace Raven.Database.Tasks
             return new TouchMissingReferenceDocumentTask
             {
                 Index = Index,
-                Keys = new HashSet<string>(Keys)
+				MissingReferences = new Dictionary<string, HashSet<string>>(MissingReferences)
             };
         }
     }
