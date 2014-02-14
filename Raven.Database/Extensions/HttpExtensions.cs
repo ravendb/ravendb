@@ -395,10 +395,10 @@ namespace Raven.Database.Extensions
 			return result;
 		}
 
-		public static bool GetCheckForUpdates(this IHttpContext context)
+		public static bool GetOverwriteExisting(this IHttpContext context)
 		{
 			bool result;
-			bool.TryParse(context.Request.QueryString["checkForUpdates"], out result);
+			bool.TryParse(context.Request.QueryString["overwriteExisting"], out result);
 			return result;
 		}
 
