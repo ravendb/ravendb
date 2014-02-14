@@ -211,6 +211,9 @@ namespace Raven.Database.Indexing
                                 if (reader.IsDeleted(termDocs.Doc))
                                     continue;
 
+	                            if (items[termDocs.Doc] == null)
+		                            items[termDocs.Doc] = new LinkedList<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>();
+
 	                            items[termDocs.Doc].AddLast(new IndexSearcherHolder.IndexSearcherHoldingState.CacheVal
 	                            {
 		                            Term = termEnum.Term

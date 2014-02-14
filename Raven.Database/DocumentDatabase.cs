@@ -954,7 +954,7 @@ namespace Raven.Database
                 .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
             if (vetoResult != null)
             {
-	            throw new OperationVetoedException("PUT vetoed on attachment " + key + "by " + vetoResult.Trigger +
+	            throw new OperationVetoedException("PUT vetoed on attachment " + key + " by " + vetoResult.Trigger +
 	                                               " because: " + vetoResult.VetoResult.Reason);
             }
         }

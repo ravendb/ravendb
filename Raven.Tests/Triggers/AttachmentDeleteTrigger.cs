@@ -38,7 +38,7 @@ namespace Raven.Tests.Triggers
 		{
 			db.PutStatic("ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 			var operationVetoedException = Assert.Throws<OperationVetoedException>(()=>db.DeleteStatic("ayende", null));
-			Assert.Equal("DELETE vetoed by Raven.Tests.Triggers.AttachmentDeleteTrigger+RefuseAttachmentDeleteTrigger because: Can't delete attachments", operationVetoedException.Message);
+			Assert.Equal("PUT vetoed on attachment ayende by Raven.Tests.Triggers.AttachmentDeleteTrigger+RefuseAttachmentDeleteTrigger because: Can't delete attachments", operationVetoedException.Message);
 		}
 
 		public class RefuseAttachmentDeleteTrigger: AbstractAttachmentDeleteTrigger
