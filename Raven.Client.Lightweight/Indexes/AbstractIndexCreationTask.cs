@@ -277,7 +277,8 @@ namespace Raven.Client.Indexes
 				TermVectors = TermVectors,
 				TermVectorsStrings = TermVectorsStrings,
 				SpatialIndexes = SpatialIndexes,
-				SpatialIndexesStrings = SpatialIndexesStrings
+				SpatialIndexesStrings = SpatialIndexesStrings,
+				DisableInMemoryIndexing = DisableInMemoryIndexing
 			}.ToIndexDefinition(Conventions);
 		}
 
