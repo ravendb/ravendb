@@ -293,7 +293,8 @@ namespace Raven.Database.Indexing
 			Lucene.Net.Store.Directory directory;
 			if (configuration.RunInMemory ||
 				(indexDefinition.IsMapReduce == false &&  // there is no point in creating map/reduce indexes in memory, we write the intermediate results to disk anyway
-				 indexDefinitionStorage.IsNewThisSession(indexDefinition)))
+				 indexDefinitionStorage.IsNewThisSession(indexDefinition) &&
+				 indexDefinition.DisableInMemoryIndexing == false))
 			{
 				directory = new RAMDirectory();
 				new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose(); // creating index structure
