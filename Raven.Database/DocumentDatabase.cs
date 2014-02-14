@@ -943,7 +943,7 @@ namespace Raven.Database
                 .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
             if (vetoResult != null)
             {
-                throw new OperationVetoedException("PUT vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+                throw new OperationVetoedException("PUT vetoed on document " + key + " by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
             }
         }
 
@@ -954,7 +954,8 @@ namespace Raven.Database
                 .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
             if (vetoResult != null)
             {
-                throw new OperationVetoedException("PUT vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+	            throw new OperationVetoedException("PUT vetoed on attachment " + key + "by " + vetoResult.Trigger +
+	                                               " because: " + vetoResult.VetoResult.Reason);
             }
         }
 
@@ -965,7 +966,8 @@ namespace Raven.Database
                 .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
             if (vetoResult != null)
             {
-                throw new OperationVetoedException("DELETE vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+	            throw new OperationVetoedException("DELETE vetoed on attachment " + key + " by " + vetoResult.Trigger +
+	                                               " because: " + vetoResult.VetoResult.Reason);
             }
         }
 
@@ -976,7 +978,8 @@ namespace Raven.Database
                 .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
             if (vetoResult != null)
             {
-                throw new OperationVetoedException("DELETE vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+	            throw new OperationVetoedException("DELETE vetoed on document " + key + " by " + vetoResult.Trigger +
+	                                               " because: " + vetoResult.VetoResult.Reason);
             }
         }
 
