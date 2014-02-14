@@ -475,7 +475,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				{
 					replicationStats.MarkScriptAsInvalid(Database, cfg.Script);
 
-					log.WarnException("Could parse SQL Replication script for " + cfg.Name, e);
+					log.WarnException("Could not parse SQL Replication script for " + cfg.Name, e);
 
 					return result;
 				}
