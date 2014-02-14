@@ -276,7 +276,7 @@ namespace Raven.Storage.Managed
 			etagTouches.Add(preTouchEtag, afterTouchEtag);
 		}
 
-		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
+		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool overwriteExisting)
 		{
 			var ms = new MemoryStream();
 
@@ -292,7 +292,7 @@ namespace Raven.Storage.Managed
 			var readResult = storage.Documents.Read(new RavenJObject {{"key", key}});
 			var isUpdate = readResult != null;
 
-			if (isUpdate && checkForUpdates == false)
+			if (isUpdate && overwriteExisting == false)
 				throw new ConcurrencyException("Illegal duplicate key " + key);
 
 			Etag existingEtag = null;

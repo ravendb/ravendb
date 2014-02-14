@@ -28,7 +28,7 @@ namespace Raven.Tests.Issues
                     {
                         using (var bulk = store.BulkInsert(options: new BulkInsertOptions
                                                                     {
-                                                                        CheckForUpdates = true
+                                                                        OverwriteExisting = true
                                                                     }))
                         {
                             bulk.Store(new { }, "foos/1");
@@ -45,7 +45,7 @@ namespace Raven.Tests.Issues
                     {
                         using (var bulk = store.BulkInsert(options: new BulkInsertOptions
                         {
-                            CheckForUpdates = true
+                            OverwriteExisting = true
                         }))
                         {
                             bulk.Store(new { }, "foos/1");
@@ -72,7 +72,7 @@ namespace Raven.Tests.Issues
 	            });
 
                 Assert.True(e.Message.StartsWith("Illegal duplicate key foos/1") || //esent
-                        e.Message.StartsWith("InsertDocument() - checkForUpdates is false and document with key = 'foos/1' already exists")); //voron
+                        e.Message.StartsWith("InsertDocument() - overwriteExisting is false and document with key = 'foos/1' already exists")); //voron
             }
         }
 

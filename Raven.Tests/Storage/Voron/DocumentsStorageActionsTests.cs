@@ -330,7 +330,7 @@ using Raven.Database.Plugins;
 
 		[Theory]
 		[PropertyData("Storages")]
-		public void DocumentStorage_InsertDocument_Twice_WithCheckForUpdatesTrue_And_DocumentRead(string requestedStorage)
+        public void DocumentStorage_InsertDocument_Twice_WithOverwriteExistingTrue_And_DocumentRead(string requestedStorage)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
@@ -448,7 +448,7 @@ using Raven.Database.Plugins;
 
 		[Theory]
 		[PropertyData("Storages")]
-		public void DocumentStorage_InsertDocument_Twice_WithCheckForUpdatesFalse_ExceptionThrown(string requestedStorage)
+        public void DocumentStorage_InsertDocument_Twice_WithOverwriteExistingFalse_ExceptionThrown(string requestedStorage)
 		{
 			var expectedException = typeof(ConcurrencyException);	
 

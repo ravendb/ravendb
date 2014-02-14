@@ -52,7 +52,7 @@ namespace Raven.Database.Server.Controllers
 
 			var options = new BulkInsertOptions
 			{
-				CheckForUpdates = GetCheckForUpdates(),
+				OverwriteExisting = GetOverwriteExisting(),
 				CheckReferencesInIndexes = GetCheckReferencesInIndexes()
 			};
 

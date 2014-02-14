@@ -149,7 +149,7 @@ namespace Raven.Smuggler
             var bulkInsertOperation = importStore.BulkInsert(null, new BulkInsertOptions
             {
                 BatchSize = options.BatchSize,
-                CheckForUpdates = true,
+                OverwriteExisting = true,
             });
             bulkInsertOperation.Report += text => ShowProgress(text);
 

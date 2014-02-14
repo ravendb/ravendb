@@ -429,13 +429,13 @@ namespace Raven.Storage.Esent.StorageActions
 	}
 
 
-		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
+		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool overwriteExisting)
 		{
 			var prep = JET_prep.Insert;
 			bool isUpdate = false;
 
 			Etag existingETag = null;
-			if (checkForUpdates)
+			if (overwriteExisting)
 			{
 				Api.JetSetCurrentIndex(session, Documents, "by_key");
 				Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);

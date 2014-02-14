@@ -2778,7 +2778,7 @@ namespace Raven.Database
 							{
 								trigger.Value.OnPut(doc.Key, doc.DataAsJson, doc.Metadata, null);
 							}
-							var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.CheckForUpdates);
+							var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.OverwriteExisting);
 							if (result.Updated == false)
 								inserts++;
 
