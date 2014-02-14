@@ -600,17 +600,8 @@ namespace Raven.Database.Indexing
 				foreach (var reduceKey in ReduceKeys)
 				{
 					var entryKey = reduceKey;
+				    parent.InvokeOnIndexEntryDeletedOnAllBatchers(batchers, new Term(Constants.ReduceKeyFieldName, entryKey));
 					indexWriter.DeleteDocuments(new Term(Constants.ReduceKeyFieldName, entryKey));
-					batchers.ApplyAndIgnoreAllErrors(
-						exception =>
-						{
-							logIndexing.WarnException(
-								string.Format("Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
-                                              indexId, entryKey),
-								exception);
-                            Context.AddError(indexId, parent.PublicName, entryKey, exception.Message, "OnIndexEntryDeleted Trigger");
-						},
-						trigger => trigger.OnIndexEntryDeleted(entryKey));
 				}
 			}
 		}

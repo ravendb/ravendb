@@ -49,7 +49,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
             private readonly HashSet<string> forEntityNames;
 
             private readonly Dictionary<string, RavenJObject> created = new Dictionary<string, RavenJObject>(StringComparer.InvariantCultureIgnoreCase);
-            private readonly HashSet<string> removed = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+            private readonly Dictionary<string, RavenJObject> removed = new Dictionary<string, RavenJObject>(StringComparer.InvariantCultureIgnoreCase);
 
             public Batcher(DocumentDatabase database, Abstractions.Data.ScriptedIndexResults scriptedIndexResults, HashSet<string> forEntityNames)
             {
@@ -58,15 +58,17 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                 this.forEntityNames = forEntityNames;
             }
 
+            public override bool RequiresDocumentOnIndexEntryDeleted { get { return true;  } }
+
             public override void OnIndexEntryCreated(string entryKey, Document document)
             {
                 created.Add(entryKey, CreateJsonDocumentFromLuceneDocument(document));
-                removed.Remove(entryKey);
+                //NOTE: do NOT remove item from removed Dictionary, but we swallow delete trigger then.
             }
 
-            public override void OnIndexEntryDeleted(string entryKey)
+            public override void OnIndexEntryDeleted(string entryKey, Document document = null)
             {
-                removed.Add(entryKey);
+                removed.Add(entryKey, document != null ? CreateJsonDocumentFromLuceneDocument(document) : new RavenJObject());
             }
 
             public override void Dispose()
@@ -75,20 +77,20 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
                 if (string.IsNullOrEmpty(scriptedIndexResults.DeleteScript) == false)
                 {
-                    foreach (var removeKey in removed)
+                    foreach (var kvp in removed)
                     {
-                        patcher.Apply(new RavenJObject(), new ScriptedPatchRequest
+                        patcher.Apply(kvp.Value, new ScriptedPatchRequest
                         {
                             Script = scriptedIndexResults.DeleteScript,
                             Values =
 							{
-								{"key", removeKey}
+								{"key", kvp.Key}
 							}
                         });
 
                         if (log.IsDebugEnabled && patcher.Debug.Count > 0)
                         {
-                            log.Debug("Debug output for doc: {0} for index {1} (delete):\r\n.{2}", removeKey, scriptedIndexResults.Id, string.Join("\r\n", patcher.Debug));
+                            log.Debug("Debug output for doc: {0} for index {1} (delete):\r\n.{2}", kvp.Key, scriptedIndexResults.Id, string.Join("\r\n", patcher.Debug));
 
                             patcher.Debug.Clear();
                         }

@@ -36,7 +36,7 @@ namespace Raven.Tests.Triggers
 				this.parent = parent;
 			}
 
-			public override void OnIndexEntryDeleted(string entryKey)
+            public override void OnIndexEntryDeleted(string entryKey, Lucene.Net.Documents.Document document = null)
 			{
 				lock (parent.DataTable)
 				{
