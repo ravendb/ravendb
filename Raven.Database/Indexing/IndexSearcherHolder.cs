@@ -1,6 +1,4 @@
 using System;
-using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -9,7 +7,6 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Logging;
 using Raven.Json.Linq;
-using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Indexing
 {
@@ -96,12 +93,10 @@ namespace Raven.Database.Indexing
             private readonly Lazy<ManualResetEvent> disposed = new Lazy<ManualResetEvent>(() => new ManualResetEvent(false));
 
 
-            private readonly Dictionary<string, Dictionary<int, List<CacheVal>>> cache =
-                new Dictionary<string, Dictionary<int, List<CacheVal>>>();
-
             private readonly ReaderWriterLockSlim rwls = new ReaderWriterLockSlim();
+	        private readonly Dictionary<string, LinkedList<CacheVal>[]> cache = new Dictionary<string, LinkedList<CacheVal>[]>();
 
-            public ReaderWriterLockSlim Lock
+	        public ReaderWriterLockSlim Lock
             {
                 get { return rwls; }
             }
@@ -119,19 +114,19 @@ namespace Raven.Database.Indexing
 
             public IEnumerable<CacheVal> GetFromCache(string field, int doc)
             {
-                Dictionary<int, List<CacheVal>> value;
-                if (cache.TryGetValue(field, out value) == false)
-                    yield break;
-                List<CacheVal> list;
-                if (value.TryGetValue(doc, out list) == false)
-                    yield break;
-                foreach (var item in list)
-                {
-                    yield return item;
-                }
+	            LinkedList<CacheVal>[] vals;
+	            if (cache.TryGetValue(field, out vals) == false)
+		            yield break;
+	            if (vals[doc] == null)
+		            yield break;
+
+	            foreach (var cacheVal in vals[doc])
+	            {
+		            yield return cacheVal;
+	            }
             }
 
-            public IEnumerable<Term> GetTermsFromCache(string field, int doc)
+	        public IEnumerable<Term> GetTermsFromCache(string field, int doc)
             {
                 return GetFromCache(field, doc).Select(cacheVal => cacheVal.Term);
             }
@@ -139,14 +134,6 @@ namespace Raven.Database.Indexing
             public bool IsInCache(string field)
             {
                 return cache.ContainsKey(field);
-            }
-            public void SetInCache(string field, int doc, Term term, double? val = null)
-            {
-                cache.GetOrAdd(field).GetOrAdd(doc).Add(new CacheVal
-                {
-                    Term = term,
-                    Val = val
-                });
             }
 
             public IndexSearcherHoldingState(IndexSearcher indexSearcher)
@@ -197,6 +184,11 @@ namespace Raven.Database.Indexing
                 readEntriesFromIndex = IndexedTerms.ReadAllEntriesFromIndex(indexReader);
                 return readEntriesFromIndex;
             }
+
+	        public void SetInCache(string field, LinkedList<CacheVal>[] items)
+	        {
+		        cache[field] = items;
+	        }
         }
     }
 }
