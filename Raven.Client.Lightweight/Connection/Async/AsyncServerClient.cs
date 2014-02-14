@@ -1132,9 +1132,9 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument)
+		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, string databaseName)
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/backup").NoCache(), "POST", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (MultiDatabase.GetDatabaseUrl(url, databaseName) + "/admin/backup").NoCache(), "POST", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 			return request.WriteAsync(new RavenJObject
 			{

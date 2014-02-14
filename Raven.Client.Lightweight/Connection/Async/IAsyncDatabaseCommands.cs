@@ -492,6 +492,11 @@ namespace Raven.Client.Connection.Async
         /// Begins an async restore operation
         /// </summary>
         Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false);
+
+        /// <summary>
+        /// Begins an async backup operation
+        /// </summary>
+        Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, string databaseName);
 	}
 
 	public interface IAsyncAdminDatabaseCommands
@@ -505,11 +510,6 @@ namespace Raven.Client.Connection.Async
 		/// Sends an async command that enables indexing
 		/// </summary>
 		Task StartIndexingAsync();
-
-		/// <summary>
-		/// Begins an async backup operation
-		/// </summary>
-		Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument);
 
 		/// <summary>
 		/// Get the indexing status

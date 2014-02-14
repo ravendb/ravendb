@@ -304,7 +304,7 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<BuildNumber>(databaseCommands.GetBuildNumber());			
 		}
 
-		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument)
+		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, string databaseName)
 		{
 			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();
