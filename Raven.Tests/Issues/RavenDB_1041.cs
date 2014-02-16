@@ -119,38 +119,25 @@ namespace Raven.Tests.Issues
 			}
 
 			((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(20)).Wait();
-
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 		}
 
 		[Fact]
 		public async Task ShouldThrowTimeoutException()
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
+			var store1 = CreateStore(requestedStorage: "esent");
+			var store2 = CreateStore(requestedStorage: "esent");
 
 			SetupReplication(store1.DatabaseCommands, store2.Url, "http://localhost:1234"); // the last one is not running
 
 			using (var session = store1.OpenSession())
 			{
 				session.Store(new ReplicatedItem { Id = "Replicated/1" });
-
 				session.SaveChanges();
 			}
 
-			TimeoutException timeoutException = null;
-
-			try
-			{
-				await ((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2);
-			}
-			catch (TimeoutException ex)
-			{
-				timeoutException = ex;
-			}
-
-			Assert.NotNull(timeoutException);
-			Assert.Contains("was replicated to 1 of 2 servers", timeoutException.Message);
+			var exception = await AssertAsync.Throws<TimeoutException>(async () => await ((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2));
+			Assert.Contains("was replicated to 1 of 2 servers", exception.Message);
 		}
 
 		[Fact]

@@ -103,7 +103,7 @@ namespace Raven.Client.Document
 		            (toCheck - completedCount),
 		            toCheck,
                     sp.Elapsed);
-		        throw new TimeoutException(message,e);
+			    throw new TimeoutException(message, e);
 		    }
 		}
 
