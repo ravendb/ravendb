@@ -260,7 +260,6 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		[HttpGet]
 		[Route("admin/stats")]
-		[Route("databases/{databaseName}/admin/stats")]
 		public HttpResponseMessage Stats()
 		{
 			if (Database != DatabasesLandlord.SystemDatabase)
