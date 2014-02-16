@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,7 +11,6 @@ using Raven.Abstractions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Tasks;
 using Raven.Json.Linq;
-using Raven.Abstractions.Extensions;
 using Task = System.Threading.Tasks.Task;
 
 namespace Raven.Database.Indexing
@@ -139,12 +137,10 @@ namespace Raven.Database.Indexing
             private readonly Lazy<ManualResetEvent> disposed = new Lazy<ManualResetEvent>(() => new ManualResetEvent(false));
 
 
-            private readonly Dictionary<string, Dictionary<int, List<CacheVal>>> cache =
-                new Dictionary<string, Dictionary<int, List<CacheVal>>>();
-
             private readonly ConcurrentDictionary<string, DateTime> lastFacetQuery = new ConcurrentDictionary<string, DateTime>();
 
             private readonly ReaderWriterLockSlim rwls = new ReaderWriterLockSlim();
+	        private readonly Dictionary<string, LinkedList<CacheVal>[]> cache = new Dictionary<string, LinkedList<CacheVal>[]>();
 
             public ReaderWriterLockSlim Lock
             {
@@ -164,15 +160,15 @@ namespace Raven.Database.Indexing
 
             public IEnumerable<CacheVal> GetFromCache(string field, int doc)
             {
-                Dictionary<int, List<CacheVal>> value;
-                if (cache.TryGetValue(field, out value) == false)
+	            LinkedList<CacheVal>[] vals;
+	            if (cache.TryGetValue(field, out vals) == false)
                     yield break;
-                List<CacheVal> list;
-                if (value.TryGetValue(doc, out list) == false)
+	            if (vals[doc] == null)
                     yield break;
-                foreach (var item in list)
+
+	            foreach (var cacheVal in vals[doc])
                 {
-                    yield return item;
+		            yield return cacheVal;
                 }
             }
 
@@ -192,14 +188,6 @@ namespace Raven.Database.Indexing
                 var now = SystemTime.UtcNow;
                 lastFacetQuery.AddOrUpdate(field, now, (s, time) => time > now ? time : now);
                 return cache.ContainsKey(field);
-            }
-            public void SetInCache(string field, int doc, Term term, double? val = null)
-            {
-                cache.GetOrAdd(field).GetOrAdd(doc).Add(new CacheVal
-                {
-                    Term = term,
-                    Val = val
-                });
             }
 
             public IndexSearcherHoldingState(IndexSearcher indexSearcher)
@@ -250,6 +238,11 @@ namespace Raven.Database.Indexing
                 readEntriesFromIndex = IndexedTerms.ReadAllEntriesFromIndex(indexReader);
                 return readEntriesFromIndex;
             }
+
+	        public void SetInCache(string field, LinkedList<CacheVal>[] items)
+	        {
+		        cache[field] = items;
+	        }
         }
     }
 }

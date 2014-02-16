@@ -125,6 +125,11 @@ namespace Raven.Client.Indexes
 		protected IDictionary<string, FieldIndexing> IndexesStrings { get; set; }
 
 		/// <summary>
+		/// Prevent index from being kept in memory. Default: false
+		/// </summary>
+		public bool DisableInMemoryIndexing { get; set; }
+
+		/// <summary>
 		/// Register a field to be indexed
 		/// </summary>
 		protected void Index(Expression<Func<TReduceResult, object>> field, FieldIndexing indexing)

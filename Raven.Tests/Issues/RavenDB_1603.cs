@@ -10,6 +10,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -33,7 +34,7 @@ namespace Raven.Tests.Issues
     {
         private readonly int listenPort;
         private readonly int targetPort;
-        private Func<int, byte[], int, int, bool> shouldThrow;
+        private readonly Func<int, byte[], int, int, bool> shouldThrow;
         private readonly CancellationTokenSource cancellationTokenSource;
         private TcpListener server;
 
@@ -59,72 +60,61 @@ namespace Raven.Tests.Issues
 
             Task.Run(() =>
             {
-                var token = cancellationTokenSource.Token;
-                while (true)
+                while (cancellationTokenSource.IsCancellationRequested == false)
                 {
                     var tcpClient = server.AcceptTcpClient();
-                    Task.Run(() => HandleClient(tcpClient));
+                    Task.Run(() =>
+                    {
+                        using (tcpClient)
+                        {
+                            HandleClient(tcpClient);
+                        }
+                    });
                 }
             });
         }
 
-        private void HandleClient(TcpClient tcpClient)
+        private async Task CopyStream(Stream source, Stream destination)
         {
-            var incomingStream = tcpClient.GetStream();
-
-            // now connect to target
-
-            var targetClient = new TcpClient("127.0.0.1", targetPort);
-            var targetStream = targetClient.GetStream();
-
-            var readTask = Task.Run(async () =>
+            var buffer = new byte[1024];
+            var totalRead = 0;
+            var token = cancellationTokenSource.Token;
+            try
             {
-                var buffer = new byte[4096];
-                var totalRead = 0;
-                var token = cancellationTokenSource.Token;
                 while (true)
                 {
-                    var read = await incomingStream.ReadAsync(buffer, 0, 4096, token);
+                    var read = await source.ReadAsync(buffer, 0, 1024, token);
                     if (read == 0)
                     {
-                        tcpClient.Close();
                         break;
                     }
-                    totalRead += read;
-                    if (shouldThrow(totalRead, buffer,0, read))
-                    {
-                        incomingStream.Close();
-                        targetStream.Close();
-                    }
-                    await targetStream.WriteAsync(buffer, 0, read, token);
-                    targetStream.Flush();
-                }
-            });
-
-            var writeTask = Task.Run(async () =>
-            {
-                var token = cancellationTokenSource.Token;
-                var buffer = new byte[4096];
-                var totalRead = 0;
-                while (true)
-                {
-                    var read = await targetStream.ReadAsync(buffer, 0, 4096, token);
-                    if (read == 0)
-                    {
-                        targetClient.Close();
-                    }
-                    totalRead += read;
+                    Interlocked.Add(ref totalRead, read);
                     if (shouldThrow(totalRead, buffer, 0, read))
                     {
-                        incomingStream.Close();
-                        targetStream.Close();
+                        throw new Exception("Connection closed");
                     }
-                    await incomingStream.WriteAsync(buffer, 0, read, token);
-                    incomingStream.Flush();
+                    await destination.WriteAsync(buffer, 0, read, token);
+                    destination.Flush();
                 }
-            });
+            }
+            finally
+            {
+                source.Close();
+                destination.Close();
+            }
+        }
 
-            Task.WaitAll(readTask, writeTask);
+        private void HandleClient(TcpClient tcpClient)
+        {
+            using (var incomingStream = tcpClient.GetStream())
+            using (var targetClient = new TcpClient("127.0.0.1", targetPort))
+            using (var targetStream = targetClient.GetStream())
+            {
+                var readTask = CopyStream(incomingStream, targetStream);
+                var writeTask = CopyStream(targetStream, incomingStream);
+
+                Task.WaitAll(readTask, writeTask);
+            }
         }
     }
 
@@ -802,15 +792,25 @@ namespace Raven.Tests.Issues
             var backupPath = NewDataPath("BackupFolder");
             var server = GetNewServer();
 
-            var alreadyReset = false;
+            
+            var shouldBreak = true;
+            var afterStream = false;
+            var bytesCount = 0;
 
             var forwarder = new PortForwarder(8070, 8079, (totalRead, bytes, offset, count) =>
             {
-                if (alreadyReset == false && totalRead > 10000)
+                var str = Encoding.UTF8.GetString(bytes, offset, count);
+                if (str.StartsWith("GET /streams/docs") && shouldBreak)
                 {
-                    alreadyReset = true;
+                    afterStream = true;
+                    bytesCount = totalRead;
+                }
+                if (shouldBreak && totalRead > bytesCount + 14000 && afterStream)
+                {
+                    shouldBreak = false;
                     return true;
                 }
+              
                 return false;
             });
             forwarder.Forward();

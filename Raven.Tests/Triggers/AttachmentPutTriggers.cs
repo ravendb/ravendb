@@ -51,7 +51,7 @@ namespace Raven.Tests.Triggers
 																					   db.PutStatic("ayende", null, new MemoryStream(new byte[] { 1, 2, 3, 4, 5, 6 }),
 																									new RavenJObject()));
 
-			Assert.Equal("PUT vetoed by Raven.Tests.Triggers.RefuseBigAttachmentPutTrigger because: Attachment is too big", operationVetoedException.Message);
+			Assert.Equal("PUT vetoed on attachment ayende by Raven.Tests.Triggers.RefuseBigAttachmentPutTrigger because: Attachment is too big", operationVetoedException.Message);
 		}
 	}
 }

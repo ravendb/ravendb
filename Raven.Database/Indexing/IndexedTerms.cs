@@ -187,6 +187,7 @@ namespace Raven.Database.Indexing
         {
             foreach (var field in fieldsToRead)
             {
+	            var items = new LinkedList<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>[reader.MaxDoc];
                 using (var termDocs = reader.TermDocs())
                 {
                     using (var termEnum = reader.Terms(new Term(field)))
@@ -210,11 +211,18 @@ namespace Raven.Database.Indexing
                                 if (reader.IsDeleted(termDocs.Doc))
                                     continue;
 
-                                state.SetInCache(field, termDocs.Doc, termEnum.Term);
+	                            if (items[termDocs.Doc] == null)
+		                            items[termDocs.Doc] = new LinkedList<IndexSearcherHolder.IndexSearcherHoldingState.CacheVal>();
+
+	                            items[termDocs.Doc].AddLast(new IndexSearcherHolder.IndexSearcherHoldingState.CacheVal
+	                            {
+		                            Term = termEnum.Term
+	                            });
                             }
                         } while (termEnum.Next());
                     }
                 }
+	            state.SetInCache(field, items);
             }
         }
 
