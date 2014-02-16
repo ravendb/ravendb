@@ -23,7 +23,7 @@ namespace Voron.Debugging
 				    if (currentPage.IsLeaf)
 				    {						
 						writer.WriteLine();
-						writer.WriteLine("Page #{0}, NumberOfEntries = {1}, Flags = {2} (Leaf), Used: {3}", currentPage.PageNumber,currentPage.NumberOfEntries,currentPage.Flags, currentPage.SizeUsed);
+						writer.WriteLine("Page #{0}, NumberOfEntries = {1}, Flags = {2} (Leaf), Used: {3} : {4}", currentPage.PageNumber,currentPage.NumberOfEntries,currentPage.Flags, currentPage.SizeUsed, currentPage.CalcSizeUsed());
 						if(currentPage.NumberOfEntries <= 0)
 							writer.WriteLine("Empty page (tree corrupted?)");
 					    
@@ -40,7 +40,7 @@ namespace Voron.Debugging
 				    else if(currentPage.IsBranch) 
 				    {
 						writer.WriteLine();
-						writer.WriteLine("Page #{0}, NumberOfEntries = {1}, Flags = {2} (Branch), Used: {3}", currentPage.PageNumber, currentPage.NumberOfEntries, currentPage.Flags, currentPage.SizeUsed);
+						writer.WriteLine("Page #{0}, NumberOfEntries = {1}, Flags = {2} (Branch), Used: {3} : {4}", currentPage.PageNumber, currentPage.NumberOfEntries, currentPage.Flags, currentPage.SizeUsed, currentPage.SizeUsed);
 
 						var key = new Slice(SliceOptions.Key);
 						for (int nodeIndex = 0; nodeIndex < currentPage.NumberOfEntries; nodeIndex++)
@@ -91,10 +91,11 @@ digraph structs {
 	subgraph cluster_p_{0} {{ 
 		label=""Page #{0}"";
 		color={3};
-	p_{0} [label=""Page: {0}|{1}|Entries: {2:#,#} | {4:p} utilization""];
+	p_{0} [label=""Page: {0}|{1}|Entries: {2:#,#} | {4:p} : {5:p} utilization""];
 
 ", p.PageNumber, p.Flags, p.NumberOfEntries, p.IsLeaf ? "black" : "blue",
-	Math.Round(((AbstractPager.PageSize - p.SizeLeft) / (double)AbstractPager.PageSize), 2));
+	Math.Round(((AbstractPager.PageSize - p.SizeLeft) / (double)AbstractPager.PageSize), 2),
+    Math.Round(((AbstractPager.PageSize - p.CalcSizeLeft()) / (double)AbstractPager.PageSize), 2));
                     var key = new Slice(SliceOptions.Key);
                     if (p.IsLeaf && showNodesEvery > 0)
                     {

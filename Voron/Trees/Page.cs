@@ -151,27 +151,16 @@ namespace Voron.Trees
         {
             Debug.Assert(index >= 0 || index < NumberOfEntries);
 
-            var node = GetNode(index);
-
-            var size = SizeOf.NodeEntry(node);
-
-            var nodeOffset = KeysOffsets[index];
-
             int modifiedEntries = 0;
             for (int i = 0; i < NumberOfEntries; i++)
             {
                 if (i == index)
                     continue;
                 KeysOffsets[modifiedEntries] = KeysOffsets[i];
-                if (KeysOffsets[i] < nodeOffset)
-                    KeysOffsets[modifiedEntries] += (ushort)size;
                 modifiedEntries++;
             }
 
-            NativeMethods.memmove(_base + Upper + size, _base + Upper, nodeOffset - Upper);
-
             Lower -= (ushort)Constants.NodeOffsetSize;
-            Upper += (ushort)size;
 
         }
 
@@ -448,6 +437,34 @@ namespace Voron.Trees
         public bool UseMoreSizThan(int len)
         {
             return SizeUsed > len;
+        }
+
+        public int CalcSizeUsed()
+        {
+            var size = 0;
+            for (int i = 0; i < NumberOfEntries; i++)
+            {
+                var node = GetNode(i);
+                switch (node->Flags)
+                {
+                    case NodeFlags.Data:
+                        size += SizeOf.NodeEntry(node);
+                        break;
+                    case NodeFlags.MultiValuePageRef:
+                    case NodeFlags.PageRef:
+                        size += node->KeySize + Constants.NodeHeaderSize;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(node->Flags.ToString());
+                }
+            }
+
+            return size;
+        }
+
+        public int CalcSizeLeft()
+        {
+            return AbstractPager.PageMaxSpace - CalcSizeUsed();
         }
     }
 }
