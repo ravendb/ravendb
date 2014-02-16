@@ -254,7 +254,7 @@ namespace Raven.Storage.Voron
 
 		public long GetDatabaseSizeInBytes()
 		{
-			throw new NotSupportedException("Database size fetching is not supported in Voron");
+		    return -1;
 		}
 
 	    public long GetDatabaseCacheSizeInBytes()

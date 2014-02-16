@@ -6,8 +6,6 @@ namespace Raven.Abstractions.Data
 	public class AdminStatistics
 	{
 		public string ServerName { get; set; }
-		public string ClusterName { get; set; }
-
 		public int TotalNumberOfRequests { get; set; }
 		public TimeSpan Uptime { get; set; }
 		public AdminMemoryStatistics Memory { get; set; }

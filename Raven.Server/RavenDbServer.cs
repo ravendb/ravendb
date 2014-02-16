@@ -4,25 +4,19 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.WebApi;
 using Raven.Database.Util;
-using Raven.Server.Discovery;
 
 namespace Raven.Server
 {
 	public class RavenDbServer : IDisposable
 	{
-		private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 		private readonly IServerThingsForTests serverThingsForTests;
-		private ClusterDiscoveryHost discoveryHost;
 		private readonly CompositeDisposable compositeDisposable = new CompositeDisposable();
 		private readonly RavenDBOptions options;
 
@@ -35,7 +29,6 @@ namespace Raven.Server
 			var owinHttpServer = new OwinHttpServer(configuration);
 			options = owinHttpServer.Options;
 			compositeDisposable.Add(owinHttpServer);
-			ClusterDiscovery(configuration);
 			serverThingsForTests = new ServerThingsForTests(options);
 		}
 
@@ -54,46 +47,6 @@ namespace Raven.Server
 		public void Dispose()
 		{
 			compositeDisposable.Dispose();
-		}
-
-		private void ClusterDiscovery(InMemoryRavenConfiguration configuration)
-		{
-			if (configuration.DisableClusterDiscovery == false)
-			{
-				discoveryHost = new ClusterDiscoveryHost();
-				try
-				{
-					discoveryHost.Start();
-					discoveryHost.ClientDiscovered += async (sender, args) =>
-					{
-						var httpClient = new HttpClient(new HttpClientHandler());
-						var values = new Dictionary<string, string>
-						{
-							{"Url", configuration.ServerUrl},
-							{"ClusterName", configuration.ClusterName},
-						};
-						try
-						{
-							HttpResponseMessage result =
-								await httpClient.PostAsync(args.ClusterManagerUrl, new FormUrlEncodedContent(values));
-							result.EnsureSuccessStatusCode();
-						}
-						catch (Exception e)
-						{
-							Logger.ErrorException(
-								"Cannot post notification for cluster discovert to: " + configuration.ServerUrl, e);
-						}
-					};
-					compositeDisposable.Add(discoveryHost);
-				}
-				catch (Exception e)
-				{
-					discoveryHost.Dispose();
-					discoveryHost = null;
-
-					Logger.ErrorException("Cannot setup cluster discovery", e);
-				}
-			}
 		}
 
 		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
