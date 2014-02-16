@@ -75,13 +75,13 @@ namespace Raven.Tests.MailingList
 				IndexCreation.CreateIndexes(typeof (Proficiencies_ConsultantId).Assembly, store);
 
 				//Write the test data to the database.
-				using (IDocumentSession session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
-					Skill skill1 = new Skill {Id = 1, Name = "C#"};
-					Skill skill2 = new Skill {Id = 2, Name = "SQL"};
-					Consultant consultant1 = new Consultant {Id = 1, Name = "Subha", YearsOfService = 6};
-					Consultant consultant2 = new Consultant {Id = 2, Name = "Tom", YearsOfService = 5};
-					Proficiency proficiency1 = new Proficiency
+					var skill1 = new Skill {Id = 1, Name = "C#"};
+					var skill2 = new Skill {Id = 2, Name = "SQL"};
+					var consultant1 = new Consultant {Id = 1, Name = "Subha", YearsOfService = 6};
+					var consultant2 = new Consultant {Id = 2, Name = "Tom", YearsOfService = 5};
+					var proficiency1 = new Proficiency
 					{
 						Id = 1,
 						Consultant = consultant1,
@@ -100,10 +100,10 @@ namespace Raven.Tests.MailingList
 
 					//Block1
 					{
-						List<Proficiency> proficiencies = session.Query<Proficiency>("Proficiencies/ConsultantId")
+						var proficiencies = session.Query<Proficiency>("Proficiencies/ConsultantId")
 						                                         .Customize(o => o.WaitForNonStaleResultsAsOfLastWrite())
 						                                         .Where(o => o.Consultant.Id == 1).ToList();
-						foreach (Proficiency proficiency in proficiencies)
+						foreach (var proficiency in proficiencies)
 						{
 							Console.WriteLine("Id: " + proficiency.Id + " ConsultantName: " + proficiency.Consultant.Name);
 						}
@@ -111,9 +111,9 @@ namespace Raven.Tests.MailingList
 				}
 
 
-				using (IDocumentSession session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
-					Consultant consultant1 = session.Load<Consultant>(1);
+					var consultant1 = session.Load<Consultant>(1);
 
 					//Here I am changing the name of one consultant from "Subha" to "Subhashini".
 					//A denormalized reference to this name exists in the Proficiency class. After this update, I will need to sync the denormalized reference.
@@ -125,10 +125,10 @@ namespace Raven.Tests.MailingList
 					//This block of code simply lists the names of the consultants in the Proficiencies collection. Since I have not synced the collection
 					//yet, I expect the consultant name to still be "Subha."
 					{
-						List<Proficiency> list = session.Query<Proficiency>("Proficiencies/ConsultantId")
+						var list = session.Query<Proficiency>("Proficiencies/ConsultantId")
 							//.Customize(o => o.WaitForNonStaleResultsAsOfLastWrite())
 						                                .Where(o => o.Consultant.Id == 1).ToList();
-						foreach (Proficiency proficiency in list)
+						foreach (var proficiency in list)
 						{
 							Console.WriteLine("Id: " + proficiency.Id + " ConsultantName: " + proficiency.Consultant.Name);
 						}
@@ -161,14 +161,14 @@ namespace Raven.Tests.MailingList
 					allowStale: false);
 
 				//Here, I again list the name of the consultant in the Proficiencies collection and expect it to be "Subhashini".
-				using (IDocumentSession session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					//Block2
 					{
-						List<Proficiency> proficiencies = session.Query<Proficiency>("Proficiencies/ConsultantId")
+						var proficiencies = session.Query<Proficiency>("Proficiencies/ConsultantId")
 						                                         .Customize(o => o.WaitForNonStaleResultsAsOfLastWrite())
 						                                         .Where(o => o.Consultant.Id == 1).ToList();
-						foreach (Proficiency proficiency in proficiencies)
+						foreach (var proficiency in proficiencies)
 						{
 							Console.WriteLine("Id: " + proficiency.Id + " ConsultantName: " + proficiency.Consultant.Name);
 						}
