@@ -876,6 +876,7 @@
     <Compile Include="MailingList\RenamedProperty.cs" />
     <Compile Include="MailingList\ResultTransformerMetaData .cs" />
     <Compile Include="MailingList\Rudolph.cs" />
+    <Compile Include="MailingList\SeanBuchanan.cs" />
     <Compile Include="MailingList\SessionAlreadyHaveSessionContext.cs" />
     <Compile Include="MailingList\ShardedFacets.cs" />
     <Compile Include="MailingList\SmugglerTests.cs" />
