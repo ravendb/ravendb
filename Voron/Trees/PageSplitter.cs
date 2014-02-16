@@ -185,7 +185,7 @@ namespace Voron.Trees
 
         private void AddSeparatorToParentPage(Page rightPage, Slice seperatorKey)
         {
-            if (_parentPage.SizeLeft < SizeOf.BranchEntry(seperatorKey) + Constants.NodeOffsetSize)
+            if (_parentPage.HasSpaceFor(SizeOf.BranchEntry(seperatorKey) + Constants.NodeOffsetSize) == false)
             {
                 var pageSplitter = new PageSplitter(_tx, _tree, _cmp, seperatorKey, -1, rightPage.PageNumber, NodeFlags.PageRef,
                     0, _cursor, _treeState);

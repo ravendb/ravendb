@@ -50,7 +50,7 @@ namespace Voron.Trees
             }
 
             var minKeys = page.IsBranch ? 2 : 1;
-            if ((page.SizeUsed >= _tx.DataPager.PageMinSpace) &&
+            if ((page.UseMoreSizThan(_tx.DataPager.PageMinSpace)) &&
                 page.NumberOfEntries >= minKeys)
                 return null; // above space/keys thresholds
 
@@ -60,7 +60,7 @@ namespace Voron.Trees
             Debug.Assert(sibling.PageNumber != page.PageNumber);
 
             minKeys = sibling.IsBranch ? 2 : 1; // branch must have at least 2 keys
-            if (sibling.SizeUsed > _tx.DataPager.PageMinSpace &&
+            if (sibling.UseMoreSizThan(_tx.DataPager.PageMinSpace) &&
                 sibling.NumberOfEntries > minKeys)
             {	         
                 // neighbor is over the min size and has enough key, can move just one key to  the current page
@@ -105,7 +105,7 @@ namespace Voron.Trees
 		    }
 
 		    right.LastSearchPosition = previousSearchPosition; //previous position --> prevent mutation of parameter
-		    return left.SizeLeft >= actualSpaceNeeded;
+	        return left.HasSpaceFor(actualSpaceNeeded);
 	    }
 
         private void MergePages(Page parentPage, Page left, Page right)

@@ -6,6 +6,7 @@ using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
+using Voron.Util.Conversion;
 
 namespace Voron.Trees
 {
@@ -234,7 +235,7 @@ namespace Voron.Trees
         internal void CopyNodeDataToEndOfPage(NodeHeader* other, Slice key = null)
         {
 			var nodeKey = key ?? new Slice(other);
-			Debug.Assert(SizeOf.NodeEntryWithAnotherKey(other, nodeKey) + Constants.NodeOffsetSize <= SizeLeft);
+            Debug.Assert(HasSpaceFor(SizeOf.NodeEntryWithAnotherKey(other, nodeKey) + Constants.NodeOffsetSize));
             
             var index = NumberOfEntries;
 
@@ -364,6 +365,11 @@ namespace Voron.Trees
             return sb.ToString();
         }
 
+        public bool HasSpaceFor(int len)
+        {
+            return len <= SizeLeft;
+        }
+
         public bool HasSpaceFor(Slice key, int len)
         {
             var requiredSpace = GetRequiredSpace(key, len);
@@ -437,6 +443,11 @@ namespace Voron.Trees
 
                 prev = current;
             }
+        }
+
+        public bool UseMoreSizThan(int len)
+        {
+            return SizeUsed > len;
         }
     }
 }
