@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using FizzWare.NBuilder.Implementation;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client;
@@ -23,6 +24,7 @@ using Raven.Server;
 using Raven.Tests.Helpers;
 using Xunit;
 using System.Linq;
+using Path = System.IO.Path;
 
 namespace Raven.Tests.Bundles.Replication
 {
@@ -53,7 +55,7 @@ namespace Raven.Tests.Bundles.Replication
 									  {
 										  Settings = { { "Raven/ActiveBundles", "replication" + (enableCompressionBundle ? ";compression" : string.Empty) } },
 										  AnonymousUserAccessMode = anonymousUserAccessMode,
-										  DataDirectory = "Data #" + stores.Count,
+										  DataDirectory = Path.Combine("Database #" + stores.Count, "SysDb"),
 										  RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 										  RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false,
 										  Port = port,

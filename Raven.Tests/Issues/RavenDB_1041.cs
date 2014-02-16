@@ -6,6 +6,7 @@
 using System;
 using System.Threading.Tasks;
 using Raven.Client.Document;
+using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.Replication;
 using Xunit;
@@ -18,6 +19,12 @@ namespace Raven.Tests.Issues
 
     public class RavenDB_1041 : ReplicationBase
 	{
+	    public RavenDB_1041()
+	    {
+			IOExtensions.DeleteDirectory("Database #0");
+			IOExtensions.DeleteDirectory("Database #1");
+			IOExtensions.DeleteDirectory("Database #2");
+	    }
 		class ReplicatedItem
 		{
 			public string Id { get; set; }
@@ -28,9 +35,9 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task CanWaitForReplication()
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
-			var store3 = CreateStore();
+			var store1 = CreateStore(requestedStorage: "esent");
+			var store2 = CreateStore(requestedStorage: "esent");
+			var store3 = CreateStore(requestedStorage: "esent");
 
 		    store1.DatabaseCommands.EnsureDatabaseExists(DatabaseName);
             store2.DatabaseCommands.EnsureDatabaseExists(DatabaseName);
