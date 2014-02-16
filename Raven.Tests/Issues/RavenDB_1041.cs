@@ -154,7 +154,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void ShouldThrowIfCannotReachEnoughDestinationServers()
+		public async Task ShouldThrowIfCannotReachEnoughDestinationServers()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
@@ -168,9 +168,8 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-			var exception = Assert.Throws<AggregateException>(() => ((DocumentStore)store1).Replication.WaitAsync(replicas: 3).Wait());
-
-			Assert.Equal(2, ((AggregateException)exception.InnerExceptions[0]).InnerExceptions.Count);
+			var exception = await AssertAsync.Throws<TimeoutException>(async () => await ((DocumentStore)store1).Replication.WaitAsync(replicas: 3));
+			Assert.Contains("Confirmed that the specified etag", exception.Message);
 		}
 
 		[Fact]
