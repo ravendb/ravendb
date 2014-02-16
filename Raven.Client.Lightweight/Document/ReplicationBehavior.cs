@@ -87,22 +87,25 @@ namespace Raven.Client.Document
 		    }
 		    catch (Exception e)
 		    {
-		        var completedCount = tasks.Count(x => x.IsCompleted);
+		        var completedCount = tasks.Count(x => x.IsCompleted && x.IsFaulted == false);
 		        if (completedCount >= toCheck)
 		        {
 		            // we have nothing to do here, we replicated to at least the 
                     // number we had to check, so that is good
+			        return completedCount;
 		        }
-                else if (tasks.Any(x => x.IsFaulted))
-                {
-                    // there was an error here, not just cancellation, let us just let it bubble up.
-                    throw;
-                }
-                // we have either completed (but not enough) or cancelled, meaning timeout
+			    if (tasks.Any(x => x.IsFaulted) && completedCount == 0)
+			    {
+				    // there was an error here, not just cancellation, let us just let it bubble up.
+				    throw;
+			    }
+
+			    // we have either completed (but not enough) or cancelled, meaning timeout
 		        var message = string.Format("Confirmed that the specified etag {0} was replicated to {1} of {2} servers after {3}", etag,
 		            (toCheck - completedCount),
 		            toCheck,
                     sp.Elapsed);
+
 			    throw new TimeoutException(message, e);
 		    }
 		}
