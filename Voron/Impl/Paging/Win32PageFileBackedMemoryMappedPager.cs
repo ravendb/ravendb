@@ -16,18 +16,13 @@ namespace Voron.Impl.Paging
 	{
 		public readonly long AllocationGranularity;
 		private long _totalAllocationSize;
-		private readonly string _memoryName;
 		private const int MaxAllocationRetries = 100;
 
-	    private static int _counter;
 
-		public Win32PageFileBackedMemoryMappedPager(string memoryName = null)
+		public Win32PageFileBackedMemoryMappedPager()
 		{
 			NativeMethods.SYSTEM_INFO systemInfo;
 			NativeMethods.GetSystemInfo(out systemInfo);
-
-		    var s = Interlocked.Increment(ref _counter).ToString(CultureInfo.InvariantCulture);
-		    _memoryName = memoryName + s;
 
 			AllocationGranularity = systemInfo.allocationGranularity;
 			_totalAllocationSize = systemInfo.allocationGranularity;
@@ -40,7 +35,7 @@ namespace Voron.Impl.Paging
 
 		protected override string GetSourceName()
 		{
-			return "MemMapInSystemPage: " + _memoryName;
+			return "MemMapInSystemPage, Size : " + _totalAllocationSize;
 		}
 
 		public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
@@ -214,7 +209,7 @@ namespace Voron.Impl.Paging
 
 		private PagerState.AllocationInfo TryCreateNewFileMappingAtAddress(long allocationSize, byte* baseAddress)
 		{
-			var newMemoryMappedFile = MemoryMappedFile.CreateNew(Guid.NewGuid().ToString(), allocationSize);
+			var newMemoryMappedFile = MemoryMappedFile.CreateNew(null, allocationSize);
 			var newFileMappingHandle = newMemoryMappedFile.SafeMemoryMappedFileHandle.DangerousGetHandle();
 			var newMappingBaseAddress = MemoryMapNativeMethods.MapViewOfFileEx(newFileMappingHandle,
 				MemoryMapNativeMethods.NativeFileMapAccessType.Read | MemoryMapNativeMethods.NativeFileMapAccessType.Write,
@@ -269,7 +264,7 @@ namespace Voron.Impl.Paging
 		private PagerState CreateInitialPagerState(long size, byte* requestedBaseAddress)
 		{
 			var allocationSize = NearestSizeToAllocationGranularity(size);
-			var mmf = MemoryMappedFile.CreateNew(_memoryName, allocationSize, MemoryMappedFileAccess.ReadWrite);
+			var mmf = MemoryMappedFile.CreateNew(null, allocationSize, MemoryMappedFileAccess.ReadWrite);
 
 			var fileMappingHandle = mmf.SafeMemoryMappedFileHandle.DangerousGetHandle();
 
