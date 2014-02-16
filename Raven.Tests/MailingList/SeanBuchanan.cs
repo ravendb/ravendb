@@ -3,11 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
-using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 using Xunit;
@@ -26,7 +23,7 @@ namespace Raven.Tests.MailingList
 		public interface INamedDocument
 		{
 			int Id { get; set; }
-			
+
 			string Name { get; set; }
 		}
 
@@ -68,11 +65,11 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void FactMethodName()
+		public void PatchShouldWorkCorrectly()
 		{
 			using (var store = NewDocumentStore())
 			{
-				IndexCreation.CreateIndexes(typeof (Proficiencies_ConsultantId).Assembly, store);
+				store.ExecuteIndex(new Proficiencies_ConsultantId());
 
 				//Write the test data to the database.
 				using (var session = store.OpenSession())
@@ -94,23 +91,17 @@ namespace Raven.Tests.MailingList
 					session.Store(consultant1);
 					session.Store(consultant2);
 					session.Store(proficiency1);
-					session.Store(proficiency2);
-					session.Store(proficiency3);
 					session.SaveChanges();
 
-					//Block1
-					{
-						var proficiencies = session.Query<Proficiency>("Proficiencies/ConsultantId")
-						                                         .Customize(o => o.WaitForNonStaleResultsAsOfLastWrite())
-						                                         .Where(o => o.Consultant.Id == 1).ToList();
-						foreach (var proficiency in proficiencies)
-						{
-							Console.WriteLine("Id: " + proficiency.Id + " ConsultantName: " + proficiency.Consultant.Name);
-						}
-					}
+					var proficiencies = session.Query<Proficiency, Proficiencies_ConsultantId>()
+					                           .Customize(o => o.WaitForNonStaleResultsAsOfLastWrite())
+					                           .Where(o => o.Consultant.Id == 1)
+					                           .ToList();
+
+					Assert.Equal("Subha", proficiencies.Single().Consultant.Name);
 				}
 
-
+				//Block2
 				using (var session = store.OpenSession())
 				{
 					var consultant1 = session.Load<Consultant>(1);
@@ -121,18 +112,16 @@ namespace Raven.Tests.MailingList
 					consultant1.Name = "Subhashini";
 					session.SaveChanges();
 
+
 					//Block1
 					//This block of code simply lists the names of the consultants in the Proficiencies collection. Since I have not synced the collection
 					//yet, I expect the consultant name to still be "Subha."
-					{
-						var list = session.Query<Proficiency>("Proficiencies/ConsultantId")
-							//.Customize(o => o.WaitForNonStaleResultsAsOfLastWrite())
-						                                .Where(o => o.Consultant.Id == 1).ToList();
-						foreach (var proficiency in list)
-						{
-							Console.WriteLine("Id: " + proficiency.Id + " ConsultantName: " + proficiency.Consultant.Name);
-						}
-					}
+					var proficiencies = session.Query<Proficiency>("Proficiencies/ConsultantId")
+					                  .Customize(o => o.WaitForNonStaleResultsAsOfLastWrite())
+					                  .Where(o => o.Consultant.Id == 1)
+					                  .ToList();
+
+					Assert.Equal("Subha", proficiencies.Single().Consultant.Name);
 				}
 
 				//I use this patch to update the consultant name to "Subha" in the Proficiencies collection.
@@ -164,15 +153,11 @@ namespace Raven.Tests.MailingList
 				using (var session = store.OpenSession())
 				{
 					//Block2
-					{
-						var proficiencies = session.Query<Proficiency>("Proficiencies/ConsultantId")
-						                                         .Customize(o => o.WaitForNonStaleResultsAsOfLastWrite())
-						                                         .Where(o => o.Consultant.Id == 1).ToList();
-						foreach (var proficiency in proficiencies)
-						{
-							Console.WriteLine("Id: " + proficiency.Id + " ConsultantName: " + proficiency.Consultant.Name);
-						}
-					}
+					var proficiencies = session.Query<Proficiency>("Proficiencies/ConsultantId")
+					                           .Customize(o => o.WaitForNonStaleResultsAsOfLastWrite())
+					                           .Where(o => o.Consultant.Id == 1).ToList();
+
+					Assert.Equal("Subhashini", proficiencies.Single().Consultant.Name);
 				}
 			}
 		}
