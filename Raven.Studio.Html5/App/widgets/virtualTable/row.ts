@@ -1,4 +1,5 @@
 import document = require("models/document");
+import cell = require("widgets/virtualTable/cell");
 
 class row {
     top = ko.observable(0);
@@ -9,13 +10,16 @@ class row {
     editUrl = ko.observable("");
     isChecked = ko.observable(false);
 
-    constructor() {
-        this.cellMap['Id'] = ko.observable<any>();
+    constructor(addIdCell: boolean) {
+        if (addIdCell) {
+            this.addOrUpdateCellMap('Id', null);
+        }
     }
 
     resetCells() {
         for (var prop in this.cellMap) {
-            this.cellMap[prop]('');
+            var cellVal: cell = this.cellMap[prop];
+            cellVal.reset();
         }
         this.collectionClass('');
         this.isChecked(false);
@@ -45,11 +49,42 @@ class row {
     }
 
     addOrUpdateCellMap(propertyName: string, data: any) {
-        if (!this.cellMap[propertyName]) {
-            this.cellMap[propertyName] = ko.observable<any>(data);
+        if (!this.cellMap[propertyName]) {            
+            this.cellMap[propertyName] = new cell(data, this.getCellTemplateName(propertyName));
         } else {
-            this.cellMap[propertyName](data);
+            var cellVal: cell = this.cellMap[propertyName];
+            cellVal.data(data);
         }
+    }
+
+    getCellData(cellName: string): any {
+        var cellVal: cell = this.cellMap[cellName];
+        if (cellVal) {
+            return cellVal.data;
+        }
+
+        return '';
+    }
+
+    getCellTemplate(cellName: string): string {
+        var cellVal: cell = this.cellMap[cellName];
+        if (cellVal) {
+            return cellVal.templateName;
+        }
+
+        return null;
+    }
+
+    getCellTemplateName(propertyName: string): string {
+        if (propertyName === "Id") {
+            return cell.idTemplate;
+        }
+
+        if (propertyName === "__IsChecked") {
+            return cell.checkboxTemplate;
+        }
+
+        return cell.defaultTemplate;
     }
 }
 
