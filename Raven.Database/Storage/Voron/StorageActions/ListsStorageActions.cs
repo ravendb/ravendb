@@ -149,7 +149,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						var key = value.Value<string>("key");
 
 						tableStorage.Lists.Delete(writeBatch.Value, currentEtag.ToString());
-						listsByName.MultiDelete(writeBatch.Value, nameKey, etag.ToString());
+                        listsByName.MultiDelete(writeBatch.Value, nameKey, currentEtag.ToString());
 						listsByNameAndKey.Delete(writeBatch.Value, CreateKey(name, key));
 					}
 				}
