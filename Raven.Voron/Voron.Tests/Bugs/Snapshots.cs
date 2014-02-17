@@ -1,4 +1,6 @@
-﻿namespace Voron.Tests.Bugs
+﻿using Voron.Debugging;
+
+namespace Voron.Tests.Bugs
 {
 	using System;
 	using System.Collections.Generic;

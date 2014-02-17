@@ -327,7 +327,7 @@ namespace Voron
 
 			public override IVirtualPager CreateScratchPager(string name)
 			{
-				return new Win32PageFileBackedMemoryMappedPager();
+				return new Win32PageFileBackedMemoryMappedPager(name);
 			}
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)
