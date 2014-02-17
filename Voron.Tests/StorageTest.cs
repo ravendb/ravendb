@@ -41,7 +41,8 @@ namespace Voron.Tests
 		protected StorageTest()
 		{
 			DeleteDirectory("test.data");
-		    _options = StorageEnvironmentOptions.GetInMemory();
+//		    _options = StorageEnvironmentOptions.GetInMemory();
+			_options = StorageEnvironmentOptions.ForPath("test.data");
 			Configure(_options);
 		}
 

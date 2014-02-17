@@ -259,11 +259,6 @@ namespace Voron
 				_dataPager = new Win32PageFileBackedMemoryMappedPager();
 			}
 
-			public PureMemoryStorageEnvironmentOptions(string memoryName)
-			{
-				_dataPager = new Win32PageFileBackedMemoryMappedPager(memoryName);
-			}
-
 			public override IVirtualPager DataPager
 			{
 				get { return _dataPager; }
@@ -332,7 +327,7 @@ namespace Voron
 
 			public override IVirtualPager CreateScratchPager(string name)
 			{
-				return new Win32PageFileBackedMemoryMappedPager(name);
+				return new Win32PageFileBackedMemoryMappedPager();
 			}
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)
