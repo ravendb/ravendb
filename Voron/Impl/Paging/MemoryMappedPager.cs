@@ -18,12 +18,11 @@ namespace Voron.Impl.Paging
 	{
 		public readonly long AllocationGranularity;
 		private long _totalAllocationSize;
-		private const int MaxAllocationRetries = 100;
 		private readonly FileInfo _fileInfo;
 		private readonly FileStream _fileStream;
 		private readonly SafeFileHandle _handle;
 		private readonly NativeFileAccess _access;
-		private MemoryMappedFileAccess _memoryMappedFileAccess;
+		private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
 
 		[StructLayout(LayoutKind.Explicit)]
 		private struct SplitValue
@@ -52,6 +51,7 @@ namespace Voron.Impl.Paging
 				? MemoryMappedFileAccess.Read
 				: MemoryMappedFileAccess.ReadWrite;
 
+			Trace.WriteLine(string.Format("creating/opening file (name = {0}), access type = {1}", file, _memoryMappedFileAccess));
 			_handle = NativeFileMethods.CreateFile(file, access,
 			   NativeFileShare.Read | NativeFileShare.Write | NativeFileShare.Delete, IntPtr.Zero,
 			   NativeFileCreationDisposition.OpenAlways, options, IntPtr.Zero);
@@ -63,16 +63,27 @@ namespace Voron.Impl.Paging
 			}
 
 			_fileInfo = new FileInfo(file);
-			_fileStream = new FileStream(_handle, FileAccess.ReadWrite);
 
-			long fileLengthAfterAdjustment = _fileStream.Length;
-			if (_fileStream.Length == 0 || (_fileStream.Length % AllocationGranularity != 0))
+			var streamAccessType = _access == NativeFileAccess.GenericRead
+				? FileAccess.Read
+				: FileAccess.ReadWrite;
+			_fileStream = new FileStream(_handle, streamAccessType);
+
+			_totalAllocationSize = _fileInfo.Length;
+
+			if (_access.HasFlag(NativeFileAccess.GenericWrite) || 
+				_access.HasFlag(NativeFileAccess.GenericAll) ||
+				_access.HasFlag(NativeFileAccess.FILE_GENERIC_WRITE))
 			{
-				fileLengthAfterAdjustment = NearestSizeToAllocationGranularity(_fileInfo.Length);
-				_fileStream.SetLength(fileLengthAfterAdjustment);
-			}
+				long fileLengthAfterAdjustment = _fileStream.Length;
+				if (_fileStream.Length == 0 || (_fileStream.Length%AllocationGranularity != 0))
+				{
+					fileLengthAfterAdjustment = NearestSizeToAllocationGranularity(_fileInfo.Length);
+					_fileStream.SetLength(fileLengthAfterAdjustment);
+				}
 
-			_totalAllocationSize = fileLengthAfterAdjustment;
+				_totalAllocationSize = fileLengthAfterAdjustment;
+			}
 
 			NumberOfAllocatedPages = _totalAllocationSize / PageSize;
 			PagerState.Release();
@@ -220,23 +231,6 @@ namespace Voron.Impl.Paging
 			return newPager;
 		}
 
-		private bool TryFindContinuousMemory(ulong size, out byte* foundAddressPtr)
-		{
-			foundAddressPtr = null;
-			try
-			{
-				foundAddressPtr = NativeMethods.VirtualAlloc(null, new UIntPtr(size), NativeMethods.AllocationType.RESERVE,
-					NativeMethods.MemoryProtection.READWRITE);
-
-				return (foundAddressPtr != null && foundAddressPtr != (byte*)0);
-			}
-			finally
-			{
-				if (foundAddressPtr != null && foundAddressPtr != (byte*)0)
-					NativeMethods.VirtualFree(foundAddressPtr, UIntPtr.Zero, NativeMethods.FreeType.MEM_RELEASE);
-			}
-		}
-
 		protected override string GetSourceName()
 		{
 			if (_fileInfo == null)
@@ -251,8 +245,6 @@ namespace Voron.Impl.Paging
 
 		public override void Sync()
 		{
-			Debug.Assert(PagerState.AllocationInfos.Any());
-
 			if (PagerState.AllocationInfos.Any(allocationInfo => 
 				MemoryMapNativeMethods.FlushViewOfFile(allocationInfo.BaseAddress, new IntPtr(allocationInfo.Size)) == false))
 					throw new Win32Exception();
@@ -285,6 +277,7 @@ namespace Voron.Impl.Paging
 
 		public override void Dispose()
 		{
+			Trace.WriteLine("Closing file (name = " + _fileInfo.FullName + ")");
 			_fileStream.Dispose();
 			_handle.Close();
 			if (DeleteOnClose)

@@ -34,9 +34,9 @@ namespace Voron.Tryout
 			for (int i = 0; i < 10; i++)
 			{
 			    Console.WriteLine(i);
-				using (var x = new Snapshots())
+				using (var x = new RecoveryMultipleJournals())
 				{
-					x.SnapshotIssue_ExplicitFlushing();
+					x.CanRecoverAfterRestartWithMultipleFilesInSingleTransaction();
 				}
 			}
 		}

@@ -68,18 +68,18 @@
                 Accessor = null;
             }
 
+			if (AllocationInfos != null)
+			{
+				foreach (var allocationInfo in AllocationInfos)
+					MemoryMapNativeMethods.UnmapViewOfFile(allocationInfo.BaseAddress);
+			}
+
 			if (Files != null && DisposeFilesOnDispose)
             {
 	            foreach (var file in Files)
 					file.Dispose();
 
 	            Files = null;
-            }
-
-            if (AllocationInfos != null)
-            {
-                foreach (var allocationInfo in AllocationInfos)
-                    MemoryMapNativeMethods.UnmapViewOfFile(allocationInfo.BaseAddress);
             }
 
             Released = true;

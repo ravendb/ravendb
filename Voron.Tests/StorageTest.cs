@@ -100,7 +100,7 @@ namespace Voron.Tests
 					Thread.Sleep(13);
 				}
 			}
-
+			Trace.WriteLine("DeleteDirectory() --> Trying to delete folder : "+new DirectoryInfo(dir).FullName);
 			Directory.Delete(dir, true);
 		}
 
