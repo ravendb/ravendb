@@ -303,7 +303,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanDeleteTombStones()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = NewRemoteDocumentStore(databaseName:Constants.SystemDatabase))
             {
                 string userId;
                 using (var session = store.OpenSession())
@@ -320,9 +320,8 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                //TODO: we need the way to find out that thombstone was created
-                Etag etagAfterFirstDelete = Etag.Empty;
-                servers[0].SystemDatabase.TransactionalStorage.Batch(accessor => etagAfterFirstDelete = accessor.Staleness.GetMostRecentDocumentEtag());
+                servers[0].SystemDatabase.TransactionalStorage.Batch(accessor =>
+                    Assert.Equal(1, accessor.Lists.Read(Constants.RavenPeriodicBackupsDocsTombstones, Etag.Empty, null, 10).Count()));
 
                 using (var session = store.OpenSession())
                 {
@@ -332,11 +331,17 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
+                var etagAfterFirstDelete = Etag.Empty;
+                servers[0].SystemDatabase.TransactionalStorage.Batch(accessor => etagAfterFirstDelete = accessor.Staleness.GetMostRecentDocumentEtag());
+
                 using (var session = store.OpenSession())
                 {
                     session.Delete(userId);
                     session.SaveChanges();
                 }
+
+                servers[0].SystemDatabase.TransactionalStorage.Batch(accessor =>
+                    Assert.Equal(2, accessor.Lists.Read(Constants.RavenPeriodicBackupsDocsTombstones, Etag.Empty, null, 10).Count()));
 
                 var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
                                                                     servers[0].SystemDatabase.ServerUrl +
@@ -345,11 +350,10 @@ namespace Raven.Tests.Issues
                                                                     new OperationCredentials(null, CredentialCache.DefaultCredentials),
                                                                     store.Conventions);
 
-                store.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).ExecuteRequest();
+                store.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).ReadResponseJson();
 
                 servers[0].SystemDatabase.TransactionalStorage.Batch(accessor =>
                     Assert.Equal(1, accessor.Lists.Read(Constants.RavenPeriodicBackupsDocsTombstones, Etag.Empty, null, 10).Count()));
-
 
             }
         }
