@@ -43,10 +43,14 @@ namespace Raven.Abstractions.Util
 
         public static string GetExtractedAssemblyLocationFor(Type type, Assembly executingAssembly)
         {
+#if !DEBUG
             var path = Path.GetDirectoryName(executingAssembly.Location);
             var name = type.Assembly.GetName().Name;
 
             return Path.Combine(path, Constants.AssembliesDirectoryName + "\\", name + ".dll");
+#else
+            return type.Assembly.Location; // we do not merge/extract assemblies in DEBUG
+#endif
         }
     }
 }
