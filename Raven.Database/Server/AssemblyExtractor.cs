@@ -25,7 +25,6 @@ namespace Raven.Database.Server
 
         public static void ExtractEmbeddedAssemblies()
         {
-#if !DEBUG
             var assemblies = new HashSet<string> { 
                 typeof(SystemTime).Assembly.GetName().Name, 
                 typeof(Field).Assembly.GetName().Name 
@@ -43,6 +42,7 @@ namespace Raven.Database.Server
             foreach (var assemblyToExtract in assembliesToExtract)
                 assemblies.Remove(assemblyToExtract.Value.Name);
 
+#if !DEBUG
             if (assemblies.Count != 0)
                 throw new InvalidOperationException("Not all embedded assemblies were extracted. Probably a bug.");
 #endif

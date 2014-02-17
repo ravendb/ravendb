@@ -6,6 +6,7 @@ using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
+using Voron.Util.Conversion;
 
 namespace Voron.Trees
 {
@@ -150,28 +151,12 @@ namespace Voron.Trees
         {
             Debug.Assert(index >= 0 || index < NumberOfEntries);
 
-            var node = GetNode(index);
-
-            var size = SizeOf.NodeEntry(node);
-
-            var nodeOffset = KeysOffsets[index];
-
-            int modifiedEntries = 0;
-            for (int i = 0; i < NumberOfEntries; i++)
+            for (int i = index+1; i < NumberOfEntries; i++)
             {
-                if (i == index)
-                    continue;
-                KeysOffsets[modifiedEntries] = KeysOffsets[i];
-                if (KeysOffsets[i] < nodeOffset)
-                    KeysOffsets[modifiedEntries] += (ushort)size;
-                modifiedEntries++;
+                KeysOffsets[i-1] = KeysOffsets[i];
             }
 
-            NativeMethods.memmove(_base + Upper + size, _base + Upper, nodeOffset - Upper);
-
             Lower -= (ushort)Constants.NodeOffsetSize;
-            Upper += (ushort)size;
-
         }
 
 		public byte* AddPageRefNode(int index, Slice key, long pageNumber)
@@ -234,7 +219,7 @@ namespace Voron.Trees
         internal void CopyNodeDataToEndOfPage(NodeHeader* other, Slice key = null)
         {
 			var nodeKey = key ?? new Slice(other);
-			Debug.Assert(SizeOf.NodeEntryWithAnotherKey(other, nodeKey) + Constants.NodeOffsetSize <= SizeLeft);
+            Debug.Assert(HasSpaceFor(SizeOf.NodeEntryWithAnotherKey(other, nodeKey) + Constants.NodeOffsetSize));
             
             var index = NumberOfEntries;
 
@@ -364,10 +349,54 @@ namespace Voron.Trees
             return sb.ToString();
         }
 
-        public bool HasSpaceFor(Slice key, int len)
+        public bool HasSpaceFor(Transaction tx, int len)
+        {
+            if (len <= SizeLeft)
+                return true;
+            if (len > CalcSizeLeft())
+                return false;
+
+            Defrag(tx);
+
+            Debug.Assert(len <= SizeLeft);
+
+            return true;
+        }
+
+        private void Defrag(Transaction tx)
+        {
+            var tmp = tx.Environment.TemporaryPage.TempPage;
+            NativeMethods.memcpy(tmp.Base, Base, AbstractPager.PageSize);
+
+            var numberOfEntries = NumberOfEntries;
+
+            Upper = AbstractPager.PageSize;
+
+            for (int i = 0; i < numberOfEntries; i++)
+            {
+                var node = tmp.GetNode(i);
+                var size = node->GetNodeSize() - Constants.NodeOffsetSize;
+                size += size & 1;
+                NativeMethods.memcpy(Base + Upper - size, (byte*) node, size);
+                Upper -= (ushort)size;
+                KeysOffsets[i] = Upper;
+            }
+        }
+
+        private bool HasSpaceFor(int len)
+        {
+            return len <= SizeLeft;
+        }
+
+        public bool HasSpaceFor(Transaction tx, Slice key, int len)
         {
             var requiredSpace = GetRequiredSpace(key, len);
-            return requiredSpace <= SizeLeft;
+            return HasSpaceFor(tx, requiredSpace);
+        }
+
+        private bool HasSpaceFor(Slice key, int len)
+        {
+            return HasSpaceFor(GetRequiredSpace(key, len));
         }
 
         public int GetRequiredSpace(Slice key, int len)
@@ -437,6 +466,40 @@ namespace Voron.Trees
 
                 prev = current;
             }
+        }
+
+        public bool UseMoreSizeThan(int len)
+        {
+            if (SizeUsed <= len)
+                return false;
+            var sizeUsed  = CalcSizeUsed();
+            return sizeUsed > len;
+        }
+
+        public int CalcSizeUsed()
+        {
+            var size = 0;
+            for (int i = 0; i < NumberOfEntries; i++)
+            {
+                var node = GetNode(i);
+                var nodeSize = node->GetNodeSize();
+                size += nodeSize + (nodeSize & 1);
+            }
+            Debug.Assert(SizeUsed >= size);
+            return size;
+        }
+
+        public int CalcSizeLeft()
+        {
+            var sl = AbstractPager.PageMaxSpace - CalcSizeUsed();
+            Debug.Assert(sl >= 0);
+            return sl;
+        }
+
+        public void EnsureHasSpaceFor(Transaction tx, Slice key, int len)
+        {
+            if (HasSpaceFor(tx, key, len) == false)
+                throw new InvalidOperationException("Could not ensure that we have enough space, this is probably a bug");
         }
     }
 }
