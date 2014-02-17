@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Voron.Trees;
 using Xunit;
 
 namespace Voron.Tests.Trees
@@ -30,7 +31,9 @@ namespace Voron.Tests.Trees
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.State.Root.Add(tx,  "00244",new MemoryStream(new byte[512]));
+                var pageCount = tx.State.Root.State.PageCount;
+                tx.State.Root.Add(tx,  "  244",new MemoryStream(new byte[512]));
+                Assert.Equal(pageCount, tx.State.Root.State.PageCount);
                 tx.Commit();
             }
         }

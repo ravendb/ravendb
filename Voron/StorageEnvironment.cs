@@ -348,7 +348,7 @@ namespace Voron
             {
                 if (flags == (TransactionFlags.ReadWrite))
                 {
-                    var wait = timeout ?? TimeSpan.FromSeconds(30);
+                    var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
                     if (_txWriter.Wait(wait) == false)
                     {
                         throw new TimeoutException("Waited for " + wait +

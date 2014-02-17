@@ -50,7 +50,7 @@ namespace Voron.Trees
             }
 
             var minKeys = page.IsBranch ? 2 : 1;
-            if ((page.UseMoreSizThan(_tx.DataPager.PageMinSpace)) &&
+            if ((page.UseMoreSizeThan(_tx.DataPager.PageMinSpace)) &&
                 page.NumberOfEntries >= minKeys)
                 return null; // above space/keys thresholds
 
@@ -60,7 +60,7 @@ namespace Voron.Trees
             Debug.Assert(sibling.PageNumber != page.PageNumber);
 
             minKeys = sibling.IsBranch ? 2 : 1; // branch must have at least 2 keys
-            if (sibling.UseMoreSizThan(_tx.DataPager.PageMinSpace) &&
+            if (sibling.UseMoreSizeThan(_tx.DataPager.PageMinSpace) &&
                 sibling.NumberOfEntries > minKeys)
             {	         
                 // neighbor is over the min size and has enough key, can move just one key to  the current page
@@ -105,7 +105,7 @@ namespace Voron.Trees
 		    }
 
 		    right.LastSearchPosition = previousSearchPosition; //previous position --> prevent mutation of parameter
-	        return left.HasSpaceFor(actualSpaceNeeded);
+	        return left.HasSpaceFor(_tx, actualSpaceNeeded);
 	    }
 
         private void MergePages(Page parentPage, Page left, Page right)
@@ -163,17 +163,20 @@ namespace Voron.Trees
 			if (nodeVersion > 0)
 				nodeVersion -= 1;
 
-	        byte* dataPos = null;
+	        byte* dataPos;
 	        switch (fromNode->Flags)
 	        {
 				case NodeFlags.PageRef:
+	                to.EnsureHasSpaceFor(_tx, originalFromKeyStart, -1);
 					dataPos = to.AddPageRefNode(to.LastSearchPosition, originalFromKeyStart, fromNode->PageNumber);
 					break;
 				case NodeFlags.Data:
+	                to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromNode->DataSize);
 			        dataPos = to.AddDataNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, nodeVersion);
 					break;
 				case NodeFlags.MultiValuePageRef:
-					dataPos = to.AddMultiValueNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, nodeVersion);
+                    to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromNode->DataSize);
+                    dataPos = to.AddMultiValueNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, nodeVersion);
 					break;
 				default:
 			        throw new NotSupportedException("Invalid node type to move: " + fromNode->Flags);
@@ -194,7 +197,7 @@ namespace Voron.Trees
                 pageNumber = from.PageNumber;
                 newKey = GetActualKey(from, 0);
             }
-
+            parentPage.EnsureHasSpaceFor(_tx, newKey, -1);
 			parentPage.AddPageRefNode(pos, newKey, pageNumber);
         }
 
@@ -202,6 +205,8 @@ namespace Voron.Trees
         {
             Debug.Assert(from.IsBranch);
             var originalFromKeyStart = GetActualKey(from, from.LastSearchPositionOrLastEntry);
+
+            to.EnsureHasSpaceFor(_tx, originalFromKeyStart, -1);
 
             var fromNode = from.GetNode(from.LastSearchPosition);
             long pageNum = fromNode->PageNumber;
@@ -228,6 +233,7 @@ namespace Voron.Trees
                 var rightPageNumber = from.GetNode(1)->PageNumber;
                 from.RemoveNode(0); // remove the original implicit node
                 from.RemoveNode(0); // remove the next node that we now turned into implicit
+                from.EnsureHasSpaceFor(_tx, Slice.BeforeAllKeys, -1);
                 from.AddPageRefNode(0, Slice.BeforeAllKeys, rightPageNumber);
                 Debug.Assert(from.NumberOfEntries >= 2);
             }
@@ -245,7 +251,7 @@ namespace Voron.Trees
                 pageNumber = from.PageNumber;
                 newKey = GetActualKey(from, 0);
             }
-
+            parentPage.EnsureHasSpaceFor(_tx, newKey, -1);
 			parentPage.AddPageRefNode(pos, newKey, pageNumber);
         }
 

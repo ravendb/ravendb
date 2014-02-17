@@ -103,10 +103,27 @@ namespace Voron.Debugging
 			TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(startPageNumber), showNodesEvery);
 
 			var output = Path.Combine(Environment.CurrentDirectory, "output." + format);
-			var p = Process.Start(@"C:\Program Files (x86)\Graphviz2.32\bin\dot.exe", "-T" + format + " " + path + " -o " + output);
+
+			var p = Process.Start( FindGraphviz() + @"\bin\dot.exe", "-T" + format + " " + path + " -o " + output);
 			p.WaitForExit();
 			Process.Start(output);
 			Thread.Sleep(500);
-		} 
+		}
+
+
+	    public static string FindGraphviz()
+        {
+            var path = @"C:\Program Files (x86)\Graphviz2.";
+            for (var i = 0; i < 100; i++)
+            {
+                var p = path + i.ToString("00");
+
+                if (Directory.Exists(p))
+                    return p;
+            }
+
+            throw new InvalidOperationException("No Graphviz found.");
+        }
+
 	}
 }
