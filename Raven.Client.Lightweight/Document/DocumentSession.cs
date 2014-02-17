@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 #if !SILVERLIGHT && !NETFX_CORE
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System;
@@ -805,18 +806,26 @@ namespace Raven.Client.Document
             return AddLazyOperation(lazyOp, onEval);
         }
 
-        public void ExecuteAllPendingLazyOperations()
+        public ResponseTimeInformation ExecuteAllPendingLazyOperations()
         {
             if (pendingLazyOperations.Count == 0)
-                return;
+                return new ResponseTimeInformation();
 
             try
             {
+                var sw = Stopwatch.StartNew();
+
                 IncrementRequestCount();
-                while (ExecuteLazyOperationsSingleStep())
+
+                var responseTimeDuration = new ResponseTimeInformation();
+
+                while (ExecuteLazyOperationsSingleStep(responseTimeDuration))
                 {
                     ThreadSleep.Sleep(100);
                 }
+
+                responseTimeDuration.ComputeServerTotal();
+                
 
                 foreach (var pendingLazyOperation in pendingLazyOperations)
                 {
@@ -824,6 +833,8 @@ namespace Raven.Client.Document
                     if (onEvaluateLazy.TryGetValue(pendingLazyOperation, out value))
                         value(pendingLazyOperation.Result);
                 }
+                responseTimeDuration.TotalClientDuration = sw.Elapsed;
+                return responseTimeDuration;
             }
             finally
             {
@@ -831,7 +842,7 @@ namespace Raven.Client.Document
             }
         }
 
-        private bool ExecuteLazyOperationsSingleStep()
+        private bool ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation)
         {
             var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
             try
@@ -840,8 +851,17 @@ namespace Raven.Client.Document
                 {
                     var requests = pendingLazyOperations.Select(x => x.CreateRequest()).ToArray();
                     var responses = DatabaseCommands.MultiGet(requests);
+
                     for (int i = 0; i < pendingLazyOperations.Count; i++)
                     {
+                        long totalTime;
+                        long.TryParse(responses[i].Headers["Temp-Request-Time"], out totalTime);
+                        
+                        responseTimeInformation.DurationBreakdown.Add(new ResponseTimeItem
+                        {
+                            Url = requests[i].UrlAndQuery,
+                            Duration = TimeSpan.FromMilliseconds(totalTime)
+                        });
                         if (responses[i].RequestHasErrors())
                         {
                             throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
@@ -857,7 +877,19 @@ namespace Raven.Client.Document
                 }
                 else // embedded mode
                 {
-                    var responses = pendingLazyOperations.Select(x => x.ExecuteEmbedded(DatabaseCommands)).ToArray();
+                    var responses = new List<object>();
+                    foreach (var lazyOp in pendingLazyOperations)
+                    {
+                        var sw = Stopwatch.StartNew();
+                        var result = lazyOp.ExecuteEmbedded(DatabaseCommands);
+                        responses.Add(result);
+                        responseTimeInformation.DurationBreakdown.Add(new ResponseTimeItem
+                        {
+                            Url = lazyOp.ToString(),
+                            Duration = sw.Elapsed
+                        });
+                    }
+                    
                     for (int i = 0; i < pendingLazyOperations.Count; i++)
                     {
                         pendingLazyOperations[i].HandleEmbeddedResponse(responses[i]);
