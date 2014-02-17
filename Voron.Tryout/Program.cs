@@ -12,6 +12,9 @@ namespace Voron.Tryout
         {
             for (int ix = 0; ix < 5; ix++)
             {
+                const int size = 10 * 1000;
+
+                var sp = Stopwatch.StartNew();
                 using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
                 {
                     using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
@@ -20,50 +23,45 @@ namespace Voron.Tryout
                         tx.Commit();
                     }
 
-                    var sp = Stopwatch.StartNew();
-                    var producer = Task.Factory.StartNew(() =>
+                    var buffer = new byte[100];
+                    var total = 0;
+                    for (int i = 0; i < size; i++)
                     {
-                        int counter = 0;
-                        var buffer = new Byte[98];
-                        for (int i = 0; i < 10 * 1000; i++)
+                        using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                         {
-                            var wb = new WriteBatch();
+                            var t = env.CreateTree(tx, "test");
+
                             for (int j = 0; j < 10; j++)
                             {
-                                wb.Add((counter++).ToString("0000000000"), new MemoryStream(buffer), "test");
+                                t.Add(tx, (total++).ToString("00000000"), new MemoryStream(buffer));
                             }
-                            env.Writer.Write(wb);
-                        }
-                    });
 
-                    var consumer = Task.Factory.StartNew(() =>
+                            tx.Commit();
+                        }
+                    }
+
+                    for (int i = 0; i < size; i++)
                     {
-                        var total = 0;
-                        while (total < 10 * 10 * 1000)
+                        using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                         {
-                            var wb = new WriteBatch();
-                            using (var snapshot = env.CreateSnapshot())
+                            var t = env.CreateTree(tx, "test");
+                            var treeIterator = t.Iterate(tx);
+                            for (int j = 0; j < 10; j++)
                             {
-                                using (var it = snapshot.Iterate("test"))
+                                if (treeIterator.Seek(Slice.BeforeAllKeys) == false)
                                 {
-                                    if (it.Seek(Slice.BeforeAllKeys) == false)
-                                        continue;
-                                    int i = 0;
-                                    do
-                                    {
-                                        i++;
-                                        wb.Delete(it.CurrentKey, "test");
-                                        total++;
-                                    } while (it.MoveNext() && i < 128);
+                                    t.Delete(tx, treeIterator.CurrentKey);
                                 }
                             }
+
+                            tx.Commit();
                         }
-                    });
+                    }
 
-                    Task.WaitAll(consumer, producer);
-
-                    Console.WriteLine(sp.Elapsed);
+                   
                 }
+
+                Console.WriteLine(sp.Elapsed);
             }
         }
     }
