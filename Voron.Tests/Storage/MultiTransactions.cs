@@ -10,7 +10,7 @@ namespace Voron.Tests.Storage
         [Fact]
         public void ShouldWork()
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
             {
                 for (int x = 0; x < 10; x++)
                 {

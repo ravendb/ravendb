@@ -38,7 +38,7 @@ namespace Voron.Tests.Bugs
         [InlineData(5000)]
 		public void MultiAdds_And_MultiDeletes_After_Causing_PageSplit_DoNot_Fail(int size)
 		{
-			using (var Env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
+			using (var Env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
 			{
 				var inputData = new List<byte[]>();
 				for (int i = 0; i < size; i++)
@@ -81,7 +81,7 @@ namespace Voron.Tests.Bugs
 		{
 			const int DocumentCount = 10;
 
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
 			{
 				var rand = new Random();
 				var testBuffer = new byte[168];
@@ -101,7 +101,7 @@ namespace Voron.Tests.Bugs
 		[Fact]
 		public void SplitterIssue2()
 		{
-			var storageEnvironmentOptions = StorageEnvironmentOptions.GetInMemory();
+			var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
 			storageEnvironmentOptions.ManualFlushing = true;
 			using (var env = new StorageEnvironment(storageEnvironmentOptions))
 			{
@@ -172,7 +172,7 @@ namespace Voron.Tests.Bugs
 		[Fact]
 		public void CanAddMultiValuesUnderTheSameKeyToBatch()
 		{
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
 			{
 				var rand = new Random();
 				var testBuffer = new byte[168];

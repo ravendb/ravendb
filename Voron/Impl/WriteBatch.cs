@@ -28,6 +28,15 @@ namespace Voron.Impl
 			}
 		}
 
+	    public int OperationsCount
+	    {
+	        get
+	        {
+	            return _lastOperations.Sum(x => x.Value.Count) +
+	                   _multiTreeOperations.Sum(x => x.Value.Sum(y => y.Value.Count));
+	        }
+	    }
+
 		public Func<long> Size
 		{
 			get

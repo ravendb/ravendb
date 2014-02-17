@@ -29,7 +29,7 @@ namespace Voron.Tests.Bugs
         [Fact]
         public void SurviveRestart()
         {
-            using (var options = StorageEnvironmentOptions.GetInMemory())
+            using (var options = StorageEnvironmentOptions.CreateMemoryOnly())
             {
                 options.OwnsPagers = false;
                 using (var env = new StorageEnvironment(options))

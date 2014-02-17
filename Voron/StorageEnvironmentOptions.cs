@@ -84,7 +84,7 @@ namespace Voron
 			IncrementalBackupEnabled = false;
 		}
 
-		public static StorageEnvironmentOptions GetInMemory()
+		public static StorageEnvironmentOptions CreateMemoryOnly()
 		{
 			return new PureMemoryStorageEnvironmentOptions();
 		}
