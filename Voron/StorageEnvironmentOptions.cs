@@ -89,11 +89,6 @@ namespace Voron
 			return new PureMemoryStorageEnvironmentOptions();
 		}
 
-		public static StorageEnvironmentOptions GetInMemory(string memoryName)
-		{
-			return new PureMemoryStorageEnvironmentOptions(memoryName);
-		}
-
 		public static StorageEnvironmentOptions ForPath(string path)
 		{
 			return new DirectoryStorageEnvironmentOptions(path);
