@@ -44,7 +44,6 @@ namespace Voron
 	    private DebugJournal _debugJournal;
 	    private EndOfDiskSpaceEvent _endOfDiskSpace;
 	    private int _sizeOfUnflushedTransactionsInJournalFile;
-	    private bool disposed;
 
 
 	    public TemporaryPage TemporaryPage { get; private set; }
@@ -105,7 +104,7 @@ namespace Voron
                 Dispose();
                 throw;
             }
-        }
+		}
 
         public ScratchBufferPool ScratchBufferPool
         {
@@ -284,7 +283,6 @@ namespace Voron
 
         public void Dispose()
         {
-	        disposed = true;
 			if(DebugJournal != null)
 				DebugJournal.Dispose();
 
@@ -345,9 +343,6 @@ namespace Voron
 
         public Transaction NewTransaction(TransactionFlags flags, TimeSpan? timeout = null)
         {
-			if(disposed)
-				throw new ObjectDisposedException("StorageEnvironment");
-
             bool txLockTaken = false;
             try
             {

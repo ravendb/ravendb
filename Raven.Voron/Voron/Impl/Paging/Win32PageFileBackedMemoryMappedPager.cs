@@ -14,14 +14,13 @@ namespace Voron.Impl.Paging
 {
 	public unsafe class Win32PageFileBackedMemoryMappedPager : AbstractPager
 	{
-	    private readonly string _name;
 		public readonly long AllocationGranularity;
 		private long _totalAllocationSize;
 		private const int MaxAllocationRetries = 100;
 
-		public Win32PageFileBackedMemoryMappedPager(string name = null)
+
+		public Win32PageFileBackedMemoryMappedPager()
 		{
-		    _name = name;
 			NativeMethods.SYSTEM_INFO systemInfo;
 			NativeMethods.GetSystemInfo(out systemInfo);
 
@@ -36,7 +35,7 @@ namespace Voron.Impl.Paging
 
 		protected override string GetSourceName()
 		{
-			return "MemMapInSystemPage " + _name + " Size : " + _totalAllocationSize;
+			return "MemMapInSystemPage, Size : " + _totalAllocationSize;
 		}
 
 		public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
@@ -71,6 +70,9 @@ namespace Voron.Impl.Paging
 
 			var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
+			if (_totalAllocationSize + allocationSize >= long.MaxValue) //probably would never be true, but just in case
+				throw new OutOfMemoryException("failed to allocated more pages - reached maximum allowed space usage");
+
 		    if (TryAllocateMoreContinuousPages(allocationSize) == false)
 		    {
 		        var newPagerState = AllocateMorePagesAndRemapContinuously(allocationSize);
@@ -90,11 +92,13 @@ namespace Voron.Impl.Paging
 		            newPagerState.AddRef();
 		            tx.AddPagerState(newPagerState);
 		        }
-
+                // we always share the same memory mapped files references between all pages, since to close them 
+                // would be to lose all the memory assoicated with them
 		        PagerState.DisposeFilesOnDispose = false;
 		        PagerState.Release(); //replacing the pager state --> so one less reference for it
 		        PagerState = newPagerState;
 		    }
+
 		    _totalAllocationSize += allocationSize;
             NumberOfAllocatedPages = _totalAllocationSize / PageSize;
 		}
@@ -249,7 +253,6 @@ namespace Voron.Impl.Paging
 				if (foundAddressPtr != null && foundAddressPtr != (byte*)0)
 					NativeMethods.VirtualFree(foundAddressPtr, UIntPtr.Zero, NativeMethods.FreeType.MEM_RELEASE);
 			}
-
 		}
 		
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]

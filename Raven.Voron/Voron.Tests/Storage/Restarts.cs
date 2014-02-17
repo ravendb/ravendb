@@ -13,7 +13,7 @@ namespace Voron.Tests.Storage
         [Fact]
         public void DataIsKeptAfterRestart()
         {
-            using (var pureMemoryPager = StorageEnvironmentOptions.GetInMemory())
+            using (var pureMemoryPager = StorageEnvironmentOptions.CreateMemoryOnly())
             {
                 pureMemoryPager.OwnsPagers = false;
                 using (var env = new StorageEnvironment(pureMemoryPager))
@@ -48,7 +48,7 @@ namespace Voron.Tests.Storage
         [Fact]
         public void DataIsKeptAfterRestartForSubTrees()
         {
-            using (var pureMemoryPager = StorageEnvironmentOptions.GetInMemory())
+            using (var pureMemoryPager = StorageEnvironmentOptions.CreateMemoryOnly())
             {
                 pureMemoryPager.OwnsPagers = false;
                 using (var env = new StorageEnvironment(pureMemoryPager))
