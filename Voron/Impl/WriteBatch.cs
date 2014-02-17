@@ -13,7 +13,6 @@ namespace Voron.Impl
 		private readonly Dictionary<string, Dictionary<Slice, List<BatchOperation>>>  _multiTreeOperations;
 
 		private readonly SliceEqualityComparer _sliceEqualityComparer;
-		private bool _disposeAfterWrite = true;
 
 		public IEnumerable<BatchOperation> Operations
 		{
@@ -28,6 +27,15 @@ namespace Voron.Impl
 												.SelectMany(x => x));
 			}
 		}
+
+	    public int OperationsCount
+	    {
+	        get
+	        {
+	            return _lastOperations.Sum(x => x.Value.Count) +
+	                   _multiTreeOperations.Sum(x => x.Value.Sum(y => y.Value.Count));
+	        }
+	    }
 
 		public Func<long> Size
 		{
@@ -53,14 +61,8 @@ namespace Voron.Impl
 		}
 
 		public bool IsEmpty { get { return _lastOperations.Count == 0 && _multiTreeOperations.Count == 0; } }
-		
-		public bool DisposeAfterWrite
-		{
-			get { return _disposeAfterWrite; }
-			set { _disposeAfterWrite = value; }
-		}
 
-		internal bool TryGetValue(string treeName, Slice key, out Stream value, out ushort? version, out BatchOperationType operationType)
+	    internal bool TryGetValue(string treeName, Slice key, out Stream value, out ushort? version, out BatchOperationType operationType)
 		{
 		    value = null;
 		    version = null;
@@ -95,7 +97,6 @@ namespace Voron.Impl
 					return true;
 
 			    value = operation.Value as Stream;
-				operation.Reset(); // will reset stream position
 
 				if (operation.Type == BatchOperationType.Add)
 					return true;

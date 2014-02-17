@@ -16,7 +16,7 @@ namespace Voron.Tests
 		[Fact]
 		public void Record_debug_journal_and_replay_it()
 		{
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
 			{
 
 				env.DebugJournal = new DebugJournal("debug_journal_test", env, true);
@@ -71,7 +71,7 @@ namespace Voron.Tests
 				}
 			}
 
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
 			{
 				env.DebugJournal = DebugJournal.FromFile("debug_journal_test",env);
 				env.DebugJournal.Replay();

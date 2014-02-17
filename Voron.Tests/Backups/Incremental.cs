@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using Voron.Impl;
 using Voron.Impl.Backup;
