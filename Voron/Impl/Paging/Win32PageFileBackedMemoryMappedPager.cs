@@ -92,7 +92,8 @@ namespace Voron.Impl.Paging
 		            newPagerState.AddRef();
 		            tx.AddPagerState(newPagerState);
 		        }
-
+                // we always share the same memory mapped files references between all pages, since to close them 
+                // would be to lose all the memory assoicated with them
 		        PagerState.DisposeFilesOnDispose = false;
 		        PagerState.Release(); //replacing the pager state --> so one less reference for it
 		        PagerState = newPagerState;

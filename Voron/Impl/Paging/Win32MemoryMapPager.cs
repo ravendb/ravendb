@@ -136,7 +136,6 @@ namespace Voron.Impl.Paging
 					tx.AddPagerState(newPagerState);
 				}
 
-				PagerState.DisposeFilesOnDispose = false;
 				PagerState.Release(); //replacing the pager state --> so one less reference for it
 				PagerState = newPagerState;
 			}
