@@ -276,7 +276,6 @@ namespace Voron.Impl.Paging
 
 		public override void Dispose()
 		{
-			Trace.WriteLine("Closing file (name = " + _fileInfo.FullName + ")");
 			_fileStream.Dispose();
 			_handle.Close();
 			if (DeleteOnClose)

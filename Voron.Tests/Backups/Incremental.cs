@@ -221,7 +221,6 @@ namespace Voron.Tests.Backups
 				File.Delete(incBackupFile);
 			}
 
-			Trace.WriteLine("Incremental::Clean() --> trying to delete folder : " + _restoredStoragePath);
 			if (Directory.Exists(_restoredStoragePath))
 				Directory.Delete(_restoredStoragePath, true);
 		}
