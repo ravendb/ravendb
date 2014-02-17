@@ -26,7 +26,7 @@ namespace Voron.Trees
 		public int GetNodeSize()
 		{
 			return Constants.NodeHeaderSize + KeySize + Constants.NodeOffsetSize + 
-				  (Flags == (NodeFlags.PageRef) ? Constants.PageNumberSize : DataSize);
+				  (Flags == (NodeFlags.PageRef) ? 0 : DataSize);
 		}
 
 
