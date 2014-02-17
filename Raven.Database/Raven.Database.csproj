@@ -922,6 +922,7 @@
     <Compile Include="Server\WebApi\RequestManager.cs" />
     <Compile Include="Smuggler\DataDumper.cs" />
     <Compile Include="Storage\BaseRestoreOperation.cs" />
+    <Compile Include="Storage\DatabaseSizeInformation.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
     <Compile Include="Storage\Esent\Backup\BackupOperation.cs" />
     <Compile Include="Storage\Esent\Backup\EsentBackup.cs" />

@@ -461,12 +461,16 @@ namespace Voron
 
         public EnvironmentStats Stats()
         {
+            var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, State.NextPageNumber - 1); // async apply to data file task
+
             return new EnvironmentStats
                 {
                     FreePages = _freeSpaceHandling.GetFreePageCount(),
                     FreePagesOverhead = State.FreeSpaceRoot.State.PageCount,
                     RootPages = State.Root.State.PageCount,
-                    UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber
+                    UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,
+                    UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * AbstractPager.PageSize,
+                    AllocatedDataFileSizeInBytes = numberOfAllocatedPages * AbstractPager.PageSize
                 };
         }
 

@@ -289,7 +289,7 @@ namespace Raven.Database.Server.Controllers.Admin
                     from documentDatabase in allDbs
                     let indexStorageSize = documentDatabase.GetIndexStorageSizeOnDisk()
                     let transactionalStorageSize = documentDatabase.GetTransactionalStorageSizeOnDisk()
-                    let totalDatabaseSize = indexStorageSize + transactionalStorageSize
+                    let totalDatabaseSize = indexStorageSize + transactionalStorageSize.AllocatedSizeInBytes
                     let lastUsed = DatabasesLandlord.DatabaseLastRecentlyUsed.GetOrDefault(documentDatabase.Name ?? Constants.SystemDatabase)
                     select new LoadedDatabaseStatistics
                     {
@@ -299,8 +299,10 @@ namespace Raven.Database.Server.Controllers.Admin
 								lastUsed,
 								documentDatabase.WorkContext.LastWorkTime
 							}.Max(),
-                        TransactionalStorageSize = transactionalStorageSize,
-                        TransactionalStorageSizeHumaneSize = DatabaseSize.Humane(transactionalStorageSize),
+                        TransactionalStorageAllocatedSize = transactionalStorageSize.AllocatedSizeInBytes,
+                        TransactionalStorageAllocatedSizeHumaneSize = DatabaseSize.Humane(transactionalStorageSize.AllocatedSizeInBytes),
+                        TransactionalStorageUsedSize = transactionalStorageSize.UsedSizeInBytes,
+                        TransactionalStorageUsedSizeHumaneSize = DatabaseSize.Humane(transactionalStorageSize.UsedSizeInBytes),
                         IndexStorageSize = indexStorageSize,
                         IndexStorageHumaneSize = DatabaseSize.Humane(indexStorageSize),
                         TotalDatabaseSize = totalDatabaseSize,

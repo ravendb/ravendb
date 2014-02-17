@@ -2660,9 +2660,9 @@ namespace Raven.Database
 		/// <remarks>
 		/// This is a potentially a very expensive call, avoid making it if possible.
 		/// </remarks>
-		public long GetTransactionalStorageSizeOnDisk()
+		public DatabaseSizeInformation GetTransactionalStorageSizeOnDisk()
 		{
-			return Configuration.RunInMemory ? 0 : TransactionalStorage.GetDatabaseSizeInBytes();
+			return Configuration.RunInMemory ? DatabaseSizeInformation.Empty : TransactionalStorage.GetDatabaseSize();
 		}
 
 		/// <summary>
@@ -2678,7 +2678,7 @@ namespace Raven.Database
 		{
 			if (Configuration.RunInMemory)
 				return 0;
-			return GetIndexStorageSizeOnDisk() + GetTransactionalStorageSizeOnDisk();
+			return GetIndexStorageSizeOnDisk() + GetTransactionalStorageSizeOnDisk().AllocatedSizeInBytes;
 		}
 
 		public Etag GetIndexEtag(string indexName, Etag previousEtag, string resultTransformer = null)
