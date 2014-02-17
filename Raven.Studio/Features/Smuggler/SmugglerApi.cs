@@ -46,6 +46,11 @@ namespace Raven.Studio.Features.Smuggler
 		    return (RavenJArray)await request.ReadResponseJsonAsync();
 		}
 
+        protected override Task DeleteDocument(string documentId, Etag etag)
+        {
+            throw new NotImplementedException();
+        }
+
         protected override Task ExportDocumentsDeletion(SmugglerOptions options, JsonTextWriter jsonWriter, Etag startDocsEtag)
         {
             throw new NotImplementedException();

@@ -21,6 +21,7 @@ using Raven.Database.Server;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 using Task = System.Threading.Tasks.Task;
+using System.Linq;
 
 namespace Raven.Database.Bundles.PeriodicBackups
 {
@@ -165,11 +166,27 @@ namespace Raven.Database.Bundles.PeriodicBackups
                             if (fullBackup == false)
                             {
                                 var databaseStatistics = documentDatabase.Statistics;
+                                var hasDeletions = false;
                                 // No-op if nothing has changed
                                 if (databaseStatistics.LastDocEtag == localBackupStatus.LastDocsEtag &&
                                     databaseStatistics.LastAttachmentEtag == localBackupStatus.LastAttachmentsEtag)
                                 {
-                                    return;
+                                    // no document changes since last backup, but check if there was any document/attachments removals
+                                    Database.TransactionalStorage.Batch(accessor =>
+                                    {
+                                        hasDeletions = accessor.Lists.Read(
+                                            Constants.RavenPeriodicBackupsDocsTombstones,
+                                            localBackupStatus.LastDocsEtag, null, 1).Any() 
+                                            ||
+                                                          accessor.Lists.Read(
+                                                              Constants.RavenPeriodicBackupsAttachmentsTombstones,
+                                                              localBackupStatus.LastAttachmentsEtag, null, 1).Any();
+                                    });
+                                    if (hasDeletions == false)
+                                    {
+                                        return;    
+                                    }
+                                    
                                 }
                             }
 
@@ -200,6 +217,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
                                                           StartDocsEtag = localBackupStatus.LastDocsEtag,
                                                           StartAttachmentsEtag = localBackupStatus.LastAttachmentsEtag,
                                                           Incremental = true,
+                                                          ExportDeletions = true
                                                       };
 
                             var exportResult = await new DataDumper(documentDatabase).ExportData(new SmugglerExportOptions { ToFile = backupPath }, smugglerOptions);

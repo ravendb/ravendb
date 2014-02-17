@@ -15,6 +15,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
+using Raven.Database.Impl;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -86,15 +87,19 @@ namespace Raven.Database.Smuggler
         {
             database.TransactionalStorage.Batch(accessor =>
             {
-                //TODO: rewrite in fashion that is used in export documents 
                 var deletions =
                     accessor.Lists.Read(Constants.RavenPeriodicBackupsDocsTombstones, startDocsEtag, null, int.MaxValue)
                             .Select(x => new JsonDocument
                             {
-                                Key = x.Key,
+                                Etag = x.Etag,
+                                DataAsJson = new RavenJObject
+                                {
+                                    { "Key", x.Key},
+                                    { "Etag" , x.Etag.ToString() }
+                                }
                             })
-                            .OrderBy(x => x.Etag).Select(x => x.ToJson())
-                            .ToList();
+                            .OrderBy(x => x.Etag).Select(x => x.ToJson());
+                           
                 foreach (var ravenObject in deletions)
                 {
                     ravenObject.WriteTo(jsonWriter);
@@ -142,6 +147,15 @@ namespace Raven.Database.Smuggler
 
 			return new CompletedTask();
 		}
+
+        protected override Task DeleteDocument(string key, Etag etag)
+        {
+            if (key != null && etag != null)
+            {
+                database.Delete(key, null, null);
+            }
+            return new CompletedTask();
+        }
 
 		protected override Task PutDocument(RavenJObject document)
 		{

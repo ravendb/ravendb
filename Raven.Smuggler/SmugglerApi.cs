@@ -69,6 +69,11 @@ namespace Raven.Smuggler
             throw new NotImplementedException();
         }
 
+        protected override Task DeleteDocument(string documentId, Etag etag)
+        {
+            throw new NotImplementedException();
+        }
+
 		public override async Task ImportData(SmugglerImportOptions importOptions, SmugglerOptions options, Stream stream)
 		{
             SetSmugglerOptions(options);

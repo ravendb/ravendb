@@ -30,7 +30,10 @@ namespace Raven.Abstractions.Smuggler
             StartAttachmentsEtag = StartDocsEtag = Etag.Empty;
             Limit = int.MaxValue;
 		    MaxStepsForTransformScript = 10*1000;
+	        ExportDeletions = false;
         }
+
+        public bool ExportDeletions { get; set; }
 
         /// <summary>
         /// Start exporting from the specified documents etag

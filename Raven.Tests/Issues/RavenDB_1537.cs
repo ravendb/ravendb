@@ -361,5 +361,6 @@ namespace Raven.Tests.Issues
         //TODO: test deletion with replication
         //TODO: tests for documents and attachments
         //TODO: test back with only deletion!
+        //TODO: test incemental status with missing delete position
     }
 }

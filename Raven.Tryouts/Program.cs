@@ -9,18 +9,6 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("pl-PL");
-			CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("pl-PL");
-			for (int i = 0; i < 1000; i++)
-			{
-				Console.WriteLine(i);
-
-                Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new Embedded())
-				{
-					x.AllowNonAuthoritativeInformationAlwaysWorks();
-				}
-			}
 			
 		}
 	}
