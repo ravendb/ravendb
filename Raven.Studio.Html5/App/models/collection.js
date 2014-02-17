@@ -1,4 +1,13 @@
-define(["require", "exports", "common/pagedList", "commands/getCollectionInfoCommand", "commands/getDocumentsByEntityNameCommand", "commands/getSystemDocumentsCommand", "commands/getAllDocumentsCommand", "models/collectionInfo", "common/pagedResultSet", "models/database"], function(require, exports, pagedList, getCollectionInfoCommand, getDocumentsByEntityNameCommand, getSystemDocumentsCommand, getAllDocumentsCommand, collectionInfo, pagedResultSet, database) {
+define(["require", "exports", "common/pagedList", "commands/getCollectionInfoCommand", "commands/getDocumentsByEntityNameCommand", "commands/getSystemDocumentsCommand", "commands/getAllDocumentsCommand", "models/collectionInfo", "common/pagedResultSet", "models/database"], function(require, exports, __pagedList__, __getCollectionInfoCommand__, __getDocumentsByEntityNameCommand__, __getSystemDocumentsCommand__, __getAllDocumentsCommand__, __collectionInfo__, __pagedResultSet__, __database__) {
+    var pagedList = __pagedList__;
+    var getCollectionInfoCommand = __getCollectionInfoCommand__;
+    var getDocumentsByEntityNameCommand = __getDocumentsByEntityNameCommand__;
+    var getSystemDocumentsCommand = __getSystemDocumentsCommand__;
+    var getAllDocumentsCommand = __getAllDocumentsCommand__;
+    var collectionInfo = __collectionInfo__;
+    var pagedResultSet = __pagedResultSet__;
+    var database = __database__;
+
     var collection = (function () {
         function collection(name, ownerDatabase) {
             this.name = name;
@@ -19,8 +28,6 @@ define(["require", "exports", "common/pagedList", "commands/getCollectionInfoCom
 
         collection.prototype.fetchTotalDocumentCount = function () {
             var _this = this;
-            // AFAICT, there's no way to fetch just the total number of system
-            // documents, other than doing a full fetch for sys docs.
             if (this.isSystemDocuments) {
                 new getSystemDocumentsCommand(this.ownerDatabase, 0, 1024).execute().done(function (results) {
                     return _this.documentCount(results.totalResultCount);

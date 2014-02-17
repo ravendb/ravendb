@@ -130,7 +130,6 @@ namespace Raven.Database.Config
 
 			DisableClusterDiscovery = new BooleanSetting(settings["Raven/DisableClusterDiscovery"], false);
 
-			ClusterName = new StringSetting(settings["Raven/ClusterName"], (string)null);
 			ServerName = new StringSetting(settings["Raven/ServerName"], (string)null);
 
 			MaxStepsForScript = new IntegerSetting(settings["Raven/MaxStepsForScript"], 10*1000);
@@ -225,8 +224,6 @@ namespace Raven.Database.Config
 		public StringSetting WebDir { get; private set; }
 
 		public BooleanSetting DisableClusterDiscovery { get; private set; }
-
-		public StringSetting ClusterName { get; private set; }
 
 		public StringSetting ServerName { get; private set; }
 

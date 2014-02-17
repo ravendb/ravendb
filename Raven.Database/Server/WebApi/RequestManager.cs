@@ -24,8 +24,13 @@ namespace Raven.Database.Server.WebApi
 {
 	public class RequestManager : IDisposable
 	{
-		private readonly DatabasesLandlord landlord;
-		private int reqNum;
+        private readonly DateTime startUpTime = SystemTime.UtcNow; 
+        private readonly DatabasesLandlord landlord;
+	    public DateTime StartUpTime
+	    {
+	        get { return startUpTime; }
+	    }
+	    private int reqNum;
 		private Timer serverTimer;
 		private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 		private readonly TimeSpan maxTimeDatabaseCanBeIdle;
@@ -49,6 +54,7 @@ namespace Raven.Database.Server.WebApi
 
 		public RequestManager(DatabasesLandlord landlord)
 		{
+            BeforeRequest+=OnBeforeRequest;
 		    cancellationTokenSource = new CancellationTokenSource();
 		    this.landlord = landlord;
 			int val;
@@ -64,7 +70,14 @@ namespace Raven.Database.Server.WebApi
 		    cancellationToken = cancellationTokenSource.Token;
 		}
 
-		public void Init()
+	    private void OnBeforeRequest(object sender, BeforeRequestWebApiEventArgs args)
+	    {
+	        var documentDatabase = args.Database;
+	        documentDatabase.WorkContext.PerformanceCounters.RequestsPerSecond.Increment();
+            documentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.Increment();
+	    }
+
+	    public void Init()
 		{
 			if (initialized)
 				return;
@@ -306,26 +319,31 @@ namespace Raven.Database.Server.WebApi
 		private void FinalizeRequestProcessing(RavenDbApiController controller, HttpResponseMessage response, Stopwatch sw, bool ravenUiRequest)
 		{
 			LogHttpRequestStatsParams logHttpRequestStatsParam = null;
-			try
-			{
-				logHttpRequestStatsParam = new LogHttpRequestStatsParams(
-					sw,
-					GetHeaders(controller.InnerHeaders), //TODO: request.Headers,
-					controller.InnerRequest.Method.Method,
-					response != null ? (int) response.StatusCode : 500,
-					controller.InnerRequest.RequestUri.PathAndQuery,
-					controller.CustomRequestTraceInfo != null ? controller.CustomRequestTraceInfo.ToString() : null
-					);
-			}
-			catch (Exception e)
-			{
-				Logger.WarnException("Could not gather information to log request stats", e);
-			}
+		    try
+		    {
+		        logHttpRequestStatsParam = new LogHttpRequestStatsParams(
+		            sw,
+		            GetHeaders(controller.InnerHeaders), //TODO: request.Headers,
+		            controller.InnerRequest.Method.Method,
+		            response != null ? (int) response.StatusCode : 500,
+		            controller.InnerRequest.RequestUri.PathAndQuery,
+		            controller.CustomRequestTraceInfo != null ? controller.CustomRequestTraceInfo.ToString() : null
+		            );
+		    }
+		    catch (Exception e)
+		    {
+		        Logger.WarnException("Could not gather information to log request stats", e);
+		    }
+		    finally
+		    {
+                controller.Database.WorkContext.PerformanceCounters.ConcurrentRequests.Decrement();		        
+		    }
 
 			if (ravenUiRequest || logHttpRequestStatsParam == null || sw == null)
 				return;
 
 			sw.Stop();
+           
 
 			LogHttpRequestStats(logHttpRequestStatsParam, controller.DatabaseName);
 

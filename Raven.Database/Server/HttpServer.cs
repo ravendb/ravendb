@@ -216,7 +216,6 @@ namespace Raven.Database.Server
 				return new AdminStatistics
 				{
 					ServerName = currentConfiguration.Value.ServerName,
-					ClusterName = currentConfiguration.Value.ClusterName,
 					TotalNumberOfRequests = NumberOfRequests,
 					Uptime = SystemTime.UtcNow - startUpTime,
 					Memory = new AdminMemoryStatistics

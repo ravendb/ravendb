@@ -88,9 +88,6 @@ namespace Raven.Database.Config
 			// Discovery
 			DisableClusterDiscovery = ravenSettings.DisableClusterDiscovery.Value;
 
-			// TODO: Validate the cluster name. Valid names are only valid chars in documents IDs.
-			ClusterName = ravenSettings.ClusterName.Value;
-
 			ServerName = ravenSettings.ServerName.Value;
 
 			MaxStepsForScript = ravenSettings.MaxStepsForScript.Value;
@@ -804,11 +801,6 @@ namespace Raven.Database.Config
 		/// If True, cluster discovery will be disabled. Default is False
 		/// </summary>
 		public bool DisableClusterDiscovery { get; set; }
-
-		/// <summary>
-		/// The cluster name
-		/// </summary>
-		public string ClusterName { get; set; }
 
 		/// <summary>
 		/// The server name

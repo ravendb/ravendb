@@ -147,7 +147,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Extensions\MultiDatabase.cs">
       <Link>Smuggler\Imports\MultiDatabase.cs</Link>
     </Compile>
-    <Compile Include="Discovery\ClusterDiscoveryHost.cs" />
     <Compile Include="FromMono\Options.cs" />
     <Compile Include="RavenDbServer.cs" />
     <Compile Include="Program.cs" />
@@ -225,8 +224,7 @@
     <CreateItem Include="WebUI\**\*.*">
       <Output ItemName="EmbeddedResource" TaskParameter="Include" />
     </CreateItem>
-    <Copy SourceFiles="$(SolutionDir)\Imports\Fody\Config\FodyWeavers.$(Configuration).xml" DestinationFiles="$(MSBuildProjectDirectory)\FodyWeavers.xml" Condition="Exists('$(SolutionDir)\Imports\Fody\Config\FodyWeavers.$(Configuration).xml')" />
   </Target>
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-  <Import Project="$(SolutionDir)\Imports\Fody\Fody.targets" />
+  <Import Project="$(SolutionDir)\Imports\Fody\Fody.targets" Condition="$(Configuration) != 'Debug'" />
 </Project>
