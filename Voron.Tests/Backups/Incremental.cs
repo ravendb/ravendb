@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using Voron.Impl;
 using Voron.Impl.Backup;
@@ -220,6 +221,7 @@ namespace Voron.Tests.Backups
 				File.Delete(incBackupFile);
 			}
 
+			Trace.WriteLine("Incremental::Clean() --> trying to delete folder : " + _restoredStoragePath);
 			if (Directory.Exists(_restoredStoragePath))
 				Directory.Delete(_restoredStoragePath, true);
 		}

@@ -1,68 +1,44 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.Threading.Tasks;
+using System.IO.Compression;
+using System.IO.MemoryMappedFiles;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Xml;
+using Voron.Debugging;
 using Voron.Impl;
+using Voron.Tests.Bugs;
+using Voron.Tests.Storage;
+using Snapshots = Voron.Tests.Bugs.Snapshots;
 
 namespace Voron.Tryout
 {
-    internal unsafe class Program
-    {
-        private static void Main()
-        {
-            for (int ix = 0; ix < 5; ix++)
-            {
-                const int size = 10 * 1000;
+	internal unsafe class Program
+	{
+		[StructLayout(LayoutKind.Explicit)]
+		private struct NumberWithHighAndLowParts
+		{
+			[FieldOffset(0)]
+			public long Number;
 
-                var sp = Stopwatch.StartNew();
-                using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
-                {
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-                    {
-                        env.CreateTree(tx, "test");
-                        tx.Commit();
-                    }
+			[FieldOffset(0)]
+			public uint Low;
 
-                    var buffer = new byte[100];
-                    var total = 0;
-                    for (int i = 0; i < size; i++)
-                    {
-                        using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-                        {
-                            var t = env.CreateTree(tx, "test");
-
-                            for (int j = 0; j < 10; j++)
-                            {
-                                t.Add(tx, (total++).ToString("00000000"), new MemoryStream(buffer));
-                            }
-
-                            tx.Commit();
-                        }
-                    }
-
-                    for (int i = 0; i < size; i++)
-                    {
-                        using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-                        {
-                            var t = env.CreateTree(tx, "test");
-                            var treeIterator = t.Iterate(tx);
-                            for (int j = 0; j < 10; j++)
-                            {
-                                if (treeIterator.Seek(Slice.BeforeAllKeys) == false)
-                                {
-                                    t.Delete(tx, treeIterator.CurrentKey);
-                                }
-                            }
-
-                            tx.Commit();
-                        }
-                    }
-
-                   
-                }
-
-                Console.WriteLine(sp.Elapsed);
-            }
-        }
-    }
+			[FieldOffset(4)]
+			public uint High;
+		}
+		private static void Main()
+		{
+			for (int i = 0; i < 10; i++)
+			{
+			    Console.WriteLine(i);
+				using (var x = new RecoveryMultipleJournals())
+				{
+					x.CanRecoverAfterRestartWithMultipleFilesInSingleTransaction();
+				}
+			}
+		}
+	}
 }

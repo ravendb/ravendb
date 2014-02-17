@@ -104,7 +104,7 @@ namespace Voron
                 Dispose();
                 throw;
             }
-        }
+		}
 
         public ScratchBufferPool ScratchBufferPool
         {
