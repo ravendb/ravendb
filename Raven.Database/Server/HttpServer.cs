@@ -251,6 +251,12 @@ namespace Raven.Database.Server
 							RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.PerformanceCounters.RequestsPerSecond.NextValue(), 2),
 							ConcurrentRequests = (int)documentDatabase.Database.WorkContext.PerformanceCounters.ConcurrentRequests.NextValue(),
 							DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.Database.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
+                            MeanRate = documentDatabase.Database.WorkContext.PerformanceCounters.RequestsMeter.MeanRate,
+                            OneMinuteRate = documentDatabase.Database.WorkContext.PerformanceCounters.RequestsMeter.OneMinuteRate,
+                            Count = documentDatabase.Database.WorkContext.PerformanceCounters.RequestsMeter.Count,
+                            CounterRequestsPerSecond = documentDatabase.Database.WorkContext.PerformanceCounters.RequestsPerSecondCounter.CurrentValue
+
+
 						}
 				};
 			}
@@ -905,6 +911,9 @@ namespace Raven.Database.Server
 			ctx.Response.AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion);
 			CurrentDatabase.WorkContext.PerformanceCounters.RequestsPerSecond.Increment();
 			CurrentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.Increment();
+            CurrentDatabase.WorkContext.PerformanceCounters.RequestsMeter.Mark();
+            CurrentDatabase.WorkContext.PerformanceCounters.RequestsPerSecondCounter.Mark();
+           
 		}
 
 		public DocumentDatabase CurrentDatabase

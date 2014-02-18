@@ -247,7 +247,7 @@ namespace Raven.Database.Indexing
 		private bool disposed;
 
         public PerformanceCountersManager PerformanceCounters { get; private set; }
-
+        
 		public void Init(string name)
 		{
 			if (Configuration.DisablePerformanceCounters == false && Configuration.RunInMemory == false)
