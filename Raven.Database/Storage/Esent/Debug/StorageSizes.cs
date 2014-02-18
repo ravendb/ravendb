@@ -72,12 +72,12 @@ namespace Raven.Database.Storage.Esent.Debug
 					Api.JetGetTableInfo(session, tbl, out ownedPages, JET_TblInfo.SpaceOwned);
 
 					sb.Append("\tOwned Size: ")
-					  .Append(DatabaseSize.Humane(ownedPages*SystemParameters.DatabasePageSize))
+                      .Append(DatabaseSize.Humane(ownedPages * SystemParameters.DatabasePageSize))
 					  .AppendLine();
 
 
 					sb.Append("\tUsed Size: ")
-					  .Append(DatabaseSize.Humane(usedSize))
+                      .Append(DatabaseSize.Humane(usedSize))
 					  .AppendLine();
 					
 					
@@ -89,7 +89,7 @@ namespace Raven.Database.Storage.Esent.Debug
 						sb.Append("\t\t")
 						  .Append(index.Name)
 						  .Append(": ")
-						  .Append(DatabaseSize.Humane(index.Pages*(SystemParameters.DatabasePageSize)))
+                          .Append(DatabaseSize.Humane(index.Pages * (SystemParameters.DatabasePageSize)))
 						  .AppendLine();
 					}
 					yield return Tuple.Create(sb.ToString(), ownedPages * SystemParameters.DatabasePageSize);
