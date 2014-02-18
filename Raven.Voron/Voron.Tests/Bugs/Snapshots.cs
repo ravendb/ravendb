@@ -17,7 +17,7 @@ namespace Voron.Tests.Bugs
 	public class Snapshots : StorageTest
 	{
 		public Snapshots()
-			: base(StorageEnvironmentOptions.GetInMemory())
+			: base(StorageEnvironmentOptions.CreateMemoryOnly())
 		{
 			
 		}

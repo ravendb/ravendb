@@ -95,11 +95,13 @@ namespace Raven.Database.Server.Controllers
 		{
 			var indexStorageSize = Database.GetIndexStorageSizeOnDisk();
 			var transactionalStorageSize = Database.GetTransactionalStorageSizeOnDisk();
-			var totalDatabaseSize = indexStorageSize + transactionalStorageSize;
+			var totalDatabaseSize = indexStorageSize + transactionalStorageSize.AllocatedSizeInBytes;
 			return GetMessageWithObject(new
 			{
-				TransactionalStorageSize = transactionalStorageSize,
-				TransactionalStorageSizeHumane = Humane(transactionalStorageSize),
+                TransactionalStorageAllocatedSize = transactionalStorageSize.AllocatedSizeInBytes,
+                TransactionalStorageAllocatedSizeHumaneSize = Humane(transactionalStorageSize.AllocatedSizeInBytes),
+                TransactionalStorageUsedSize = transactionalStorageSize.UsedSizeInBytes,
+                TransactionalStorageUsedSizeHumaneSize = Humane(transactionalStorageSize.UsedSizeInBytes),
 				IndexStorageSize = indexStorageSize,
 				IndexStorageSizeHumane = Humane(indexStorageSize),
 				TotalDatabaseSize = totalDatabaseSize,

@@ -93,7 +93,7 @@
     <Compile Include="Impl\Paging\FragmentedPureMemoryPager.cs" />
     <Compile Include="Impl\Paging\FilePager.cs" />
     <Compile Include="Impl\Paging\IVirtualPager.cs" />
-    <Compile Include="Impl\Paging\MemoryMappedPager.cs" />
+    <Compile Include="Impl\Paging\Win32MemoryMapPager.cs" />
     <Compile Include="Impl\Paging\Win32PureMemoryPager.cs" />
     <Compile Include="Impl\Paging\TemporaryPage.cs" />
     <Compile Include="Impl\ScratchBufferPool.cs" />

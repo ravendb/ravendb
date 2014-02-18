@@ -379,9 +379,7 @@ namespace Raven.Client.Connection
 
 				try
 				{
-					//TODO: check how to add Credentials
-					//document = commands.DirectGet(new OperationMetadata(commands.Url, commands.Credentials), RavenReplicationDestinations);
-					document = commands.DirectGet(new OperationMetadata(commands.Url), RavenReplicationDestinations);
+					document = commands.DirectGet(new OperationMetadata(commands.Url, commands.PrimaryCredentials), RavenReplicationDestinations);
 					failureCounts[commands.Url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 				}
 				catch (Exception e)

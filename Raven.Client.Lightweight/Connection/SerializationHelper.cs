@@ -154,16 +154,29 @@ namespace Raven.Client.Connection
 			if (json.ContainsKey("DurationMilliseconds"))
 				result.DurationMilliseconds = json.Value<long>("DurationMilliseconds");
 
-			if (string.IsNullOrEmpty(tempRequestTime) == false)
-			{
-				long l;
-				if (long.TryParse(tempRequestTime, out l))
-				{
-					result.DurationMilliseconds = l;
-				}
-			}
+		    long totalTime;
+            if (TryParseTempRequestTime(tempRequestTime, out totalTime))
+            {
+                result.DurationMilliseconds = totalTime;
+            }
+			
 			return result;
 		}
+
+        public static bool TryParseTempRequestTime(string tempRequestTime, out long result)
+        {
+            result = 0;
+            if (string.IsNullOrEmpty(tempRequestTime) == false)
+            {
+                long l;
+                if (long.TryParse(tempRequestTime, NumberStyles.Number, CultureInfo.InvariantCulture, out l))
+                {
+                    result = l;
+                    return true;
+                }
+            }
+            return false;
+        }
 
 		/// <summary>
 		/// Deserialize a request to a JsonDocument

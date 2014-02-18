@@ -169,19 +169,26 @@ namespace Raven.Storage.Esent
             new RestoreOperation(backupLocation, configuration, output, defrag).Execute();
         }
 
-        public long GetDatabaseSizeInBytes()
+        public DatabaseSizeInformation GetDatabaseSize()
         {
-            long sizeInBytes;
+            long allocatedSizeInBytes;
+            long usedSizeInBytes;
 
             using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, null, this))
             {
-                int sizeInPages, pageSize;
+                int sizeInPages, pageSize, spaceOwnedInPages;
                 Api.JetGetDatabaseInfo(pht.Session, pht.Dbid, out sizeInPages, JET_DbInfo.Filesize);
+                Api.JetGetDatabaseInfo(pht.Session, pht.Dbid, out spaceOwnedInPages, JET_DbInfo.SpaceOwned);
                 Api.JetGetDatabaseInfo(pht.Session, pht.Dbid, out pageSize, JET_DbInfo.PageSize);
-                sizeInBytes = ((long)sizeInPages) * pageSize;
+                allocatedSizeInBytes = ((long)sizeInPages) * pageSize;
+                usedSizeInBytes = ((long)spaceOwnedInPages) * pageSize;
             }
 
-            return sizeInBytes;
+            return new DatabaseSizeInformation
+                   {
+                       AllocatedSizeInBytes = allocatedSizeInBytes,
+                       UsedSizeInBytes = usedSizeInBytes
+                   };
         }
 
         public long GetDatabaseCacheSizeInBytes()

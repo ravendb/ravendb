@@ -1,3 +1,4 @@
+using Raven.Abstractions.Connection;
 using Raven.Client.Exceptions;
 using Raven.Database.Data;
 #if !SILVERLIGHT && !NETFX_CORE
@@ -54,7 +55,15 @@ namespace Raven.Client.Connection
 			this.asyncServerClient = asyncServerClient;
 		}
 
-		public DocumentConvention Convention { get { return asyncServerClient.convention; } }
+		public OperationCredentials PrimaryCredentials
+		{
+			get { return asyncServerClient.PrimaryCredentials; }
+		}
+
+		public DocumentConvention Convention
+		{
+			get { return asyncServerClient.convention; }
+		}
 
 		/// <summary>
 		/// Allow access to the replication informer used to determine how we replicate requests
@@ -94,9 +103,12 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
-		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null)
+		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
+			RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null)
 		{
-			return asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude).ResultUnwrap();
+			return
+				asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude)
+					.ResultUnwrap();
 		}
 
 		/// <summary>
@@ -109,7 +121,7 @@ namespace Raven.Client.Connection
 		/// </remarks>
 		public RavenJToken ExecuteGetRequest(string requestUrl)
 		{
-            return asyncServerClient.ExecuteGetRequest(requestUrl).ResultUnwrap();
+			return asyncServerClient.ExecuteGetRequest(requestUrl).ResultUnwrap();
 		}
 
 		public HttpJsonRequest CreateRequest(string requestUrl, string method, bool disableRequestCompression = false)
@@ -117,12 +129,14 @@ namespace Raven.Client.Connection
 			return asyncServerClient.CreateRequest(requestUrl, method, disableRequestCompression);
 		}
 
-		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false)
+		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method,
+			bool disableRequestCompression = false)
 		{
-			return asyncServerClient.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method, disableRequestCompression);
+			return asyncServerClient.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method,
+				disableRequestCompression);
 		}
 
-        internal void ExecuteWithReplication(string method, Action<string> operation)
+		internal void ExecuteWithReplication(string method, Action<string> operation)
 		{
 			asyncServerClient.ExecuteWithReplication(method, operationMetadata =>
 			{
@@ -133,7 +147,9 @@ namespace Raven.Client.Connection
 
 		internal T ExecuteWithReplication<T>(string method, Func<string, T> operation)
 		{
-			return asyncServerClient.ExecuteWithReplication(method, operationMetadata => Task.FromResult(operation(operationMetadata.Url))).ResultUnwrap();
+			return
+				asyncServerClient.ExecuteWithReplication(method,
+					operationMetadata => Task.FromResult(operation(operationMetadata.Url))).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -146,14 +162,14 @@ namespace Raven.Client.Connection
 		{
 			//TODO: add transformer
 			return asyncServerClient.DirectGetAsync(operationMetadata, key).ResultUnwrap();
-			}
+		}
 
 		public JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false)
 		{
 			return asyncServerClient.GetDocumentsAsync(start, pageSize, metadataOnly).ResultUnwrap();
 		}
 
-	    /// <summary>
+		/// <summary>
 		/// Puts the document with the specified key in the database
 		/// </summary>
 		/// <param name="key">The key.</param>
@@ -205,9 +221,9 @@ namespace Raven.Client.Connection
 		public IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize)
 		{
 			return new AsycnEnumerableWrapper<Attachment>(asyncServerClient.GetAttachmentHeadersStartingWithAsync(idPrefix,
-					start, pageSize).Result);
+				start, pageSize).Result);
 
-					}
+		}
 
 		/// <summary>
 		/// Gets the attachment by the specified key
@@ -330,7 +346,8 @@ namespace Raven.Client.Connection
 		/// <param name="name">The name.</param>
 		/// <param name="indexDef">The index def.</param>
 		/// <returns></returns>
-		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef)
+		public string PutIndex<TDocument, TReduceResult>(string name,
+			IndexDefinitionBuilder<TDocument, TReduceResult> indexDef)
 		{
 			return asyncServerClient.PutIndexAsync(name, indexDef).ResultUnwrap();
 		}
@@ -344,12 +361,14 @@ namespace Raven.Client.Connection
 		/// <param name="indexDef">The index def.</param>
 		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
 		/// <returns></returns>
-		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite)
+		public string PutIndex<TDocument, TReduceResult>(string name,
+			IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite)
 		{
 			return asyncServerClient.PutIndexAsync(name, indexDef, overwrite).ResultUnwrap();
 		}
 
-		public string DirectPutIndex(string name, OperationMetadata operationMetadata, bool overwrite, IndexDefinition definition)
+		public string DirectPutIndex(string name, OperationMetadata operationMetadata, bool overwrite,
+			IndexDefinition definition)
 		{
 			return asyncServerClient.DirectPutIndexAsync(name, definition, overwrite, operationMetadata).Result;
 		}
@@ -361,7 +380,8 @@ namespace Raven.Client.Connection
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The includes.</param>
 		/// <returns></returns>
-		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
+		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false,
+			bool indexEntriesOnly = false)
 		{
 			try
 			{
@@ -371,8 +391,8 @@ namespace Raven.Client.Connection
 			{
 				if (e is ConflictException)
 					throw;
-				
-				throw new InvalidOperationException("Query failed. See inner exception for details.",e);
+
+				throw new InvalidOperationException("Query failed. See inner exception for details.", e);
 			}
 		}
 
@@ -380,23 +400,25 @@ namespace Raven.Client.Connection
 		/// Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
 		/// of the number of items that might be returned.
 		/// </summary>
-		public IEnumerator<RavenJObject> StreamQuery(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo)
+		public IEnumerator<RavenJObject> StreamQuery(string index, IndexQuery query,
+			out QueryHeaderInformation queryHeaderInfo)
 		{
 			var reference = new Reference<QueryHeaderInformation>();
 			var streamQueryAsync = asyncServerClient.StreamQueryAsync(index, query, reference).Result;
 			queryHeaderInfo = reference.Value;
 			return new AsycnEnumerableWrapper<RavenJObject>(streamQueryAsync);
-			}
+		}
 
 		/// <summary>
 		/// Streams the documents by etag OR starts with the prefix and match the matches
 		/// Will return *all* results, regardless of the number of itmes that might be returned.
 		/// </summary>
-		public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation = null)
+		public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize,
+			string exclude, RavenPagingInformation pagingInformation = null)
 		{
 			return new AsycnEnumerableWrapper<RavenJObject>(
-					asyncServerClient.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, exclude ,pagingInformation).Result);
-			}
+				asyncServerClient.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, exclude, pagingInformation).Result);
+		}
 
 		/// <summary>
 		/// Deletes the index.
@@ -416,7 +438,8 @@ namespace Raven.Client.Connection
 		/// <param name="queryInputs"></param>
 		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <returns></returns>
-		public MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
+		public MultiLoadResult Get(string[] ids, string[] includes, string transformer = null,
+			Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
 		{
 			return asyncServerClient.GetAsync(ids, includes, transformer, queryInputs, metadataOnly).ResultUnwrap();
 		}
@@ -475,7 +498,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public IDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new ServerClient((AsyncServerClient)asyncServerClient.With(credentialsForSession)); //TODO This cast is bad
+			return new ServerClient((AsyncServerClient) asyncServerClient.With(credentialsForSession)); //TODO This cast is bad
 		}
 
 		/// <summary>
@@ -492,12 +515,12 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public IDatabaseCommands ForDatabase(string database)
 		{
-			return new ServerClient((AsyncServerClient)asyncServerClient.ForDatabase(database)); //TODO This cast is bad
+			return new ServerClient((AsyncServerClient) asyncServerClient.ForDatabase(database)); //TODO This cast is bad
 		}
 
 		public IDatabaseCommands ForSystemDatabase()
 		{
-			return new ServerClient((AsyncServerClient)asyncServerClient.ForSystemDatabase()); //TODO This cast is bad
+			return new ServerClient((AsyncServerClient) asyncServerClient.ForSystemDatabase()); //TODO This cast is bad
 		}
 
 		/// <summary>
@@ -509,6 +532,7 @@ namespace Raven.Client.Connection
 			get { return asyncServerClient.Url; }
 		}
 
+
 		/// <summary>
 		/// Perform a set based deletes using the specified index.
 		/// </summary>
@@ -518,7 +542,7 @@ namespace Raven.Client.Connection
 		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale = false)
 		{
 			return asyncServerClient.DeleteByIndexAsync(indexName, queryToDelete, allowStale).ResultUnwrap();
-				}
+		}
 
 		/// <summary>
 		/// Perform a set based update using the specified index.
@@ -527,7 +551,8 @@ namespace Raven.Client.Connection
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patchRequests">The patch requests.</param>
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale = false)
+		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests,
+			bool allowStale = false)
 		{
 			return asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patchRequests, allowStale).ResultUnwrap();
 		}
@@ -539,7 +564,8 @@ namespace Raven.Client.Connection
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale = false)
+		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch,
+			bool allowStale = false)
 		{
 			return asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patch, allowStale).ResultUnwrap();
 		}
@@ -605,7 +631,7 @@ namespace Raven.Client.Connection
 		public GetResponse[] MultiGet(GetRequest[] requests)
 		{
 			return asyncServerClient.MultiGetAsync(requests).ResultUnwrap();
-			}
+		}
 
 		///<summary>
 		/// Get the possible terms for the specified field in the index 
@@ -672,7 +698,7 @@ namespace Raven.Client.Connection
 		public RavenJObject Patch(string key, PatchRequest[] patches, bool ignoreMissing)
 		{
 			return asyncServerClient.PatchAsync(key, patches, ignoreMissing).ResultUnwrap();
-				}
+		}
 
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
@@ -693,7 +719,7 @@ namespace Raven.Client.Connection
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch, bool ignoreMissing)
 		{
 			return asyncServerClient.PatchAsync(key, patch, ignoreMissing).ResultUnwrap();
-					  }
+		}
 
 		/// <summary>
 		/// Sends a patch request for a specific document
@@ -704,7 +730,7 @@ namespace Raven.Client.Connection
 		public RavenJObject Patch(string key, PatchRequest[] patches, Etag etag)
 		{
 			return asyncServerClient.PatchAsync(key, patches, etag).ResultUnwrap();
-			      			}
+		}
 
 		/// <summary>
 		/// Sends a patch request for a specific document which may or may not currently exist
@@ -713,10 +739,11 @@ namespace Raven.Client.Connection
 		/// <param name="patchesToExisting">Array of patch requests to apply to an existing document</param>
 		/// <param name="patchesToDefault">Array of patch requests to apply to a default document when the document is missing</param>
 		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
-		public RavenJObject Patch(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata)
+		public RavenJObject Patch(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault,
+			RavenJObject defaultMetadata)
 		{
 			return asyncServerClient.PatchAsync(key, patchesToExisting, patchesToDefault, defaultMetadata).ResultUnwrap();
-							}
+		}
 
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
@@ -727,7 +754,7 @@ namespace Raven.Client.Connection
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch, Etag etag)
 		{
 			return asyncServerClient.PatchAsync(key, patch, etag).ResultUnwrap();
-				}
+		}
 
 		/// <summary>
 		/// Sends a patch request for a specific document which may or may not currently exist
@@ -736,10 +763,11 @@ namespace Raven.Client.Connection
 		/// <param name="patchExisting">The patch request to use (using JavaScript) to an existing document</param>
 		/// <param name="patchDefault">The patch request to use (using JavaScript)  to a default document when the document is missing</param>
 		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
-		public RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata)
+		public RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault,
+			RavenJObject defaultMetadata)
 		{
 			return asyncServerClient.PatchAsync(key, patchExisting, patchDefault, defaultMetadata).ResultUnwrap();
-				}
+		}
 
 		/// <summary>
 		/// Disable all caching within the given scope
@@ -767,7 +795,7 @@ namespace Raven.Client.Connection
 		{
 			GC.SuppressFinalize(this);
 			asyncServerClient.Dispose();
-			}
+		}
 
 		/// <summary>
 		/// Allows an <see cref="T:System.Object"/> to attempt to free resources and perform other cleanup operations before the <see cref="T:System.Object"/> is reclaimed by garbage collection.
@@ -792,25 +820,25 @@ namespace Raven.Client.Connection
 			public AsycnEnumerableWrapper(IAsyncEnumerator<T> asyncEnumerator)
 			{
 				this.asyncEnumerator = asyncEnumerator;
-		}
+			}
 
 			public void Dispose()
-		{
+			{
 				asyncEnumerator.Dispose();
 			}
 
 			public bool MoveNext()
 			{
 				return asyncEnumerator.MoveNextAsync().ResultUnwrap();
-		}
+			}
 
 			public void Reset()
-		{
+			{
 				throw new NotSupportedException();
-		}
+			}
 
 			public T Current
-		{
+			{
 				get { return asyncEnumerator.Current; }
 			}
 
@@ -822,13 +850,14 @@ namespace Raven.Client.Connection
 			public IEnumerator<T> GetEnumerator()
 			{
 				return this;
-		}
+			}
 
 			IEnumerator IEnumerable.GetEnumerator()
 			{
 				return GetEnumerator();
-	}
-}
+			}
+		}
+
 	}
 }
 #endif
