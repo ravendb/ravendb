@@ -1,12 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Weavers>
   <Costura IncludeDebugSymbols='true'>
-    <ExcludeAssemblies>
-      Microsoft.Owin
-      Microsoft.Owin.Hosting
-      Microsoft.Owin.Host.SystemWeb
-      Owin
-      System.Web.Http.Owin
+	<ExcludeAssemblies>
       Raven.Database
     </ExcludeAssemblies>
   </Costura>

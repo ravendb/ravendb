@@ -1,3 +1,4 @@
+using Raven.Abstractions.Connection;
 using Raven.Database.Data;
 #if !SILVERLIGHT
 //-----------------------------------------------------------------------
@@ -41,6 +42,11 @@ namespace Raven.Client.Connection
 		/// Admin operations performed against system database, like create/delete database
 		/// </summary>
 		IGlobalAdminDatabaseCommands GlobalAdmin { get; }
+
+		/// <summary>
+		/// Primary credentials for access. Will be used also in replication context - for failovers
+		/// </summary>
+		OperationCredentials PrimaryCredentials { get; }
 
 		/// <summary>
 		/// Retrieves documents for the specified key prefix
@@ -509,6 +515,11 @@ namespace Raven.Client.Connection
         /// </summary>
         void StartRestore(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false);
 
+        /// <summary>
+        /// Begins a backup operation
+        /// </summary>
+        void StartBackup(string backupLocation, DatabaseDocument databaseDocument, string databaseName);
+
         IDatabaseCommands Commands { get; }
 	}
 
@@ -523,11 +534,6 @@ namespace Raven.Client.Connection
 		/// Enables indexing
 		/// </summary>
 		void StartIndexing();
-
-		/// <summary>
-		/// Begins a backup operation
-		/// </summary>
-		void StartBackup(string backupLocation, DatabaseDocument databaseDocument);
 
 		/// <summary>
 		/// Get the indexing status

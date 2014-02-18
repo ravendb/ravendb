@@ -59,10 +59,10 @@ namespace Raven.Client.Connection.Async
 			return json.Deserialize<AdminStatistics>(innerAsyncServerClient.convention);
 		}
 
-		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument)
+		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, string databaseName)
 		{
 			RavenJObject backupSettings;
-			var request = adminRequest.StartBackup(backupLocation, databaseDocument, out backupSettings);
+			var request = adminRequest.StartBackup(backupLocation, databaseDocument, databaseName, out backupSettings);
 
 			return request.WriteAsync(backupSettings.ToString(Formatting.None));
 		}

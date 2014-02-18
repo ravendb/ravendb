@@ -180,8 +180,8 @@ namespace Raven.Client.Document
 		private string CreateOperationUrl(BulkInsertOptions options)
 		{
 			string requestUrl = "/bulkInsert?";
-			if (options.CheckForUpdates)
-				requestUrl += "checkForUpdates=true";
+			if (options.OverwriteExisting)
+                requestUrl += "overwriteExisting=true";
 			if (options.CheckReferencesInIndexes)
 				requestUrl += "&checkReferencesInIndexes=true";
 

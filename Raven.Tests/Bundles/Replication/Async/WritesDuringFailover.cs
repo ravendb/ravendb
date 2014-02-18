@@ -21,6 +21,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 			TellFirstInstanceToReplicateToSecondInstance();
 
 			var serverClient = ((ServerClient)store1.DatabaseCommands);
+			
 			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
 
 			using (var session = store1.OpenAsyncSession())

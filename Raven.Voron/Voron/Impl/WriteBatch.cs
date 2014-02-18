@@ -10,7 +10,7 @@ namespace Voron.Impl
 	public class WriteBatch : IDisposable
 	{
 		private readonly Dictionary<string, Dictionary<Slice, BatchOperation>> _lastOperations;
-		private readonly Dictionary<string, Dictionary<Slice, List<BatchOperation>>>  _multiTreeOperations;
+		private readonly Dictionary<string, Dictionary<Slice, List<BatchOperation>>> _multiTreeOperations;
 
 		private readonly SliceEqualityComparer _sliceEqualityComparer;
 		private bool _disposeAfterWrite = true;
@@ -34,26 +34,26 @@ namespace Voron.Impl
 			get
 			{
 				return () =>
-					{
-						long totalSize = 0;
+				{
+					long totalSize = 0;
 
-						if (_lastOperations.Count > 0)
-							totalSize += _lastOperations.Sum(
-								operation =>
-								operation.Value.Values.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
+					if (_lastOperations.Count > 0)
+						totalSize += _lastOperations.Sum(
+							operation =>
+							operation.Value.Values.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
 
-						if (_multiTreeOperations.Count > 0)
-							totalSize += _multiTreeOperations.Sum(
-								tree =>
-								tree.Value.Sum(
-									multiOp => multiOp.Value.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size)));
-						return totalSize;
-					};
+					if (_multiTreeOperations.Count > 0)
+						totalSize += _multiTreeOperations.Sum(
+							tree =>
+							tree.Value.Sum(
+								multiOp => multiOp.Value.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size)));
+					return totalSize;
+				};
 			}
 		}
 
 		public bool IsEmpty { get { return _lastOperations.Count == 0 && _multiTreeOperations.Count == 0; } }
-		
+
 		public bool DisposeAfterWrite
 		{
 			get { return _disposeAfterWrite; }
@@ -62,26 +62,26 @@ namespace Voron.Impl
 
 		internal bool TryGetValue(string treeName, Slice key, out Stream value, out ushort? version, out BatchOperationType operationType)
 		{
-		    value = null;
-		    version = null;
+			value = null;
+			version = null;
 			operationType = BatchOperationType.None;
 
 			if (treeName == null)
 				treeName = Constants.RootTreeName;
 
 			//first check if it is a multi-tree operation
-		    Dictionary<Slice, List<BatchOperation>> treeOperations;
-		    if (_multiTreeOperations.TryGetValue(treeName, out treeOperations))
-		    {
-                List<BatchOperation> operationRecords;
-			    if (treeOperations.TryGetValue(key, out operationRecords))
-			    {
+			Dictionary<Slice, List<BatchOperation>> treeOperations;
+			if (_multiTreeOperations.TryGetValue(treeName, out treeOperations))
+			{
+				List<BatchOperation> operationRecords;
+				if (treeOperations.TryGetValue(key, out operationRecords))
+				{
 					//since in multi-tree there are many operations for single tree key, then fetching operation type and value is meaningless
-				    return true;
-			    }				
-		    }
+					return true;
+				}
+			}
 
-		    Dictionary<Slice, BatchOperation> operations;
+			Dictionary<Slice, BatchOperation> operations;
 			if (_lastOperations.TryGetValue(treeName, out operations) == false)
 				return false;
 
@@ -89,12 +89,12 @@ namespace Voron.Impl
 			if (operations.TryGetValue(key, out operation))
 			{
 				operationType = operation.Type;
-			    version = operation.Version;
+				version = operation.Version;
 
 				if (operation.Type == BatchOperationType.Delete)
 					return true;
 
-			    value = operation.Value as Stream;
+				value = operation.Value as Stream;
 				operation.Reset(); // will reset stream position
 
 				if (operation.Type == BatchOperationType.Add)
@@ -108,7 +108,7 @@ namespace Voron.Impl
 		public WriteBatch()
 		{
 			_lastOperations = new Dictionary<string, Dictionary<Slice, BatchOperation>>();
-            _multiTreeOperations = new Dictionary<string, Dictionary<Slice, List<BatchOperation>>>();
+			_multiTreeOperations = new Dictionary<string, Dictionary<Slice, List<BatchOperation>>>();
 			_sliceEqualityComparer = new SliceEqualityComparer();
 		}
 
@@ -170,16 +170,16 @@ namespace Voron.Impl
 
 			if (operation.Type == BatchOperationType.MultiAdd || operation.Type == BatchOperationType.MultiDelete)
 			{
-                Dictionary<Slice, List<BatchOperation>> multiTreeOperationsOfTree;
+				Dictionary<Slice, List<BatchOperation>> multiTreeOperationsOfTree;
 				if (_multiTreeOperations.TryGetValue(treeName, out multiTreeOperationsOfTree) == false)
 				{
 					_multiTreeOperations[treeName] =
-                        multiTreeOperationsOfTree = new Dictionary<Slice, List<BatchOperation>>(_sliceEqualityComparer);
+						multiTreeOperationsOfTree = new Dictionary<Slice, List<BatchOperation>>(_sliceEqualityComparer);
 				}
 
-                List<BatchOperation> specificMultiTreeOperations;
+				List<BatchOperation> specificMultiTreeOperations;
 				if (multiTreeOperationsOfTree.TryGetValue(operation.Key, out specificMultiTreeOperations) == false)
-                    multiTreeOperationsOfTree[operation.Key] = specificMultiTreeOperations = new List<BatchOperation>();
+					multiTreeOperationsOfTree[operation.Key] = specificMultiTreeOperations = new List<BatchOperation>();
 
 				specificMultiTreeOperations.Add(operation);
 			}
@@ -253,7 +253,7 @@ namespace Voron.Impl
 
 			public void SetVersionFrom(BatchOperation other)
 			{
-				if (other.Version != null && 
+				if (other.Version != null &&
 					other.Version + 1 == Version)
 					Version = other.Version;
 			}

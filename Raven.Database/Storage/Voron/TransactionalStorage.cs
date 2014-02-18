@@ -252,10 +252,16 @@ namespace Raven.Storage.Voron
 			new RestoreOperation(backupLocation, configuration, output).Execute();
 		}
 
-		public long GetDatabaseSizeInBytes()
-		{
-			throw new NotSupportedException("Database size fetching is not supported in Voron");
-		}
+	    public DatabaseSizeInformation GetDatabaseSize()
+	    {
+	        var stats = tableStorage.Environment.Stats();
+
+            return new DatabaseSizeInformation
+                   {
+                       AllocatedSizeInBytes = stats.AllocatedDataFileSizeInBytes,
+                       UsedSizeInBytes = stats.UsedDataFileSizeInBytes
+                   };
+	    }
 
 	    public long GetDatabaseCacheSizeInBytes()
 		{

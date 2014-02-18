@@ -336,14 +336,14 @@
 			//TODO : verify if this is the case - I might be missing something
 		}
 
-		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
+		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool overwriteExisting)
 		{
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			if (!checkForUpdates && tableStorage.Documents.Contains(Snapshot, CreateKey(key), writeBatch.Value))
+			if (!overwriteExisting && tableStorage.Documents.Contains(Snapshot, CreateKey(key), writeBatch.Value))
 			{
-				throw new ConcurrencyException(string.Format("InsertDocument() - checkForUpdates is false and document with key = '{0}' already exists", key));
+				throw new ConcurrencyException(string.Format("InsertDocument() - overwriteExisting is false and document with key = '{0}' already exists", key));
 			}
 
 			return AddDocument(key, null, data, metadata);

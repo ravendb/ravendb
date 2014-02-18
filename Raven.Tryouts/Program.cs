@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Raven.Tests.Bugs.DTC;
+using Raven.Tests.Bundles.Replication;
 
 namespace Raven.Tryouts
 {
@@ -13,12 +14,13 @@ namespace Raven.Tryouts
 			CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("pl-PL");
 			for (int i = 0; i < 1000; i++)
 			{
+				Console.Clear();
 				Console.WriteLine(i);
 
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new Embedded())
+				using (var x = new FailoverDisabled())
 				{
-					x.AllowNonAuthoritativeInformationAlwaysWorks();
+					x.CanDisableFailoverByDisablingDestination();
 				}
 			}
 			

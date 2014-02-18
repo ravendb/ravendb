@@ -44,6 +44,20 @@ namespace Raven.Client.Extensions
             }
         }
 
+        /// <summary>
+        ///  Returns database url (system or non-system) based on system or non-system DB url.
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public static string GetDatabaseUrl(string url, string database)
+        {
+            if (database == Constants.SystemDatabase)
+            {
+                return GetRootDatabaseUrl(url);
+            }
+            return GetRootDatabaseUrl(url) + "/databases/" + database + "/";
+        }
+
         public static string GetRootDatabaseUrl(string url)
         {
             var databaseUrl = url;

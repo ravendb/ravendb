@@ -9,6 +9,7 @@ using System.Text;
 using System.Xml;
 using Voron.Debugging;
 using Voron.Impl;
+using Voron.Tests.Backups;
 using Voron.Tests.Bugs;
 using Voron.Tests.Storage;
 using Snapshots = Voron.Tests.Bugs.Snapshots;
@@ -34,9 +35,9 @@ namespace Voron.Tryout
 			for (int i = 0; i < 10; i++)
 			{
 			    Console.WriteLine(i);
-				using (var x = new Snapshots())
+				using (var x = new Incremental())
 				{
-					x.SnapshotIssue_ExplicitFlushing();
+					x.CanDoMultipleIncrementalBackupsAndRestoreOneByOne();
 				}
 			}
 		}

@@ -54,7 +54,7 @@ namespace Raven.Tests.Issues
 
 				using (var op = new RemoteBulkInsertOperation(new BulkInsertOptions
 				{
-					CheckForUpdates = true
+					OverwriteExisting = true
 				}, (AsyncServerClient)store.AsyncDatabaseCommands, store.Changes()))
 				{
 					op.Write("items/1", new RavenJObject(), new RavenJObject());

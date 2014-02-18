@@ -42,8 +42,10 @@ namespace Raven.Database.Server
             foreach (var assemblyToExtract in assembliesToExtract)
                 assemblies.Remove(assemblyToExtract.Value.Name);
 
+#if !DEBUG
             if (assemblies.Count != 0)
                 throw new InvalidOperationException("Not all embedded assemblies were extracted. Probably a bug.");
+#endif
         }
 
         private static Dictionary<string, AssemblyToExtract> FindAssembliesToExtract(Assembly currentAssembly, HashSet<string> assembliesToFind)

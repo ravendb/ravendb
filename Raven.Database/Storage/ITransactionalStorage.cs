@@ -32,7 +32,7 @@ namespace Raven.Database.Storage
 		bool Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs);
 		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase);
 		void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag);
-		long GetDatabaseSizeInBytes();
+		DatabaseSizeInformation GetDatabaseSize();
 		long GetDatabaseCacheSizeInBytes();
 		long GetDatabaseTransactionVersionSizeInBytes();
 

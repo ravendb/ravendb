@@ -1,16 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using System.Net.Http;
+using Raven.Database.Server.Responders;
+using Raven.Database.Server.Tenancy;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers.Admin
@@ -260,26 +266,84 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		[HttpGet]
 		[Route("admin/stats")]
-		[Route("databases/{databaseName}/admin/stats")]
 		public HttpResponseMessage Stats()
 		{
 			if (Database != DatabasesLandlord.SystemDatabase)
 				return GetMessageWithString("Admin stats can only be had from the root database", HttpStatusCode.NotFound);
 
-			return GetMessageWithObject(DatabasesLandlord.SystemDatabase.Statistics);
+		    var allDbs = new List<DocumentDatabase>();
+            DatabasesLandlord.ForAllDatabases(allDbs.Add);
+		    var currentConfiguration = DatabasesLandlord.SystemConfiguration;
+            var stats =  new AdminStatistics
+            {
+                ServerName = currentConfiguration.ServerName,
+                TotalNumberOfRequests = RequestManager.NumberOfRequests,
+                Uptime = SystemTime.UtcNow - RequestManager.StartUpTime,
+                Memory = new AdminMemoryStatistics
+                {
+                    DatabaseCacheSizeInMB = ConvertBytesToMBs(DatabasesLandlord.SystemDatabase.TransactionalStorage.GetDatabaseCacheSizeInBytes()),
+                    ManagedMemorySizeInMB = ConvertBytesToMBs(GetCurrentManagedMemorySize()),
+                    TotalProcessMemorySizeInMB = ConvertBytesToMBs(GetCurrentProcessPrivateMemorySize64()),
+                },
+                LoadedDatabases =
+                    from documentDatabase in allDbs
+                    let indexStorageSize = documentDatabase.GetIndexStorageSizeOnDisk()
+                    let transactionalStorageSize = documentDatabase.GetTransactionalStorageSizeOnDisk()
+                    let totalDatabaseSize = indexStorageSize + transactionalStorageSize.AllocatedSizeInBytes
+                    let lastUsed = DatabasesLandlord.DatabaseLastRecentlyUsed.GetOrDefault(documentDatabase.Name ?? Constants.SystemDatabase)
+                    select new LoadedDatabaseStatistics
+                    {
+                        Name = documentDatabase.Name,
+                        LastActivity = new[]
+							{
+								lastUsed,
+								documentDatabase.WorkContext.LastWorkTime
+							}.Max(),
+                        TransactionalStorageAllocatedSize = transactionalStorageSize.AllocatedSizeInBytes,
+                        TransactionalStorageAllocatedSizeHumaneSize = DatabaseSize.Humane(transactionalStorageSize.AllocatedSizeInBytes),
+                        TransactionalStorageUsedSize = transactionalStorageSize.UsedSizeInBytes,
+                        TransactionalStorageUsedSizeHumaneSize = DatabaseSize.Humane(transactionalStorageSize.UsedSizeInBytes),
+                        IndexStorageSize = indexStorageSize,
+                        IndexStorageHumaneSize = DatabaseSize.Humane(indexStorageSize),
+                        TotalDatabaseSize = totalDatabaseSize,
+                        TotalDatabaseHumaneSize = DatabaseSize.Humane(totalDatabaseSize),
+                        CountOfDocuments = documentDatabase.Statistics.CountOfDocuments,
+                        CountOfAttachments = documentDatabase.Statistics.CountOfAttachments,
+                        RequestsPerSecond = Math.Round(documentDatabase.WorkContext.PerformanceCounters.RequestsPerSecond.NextValue(), 2),
+                        ConcurrentRequests = (int)documentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.NextValue(),
+                        DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
+                    }
+            };
+
+            return GetMessageWithObject(stats);
 		}
 
-		[HttpGet]
-		[Route("admin/gc")]
-		[Route("databases/{databaseName}/admin/gc")]
-		[HttpPost]
-		[Route("admin/gc")]
-		[Route("databases/{databaseName}/admin/gc")]
-		public void Gc()
-		{
-			EnsureSystemDatabase();
-			CollectGarbage(Database);
-		}
+        private decimal ConvertBytesToMBs(long bytes)
+        {
+            return Math.Round(bytes / 1024.0m / 1024.0m, 2);
+        }
+
+        private static long GetCurrentProcessPrivateMemorySize64()
+        {
+            using (var p = Process.GetCurrentProcess())
+                return p.PrivateMemorySize64;
+        }
+
+        private static long GetCurrentManagedMemorySize()
+        {
+            var safelyGetPerformanceCounter = PerformanceCountersUtils.SafelyGetPerformanceCounter(
+                ".NET CLR Memory", "# Total committed Bytes", CurrentProcessName.Value);
+            return safelyGetPerformanceCounter ?? GC.GetTotalMemory(false);
+        }
+
+        private static readonly Lazy<string> CurrentProcessName = new Lazy<string>(() =>
+        {
+            using (var p = Process.GetCurrentProcess())
+                return p.ProcessName;
+        });
+
+
+      
 
 		[HttpGet]
 		[Route("admin/detailed-storage-breakdown")]
@@ -290,25 +354,35 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetMessageWithObject(x);
 		}
 
-		[HttpGet]
-		[Route("admin/loh-compaction")]
-		[Route("databases/{databaseName}/admin/loh-compaction")]
-		[HttpPost]
-		[Route("admin/loh-compaction")]
-		[Route("databases/{databaseName}/admin/loh-compaction")]		
-		public void LohCompaction()
-		{
-			if (EnsureSystemDatabase() == false)
-				return;
+        [HttpPost]
+        [HttpGet]
+        [Route("admin/gc")]
+        public HttpResponseMessage Gc()
+        {
+            if (EnsureSystemDatabase() == false)
+                return GetMessageWithString("Garbage Collection is only possiable from the system database", HttpStatusCode.BadRequest);
 
-			RavenGC.CollectGarbage(true, () => Database.TransactionalStorage.ClearCaches());
-		}
 
-		public static void CollectGarbage(DocumentDatabase database)
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
+            DatabasesLandlord.ForAllDatabases(documentDatabase => documentDatabase.TransactionalStorage.ClearCaches());
+            GC.WaitForPendingFinalizers();
+
+            return GetMessageWithString("GC Done");
+        }
+
+        [HttpGet]
+        [HttpPost]
+		[Route("admin/loh-compaction")]
+        public HttpResponseMessage LohCompaction()
 		{
-			GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
-			database.TransactionalStorage.ClearCaches();
-			GC.WaitForPendingFinalizers();
-		}
+            if (EnsureSystemDatabase() == false)
+                return GetMessageWithString("Large Object Heap Garbage Collection is only possiable from the system database", HttpStatusCode.BadRequest);
+
+
+		    Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
+            Action afterCollect = () => DatabasesLandlord.ForAllDatabases(clearCaches);
+		    RavenGC.CollectGarbage(true, afterCollect);
+            return GetMessageWithString("LOH GC Done");
+        }
 	}
 }

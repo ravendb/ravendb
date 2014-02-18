@@ -431,10 +431,10 @@ namespace Raven.Database.Server.Controllers
 			return result;
 		}
 
-		protected bool GetCheckForUpdates()
+		protected bool GetOverwriteExisting()
 		{
 			bool result;
-			bool.TryParse(GetQueryStringValue("checkForUpdates"), out result);
+			bool.TryParse(GetQueryStringValue("overwriteExisting"), out result);
 			return result;
 		}
 

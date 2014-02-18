@@ -372,7 +372,7 @@ namespace Voron.Impl.Journal
                 bool locked = false;
                 if (_flushingSemaphore.IsWriteLockHeld == false)
                 {
-                    if (_flushingSemaphore.TryEnterWriteLock(TimeSpan.FromSeconds(30)) == false)
+                    if (_flushingSemaphore.TryEnterWriteLock(Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30)) == false)
                         throw new TimeoutException("Could not acquire the write lock in 30 seconds");
                     locked = true;
                 }

@@ -247,10 +247,16 @@ namespace Raven.Storage.Managed
 			new RestoreOperation(backupLocation, databaseLocation, output).Execute();
 		}
 
-		public long GetDatabaseSizeInBytes()
-		{
-			return PersistenceSource.Read(stream => stream.Length);
-		}
+	    public DatabaseSizeInformation GetDatabaseSize()
+	    {
+            var size = PersistenceSource.Read(stream => stream.Length);
+
+            return new DatabaseSizeInformation
+                   {
+                       UsedSizeInBytes = size,
+                       AllocatedSizeInBytes = size
+                   };
+	    }
 
 		public long GetDatabaseCacheSizeInBytes()
 		{

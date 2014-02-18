@@ -954,6 +954,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 			if (string.IsNullOrWhiteSpace(jsonDeserialization.Source))
 			{
+				Console.WriteLine("Updating replication source " + docDb.Configuration.Port + " " + docDb.Name);
 				jsonDeserialization.Source = docDb.TransactionalStorage.Id.ToString();
 				try
 				{
