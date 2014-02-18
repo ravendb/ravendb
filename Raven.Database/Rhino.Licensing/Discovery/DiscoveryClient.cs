@@ -49,15 +49,21 @@ namespace Rhino.Licensing.Discovery
 
 				lastPublish = SystemTime.UtcNow;
 			}
-
-			Task.Factory.FromAsync<byte[], int, IPEndPoint, int>(udpClient.BeginSend, udpClient.EndSend, buffer, buffer.Length, allHostsGroup, null)
-				.ContinueWith(task =>
-				{
+		    try
+		    {
+		        Task.Factory.FromAsync<byte[], int, IPEndPoint, int>(udpClient.BeginSend, udpClient.EndSend, buffer, buffer.Length, allHostsGroup, null)
+		            .ContinueWith(task =>
+		            {
 #pragma warning disable 0219
-					var _ = task.Exception;
+		                var _ = task.Exception;
 #pragma warning restore 0219
-					// basically just ignoring this error
-				});
+		                // basically just ignoring this error
+		            });
+		    }
+		    catch (Exception)
+		    {
+		        // explicitly ignoring this error
+		    }
 		}
 
 		void IDisposable.Dispose()
