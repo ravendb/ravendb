@@ -29,7 +29,18 @@ namespace Raven.Database.Tasks
         {
             var t = (TouchMissingReferenceDocumentTask)task;
 
-			MissingReferences = MissingReferences.Union(t.MissingReferences).ToDictionary(x => x.Key, x => x.Value);
+            foreach (var kvp in t.MissingReferences)
+            {
+                HashSet<string> set;
+                if (MissingReferences.TryGetValue(kvp.Key, out set) == false)
+                {
+                    MissingReferences[kvp.Key] = kvp.Value;
+                }
+                else
+                {
+                    set.UnionWith(kvp.Value);
+                }
+            }
         }
 
         public override void Execute(WorkContext context)

@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Tests.Indexes;
 using Raven.Tests.Issues;
 using Xunit;
 
@@ -12,9 +13,9 @@ namespace Raven.Tryouts
 		    {
 				Environment.SetEnvironmentVariable("run", string.Format("{0:0000}", i));
 		        Console.WriteLine(i);
-				using (var x = new RavenDB_1041())
+				using (var x = new RavenDB_1280())
                 {
-                    x.CanWaitForReplication().Wait();
+                    x.CanHandleMultipleMissingDocumentsInMultipleIndexes();
                 }
 		    }
 		}
