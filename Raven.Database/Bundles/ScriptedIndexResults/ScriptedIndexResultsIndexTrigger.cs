@@ -131,18 +131,16 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
                 database.TransactionalStorage.Batch(accessor =>
                 {
-                    if (patcher.CreatedDocs != null)
+                    foreach (var operation in patcher.GetOperations())
                     {
-                        foreach (var jsonDocument in patcher.CreatedDocs)
-                        {
-                            patcher.DocumentsToDelete.Remove(jsonDocument.Key);
-                            database.Put(jsonDocument.Key, jsonDocument.Etag, jsonDocument.DataAsJson, jsonDocument.Metadata, null);
-                        }
-                    }
+                        var key = operation.Key;
+                        var document = operation.Value;
+                        var isPut = document != null;
 
-                    foreach (var doc in patcher.DocumentsToDelete)
-                    {
-                        database.Delete(doc, null, null);
+                        if (isPut)
+                            database.Put(key, document.Etag, document.DataAsJson, document.Metadata, null);
+                        else
+                            database.Delete(key, null, null);
                     }
                 });
             }
@@ -157,11 +155,9 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                     this.entityNames = entityNames;
                 }
 
-                public HashSet<string> DocumentsToDelete = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
-
                 protected override void CustomizeEngine(Jint.JintEngine jintEngine)
                 {
-                    jintEngine.SetFunction("DeleteDocument", ((Action<string>)(document => DocumentsToDelete.Add(document))));
+                    jintEngine.SetFunction("DeleteDocument", ((Action<string>)(DeleteFromContext)));
                 }
 
                 protected override void RemoveEngineCustomizations(Jint.JintEngine jintEngine)

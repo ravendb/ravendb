@@ -2198,7 +2198,10 @@ namespace Raven.Database
 				{
 					if (scriptedJsonPatcher == null)
 						return null;
-					return scriptedJsonPatcher.CreatedDocs;
+                    return scriptedJsonPatcher
+                        .GetPutOperations()
+                        .Select(x => x.Value)
+                        .ToList();
 				}, debugMode);
 			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
 		}
@@ -2228,7 +2231,10 @@ namespace Raven.Database
 				{
 					if (scriptedJsonPatcher == null)
 						return null;
-					return scriptedJsonPatcher.CreatedDocs;
+                    return scriptedJsonPatcher
+                        .GetPutOperations()
+                        .Select(x => x.Value)
+                        .ToList();
 				}, debugMode);
 			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
 		}
