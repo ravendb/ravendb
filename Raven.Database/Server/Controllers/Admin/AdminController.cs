@@ -310,6 +310,11 @@ namespace Raven.Database.Server.Controllers.Admin
                         RequestsPerSecond = Math.Round(documentDatabase.WorkContext.PerformanceCounters.RequestsPerSecond.NextValue(), 2),
                         ConcurrentRequests = (int)documentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.NextValue(),
                         DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
+                        MeanRate = documentDatabase.WorkContext.PerformanceCounters.RequestsMeter.MeanRate,
+                        OneMinuteRate = documentDatabase.WorkContext.PerformanceCounters.RequestsMeter.OneMinuteRate,
+                        Count = documentDatabase.WorkContext.PerformanceCounters.RequestsMeter.Count,
+                        FiveMinuteRate = documentDatabase.WorkContext.PerformanceCounters.RequestsMeter.FiveMinuteRate,
+                        CounterRequestsPerSecond=documentDatabase.WorkContext.PerformanceCounters.RequestsPerSecondCounter.CurrentValue
                     }
             };
 

@@ -11,6 +11,8 @@ using System.Reflection;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
+using metrics;
+using metrics.Core;
 using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Util
@@ -27,6 +29,7 @@ namespace Raven.Database.Util
        // REVIEW: Is this long enough to determine if it *would* hang forever?
         private static readonly TimeSpan PerformanceCounterWaitTimeout = TimeSpan.FromSeconds(3);
         private static bool corruptedCounters;
+        readonly Metrics dbMetrics = new Metrics();
 
         public PerformanceCountersManager()
         {
@@ -48,6 +51,8 @@ namespace Raven.Database.Util
         [PerformanceCounter(Name = "# of concurrent requests", CounterType = PerformanceCounterType.NumberOfItems32, Description = "Number of concurrent requests.")]
         public IPerformanceCounter ConcurrentRequests { get; private set; }
 
+        public MeterMetric RequestsMeter { get; private set; }
+        public PerSecondCounterMetric RequestsPerSecondCounter { get; private set; }
         public void Setup(string name)
         {
             try
@@ -71,6 +76,10 @@ namespace Raven.Database.Util
 
         private void InstallCounters(string name)
         {
+            RequestsMeter = dbMetrics.Meter(name, "req/sec", "Requests Meter", TimeUnit.Seconds);
+            RequestsPerSecondCounter = dbMetrics.TimedCounter(name, "req/sec counter", "Requests Per Second"); 
+
+            
             if (IsValidCategory(name) == false)
             {
                 var counterCreationData = CounterProperties.Select(p =>
@@ -83,6 +92,7 @@ namespace Raven.Database.Util
 
                 PerformanceCounterCategory.Create(CategoryName, "RavenDB Performance Counters", PerformanceCounterCategoryType.MultiInstance, createDataCollection);
                 PerformanceCounter.CloseSharedResources(); // http://blog.dezfowler.com/2007/08/net-performance-counter-problems.html
+
             }
         }
 

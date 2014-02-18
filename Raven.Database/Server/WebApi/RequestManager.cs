@@ -75,6 +75,9 @@ namespace Raven.Database.Server.WebApi
 	        var documentDatabase = args.Database;
 	        documentDatabase.WorkContext.PerformanceCounters.RequestsPerSecond.Increment();
             documentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.Increment();
+            documentDatabase.WorkContext.PerformanceCounters.RequestsMeter.Mark();
+            documentDatabase.WorkContext.PerformanceCounters.RequestsPerSecondCounter.Mark();
+             
 	    }
 
 	    public void Init()

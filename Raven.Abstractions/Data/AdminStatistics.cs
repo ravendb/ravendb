@@ -35,5 +35,14 @@ namespace Raven.Abstractions.Data
 		public double RequestsPerSecond { get; set; }
 		public int ConcurrentRequests { get; set; }
 		public decimal DatabaseTransactionVersionSizeInMB { get; set; }
+
+        public double MeanRate { get; set; }
+        public double OneMinuteRate { get; set; }
+        public long Count { get; set; }
+
+        public double FiveMinuteRate { get; set; }
+
+        public double CounterRequestsPerSecond { get; set; }
+
 	}
 }
