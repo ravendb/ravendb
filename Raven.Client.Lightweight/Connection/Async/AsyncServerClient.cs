@@ -1264,10 +1264,13 @@ namespace Raven.Client.Connection.Async
 		/// <returns></returns>
 		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
-			return ExecuteWithReplication("GET", async operationMetadata =>
+			var method = query.Query != null && query.Query.Length > 32760 ? "POST" : "GET";
+
+			return ExecuteWithReplication(method, async operationMetadata =>
 			{
 				EnsureIsNotNullOrEmpty(index, "index");
-				var path = query.GetIndexQueryUrl(operationMetadata.Url, index, "indexes");
+				string path = query.GetIndexQueryUrl(operationMetadata.Url, index, "indexes", includeQuery: method == "GET");
+
 				if (metadataOnly)
 					path += "&metadata-only=true";
 				if (indexEntriesOnly)
@@ -1277,13 +1280,19 @@ namespace Raven.Client.Connection.Async
 					path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 				}
 
+				if (method == "POST")
+					path += "&postQuery=true";
+
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-                        new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", operationMetadata.Credentials, convention)
+						new CreateHttpJsonRequestParams(this, path.NoCache(), method, operationMetadata.Credentials, convention)
 						{
 							AvoidCachingRequest = query.DisableCaching
 						}.AddOperationHeaders(OperationsHeaders));
 
 				request.AddReplicationStatusHeaders(operationMetadata.Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+				if (method == "POST")
+					await request.WriteAsync(query.Query).ConfigureAwait(false);
 
 				ErrorResponseException responseException;
 				try
@@ -1713,10 +1722,16 @@ namespace Raven.Client.Connection.Async
 #else
 		public async Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
 		{
+			var method = query.Query != null && query.Query.Length > 32760 ? "POST" : "GET";
+
 			EnsureIsNotNullOrEmpty(index, "index");
-			string path = query.GetIndexQueryUrl(url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false);
+			string path = query.GetIndexQueryUrl(url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: method == "GET");
+
+			if (method == "POST")
+				path += "&postQuery=true";
+
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
+					new CreateHttpJsonRequestParams(this, path.NoCache(), method, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
 							.AddOperationHeaders(OperationsHeaders))
 																			.AddReplicationStatusHeaders(Url, url, replicationInformer,
 																																	 convention.FailoverBehavior,
@@ -1737,7 +1752,17 @@ namespace Raven.Client.Connection.Async
 			}
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 
-			var response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
+			HttpResponseMessage response;
+
+			if (method == "POST")
+			{
+				response = await request.ExecuteRawResponseAsync(query.Query).ConfigureAwait(false);
+			}
+			else
+			{
+				response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
+			}
+			
 			queryHeaderInfo.Value = new QueryHeaderInformation
 			{
 				Index = response.Headers.GetFirstValue("Raven-Index"),
