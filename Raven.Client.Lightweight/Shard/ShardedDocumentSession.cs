@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
@@ -576,18 +577,21 @@ namespace Raven.Client.Shard
 			return AddLazyOperation(lazyOp, onEval, cmds);
 		}
 
-		public void ExecuteAllPendingLazyOperations()
+		public ResponseTimeInformation ExecuteAllPendingLazyOperations()
 		{
 			if (pendingLazyOperations.Count == 0)
-				return;
+				return new ResponseTimeInformation();
 
 			try
 			{
+                var sw = Stopwatch.StartNew();
 				IncrementRequestCount();
-				while (ExecuteLazyOperationsSingleStep())
+                var responseTimeDuration = new ResponseTimeInformation();
+                while (ExecuteLazyOperationsSingleStep())
 				{
 					ThreadSleep.Sleep(100);
 				}
+                responseTimeDuration.ComputeServerTotal();
 
 				foreach (var pendingLazyOperation in pendingLazyOperations)
 				{
@@ -595,6 +599,9 @@ namespace Raven.Client.Shard
 					if (onEvaluateLazy.TryGetValue(pendingLazyOperation.Item1, out value))
 						value(pendingLazyOperation.Item1.Result);
 				}
+
+                responseTimeDuration.TotalClientDuration = sw.Elapsed;
+                return responseTimeDuration;
 			}
 			finally
 			{
