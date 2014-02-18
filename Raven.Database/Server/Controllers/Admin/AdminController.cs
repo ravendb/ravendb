@@ -341,17 +341,7 @@ namespace Raven.Database.Server.Controllers.Admin
         });
 
 
-		[HttpGet]
-		[Route("admin/gc")]
-		[Route("databases/{databaseName}/admin/gc")]
-		[HttpPost]
-		[Route("admin/gc")]
-		[Route("databases/{databaseName}/admin/gc")]
-		public void Gc()
-		{
-			EnsureSystemDatabase();
-			CollectGarbage(Database);
-		}
+      
 
 		[HttpGet]
 		[Route("admin/detailed-storage-breakdown")]
@@ -362,25 +352,33 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetMessageWithObject(x);
 		}
 
-		[HttpGet]
-		[Route("admin/loh-compaction")]
-		[Route("databases/{databaseName}/admin/loh-compaction")]
+        [HttpPost]
+        [Route("admin/gc")]
+        public HttpResponseMessage Gc()
+        {
+            if (EnsureSystemDatabase() == false)
+                return GetMessageWithString("Garbage Collection is only possiable from the system database", HttpStatusCode.BadRequest);
+
+
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
+            DatabasesLandlord.ForAllDatabases(documentDatabase => documentDatabase.TransactionalStorage.ClearCaches());
+            GC.WaitForPendingFinalizers();
+
+            return GetMessageWithString("GC Done");
+        }
+
 		[HttpPost]
 		[Route("admin/loh-compaction")]
-		[Route("databases/{databaseName}/admin/loh-compaction")]		
-		public void LohCompaction()
+        public HttpResponseMessage LohCompaction()
 		{
-			if (EnsureSystemDatabase() == false)
-				return;
+            if (EnsureSystemDatabase() == false)
+                return GetMessageWithString("Large Object Heap Garbage Collection is only possiable from the system database", HttpStatusCode.BadRequest);
 
-			RavenGC.CollectGarbage(true, () => Database.TransactionalStorage.ClearCaches());
-		}
 
-		public static void CollectGarbage(DocumentDatabase database)
-		{
-			GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
-			database.TransactionalStorage.ClearCaches();
-			GC.WaitForPendingFinalizers();
-		}
+		    Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
+            Action afterCollect = () => DatabasesLandlord.ForAllDatabases(clearCaches);
+		    RavenGC.CollectGarbage(true, afterCollect);
+            return GetMessageWithString("LOH GC Done");
+        }
 	}
 }
