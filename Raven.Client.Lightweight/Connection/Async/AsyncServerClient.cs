@@ -82,6 +82,14 @@ namespace Raven.Client.Connection.Async
 			get { return replicationInformer; }
 		}
 
+		public OperationCredentials PrimaryCredentials
+		{
+			get
+			{
+				return credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
+			}
+		}
+		
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
 		/// </summary>
