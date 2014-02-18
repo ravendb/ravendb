@@ -95,9 +95,7 @@ body {
 }
 .indexes-container .index-group {
   /*width: 50%;*/
-
   /*overflow: visible;*/
-
 }
 .settings-container {
   margin-top: 10px;
@@ -161,28 +159,20 @@ body {
 .all-documents-collection {
   background: #ff0202;
   /* Old browsers */
-
   background: -moz-linear-gradient(top, #ff0202 0%, #fff202 27%, #02ff1b 54%, #0206ff 79%, #f602ff 100%);
   /* FF3.6+ */
-
   background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #ff0202), color-stop(27%, #fff202), color-stop(54%, #02ff1b), color-stop(79%, #0206ff), color-stop(100%, #f602ff));
   /* Chrome,Safari4+ */
-
   background: -webkit-linear-gradient(top, #ff0202 0%, #fff202 27%, #02ff1b 54%, #0206ff 79%, #f602ff 100%);
   /* Chrome10+,Safari5.1+ */
-
   background: -o-linear-gradient(top, #ff0202 0%, #fff202 27%, #02ff1b 54%, #0206ff 79%, #f602ff 100%);
   /* Opera 11.10+ */
-
   background: -ms-linear-gradient(top, #ff0202 0%, #fff202 27%, #02ff1b 54%, #0206ff 79%, #f602ff 100%);
   /* IE10+ */
-
   background: linear-gradient(to bottom, #ff0202 0%, #fff202 27%, #02ff1b 54%, #0206ff 79%, #f602ff 100%);
   /* W3C */
-
   filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff0202', endColorstr='#f602ff', GradientType=0);
   /* IE6-9 */
-
 }
 #nprogress {
   position: absolute;
