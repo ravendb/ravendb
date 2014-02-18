@@ -452,6 +452,7 @@ namespace Raven.Tests.Issues
 
                 // status + two exports
                 VerifyFilesCount(1 + 2, backupPath);
+                //TODO: verify if tombstones are removed!
 
             }
 
@@ -463,7 +464,7 @@ namespace Raven.Tests.Issues
             Assert.Equal(expectedFiles, Directory.GetFiles(backupPath).Count());
         }
 
-        //TODO: tests for documents and attachments
+        //TODO: test for attachments
         //TODO: test back with only deletion!
 
         /// <summary>
@@ -512,6 +513,11 @@ namespace Raven.Tests.Issues
             public new Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
                 return base.ExportAttachments(jsonWriter, lastEtag, maxEtag);
+            }
+
+            public new void ExportDeletions(JsonTextWriter jsonWriter, SmugglerOptions options, ExportDataResult result, LastEtagsInfo maxEtags)
+            {
+                base.ExportDeletions(jsonWriter, options, result, maxEtags);
             }
         }
 
@@ -635,11 +641,47 @@ namespace Raven.Tests.Issues
 
                 }
 
-                //TODO: finish for document deletions + attachment deletions
+                WaitForIndexing(store);
 
+                store.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery()
+                {
+                    Query = "Tag:Users"
+                }).WaitForCompletion();
 
+                for (var i = 0; i < 10; i++)
+                {
+                    store.DatabaseCommands.DeleteAttachment("attach" + (i+1), null);
+                }
 
+                using (var textStream = new StringWriter())
+                using (var writer = new JsonTextWriter(textStream))
+                {
+                    var dumper = new CustomDataDumper(store.DocumentDatabase)
+                    {
+                        SmugglerOptions = new SmugglerOptions()
+                    };
 
+                    var lastEtags = dumper.FetchCurrentMaxEtags();
+
+                    writer.WriteStartObject();
+                    var exportResult = new ExportDataResult
+                    {
+                        LastDocDeleteEtag = lastEtags.LastDocDeleteEtag.IncrementBy(-4),
+                        LastAttachmentsDeleteEtag = lastEtags.LastAttachmentsDeleteEtag.IncrementBy(-6)
+                    };
+
+                    lastEtags.LastDocDeleteEtag = lastEtags.LastDocDeleteEtag.IncrementBy(-1);
+                    lastEtags.LastAttachmentsDeleteEtag = lastEtags.LastAttachmentsDeleteEtag.IncrementBy(-2);
+                    dumper.ExportDeletions(writer, new SmugglerOptions(), exportResult, lastEtags);
+                    writer.WriteEndObject();
+                    writer.Flush();
+
+                    // read exported content
+                    var exportJson = RavenJArray.Parse(textStream.GetStringBuilder().ToString());
+
+                    //TODO: finish me  - check if correct documents were fetched
+
+                }
             }
         }
     }
