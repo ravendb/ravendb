@@ -355,6 +355,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
         [HttpPost]
+        [HttpGet]
         [Route("admin/gc")]
         public HttpResponseMessage Gc()
         {
@@ -369,7 +370,8 @@ namespace Raven.Database.Server.Controllers.Admin
             return GetMessageWithString("GC Done");
         }
 
-		[HttpPost]
+        [HttpGet]
+        [HttpPost]
 		[Route("admin/loh-compaction")]
         public HttpResponseMessage LohCompaction()
 		{
