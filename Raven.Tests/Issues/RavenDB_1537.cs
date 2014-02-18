@@ -4,22 +4,26 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 using Raven.Client;
 using Raven.Client.Connection;
-using Raven.Client.Document;
 using Raven.Client.Embedded;
+using Raven.Database;
 using Raven.Database.Extensions;
 using Raven.Database.Smuggler;
-using Raven.Tests.Bundles.PeriodicBackups;
+using Raven.Json.Linq;
+using Raven.Smuggler;
 using Xunit;
 using System.Linq;
+using JsonTextWriter = Raven.Imports.Newtonsoft.Json.JsonTextWriter;
 
 namespace Raven.Tests.Issues
 {
@@ -55,17 +59,9 @@ namespace Raven.Tests.Issues
                         session.Store(periodicBackupSetup, PeriodicBackupSetup.RavenDocumentKey);
 
                         session.SaveChanges();
-
                     }
-                    SpinWait.SpinUntil(() =>
-                    {
-                        var jsonDocument = store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey);
-                        if (jsonDocument == null)
-                            return false;
-                        var periodicBackupStatus = jsonDocument.DataAsJson.JsonDeserialization<PeriodicBackupStatus>();
-                        return periodicBackupStatus.LastFullBackup != new DateTime();
-                    }, 5000);
 
+                    WaitForNextFullBackup(store);
                 }
                 using (var store = NewDocumentStore())
                 {
@@ -138,8 +134,6 @@ namespace Raven.Tests.Issues
                                      .OrderBy(File.GetLastWriteTimeUtc).ToList();
                 AssertUsersCountInBackup(1, files.First());
                 AssertUsersCountInBackup(2, files.Last());
-
-
             }
             finally
             {
@@ -157,6 +151,7 @@ namespace Raven.Tests.Issues
             var periodicBackupStatus = jsonDocument.DataAsJson.JsonDeserialization<PeriodicBackupStatus>();
             return periodicBackupStatus.LastFullBackup;
         }
+
         private void WaitForNextFullBackup(IDocumentStore store)
         {
             var lastFullBackup = DateTime.MinValue;
@@ -200,41 +195,99 @@ namespace Raven.Tests.Issues
         }
 
         [Fact]
-        public void CanBackupDeletion()
+        public void SmugglerCanUnderstandPeriodicBackupFormat()
         {
             var backupPath = NewDataPath("BackupFolder");
-            using (var store = NewDocumentStore(requestedStorage:"esent"))
+            using (var store = NewDocumentStore())
             {
                 string userId;
+                using (var session = store.OpenSession())
+                {
+                    var periodicBackupSetup = new PeriodicBackupSetup
+                    {
+                        LocalFolderName = backupPath,
+                        IntervalMilliseconds = 100
+                    };
+                    session.Store(periodicBackupSetup, PeriodicBackupSetup.RavenDocumentKey);
+
+                    session.SaveChanges();
+                }
+
+                var backupStatus = GetPerodicBackupStatus(store.DocumentDatabase);
+
                 using (var session = store.OpenSession())
                 {
                     var user = new User { Name = "oren" };
                     session.Store(user);
                     userId = user.Id;
+                    session.SaveChanges();
+                }
+
+                WaitForPeriodicBackup(store.DocumentDatabase, backupStatus);
+
+                store.DatabaseCommands.Delete(userId, null);
+
+                WaitForPeriodicBackup(store.DocumentDatabase, backupStatus);
+
+            }
+
+            using (var store = NewRemoteDocumentStore())
+            {
+                var dataDumper = new SmugglerApi(new RavenConnectionStringOptions
+                {
+                    Url = store.Url
+                });
+                dataDumper.ImportData(new SmugglerImportOptions
+                {
+                    FromFile = backupPath,
+                }, new SmugglerOptions
+                {
+                    Incremental = true,
+                }).Wait();
+
+                using (var session = store.OpenSession())
+                {
+                    Assert.Null(session.Load<User>(1));
+                }
+            }
+
+            IOExtensions.DeleteDirectory(backupPath);
+        }
+
+        [Fact]
+        public void CanBackupDeletion()
+        {
+            var backupPath = NewDataPath("BackupFolder");
+            using (var store = NewDocumentStore())
+            {
+                string userId;
+                using (var session = store.OpenSession())
+                {
                     var periodicBackupSetup = new PeriodicBackupSetup
                     {
                         LocalFolderName = backupPath,
-                        IntervalMilliseconds = 250 //TODO: change to 25
+                        IntervalMilliseconds = 100
                     };
                     session.Store(periodicBackupSetup, PeriodicBackupSetup.RavenDocumentKey);
 
                     session.SaveChanges();
-
                 }
-                SpinWait.SpinUntil(() =>
-                {
-                    var jsonDocument = store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey);
-                    if (jsonDocument == null)
-                        return false;
-                    var periodicBackupStatus = jsonDocument.DataAsJson.JsonDeserialization<PeriodicBackupStatus>();
-                    return periodicBackupStatus.LastDocsEtag != Etag.Empty && periodicBackupStatus.LastDocsEtag != null;
-                });
 
-                var etagForBackups = store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey).Etag;
+                var backupStatus = GetPerodicBackupStatus(store.DocumentDatabase);
+
+                using (var session = store.OpenSession())
+                {
+                    var user = new User { Name = "oren" };
+                    session.Store(user);
+                    userId = user.Id;
+                    session.SaveChanges();
+                }
+
+                WaitForPeriodicBackup(store.DocumentDatabase, backupStatus);
+
                 store.DatabaseCommands.Delete(userId, null);
-                
-                SpinWait.SpinUntil(() =>
-                     store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey).Etag != etagForBackups, 5000);
+
+                WaitForPeriodicBackup(store.DocumentDatabase, backupStatus);
 
             }
 
@@ -254,6 +307,7 @@ namespace Raven.Tests.Issues
                     Assert.Null(session.Load<User>(1));
                 }
             }
+
             IOExtensions.DeleteDirectory(backupPath);
         }
 
@@ -303,7 +357,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanDeleteTombStones()
         {
-            using (var store = NewRemoteDocumentStore(databaseName:Constants.SystemDatabase))
+            using (var store = NewRemoteDocumentStore(databaseName: Constants.SystemDatabase))
             {
                 string userId;
                 using (var session = store.OpenSession())
@@ -358,9 +412,235 @@ namespace Raven.Tests.Issues
             }
         }
 
-        //TODO: test deletion with replication
+        [Fact]
+        public void PeriodicBackupDoesntProduceExcessiveFilesAndCleanupTombstonesProperly()
+        {
+            var backupPath = NewDataPath("BackupFolder");
+            using (var store = NewDocumentStore())
+            {
+                string userId;
+                using (var session = store.OpenSession())
+                {
+                    var periodicBackupSetup = new PeriodicBackupSetup
+                    {
+                        LocalFolderName = backupPath,
+                        IntervalMilliseconds = 10000
+                    };
+                    session.Store(periodicBackupSetup, PeriodicBackupSetup.RavenDocumentKey);
+
+                    session.SaveChanges();
+                }
+
+                var backupStatus = GetPerodicBackupStatus(store.DocumentDatabase);
+
+                using (var session = store.OpenSession())
+                {
+                    var user = new User { Name = "oren" };
+                    session.Store(user);
+                    userId = user.Id;
+                    session.SaveChanges();
+                }
+
+                WaitForPeriodicBackup(store.DocumentDatabase, backupStatus);
+
+                // status + one export
+                VerifyFilesCount(1 + 1, backupPath);
+
+                store.DatabaseCommands.Delete(userId, null);
+
+                WaitForPeriodicBackup(store.DocumentDatabase, backupStatus);
+
+                // status + two exports
+                VerifyFilesCount(1 + 2, backupPath);
+
+            }
+
+            IOExtensions.DeleteDirectory(backupPath);
+        }
+
+        private void VerifyFilesCount(int expectedFiles, string backupPath)
+        {
+            Assert.Equal(expectedFiles, Directory.GetFiles(backupPath).Count());
+        }
+
         //TODO: tests for documents and attachments
         //TODO: test back with only deletion!
-        //TODO: test incemental status with missing delete position
+
+        /// <summary>
+        ///  In 2.5 we didn't support deleted documents/attachments, so those props aren't available. 
+        /// </summary>
+        [Fact]
+        public void CanProperlyReadLastEtagUsingPreviousFormat()
+        {
+            var backupPath = NewDataPath("BackupFolder");
+
+            var etagFileLocation = Path.Combine(Path.GetDirectoryName(backupPath), "IncrementalExport.state.json");
+            using (var streamWriter = new StreamWriter(File.Create(etagFileLocation)))
+            {
+                new RavenJObject
+					{
+						{"LastDocEtag", Etag.Parse("00000000-0000-0000-0000-000000000001").ToString()},
+                        {"LastAttachmentEtag", Etag.Parse("00000000-0000-0000-0000-000000000002").ToString()}
+					}.WriteTo(new JsonTextWriter(streamWriter));
+                streamWriter.Flush();
+            }
+
+            var result = new ExportDataResult
+            {
+                FilePath = backupPath
+            };
+            SmugglerApiBase.ReadLastEtagsFromFile(result);
+
+            Assert.Equal("00000000-0000-0000-0000-000000000001", result.LastDocsEtag.ToString());
+            Assert.Equal("00000000-0000-0000-0000-000000000002", result.LastAttachmentsEtag.ToString());
+            Assert.Equal(Etag.Empty, result.LastDocDeleteEtag);
+            Assert.Equal(Etag.Empty, result.LastAttachmentsDeleteEtag);
+        }
+
+        public class CustomDataDumper : DataDumper
+        {
+            public CustomDataDumper(DocumentDatabase database)
+                : base(database)
+            {
+            }
+
+            public new Task<Etag> ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+            {
+                return base.ExportDocuments(options, jsonWriter, lastEtag, maxEtag);
+            }
+
+            public new Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+            {
+                return base.ExportAttachments(jsonWriter, lastEtag, maxEtag);
+            }
+        }
+
+        [Fact]
+        public async Task DataDumperExportHandlesMaxEtagCorrectly()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (var i = 0; i < 10; i++)
+                    {
+                        session.Store(new User { Name = "oren #" + i });
+                    }
+                    session.SaveChanges();
+                }
+
+                using (var textStream = new StringWriter())
+                using (var writer = new JsonTextWriter(textStream))
+                {
+                    var dumper = new CustomDataDumper(store.DocumentDatabase)
+                    {
+                        SmugglerOptions = new SmugglerOptions()
+                    };
+
+                    var startEtag = store.DocumentDatabase.Statistics.LastDocEtag.IncrementBy(-5);
+                    var endEtag = startEtag.IncrementBy(2);
+
+                    writer.WriteStartArray();
+                    var lastEtag = await dumper.ExportDocuments(new SmugglerOptions(), writer, startEtag, endEtag);
+                    writer.WriteEndArray();
+                    writer.Flush();
+
+                    // read exported content
+                    var exportedDocs = RavenJArray.Parse(textStream.GetStringBuilder().ToString());
+                    Assert.Equal(2, exportedDocs.Count());
+
+                    Assert.Equal("01000000-0000-0001-0000-000000000007", exportedDocs.First().Value<RavenJObject>("@metadata").Value<string>("@etag"));
+                    Assert.Equal("01000000-0000-0001-0000-000000000008", exportedDocs.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
+                    Assert.Equal("01000000-0000-0001-0000-000000000008", lastEtag.ToString());
+
+                }
+
+                using (var textStream = new StringWriter())
+                using (var writer = new JsonTextWriter(textStream))
+                {
+                    var dumper = new CustomDataDumper(store.DocumentDatabase)
+                    {
+                        SmugglerOptions = new SmugglerOptions()
+                    };
+
+                    var startEtag = store.DocumentDatabase.Statistics.LastDocEtag.IncrementBy(-5);
+
+                    writer.WriteStartArray();
+                    var lastEtag = await dumper.ExportDocuments(new SmugglerOptions(), writer, startEtag, null);
+                    writer.WriteEndArray();
+                    writer.Flush();
+
+                    // read exported content
+                    var exportedDocs = RavenJArray.Parse(textStream.GetStringBuilder().ToString());
+                    Assert.Equal(5, exportedDocs.Count());
+
+                    Assert.Equal("01000000-0000-0001-0000-000000000007", exportedDocs.First().Value<RavenJObject>("@metadata").Value<string>("@etag"));
+                    Assert.Equal("01000000-0000-0001-0000-00000000000B", exportedDocs.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
+                    Assert.Equal("01000000-0000-0001-0000-00000000000B", lastEtag.ToString());
+                }
+
+                for (var i = 0; i < 10; i++)
+                {
+                    store.DatabaseCommands.PutAttachment("attach/" + (i+1), null, new MemoryStream(new [] { (byte)i }), new RavenJObject());
+                }
+
+                using (var textStream = new StringWriter())
+                using (var writer = new JsonTextWriter(textStream))
+                {
+                    var dumper = new CustomDataDumper(store.DocumentDatabase)
+                    {
+                        SmugglerOptions = new SmugglerOptions()
+                    };
+
+                    var startEtag = store.DocumentDatabase.Statistics.LastAttachmentEtag.IncrementBy(-5);
+                    var endEtag = startEtag.IncrementBy(2);
+
+                    writer.WriteStartArray();
+                    var lastEtag = await dumper.ExportAttachments(writer, startEtag, endEtag);
+                    writer.WriteEndArray();
+                    writer.Flush();
+
+                    // read exported content
+                    var exportedAttachments = RavenJArray.Parse(textStream.GetStringBuilder().ToString());
+                    Assert.Equal(2, exportedAttachments.Count());
+
+                    Assert.Equal("02000000-0000-0001-0000-000000000006", exportedAttachments.First().Value<string>("Etag"));
+                    Assert.Equal("02000000-0000-0001-0000-000000000007", exportedAttachments.Last().Value<string>("Etag"));
+                    Assert.Equal("02000000-0000-0001-0000-000000000007", lastEtag.ToString());
+
+                }
+
+                using (var textStream = new StringWriter())
+                using (var writer = new JsonTextWriter(textStream))
+                {
+                    var dumper = new CustomDataDumper(store.DocumentDatabase)
+                    {
+                        SmugglerOptions = new SmugglerOptions()
+                    };
+
+                    var startEtag = store.DocumentDatabase.Statistics.LastAttachmentEtag.IncrementBy(-5);
+
+                    writer.WriteStartArray();
+                    var lastEtag = await dumper.ExportAttachments(writer, startEtag, null);
+                    writer.WriteEndArray();
+                    writer.Flush();
+
+                    // read exported content
+                    var exportedAttachments = RavenJArray.Parse(textStream.GetStringBuilder().ToString());
+                    Assert.Equal(5, exportedAttachments.Count());
+
+                    Assert.Equal("02000000-0000-0001-0000-000000000006", exportedAttachments.First().Value<string>("Etag"));
+                    Assert.Equal("02000000-0000-0001-0000-00000000000A", exportedAttachments.Last().Value<string>("Etag"));
+                    Assert.Equal("02000000-0000-0001-0000-00000000000A", lastEtag.ToString());
+
+                }
+
+                //TODO: finish for document deletions + attachment deletions
+
+
+
+
+            }
+        }
     }
 }

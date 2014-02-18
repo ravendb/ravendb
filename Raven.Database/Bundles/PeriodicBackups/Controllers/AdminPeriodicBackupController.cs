@@ -19,6 +19,7 @@ namespace Raven.Database.Bundles.PeriodicBackups.Controllers
             get { return "PeriodicBackup"; }
         }
 
+        //TODO: is it really required ?
         [HttpPost]
         [Route("admin/periodicBackup/purge-tombstones")]
         public HttpResponseMessage PurgeTombstones()

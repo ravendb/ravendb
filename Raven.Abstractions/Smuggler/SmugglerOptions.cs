@@ -46,6 +46,16 @@ namespace Raven.Abstractions.Smuggler
         public Etag StartAttachmentsEtag { get; set; }
 
         /// <summary>
+        /// Start exporting from the specified document deletion etag
+        /// </summary>
+        public Etag StartDocsDeletionEtag { get; set; }
+
+        /// <summary>
+        /// Start exporting from the specified attachment deletion etag
+        /// </summary>
+        public Etag StartAttachmentsDeletionEtag { get; set; }
+
+        /// <summary>
         /// The number of document or attachments or indexes or transformers to load in each call to the RavenDB database.
         /// </summary>
         public int BatchSize

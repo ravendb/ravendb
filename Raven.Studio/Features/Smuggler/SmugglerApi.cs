@@ -46,23 +46,43 @@ namespace Raven.Studio.Features.Smuggler
 		    return (RavenJArray)await request.ReadResponseJsonAsync();
 		}
 
-        protected override Task DeleteDocument(string documentId, Etag etag)
+	    public override LastEtagsInfo FetchCurrentMaxEtags()
+	    {
+            throw new NotImplementedException("Export Deletions is not supported for command line smuggler");
+	    }
+
+	    protected override void ExportDeletions(JsonTextWriter jsonWriter, SmugglerOptions options, ExportDataResult result,
+	                                            LastEtagsInfo maxEtagsToFetch)
+	    {
+	        throw new NotImplementedException("Export Deletions is not supported for command line smuggler");
+	    }
+
+	    protected override Task DeleteDocument(string documentId)
         {
-            throw new NotImplementedException();
+            return commands.DeleteDocumentAsync(documentId);
         }
 
-        protected override Task ExportDocumentsDeletion(SmugglerOptions options, JsonTextWriter jsonWriter, Etag startDocsEtag)
-        {
-            throw new NotImplementedException();
-        }
+	    protected override void PurgeTombstones(ExportDataResult result)
+	    {
+	        throw new NotImplementedException();
+	    }
 
-		protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int limit)
+	    protected override Task DeleteAttachment(string key)
+	    {
+	        return commands.DeleteAttachmentAsync(key, null);
+	    }
+
+	    protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int limit)
 		{
 			return commands.StreamDocsAsync(lastEtag, pageSize:limit);
 		}
 
-		protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
+		protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
 		{
+            if (maxEtag != null)
+            {
+                throw new ArgumentException("We don't support maxEtag in SmugglerApi", "maxEtag");
+            }
 			int totalCount = 0;
 			while (true)
 			{
