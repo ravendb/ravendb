@@ -19,12 +19,14 @@ class settings extends viewModelBase {
         var windowsAuthRoute = { route: 'settings/windowsAuth', moduleId: 'viewmodels/windowsAuth', title: 'Windows Authentication', nav: true, hash: appUrl.forWindowsAuth() };
         var databaseSettingsRoute = { route: 'settings/databaseSettings', moduleId: 'viewmodels/databaseSettings', title: 'Database Settings', nav: true, hash: appUrl.forCurrentDatabase().databaseSettings };
         var periodicBackupRoute = { route: 'settings/periodicBackup', moduleId: 'viewmodels/periodicBackup', title: 'Periodic Backup', nav: true, hash: appUrl.forCurrentDatabase().periodicBackup };
+        var replicationRoute = { route: 'settings/replication', moduleId: 'viewmodels/replication', title: 'Replication', nav: true, hash: appUrl.forCurrentDatabase().replication };
         this.router = durandalRouter.createChildRouter()
             .map([
                 apiKeyRoute,
                 windowsAuthRoute,
                 databaseSettingsRoute,
-                periodicBackupRoute
+                periodicBackupRoute,
+                replicationRoute
             ])
             .buildNavigationModel();
 
@@ -54,8 +56,9 @@ class settings extends viewModelBase {
     }
 
     routeIsVisible(route: DurandalRouteConfiguration) {
-        if (route.title === "Periodic Backup" || route.title === "Database Settings") {
-            // Periodic backup and database settings are visible only when we're on a user database.
+        var userDatabasePages = ["Periodic Backup", "Database Settings", "Replication"];
+        if (jQuery.inArray(route.title, userDatabasePages) !== -1) {
+            // Periodic backup, database settings, and replication are visible only when we're on a user database.
             return this.isOnUserDatabase();
         } else {
             // API keys and Windows Auth are visible only when we're on the system database.
