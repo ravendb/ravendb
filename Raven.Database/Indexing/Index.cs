@@ -346,9 +346,9 @@ namespace Raven.Database.Indexing
                             logIndexing.WarnException(
                                 string.Format(
                                     "Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
-                                    name, key),
+                                    indexId, key),
                                 exception);
-                            context.AddError(name, key, exception.Message, "OnIndexEntryDeleted Trigger");
+                            context.AddError(indexId, key, exception.Message, "OnIndexEntryDeleted Trigger");
                         },
                         trigger => trigger.OnIndexEntryDeleted(key, document));
                 }

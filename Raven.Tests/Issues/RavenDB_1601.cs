@@ -10,6 +10,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Database.Bundles.ScriptedIndexResults;
+using Raven.Database.Json;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.ScriptedIndexResults;
 using Xunit;
@@ -464,11 +465,11 @@ PutDocument(docId, type);
                 var patcher =
                     new ScriptedIndexResultsIndexTrigger.Batcher.ScriptedIndexResultsJsonPatcher(
                         store.DocumentDatabase, new HashSet<string> { "dogs" });
-                        
+
 
                 patcher.Apply(new RavenJObject(), new ScriptedPatchRequest
                 {
-                    Script = 
+                    Script =
 @"var opCounterId = 'opCounter';
 var opCounter = LoadDocument(opCounterId) || {};
 opCounter.Index++;
@@ -481,18 +482,20 @@ PutDocument(opCounterId, opCounter);
 
                 store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
                 {
-                    if (patcher.CreatedDocs != null)
+                    foreach (var operation in patcher.GetOperations())
                     {
-                        foreach (var jsonDocument in patcher.CreatedDocs)
+                        switch (operation.Type)
                         {
-                            patcher.DocumentsToDelete.Remove(jsonDocument.Key);
-                            store.DocumentDatabase.Put(jsonDocument.Key, jsonDocument.Etag, jsonDocument.DataAsJson, jsonDocument.Metadata, null);
+                            case ScriptedJsonPatcher.OperationType.Put:
+                                store.DocumentDatabase.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson,
+                                             operation.Document.Metadata, null);
+                                break;
+                            case ScriptedJsonPatcher.OperationType.Delete:
+                                store.DocumentDatabase.Delete(operation.DocumentKey, null, null);
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException("operation.Type");
                         }
-                    }
-
-                    foreach (var doc in patcher.DocumentsToDelete)
-                    {
-                        store.DocumentDatabase.Delete(doc, null, null);
                     }
                 });
 
@@ -502,10 +505,8 @@ PutDocument(opCounterId, opCounter);
                     Assert.Equal(1, opCounter.Deletes);
                     Assert.Equal(1, opCounter.Index);
                 }
-
-
             }
-        }
+        } 
 
     }
 }

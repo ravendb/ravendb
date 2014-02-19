@@ -291,16 +291,12 @@
     <Compile Include="Issues\RavenDB_1561.cs" />
     <Compile Include="Issues\RavenDB_1560.cs" />
     <Compile Include="Issues\RavenDB_1595.cs" />
-    <Compile Include="Issues\RavenDB_1603.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="Issues\RavenDB_1565.cs" />
     <Compile Include="Issues\RavenDB_1594.cs" />
     <Compile Include="Issues\RavenDB_1609.cs" />
     <Compile Include="Issues\RavenDB_1610.cs" />
     <Compile Include="Issues\RavenDB_1650.cs" />
     <Compile Include="Issues\RavenDB_1666.cs" />
-    <Compile Include="Issues\RavenDB_1701.cs" />
     <Compile Include="Issues\RavenDB_1716.cs" />
     <Compile Include="Issues\RavenDB_1717.cs" />
     <Compile Include="Issues\RavenDB_1735.cs" />
