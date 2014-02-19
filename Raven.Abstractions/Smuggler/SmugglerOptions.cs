@@ -27,7 +27,7 @@ namespace Raven.Abstractions.Smuggler
             OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
             Timeout = TimeSpan.FromSeconds(30);
             ShouldExcludeExpired = false;
-            StartAttachmentsEtag = StartDocsEtag = Etag.Empty;
+	        StartDocsDeletionEtag = StartAttachmentsDeletionEtag = StartAttachmentsEtag = StartDocsEtag = Etag.Empty;
             Limit = int.MaxValue;
 		    MaxStepsForTransformScript = 10*1000;
 	        ExportDeletions = false;
