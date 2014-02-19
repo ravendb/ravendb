@@ -84,7 +84,7 @@ namespace Voron
 			IncrementalBackupEnabled = false;
 		}
 
-		public static StorageEnvironmentOptions GetInMemory()
+		public static StorageEnvironmentOptions CreateMemoryOnly()
 		{
 			return new PureMemoryStorageEnvironmentOptions();
 		}		
@@ -337,7 +337,7 @@ namespace Voron
 
 			public override IVirtualPager CreateScratchPager(string name)
 			{
-				return new Win32PageFileBackedMemoryMappedPager(name);
+				return new Win32PageFileBackedMemoryMappedPager();
 			}
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)

@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -182,12 +183,27 @@ namespace Raven.Tests.Bundles.Replication
 				}
 
                 SetupDestination(replicationDestination);
+	            Console.WriteLine("writing rep dests for " + db + " " + source.Url);
                 session.Store(new ReplicationDocument
                 {
                     Destinations = { replicationDestination }
                 }, "Raven/Replication/Destinations");
-                session.SaveChanges();
+	            session.SaveChanges();
             }
+
+	        while (true)
+	        {
+		        using (var s = source.OpenSession(db))
+		        {
+			        var doc = s.Load<ReplicationDocument>("Raven/Replication/Destinations");
+			        if (string.IsNullOrWhiteSpace(doc.Source))
+			        {
+				        Thread.Sleep(100);
+						continue;
+			        }
+			        break;
+		        }
+	        }
         }
 
         protected virtual void SetupDestination(ReplicationDestination replicationDestination)

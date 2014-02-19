@@ -20,7 +20,9 @@ namespace Raven.Tests.Bundles.Replication
 			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
 
 			Assert.Equal(1, serverClient.ReplicationInformer.ReplicationDestinationsUrls.Count());
-            Assert.Equal(store3.Url + "/databases/" + store3.DefaultDatabase + "/", serverClient.ReplicationInformer.ReplicationDestinationsUrls[0].Url);
+			
+			var expectedDestinationUrl = serverClient.ReplicationInformer.ReplicationDestinationsUrls[0].Url;
+			Assert.Equal(store3.Url + "/databases/" + store3.DefaultDatabase + "/", expectedDestinationUrl);
 		}
 
 		[Fact]

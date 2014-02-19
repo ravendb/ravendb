@@ -14,7 +14,7 @@ namespace Voron.Tests.Bugs
 		[Fact]
 		public void ReadTransactionCanReadJustCommittedValue()
 		{
-			var options = StorageEnvironmentOptions.GetInMemory();
+			var options = StorageEnvironmentOptions.CreateMemoryOnly();
 			options.ManualFlushing = true;
 			using (var env = new StorageEnvironment(options))
 			{

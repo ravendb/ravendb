@@ -28,11 +28,12 @@ namespace Raven.Database.Json
 		private static Func<string, RavenJObject> loadDocumentStatic;
 
 		public List<string> Debug = new List<string>();
-		public IList<JsonDocument> CreatedDocs = new List<JsonDocument>();
 		private readonly int maxSteps;
 		private readonly int additionalStepsPerSize;
 
 		private readonly Dictionary<JsInstance, KeyValuePair<RavenJValue, object>> propertiesByValue = new Dictionary<JsInstance, KeyValuePair<RavenJValue, object>>();
+
+        private readonly Dictionary<string, JsonDocument> context = new Dictionary<string, JsonDocument>(); 
 
 		public ScriptedJsonPatcher(DocumentDatabase database = null)
 		{
@@ -52,13 +53,43 @@ namespace Raven.Database.Json
 				additionalStepsPerSize = database.Configuration.AdditionalStepsForScriptBasedOnDocumentSize;
 				loadDocument = id =>
 				{
-					var jsonDocument = database.Get(id, null);
-					return jsonDocument == null ? null : jsonDocument.ToJson();
+				    JsonDocument document;
+                    if (context.TryGetValue(id, out document) == false)
+                        document = database.Get(id, null);
+
+                    return document == null ? null : document.ToJson();
 				};
 			}
 		}
 
-		public RavenJObject Apply(RavenJObject document, ScriptedPatchRequest patch, int size = 0, string docId = null)
+        protected void AddToContext(string key, JsonDocument document)
+        {
+            context[key] = document;
+        }
+
+        protected void DeleteFromContext(string key)
+        {
+            context[key] = null;
+        }
+
+        public IEnumerable<KeyValuePair<string, JsonDocument>> GetOperations()
+        {
+            return context;
+        }
+
+        public IEnumerable<KeyValuePair<string, JsonDocument>> GetPutOperations()
+        {
+            return context
+                .Where(x => x.Value != null);
+        }
+
+        public IEnumerable<KeyValuePair<string, JsonDocument>> GetDeleteOperations()
+        {
+            return context
+                .Where(x => x.Value == null);
+        }
+
+	    public RavenJObject Apply(RavenJObject document, ScriptedPatchRequest patch, int size = 0, string docId = null)
 		{
 			if (document == null)
 				return null;
@@ -430,7 +461,7 @@ function ExecutePatchScript(docInner){{
 	            newDocument.Metadata = ToRavenJObject(meta);
 	        }
 	        ValidateDocument(newDocument);
-            CreatedDocs.Add(newDocument);
+            AddToContext(key, newDocument);
 	    }
 
 	    protected virtual void ValidateDocument(JsonDocument newDocument)
