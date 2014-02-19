@@ -21,6 +21,20 @@ namespace Raven.Database.Json
 {
 	public class ScriptedJsonPatcher
 	{
+		public enum OperationType
+		{
+			None,
+			Put,
+			Delete
+		}
+
+		public class Operation
+		{
+			public OperationType Type { get; set; }
+			public string DocumentKey { get; set; }
+			public JsonDocument Document { get; set; }
+		}
+
 		private static readonly ScriptsCache scriptsCache = new ScriptsCache();
 		private readonly Func<string, RavenJObject> loadDocument;
 
@@ -33,7 +47,8 @@ namespace Raven.Database.Json
 
 		private readonly Dictionary<JsInstance, KeyValuePair<RavenJValue, object>> propertiesByValue = new Dictionary<JsInstance, KeyValuePair<RavenJValue, object>>();
 
-        private readonly Dictionary<string, JsonDocument> context = new Dictionary<string, JsonDocument>(); 
+        private readonly Dictionary<string, JsonDocument> documentKeyContext = new Dictionary<string, JsonDocument>(); 
+		private readonly List<JsonDocument> incompleteDocumentKeyContext = new List<JsonDocument>();
 
 		public ScriptedJsonPatcher(DocumentDatabase database = null)
 		{
@@ -54,7 +69,7 @@ namespace Raven.Database.Json
 				loadDocument = id =>
 				{
 				    JsonDocument document;
-                    if (context.TryGetValue(id, out document) == false)
+                    if (documentKeyContext.TryGetValue(id, out document) == false)
                         document = database.Get(id, null);
 
                     return document == null ? null : document.ToJson();
@@ -64,30 +79,36 @@ namespace Raven.Database.Json
 
         protected void AddToContext(string key, JsonDocument document)
         {
-            context[key] = document;
+			if(string.IsNullOrEmpty(key) || key.EndsWith("/"))
+				incompleteDocumentKeyContext.Add(document);
+			else
+				documentKeyContext[key] = document;
         }
 
         protected void DeleteFromContext(string key)
         {
-            context[key] = null;
+            documentKeyContext[key] = null;
         }
 
-        public IEnumerable<KeyValuePair<string, JsonDocument>> GetOperations()
+        public IEnumerable<Operation> GetOperations()
         {
-            return context;
+            return documentKeyContext.Select(x => new Operation()
+            {
+	            Type = x.Value != null ? OperationType.Put : OperationType.Delete,
+				DocumentKey = x.Key,
+				Document = x.Value
+            }).Union(incompleteDocumentKeyContext.Select(x => new Operation()
+            {
+	            Type = OperationType.Put,
+				DocumentKey = x.Key,
+				Document = x
+            }));
         }
 
-        public IEnumerable<KeyValuePair<string, JsonDocument>> GetPutOperations()
-        {
-            return context
-                .Where(x => x.Value != null);
-        }
-
-        public IEnumerable<KeyValuePair<string, JsonDocument>> GetDeleteOperations()
-        {
-            return context
-                .Where(x => x.Value == null);
-        }
+		public IEnumerable<JsonDocument> GetPutOperations()
+		{
+			return GetOperations().Where(x => x.Type == OperationType.Put).Select(x => x.Document);
+		}
 
 	    public RavenJObject Apply(RavenJObject document, ScriptedPatchRequest patch, int size = 0, string docId = null)
 		{

@@ -2200,7 +2200,6 @@ namespace Raven.Database
 						return null;
                     return scriptedJsonPatcher
                         .GetPutOperations()
-                        .Select(x => x.Value)
                         .ToList();
 				}, debugMode);
 			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
@@ -2233,7 +2232,6 @@ namespace Raven.Database
 						return null;
                     return scriptedJsonPatcher
                         .GetPutOperations()
-                        .Select(x => x.Value)
                         .ToList();
 				}, debugMode);
 			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
