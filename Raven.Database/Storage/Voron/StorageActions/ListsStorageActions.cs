@@ -125,7 +125,23 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public void RemoveAllBefore(string name, Etag etag)
+	    public ListItem ReadLast(string name)
+	    {
+            var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
+	        var nameKey = CreateKey(name);
+
+	        using (var iterator = listsByName.MultiRead(Snapshot, nameKey))
+	        {
+                if (!iterator.Seek(Slice.AfterAllKeys))
+                    return null;
+
+                var etag = Etag.Parse(iterator.CurrentKey.ToString());
+
+	            return ReadInternal(etag);
+	        }
+	    }
+
+	    public void RemoveAllBefore(string name, Etag etag)
 		{
 			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
@@ -149,7 +165,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						var key = value.Value<string>("key");
 
 						tableStorage.Lists.Delete(writeBatch.Value, currentEtag.ToString());
-						listsByName.MultiDelete(writeBatch.Value, nameKey, etag.ToString());
+                        listsByName.MultiDelete(writeBatch.Value, nameKey, currentEtag.ToString());
 						listsByNameAndKey.Delete(writeBatch.Value, CreateKey(name, key));
 					}
 				}

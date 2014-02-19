@@ -72,7 +72,12 @@ namespace Raven.Storage.Managed
 			});
 		}
 
-		public void RemoveAllBefore(string name, Etag etag)
+	    public ListItem ReadLast(string name)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public void RemoveAllBefore(string name, Etag etag)
 		{
 			var comparable = new ComparableByteArray(etag);
 			var results = storage.Lists["ByNameAndEtag"].SkipAfter(new RavenJObject
