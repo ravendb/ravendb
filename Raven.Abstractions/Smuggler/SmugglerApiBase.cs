@@ -271,6 +271,7 @@ namespace Raven.Abstractions.Smuggler
 
 		private async Task<Etag> ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Etag lastEtag)
 		{
+		    var now = SystemTime.UtcNow;
 			var totalCount = 0;
 			var lastReport = SystemTime.UtcNow;
 			var reportInterval = TimeSpan.FromSeconds(2);
@@ -298,8 +299,9 @@ namespace Raven.Abstractions.Smuggler
 			                    if (!options.MatchFilters(document))
 			                        continue;
 
-			                    if (options.ShouldExcludeExpired && options.ExcludeExpired(document))
+                                if (options.ShouldExcludeExpired && options.ExcludeExpired(document, now))
 			                        continue;
+
 			                    document.WriteTo(jsonWriter);
 			                    totalCount++;
 
@@ -607,6 +609,7 @@ namespace Raven.Abstractions.Smuggler
 
 		private async Task<int> ImportDocuments(JsonTextReader jsonReader, SmugglerOptions options)
 		{
+		    var now = SystemTime.UtcNow;
 			var count = 0;
 
 			if (jsonReader.Read() == false)
@@ -634,6 +637,9 @@ namespace Raven.Abstractions.Smuggler
 					continue;
 				if (options.MatchFilters(document) == false)
 					continue;
+
+                if (options.ShouldExcludeExpired && options.ExcludeExpired(document, now))
+                    continue;
 
 				if (!string.IsNullOrEmpty(options.TransformScript))
 					document = await TransformDocument(document, options.TransformScript);
