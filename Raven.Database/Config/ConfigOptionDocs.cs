@@ -83,6 +83,7 @@ namespace Raven.Database.Config
 
 			//Voron	
 			{"Raven/Voron/AllowIncrementalBackups", "bool", "true / false", "Defaults to false. If you want to use incremental backups, you need to turn this to true, but then journal files will not be deleted on backup."},
+            {"Raven/Voron/TempPath", "string", null, "You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file."},
 
 			// Advanced
 			{"Raven/TransactionMode", "string", "lazy,safe", "What transaction mode to use. Safe transaction mode ensures data consistency, but is slower. Lazy is faster, but may result in a data loss if the server crashes. Default: Safe."},

@@ -281,7 +281,7 @@ namespace Raven.Tests.Helpers
 			return ravenDbServer;
 		}
 
-		public ITransactionalStorage NewTransactionalStorage(string requestedStorage = null, string dataDir = null, bool runInMemory = false, OrderedPartCollection<AbstractDocumentCodec> documentCodecs = null)
+		public ITransactionalStorage NewTransactionalStorage(string requestedStorage = null, string dataDir = null, string tempDir = null, bool runInMemory = false, OrderedPartCollection<AbstractDocumentCodec> documentCodecs = null)
 		{
 			ITransactionalStorage newTransactionalStorage;
 			string storageType = GetDefaultStorageType(requestedStorage);
@@ -293,6 +293,8 @@ namespace Raven.Tests.Helpers
 				FileSystemDataDirectory = Path.Combine(dataDirectory, "FileSystem"),
 				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 			};
+
+            ravenConfiguration.Settings["Raven/Voron/TempPath"] = tempDir;
 
 			if (storageType == "munin")
 				newTransactionalStorage = new Storage.Managed.TransactionalStorage(ravenConfiguration, () => { });
