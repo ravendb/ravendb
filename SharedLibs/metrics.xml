@@ -1106,6 +1106,14 @@
             <param name="name">The metric name</param>
             <returns></returns>
         </member>
+        <member name="M:metrics.Metrics.Counter(System.String,System.String)">
+            <summary>
+            Creates a new counter metric and registers it under the given type and name
+            </summary>
+            <param name="context">The context for this metric</param>
+            <param name="name">The metric name</param>
+            <returns></returns>
+        </member>
         <member name="M:metrics.Metrics.Histogram(System.Type,System.String,System.Boolean)">
             <summary>
             Creates a new histogram metric and registers it under the given type and name
@@ -1115,11 +1123,28 @@
             <param name="biased">Whether the sample type is biased or uniform</param>
             <returns></returns>
         </member>
+        <member name="M:metrics.Metrics.Histogram(System.String,System.String,System.Boolean)">
+            <summary>
+            Creates a new histogram metric and registers it under the given type and name
+            </summary>
+            <param name="context">The context for this metric</param>
+            <param name="name">The metric name</param>
+            <param name="biased">Whether the sample type is biased or uniform</param>
+            <returns></returns>
+        </member>
         <member name="M:metrics.Metrics.Histogram(System.Type,System.String)">
             <summary>
             Creates a new non-biased histogram metric and registers it under the given type and name
             </summary>
             <param name="owner">The type that owns the metric</param>
+            <param name="name">The metric name</param>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Metrics.Histogram(System.String,System.String)">
+            <summary>
+            Creates a new non-biased histogram metric and registers it under the given type and name
+            </summary>
+            <param name="context">The context for this the metric</param>
             <param name="name">The metric name</param>
             <returns></returns>
         </member>
