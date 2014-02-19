@@ -98,7 +98,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
                         var timeSinceLastBackup = DateTime.UtcNow - backupStatus.LastBackup;
                         var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
-                        incrementalBackupTimer = new Timer(state => TimerCallback(state, false), null, nextBackup, interval);
+                        incrementalBackupTimer = new Timer(state => TimerCallback(false), null, nextBackup, interval);
                     }
                     else
                     {
@@ -112,7 +112,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
                         var timeSinceLastBackup = DateTime.UtcNow - backupStatus.LastFullBackup;
                         var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
-                        fullBackupTimer = new Timer(state => TimerCallback(state, true), null, nextBackup, interval);
+                        fullBackupTimer = new Timer(state => TimerCallback(true), null, nextBackup, interval);
                     }
                     else
                     {
@@ -139,7 +139,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 
 
-        private void TimerCallback(object state, bool fullBackup)
+        private void TimerCallback(bool fullBackup)
         {
             if (currentTask != null)
                 return;
