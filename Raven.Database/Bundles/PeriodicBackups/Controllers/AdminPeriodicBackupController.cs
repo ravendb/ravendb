@@ -19,7 +19,6 @@ namespace Raven.Database.Bundles.PeriodicBackups.Controllers
             get { return "PeriodicBackup"; }
         }
 
-        //TODO: is it really required ?
         [HttpPost]
         [Route("admin/periodicBackup/purge-tombstones")]
         public HttpResponseMessage PurgeTombstones()
@@ -28,23 +27,30 @@ namespace Raven.Database.Bundles.PeriodicBackups.Controllers
             Etag docEtag = null;
             var attachmentEtagStr = GetQueryStringValue("attachmentEtag");
             Etag attachmentEtag = null;
+
             try
             {
-                docEtag = Etag.Parse(docEtagStr);
-            }
-            catch
-            {
-                try
+                if (string.IsNullOrEmpty(docEtagStr) == false)
+                {
+                    docEtag = Etag.Parse(docEtagStr);
+                }
+
+                if (string.IsNullOrEmpty(attachmentEtagStr) == false)
                 {
                     attachmentEtag = Etag.Parse(attachmentEtagStr);
                 }
-                catch (Exception)
+
+                if (docEtag == null && attachmentEtag == null)
                 {
-                    return GetMessageWithObject(new
-                    {
-                        Error = "The query string variable 'docEtag' or 'attachmentEtag' must be set to a valid guid"
-                    }, HttpStatusCode.BadRequest);
+                    throw new ArgumentException("'docEtag' or 'attachmentEtag' must be set.");
                 }
+            }
+            catch
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "The query string variable 'docEtag' or 'attachmentEtag' must be set to a valid guid"
+                }, HttpStatusCode.BadRequest);
             }
 
             Database.TransactionalStorage.Batch(accessor =>

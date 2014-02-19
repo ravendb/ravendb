@@ -72,7 +72,7 @@ namespace Raven.Smuggler
 	    protected override void ExportDeletions(JsonTextWriter jsonWriter, SmugglerOptions options, ExportDataResult result,
 	                                            LastEtagsInfo maxEtagsToFetch)
 	    {
-	        throw new NotImplementedException();
+	        throw new NotImplementedException("Exporting deletions is not supported for Command Line Smuggler");
 	    }
 
 	    public override LastEtagsInfo FetchCurrentMaxEtags()

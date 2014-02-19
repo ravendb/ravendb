@@ -33,16 +33,23 @@ namespace Raven.Database.Smuggler
 			EnsuredDatabaseExists = true;
 		}
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="jsonWriter"></param>
+        /// <param name="options"></param>
+        /// <param name="result"></param>
+        /// <param name="maxEtags">Max etags are inclusive</param>
         protected async override void ExportDeletions(JsonTextWriter jsonWriter, SmugglerOptions options, ExportDataResult result, LastEtagsInfo maxEtags)
         {
             jsonWriter.WritePropertyName("DocsDeletions");
             jsonWriter.WriteStartArray();
-            result.LastDocDeleteEtag = await ExportDocumentsDeletion(options, jsonWriter, result.LastDocDeleteEtag, maxEtags.LastDocDeleteEtag);
+            result.LastDocDeleteEtag = await ExportDocumentsDeletion(options, jsonWriter, result.LastDocDeleteEtag, maxEtags.LastDocDeleteEtag.IncrementBy(1));
             jsonWriter.WriteEndArray();
 
             jsonWriter.WritePropertyName("AttachmentsDeletions");
             jsonWriter.WriteStartArray();
-            result.LastAttachmentsDeleteEtag = await ExportAttachmentsDeletion(options, jsonWriter, result.LastAttachmentsDeleteEtag, maxEtags.LastAttachmentsDeleteEtag);
+            result.LastAttachmentsDeleteEtag = await ExportAttachmentsDeletion(options, jsonWriter, result.LastAttachmentsDeleteEtag, maxEtags.LastAttachmentsDeleteEtag.IncrementBy(1));
             jsonWriter.WriteEndArray();
         }
 
@@ -51,8 +58,9 @@ namespace Raven.Database.Smuggler
 	    {
 	        database.TransactionalStorage.Batch(accessor =>
 	        {
-	            accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicBackupsDocsTombstones, result.LastDocDeleteEtag);
-                accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicBackupsAttachmentsTombstones, result.LastAttachmentsDeleteEtag);
+                // since remove all before is inclusive, but we want last etag for function FetchCurrentMaxEtags we modify ranges
+	            accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicBackupsDocsTombstones, result.LastDocDeleteEtag.IncrementBy(-1));
+                accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicBackupsAttachmentsTombstones, result.LastAttachmentsDeleteEtag.IncrementBy(-1));
 	        });
 	    }
 
@@ -146,6 +154,7 @@ namespace Raven.Database.Smuggler
             var lastEtag = startDocsEtag;
             database.TransactionalStorage.Batch(accessor =>
             {
+                //TODO: check if we have to sort it 
                 var deletions =
                     accessor.Lists.Read(Constants.RavenPeriodicBackupsDocsTombstones, startDocsEtag, maxEtag, int.MaxValue)
                             .OrderBy(x => x.Etag).ToArray();
@@ -212,6 +221,7 @@ namespace Raven.Database.Smuggler
             var lastEtag = startAttachmentsDeletionEtag;
             database.TransactionalStorage.Batch(accessor =>
             {
+                //TODO: Do we have to order by etag or is it already in order?
                 var deletions =
                     accessor.Lists.Read(Constants.RavenPeriodicBackupsAttachmentsTombstones, startAttachmentsDeletionEtag, maxAttachmentEtag, int.MaxValue)
                             .OrderBy(x => x.Etag).ToArray();

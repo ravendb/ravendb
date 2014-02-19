@@ -609,8 +609,7 @@ namespace Raven.Abstractions.Smuggler
 			
 			sw.Stop();
 
-            //TODO: show progress about delete?
-            ShowProgress("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments in {2:#,#;;0} ms", exportCounts["Docs"], exportCounts["Attachments"], sw.ElapsedMilliseconds);
+            ShowProgress("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments, deleted {2:#,#;;0} documents and {3:#,#;;0} attachments in {4:#,#;;0} ms", exportCounts["Docs"], exportCounts["Attachments"], exportCounts["DocsDeletions"], exportCounts["AttachmentsDeletions"], sw.ElapsedMilliseconds);
 		}
 
         private async Task<int> ImportDeletedDocuments(JsonReader jsonReader, SmugglerOptions options)

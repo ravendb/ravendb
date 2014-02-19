@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Raven.Tests.Bugs.DTC;
+using Raven.Tests.Issues;
+using System.Linq;
+using Xunit;
 
 namespace Raven.Tryouts
 {
@@ -9,7 +12,19 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			
+            for (var i = 0; i < 1; i++)
+            {
+                Console.WriteLine("Pass # " + i);
+                var methods = typeof(RavenDB_1537).GetMethods().Where(m => m.CustomAttributes.Any(a => a.AttributeType == typeof(FactAttribute)));
+                var test = new RavenDB_1537();
+                foreach (var method in methods)
+                {
+                    Console.WriteLine("Invoking: " + method.Name);
+                    method.Invoke(test, new object[] {});
+                }
+            }
+
+		    Console.ReadKey();
 		}
 	}
 
