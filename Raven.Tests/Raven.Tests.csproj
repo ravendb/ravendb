@@ -283,6 +283,7 @@
     <Compile Include="Bugs\TransformerThatReturnAnArray.cs" />
     <Compile Include="Issues\RavenDB_1435.cs" />
     <Compile Include="Issues\RavenDB_1497.cs" />
+    <Compile Include="Issues\RavenDB_1517.cs" />
     <Compile Include="Issues\RavenDB_1520.cs" />
     <Compile Include="Issues\RavenDB_1533.cs" />
     <Compile Include="Issues\RavenDB_1537.cs" />

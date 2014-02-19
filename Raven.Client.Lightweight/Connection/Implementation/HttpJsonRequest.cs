@@ -690,6 +690,19 @@ namespace Raven.Client.Connection
 			});
 		}
 
+		public async Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
+		{
+			var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url)
+			{
+				Content = new CompressedStringContent(data, factory.DisableRequestCompression),
+			};
+
+			CopyHeadersToHttpRequestMessage(rawRequestMessage);
+			var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead);
+			await AssertNotFailingResponse(response);
+			return response;
+		}
+
 		public async Task<HttpResponseMessage> ExecuteRawResponseAsync()
 		{
 			var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);

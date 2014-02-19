@@ -3,8 +3,10 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Dispatcher;
@@ -163,10 +165,19 @@ namespace Raven.Database.Server.Controllers
 			if (request.Query != null)
 				query = request.Query.TrimStart('?').Replace("+", "%2B");
 
+			string indexQuery = null;
+			string modifiedQuery;
+
+			// to avoid UriFormatException: Invalid URI: The Uri string is too long. [see RavenDB-1517]
+			if (query.Length > 32760 && TryExtractIndexQuery(query, out modifiedQuery, out indexQuery))
+			{
+				query = modifiedQuery;
+			}
+
 			var msg = new HttpRequestMessage(HttpMethod.Get, new UriBuilder
 			{
 				Host = "multi.get",
-				Query = query,
+				Query = query, 
 				Path = request.Url
 			}.Uri);
 			msg.SetConfiguration(Configuration);
@@ -196,7 +207,35 @@ namespace Raven.Database.Server.Controllers
 			controller.RequestContext = controllerContext.RequestContext;
 			controller.Configuration = Configuration;
 
+			if (string.IsNullOrEmpty(indexQuery) == false && (controller as RavenDbApiController) != null)
+			{
+				((RavenDbApiController)controller).SetPostRequestQuery(indexQuery);
+			}
+
 			return await controller.ExecuteAsync(controllerContext, CancellationToken.None);
+		}
+
+		private static bool TryExtractIndexQuery(string query, out string withoutIndexQuery, out string indexQuery)
+		{
+			var parameters = HttpUtility.ParseQueryString(query);
+			if (parameters["query"] != null)
+			{
+				indexQuery = parameters["query"];
+
+				var array = (from key in parameters.AllKeys
+				             where key != null && key != "query"
+				             from value in parameters.GetValues(key)
+				             select string.Format("{0}={1}", key, value))
+					.ToArray();
+
+				withoutIndexQuery = string.Join("&", array);
+				return true;
+			}
+
+			withoutIndexQuery = null;
+			indexQuery = null;
+
+			return false;
 		}
 	}
 }
