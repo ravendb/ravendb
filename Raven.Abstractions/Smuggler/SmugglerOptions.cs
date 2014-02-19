@@ -99,7 +99,7 @@ namespace Raven.Abstractions.Smuggler
 		/// </summary>
 		public bool ShouldExcludeExpired { get; set; }
 
-		public virtual bool ExcludeExpired(RavenJToken item)
+		public virtual bool ExcludeExpired(RavenJToken item, DateTime now)
 		{
 			var metadata = item.Value<RavenJObject>("@metadata");
 
@@ -124,7 +124,7 @@ namespace Raven.Abstractions.Smuggler
 				return false;
 			}
 
-			return dateTime >= SystemTime.UtcNow;
+            return dateTime < now;
 		}
 	}
 
