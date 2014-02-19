@@ -3,10 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 
 using Raven.Abstractions.Data;
 using Raven.Database.Bundles.ScriptedIndexResults;
+using Raven.Database.Json;
 using Raven.Json.Linq;
 
 using Xunit;
@@ -54,14 +56,18 @@ PutDocument(opCounterId, opCounter);
                 {
                     foreach (var operation in patcher.GetOperations())
                     {
-                        var key = operation.Key;
-                        var document = operation.Value;
-                        var isPut = document != null;
-
-                        if (isPut)
-                            store.DocumentDatabase.Put(key, document.Etag, document.DataAsJson, document.Metadata, null);
-                        else
-                            store.DocumentDatabase.Delete(key, null, null);
+						switch (operation.Type)
+						{
+							case ScriptedJsonPatcher.OperationType.Put:
+								store.DocumentDatabase.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson,
+											 operation.Document.Metadata, null);
+								break;
+							case ScriptedJsonPatcher.OperationType.Delete:
+								store.DocumentDatabase.Delete(operation.DocumentKey, null, null);
+								break;
+							default:
+								throw new ArgumentOutOfRangeException("operation.Type");
+						}  
                     }
                 });
 
