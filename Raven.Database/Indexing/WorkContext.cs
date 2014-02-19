@@ -42,7 +42,7 @@ namespace Raven.Database.Indexing
 	    {
 	        DoNotTouchAgainIfMissingReferences = new ConcurrentDictionary<int, ConcurrentSet<string>>();
             CurrentlyRunningQueries = new ConcurrentDictionary<string, ConcurrentSet<ExecutingQueryInfo>>(StringComparer.OrdinalIgnoreCase);
-	        PerformanceCounters = new PerformanceCountersManager();
+	        PerformanceCounters = new PerformanceCountersManager(); //!!??
             MetricsCounters = new MetricsCountersManager();
         }
 
@@ -222,7 +222,7 @@ namespace Raven.Database.Indexing
 
 			shouldNotifyOnWork.Dispose();
 
-		    PerformanceCounters.Dispose();
+		    PerformanceCounters.Dispose(); //!!??
             MetricsCounters.Dispose();
 			cancellationTokenSource.Dispose();
 		}
@@ -248,14 +248,14 @@ namespace Raven.Database.Indexing
 
 		private bool disposed;
 
-        public PerformanceCountersManager PerformanceCounters { get; private set; }
+        public PerformanceCountersManager PerformanceCounters { get; private set; } //!!??
         public MetricsCountersManager MetricsCounters { get; private set; }
         
 		public void Init(string name)
 		{
 			if (Configuration.DisablePerformanceCounters == false && Configuration.RunInMemory == false)
 			{
-                PerformanceCounters.Setup(name ?? Constants.SystemDatabase);
+                PerformanceCounters.Setup(name ?? Constants.SystemDatabase); //!!??
                 MetricsCounters.Setup(name ?? Constants.SystemDatabase);  //?? may be out of condition
             }
 		}

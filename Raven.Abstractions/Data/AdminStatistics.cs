@@ -34,7 +34,7 @@ namespace Raven.Abstractions.Data
 		public string TotalDatabaseHumaneSize { get; set; }
 		public long CountOfDocuments { get; set; }
         public long CountOfAttachments { get; set; }
-		public double RequestsPerSecond { get; set; }
+	//	public double RequestsPerSecond { get; set; }
 		public int ConcurrentRequests { get; set; }
 		public decimal DatabaseTransactionVersionSizeInMB { get; set; }
 
@@ -43,8 +43,22 @@ namespace Raven.Abstractions.Data
         public long Count { get; set; }
 
         public double FiveMinuteRate { get; set; }
+        public double FifteenMinuteRate { get; set; }
 
         public double CounterRequestsPerSecond { get; set; }
+
+        public long DocsPerSecondCounter { get;  set; }
+
+        public long IndexedPerSecondCounter { get;  set; }
+
+        public long ReducedPerSecondCounter { get;  set; }
+
+        //public MeterMetric ConcurrentRequests { get; private set; }  //!!
+
+        //public MeterMetric RequestsMeter { get; private set; }
+        //public PerSecondCounterMetric RequestsPerSecondCounter { get; private set; }
+        //public HistogramMetric RequestsPerSecondHistogram { get; private set; }
+
 
 	}
 }

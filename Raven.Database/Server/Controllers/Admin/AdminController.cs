@@ -309,14 +309,27 @@ namespace Raven.Database.Server.Controllers.Admin
                         TotalDatabaseHumaneSize = DatabaseSize.Humane(totalDatabaseSize),
                         CountOfDocuments = documentDatabase.Statistics.CountOfDocuments,
                         CountOfAttachments = documentDatabase.Statistics.CountOfAttachments,
-                        RequestsPerSecond = Math.Round(documentDatabase.WorkContext.PerformanceCounters.RequestsPerSecond.NextValue(), 2),
-                        ConcurrentRequests = (int)documentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.NextValue(),
+                        //RequestsPerSecond = Math.Round(documentDatabase.WorkContext.PerformanceCounters.RequestsPerSecond.NextValue(), 2),
+                        //ConcurrentRequests = (int)documentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.NextValue(),
+                        //DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
+                        //MeanRate = documentDatabase.WorkContext.PerformanceCounters.RequestsMeter.MeanRate,
+                        //OneMinuteRate = documentDatabase.WorkContext.PerformanceCounters.RequestsMeter.OneMinuteRate,
+                        //Count = documentDatabase.WorkContext.PerformanceCounters.RequestsMeter.Count,
+                        //FiveMinuteRate = documentDatabase.WorkContext.PerformanceCounters.RequestsMeter.FiveMinuteRate,
+                        //CounterRequestsPerSecond=documentDatabase.WorkContext.PerformanceCounters.RequestsPerSecondCounter.CurrentValue
+                      //  RequestsPerSecond = Math.Round(documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.CurrentValue,2),//!!!!
+  
+                      //  ConcurrentRequests = (int)documentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.NextValue(),
                         DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
-                        MeanRate = documentDatabase.WorkContext.PerformanceCounters.RequestsMeter.MeanRate,
-                        OneMinuteRate = documentDatabase.WorkContext.PerformanceCounters.RequestsMeter.OneMinuteRate,
-                        Count = documentDatabase.WorkContext.PerformanceCounters.RequestsMeter.Count,
-                        FiveMinuteRate = documentDatabase.WorkContext.PerformanceCounters.RequestsMeter.FiveMinuteRate,
-                        CounterRequestsPerSecond=documentDatabase.WorkContext.PerformanceCounters.RequestsPerSecondCounter.CurrentValue
+                        DocsPerSecondCounter = documentDatabase.WorkContext.MetricsCounters.DocsPerSecond.Count,
+                        IndexedPerSecondCounter = documentDatabase.WorkContext.MetricsCounters.IndexedPerSecond.Count,
+                        ReducedPerSecondCounter = documentDatabase.WorkContext.MetricsCounters.ReducedPerSecond.Count,
+                        Count = documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.Count,
+                        MeanRate = Math.Round(documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.MeanRate,2),
+                        OneMinuteRate = Math.Round(documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.OneMinuteRate,2),
+                        FiveMinuteRate = Math.Round(documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.FiveMinuteRate,2),  //??RequestsMeter not required
+                        FifteenMinuteRate = Math.Round(documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.FifteenMinuteRate, 2),
+                        CounterRequestsPerSecond = Math.Round(documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.CurrentValue,2)
                     }
             };
 

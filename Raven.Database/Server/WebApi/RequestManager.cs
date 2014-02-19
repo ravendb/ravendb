@@ -73,14 +73,14 @@ namespace Raven.Database.Server.WebApi
 	    private void OnBeforeRequest(object sender, BeforeRequestWebApiEventArgs args)
 	    {
 	        var documentDatabase = args.Database;
-	        documentDatabase.WorkContext.PerformanceCounters.RequestsPerSecond.Increment();
-            documentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.Increment();
-            documentDatabase.WorkContext.PerformanceCounters.RequestsMeter.Mark();
-            documentDatabase.WorkContext.PerformanceCounters.RequestsPerSecondCounter.Mark();
+            //documentDatabase.WorkContext.PerformanceCounters.RequestsPerSecond.Increment(); //!!
+            //documentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.Increment();
+            //documentDatabase.WorkContext.PerformanceCounters.RequestsMeter.Mark();
+            //documentDatabase.WorkContext.PerformanceCounters.RequestsPerSecondCounter.Mark();
 
-            //documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.Mark();
-            //documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.Mark();
-            ////documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondHistogram.SampleCount();
+            documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.Mark();
+            documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.Mark();
+            documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondHistogram.Update((long)documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.CurrentValue); //??
            
 
 	    }
@@ -344,8 +344,9 @@ namespace Raven.Database.Server.WebApi
 		    }
 		    finally
 		    {
-                controller.Database.WorkContext.PerformanceCounters.ConcurrentRequests.Decrement();		        
-		    }
+               //!! controller.Database.WorkContext.PerformanceCounters.ConcurrentRequests.Decrement(); //??
+               
+            }
 
 			if (ravenUiRequest || logHttpRequestStatsParam == null || sw == null)
 				return;
