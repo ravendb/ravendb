@@ -13,6 +13,7 @@ using System.Net;
 using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
@@ -1553,6 +1554,15 @@ namespace Raven.Client.Embedded
 			}
 
 			return false;
+		}
+
+		/// <summary>
+		/// Primary credentials for access. Will be used also in replication context - for failovers
+		/// </summary>
+		public OperationCredentials PrimaryCredentials
+		{
+			//TODO : check if this is correct
+			get { return new OperationCredentials(null, CredentialCache.DefaultCredentials); }
 		}
 	}
 }

@@ -925,6 +925,7 @@
     <Compile Include="Server\WebApi\RequestManager.cs" />
     <Compile Include="Smuggler\DataDumper.cs" />
     <Compile Include="Storage\BaseRestoreOperation.cs" />
+    <Compile Include="Storage\DatabaseSizeInformation.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
     <Compile Include="Storage\Esent\Backup\BackupOperation.cs" />
     <Compile Include="Storage\Esent\Backup\EsentBackup.cs" />
@@ -1206,15 +1207,7 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
   <Target Name="BeforeBuild">
-    <CreateItem Include="Server\WebUI\**\*.*">
-      <Output ItemName="EmbeddedResource" TaskParameter="Include" />
-    </CreateItem>
   </Target>
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-  <Target Name="BeforeBuild">
-    <Copy SourceFiles="$(SolutionDir)\Imports\Fody\Config\FodyWeavers.$(Configuration).xml" DestinationFiles="$(MSBuildProjectDirectory)\FodyWeavers.xml" Condition="Exists('$(SolutionDir)\Imports\Fody\Config\FodyWeavers.$(Configuration).xml')" />
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  <Import Project="Fody.targets" />
+  <Import Project="$(SolutionDir)\Imports\Fody\Fody.targets" Condition="$(Configuration) != 'Debug'" />
 </Project>

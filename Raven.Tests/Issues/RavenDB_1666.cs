@@ -47,6 +47,9 @@ namespace Raven.Tests.Issues
         public void CheckRoutes()
         {
             
+            RegisterRouteForOnlySysDb<AdminController>(a => a.Stats());
+            RegisterRouteForOnlySysDb<AdminController>(a => a.Gc());
+            RegisterRouteForOnlySysDb<AdminController>(a => a.LohCompaction());
             RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabasesGet(string.Empty));
             RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabasesDelete(string.Empty));
             RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabasesPut(string.Empty));

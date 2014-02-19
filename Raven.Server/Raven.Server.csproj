@@ -227,8 +227,7 @@
     <CreateItem Include="WebUI\**\*.*">
       <Output ItemName="EmbeddedResource" TaskParameter="Include" />
     </CreateItem>
-    <Copy SourceFiles="$(SolutionDir)\Imports\Fody\Config\FodyWeavers.$(Configuration).xml" DestinationFiles="$(MSBuildProjectDirectory)\FodyWeavers.xml" Condition="Exists('$(SolutionDir)\Imports\Fody\Config\FodyWeavers.$(Configuration).xml')" />
   </Target>
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-  <Import Project="$(SolutionDir)\Imports\Fody\Fody.targets" />
+  <Import Project="$(SolutionDir)\Imports\Fody\Fody.targets" Condition="$(Configuration) != 'Debug'" />
 </Project>

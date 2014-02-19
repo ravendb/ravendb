@@ -147,7 +147,7 @@ namespace Raven.Database.Config
 
 			if (string.IsNullOrEmpty(DefaultStorageTypeName))
 			{
-				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
+				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "voron";
 			}
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
@@ -179,7 +179,7 @@ namespace Raven.Database.Config
 			// HTTP settings
 			HostName = ravenSettings.HostName.Value;
 
-			if (string.IsNullOrEmpty(DatabaseName) && Port == 0) // we only use this for root database
+			if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
 			{
 				Port = PortUtil.GetPort(ravenSettings.Port.Value);
 				UseSsl = ravenSettings.UseSsl.Value;

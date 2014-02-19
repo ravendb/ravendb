@@ -24,8 +24,10 @@ namespace Raven.Abstractions.Data
 	{
 		public string Name { get; set; }
 		public DateTime LastActivity { get; set; }
-		public long TransactionalStorageSize { get; set; }
-		public string TransactionalStorageSizeHumaneSize { get; set; }
+		public long TransactionalStorageAllocatedSize { get; set; }
+		public string TransactionalStorageAllocatedSizeHumaneSize { get; set; }
+        public long TransactionalStorageUsedSize { get; set; }
+        public string TransactionalStorageUsedSizeHumaneSize { get; set; }
 		public long IndexStorageSize { get; set; }
 		public string IndexStorageHumaneSize { get; set; }
 		public long TotalDatabaseSize { get; set; }

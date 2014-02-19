@@ -327,6 +327,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\ReplicationBehavior.cs">
       <Link>Document\ReplicationBehavior</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\ResponseTimeInformation.cs">
+      <Link>Document\ResponseTimeInformation.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\ShardedDocumentQuery.cs">
       <Link>Document\ShardedDocumentQuery</Link>
     </Compile>

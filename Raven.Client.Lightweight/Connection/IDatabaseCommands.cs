@@ -1,3 +1,4 @@
+using Raven.Abstractions.Connection;
 using Raven.Database.Data;
 #if !SILVERLIGHT
 //-----------------------------------------------------------------------
@@ -41,6 +42,11 @@ namespace Raven.Client.Connection
 		/// Admin operations performed against system database, like create/delete database
 		/// </summary>
 		IGlobalAdminDatabaseCommands GlobalAdmin { get; }
+
+		/// <summary>
+		/// Primary credentials for access. Will be used also in replication context - for failovers
+		/// </summary>
+		OperationCredentials PrimaryCredentials { get; }
 
 		/// <summary>
 		/// Retrieves documents for the specified key prefix

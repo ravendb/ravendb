@@ -53,10 +53,12 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="WindowsBase" />
+
     <Reference Include="xunit">
       <HintPath>..\..\SharedLibs\xunit\xunit.dll</HintPath>
     </Reference>
     <Reference Include="xunit.extensions">
+
       <HintPath>..\..\SharedLibs\xunit\xunit.extensions.dll</HintPath>
     </Reference>
   </ItemGroup>
@@ -104,6 +106,7 @@
     <Compile Include="Storage\SplittingVeryBig.cs" />
     <Compile Include="Storage\VeryBig.cs" />
     <Compile Include="Trees\Basic.cs" />
+    <Compile Include="Trees\CanDefrag.cs" />
     <Compile Include="Trees\CanIterateBackward.cs" />
     <Compile Include="Trees\Deletes.cs" />
     <Compile Include="Trees\FreeSpaceTest.cs" />

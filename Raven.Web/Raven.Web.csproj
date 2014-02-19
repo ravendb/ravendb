@@ -62,8 +62,6 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Config\FodyWeavers.Debug.xml" />
-    <None Include="Config\FodyWeavers.Release.xml" />
     <Content Include="FodyWeavers.xml" />
     <Content Include="Web.config" />
   </ItemGroup>
@@ -131,10 +129,7 @@
     </VisualStudio>
   </ProjectExtensions>
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
-  <Import Project="$(SolutionDir)\Imports\Fody\Fody.targets" />
-  <Target Name="BeforeBuild">
-    <Copy SourceFiles="$(MSBuildProjectDirectory)\Config\FodyWeavers.$(Configuration).xml" DestinationFiles="$(MSBuildProjectDirectory)\FodyWeavers.xml" Condition="Exists('$(MSBuildProjectDirectory)\Config\FodyWeavers.$(Configuration).xml')" />
-  </Target>
+  <Import Project="$(SolutionDir)\Imports\Fody\Fody.targets" Condition="$(Configuration) != 'Debug'" />
   <Target Name="AfterBuild">
   </Target>
 </Project>
