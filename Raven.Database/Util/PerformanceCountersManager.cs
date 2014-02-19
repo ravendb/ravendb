@@ -36,23 +36,23 @@ namespace Raven.Database.Util
             InitNoOpCounters();
         }
 
-        [PerformanceCounter(Name = "# docs / sec", CounterType = PerformanceCounterType.RateOfCountsPerSecond32, Description = "Number of documents per second.")]
-        public IPerformanceCounter DocsPerSecond { get; private set; }
+        //[PerformanceCounter(Name = "# docs / sec", CounterType = PerformanceCounterType.RateOfCountsPerSecond32, Description = "Number of documents per second.")]  //!!for remove
+        //public IPerformanceCounter DocsPerSecond { get; private set; }
 
-        [PerformanceCounter(Name = "# docs indexed / sec", CounterType = PerformanceCounterType.RateOfCountsPerSecond32, Description = "Number of documents indexed per second.")]
-        public IPerformanceCounter IndexedPerSecond { get; private set; }
+        //[PerformanceCounter(Name = "# docs indexed / sec", CounterType = PerformanceCounterType.RateOfCountsPerSecond32, Description = "Number of documents indexed per second.")]
+        //public IPerformanceCounter IndexedPerSecond { get; private set; }
 
-        [PerformanceCounter(Name = "# docs reduced / sec", CounterType = PerformanceCounterType.RateOfCountsPerSecond32, Description = "Number of documents reduced per second.")]
-        public IPerformanceCounter ReducedPerSecond { get; private set; }
+        //[PerformanceCounter(Name = "# docs reduced / sec", CounterType = PerformanceCounterType.RateOfCountsPerSecond32, Description = "Number of documents reduced per second.")]
+        //public IPerformanceCounter ReducedPerSecond { get; private set; }
 
-        [PerformanceCounter(Name = "# req / sec", CounterType = PerformanceCounterType.RateOfCountsPerSecond32, Description = "Number of requests per second.")]
-        public IPerformanceCounter RequestsPerSecond { get; private set; }
+        //[PerformanceCounter(Name = "# req / sec", CounterType = PerformanceCounterType.RateOfCountsPerSecond32, Description = "Number of requests per second.")]
+        //public IPerformanceCounter RequestsPerSecond { get; private set; }
 
-        [PerformanceCounter(Name = "# of concurrent requests", CounterType = PerformanceCounterType.NumberOfItems32, Description = "Number of concurrent requests.")]
-        public IPerformanceCounter ConcurrentRequests { get; private set; }
+        //[PerformanceCounter(Name = "# of concurrent requests", CounterType = PerformanceCounterType.NumberOfItems32, Description = "Number of concurrent requests.")]
+        //public IPerformanceCounter ConcurrentRequests { get; private set; }
 
-        public MeterMetric RequestsMeter { get; private set; }
-        public PerSecondCounterMetric RequestsPerSecondCounter { get; private set; }
+        //public MeterMetric RequestsMeter { get; private set; }
+        //public PerSecondCounterMetric RequestsPerSecondCounter { get; private set; }
         public void Setup(string name)
         {
             try
@@ -76,8 +76,8 @@ namespace Raven.Database.Util
 
         private void InstallCounters(string name)
         {
-            RequestsMeter = dbMetrics.Meter(name, "req/sec", "Requests Meter", TimeUnit.Seconds);
-            RequestsPerSecondCounter = dbMetrics.TimedCounter(name, "req/sec counter", "Requests Per Second"); 
+            //RequestsMeter = dbMetrics.Meter(name, "req/sec", "Requests Meter", TimeUnit.Seconds);  //!!!
+            //RequestsPerSecondCounter = dbMetrics.TimedCounter(name, "req/sec counter", "Requests Per Second"); 
 
             
             if (IsValidCategory(name) == false)
