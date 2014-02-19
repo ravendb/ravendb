@@ -79,17 +79,25 @@ namespace Raven.Abstractions.Smuggler
 		{
 			foreach (var filter in Filters)
 			{
+			    bool anyRecords = false;
 				bool matchedFilter = false;
 				foreach (var tuple in item.SelectTokenWithRavenSyntaxReturningFlatStructure(filter.Path))
 				{
 					if (tuple == null || tuple.Item1 == null)
 						continue;
+
+				    anyRecords = true;
+
 					var val = tuple.Item1.Type == JTokenType.String
 								? tuple.Item1.Value<string>()
 								: tuple.Item1.ToString(Formatting.None);
 					matchedFilter |= filter.Values.Any(value => String.Equals(val, value, StringComparison.OrdinalIgnoreCase)) ==
 									 filter.ShouldMatch;
 				}
+
+                if (filter.ShouldMatch == false && anyRecords == false) // RDBQA-7
+                    return true;
+
 				if (matchedFilter == false)
 					return false;
 			}
