@@ -21,6 +21,7 @@ namespace Raven.Database.Bundles.PeriodicBackups.Controllers
 
         [HttpPost]
         [Route("admin/periodicBackup/purge-tombstones")]
+        [Route("databases/{databaseName}/admin/periodicBackup/purge-tombstones")]
         public HttpResponseMessage PurgeTombstones()
         {
             var docEtagStr = GetQueryStringValue("docEtag");
