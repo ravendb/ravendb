@@ -112,7 +112,7 @@ namespace Raven.Database.Server.Controllers
 		[HttpPost]
 		[Route("indexes/{*id}")]
 		[Route("databases/{databaseName}/indexes/{*id}")]
-		public HttpResponseMessage IndexPost(string id)
+		public async Task<HttpResponseMessage >IndexPost(string id)
 		{
 			var index = id;
 			if ("forceWriteToDisk".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
@@ -126,7 +126,7 @@ namespace Raven.Database.Server.Controllers
 
 			if ("true".Equals(GetQueryStringValue("postQuery"), StringComparison.InvariantCultureIgnoreCase))
 			{
-				var postedQuery = ReadStringAsync().Result;
+				var postedQuery = await ReadStringAsync();
 				
 				SetPostRequestQuery(postedQuery);
 
