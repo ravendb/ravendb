@@ -183,6 +183,38 @@ namespace Raven.Tests.Storage.Voron
 			}
 		}
 
+        [Theory]
+        [PropertyData("Storages")]
+        public void ReadLast(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => accessor.Lists.Set("name1", "key1", new RavenJObject { { "data", "123" } }, UuidType.ReduceResults));
+                storage.Batch(accessor => accessor.Lists.Set("name1", "key9", new RavenJObject { { "data", "111" } }, UuidType.ReduceResults));
+                storage.Batch(accessor => accessor.Lists.Set("name1", "key5", new RavenJObject { { "data", "321" } }, UuidType.ReduceResults));
+                storage.Batch(accessor => accessor.Lists.Set("name2", "key2", new RavenJObject { { "data", "000" } }, UuidType.ReduceResults));
+                storage.Batch(accessor => accessor.Lists.Set("name3", "key7", new RavenJObject { { "data", "000" } }, UuidType.ReduceResults));
+                storage.Batch(accessor => accessor.Lists.Remove("name3", "key7"));
+
+                storage.Batch(accessor =>
+                {
+                    var item1 = accessor.Lists.ReadLast("name1");
+                    var item2 = accessor.Lists.ReadLast("name2");
+                    var item3 = accessor.Lists.ReadLast("name3");
+
+                    Assert.NotNull(item1);
+                    Assert.Equal("key5", item1.Key);
+                    Assert.Equal("321", item1.Data.Value<string>("data"));
+
+                    Assert.NotNull(item2);
+                    Assert.Equal("key2", item2.Key);
+                    Assert.Equal("000", item2.Data.Value<string>("data"));
+
+                    Assert.Null(item3);
+                });
+            }
+        }
+
 		private void CompareListItems(ListItem expected, ListItem actual)
 		{
 			Assert.Equal(expected.Key, actual.Key);

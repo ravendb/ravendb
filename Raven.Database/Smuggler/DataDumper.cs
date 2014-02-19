@@ -69,17 +69,15 @@ namespace Raven.Database.Smuggler
 	        LastEtagsInfo result = null;
             database.TransactionalStorage.Batch(accessor =>
             {
-                result = new LastEtagsInfo();
-                result.LastDocsEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-                result.LastAttachmentsEtag = accessor.Staleness.GetMostRecentAttachmentEtag();
-                //TODO: this impl is extremally slow! - refactor me
-                var docTombstones =
-                    accessor.Lists.Read(Constants.RavenPeriodicBackupsDocsTombstones, Etag.Empty, null, int.MaxValue)
-                            .OrderBy(x => x.Etag).ToArray();
-                if (docTombstones.Any())
-                {
-                    result.LastDocDeleteEtag = docTombstones.Last().Etag;
-                }
+                result = new LastEtagsInfo
+                         {
+                             LastDocsEtag = accessor.Staleness.GetMostRecentDocumentEtag(),
+                             LastAttachmentsEtag = accessor.Staleness.GetMostRecentAttachmentEtag()
+                         };
+
+                var lastDocumentTombstone = accessor.Lists.ReadLast(Constants.RavenPeriodicBackupsDocsTombstones);
+                if (lastDocumentTombstone != null)
+                    result.LastDocDeleteEtag = lastDocumentTombstone.Etag;
 
                 var attachmentTombstones = 
                     accessor.Lists.Read(Constants.RavenPeriodicBackupsAttachmentsTombstones, Etag.Empty, null, int.MaxValue)
@@ -154,12 +152,7 @@ namespace Raven.Database.Smuggler
             var lastEtag = startDocsEtag;
             database.TransactionalStorage.Batch(accessor =>
             {
-                //TODO: check if we have to sort it 
-                var deletions =
-                    accessor.Lists.Read(Constants.RavenPeriodicBackupsDocsTombstones, startDocsEtag, maxEtag, int.MaxValue)
-                            .OrderBy(x => x.Etag).ToArray();
-                           
-                foreach (var listItem in deletions)
+                foreach (var listItem in accessor.Lists.Read(Constants.RavenPeriodicBackupsDocsTombstones, startDocsEtag, maxEtag, int.MaxValue))
                 {
                     var o = new RavenJObject
                     {
@@ -221,12 +214,7 @@ namespace Raven.Database.Smuggler
             var lastEtag = startAttachmentsDeletionEtag;
             database.TransactionalStorage.Batch(accessor =>
             {
-                //TODO: Do we have to order by etag or is it already in order?
-                var deletions =
-                    accessor.Lists.Read(Constants.RavenPeriodicBackupsAttachmentsTombstones, startAttachmentsDeletionEtag, maxAttachmentEtag, int.MaxValue)
-                            .OrderBy(x => x.Etag).ToArray();
-
-                foreach (var listItem in deletions)
+                foreach (var listItem in accessor.Lists.Read(Constants.RavenPeriodicBackupsAttachmentsTombstones, startAttachmentsDeletionEtag, maxAttachmentEtag, int.MaxValue))
                 {
                     var o = new RavenJObject
                     {
