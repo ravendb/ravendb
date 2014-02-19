@@ -28,28 +28,21 @@ namespace Raven.Database.Bundles.PeriodicBackups.Controllers
             var attachmentEtagStr = GetQueryStringValue("attachmentEtag");
             Etag attachmentEtag = null;
 
-            try
+            if (string.IsNullOrEmpty(docEtagStr) == false)
             {
-                if (string.IsNullOrEmpty(docEtagStr) == false)
-                {
-                    docEtag = Etag.Parse(docEtagStr);
-                }
-
-                if (string.IsNullOrEmpty(attachmentEtagStr) == false)
-                {
-                    attachmentEtag = Etag.Parse(attachmentEtagStr);
-                }
-
-                if (docEtag == null && attachmentEtag == null)
-                {
-                    throw new ArgumentException("'docEtag' or 'attachmentEtag' must be set.");
-                }
+                docEtag = Etag.Parse(docEtagStr);
             }
-            catch
+
+            if (string.IsNullOrEmpty(attachmentEtagStr) == false)
+            {
+                attachmentEtag = Etag.Parse(attachmentEtagStr);
+            }
+
+            if (docEtag == null && attachmentEtag == null)
             {
                 return GetMessageWithObject(new
                 {
-                    Error = "The query string variable 'docEtag' or 'attachmentEtag' must be set to a valid guid"
+                    Error = "The query string variable 'docEtag' or 'attachmentEtag' must be set to a valid etag"
                 }, HttpStatusCode.BadRequest);
             }
 
