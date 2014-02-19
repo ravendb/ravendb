@@ -89,9 +89,9 @@ namespace Voron
 			return new PureMemoryStorageEnvironmentOptions();
 		}		
 
-		public static StorageEnvironmentOptions ForPath(string path)
+		public static StorageEnvironmentOptions ForPath(string path, string tempPath = null)
 		{
-			return new DirectoryStorageEnvironmentOptions(path);
+            return new DirectoryStorageEnvironmentOptions(path, tempPath);
 		}
 
 		public IDisposable AllowManualFlushing()
@@ -106,19 +106,24 @@ namespace Voron
 		public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
 		{
 			private readonly string _basePath;
+            private readonly string _tempPath;
+
 			private readonly Lazy<IVirtualPager> _dataPager;
 
 			private readonly ConcurrentDictionary<string, Lazy<IJournalWriter>> _journals =
 				new ConcurrentDictionary<string, Lazy<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
 
-			public DirectoryStorageEnvironmentOptions(string basePath)
+			public DirectoryStorageEnvironmentOptions(string basePath, string tempPath)
 			{
 				_basePath = Path.GetFullPath(basePath);
-				
+                _tempPath = !string.IsNullOrEmpty(tempPath) ? Path.GetFullPath(tempPath) : _basePath;
+
 				if (Directory.Exists(_basePath) == false)
-				{
 					Directory.CreateDirectory(_basePath);
-				}
+
+                if (_basePath != tempPath && Directory.Exists(_tempPath) == false)
+                    Directory.CreateDirectory(_tempPath);
+
 				_dataPager = new Lazy<IVirtualPager>(() => new Win32MemoryMapPager(Path.Combine(_basePath, Constants.DatabaseFilename)));
 			}
 
@@ -134,6 +139,11 @@ namespace Voron
 			{
 				get { return _basePath; }
 			}
+
+            public string TempPath
+            {
+                get { return _tempPath; }
+            }
 
 			public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
 			{
@@ -225,7 +235,7 @@ namespace Voron
 
 			public override IVirtualPager CreateScratchPager(string name)
 			{
-			    var scratchFile = Path.Combine(_basePath, name);
+			    var scratchFile = Path.Combine(_tempPath, name);
 			    if (File.Exists(scratchFile)) 
                     File.Delete(scratchFile);
 
