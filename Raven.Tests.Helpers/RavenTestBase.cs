@@ -500,17 +500,19 @@ namespace Raven.Tests.Helpers
 		{
 			var errors = new List<Exception>();
 
-			foreach (var store in stores)
-			{
-				try
+				foreach (var store in stores)
 				{
-					store.Dispose();
+					try
+					{
+						store.Dispose();
+					}
+					catch (Exception e)
+					{
+						errors.Add(e);
+					}
 				}
-				catch (Exception e)
-				{
-					errors.Add(e);
-				}
-			}
+
+				stores.Clear();
 
 			foreach (var server in servers)
 			{
@@ -523,6 +525,8 @@ namespace Raven.Tests.Helpers
 					errors.Add(e);
 				}
 			}
+
+			servers.Clear();
 
 			GC.Collect(2);
 			GC.WaitForPendingFinalizers();
@@ -547,6 +551,7 @@ namespace Raven.Tests.Helpers
 					}
 				}
 			}
+
 
 			if (errors.Count > 0)
 				throw new AggregateException(errors);
