@@ -30,7 +30,7 @@ namespace Raven.Tests.Issues
                     session.Store(new Order{Company = "companies/1"});
                     session.SaveChanges();
                 }
-
+               
                 using (var sesion = store.OpenSession())
                 {
                     var company = sesion.Load<Company>("companies/1");
