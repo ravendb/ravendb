@@ -73,7 +73,7 @@ namespace Raven.Tests.Issues
         }
 
         [Fact]
-        public void SingleOrDefaultShouldSetPageSizeToTwo()
+        public void SingleOrDefaultShouldSetPageSizeToTwoIfItHasNotBeenSet()
         {
             using (var store = NewRemoteDocumentStore())
             {
@@ -100,7 +100,7 @@ namespace Raven.Tests.Issues
         }
 
         [Fact]
-        public void SingleShouldSetPageSizeToTwo()
+        public void SingleShouldSetPageSizeToTwoIfItHasNotBeenSet()
         {
             using (var store = NewRemoteDocumentStore())
             {
@@ -124,6 +124,175 @@ namespace Raven.Tests.Issues
                 var profilingInformation = store.GetProfilingInformationFor(id);
                 Assert.Equal(1, profilingInformation.Requests.Count);
                 Assert.Contains("pageSize=2", profilingInformation.Requests[0].Url);
+            }
+        }
+
+        [Fact]
+        public void FirstOrDefaultShouldSetPageSizeToOneIfItIsBigger()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                store.InitializeProfiling();
+
+                Guid id;
+                using (var session = store.OpenSession())
+                {
+                    id = ((DocumentSession)session).DatabaseCommands.ProfilingInformation.Id;
+
+                    var product = session
+                        .Advanced
+                        .LuceneQuery<Product>()
+                        .Take(100)
+                        .FirstOrDefault();
+
+                    Assert.Null(product);
+                }
+
+                var profilingInformation = store.GetProfilingInformationFor(id);
+                Assert.Equal(1, profilingInformation.Requests.Count);
+                Assert.Contains("pageSize=1", profilingInformation.Requests[0].Url);
+            }
+        }
+
+        [Fact]
+        public void FirstShouldSetPageSizeToOneIfItIsBigger()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                store.InitializeProfiling();
+
+                Guid id;
+                using (var session = store.OpenSession())
+                {
+                    id = ((DocumentSession)session).DatabaseCommands.ProfilingInformation.Id;
+
+                    var e = Assert.Throws<InvalidOperationException>(
+                        () => session
+                            .Advanced
+                            .LuceneQuery<Product>()
+                            .Take(100)
+                            .First());
+
+                    Assert.Equal("Sequence contains no elements", e.Message);
+                }
+
+                var profilingInformation = store.GetProfilingInformationFor(id);
+                Assert.Equal(1, profilingInformation.Requests.Count);
+                Assert.Contains("pageSize=1", profilingInformation.Requests[0].Url);
+            }
+        }
+
+        [Fact]
+        public void SingleOrDefaultShouldSetPageSizeToTwoIfItIsBigger()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                store.InitializeProfiling();
+
+                Guid id;
+
+                using (var session = store.OpenSession())
+                {
+                    id = ((DocumentSession)session).DatabaseCommands.ProfilingInformation.Id;
+
+                    var product = session
+                        .Advanced
+                        .LuceneQuery<Product>()
+                        .Take(100)
+                        .SingleOrDefault();
+
+                    Assert.Null(product);
+                }
+
+                var profilingInformation = store.GetProfilingInformationFor(id);
+                Assert.Equal(1, profilingInformation.Requests.Count);
+                Assert.Contains("pageSize=2", profilingInformation.Requests[0].Url);
+            }
+        }
+
+        [Fact]
+        public void SingleShouldSetPageSizeToTwoIfItIsBigger()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                store.InitializeProfiling();
+
+                Guid id;
+
+                using (var session = store.OpenSession())
+                {
+                    id = ((DocumentSession)session).DatabaseCommands.ProfilingInformation.Id;
+
+                    var e = Assert.Throws<InvalidOperationException>(
+                        () => session
+                            .Advanced
+                            .LuceneQuery<Product>()
+                            .Take(100)
+                            .Single());
+
+                    Assert.Equal("Sequence contains no elements", e.Message);
+                }
+
+                var profilingInformation = store.GetProfilingInformationFor(id);
+                Assert.Equal(1, profilingInformation.Requests.Count);
+                Assert.Contains("pageSize=2", profilingInformation.Requests[0].Url);
+            }
+        }
+
+        [Fact]
+        public void SingleOrDefaultShouldNotSetPageToTwoIfPageIsSmaller()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                store.InitializeProfiling();
+
+                Guid id;
+
+                using (var session = store.OpenSession())
+                {
+                    id = ((DocumentSession)session).DatabaseCommands.ProfilingInformation.Id;
+
+                    var product = session
+                        .Advanced
+                        .LuceneQuery<Product>()
+                        .Take(1)
+                        .SingleOrDefault();
+
+                    Assert.Null(product);
+                }
+
+                var profilingInformation = store.GetProfilingInformationFor(id);
+                Assert.Equal(1, profilingInformation.Requests.Count);
+                Assert.Contains("pageSize=1", profilingInformation.Requests[0].Url);
+            }
+        }
+
+        [Fact]
+        public void SingleShouldNotSetPageToTwoIfPageIsSmaller()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                store.InitializeProfiling();
+
+                Guid id;
+
+                using (var session = store.OpenSession())
+                {
+                    id = ((DocumentSession)session).DatabaseCommands.ProfilingInformation.Id;
+
+                    var e = Assert.Throws<InvalidOperationException>(
+                        () => session
+                            .Advanced
+                            .LuceneQuery<Product>()
+                            .Take(1)
+                            .Single());
+
+                    Assert.Equal("Sequence contains no elements", e.Message);
+                }
+
+                var profilingInformation = store.GetProfilingInformationFor(id);
+                Assert.Equal(1, profilingInformation.Requests.Count);
+                Assert.Contains("pageSize=1", profilingInformation.Requests[0].Url);
             }
         }
 

@@ -1060,7 +1060,9 @@ If you really want to do in memory filtering on the data returned from the query
 
         private IEnumerable<T> ExecuteQueryOperation(int take)
         {
-            Take(take);
+            if (!pageSize.HasValue || pageSize > take)
+                Take(take);
+
             InitSync();
 
             return queryOperation.Complete<T>();
