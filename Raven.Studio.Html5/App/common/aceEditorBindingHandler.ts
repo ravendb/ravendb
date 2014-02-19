@@ -32,7 +32,11 @@ class aceEditorBindingHandler {
         var theme = bindingValues.theme || this.defaults.theme; // "ace/theme/github";
         var fontSize = bindingValues.fontSize || this.defaults.fontSize; // "16px";
         var lang = bindingValues.lang || this.defaults.lang; // "ace/mode/csharp";
-        var code = bindingContext.$rawData; // Can't grab bindingValues.code, because this will return the unwrapped string. We actually want access to the observable monad.
+        var code = typeof bindingValues.code === "function" ? bindingValues.code : bindingContext.$rawData;
+
+        if (typeof code !== "function") {
+            throw new Error("code should be an observable");
+        }
 
         var aceEditor = ace.edit(element);
         aceEditor.setTheme(theme);
