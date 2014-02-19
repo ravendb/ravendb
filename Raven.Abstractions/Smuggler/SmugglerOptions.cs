@@ -14,7 +14,9 @@ using System.Linq;
 
 namespace Raven.Abstractions.Smuggler
 {
-	public class SmugglerOptions
+    using System.Text.RegularExpressions;
+
+    public class SmugglerOptions
 	{
 		public string TransformScript { get; set; }
 
@@ -149,5 +151,28 @@ namespace Raven.Abstractions.Smuggler
 		{
 			Values = new List<string>();
 		}
+
+        private static readonly Regex Regex = new Regex(@"('[^']+'|[^,]+)");
+
+	    public static List<string> ParseValues(string value)
+	    {
+            var results = new List<string>();
+
+            if (string.IsNullOrEmpty(value))
+                return results;
+
+	        var matches = Regex.Matches(value);
+	        for (var i = 0; i < matches.Count; i++)
+	        {
+	            var match = matches[i].Value;
+	            
+	            if (match.StartsWith("'") && match.EndsWith("'"))
+                    match = match.Substring(1, match.Length - 2);
+
+                results.Add(match);
+	        }
+
+	        return results;
+	    }
 	}
 }
