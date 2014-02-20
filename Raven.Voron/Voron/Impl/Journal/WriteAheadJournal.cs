@@ -361,10 +361,12 @@ namespace Voron.Impl.Journal
 			private long _totalWrittenButUnsyncedBytes;
 			private DateTime _lastDataFileSyncTime;
 			private JournalFile _lastFlushedJournal;
+			private bool _isDisposed;
 
 			public JournalApplicator(WriteAheadJournal waj)
 			{
 				_waj = waj;
+				_isDisposed = false;
 			}
 
 			public void ApplyLogsToDataFile(long oldestActiveTransaction, Transaction transaction = null)
@@ -377,8 +379,12 @@ namespace Voron.Impl.Journal
                     locked = true;
                 }
 
+				
 				try
 				{
+					if (_isDisposed)
+						return;
+
 					var alreadyInWriteTx = transaction != null && transaction.Flags == TransactionFlags.ReadWrite;
 
 					var jrnls = _waj._files.Select(x => x.GetSnapshot()).OrderBy(x => x.Number).ToList();
@@ -522,33 +528,26 @@ namespace Voron.Impl.Journal
 				var scratchPagerState = scratchBufferPool.PagerState;
 				scratchPagerState.AddRef();
 
-				try
+				var sortedPages = pagesToWrite.OrderBy(x => x.Key)
+					.Select(x => scratchBufferPool.ReadPage(x.Value.ScratchPos, scratchPagerState))
+					.ToList();
+
+				var last = sortedPages.Last();
+
+				var numberOfPagesInLastPage = last.IsOverflow == false ? 1 :
+					_waj._env.Options.DataPager.GetNumberOfOverflowPages(last.OverflowSize);
+
+				EnsureDataPagerSpacing(transaction, last, numberOfPagesInLastPage, alreadyInWriteTx);
+
+				long written = 0;
+				int index = 0;
+				foreach (var page in sortedPages)
 				{
-					var sortedPages = pagesToWrite.OrderBy(x => x.Key)
-													.Select(x => scratchBufferPool.ReadPage(x.Value.ScratchPos, scratchPagerState))
-													.ToList();
-
-					var last = sortedPages.Last();
-
-					var numberOfPagesInLastPage = last.IsOverflow == false ? 1 :
-						_waj._env.Options.DataPager.GetNumberOfOverflowPages(last.OverflowSize);
-
-					EnsureDataPagerSpacing(transaction, last, numberOfPagesInLastPage, alreadyInWriteTx);
-
-					long written = 0;
-					int index = 0;
-					foreach (var page in sortedPages)
-					{
-						written += _waj._dataPager.Write(page);
-						index++;
-					}
-
-					_totalWrittenButUnsyncedBytes += written;
+					written += _waj._dataPager.Write(page);
+					index++;
 				}
-				finally
-				{
-					scratchPagerState.Release();
-				}
+
+				_totalWrittenButUnsyncedBytes += written;
 			}
 
 			private void EnsureDataPagerSpacing(Transaction transaction, Page last, int numberOfPagesInLastPage,
@@ -645,14 +644,24 @@ namespace Voron.Impl.Journal
 
 			public void Dispose()
 			{
-				foreach (var journalFile in _journalsToDelete)
+				if (_isDisposed)
+					return;
+
+				using (TakeFlushingLock())
 				{
-					// we need to release all unused journals 
-					// however here we don't force them to DeleteOnClose
-					// because we didn't synced the data file yet
-					// and we will need them on a next database recovery
-					journalFile.Value.Release();
+					foreach (var journalFile in _journalsToDelete)
+					{
+						// we need to release all unused journals 
+						// however here we don't force them to DeleteOnClose
+						// because we didn't synced the data file yet
+						// and we will need them on a next database recovery
+						journalFile.Value.Release();
+					}
+
+					_isDisposed = true;
 				}
+
+				_flushingSemaphore.Dispose();
 			}
 
 		    public IDisposable TakeFlushingLock()
