@@ -10,7 +10,6 @@ namespace Raven.Database.Server.Security
 				// allow to get files that are static and are never secret, for example, the studio, the cross domain
 				// policy and the fav icon
 				"/",
-				"/studio/Index.html",
 				"/raven/studio.html",
 				"/silverlight/Raven.Studio.xap",
 				"/favicon.ico",
@@ -19,5 +18,15 @@ namespace Raven.Database.Server.Security
 				"/OAuth/API-Key",
 				"/OAuth/Cookie",
 			};
+
+		public static bool IsNeverSecretUrl(string requestUrl)
+		{
+			return Urls.Contains(requestUrl) || IsHtml5StudioUrl(requestUrl);
+		}
+
+		private static bool IsHtml5StudioUrl(string requestUrl)
+		{
+			return requestUrl.StartsWith("/studio/");
+		}
 	}
 }

@@ -70,7 +70,7 @@ namespace Raven.Database.Server.Security
 		public bool Authorize(IHttpContext context)
 		{
 			var requestUrl = context.GetRequestUrl();
-			if (NeverSecret.Urls.Contains(requestUrl))
+			if (NeverSecret.IsNeverSecretUrl(requestUrl))
 				return true;
 
 			//CORS pre-flight (ignore creds if using cors).
