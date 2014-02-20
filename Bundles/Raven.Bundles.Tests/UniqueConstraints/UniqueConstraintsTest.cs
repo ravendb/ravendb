@@ -1,40 +1,24 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
+using Raven.Bundles.UniqueConstraints;
+using Raven.Client.Embedded;
+using Raven.Client.UniqueConstraints;
+using Raven.Tests;
 
 namespace Raven.Bundles.Tests.UniqueConstraints
 {
-	using System;
-	using System.IO;
-
-	using Raven.Bundles.UniqueConstraints;
-	using Raven.Client.Embedded;
-	using Raven.Client.UniqueConstraints;
-
-	public abstract class UniqueConstraintsTest : IDisposable
+	public abstract class UniqueConstraintsTest : RavenTest
 	{
 		protected UniqueConstraintsTest()
 		{
-			this.DocumentStore = new EmbeddableDocumentStore
-				{
-					RunInMemory = true, 
-					UseEmbeddedHttpServer = true,
-					Configuration =
-						{
-							Port = 8079
-						}
-				};
-			this.DocumentStore.Configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(UniqueConstraintsPutTrigger).Assembly));
-			this.DocumentStore.RegisterListener(new UniqueConstraintsStoreListener());
-
-			this.DocumentStore.Initialize();
+			DocumentStore = NewDocumentStore(port: 8079, configureStore: store =>
+			{
+				store.Configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(UniqueConstraintsPutTrigger).Assembly));
+				store.RegisterListener(new UniqueConstraintsStoreListener());
+			});
 		}
 
 		protected EmbeddableDocumentStore DocumentStore { get; set; }
-
-		public void Dispose()
-		{
-			DocumentStore.Dispose();
-		}
 	}
 
 	public class User
