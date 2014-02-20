@@ -33,9 +33,9 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task CanWaitForReplication()
 		{
-			var store1 = CreateStore(requestedStorageType: "esent");
-            var store2 = CreateStore(requestedStorageType: "esent");
-            var store3 = CreateStore(requestedStorageType: "esent");
+			var store1 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName);
+            var store2 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName);
+            var store3 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName);
 
 			SetupReplication(store1.DatabaseCommands, store2, store3);
 
