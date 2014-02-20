@@ -133,7 +133,9 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
-		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null)
+		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
+		                                 RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
+		                                 string exclude = null, string transformer = null)
 		{
 			pageSize = Math.Min(pageSize, database.Configuration.MaxPageSize);
 
@@ -150,7 +152,9 @@ namespace Raven.Client.Embedded
 				nextPageStart = actualStart;
 			}
 
-			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, actualStart, pageSize, CancellationToken.None, ref nextPageStart);
+			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, actualStart,
+			                                                                          pageSize, CancellationToken.None,
+			                                                                          ref nextPageStart, transformer);
 
 			if (pagingInformation != null)
 				pagingInformation.Fill(start, pageSize, nextPageStart);
@@ -718,7 +722,7 @@ namespace Raven.Client.Embedded
 				                pageSize,
 				                CancellationToken.None,
 				                ref nextPageStart,
-				                addItem);
+				                addItem, null);
 
 				            return nextPageStart;
 				        }

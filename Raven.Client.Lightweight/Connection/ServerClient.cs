@@ -104,10 +104,10 @@ namespace Raven.Client.Connection
 		/// Gets documents for the specified key prefix
 		/// </summary>
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
-			RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null)
+			RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null, string transformer = null)
 		{
 			return
-				asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude)
+				asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude, transformer)
 					.ResultUnwrap();
 		}
 

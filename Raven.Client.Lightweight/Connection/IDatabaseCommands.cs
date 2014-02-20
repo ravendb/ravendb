@@ -51,7 +51,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Retrieves documents for the specified key prefix
 		/// </summary>
-		JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null,  bool metadataOnly = false, string exclude = null);
+		JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null,  bool metadataOnly = false, string exclude = null, string transformer = null);
 
 		/// <summary>
 		/// Retrieves the document for the specified key
