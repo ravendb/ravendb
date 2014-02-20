@@ -321,15 +321,34 @@ namespace Raven.Database.Server.Controllers.Admin
   
                       //  ConcurrentRequests = (int)documentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.NextValue(),
                         DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
-                        DocsPerSecondCounter = documentDatabase.WorkContext.MetricsCounters.DocsPerSecond.Count,
-                        IndexedPerSecondCounter = documentDatabase.WorkContext.MetricsCounters.IndexedPerSecond.Count,
-                        ReducedPerSecondCounter = documentDatabase.WorkContext.MetricsCounters.ReducedPerSecond.Count,
-                        Count = documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.Count,
-                        MeanRate = Math.Round(documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.MeanRate,2),
-                        OneMinuteRate = Math.Round(documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.OneMinuteRate,2),
-                        FiveMinuteRate = Math.Round(documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.FiveMinuteRate,2),  //??RequestsMeter not required
-                        FifteenMinuteRate = Math.Round(documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.FifteenMinuteRate, 2),
-                        CounterRequestsPerSecond = Math.Round(documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.CurrentValue,2)
+                        //DocsPerSecondCounter = documentDatabase.WorkContext.MetricsCounters.DocsPerSecond.Count,
+                        //IndexedPerSecondCounter = documentDatabase.WorkContext.MetricsCounters.IndexedPerSecond.Count,
+                        //ReducedPerSecondCounter = documentDatabase.WorkContext.MetricsCounters.ReducedPerSecond.Count,
+                        //Count = documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.Count,
+                        //MeanRate = Math.Round(documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.MeanRate,2),
+                        //OneMinuteRate = Math.Round(documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.OneMinuteRate,2),
+                        //FiveMinuteRate = Math.Round(documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.FiveMinuteRate,2),  //??RequestsMeter not required
+                        //FifteenMinuteRate = Math.Round(documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.FifteenMinuteRate, 2),
+                        //CounterRequestsPerSecond = Math.Round(documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.CurrentValue,2),
+                        MetricsData = new FullMetricsData
+                        {
+                            DocsPerSecondCounter = documentDatabase.WorkContext.MetricsCounters.DocsPerSecond.Count,
+                            IndexedPerSecondCounter = documentDatabase.WorkContext.MetricsCounters.IndexedPerSecond.Count,
+                            ReducedPerSecondCounter = documentDatabase.WorkContext.MetricsCounters.ReducedPerSecond.Count,
+                            Count = documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.Count,
+                            MeanRate = Math.Round(documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.MeanRate, 2),
+                            OneMinuteRate = Math.Round(documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.OneMinuteRate, 2),
+                            FiveMinuteRate = Math.Round(documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.FiveMinuteRate, 2),  //??RequestsMeter not required
+                            FifteenMinuteRate = Math.Round(documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.FifteenMinuteRate, 2),
+                            CounterRequestsPerSecond = Math.Round(documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.CurrentValue, 2),
+                            HistCounter = documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondHistogram.Count,
+                            HistMax = Math.Round(documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondHistogram.Max, 2),
+                            HistMin = Math.Round(documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondHistogram.Min, 2),
+                            HistMean = Math.Round(documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondHistogram.Mean, 2),
+                            HistStdev = Math.Round(documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondHistogram.StdDev, 2),
+                            HistPercentiles = documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondHistogram.Percentiles(), 
+ 
+                        }
                     }
             };
 
