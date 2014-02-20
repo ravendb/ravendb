@@ -198,9 +198,9 @@ body {
   width: 450px;
 }
 .ko-grid {
-  position: absolute;
-  right: 0;
-  left: 0;
+  /*position: absolute;
+    right: 0;
+    left: 0;*/
 }
 .ko-grid:focus {
   outline: 0;
@@ -374,3 +374,4 @@ footer ul {
     margin-bottom: 0;
   }
 }
+/*# sourceMappingURL=app.css.map */

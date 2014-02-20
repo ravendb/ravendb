@@ -27,10 +27,13 @@ namespace Raven.Abstractions.Smuggler
             OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
             Timeout = TimeSpan.FromSeconds(30);
             ShouldExcludeExpired = false;
-            StartAttachmentsEtag = StartDocsEtag = Etag.Empty;
+	        StartDocsDeletionEtag = StartAttachmentsDeletionEtag = StartAttachmentsEtag = StartDocsEtag = Etag.Empty;
             Limit = int.MaxValue;
 		    MaxStepsForTransformScript = 10*1000;
+	        ExportDeletions = false;
         }
+
+        public bool ExportDeletions { get; set; }
 
         /// <summary>
         /// Start exporting from the specified documents etag
@@ -41,6 +44,16 @@ namespace Raven.Abstractions.Smuggler
         /// Start exporting from the specified attachments etag
         /// </summary>
         public Etag StartAttachmentsEtag { get; set; }
+
+        /// <summary>
+        /// Start exporting from the specified document deletion etag
+        /// </summary>
+        public Etag StartDocsDeletionEtag { get; set; }
+
+        /// <summary>
+        /// Start exporting from the specified attachment deletion etag
+        /// </summary>
+        public Etag StartAttachmentsDeletionEtag { get; set; }
 
         /// <summary>
         /// The number of document or attachments or indexes or transformers to load in each call to the RavenDB database.

@@ -256,6 +256,7 @@
     <Compile Include="Issues\1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client.cs" />
+    <Compile Include="Issues\RavenDB_1302.cs" />
     <Compile Include="Issues\RavenDB_1466.cs" />
     <Compile Include="Issues\RavenDB_1305.cs" />
     <Compile Include="Issues\RavenDB_1443 .cs" />
@@ -282,9 +283,11 @@
     <Compile Include="Bugs\TransformerThatReturnAnArray.cs" />
     <Compile Include="Issues\RavenDB_1435.cs" />
     <Compile Include="Issues\RavenDB_1497.cs" />
+    <Compile Include="Issues\RavenDB_1517.cs" />
     <Compile Include="Issues\RavenDB_1520.cs" />
     <Compile Include="Issues\RavenDB_1533.cs" />
     <Compile Include="Issues\RavenDB_1537.cs" />
+    <Compile Include="Issues\RavenDB_1539.cs" />
     <Compile Include="Issues\RavenDB_1561.cs" />
     <Compile Include="Issues\RavenDB_1560.cs" />
     <Compile Include="Issues\RavenDB_1595.cs" />
@@ -299,6 +302,7 @@
     <Compile Include="Issues\RavenDB_1666.cs" />
     <Compile Include="Issues\RavenDB_1701.cs" />
     <Compile Include="Issues\RavenDB_1716.cs" />
+    <Compile Include="Issues\RavenDB_1717.cs" />
     <Compile Include="Issues\RavenDB_1735.cs" />
     <Compile Include="Issues\RDBQA_4.cs" />
     <Compile Include="Issues\RavenDB_1553.cs" />
@@ -307,7 +311,6 @@
     <Compile Include="Issues\RavenDB_1598_MappingComplexProperties.cs" />
     <Compile Include="Issues\RavenDB_1600.cs" />
     <Compile Include="Issues\ReplicationAlerts.cs" />
-    <Compile Include="Issues\RavenDB_1539.cs" />
     <Compile Include="Issues\RavenDB_1557.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
     <Compile Include="Linq\GroupByAndDocumentId.cs" />

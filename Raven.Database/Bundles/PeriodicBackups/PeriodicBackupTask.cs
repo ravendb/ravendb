@@ -21,6 +21,7 @@ using Raven.Database.Server;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 using Task = System.Threading.Tasks.Task;
+using System.Linq;
 
 namespace Raven.Database.Bundles.PeriodicBackups
 {
@@ -97,7 +98,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
                         var timeSinceLastBackup = DateTime.UtcNow - backupStatus.LastBackup;
                         var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
-                        incrementalBackupTimer = new Timer(state => TimerCallback(state, false), null, nextBackup, interval);
+                        incrementalBackupTimer = new Timer(state => TimerCallback(false), null, nextBackup, interval);
                     }
                     else
                     {
@@ -111,7 +112,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
                         var timeSinceLastBackup = DateTime.UtcNow - backupStatus.LastFullBackup;
                         var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
-                        fullBackupTimer = new Timer(state => TimerCallback(state, true), null, nextBackup, interval);
+                        fullBackupTimer = new Timer(state => TimerCallback(true), null, nextBackup, interval);
                     }
                     else
                     {
@@ -138,7 +139,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 
 
-        private void TimerCallback(object state, bool fullBackup)
+        private void TimerCallback(bool fullBackup)
         {
             if (currentTask != null)
                 return;
@@ -157,6 +158,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
                     {
                         try
                         {
+                            var dataDumper = new DataDumper(documentDatabase);
                             var localBackupConfigs = backupConfigs;
                             var localBackupStatus = backupStatus;
                             if (localBackupConfigs == null)
@@ -164,10 +166,12 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
                             if (fullBackup == false)
                             {
-                                var databaseStatistics = documentDatabase.Statistics;
+                                var currentEtags = dataDumper.FetchCurrentMaxEtags();
                                 // No-op if nothing has changed
-                                if (databaseStatistics.LastDocEtag == localBackupStatus.LastDocsEtag &&
-                                    databaseStatistics.LastAttachmentEtag == localBackupStatus.LastAttachmentsEtag)
+                                if (currentEtags.LastDocsEtag == localBackupStatus.LastDocsEtag &&
+                                    currentEtags.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
+                                    currentEtags.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
+                                    currentEtags.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
                                 {
                                     return;
                                 }
@@ -199,16 +203,21 @@ namespace Raven.Database.Bundles.PeriodicBackups
                                                       {
                                                           StartDocsEtag = localBackupStatus.LastDocsEtag,
                                                           StartAttachmentsEtag = localBackupStatus.LastAttachmentsEtag,
+                                                          StartDocsDeletionEtag = localBackupStatus.LastDocsDeletionEtag,
+                                                          StartAttachmentsDeletionEtag = localBackupStatus.LastAttachmentDeletionEtag,
                                                           Incremental = true,
+                                                          ExportDeletions = true
                                                       };
 
-                            var exportResult = await new DataDumper(documentDatabase).ExportData(new SmugglerExportOptions { ToFile = backupPath }, smugglerOptions);
+                            var exportResult = await dataDumper.ExportData(new SmugglerExportOptions { ToFile = backupPath }, smugglerOptions);
 
                             if (fullBackup == false)
                             {
                                 // No-op if nothing has changed
                                 if (exportResult.LastDocsEtag == localBackupStatus.LastDocsEtag &&
-                                    exportResult.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag)
+                                    exportResult.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
+                                    exportResult.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
+                                    exportResult.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
                                 {
                                     logger.Info(
                                         "Periodic backup returned prematurely, nothing has changed since last backup");
@@ -237,6 +246,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
                             {
                                 localBackupStatus.LastAttachmentsEtag = exportResult.LastAttachmentsEtag;
                                 localBackupStatus.LastDocsEtag = exportResult.LastDocsEtag;
+                                localBackupStatus.LastDocsDeletionEtag = exportResult.LastDocDeleteEtag;
+                                localBackupStatus.LastAttachmentDeletionEtag = exportResult.LastAttachmentsDeleteEtag;
                                 localBackupStatus.LastBackup = SystemTime.UtcNow;    
                             }
                             

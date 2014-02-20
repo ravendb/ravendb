@@ -14,6 +14,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
@@ -30,6 +31,13 @@ namespace Raven.Database.Server.Controllers
 		{
 			get;
 			private set;
+		}
+
+		private string queryFromPostRequest;
+
+		public void SetPostRequestQuery(string query)
+		{
+			queryFromPostRequest = EscapingHelper.UnescapeLongDataString(query);
 		}
 
 		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
@@ -253,11 +261,11 @@ namespace Raven.Database.Server.Controllers
 			};
 		}
 
-		protected IndexQuery GetIndexQuery(int maxPageSize)
+		protected virtual IndexQuery GetIndexQuery(int maxPageSize)
 		{
 			var query = new IndexQuery
 			{
-				Query = GetQueryStringValue("query") ?? "",
+				Query = GetQueryStringValue("query") ?? queryFromPostRequest ?? "",
 				Start = GetStart(),
 				Cutoff = GetCutOff(),
                 WaitForNonStaleResultsAsOfNow = GetWaitForNonStaleResultsAsOfNow(),

@@ -281,7 +281,7 @@ namespace Raven.Tests.Helpers
 			return ravenDbServer;
 		}
 
-		public ITransactionalStorage NewTransactionalStorage(string requestedStorage = null, string dataDir = null, bool runInMemory = false, OrderedPartCollection<AbstractDocumentCodec> documentCodecs = null)
+		public ITransactionalStorage NewTransactionalStorage(string requestedStorage = null, string dataDir = null, string tempDir = null, bool runInMemory = false, OrderedPartCollection<AbstractDocumentCodec> documentCodecs = null)
 		{
 			ITransactionalStorage newTransactionalStorage;
 			string storageType = GetDefaultStorageType(requestedStorage);
@@ -293,6 +293,8 @@ namespace Raven.Tests.Helpers
 				FileSystemDataDirectory = Path.Combine(dataDirectory, "FileSystem"),
 				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 			};
+
+            ravenConfiguration.Settings["Raven/Voron/TempPath"] = tempDir;
 
 			if (storageType == "munin")
 				newTransactionalStorage = new Storage.Managed.TransactionalStorage(ravenConfiguration, () => { });
@@ -343,6 +345,54 @@ namespace Raven.Tests.Helpers
 		{
 			Assert.True(SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)));
 		}
+
+        protected PeriodicBackupStatus GetPerodicBackupStatus(DocumentDatabase db)
+	    {
+            return GetPerodicBackupStatus(key => db.Get(key, null));
+	    }
+
+        protected PeriodicBackupStatus GetPerodicBackupStatus(IDatabaseCommands commands)
+        {
+            return GetPerodicBackupStatus(commands.Get);
+        }
+
+        private PeriodicBackupStatus GetPerodicBackupStatus(Func<string, JsonDocument> getDocument)
+        {
+            var jsonDocument = getDocument(PeriodicBackupStatus.RavenDocumentKey);
+            if (jsonDocument == null)
+                return new PeriodicBackupStatus();
+
+            return jsonDocument.DataAsJson.JsonDeserialization<PeriodicBackupStatus>();
+        }
+
+        protected void WaitForPeriodicBackup(DocumentDatabase db, PeriodicBackupStatus previousStatus)
+        {
+            WaitForPeriodicBackup(key => db.Get(key, null), previousStatus);
+        }
+
+        protected void WaitForPeriodicBackup(IDatabaseCommands commands, PeriodicBackupStatus previousStatus)
+        {
+            WaitForPeriodicBackup(commands.Get, previousStatus);
+        }
+
+        private void WaitForPeriodicBackup(Func<string, JsonDocument> getDocument, PeriodicBackupStatus previousStatus)
+        {
+            PeriodicBackupStatus currentStatus = null;
+            var done = SpinWait.SpinUntil(() =>
+            {
+                currentStatus = GetPerodicBackupStatus(getDocument);
+                return currentStatus.LastDocsEtag != previousStatus.LastDocsEtag ||
+                       currentStatus.LastAttachmentsEtag != previousStatus.LastAttachmentsEtag ||
+                       currentStatus.LastDocsDeletionEtag != previousStatus.LastDocsDeletionEtag ||
+                       currentStatus.LastAttachmentDeletionEtag != previousStatus.LastAttachmentDeletionEtag;
+            }, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
+            Assert.True(done);
+            previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
+            previousStatus.LastAttachmentsEtag = currentStatus.LastAttachmentsEtag;
+            previousStatus.LastDocsDeletionEtag = currentStatus.LastDocsDeletionEtag;
+            previousStatus.LastAttachmentDeletionEtag = currentStatus.LastAttachmentDeletionEtag;
+
+        }
 
 		protected void WaitForBackup(DocumentDatabase db, bool checkError)
 		{
@@ -500,17 +550,19 @@ namespace Raven.Tests.Helpers
 		{
 			var errors = new List<Exception>();
 
-			foreach (var store in stores)
-			{
-				try
+				foreach (var store in stores)
 				{
-					store.Dispose();
+					try
+					{
+						store.Dispose();
+					}
+					catch (Exception e)
+					{
+						errors.Add(e);
+					}
 				}
-				catch (Exception e)
-				{
-					errors.Add(e);
-				}
-			}
+
+				stores.Clear();
 
 			foreach (var server in servers)
 			{
@@ -523,6 +575,8 @@ namespace Raven.Tests.Helpers
 					errors.Add(e);
 				}
 			}
+
+			servers.Clear();
 
 			GC.Collect(2);
 			GC.WaitForPendingFinalizers();
@@ -547,6 +601,7 @@ namespace Raven.Tests.Helpers
 					}
 				}
 			}
+
 
 			if (errors.Count > 0)
 				throw new AggregateException(errors);

@@ -4,20 +4,20 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Media;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Text;
-using System.Windows.Forms;
 using Xunit;
 
 namespace Raven.Tests.Helpers
 {
 	public class EnsureTestCleanupAttribute : BeforeAfterTestAttribute
 	{
+		private static string _lastTestName;
 		public static void AssertPortsNotInUse(string test, params int[] ports)
 		{
 			IPGlobalProperties ipProperties = IPGlobalProperties.GetIPGlobalProperties();
@@ -39,12 +39,12 @@ namespace Raven.Tests.Helpers
 
 		public override void Before(MethodInfo methodUnderTest)
 		{
-			AssertPortsNotInUse(methodUnderTest.Name,8079, 8078, 8077, 8076, 8075);
+			AssertPortsNotInUse(_lastTestName,8079, 8078, 8077, 8076, 8075);
 		}
 
 		public override void After(MethodInfo methodUnderTest)
 		{
-			AssertPortsNotInUse(methodUnderTest.Name, 8079, 8078, 8077, 8076, 8075);
+			_lastTestName = methodUnderTest.Name;
 		}
 	}
 }

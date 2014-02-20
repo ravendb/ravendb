@@ -231,10 +231,15 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="Backup\ProgressNotifier.cs" />
+    <Compile Include="Bundles\PeriodicBackups\Triggers\AttachmentAncestryPutTrigger.cs" />
+    <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Plugins\LocalAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\RemoteAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\RemoteDocumentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\LocalDocumentReplicationConflictResolver.cs" />
+    <Compile Include="Bundles\PeriodicBackups\Controllers\AdminPeriodicBackupController.cs" />
+    <Compile Include="Bundles\PeriodicBackups\Triggers\AncestryPutTrigger.cs" />
+    <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualDeleteTrigger.cs" />
     <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTask.cs" />

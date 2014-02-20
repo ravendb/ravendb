@@ -1037,7 +1037,39 @@ If you really want to do in memory filtering on the data returned from the query
 			start = count;
 		}
 
-		/// <summary>
+#if !SILVERLIGHT
+        public T First()
+        {
+            return ExecuteQueryOperation(1).First();
+        }
+
+	    public T FirstOrDefault()
+	    {
+            return ExecuteQueryOperation(1).FirstOrDefault();
+	    }
+
+        public T Single()
+        {
+            return ExecuteQueryOperation(2).Single();
+        }
+
+        public T SingleOrDefault()
+        {
+            return ExecuteQueryOperation(2).SingleOrDefault();
+        }
+
+        private IEnumerable<T> ExecuteQueryOperation(int take)
+        {
+            if (!pageSize.HasValue || pageSize > take)
+                Take(take);
+
+            InitSync();
+
+            return queryOperation.Complete<T>();
+        }
+#endif
+
+	    /// <summary>
 		///   Filter the results from the index using the specified where clause.
 		/// </summary>
 		/// <param name = "whereClause">The where clause.</param>

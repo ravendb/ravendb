@@ -53,12 +53,10 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="WindowsBase" />
-
     <Reference Include="xunit">
       <HintPath>..\..\SharedLibs\xunit\xunit.dll</HintPath>
     </Reference>
     <Reference Include="xunit.extensions">
-
       <HintPath>..\..\SharedLibs\xunit\xunit.extensions.dll</HintPath>
     </Reference>
   </ItemGroup>
@@ -96,6 +94,7 @@
     <Compile Include="Storage\Batches.cs" />
     <Compile Include="Storage\BigValue.cs" />
     <Compile Include="Storage\Concurrency.cs" />
+    <Compile Include="Storage\Files.cs" />
     <Compile Include="Storage\FreeScratchPages.cs" />
     <Compile Include="Storage\MemoryMapWithoutBackingPagerTest.cs" />
     <Compile Include="Storage\MultiTransactions.cs" />

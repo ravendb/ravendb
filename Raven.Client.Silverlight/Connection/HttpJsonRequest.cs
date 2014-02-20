@@ -563,5 +563,10 @@ namespace Raven.Client.Silverlight.Connection
         {
             throw new NotImplementedException();
         }
+
+		public async Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
+		{
+			throw new NotImplementedException();
+		}
     }
 }
