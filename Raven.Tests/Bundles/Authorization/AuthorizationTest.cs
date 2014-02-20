@@ -11,6 +11,9 @@ using System.ComponentModel.Composition.Hosting;
 using System.Web;
 using Raven.Bundles.Authorization;
 using Raven.Client.Document;
+using Raven.Database.Config;
+using Raven.Database.Extensions;
+using Raven.Database.Server;
 using Raven.Server;
 
 namespace Raven.Bundles.Tests.Authorization
@@ -34,12 +37,12 @@ namespace Raven.Bundles.Tests.Authorization
 
 		protected AuthorizationTest()
 		{
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Testing");
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Tenants");
-			server = new RavenDbServer(new database::Raven.Database.Config.RavenConfiguration
+			IOExtensions.DeleteDirectory("Data");
+			IOExtensions.DeleteDirectory("Testing");
+			IOExtensions.DeleteDirectory("Tenants");
+			server = new RavenDbServer(new RavenConfiguration
 			{
-				AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.Admin,
+				AnonymousUserAccessMode = AnonymousUserAccessMode.Admin,
 				Catalog = { Catalogs = { new AssemblyCatalog(typeof(AuthorizationDecisions).Assembly) } },
 				Port = 8079,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,

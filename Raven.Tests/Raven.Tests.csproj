@@ -223,6 +223,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\bundles\raven.bundles.uniqueconstraints\Util.cs">
+      <Link>Bundles\UniqueConstraints\Util.cs</Link>
+    </Compile>
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
@@ -253,6 +256,47 @@
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
+    <Compile Include="Bundles\Authorization\AuthorizationTest.cs" />
+    <Compile Include="Bundles\Authorization\Bugs\Bowes.cs" />
+    <Compile Include="Bundles\Authorization\Bugs\DeanWard.cs" />
+    <Compile Include="Bundles\Authorization\Bugs\fampinheiro.cs" />
+    <Compile Include="Bundles\Authorization\Bugs\Jalchr.cs" />
+    <Compile Include="Bundles\Authorization\Bugs\Kwal.cs" />
+    <Compile Include="Bundles\Authorization\Bugs\LoadingSavedInfo.cs" />
+    <Compile Include="Bundles\Authorization\Bugs\Matthew.cs" />
+    <Compile Include="Bundles\Authorization\Bugs\Preston.cs" />
+    <Compile Include="Bundles\Authorization\Bugs\WhenUsingMultiTenancy.cs" />
+    <Compile Include="Bundles\Authorization\Bugs\WithChangingOfUser.cs" />
+    <Compile Include="Bundles\Authorization\CanAskAuthQuestions.cs" />
+    <Compile Include="Bundles\Authorization\CanHandleAuthQuestions.cs" />
+    <Compile Include="Bundles\Authorization\Deleting.cs" />
+    <Compile Include="Bundles\Authorization\Reading.cs" />
+    <Compile Include="Bundles\Authorization\Writing.cs" />
+    <Compile Include="Bundles\CascadeDelete\CascadeDelete.cs" />
+    <Compile Include="Bundles\Company.cs" />
+    <Compile Include="Bundles\Expiration\WithCascade.cs" />
+    <Compile Include="Bundles\IndexReplication\Bugs\Micro.cs" />
+    <Compile Include="Bundles\IndexReplication\FactIfSqlServerIsAvailable.cs" />
+    <Compile Include="Bundles\IndexReplication\ReplicateToSql.cs" />
+    <Compile Include="Bundles\Replication\ReplicationDestinationDisabled.cs" />
+    <Compile Include="Bundles\Replication\ReplicationWithOAuth.cs" />
+    <Compile Include="Bundles\UniqueConstraints\Bugs\CaseInsensitive.cs" />
+    <Compile Include="Bundles\UniqueConstraints\Bugs\Concurrency.cs" />
+    <Compile Include="Bundles\UniqueConstraints\Bugs\JimBolla.cs" />
+    <Compile Include="Bundles\UniqueConstraints\Bugs\Lars.cs" />
+    <Compile Include="Bundles\UniqueConstraints\Bugs\MultiTenancy.cs" />
+    <Compile Include="Bundles\UniqueConstraints\Bugs\RavenDB_1499.cs" />
+    <Compile Include="Bundles\UniqueConstraints\Bugs\Troy.cs" />
+    <Compile Include="Bundles\UniqueConstraints\Bugs\Troy2.cs" />
+    <Compile Include="Bundles\UniqueConstraints\Bugs\Troy3.cs" />
+    <Compile Include="Bundles\UniqueConstraints\Bugs\TroyMapReduce.cs" />
+    <Compile Include="Bundles\UniqueConstraints\Bugs\viscious.cs" />
+    <Compile Include="Bundles\UniqueConstraints\CreateTests.cs" />
+    <Compile Include="Bundles\UniqueConstraints\DeleteTests.cs" />
+    <Compile Include="Bundles\UniqueConstraints\ExtensionCheckTests.cs" />
+    <Compile Include="Bundles\UniqueConstraints\ExtensionLoadTests.cs" />
+    <Compile Include="Bundles\UniqueConstraints\UniqueConstraintsTest.cs" />
+    <Compile Include="Bundles\UniqueConstraints\UpdateTests.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client.cs" />
@@ -1608,6 +1652,31 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Bundles\Raven.Bundles.Authorization\Raven.Bundles.Authorization.csproj">
+      <Project>{034FFD8F-F917-4A45-B920-9C460CD66BAF}</Project>
+      <Name>Raven.Bundles.Authorization</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Bundles\Raven.Bundles.CascadeDelete\Raven.Bundles.CascadeDelete.csproj">
+      <Project>{d9ccc62f-0b4e-4b37-be7e-203d34b4ec4f}</Project>
+      <Name>Raven.Bundles.CascadeDelete</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Bundles\Raven.Bundles.IndexReplication\Raven.Bundles.IndexReplication.csproj">
+      <Project>{2728bba7-5142-445e-baa5-142a25e0666d}</Project>
+      <Name>Raven.Bundles.IndexReplication</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Bundles\Raven.Bundles.UniqueConstraints\Raven.Bundles.UniqueConstraints.csproj">
+      <Project>{4c026f8a-fb36-4a30-82e9-324d207f6b48}</Project>
+      <Name>Raven.Bundles.UniqueConstraints</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Bundles\Raven.Client.Authorization\Raven.Client.Authorization.csproj">
+      <Project>{3A852FD2-E0F9-449C-8F66-0C6A180D030A}</Project>
+      <Name>Raven.Client.Authorization</Name>
+      <Aliases>client</Aliases>
+    </ProjectReference>
+    <ProjectReference Include="..\Bundles\Raven.Client.UniqueConstraints\Raven.Client.UniqueConstraints.csproj">
+      <Project>{d185331d-2b7c-4251-8ebe-140ede1fab9f}</Project>
+      <Name>Raven.Client.UniqueConstraints</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41ac479e-1eb2-4d23-aaf2-e4c8df1bc2ba}</Project>
       <Name>Raven.Abstractions</Name>

@@ -1,55 +1,31 @@
-﻿extern alias database;
-using System;
+﻿using System;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
-using System.Reflection;
+using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Bundles.CascadeDelete;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Tests;
 using Xunit;
-using System.Linq;
 
 namespace Raven.Bundles.Tests.Expiration
 {
-	public class WithCascade : IDisposable
+	public class WithCascade : RavenTest
 	{
-		private readonly DocumentStore documentStore;
-		private readonly string path;
 		private readonly RavenDbServer ravenDbServer;
+		private readonly DocumentStore documentStore;
 
 		public WithCascade()
 		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(WithCascade)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
-			var ravenConfiguration = new database::Raven.Database.Config.RavenConfiguration
+			ravenDbServer = GetNewServer(activeBundles: "documentExpiration", configureServer: configuration =>
 			{
-				Port = 8079,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-				DataDirectory = path,
-				Catalog =
-					{
-						Catalogs =
-							{
-								new AssemblyCatalog(typeof(CascadeDeleteTrigger).Assembly)
-							}
-					},
-				Settings =
-					{
-						{"Raven/Expiration/DeleteFrequencySeconds", "1"},
-						{"Raven/ActiveBundles", "documentExpiration"}
-			}
-			};
-			ravenConfiguration.PostInit();
-			ravenDbServer = new RavenDbServer(ravenConfiguration);
-			documentStore = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			};
-			documentStore.Initialize();
+				configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(CascadeDeleteTrigger).Assembly));
+				configuration.Settings["Raven/Expiration/DeleteFrequencySeconds"] = "1";
+			});
+			documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer);
 		}
 
 
@@ -147,16 +123,6 @@ namespace Raven.Bundles.Tests.Expiration
 		public class Foo
 		{
 
-		}
-
-		/// <summary>
-		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-		/// </summary>
-		/// <filterpriority>2</filterpriority>
-		public void Dispose()
-		{
-			documentStore.Dispose();
-			ravenDbServer.Dispose();
 		}
 	}
 }

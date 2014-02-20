@@ -66,50 +66,6 @@
     <Compile Include="..\..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Bundles.UniqueConstraints\Util.cs">
-      <Link>UniqueConstraints\Util.cs</Link>
-    </Compile>
-    <Compile Include="Authorization\AuthorizationTest.cs" />
-    <Compile Include="Authorization\Bugs\Bowes.cs" />
-    <Compile Include="Authorization\Bugs\DeanWard.cs" />
-    <Compile Include="Authorization\Bugs\fampinheiro.cs" />
-    <Compile Include="Authorization\Bugs\Jalchr.cs" />
-    <Compile Include="Authorization\Bugs\Kwal.cs" />
-    <Compile Include="Authorization\Bugs\LoadingSavedInfo.cs" />
-    <Compile Include="Authorization\Bugs\Matthew.cs" />
-    <Compile Include="Authorization\Bugs\Preston.cs" />
-    <Compile Include="Authorization\Bugs\WhenUsingMultiTenancy.cs" />
-    <Compile Include="Authorization\Bugs\WithChangingOfUser.cs" />
-    <Compile Include="Authorization\CanAskAuthQuestions.cs" />
-    <Compile Include="Authorization\CanHandleAuthQuestions.cs" />
-    <Compile Include="Authorization\Deleting.cs" />
-    <Compile Include="Authorization\Reading.cs" />
-    <Compile Include="Authorization\Writing.cs" />
-    <Compile Include="CascadeDelete\CascadeDelete.cs" />
-    <Compile Include="Company.cs" />
-    <Compile Include="Expiration\WithCascade.cs" />
-    <Compile Include="IndexReplication\Bugs\Micro.cs" />
-    <Compile Include="IndexReplication\FactIfSqlServerIsAvailable.cs" />
-    <Compile Include="IndexReplication\ReplicateToSql.cs" />
-    <Compile Include="Replication\ReplicationDestinationDisabled.cs" />
-    <Compile Include="Replication\ReplicationWithOAuth.cs" />
-    <Compile Include="UniqueConstraints\Bugs\CaseInsensitive.cs" />
-    <Compile Include="UniqueConstraints\Bugs\Concurrency.cs" />
-    <Compile Include="UniqueConstraints\Bugs\JimBolla.cs" />
-    <Compile Include="UniqueConstraints\Bugs\Lars.cs" />
-    <Compile Include="UniqueConstraints\Bugs\RavenDB_1499.cs" />
-    <Compile Include="UniqueConstraints\Bugs\MultiTenancy.cs" />
-    <Compile Include="UniqueConstraints\Bugs\Troy.cs" />
-    <Compile Include="UniqueConstraints\Bugs\Troy2.cs" />
-    <Compile Include="UniqueConstraints\Bugs\Troy3.cs" />
-    <Compile Include="UniqueConstraints\Bugs\TroyMapReduce.cs" />
-    <Compile Include="UniqueConstraints\Bugs\viscious.cs" />
-    <Compile Include="UniqueConstraints\CreateTests.cs" />
-    <Compile Include="UniqueConstraints\DeleteTests.cs" />
-    <Compile Include="UniqueConstraints\ExtensionCheckTests.cs" />
-    <Compile Include="UniqueConstraints\ExtensionLoadTests.cs" />
-    <Compile Include="UniqueConstraints\UniqueConstraintsTest.cs" />
-    <Compile Include="UniqueConstraints\UpdateTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">
@@ -173,6 +129,9 @@
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Replication\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\..\Tools\StyleCop\StyleCop.Targets" />

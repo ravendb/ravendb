@@ -1,9 +1,11 @@
-﻿extern alias database;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Database.Config;
+using Raven.Database.Server;
+using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.Replication;
 using Xunit;
@@ -12,10 +14,10 @@ namespace Raven.Bundles.Tests.Replication
 {
 	public class ReplicationWithOAuth : ReplicationBase
 	{
-		protected override void ModifyConfiguration(database::Raven.Database.Config.InMemoryRavenConfiguration serverConfiguration)
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
 		{
-			serverConfiguration.AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.None;
-			database::Raven.Database.Server.Security.Authentication.EnableOnce();
+			serverConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+			Authentication.EnableOnce();
 		}
 
 

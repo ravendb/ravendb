@@ -3,57 +3,28 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-extern alias database;
-using System;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
-using System.Reflection;
 using Raven.Bundles.CascadeDelete;
 using Raven.Client.Document;
 using Raven.Json.Linq;
-using Raven.Server;
+using Raven.Tests;
 using Xunit;
 
 namespace Raven.Bundles.Tests.CascadeDelete
 {
-	public class CascadeDelete : IDisposable
+	public class CascadeDelete : RavenTest
 	{
 		private readonly DocumentStore documentStore;
-		private readonly string path;
-		private readonly RavenDbServer ravenDbServer;
 
 		public CascadeDelete()
 		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(CascadeDelete)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
-			ravenDbServer = new RavenDbServer(
-				new database::Raven.Database.Config.RavenConfiguration
-				{
-					Port = 8079,
-					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-					DataDirectory = path,
-					Catalog =
-					{
-						Catalogs =
-								{
-									new AssemblyCatalog(typeof (CascadeDeleteTrigger).Assembly)
-								}
-					},
-				});
-
-			documentStore = new DocumentStore
+			var ravenDbServer = GetNewServer(configureServer: configuration =>
 			{
-				Url = "http://localhost:8079"
-			};
-			documentStore.Initialize();
-		}
+				configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof (CascadeDeleteTrigger).Assembly));
+			});
 
-		public void Dispose()
-		{
-			documentStore.Dispose();
-			ravenDbServer.Dispose();
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+			documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer);
 		}
 
 		[Fact]

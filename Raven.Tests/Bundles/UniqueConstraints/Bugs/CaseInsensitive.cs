@@ -15,28 +15,23 @@ namespace Raven.Bundles.Tests.UniqueConstraints.Bugs
         [Fact]
         public void ShouldWork()
         {
-
             using (var session = DocumentStore.OpenSession())
             {
-                session.Store(new Lizard() { Name = "Joe Smith" });
+                session.Store(new Lizard { Name = "Joe Smith" });
                 session.SaveChanges();
             }
 
             using (var session = DocumentStore.OpenSession())
             {
-                session.Store(new Lizard() { Name = "Joe SMITH" });
-
+                session.Store(new Lizard { Name = "Joe SMITH" });
                 Assert.Throws<OperationVetoedException>(() => session.SaveChanges());
             }
 
             using (var session = DocumentStore.OpenSession())
             {
-                session.Store(new Lizard() { Name = "Joe Smith" });
-
+                session.Store(new Lizard { Name = "Joe Smith" });
                 Assert.Throws<OperationVetoedException>(() => session.SaveChanges());
             }
- 
         }
-         
     }
 }
