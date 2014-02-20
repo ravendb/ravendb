@@ -139,6 +139,19 @@ namespace Raven.Tests.Issues
 					Assert.Equal("testParam", fooBars[0].Input);
 					Assert.Equal("testParam", fooBars[1].Input);
 				}
+
+				using (var asyncSession = shardedDocumentStore.OpenAsyncSession())
+				{
+					var fooBars = asyncSession.Advanced.LoadStartingWithAsync<FooCapitalNameTransformer, FooCapitalNameDto>("foos/", configure:
+																						x => x.AddQueryParam("input", "testParam")).Result.OrderBy(x => x.Name).ToArray();
+
+					Assert.Equal(2, fooBars.Length);
+
+					Assert.Equal("ABC", fooBars[0].Name);
+					Assert.Equal("DEF", fooBars[1].Name);
+					Assert.Equal("testParam", fooBars[0].Input);
+					Assert.Equal("testParam", fooBars[1].Input);
+				}
 			}
 		}
 
@@ -197,6 +210,26 @@ namespace Raven.Tests.Issues
 						                                                                x => x.AddQueryParam("input", "testParam"))
 					       .OrderBy(x => x.Name)
 					       .ToArray();
+
+				Assert.Equal(2, fooBars.Length);
+
+				Assert.Null(fooBars[0].Name);
+				Assert.Equal(2, fooBars[0].Bars.Length);
+				Assert.Equal("1", fooBars[0].Bars[0]);
+				Assert.Equal("2", fooBars[0].Bars[1]);
+				Assert.Equal("testParam", fooBars[0].Input);
+
+				Assert.Equal("Foo_Two", fooBars[1].Name);
+				Assert.Equal(0, fooBars[1].Bars.Length);
+				Assert.Equal("testParam", fooBars[1].Input);
+			}
+
+			using (var session = store.OpenAsyncSession())
+			{
+				var fooBars = session.Advanced.LoadStartingWithAsync<FooBarTransformer, FooBarDto>("foos/", configure:
+																						x => x.AddQueryParam("input", "testParam")).Result
+						   .OrderBy(x => x.Name).ToArray();
+					       
 
 				Assert.Equal(2, fooBars.Length);
 
