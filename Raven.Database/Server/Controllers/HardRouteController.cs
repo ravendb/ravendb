@@ -13,7 +13,7 @@ namespace Raven.Database.Server.Controllers
 		[HttpGet][Route("favicon.ico")]
 		public HttpResponseMessage FaviconGet()
 		{
-			return WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.WebDir, "favicon.ico");
+			return WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.WebDir, "Raven.Database.Server.WebUI", "favicon.ico");
 		}
 
 		[HttpGet][Route("clientaccesspolicy.xml")]
@@ -41,9 +41,10 @@ namespace Raven.Database.Server.Controllers
 			return msg;
 		}
 
-		public const string RootPath = "raven/studio.html";
+		public const string RootPath = "studio/index.html";
 
-		[HttpGet][Route("")]
+		[HttpGet]
+		[Route("")]
 		public HttpResponseMessage RavenRoot()
 		{
 			var location = DatabasesLandlord.SystemConfiguration.VirtualDirectory != "/" 

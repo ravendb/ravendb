@@ -50,7 +50,7 @@ properties {
  
 	$all_client_dlls = ( @( "$base_dir\Raven.Client.Embedded\bin\$global:configuration\Raven.Client.Embedded.???") + $client_dlls + $core_db_dlls )
 	  
-	$test_prjs = @("$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", "$base_dir\Raven.Bundles.Tests\bin\$global:configuration\Raven.Bundles.Tests.dll" )
+	$test_prjs = @("$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", "$base_dir\Bundles\Raven.Bundles.Tests\bin\$global:configuration\Raven.Bundles.Tests.dll" )
 }
 
 task default -depends Stable,Release
