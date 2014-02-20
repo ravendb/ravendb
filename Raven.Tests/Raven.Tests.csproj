@@ -389,6 +389,7 @@
     <Compile Include="Issues\RavenDB_1733.cs" />
     <Compile Include="Issues\RavenDB_1754.cs" />
     <Compile Include="Issues\RDBQA_11.cs" />
+    <Compile Include="Issues\RDBQA_6.cs" />
     <Compile Include="Issues\RDBQA_7.cs" />
     <Compile Include="Issues\RDBQA_9.cs" />
     <Compile Include="Issues\ReplicationAlerts.cs" />

@@ -221,7 +221,7 @@ namespace Raven.Smuggler
 				ShowProgress("Streaming documents from " + lastEtag);
 				return await Commands.StreamDocsAsync(lastEtag, pageSize: limit);
 			}
-			
+
 			int retries = RetriesCount;
 			while (true)
 			{
@@ -302,7 +302,7 @@ namespace Raven.Smuggler
 			            totalCount++;
                         lastEtag = Etag.Parse(item.Value<string>("Etag"));
 			        }
-			        
+
 			    }
 			    catch (Exception e)
 			    {
