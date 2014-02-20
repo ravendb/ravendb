@@ -328,10 +328,14 @@ namespace Raven.Client.Embedded
 			throw new NotSupportedException();
 		}
 
-		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null)
+		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize,
+		                                            RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
+		                                            string exclude = null, string transformer = null)
 		{
 			// Should add a 'matches' parameter? Setting to null for now.
-			return new CompletedTask<JsonDocument[]>(databaseCommands.StartsWith(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude));
+			return
+				new CompletedTask<JsonDocument[]>(databaseCommands.StartsWith(keyPrefix, matches, start, pageSize, pagingInformation,
+				                                                              metadataOnly, exclude, transformer));
 		}
 
 		public IDisposable ForceReadFromMaster()

@@ -30,6 +30,16 @@ namespace Raven.Client
 		T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null);
 
 		/// <summary>
+		///  Loads documents with the specified key prefix and applies the specified results transformer against the results
+		/// </summary>
+		/// <typeparam name="TTransformer">The transformer to use in this load operation</typeparam>
+		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
+		TResult[] LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0,
+		                                                  int pageSize = 25, string exclude = null,
+		                                                  RavenPagingInformation pagingInformation = null)
+			where TTransformer : AbstractTransformerCreationTask, new();
+
+		/// <summary>
 		/// Access the lazy operations
 		/// </summary>
 		ILazySessionOperations Lazily { get; }

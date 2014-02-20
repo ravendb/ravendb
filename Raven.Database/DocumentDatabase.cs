@@ -2030,14 +2030,19 @@ namespace Raven.Database
 
 		}
 
-        public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize, CancellationToken token, ref int nextStart)
+		public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start,
+		                                                  int pageSize, CancellationToken token, ref int nextStart,
+		                                                  string transformer = null)
 		{
 			var list = new RavenJArray();
-			GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart, list.Add);
+			GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart, list.Add,
+			                               transformer);
 			return list;
 		}
 
-		public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize, CancellationToken token, ref int nextStart, Action<RavenJObject> addDoc)
+		public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize,
+		                                           CancellationToken token, ref int nextStart, Action<RavenJObject> addDoc,
+		                                           string transformer = null)
 		{
 			if (idPrefix == null)
 				throw new ArgumentNullException("idPrefix");
@@ -2054,6 +2059,14 @@ namespace Raven.Database
 					var docsToSkip = canPerformRapidPagination ? 0 : start;
 			        int docCount;
 
+			        AbstractTransformer storedTransformer = null;
+			        if (transformer != null)
+					{
+						storedTransformer = IndexDefinitionStorage.GetTransformer(transformer);
+						if (storedTransformer == null)
+							throw new InvalidOperationException("No transformer with the name: " + transformer);
+					}
+					
 		            do
 		            {
 		                docCount = 0;
@@ -2083,7 +2096,38 @@ namespace Raven.Database
                                 continue;
 
 							token.ThrowIfCancellationRequested();
-							addDoc(document.ToJson());
+
+			                if (storedTransformer != null)
+			                {
+								using (new CurrentTransformationScope(documentRetriever))
+				                {
+					                var transformed =
+						                storedTransformer.TransformResultsDefinition(new[] {new DynamicJsonObject(document.ToJson())})
+						                                 .Select(x => JsonExtensions.ToJObject(x))
+						                                 .ToArray();
+
+									if (transformed.Length == 0)
+									{
+										throw new InvalidOperationException("The transform results function failed on a document: " + document.Key);
+									}
+
+									var transformedJsonDocument = new JsonDocument
+									{
+										Etag = document.Etag.HashWith(storedTransformer.GetHashCodeBytes()).HashWith(documentRetriever.Etag),
+										NonAuthoritativeInformation = document.NonAuthoritativeInformation,
+										LastModified = document.LastModified,
+										DataAsJson = new RavenJObject { { "$values", new RavenJArray(transformed) } },
+									};
+
+					                addDoc(transformedJsonDocument.ToJson());
+				                }
+
+			                }
+			                else
+			                {
+								addDoc(document.ToJson());
+			                }
+
 		                    addedDocs++;
 
 		                    if (addedDocs >= pageSize) 

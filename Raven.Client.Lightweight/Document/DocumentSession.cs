@@ -917,6 +917,16 @@ namespace Raven.Client.Document
                                    .ToArray();
         }
 
+		public TResult[] LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null)
+			where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			var transformer = new TTransformer().TransformerName;
+
+			return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude, pagingInformation: pagingInformation, transformer: transformer)
+								   .Select(TrackEntity<TResult>)
+								   .ToArray();
+		}
+
         public Lazy<TResult[]> MoreLikeThis<TResult>(MoreLikeThisQuery query)
         {
             var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, null, null);

@@ -1185,46 +1185,51 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-        public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null)
-        {
-            return ExecuteWithReplication("GET", operationMetadata =>
-            {
-                var metadata = new RavenJObject();
-                AddTransactionInformation(metadata);
+        public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize,
+		                            RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null,
+		                            string transformer = null)
+		{
+			return ExecuteWithReplication("GET", operationMetadata =>
+			{
+				var metadata = new RavenJObject();
+				AddTransactionInformation(metadata);
 
-                var actualStart = start;
+				var actualStart = start;
 
-                var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
-                if (nextPage)
-                    actualStart = pagingInformation.NextPageStart;
+				var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
+				if (nextPage)
+					actualStart = pagingInformation.NextPageStart;
 
-                var actualUrl = string.Format("{0}/docs?startsWith={1}&matches={5}&exclude={4}&start={2}&pageSize={3}", operationMetadata.Url,
-                                              Uri.EscapeDataString(keyPrefix), actualStart.ToInvariantString(), pageSize.ToInvariantString(), exclude, matches);
+				var actualUrl = string.Format("{0}/docs?startsWith={1}&matches={5}&exclude={4}&start={2}&pageSize={3}", operationMetadata.Url,
+											  Uri.EscapeDataString(keyPrefix), actualStart.ToInvariantString(), pageSize.ToInvariantString(), exclude, matches);
 
-                if (metadataOnly)
-                    actualUrl += "&metadata-only=true";
+				if (metadataOnly)
+					actualUrl += "&metadata-only=true";
 
-                if (nextPage)
-                    actualUrl += "&next-page=true";
+				if (string.IsNullOrEmpty(transformer) == false)
+					actualUrl += "&transformer=" + transformer;
 
-                var request = jsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(this, actualUrl.NoCache(), "GET", metadata, operationMetadata.Credentials, convention)
-                        .AddOperationHeaders(OperationsHeaders));
+				if (nextPage)
+					actualUrl += "&next-page=true";
 
-                request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+				var request = jsonRequestFactory.CreateHttpJsonRequest(
+					new CreateHttpJsonRequestParams(this, actualUrl.NoCache(), "GET", metadata, operationMetadata.Credentials, convention)
+						.AddOperationHeaders(OperationsHeaders));
 
-                return request.ReadResponseJsonAsync()
-                        .ContinueWith(task =>
-                        {
-                            int nextPageStart;
-                            if (pagingInformation != null && int.TryParse(request.ResponseHeaders[Constants.NextPageStart], out nextPageStart))
-                                pagingInformation.Fill(start, pageSize, nextPageStart);
+				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-                            return SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)task.Result)
-                                .OfType<RavenJObject>())
-                                .ToArray();
-                        });
-            });
+				return request.ReadResponseJsonAsync()
+						.ContinueWith(task =>
+						{
+							int nextPageStart;
+							if (pagingInformation != null && int.TryParse(request.ResponseHeaders[Constants.NextPageStart], out nextPageStart))
+								pagingInformation.Fill(start, pageSize, nextPageStart);
+
+							return SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)task.Result)
+								.OfType<RavenJObject>())
+								.ToArray();
+						});
+			});
         }
 
 		/// <summary>
