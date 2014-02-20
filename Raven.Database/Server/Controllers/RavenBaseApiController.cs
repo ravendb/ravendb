@@ -453,7 +453,10 @@ namespace Raven.Database.Server.Controllers
 			byte[] bytes;
 			var resourceName = embeddedPath + "." + docPath.Replace("/", ".");
 
-			using (var resource = typeof(IHttpContext).Assembly.GetManifestResourceStream(resourceName))
+			var resourceAssembly = typeof(IHttpContext).Assembly;
+			var resourceNames = resourceAssembly.GetManifestResourceNames();
+			var lowercasedResourceName = resourceNames.FirstOrDefault(s => string.Equals(s, resourceName, StringComparison.OrdinalIgnoreCase));
+			using (var resource = resourceAssembly.GetManifestResourceStream(lowercasedResourceName))
 			{
 				if (resource == null)
 					return GetEmptyMessage(HttpStatusCode.NotFound);

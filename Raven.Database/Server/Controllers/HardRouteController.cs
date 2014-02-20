@@ -41,7 +41,7 @@ namespace Raven.Database.Server.Controllers
 			return msg;
 		}
 
-		public const string RootPath = "studio/Index.html";
+		public const string RootPath = "studio/index.html";
 
 		[HttpGet]
 		[Route("")]
