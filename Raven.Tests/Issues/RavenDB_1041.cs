@@ -33,9 +33,9 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task CanWaitForReplication()
 		{
-			var store1 = CreateStore(requestedStorage: "esent");
-			var store2 = CreateStore(requestedStorage: "esent");
-			var store3 = CreateStore(requestedStorage: "esent");
+			var store1 = CreateStore(requestedStorageType: "esent");
+            var store2 = CreateStore(requestedStorageType: "esent");
+            var store3 = CreateStore(requestedStorageType: "esent");
 
 			SetupReplication(store1.DatabaseCommands, store2, store3);
 
@@ -55,9 +55,9 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task CanWaitForReplicationOfParticularEtag()
 		{
-			var store1 = CreateStore(requestedStorage:"esent");
-			var store2 = CreateStore(requestedStorage: "esent");
-			var store3 = CreateStore(requestedStorage: "esent");
+			var store1 = CreateStore(requestedStorageType:"esent");
+            var store2 = CreateStore(requestedStorageType: "esent");
+            var store3 = CreateStore(requestedStorageType: "esent");
 
 			SetupReplication(store1.DatabaseCommands, store2, store3);
 
@@ -119,8 +119,8 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task ShouldThrowTimeoutException()
 		{
-			var store1 = CreateStore(requestedStorage: "esent");
-			var store2 = CreateStore(requestedStorage: "esent");
+            var store1 = CreateStore(requestedStorageType: "esent");
+            var store2 = CreateStore(requestedStorageType: "esent");
 
 			SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
 

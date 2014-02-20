@@ -36,7 +36,7 @@ namespace Raven.Tests.Bundles.Versioning
 					Id = "Raven/Versioning/Products",
 					ExcludeUnlessExplicit = true,
 				});
-				s.Store(new Raven.Bundles.Versioning.Data.VersioningConfiguration
+                session.Store(new Raven.Bundles.Versioning.Data.VersioningConfiguration
 				{
 					Exclude = false,
 					Id = "Raven/Versioning/DefaultConfiguration",

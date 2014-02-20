@@ -11,7 +11,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -64,12 +63,12 @@ namespace Raven.Tests.Issues
 
                 var dumper = CreateDataDumper(store.DocumentDatabase);
                 await dumper.ExportData(new SmugglerExportOptions
-                                        {
-                                            ToFile = backupPath,
-                                        }, new SmugglerOptions
-                                        {
-                                            Incremental = true
-                                        });
+                {
+                    ToFile = backupPath,
+                }, new SmugglerOptions
+                {
+                    Incremental = true
+                });
             }
 
             VerifyDump(backupPath, store =>
@@ -93,12 +92,12 @@ namespace Raven.Tests.Issues
                 var dumper = CreateSmuggler("http://localhost:8079", store.DefaultDatabase);
 
                 await dumper.ExportData(new SmugglerExportOptions
-                                        {
-                                            ToFile = backupPath
-                                        }, new SmugglerOptions
-                                        {
-                                            Incremental = true
-                                        });
+                {
+                    ToFile = backupPath
+                }, new SmugglerOptions
+                {
+                    Incremental = true
+                });
             }
 
             VerifyDump(backupPath, store =>
@@ -120,10 +119,10 @@ namespace Raven.Tests.Issues
                 InsertUsers(store, 0, 2000);
 
                 var options = new SmugglerOptions
-                              {
-                                  Limit = 1500,
-                                  Incremental = true,
-                                  Filters =
+                {
+                    Limit = 1500,
+                    Incremental = true,
+                    Filters =
                                   {
                                       new FilterSetting
                                       {
@@ -132,13 +131,13 @@ namespace Raven.Tests.Issues
                                           ShouldMatch = true,
                                       }
                                   }
-                              };
+                };
 
                 var dumper = CreateDataDumper(store.DocumentDatabase);
                 await dumper.ExportData(new SmugglerExportOptions
-                                        {
-                                            ToFile = backupPath
-                                        }, options);
+                {
+                    ToFile = backupPath
+                }, options);
             }
 
 
@@ -156,16 +155,16 @@ namespace Raven.Tests.Issues
         public async Task CanPerformDumpWithLimit_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
-			List<User> generatedUsers;
-			using (var store = NewRemoteDocumentStore())
+            List<User> generatedUsers;
+            using (var store = NewRemoteDocumentStore())
             {
-	            InsertUsers(store, 0, 2000, out generatedUsers);
+                InsertUsers(store, 0, 2000, out generatedUsers);
 
                 var options = new SmugglerOptions
-                              {
-                                  Limit = 1500,
-                                  Incremental = true,
-                                  Filters =
+                {
+                    Limit = 1500,
+                    Incremental = true,
+                    Filters =
                                   {
                                       new FilterSetting
                                       {
@@ -174,13 +173,13 @@ namespace Raven.Tests.Issues
                                           ShouldMatch = true,
                                       }
                                   }
-                              };
+                };
 
                 var dumper = CreateSmuggler("http://localhost:8079", store.DefaultDatabase);
                 await dumper.ExportData(new SmugglerExportOptions
-                                        {
-                                            ToFile = backupPath
-                                        }, options);
+                {
+                    ToFile = backupPath
+                }, options);
             }
 
             VerifyDump(backupPath, store =>
@@ -199,12 +198,12 @@ namespace Raven.Tests.Issues
             {
                 var dumper = CreateDataDumper(store.DocumentDatabase);
                 dumper.ImportData(new SmugglerImportOptions
-                                      {
-                                          FromFile = backupPath
-                                      }, new SmugglerOptions
-                                      {
-                                          Incremental = true
-                                      }).Wait();
+                {
+                    FromFile = backupPath
+                }, new SmugglerOptions
+                {
+                    Incremental = true
+                }).Wait();
 
                 action(store);
             }
@@ -240,9 +239,9 @@ namespace Raven.Tests.Issues
                 };
                 var dumper = CreateDataDumper(store.DocumentDatabase);
                 await dumper.ExportData(new SmugglerExportOptions
-                                        {
-                                            ToFile = backupPath
-                                        }, options);
+                {
+                    ToFile = backupPath
+                }, options);
 
             }
 
@@ -273,10 +272,10 @@ namespace Raven.Tests.Issues
                 WaitForIndexing(store);
 
                 var options = new SmugglerOptions
-                              {
-                                  Limit = 5,
-                                  Incremental = true,
-                                  Filters =
+                {
+                    Limit = 5,
+                    Incremental = true,
+                    Filters =
                                   {
                                       new FilterSetting
                                       {
@@ -285,13 +284,13 @@ namespace Raven.Tests.Issues
                                           ShouldMatch = true,
                                       }
                                   }
-                              };
+                };
 
                 var dumper = CreateSmuggler("http://localhost:8079", store.DefaultDatabase);
                 await dumper.ExportData(new SmugglerExportOptions
-                                        {
-                                            ToFile = backupPath,
-                                        }, options);
+                {
+                    ToFile = backupPath,
+                }, options);
             }
 
 
@@ -329,8 +328,8 @@ namespace Raven.Tests.Issues
                     for (var j = 0; j < 25; j++)
                     {
                         counter++;
-	                    var user = new User { Name = "User #" + counter };
-	                    session.Store(user);
+                        var user = new User { Name = "User #" + counter };
+                        session.Store(user);
                     }
                     session.SaveChanges();
                 }
@@ -338,25 +337,25 @@ namespace Raven.Tests.Issues
             return counter;
         }
 
-		private static int InsertUsers(IDocumentStore store, int counter, int amount,out List<User> generatedUsers)
-		{
-			generatedUsers = new List<User>();
-			for (var i = 0; i < amount / 25; i++)
-			{
-				using (var session = store.OpenSession())
-				{
-					for (var j = 0; j < 25; j++)
-					{
-						counter++;
-						var user = new User { Name = "User #" + counter };
-						generatedUsers.Add(user);
-						session.Store(user);
-					}
-					session.SaveChanges();
-				}
-			}
-			return counter;
-		}
+        private static int InsertUsers(IDocumentStore store, int counter, int amount, out List<User> generatedUsers)
+        {
+            generatedUsers = new List<User>();
+            for (var i = 0; i < amount / 25; i++)
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (var j = 0; j < 25; j++)
+                    {
+                        counter++;
+                        var user = new User { Name = "User #" + counter };
+                        generatedUsers.Add(user);
+                        session.Store(user);
+                    }
+                    session.SaveChanges();
+                }
+            }
+            return counter;
+        }
 
 
         [Fact]
@@ -547,7 +546,7 @@ namespace Raven.Tests.Issues
                 InsertAttachments(store, 328);
 
                 var dumper = CreateDataDumper(store.DocumentDatabase);
-                await dumper.ExportData(new SmugglerExportOptions { ToFile = backupPath }, new SmugglerOptions { Incremental = true, BatchSize = 100});
+                await dumper.ExportData(new SmugglerExportOptions { ToFile = backupPath }, new SmugglerOptions { Incremental = true, BatchSize = 100 });
             }
 
             VerifyDump(backupPath, store => Assert.Equal(328, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count()));
@@ -579,7 +578,7 @@ namespace Raven.Tests.Issues
                 InsertAttachments(store, 328);
 
                 var dumper = CreateDataDumper(store.DocumentDatabase);
-                await dumper.ExportData(new SmugglerExportOptions { ToFile = backupPath }, new SmugglerOptions { Incremental = true, BatchSize = 100, Limit = 206});
+                await dumper.ExportData(new SmugglerExportOptions { ToFile = backupPath }, new SmugglerOptions { Incremental = true, BatchSize = 100, Limit = 206 });
             }
 
             VerifyDump(backupPath, store => Assert.Equal(206, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count()));
@@ -654,24 +653,21 @@ namespace Raven.Tests.Issues
             var backupPath = NewDataPath("BackupFolder");
             var server = GetNewServer(databaseName: Constants.SystemDatabase);
 
-            
-            var shouldBreak = true;
-            var afterStream = false;
-            var bytesCount = 0;
+            var alreadyReset = false;
 
             var forwarder = new ProxyServer(8070, 8079)
             {
-	            VetoTransfer = (totalRead, buffer) =>
-	            {
-		            if (alreadyReset == false && totalRead > 10000)
-		            {
-			            alreadyReset = true;
-			            return true;
-		            }
-		            return false;
-	            }
+                VetoTransfer = (totalRead, buffer) =>
+                {
+                    if (alreadyReset == false && totalRead > 10000)
+                    {
+                        alreadyReset = true;
+                        return true;
+                    }
+                    return false;
+                }
             };
-	        try
+            try
             {
                 string databaseName;
                 using (var store = new DocumentStore
@@ -734,7 +730,7 @@ namespace Raven.Tests.Issues
                 }
 
                 Assert.Equal(2000, allDocs.Count(d => (d.Value<string>("Name") ?? String.Empty).StartsWith("User")));
-                
+
             }
             finally
             {
@@ -754,11 +750,11 @@ namespace Raven.Tests.Issues
 
             var forwarder = new ProxyServer(8070, 8079)
             {
-				VetoTransfer = (totalRead, buffer) =>
-				{
-					var payload = System.Text.Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
-					return payload.Contains("GET /static/users/678 ") && allowDownload == false;
-				}
+                VetoTransfer = (totalRead, buffer) =>
+                {
+                    var payload = System.Text.Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
+                    return payload.Contains("GET /static/users/678 ") && allowDownload == false;
+                }
             };
             try
             {
@@ -810,9 +806,9 @@ namespace Raven.Tests.Issues
                 }
 
                 exportResult = await dumper.ExportData(new SmugglerExportOptions
-                                        {
-                                            ToFile = backupPath
-                                        }, options);
+                {
+                    ToFile = backupPath
+                }, options);
                 using (var fileStream = new FileStream(exportResult.FilePath, FileMode.Open))
                 using (var stream = new GZipStream(fileStream, CompressionMode.Decompress))
                 {
@@ -831,7 +827,7 @@ namespace Raven.Tests.Issues
                 server.Dispose();
             }
         }
-        
+
         private DataDumper CreateDataDumper(DocumentDatabase database)
         {
             return new DataDumper(database);
