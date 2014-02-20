@@ -3,12 +3,7 @@
 // //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // // </copyright>
 // //-----------------------------------------------------------------------
-extern alias database;
-using System;
-
-using Raven.Client;
 using Raven.Client.Document;
-using Raven.Client.Embedded;
 using Raven.Client.UniqueConstraints;
 using Xunit;
 using Xunit.Extensions;

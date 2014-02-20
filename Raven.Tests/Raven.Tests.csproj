@@ -264,6 +264,8 @@
     <Compile Include="Bundles\Authorization\Bugs\Kwal.cs" />
     <Compile Include="Bundles\Authorization\Bugs\LoadingSavedInfo.cs" />
     <Compile Include="Bundles\Authorization\Bugs\Matthew.cs" />
+    <Compile Include="Bundles\Authorization\Bugs\Mojo2.cs" />
+    <Compile Include="Bundles\Authorization\Bugs\Mojo2_Failed.cs" />
     <Compile Include="Bundles\Authorization\Bugs\Preston.cs" />
     <Compile Include="Bundles\Authorization\Bugs\WhenUsingMultiTenancy.cs" />
     <Compile Include="Bundles\Authorization\Bugs\WithChangingOfUser.cs" />
@@ -1711,7 +1713,7 @@
     </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
       <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
-      <Name>Voron %28Voron\Voron%29</Name>
+      <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

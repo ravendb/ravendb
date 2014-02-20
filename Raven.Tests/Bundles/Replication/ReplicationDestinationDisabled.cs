@@ -1,5 +1,4 @@
-﻿extern alias database;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Tests.Bundles.Replication;

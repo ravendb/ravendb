@@ -3,8 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-extern alias database;
-
 using System;
 using System.Collections;
 using System.ComponentModel.Composition.Hosting;
