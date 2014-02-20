@@ -5,8 +5,8 @@ import appUrl = require("common/appUrl");
 
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
 class commandBase {
-    private baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
-    //private baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
+    //private baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
+    private baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
 
     // TODO: better place for this?
     static ravenClientVersion = '3.0.0.0';
