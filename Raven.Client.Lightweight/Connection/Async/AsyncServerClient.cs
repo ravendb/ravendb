@@ -1187,7 +1187,7 @@ namespace Raven.Client.Connection.Async
 
         public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize,
 		                            RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null,
-		                            string transformer = null)
+									string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
 		{
 			return ExecuteWithReplication("GET", operationMetadata =>
 			{
@@ -1207,7 +1207,16 @@ namespace Raven.Client.Connection.Async
 					actualUrl += "&metadata-only=true";
 
 				if (string.IsNullOrEmpty(transformer) == false)
+				{
 					actualUrl += "&transformer=" + transformer;
+
+					if (queryInputs != null)
+					{
+						actualUrl = queryInputs.Aggregate(actualUrl,
+											 (current, queryInput) =>
+											 current + ("&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value)));
+					}
+				}
 
 				if (nextPage)
 					actualUrl += "&next-page=true";
