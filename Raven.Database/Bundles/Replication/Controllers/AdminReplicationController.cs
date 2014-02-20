@@ -33,29 +33,23 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		public HttpResponseMessage PurgeTombstones()
 		{
 			var docEtagStr = GetQueryStringValue("docEtag");
-			Etag docEtag = null;
 			var attachmentEtagStr = GetQueryStringValue("attachmentEtag");
-			Etag attachmentEtag = null;
-			try
-			{
-				docEtag = Etag.Parse(docEtagStr);
-			}
-			catch
-			{
-				try
-				{
-					attachmentEtag = Etag.Parse(attachmentEtagStr);
-				}
-				catch (Exception)
-				{
-					return GetMessageWithObject(new
-					{
-						Error = "The query string variable 'docEtag' or 'attachmentEtag' must be set to a valid guid"
-					}, HttpStatusCode.BadRequest);
-				}
-			}
 
-			Database.TransactionalStorage.Batch(accessor =>
+            Etag docEtag, attachmentEtag;
+
+		    var docEtagParsed = Etag.TryParse(docEtagStr, out docEtag);
+            var attachmentEtagParsed = Etag.TryParse(attachmentEtagStr, out attachmentEtag);
+
+		    if (docEtagParsed == false && attachmentEtagParsed == false)
+		    {
+		        return GetMessageWithObject(
+		            new
+		            {
+                        Error = "The query string variable 'docEtag' or 'attachmentEtag' must be set to a valid etag"
+		            }, HttpStatusCode.BadRequest);
+		    }
+
+		    Database.TransactionalStorage.Batch(accessor =>
 			{
 				if (docEtag != null)
 				{
