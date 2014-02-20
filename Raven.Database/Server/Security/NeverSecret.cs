@@ -10,6 +10,7 @@ namespace Raven.Database.Server.Security
 				// allow to get files that are static and are never secret, for example, the studio, the cross domain
 				// policy and the fav icon
 				"/",
+				"/studio/Index.html",
 				"/raven/studio.html",
 				"/silverlight/Raven.Studio.xap",
 				"/favicon.ico",

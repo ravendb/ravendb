@@ -417,13 +417,13 @@ namespace Raven.Database.Server.Controllers
 			return null;
 		}
 
-		public HttpResponseMessage WriteEmbeddedFile(string ravenPath, string docPath)
+		public HttpResponseMessage WriteEmbeddedFile(string ravenPath, string embeddedPath, string docPath)
 		{
 			var filePath = Path.Combine(ravenPath, docPath);
 			var type = GetContentType(docPath);
 			if (File.Exists(filePath))
 				return WriteFile(filePath);
-			return WriteEmbeddedFileOfType(docPath, type);
+			return WriteEmbeddedFileOfType(embeddedPath, docPath, type);
 		}
 
 		public HttpResponseMessage WriteFile(string filePath)
@@ -443,7 +443,7 @@ namespace Raven.Database.Server.Controllers
 			return msg;
 		}
 
-		private HttpResponseMessage WriteEmbeddedFileOfType(string docPath, string type)
+		private HttpResponseMessage WriteEmbeddedFileOfType(string embeddedPath, string docPath, string type)
 		{
 			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
 			var currentFileEtag = EmbeddedLastChangedDate + docPath;
@@ -451,7 +451,7 @@ namespace Raven.Database.Server.Controllers
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
 			byte[] bytes;
-			var resourceName = "Raven.Database.Server.WebUI." + docPath.Replace("/", ".");
+			var resourceName = embeddedPath + "." + docPath.Replace("/", ".");
 
 			using (var resource = typeof(IHttpContext).Assembly.GetManifestResourceStream(resourceName))
 			{
