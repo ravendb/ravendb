@@ -10,7 +10,6 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Raven.Abstractions;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -21,7 +20,6 @@ using Raven.Database.Server;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 using Task = System.Threading.Tasks.Task;
-using System.Linq;
 
 namespace Raven.Database.Bundles.PeriodicBackups
 {
@@ -96,7 +94,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
                         var interval = TimeSpan.FromMilliseconds(backupConfigs.IntervalMilliseconds);
                         logger.Info("Incremental periodic backups started, will backup every" + interval.TotalMinutes + "minutes");
 
-                        var timeSinceLastBackup = DateTime.UtcNow - backupStatus.LastBackup;
+                        var timeSinceLastBackup = SystemTime.UtcNow - backupStatus.LastBackup;
                         var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
                         incrementalBackupTimer = new Timer(state => TimerCallback(false), null, nextBackup, interval);
                     }
@@ -110,7 +108,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
                         var interval = TimeSpan.FromMilliseconds(backupConfigs.FullBackupIntervalMilliseconds);
                         logger.Info("Full periodic backups started, will backup every" + interval.TotalMinutes + "minutes");
 
-                        var timeSinceLastBackup = DateTime.UtcNow - backupStatus.LastFullBackup;
+                        var timeSinceLastBackup = SystemTime.UtcNow - backupStatus.LastFullBackup;
                         var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
                         fullBackupTimer = new Timer(state => TimerCallback(true), null, nextBackup, interval);
                     }
@@ -365,7 +363,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
         private string GetArchiveDescription(bool isFullBackup)
         {
-            return (isFullBackup ? "Full" : "Incremental") + "periodic backup for db " + (Database.Name ?? Constants.SystemDatabase) + " at " + DateTime.UtcNow;
+            return (isFullBackup ? "Full" : "Incremental") + "periodic backup for db " + (Database.Name ?? Constants.SystemDatabase) + " at " + SystemTime.UtcNow;
         }
 
         public void Dispose()
