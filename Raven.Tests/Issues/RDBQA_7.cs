@@ -31,9 +31,10 @@ namespace Raven.Tests.Issues
         [Fact]
         public void NegativeFiltersShouldNotFilterOutWhenThereAreNoMatches()
         {
+            var path = Path.GetTempFileName();
+
             var options = new SmugglerOptions
             {
-                BackupPath = Path.GetTempFileName(),
                 Filters =
                     new EquatableList<FilterSetting>
                                   {
@@ -52,16 +53,16 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerApi(options, new RavenConnectionStringOptions { Url = store.Url });
+                    var smuggler = new SmugglerApi(new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase });
 
-                    smuggler.ExportData(null, options, false).Wait(TimeSpan.FromSeconds(15));
+                    smuggler.ExportData(new SmugglerExportOptions { ToFile = path }, options).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
-                    var smuggler = new SmugglerApi(options, new RavenConnectionStringOptions { Url = store.Url });
+                    var smuggler = new SmugglerApi(new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase });
 
-                    smuggler.ImportData(options).Wait(TimeSpan.FromSeconds(15));
+                    smuggler.ImportData(new SmugglerImportOptions { FromFile = path }, options).Wait(TimeSpan.FromSeconds(15));
 
                     Assert.NotNull(store.DatabaseCommands.Get("key/1"));
 
@@ -79,16 +80,17 @@ namespace Raven.Tests.Issues
             }
             finally
             {
-                IOExtensions.DeleteDirectory(options.BackupPath);
+                IOExtensions.DeleteDirectory(path);
             }
         }
 
         [Fact]
         public void NegativeMetadataFiltersShouldNotFilterOutWhenThereAreNoMatches()
         {
+            var path = Path.GetTempFileName();
+
             var options = new SmugglerOptions
                           {
-                              BackupPath = Path.GetTempFileName(),
                               Filters =
                                   new EquatableList<FilterSetting>
                                   {
@@ -107,16 +109,16 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerApi(options, new RavenConnectionStringOptions { Url = store.Url });
+                    var smuggler = new SmugglerApi(new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase });
 
-                    smuggler.ExportData(null, options, false).Wait(TimeSpan.FromSeconds(15));
+                    smuggler.ExportData(new SmugglerExportOptions { ToFile = path }, options).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
-                    var smuggler = new SmugglerApi(options, new RavenConnectionStringOptions { Url = store.Url });
+                    var smuggler = new SmugglerApi(new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase });
 
-                    smuggler.ImportData(options).Wait(TimeSpan.FromSeconds(15));
+                    smuggler.ImportData(new SmugglerImportOptions { FromFile = path }, options).Wait(TimeSpan.FromSeconds(15));
 
                     Assert.NotNull(store.DatabaseCommands.Get("key/1"));
 
@@ -134,7 +136,7 @@ namespace Raven.Tests.Issues
             }
             finally
             {
-                IOExtensions.DeleteDirectory(options.BackupPath);
+                IOExtensions.DeleteDirectory(path);
             }
         }
 
