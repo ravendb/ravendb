@@ -260,16 +260,30 @@ namespace Raven.Database.Server
 
                          //   ConcurrentRequests = (int)documentDatabase.Database.WorkContext.PerformanceCounters.ConcurrentRequests.NextValue(),
                             DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.Database.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
-                            DocsPerSecondCounter = documentDatabase.Database.WorkContext.MetricsCounters.RequestsMeter.Count,
-                            IndexedPerSecondCounter = documentDatabase.Database.WorkContext.MetricsCounters.RequestsMeter.Count,
-                            ReducedPerSecondCounter = documentDatabase.Database.WorkContext.MetricsCounters.RequestsMeter.Count,
-                            Count = documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.Count,
-                            MeanRate = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.MeanRate,2),
-                            OneMinuteRate = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.OneMinuteRate, 2),
-                            FiveMinuteRate = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.FiveMinuteRate, 2),  //??RequestsMeter not required
-                            FifteenMinuteRate = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.FifteenMinuteRate, 2),
+                            //DocsPerSecondCounter = documentDatabase.Database.WorkContext.MetricsCounters.RequestsMeter.Count,
+                            //IndexedPerSecondCounter = documentDatabase.Database.WorkContext.MetricsCounters.RequestsMeter.Count,
+                            //ReducedPerSecondCounter = documentDatabase.Database.WorkContext.MetricsCounters.RequestsMeter.Count,
+                            //Count = documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.Count,
+                            //MeanRate = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.MeanRate,2),
+                            //OneMinuteRate = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.OneMinuteRate, 2),
+                            //FiveMinuteRate = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.FiveMinuteRate, 2),  //??RequestsMeter not required
+                            //FifteenMinuteRate = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.FifteenMinuteRate, 2),
 
-                            CounterRequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.RequestsPerSecondCounter.CurrentValue, 2)
+                            //CounterRequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.RequestsPerSecondCounter.CurrentValue, 2)
+
+                            MetricsData = new FullMetricsData
+                           {
+                                DocsPerSecondCounter = documentDatabase.Database.WorkContext.MetricsCounters.DocsPerSecond.Count,
+                                IndexedPerSecondCounter = documentDatabase.Database.WorkContext.MetricsCounters.IndexedPerSecond.Count,
+                                ReducedPerSecondCounter = documentDatabase.Database.WorkContext.MetricsCounters.ReducedPerSecond.Count,
+                                Count = documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.Count,
+                                MeanRate = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.MeanRate, 2),
+                                OneMinuteRate = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.OneMinuteRate, 2),
+                                FiveMinuteRate = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.FiveMinuteRate, 2),  //??RequestsMeter not required
+                                FifteenMinuteRate = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.FifteenMinuteRate, 2),
+                                CounterRequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.RequestsPerSecondCounter.CurrentValue, 2),
+
+                           }
 
 						}
 				};
