@@ -11,6 +11,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -653,7 +654,10 @@ namespace Raven.Tests.Issues
             var backupPath = NewDataPath("BackupFolder");
             var server = GetNewServer(databaseName: Constants.SystemDatabase);
 
-            var alreadyReset = false;
+            
+            var shouldBreak = true;
+            var afterStream = false;
+            var bytesCount = 0;
 
             var forwarder = new ProxyServer(8070, 8079)
             {

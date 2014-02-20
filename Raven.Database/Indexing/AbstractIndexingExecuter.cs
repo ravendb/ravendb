@@ -174,7 +174,7 @@ namespace Raven.Database.Indexing
 
                 context.UpdateFoundWork();
 
-                Log.Debug("Executing {0}", task);
+                Log.Debug("Executing task: {0}", task);
                 foundWork = true;
 
                 context.CancellationToken.ThrowIfCancellationRequested();

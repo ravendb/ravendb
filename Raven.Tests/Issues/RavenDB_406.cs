@@ -162,7 +162,7 @@ namespace Raven.Tests.Issues
 					// make sure that object is cached
 					using (var session = store.OpenSession("Northwind_1"))
 					{
-						store.Changes().Task.Result.WaitForAllPendingSubscriptions();
+                        store.Changes("Northwind_1").Task.Result.WaitForAllPendingSubscriptions();
 
 						var users = session.Load<User>(new[] { "users/1" });
 
@@ -172,7 +172,7 @@ namespace Raven.Tests.Issues
 					((DocumentStore)store).GetObserveChangesAndEvictItemsFromCacheTask().Wait();
 					using (var session = store.OpenSession("Northwind_2"))
 					{
-						store.Changes().Task.Result.WaitForAllPendingSubscriptions();
+                        store.Changes("Northwind_2").Task.Result.WaitForAllPendingSubscriptions();
 
 						var users = session.Load<User>(new[] { "users/1" });
 

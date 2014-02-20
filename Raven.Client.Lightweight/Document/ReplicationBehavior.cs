@@ -4,14 +4,14 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
-using Raven.Client.Util;
 
 namespace Raven.Client.Document
 {
@@ -30,7 +30,7 @@ namespace Raven.Client.Document
 		/// Represents an replication operation to all destination servers of an item specified by ETag
 		/// </summary>
 		/// <param name="etag">ETag of an replicated item</param>
-		/// <param name="timeout">Optional timeout</param>
+		/// <param name="timeout">Optional timeout - by default, 30 seconds</param>
 		/// <param name="database">The database from which to check, if null, the default database for the document store connection string</param>
 		/// <param name="replicas">The min number of replicas that must have the value before we can return (or the number of destinations, if higher)</param>
 		/// <returns>Task which will have the number of nodes that the caught up to the specified etag</returns>
@@ -65,63 +65,71 @@ namespace Raven.Client.Document
 
 			int toCheck = Math.Min(replicas, destinationsToCheck.Count);
 
-			var countDown = new AsyncCountdownEvent(toCheck);
-			var errors = new BlockingCollection<Exception>();
+		    var cts = new CancellationTokenSource();
+            cts.CancelAfter(timeout ?? TimeSpan.FromSeconds(30));
 
-			foreach (var url in destinationsToCheck)
-			{
-                WaitForReplicationFromServerAsync(url, database, countDown, etag, errors);
-			}
+            var sp = Stopwatch.StartNew();
 
-			if (await countDown.WaitAsync().WaitWithTimeout(timeout) == false)
-			{
-				throw new TimeoutException(
-					string.Format("Confirmed that the specified etag {0} was replicated to {1} of {2} servers, during {3}", etag,
-					              (toCheck - countDown.Count),
-					              toCheck,
-					              timeout));
-			}
+			var tasks = destinationsToCheck.Select(url => WaitForReplicationFromServerAsync(url, database, etag, cts.Token)).ToArray();
 
-			if (errors.Count > 0 && countDown.Count > 0)
-				throw new AggregateException(errors);
+		    try
+		    {
 
-			return countDown.Count;
-		}
-
-		private async void WaitForReplicationFromServerAsync(string url, string database, AsyncCountdownEvent countDown, Etag etag, BlockingCollection<Exception> errors)
-		{
-			try
-			{
-				while (countDown.Active)
-				{
-					var etags = await GetReplicatedEtagsFor(url, database);
-
-					var replicated = etag.CompareTo(etags.DocumentEtag) <= 0 || etag.CompareTo(etags.AttachmentEtag) <= 0;
-
-					if (!replicated)
-					{
-						if (countDown.Active)
-						{
-#if SILVERLIGHT
-							await TaskEx.Delay(100);
+#if !SILVERLIGHT
+                await Task.WhenAll(tasks);
 #else
-							await Task.Delay(100);
+		        await TaskEx.WhenAll(tasks);
 #endif
-						}
-						continue;
-					}
-					countDown.Signal();
-					return;
-				}
-			}
-			catch (Exception ex)
-			{
-				errors.Add(ex);
-				countDown.Error();
-			}
+
+		        return tasks.Length;
+		    }
+		    catch (Exception e)
+		    {
+		        var completedCount = tasks.Count(x => x.IsCompleted && x.IsFaulted == false);
+		        if (completedCount >= toCheck)
+		        {
+		            // we have nothing to do here, we replicated to at least the 
+                    // number we had to check, so that is good
+			        return completedCount;
+		        }
+			    if (tasks.Any(x => x.IsFaulted) && completedCount == 0)
+			    {
+				    // there was an error here, not just cancellation, let us just let it bubble up.
+				    throw;
+			    }
+
+			    // we have either completed (but not enough) or cancelled, meaning timeout
+		        var message = string.Format("Confirmed that the specified etag {0} was replicated to {1} of {2} servers after {3}", etag,
+		            (toCheck - completedCount),
+		            toCheck,
+                    sp.Elapsed);
+
+			    throw new TimeoutException(message, e);
+		    }
 		}
 
-		private async Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl, string database)
+		private async Task WaitForReplicationFromServerAsync(string url, string database, Etag etag, CancellationToken cancellationToken)
+		{
+		    while (true)
+		    {
+		        cancellationToken.ThrowIfCancellationRequested();
+
+		        var etags = await GetReplicatedEtagsFor(url, database);
+
+		        var replicated = etag.CompareTo(etags.DocumentEtag) <= 0 || etag.CompareTo(etags.AttachmentEtag) <= 0;
+
+		        if (replicated)
+		            return;
+
+#if !SILVERLIGHT
+                await Task.Delay(100, cancellationToken);
+#else
+                await TaskEx.Delay(100, cancellationToken);
+#endif   
+		    }
+		}
+
+	    private async Task<ReplicatedEtagInfo> GetReplicatedEtagsFor(string destinationUrl, string database)
 		{
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(
 				null,
