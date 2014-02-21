@@ -1,10 +1,10 @@
-﻿extern alias database;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using Raven.Client.Indexes;
 using Raven.Client.UniqueConstraints;
+using Raven.Database.Config;
 using Raven.Tests;
 using Xunit;
 
@@ -15,7 +15,7 @@ namespace Raven.Bundles.Tests.UniqueConstraints.Bugs
 		private Guid _appKey;
 		private Guid _privateKey;
 
-		protected override void ModifyConfiguration(database::Raven.Database.Config.InMemoryRavenConfiguration configuration)
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
 			configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(Bundles.UniqueConstraints.UniqueConstraintsPutTrigger).Assembly));
 		}

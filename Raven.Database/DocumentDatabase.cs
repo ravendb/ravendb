@@ -8,7 +8,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
-using System.DirectoryServices.AccountManagement;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -19,8 +18,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
 using Lucene.Net.Support;
-using Mono.CSharp;
-using NetTopologySuite.Utilities;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
@@ -217,6 +214,13 @@ namespace Raven.Database
 				};
 
 				TransactionalStorage = configuration.CreateTransactionalStorage(configuration.SelectStorageEngine(), workContext.HandleWorkNotifications);
+				if (TransactionalStorage.GetType() != typeof(Raven.Storage.Voron.TransactionalStorage))
+				{
+					if (Directory.Exists(configuration.DataDirectory) && Directory.EnumerateFileSystemEntries(configuration.DataDirectory).Any())
+						throw new InvalidOperationException(string.Format("We do not allow to run on a storage engine other then Voron, while we are in the early pre-release phase of RavenDB 3.0. You are currently running on {0}", TransactionalStorage.FriendlyName));
+
+					TransactionalStorage = new Raven.Storage.Voron.TransactionalStorage(configuration, workContext.HandleWorkNotifications);
+				}
 
 				try
 				{

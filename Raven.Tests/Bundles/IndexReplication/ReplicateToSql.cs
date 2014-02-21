@@ -3,26 +3,23 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-extern alias database;
 using System;
 using System.ComponentModel.Composition.Hosting;
 using System.Configuration;
 using System.Data.Common;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using Raven.Abstractions.Indexing;
 using Raven.Bundles.IndexReplication;
 using Raven.Bundles.IndexReplication.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
-using Raven.Server;
+using Raven.Tests;
 using Xunit;
 
 namespace Raven.Bundles.Tests.IndexReplication
 {
-	public class CanReplicateToSql : IDisposable
+	public class CanReplicateToSql : RavenTest
 	{
 		private readonly IDocumentStore documentStore;
 
@@ -33,25 +30,9 @@ namespace Raven.Bundles.Tests.IndexReplication
 
 		public CanReplicateToSql()
 		{
-			documentStore = new EmbeddableDocumentStore
-			{
-				RunInMemory = true,
-				Configuration =
-				{
-					Catalog =
-					{
-						Catalogs =
-										{
-											new AssemblyCatalog(typeof (IndexReplicationIndexUpdateTrigger).Assembly)
-										}
+			documentStore = NewDocumentStore(configureStore: store => store.Configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof (IndexReplicationIndexUpdateTrigger).Assembly)));
 
-					}
-				}
-			};
-			documentStore.Initialize();
-
-			documentStore.DatabaseCommands.PutIndex(
-				"Questions/Votes",
+			documentStore.DatabaseCommands.PutIndex("Questions/Votes",
 				new IndexDefinition
 				{
 					Map =
@@ -104,11 +85,6 @@ CREATE TABLE [dbo].[QuestionSummaries]
 					dbCommand.ExecuteNonQuery();
 				}
 			}
-		}
-
-		public void Dispose()
-		{
-			documentStore.Dispose();
 		}
 
 		[FactIfSqlServerIsAvailable]

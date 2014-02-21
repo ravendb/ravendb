@@ -11,9 +11,9 @@ using Raven.Client.Document;
 using Raven.Bundles.Tests.Authorization;
 using Xunit;
 
-namespace Raven.Bundles.Tests.Authentication.Bugs
+namespace Raven.Bundles.Tests.Authorization.Bugs
 {
-	public class Mojo2 : AuthorizationTest
+	public class Mojo2_Failed : AuthorizationTest
 	{
 		private static void SetupRoles(IDocumentSession session)
 		{
@@ -55,12 +55,12 @@ namespace Raven.Bundles.Tests.Authentication.Bugs
 			session.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
 			{
 				Id = "paolo",
-				Roles = {"Users"},
+				Roles = { "Users" },
 				Permissions =
 					new List<client::Raven.Bundles.Authorization.Model.OperationPermission>
 					{
 						new client::Raven.Bundles.Authorization.Model.OperationPermission
-						{Allow = true, Operation = "Library/Fake"}
+						{Allow = true, Operation = "Library/View"}
 					}
 			});
 
@@ -79,33 +79,33 @@ namespace Raven.Bundles.Tests.Authentication.Bugs
 			{
 				var library = new Library { Id = "library/andrea-lib" };
 				session.Store(library);
-				var documentAuthorization = new client::Raven.Bundles.
-					Authorization.Model.
-					DocumentAuthorization
-				{
-					Permissions =
-						{
-							new client::Raven.Bundles.
-								Authorization.Model.
-								DocumentPermission
-							{
-								Allow = true,
-								Operation = "Library/View",
-								User = "andrea"
-							},
-							new client::Raven.Bundles.
-								Authorization.Model.
-								DocumentPermission
-							{
-								Allow = true,
-								Operation =
-									"Library/Manage",
-								Role = "Administrators"
-							}
-						}
-				};
 				client::Raven.Client.Authorization.AuthorizationClientExtensions.SetAuthorizationFor(session, library,
-					documentAuthorization);
+																										new client::Raven.Bundles.
+																										Authorization.Model.
+																										DocumentAuthorization
+																										{
+																											Permissions =
+																											{
+																												new client::Raven.Bundles.
+																													Authorization.Model.
+																													DocumentPermission
+																												{
+																													Allow = true,
+																													Operation = "Library/View",
+																													User = "andrea"
+																												},
+																												new client::Raven.Bundles.
+																													Authorization.Model.
+																													DocumentPermission
+																												{
+																													Allow = true,
+																													Operation =
+																														"Library/Manage",
+																													Role = "Administrators"
+																												}
+																											}
+																										});
+				;
 				session.SaveChanges();
 			}
 
@@ -125,9 +125,8 @@ namespace Raven.Bundles.Tests.Authentication.Bugs
 																												  "paolo",
 																												  "Library/View",
 																												  "library/andrea-lib");
-
-				//Paolo cannot View 
-				Assert.True(!paoloCanView.IsAllowed);
+				//Paolo can View 
+				Assert.True(paoloCanView.IsAllowed);
 
 
 				client::Raven.Bundles.Authorization.OperationAllowedResult paoloCanMange =

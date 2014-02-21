@@ -1,47 +1,28 @@
-﻿extern alias database;
-
-using System;
-using System.ComponentModel.Composition.Hosting;
+﻿using System.ComponentModel.Composition.Hosting;
 using System.Configuration;
 using System.Data.Common;
-using System.Data.SqlClient;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using Raven.Abstractions.Indexing;
 using Raven.Bundles.IndexReplication;
 using Raven.Bundles.IndexReplication.Data;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Server;
+using Raven.Tests;
 using Xunit;
 
 namespace Raven.Bundles.Tests.IndexReplication.Bugs
 {
-	public class Micro : IDisposable
+	public class Micro : RavenTest
 	{
 		private readonly EmbeddableDocumentStore documentStore;
 
 		public Micro()
 		{
-			documentStore = new EmbeddableDocumentStore
-				{
-					RunInMemory = true,
-					Configuration =
-						{
-							Catalog =
-								{
-									Catalogs =
-										{
-											new AssemblyCatalog(typeof (IndexReplicationIndexUpdateTrigger).Assembly)
-										}
-
-								}
-						}
-				};
-			documentStore.Initialize();
+			documentStore = NewDocumentStore(configureStore: store =>
+			{
+				store.Configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof (IndexReplicationIndexUpdateTrigger).Assembly));
+			});
 			CreateRdbmsSchema();
 			CreateTestData(documentStore);
 
