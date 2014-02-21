@@ -407,7 +407,7 @@ namespace Raven.Client.Connection
 			out QueryHeaderInformation queryHeaderInfo)
 		{
 			var reference = new Reference<QueryHeaderInformation>();
-			var streamQueryAsync = asyncServerClient.StreamQueryAsync(index, query, reference).Result;
+			var streamQueryAsync = asyncServerClient.StreamQueryAsync(index, query, reference).ResultUnwrap();
 			queryHeaderInfo = reference.Value;
 			return new AsycnEnumerableWrapper<RavenJObject>(streamQueryAsync);
 		}

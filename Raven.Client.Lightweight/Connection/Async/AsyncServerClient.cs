@@ -20,7 +20,6 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 #else
-using System.Transactions;
 #endif
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
@@ -43,7 +42,6 @@ using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Listeners;
-using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
@@ -1775,14 +1773,27 @@ namespace Raven.Client.Connection.Async
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 
 			HttpResponseMessage response;
-
-			if (method == "POST")
+			try
 			{
-				response = await request.ExecuteRawResponseAsync(query.Query).ConfigureAwait(false);
+				if (method == "POST")
+				{
+					response = await request.ExecuteRawResponseAsync(query.Query).ConfigureAwait(false);
+				}
+				else
+				{
+					response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
+				}
 			}
-			else
+			catch (Exception e)
 			{
-				response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
+				if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) && request.ResponseStatusCode == HttpStatusCode.NotFound)
+				{
+					throw new InvalidOperationException(
+						@"StreamQuery does not support querying dynamic indexes. It is designed to be used with large data-sets and is unlikely to return all data-set after 15 sec of indexing, like Query() does.",
+						e);
+				}
+
+				throw;
 			}
 			
 			queryHeaderInfo.Value = new QueryHeaderInformation

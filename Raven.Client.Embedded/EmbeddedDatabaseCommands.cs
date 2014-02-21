@@ -643,7 +643,7 @@ namespace Raven.Client.Embedded
 						if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) &&
 							e is IndexDoesNotExistsException)
 						{
-							throw new InvalidOperationException(@"StreamQuery() does not support querying dynamic indexes. It is designed to be used with large data-sets and is unlikely to return all data-set after 15 sec of indexing, like Query() does.",e);
+							throw new InvalidOperationException(@"StreamQuery does not support querying dynamic indexes. It is designed to be used with large data-sets and is unlikely to return all data-set after 15 sec of indexing, like Query() does.",e);
 						}
 
 						throw;

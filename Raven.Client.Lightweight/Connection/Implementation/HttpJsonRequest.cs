@@ -751,8 +751,10 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private static async Task AssertNotFailingResponse(HttpResponseMessage response)
+		private async Task AssertNotFailingResponse(HttpResponseMessage response)
 		{
+			ResponseStatusCode = response.StatusCode;
+
 			if (response.IsSuccessStatusCode == false)
 			{
 				var sb = new StringBuilder()
