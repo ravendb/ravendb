@@ -21,7 +21,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -36,7 +36,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.SecureFor(UserId, "Company/Bid");
 
@@ -57,7 +57,7 @@ No one may perform operation Company/Bid on companies/1
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -73,7 +73,7 @@ No one may perform operation Company/Bid on companies/1
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.SecureFor(UserId, "Company/Bid");
 
@@ -88,7 +88,7 @@ No one may perform operation Company/Bid on companies/1
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -114,7 +114,7 @@ No one may perform operation Company/Bid on companies/1
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.SecureFor(UserId, "Company/Bid");
 
@@ -129,7 +129,7 @@ No one may perform operation Company/Bid on companies/1
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -144,7 +144,7 @@ No one may perform operation Company/Bid on companies/1
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.SecureFor(UserId, "Company/Bid");
 

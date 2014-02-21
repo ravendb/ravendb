@@ -19,7 +19,7 @@ namespace Raven.Bundles.Tests.Authorization
 
 		public CanHandleAuthQuestions()
 		{
-			authorizationDecisions = new AuthorizationDecisions(server.SystemDatabase);
+            authorizationDecisions = new AuthorizationDecisions(Database);
 		}
 
 		[Fact]
@@ -29,7 +29,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -56,7 +56,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			var jsonDocument = server.SystemDatabase.Get(company.Id, null);
+            var jsonDocument = Database.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
 		}
@@ -68,7 +68,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -101,7 +101,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			var jsonDocument = server.SystemDatabase.Get(company.Id, null);
+            var jsonDocument = Database.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
 		}
@@ -113,7 +113,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -146,7 +146,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			var jsonDocument = server.SystemDatabase.Get(company.Id, null);
+            var jsonDocument = Database.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
 		}
@@ -158,7 +158,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -191,7 +191,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			var jsonDocument = server.SystemDatabase.Get(company.Id, null);
+            var jsonDocument = Database.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.False(isAllowed);
 		}
@@ -203,7 +203,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -236,7 +236,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			var jsonDocument = server.SystemDatabase.Get(company.Id, null);
+            var jsonDocument = Database.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.False(isAllowed);
 		}
@@ -248,7 +248,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -282,7 +282,7 @@ namespace Raven.Bundles.Tests.Authorization
 
 			}
 
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				var authorizationUser = s.Load<AuthorizationUser>(userId);
 				Assert.True(s.IsAllowed(authorizationUser, operation));
@@ -292,7 +292,7 @@ namespace Raven.Bundles.Tests.Authorization
 		[Fact]
 		public void GivingDenyPermissionWillReturnFalse_OnClient()
 		{
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -312,7 +312,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 			
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				var authorizationUser = s.Load<AuthorizationUser>(userId);
 				Assert.False(s.IsAllowed(authorizationUser, operation));
@@ -322,7 +322,7 @@ namespace Raven.Bundles.Tests.Authorization
 		[Fact]
 		public void GivingPermissionOnRoleWorks_OnClient()
 		{
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -347,7 +347,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				var authorizationUser = s.Load<AuthorizationUser>(userId);
 				Assert.True(s.IsAllowed(authorizationUser, operation));
@@ -361,7 +361,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -398,7 +398,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			var jsonDocument = server.SystemDatabase.Get(company.Id, null);
+            var jsonDocument = Database.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.False(isAllowed);
 		}
@@ -410,7 +410,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -437,7 +437,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			var jsonDocument = server.SystemDatabase.Get(company.Id, null);
+            var jsonDocument = Database.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
 		}
@@ -449,7 +449,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -476,7 +476,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			var jsonDocument = server.SystemDatabase.Get(company.Id, null);
+            var jsonDocument = Database.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
 		}
@@ -488,7 +488,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -515,7 +515,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			var jsonDocument = server.SystemDatabase.Get(company.Id, null);
+            var jsonDocument = Database.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
 		}
@@ -527,7 +527,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -553,7 +553,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			var jsonDocument = server.SystemDatabase.Get(company.Id, null);
+            var jsonDocument = Database.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
 		}
@@ -565,7 +565,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -580,7 +580,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			var jsonDocument = server.SystemDatabase.Get(company.Id, null);
+            var jsonDocument = Database.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.False(isAllowed);
 		}
@@ -592,7 +592,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -604,7 +604,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			var jsonDocument = server.SystemDatabase.Get(company.Id, null);
+            var jsonDocument = Database.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
 		}

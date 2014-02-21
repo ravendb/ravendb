@@ -13,7 +13,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
         public void AuthorizationDemo_Works()
         {
             // Arrange
-            using (IDocumentSession session = store.OpenSession())
+            using (IDocumentSession session = store.OpenSession(DatabaseName))
             {
                 session.Store(
                     new AuthorizationRole
@@ -80,7 +80,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 
 
             // Assert
-            using (IDocumentSession session = store.OpenSession())
+            using (IDocumentSession session = store.OpenSession(DatabaseName))
             {
 	            client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(session,
 	                                                                                       "Authorization/Users/NotDrHowser",

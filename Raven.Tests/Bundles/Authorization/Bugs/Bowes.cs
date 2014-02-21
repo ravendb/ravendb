@@ -167,13 +167,13 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 		[Fact]
 		public void ShouldWork()
 		{
-			using (var session = store.OpenSession())
+			using (var session = store.OpenSession(DatabaseName))
 			{
 				SetupData(session);
 				session.SaveChanges();
 			}
 
-			using (var session = store.OpenSession())
+			using (var session = store.OpenSession(DatabaseName))
 			{
 				client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(session, "Users/4", "OrgDocs/View");
 

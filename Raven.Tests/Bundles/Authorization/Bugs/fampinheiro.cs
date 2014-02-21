@@ -30,7 +30,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 		[Fact]
 		public void ShouldWork()
 		{
-			using (var session = store.OpenSession())
+			using (var session = store.OpenSession(DatabaseName))
 			{
 				var person = new Person
 				{
@@ -73,14 +73,14 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 				});
 				session.SaveChanges();
 			}
-			using (var session = store.OpenSession())
+			using (var session = store.OpenSession(DatabaseName))
 			{
 				session.SecureFor("people/1", "resources/view");
 				session.Load<Resource>("resources/1");
 				var collection = session.Query<Resource>().ToList();
 				Assert.NotEmpty(collection);
 			}
-			using(var session = store.OpenSession())
+			using(var session = store.OpenSession(DatabaseName))
 			{
 				session.SecureFor("people/2", "resources/view");
 				Assert.Throws<ReadVetoException>(() => session.Load<Resource>("resources/1"));

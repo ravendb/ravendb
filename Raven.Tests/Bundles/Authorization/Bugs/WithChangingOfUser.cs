@@ -17,7 +17,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -43,21 +43,21 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.SecureFor(UserId, "Company/Bid");
 
 				Assert.Throws<ReadVetoException>(() => s.Load<Company>(company.Id));
 			}
 
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				var user = s.Load<AuthorizationUser>(UserId);
 				user.Roles = new List<string> {"Admins"};
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.SecureFor(UserId, "Company/Bid");
 
@@ -72,7 +72,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -98,21 +98,21 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.SecureFor(UserId, "Company/Bid");
 
 				Assert.Empty(s.Query<Company>().ToArray());
 			}
 
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				var user = s.Load<AuthorizationUser>(UserId);
 				user.Roles = new List<string> { "Admins" };
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.SecureFor(UserId, "Company/Bid");
 

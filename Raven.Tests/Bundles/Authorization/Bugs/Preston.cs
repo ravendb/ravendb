@@ -23,7 +23,7 @@
             {
                 Name = "Hibernating Rhinos"
             };
-            using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
             {
 
                 s.Store(new AuthorizationUser
@@ -39,7 +39,7 @@
                 s.SaveChanges();
             }
 
-            using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
             {
                 s.SecureFor(UserId, "Company/Bid");
 

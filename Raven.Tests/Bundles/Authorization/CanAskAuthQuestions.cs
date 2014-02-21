@@ -16,7 +16,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -42,7 +42,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				var isOperationAllowedOnDocument = s.Advanced.IsOperationAllowedOnDocument(UserId, "Company/Bid", "companies/1");
 				Assert.False(isOperationAllowedOnDocument.IsAllowed);
@@ -50,14 +50,14 @@ namespace Raven.Bundles.Tests.Authorization
 					isOperationAllowedOnDocument.Reasons[0]);
 			}
 
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				var user = s.Load<AuthorizationUser>(UserId);
 				user.Roles = new List<string> { "Admins" };
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				var isOperationAllowedOnDocument = s.Advanced.IsOperationAllowedOnDocument(UserId, "Company/Bid", "companies/1");
 				Assert.True(isOperationAllowedOnDocument.IsAllowed);

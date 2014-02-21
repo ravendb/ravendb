@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
+
+using Raven.Abstractions.Data;
 using Raven.Bundles.CascadeDelete;
 using Raven.Client.Document;
 using Raven.Json.Linq;
@@ -24,7 +26,7 @@ namespace Raven.Bundles.Tests.CascadeDelete
 				configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof (CascadeDeleteTrigger).Assembly));
 			});
 
-			documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer);
+            documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer);
 		}
 
 		[Fact]

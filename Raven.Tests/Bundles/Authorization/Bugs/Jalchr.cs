@@ -31,7 +31,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 		private void ExecuteSecuredOperation(string userId)
 		{
 			string operation = "operation";
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				AuthorizationUser user = new AuthorizationUser { Id = userId, Name = "Name" };
 				user.Permissions = new List<OperationPermission>
@@ -43,7 +43,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				var authorizationUser = s.Load<AuthorizationUser>(userId);
 				Assert.True(AuthorizationClientExtensions.IsAllowed(s, authorizationUser, operation));

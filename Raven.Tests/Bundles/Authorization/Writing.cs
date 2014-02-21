@@ -20,7 +20,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -35,7 +35,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.SecureFor(UserId, "Company/Rename");
 				company.Name = "Stampeding Rhinos";
@@ -52,7 +52,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -78,7 +78,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.SecureFor(UserId, "Company/Rename");
 				s.Load<Company>(company.Id).Name = "Stampeding Rhinos";
@@ -94,7 +94,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -120,7 +120,7 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.SecureFor(UserId.ToLower(), "Company/Rename");
 				s.Load<Company>(company.Id).Name = "Stampeding Rhinos";

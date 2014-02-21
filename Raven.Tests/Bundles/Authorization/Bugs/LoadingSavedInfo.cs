@@ -21,7 +21,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -49,7 +49,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 
 			for (int i = 0; i < 15; i++)
 			{
-				using (var s = store.OpenSession())
+                using (var s = store.OpenSession(DatabaseName))
 				{
 					s.SecureFor(UserId, "Company/Bid");
 
@@ -61,7 +61,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 
 			}
 
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.SecureFor(UserId, "Company/Bid");
 
@@ -78,7 +78,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.Store(new AuthorizationUser
 				{
@@ -106,7 +106,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 
 			for (int i = 0; i < 15; i++)
 			{
-				using (var s = store.OpenSession())
+                using (var s = store.OpenSession(DatabaseName))
 				{
 					s.SecureFor(UserId, "Company/Bid");
 
@@ -118,7 +118,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 
 			}
 
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
 				s.SecureFor(UserId, "Company/Bid");
 
