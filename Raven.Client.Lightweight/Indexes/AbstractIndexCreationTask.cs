@@ -280,6 +280,7 @@ namespace Raven.Client.Indexes
 				TermVectorsStrings = TermVectorsStrings,
 				SpatialIndexes = SpatialIndexes,
 				SpatialIndexesStrings = SpatialIndexesStrings,
+                DisableInMemoryIndexing = DisableInMemoryIndexing,
 				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
 			}.ToIndexDefinition(Conventions);
 		}

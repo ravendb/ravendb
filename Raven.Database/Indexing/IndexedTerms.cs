@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Lucene.Net.Index;
 using Lucene.Net.Util;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -14,8 +13,35 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
 {
-    public class IndexedTerms
+    public static class IndexedTerms
     {
+        public static void ReadEntriesForFieldsFromTermVectors(
+            IndexSearcherHolder.IndexSearcherHoldingState state,
+            HashSet<string> fieldsToRead,
+            HashSet<int> docIds,
+            Func<string,string, double> convert,
+            Action<string, string, double, int> onTermFound)
+        {
+            var reader = state.IndexSearcher.IndexReader;
+
+            foreach (var docId in docIds)
+            {
+                foreach (var field in fieldsToRead)
+                {
+                    var termFreqVector = reader.GetTermFreqVector(docId, field);
+                    if (termFreqVector == null)
+                        continue;
+
+                    foreach (var term in termFreqVector.GetTerms())
+                    {
+                        if (LowPrecisionNumber(field, term))
+                            continue;
+                        onTermFound(field, term, convert(field, term), docId);
+                    }
+                }
+            }
+        }
+
         public static void ReadEntriesForFields(
                 IndexSearcherHolder.IndexSearcherHoldingState state,
                 HashSet<string> fieldsToRead,
@@ -63,6 +89,31 @@ namespace Raven.Database.Indexing
             }
         }
 
+        public static void ReadEntriesForFieldsFromTermVectors(
+            IndexSearcherHolder.IndexSearcherHoldingState state,
+            HashSet<string> fieldsToRead,
+            HashSet<int> docIds,
+            Action<string,string, int> onTermFound)
+        {
+            var reader = state.IndexSearcher.IndexReader;
+
+            foreach (var docId in docIds)
+            {
+                foreach (var field in fieldsToRead)
+                {
+                    var termFreqVector = reader.GetTermFreqVector(docId, field);
+                    if (termFreqVector == null)
+                        continue;
+
+                    foreach (var term in termFreqVector.GetTerms())
+                    {
+                        if(LowPrecisionNumber(field, term))
+                            continue;
+                        onTermFound(field, term, docId);
+                    }
+                }
+            }
+        }
 
         public static void ReadEntriesForFields(
               IndexSearcherHolder.IndexSearcherHoldingState state,
@@ -95,6 +146,22 @@ namespace Raven.Database.Indexing
             }
         }
 
+        public static void PreFillCache(IndexSearcherHolder.IndexSearcherHoldingState state, string[] fieldsToRead,
+            IndexReader reader)
+        {
+            state.Lock.EnterWriteLock();
+            try
+            {
+                if (fieldsToRead.All(state.IsInCache))
+                    return;
+                FillCache(state, fieldsToRead, reader);
+            }
+            finally
+            {
+                state.Lock.ExitWriteLock();
+            }
+        }
+
         private static void EnsureFieldsAreInCache(IndexSearcherHolder.IndexSearcherHoldingState state, HashSet<string> fieldsToRead, IndexReader reader)
         {
             if (fieldsToRead.All(state.IsInCache))
@@ -115,7 +182,7 @@ namespace Raven.Database.Indexing
             state.Lock.EnterReadLock();
         }
 
-        private static void FillCache(IndexSearcherHolder.IndexSearcherHoldingState state, List<string> fieldsToRead,IndexReader reader)
+        private static void FillCache(IndexSearcherHolder.IndexSearcherHoldingState state, IEnumerable<string> fieldsToRead,IndexReader reader)
         {
             foreach (var field in fieldsToRead)
             {
@@ -129,7 +196,8 @@ namespace Raven.Database.Indexing
                             if (termEnum.Term == null || field != termEnum.Term.Field)
                                 break;
 
-                            if (LowPrecisionNumber(termEnum.Term))
+                            Term term = termEnum.Term;
+                            if (LowPrecisionNumber(term.Field, term.Text))
                                 continue;
 
 
@@ -156,16 +224,16 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private static bool LowPrecisionNumber(Term term)
+        private static bool LowPrecisionNumber(string field, string val)
         {
-            if (term.Field.EndsWith("_Range") == false)
+            if (field.EndsWith("_Range") == false)
                 return false;
 
-            if (string.IsNullOrEmpty(term.Text))
+            if (string.IsNullOrEmpty(val))
                 return false;
 
-            return term.Text[0] - NumericUtils.SHIFT_START_INT != 0 &&
-                   term.Text[0] - NumericUtils.SHIFT_START_LONG != 0;
+            return val[0] - NumericUtils.SHIFT_START_INT != 0 &&
+                   val[0] - NumericUtils.SHIFT_START_LONG != 0;
         }
 
         public static RavenJObject[] ReadAllEntriesFromIndex(IndexReader reader)

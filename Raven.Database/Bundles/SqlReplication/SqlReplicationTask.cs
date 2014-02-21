@@ -174,7 +174,9 @@ namespace Raven.Database.Bundles.SqlReplication
 				
 				if (documents.Count != 0)
 					latestEtag = documents[documents.Count - 1].Etag;
-				
+
+				documents.RemoveAll(x => prefetchingBehavior.FilterDocuments(x) == false);
+
 				var deletedDocsByConfig = new Dictionary<SqlReplicationConfig, List<ListItem>>();
 
 				foreach (var relevantConfig in relevantConfigs)
@@ -229,7 +231,7 @@ namespace Raven.Database.Bundles.SqlReplication
 							var currentLatestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicate);
 
 							if (ReplicateDeletionsToDestination(replicationConfig, deletedDocs) &&
-								ReplicateChangesToDesintation(replicationConfig, docsToReplicate))
+								ReplicateChangesToDestination(replicationConfig, docsToReplicate))
 							{
 								if (deletedDocs.Count > 0)
 								{
@@ -398,7 +400,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			return calculateSynchronizationEtag;
 		}
 
-		private bool ReplicateChangesToDesintation(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
+		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
 		{
 			var scriptResult = ApplyConversionScript(cfg, docs);
 			if (scriptResult.Data.Count == 0)
@@ -473,7 +475,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				{
 					replicationStats.MarkScriptAsInvalid(Database, cfg.Script);
 
-					log.WarnException("Could parse SQL Replication script for " + cfg.Name, e);
+					log.WarnException("Could not parse SQL Replication script for " + cfg.Name, e);
 
 					return result;
 				}

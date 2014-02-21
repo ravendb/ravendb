@@ -481,7 +481,7 @@
 				var existingCachedDocument = documentCacher.GetCachedDocument(loweredKey, etag);
 
 				var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : stream.ToJObject();
-				var lastModified = lastModifiedDateTimeBinary > 0 ? DateTime.FromBinary(lastModifiedDateTimeBinary) : (DateTime?) null;
+			    var lastModified = DateTime.FromBinary(lastModifiedDateTimeBinary);
 
 				return new JsonDocumentMetadata
 				{

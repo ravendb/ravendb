@@ -5,8 +5,8 @@
 		<version>{{version}}</version>
 		<title>RavenDB Test Helpers</title>
 		<authors>Hibernating Rhinos</authors>
-		<summary>This package includes a utiliti class that helps test features of RavenDB.</summary>
-		<description>This package includes a utiliti class that helps test features of RavenDB. RavenDB is a document database for the .NET platform, offering a flexible data model design to fit the needs of real world systems.</description>
+		<summary>This package includes a utility class that helps test features of RavenDB.</summary>
+		<description>This package includes a utility class that helps test features of RavenDB. RavenDB is a document database for the .NET platform, offering a flexible data model design to fit the needs of real world systems.</description>
 		<language>en-US</language>
 		<licenseUrl>http://www.ravendb.net/licensing</licenseUrl>
 		<projectUrl>http://www.ravendb.net/</projectUrl>
