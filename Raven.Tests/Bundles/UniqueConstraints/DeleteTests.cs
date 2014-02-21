@@ -1,11 +1,8 @@
-﻿using System;
-using Raven.Bundles.UniqueConstraints;
+﻿using Xunit;
 
-namespace Raven.Bundles.Tests.UniqueConstraints
+namespace Raven.Tests.Bundles.UniqueConstraints
 {
-	using Xunit;
-
-	public class DeleteTests : UniqueConstraintsTest
+    public class DeleteTests : UniqueConstraintsTest
 	{
 		[Fact]
 		public void Deletes_constraint_document_when_base_document_is_deleted()
@@ -19,13 +16,13 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 
 				// Ensures constraint was created
 				Assert.NotNull(
-					DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Util.EscapeUniqueValue(("foo@bar.com"))));
+					DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(("foo@bar.com"))));
 				Assert.NotNull(DocumentStore.DatabaseCommands.Get("users/1"));
 
 				DocumentStore.DatabaseCommands.Delete("users/1", null);
 
 				// Both docs should be deleted
-				Assert.Null(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Util.EscapeUniqueValue("foo@bar.com")));
+				Assert.Null(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue("foo@bar.com")));
 				Assert.Null(DocumentStore.DatabaseCommands.Get("users/1"));
 			}
 		}
@@ -41,15 +38,15 @@ namespace Raven.Bundles.Tests.UniqueConstraints
                 session.SaveChanges();
 
                 // Ensures constraint was created
-                Assert.NotNull(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/TaskIds/" + Util.EscapeUniqueValue(("Task1"))));
-                Assert.NotNull(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/TaskIds/" + Util.EscapeUniqueValue(("Task2"))));
+                Assert.NotNull(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/TaskIds/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(("Task1"))));
+                Assert.NotNull(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/TaskIds/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(("Task2"))));
                 Assert.NotNull(DocumentStore.DatabaseCommands.Get("users/1"));
 
                 DocumentStore.DatabaseCommands.Delete("users/1", null);
 
                 // Both docs should be deleted
-                Assert.Null(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/TaskIds/" + Util.EscapeUniqueValue(("Task1"))));
-                Assert.Null(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/TaskIds/" + Util.EscapeUniqueValue(("Task2"))));
+                Assert.Null(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/TaskIds/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(("Task1"))));
+                Assert.Null(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/TaskIds/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(("Task2"))));
                 Assert.Null(DocumentStore.DatabaseCommands.Get("users/1"));
             }
         }
@@ -65,10 +62,10 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 				session.SaveChanges();
 
 				// Ensures constraint was created
-				Assert.NotNull(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Util.EscapeUniqueValue("foo@bar.com")));
+				Assert.NotNull(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue("foo@bar.com")));
 				Assert.NotNull(DocumentStore.DatabaseCommands.Get("users/1"));
 
-				DocumentStore.DatabaseCommands.Delete("UniqueConstraints/Users/Email/" + Util.EscapeUniqueValue("foo@bar.com"), null);
+				DocumentStore.DatabaseCommands.Delete("UniqueConstraints/Users/Email/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue("foo@bar.com"), null);
 
 				// Base doc still intact
 				Assert.NotNull(DocumentStore.DatabaseCommands.Get("users/1"));

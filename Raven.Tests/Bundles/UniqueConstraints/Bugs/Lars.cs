@@ -1,11 +1,12 @@
 using Raven.Client.UniqueConstraints;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.UniqueConstraints.Bugs
-{
-	using System.Linq;
+using System.Linq;
 
-	public class TestRavenUniqueConstraints : UniqueConstraintsTest
+namespace Raven.Tests.Bundles.UniqueConstraints.Bugs
+{
+    public class TestRavenUniqueConstraints : UniqueConstraintsTest
 	{
 		public class WithUniqueName
 		{

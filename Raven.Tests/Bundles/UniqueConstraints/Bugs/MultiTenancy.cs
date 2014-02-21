@@ -1,19 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+
 using Raven.Bundles.UniqueConstraints;
 using Raven.Client.Embedded;
 using Raven.Client.UniqueConstraints;
 using Raven.Json.Linq;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.UniqueConstraints.Bugs
+namespace Raven.Tests.Bundles.UniqueConstraints.Bugs
 {
-	public class MultiTenancy
+	public class MultiTenancy : RavenTest
 	{
 		[Fact]
 		public void Round_Trip_Includes_Expected_Metadata()
@@ -76,20 +74,11 @@ namespace Raven.Bundles.Tests.UniqueConstraints.Bugs
 
 		private EmbeddableDocumentStore InitializeDocumentStore(UniqueConstraintsStoreListener listener, int port = 8079)
 		{
-			EmbeddableDocumentStore documentStore = new EmbeddableDocumentStore
-			{
-				RunInMemory = true,
-				UseEmbeddedHttpServer = true,
-				Configuration =
-				{
-					Port = port
-				}
-			};
-
-			documentStore.Configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(UniqueConstraintsPutTrigger).Assembly));
-			documentStore.RegisterListener(listener);
-
-			documentStore.Initialize();
+		    var documentStore = NewDocumentStore(port: port, configureStore: store =>
+		    {
+                store.Configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(UniqueConstraintsPutTrigger).Assembly));
+                store.RegisterListener(listener);
+		    });
 
 			return documentStore;
 		}

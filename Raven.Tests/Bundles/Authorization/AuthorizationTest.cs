@@ -6,33 +6,39 @@
 using System.Collections;
 using System.ComponentModel.Composition.Hosting;
 using System.Web;
+
 using Raven.Bundles.Authorization;
 using Raven.Client.Document;
-using Raven.Database.Extensions;
+using Raven.Database;
 using Raven.Server;
-using Raven.Tests;
 
-namespace Raven.Bundles.Tests.Authorization
+namespace Raven.Tests.Bundles.Authorization
 {
 	public abstract class AuthorizationTest : RavenTest
 	{
 		protected const string UserId = "Authorization/Users/Ayende";
 		protected readonly DocumentStore store;
 		protected readonly RavenDbServer server;
+
+	    protected readonly string DatabaseName = Raven.Abstractions.Data.Constants.SystemDatabase;
 		
 		protected AuthorizationTest()
 		{
-			IOExtensions.DeleteDirectory("Data");
-			IOExtensions.DeleteDirectory("Testing");
-			IOExtensions.DeleteDirectory("Tenants");
-
 			server = GetNewServer(configureServer: configuration => configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof (AuthorizationDecisions).Assembly)));
-			store = NewRemoteDocumentStore(ravenDbServer: server);
+            store = NewRemoteDocumentStore(ravenDbServer: server, databaseName: DatabaseName);
 			
 			foreach (DictionaryEntry de in HttpRuntime.Cache)
 			{
 				HttpRuntime.Cache.Remove((string)de.Key);
 			}
 		}
+
+	    protected DocumentDatabase Database
+	    {
+	        get
+	        {
+	            return server.Server.GetDatabaseInternal(DatabaseName).Result;
+	        }
+	    }
 	}
 }

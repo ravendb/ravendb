@@ -1,10 +1,11 @@
 extern alias client;
-using client::Raven.Bundles.Authorization.Model;
 using Raven.Abstractions.Data;
+
 using Xunit;
+
 using Raven.Client.Extensions;
 
-namespace Raven.Bundles.Tests.Authorization.Bugs
+namespace Raven.Tests.Bundles.Authorization.Bugs
 {
 	public class Kwal : AuthorizationTest
 	{
@@ -33,7 +34,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 			using (var session = store.OpenSession("Testing"))
 			{
 				session.Store(
-					new AuthorizationUser()
+					new client::Raven.Bundles.Authorization.Model.AuthorizationUser()
 					{
 						Id = "Authorization/Users/Johnny",
 						Name = "Johnny Executive"

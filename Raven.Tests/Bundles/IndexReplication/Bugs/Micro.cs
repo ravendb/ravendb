@@ -2,16 +2,17 @@
 using System.Configuration;
 using System.Data.Common;
 using System.Linq;
+
 using Raven.Abstractions.Indexing;
 using Raven.Bundles.IndexReplication;
 using Raven.Bundles.IndexReplication.Data;
 using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Tests;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.IndexReplication.Bugs
+namespace Raven.Tests.Bundles.IndexReplication.Bugs
 {
 	public class Micro : RavenTest
 	{

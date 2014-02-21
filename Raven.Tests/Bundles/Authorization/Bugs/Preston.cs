@@ -1,17 +1,14 @@
-﻿namespace Raven.Bundles.Tests.Authorization.Bugs
+﻿using System.Linq;
+
+using Raven.Client.Exceptions;
+using Raven.Client.Linq;
+using Raven.Client.Indexes;
+
+using Xunit;
+
+namespace Raven.Tests.Bundles.Authorization.Bugs
 {
     extern alias client;
-
-    using System.Linq;
-
-    using client::Raven.Client.Authorization;
-    using client::Raven.Bundles.Authorization.Model;
-
-    using Raven.Client.Exceptions;
-    using Raven.Client.Linq;
-    using Raven.Client.Indexes;
-
-    using Xunit;
 
     public class Preston : AuthorizationTest
     {
@@ -23,10 +20,10 @@
             {
                 Name = "Hibernating Rhinos"
             };
-            using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
             {
 
-                s.Store(new AuthorizationUser
+                s.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
                 {
                     Id = UserId,
                     Name = "Ayende Rahien",
@@ -34,14 +31,14 @@
 
                 s.Store(company);
 
-                s.SetAuthorizationFor(company, new DocumentAuthorization());// deny everyone
+                client::Raven.Client.Authorization.AuthorizationClientExtensions.SetAuthorizationFor(s, company, new client::Raven.Bundles.Authorization.Model.DocumentAuthorization());// deny everyone
 
                 s.SaveChanges();
             }
 
-            using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
             {
-                s.SecureFor(UserId, "Company/Bid");
+                client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(s, UserId, "Company/Bid");
 
                 var companyListTransform = s.Query<Company>()
                     .Where(c => c.Name.StartsWith("Hibernating"))
