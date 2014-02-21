@@ -17,6 +17,9 @@ using Raven.Database.Linq;
 
 namespace Raven.Database.Queries
 {
+    using Raven.Abstractions;
+    using Raven.Abstractions.Util;
+
     public class FacetedQueryRunner
     {
         private readonly DocumentDatabase database;
@@ -116,9 +119,24 @@ namespace Raven.Database.Queries
             if (parsedRange.HighValue == "NULL" || parsedRange.HighValue == "*")
                 parsedRange.HighValue = null;
 
-
+            parsedRange.LowValue = UnescapeValueIfNecessary(parsedRange.LowValue);
+            parsedRange.HighValue = UnescapeValueIfNecessary(parsedRange.HighValue);
 
             return parsedRange;
+        }
+
+        private static string UnescapeValueIfNecessary(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return value;
+
+            var unescapedValue = QueryBuilder.Unescape(value);
+
+            DateTime _;
+            if (DateTime.TryParseExact(unescapedValue, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out _))
+                return unescapedValue;
+
+            return value;
         }
 
         private static string NumericStringToSortableNumeric(string value)
