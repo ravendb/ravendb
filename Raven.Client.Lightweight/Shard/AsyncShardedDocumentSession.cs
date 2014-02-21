@@ -384,6 +384,34 @@ namespace Raven.Client.Shard
 								.ContinueWith(task => (IEnumerable<T>)task.Result.SelectMany(x => x).Select(TrackEntity<T>).ToList());
 		}
 
+		public Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25,
+		                                                    string exclude = null, RavenPagingInformation pagingInformation = null,
+		                                                    Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			var transformer = new TTransformer().TransformerName;
+
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+			{
+				configure(configuration);
+			}
+
+			IncrementRequestCount();
+			var shards = GetCommandsToOperateOn(new ShardRequestData
+			{
+				EntityType = typeof(TResult),
+				Keys = { keyPrefix }
+			});
+
+			return shardStrategy.ShardAccessStrategy.ApplyAsync(shards, new ShardRequestData
+			{
+				EntityType = typeof(TResult),
+				Keys = { keyPrefix }
+			}, (dbCmd, i) => dbCmd.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude, transformer: transformer,
+														 queryInputs: configuration.QueryInputs))
+								.ContinueWith(task => (IEnumerable<TResult>)task.Result.SelectMany(x => x).Select(TrackEntity<TResult>).ToList());
+		}
+
 		/// <summary>
 		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
 		/// </summary>

@@ -135,7 +135,7 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
 		                                 RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
-		                                 string exclude = null, string transformer = null)
+										 string exclude = null, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
 		{
 			pageSize = Math.Min(pageSize, database.Configuration.MaxPageSize);
 
@@ -154,7 +154,7 @@ namespace Raven.Client.Embedded
 
 			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, actualStart,
 			                                                                          pageSize, CancellationToken.None,
-			                                                                          ref nextPageStart, transformer);
+			                                                                          ref nextPageStart, transformer, queryInputs);
 
 			if (pagingInformation != null)
 				pagingInformation.Fill(start, pageSize, nextPageStart);

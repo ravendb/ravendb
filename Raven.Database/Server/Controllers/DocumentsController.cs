@@ -66,6 +66,7 @@ namespace Raven.Database.Server.Controllers
 		        else
 		        {
 			        var transformer = GetQueryStringValue("transformer");
+			        var queryInputs = ExtractQueryInputs();
 
 		            msg =
 		                GetMessageWithObject(
@@ -76,7 +77,7 @@ namespace Raven.Database.Server.Controllers
 		                        GetStart(),
 		                        GetPageSize(Database.Configuration.MaxPageSize),
 		                        cts.Token,
-		                        ref nextPageStart, transformer));
+		                        ref nextPageStart, transformer, queryInputs));
 		        }
 
 		        WriteHeaders(new RavenJObject { { Constants.NextPageStart, nextPageStart } }, lastDocEtag, msg);
