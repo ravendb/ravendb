@@ -7,6 +7,7 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Bundles.CascadeDelete;
 using Raven.Client.Document;
+using Raven.Database;
 using Raven.Json.Linq;
 using Raven.Server;
 
@@ -19,14 +20,18 @@ namespace Raven.Tests.Bundles.Expiration
 		private readonly RavenDbServer ravenDbServer;
 		private readonly DocumentStore documentStore;
 
+	    private readonly DocumentDatabase database;
+
 		public WithCascade()
 		{
-			ravenDbServer = GetNewServer(activeBundles: "documentExpiration", configureServer: configuration =>
+			ravenDbServer = GetNewServer(databaseName: Constants.SystemDatabase, activeBundles: "documentExpiration", configureServer: configuration =>
 			{
 				configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(CascadeDeleteTrigger).Assembly));
 				configuration.Settings["Raven/Expiration/DeleteFrequencySeconds"] = "1";
 			});
-			documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer);
+            documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, databaseName: Constants.SystemDatabase);
+
+            database = ravenDbServer.Server.GetDatabaseInternal(Constants.SystemDatabase).Result;
 		}
 
 
@@ -34,7 +39,7 @@ namespace Raven.Tests.Bundles.Expiration
 		public void CanDeleteAndCascadeAtTheSameTime()
 		{
 			documentStore.DatabaseCommands.PutAttachment("item", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
-			using (var session = documentStore.OpenSession())
+            using (var session = documentStore.OpenSession())
 			{
 				var doc = new { Id = "doc/1" };
 				session.Store(doc);
@@ -42,11 +47,11 @@ namespace Raven.Tests.Bundles.Expiration
 				session.Advanced.GetMetadataFor(doc)[MetadataKeys.AttachmentsToCascadeDelete] = new RavenJArray(new[] { "item" });
 				session.SaveChanges();
 			}
-			
+
 			JsonDocument documentByKey = null;
 			for (int i = 0; i < 50; i++)
 			{
-				ravenDbServer.SystemDatabase.TransactionalStorage.Batch(accessor =>
+                database.TransactionalStorage.Batch(accessor =>
 				{
 					documentByKey = accessor.Documents.DocumentByKey("doc/1", null);
 
@@ -58,8 +63,7 @@ namespace Raven.Tests.Bundles.Expiration
 
 			Assert.Null(documentByKey);
 
-
-			ravenDbServer.SystemDatabase.TransactionalStorage.Batch(accessor => Assert.Null(accessor.Attachments.GetAttachment("item")));
+            database.TransactionalStorage.Batch(accessor => Assert.Null(accessor.Attachments.GetAttachment("item")));
 		
 		}
 
@@ -67,7 +71,7 @@ namespace Raven.Tests.Bundles.Expiration
 		public void CanDeleteAndCascadeAtTheSameTimeDocuemnts()
 		{
 		//	documentStore.DatabaseCommands.Put("doc/1", new Etag(), new RavenJObject(), new RavenJObject());
-			using (var session = documentStore.OpenSession())
+            using (var session = documentStore.OpenSession())
 			{
 				var doc1 = new { Id = "doc/1" };
 				var doc2 = new { Id = "doc/2" };
@@ -81,7 +85,7 @@ namespace Raven.Tests.Bundles.Expiration
 			JsonDocument documentByKey = null;
 			for (int i = 0; i < 50; i++)
 			{
-				ravenDbServer.SystemDatabase.TransactionalStorage.Batch(accessor =>
+				database.TransactionalStorage.Batch(accessor =>
 				{
 					documentByKey = accessor.Documents.DocumentByKey("doc/1", null);
 
@@ -94,13 +98,13 @@ namespace Raven.Tests.Bundles.Expiration
 			Assert.Null(documentByKey);
 
 
-			ravenDbServer.SystemDatabase.TransactionalStorage.Batch(accessor => Assert.Null(accessor.Documents.DocumentByKey("doc/2", null)));
+            database.TransactionalStorage.Batch(accessor => Assert.Null(accessor.Documents.DocumentByKey("doc/2", null)));
 		}
 
 		[Fact]
 		public void CanDeleteMultiChildrenWithCascade()
 		{
-			using (var session = documentStore.OpenSession())
+            using (var session = documentStore.OpenSession())
 			{
 				var parent = new Foo();
 				var child1 = new Foo();
@@ -114,7 +118,7 @@ namespace Raven.Tests.Bundles.Expiration
 			}
 
 			Thread.Sleep(5000);
-			using (var session = documentStore.OpenSession())
+            using (var session = documentStore.OpenSession())
 			{
 				var list = session.Query<Foo>().ToList();
 				Assert.Empty(list);

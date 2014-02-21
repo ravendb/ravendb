@@ -264,13 +264,6 @@ namespace Raven.Tests.Helpers
 				{
 					CreateDefaultIndexes(documentStore);
 				}
-
-			    var database = ravenDbServer.Server.GetDatabaseInternal(databaseName).Result;
-
-                if (configureServer != null)
-				    configureServer(database.Configuration);
-
-			    ModifyConfiguration(database.Configuration);
 			}
 			catch
 			{

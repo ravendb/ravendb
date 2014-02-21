@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Collections;
 using System.ComponentModel.Composition.Hosting;
 using System.Web;
@@ -11,7 +10,6 @@ using System.Web;
 using Raven.Bundles.Authorization;
 using Raven.Client.Document;
 using Raven.Database;
-using Raven.Database.Extensions;
 using Raven.Server;
 
 namespace Raven.Tests.Bundles.Authorization
@@ -22,14 +20,10 @@ namespace Raven.Tests.Bundles.Authorization
 		protected readonly DocumentStore store;
 		protected readonly RavenDbServer server;
 
-	    protected readonly string DatabaseName = Guid.NewGuid().ToString("N");
+	    protected readonly string DatabaseName = Raven.Abstractions.Data.Constants.SystemDatabase;
 		
 		protected AuthorizationTest()
 		{
-			IOExtensions.DeleteDirectory("Data");
-			IOExtensions.DeleteDirectory("Testing");
-			IOExtensions.DeleteDirectory("Tenants");
-
 			server = GetNewServer(configureServer: configuration => configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof (AuthorizationDecisions).Assembly)));
             store = NewRemoteDocumentStore(ravenDbServer: server, databaseName: DatabaseName);
 			
