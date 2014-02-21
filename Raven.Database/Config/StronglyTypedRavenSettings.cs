@@ -145,6 +145,8 @@ namespace Raven.Database.Config
 
 			MaxStepsForScript = new IntegerSetting(settings["Raven/MaxStepsForScript"], 10*1000);
 			AdditionalStepsForScriptBasedOnDocumentSize = new IntegerSetting(settings["Raven/AdditionalStepsForScriptBasedOnDocumentSize"], 5);
+
+            VoronMaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
 		}
 
 	    
@@ -275,5 +277,7 @@ namespace Raven.Database.Config
     
         public BooleanSetting DisablePerformanceCounters { get; set; }
 		public TimeSpanSetting DatbaseOperationTimeout { get; private set; }
+
+        public IntegerSetting VoronMaxBufferPoolSize { get; private set; }
 	}
 }

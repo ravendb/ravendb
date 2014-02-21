@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
@@ -32,8 +33,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private readonly Reference<WriteBatch> writeBatch;
 
-		public TasksStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, Reference<WriteBatch> writeBatch)
-			: base(snapshot)
+        public TasksStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool)
+			: base(snapshot, bufferPool)
 		{
 			this.tableStorage = tableStorage;
 			this.generator = generator;
