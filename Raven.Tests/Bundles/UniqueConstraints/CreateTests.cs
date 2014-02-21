@@ -1,15 +1,11 @@
 ﻿using Raven.Abstractions.Exceptions;
-using Raven.Bundles.UniqueConstraints;
+using Raven.Json.Linq;
 
-namespace Raven.Bundles.Tests.UniqueConstraints
+using Xunit;
+
+namespace Raven.Tests.Bundles.UniqueConstraints
 {
-	using System;
-
-	using Xunit;
-
-	using RavenJArray = Raven.Json.Linq.RavenJArray;
-
-	public class CreateTests : UniqueConstraintsTest
+    public class CreateTests : UniqueConstraintsTest
 	{
 		[Fact]
 		public void Will_create_correct_metadata()
@@ -62,7 +58,7 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 
 			using (var session = DocumentStore.OpenSession())
 			{
-				var constraintDocument = session.Load<dynamic>("UniqueConstraints/Users/Email/" + Util.EscapeUniqueValue("foo@bar.com"));
+				var constraintDocument = session.Load<dynamic>("UniqueConstraints/Users/Email/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue("foo@bar.com"));
 
 				Assert.NotNull(constraintDocument);
 				Assert.Equal(constraintDocument.RelatedId, user.Id);

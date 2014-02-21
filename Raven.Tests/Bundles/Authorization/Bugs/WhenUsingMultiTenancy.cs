@@ -4,12 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 extern alias client;
-using client::Raven.Client.Authorization;
-using client::Raven.Bundles.Authorization.Model;
 using Raven.Client.Extensions;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.Authorization.Bugs
+namespace Raven.Tests.Bundles.Authorization.Bugs
 {
 	public class WhenUsingMultiTenancy : AuthorizationTest
 	{
@@ -25,7 +24,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 			};
 			using (var s = store.OpenSession(database))
 			{
-				s.Store(new AuthorizationUser
+				s.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
 				{
 					Id = UserId,
 					Name = "Ayende Rahien",
@@ -33,11 +32,11 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 
 				s.Store(company);
 
-				s.SetAuthorizationFor(company, new DocumentAuthorization
+				client::Raven.Client.Authorization.AuthorizationClientExtensions.SetAuthorizationFor(s, company, new client::Raven.Bundles.Authorization.Model.DocumentAuthorization
 				{
 					Permissions =
 						{
-							new DocumentPermission
+							new client::Raven.Bundles.Authorization.Model.DocumentPermission
 							{
 								User = UserId,
 								Allow = true,
@@ -51,7 +50,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 
 			using (var s = store.OpenSession(database))
 			{
-				s.SecureFor(UserId, "Company/Bid");
+				client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(s, UserId, "Company/Bid");
 
 				Assert.NotNull(s.Load<Company>(company.Id));
 			}

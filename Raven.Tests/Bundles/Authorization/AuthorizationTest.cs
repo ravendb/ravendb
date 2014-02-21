@@ -7,14 +7,14 @@ using System;
 using System.Collections;
 using System.ComponentModel.Composition.Hosting;
 using System.Web;
+
 using Raven.Bundles.Authorization;
 using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Extensions;
 using Raven.Server;
-using Raven.Tests;
 
-namespace Raven.Bundles.Tests.Authorization
+namespace Raven.Tests.Bundles.Authorization
 {
 	public abstract class AuthorizationTest : RavenTest
 	{

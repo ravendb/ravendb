@@ -5,12 +5,12 @@
 //-----------------------------------------------------------------------
 extern alias client;
 using System.Linq;
-using client::Raven.Client.Authorization;
-using client::Raven.Bundles.Authorization.Model;
+
 using Raven.Client.Exceptions;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.Authorization
+namespace Raven.Tests.Bundles.Authorization
 {
 	public class Reading : AuthorizationTest
 	{
@@ -23,7 +23,7 @@ namespace Raven.Bundles.Tests.Authorization
 			};
 			using (var s = store.OpenSession(DatabaseName))
 			{
-				s.Store(new AuthorizationUser
+				s.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
 				{
 					Id = UserId,
 					Name = "Ayende Rahien",
@@ -31,14 +31,14 @@ namespace Raven.Bundles.Tests.Authorization
 
 				s.Store(company);
 
-				s.SetAuthorizationFor(company, new DocumentAuthorization());// deny everyone
+				client::Raven.Client.Authorization.AuthorizationClientExtensions.SetAuthorizationFor(s, company, new client::Raven.Bundles.Authorization.Model.DocumentAuthorization());// deny everyone
 
 				s.SaveChanges();
 			}
 
             using (var s = store.OpenSession(DatabaseName))
 			{
-				s.SecureFor(UserId, "Company/Bid");
+				client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(s, UserId, "Company/Bid");
 
 				var readVetoException = Assert.Throws<ReadVetoException>(() => s.Load<Company>(company.Id));
 
@@ -59,7 +59,7 @@ No one may perform operation Company/Bid on companies/1
 			};
             using (var s = store.OpenSession(DatabaseName))
 			{
-				s.Store(new AuthorizationUser
+				s.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
 				{
 					Id = UserId,
 					Name = "Ayende Rahien",
@@ -75,7 +75,7 @@ No one may perform operation Company/Bid on companies/1
 
             using (var s = store.OpenSession(DatabaseName))
 			{
-				s.SecureFor(UserId, "Company/Bid");
+				client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(s, UserId, "Company/Bid");
 
 				Assert.NotNull(s.Load<Company>(company.Id));
 			}
@@ -90,7 +90,7 @@ No one may perform operation Company/Bid on companies/1
 			};
             using (var s = store.OpenSession(DatabaseName))
 			{
-				s.Store(new AuthorizationUser
+				s.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
 				{
 					Id = UserId,
 					Name = "Ayende Rahien",
@@ -98,11 +98,11 @@ No one may perform operation Company/Bid on companies/1
 
 				s.Store(company);
 
-				s.SetAuthorizationFor(company, new DocumentAuthorization
+				client::Raven.Client.Authorization.AuthorizationClientExtensions.SetAuthorizationFor(s, company, new client::Raven.Bundles.Authorization.Model.DocumentAuthorization
 				{
 					Permissions =
 						{
-							new DocumentPermission
+							new client::Raven.Bundles.Authorization.Model.DocumentPermission
 							{
 								User = UserId,
 								Allow = true,
@@ -116,7 +116,7 @@ No one may perform operation Company/Bid on companies/1
 
             using (var s = store.OpenSession(DatabaseName))
 			{
-				s.SecureFor(UserId, "Company/Bid");
+				client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(s, UserId, "Company/Bid");
 
 				Assert.NotNull(s.Load<Company>(company.Id));
 			}
@@ -131,7 +131,7 @@ No one may perform operation Company/Bid on companies/1
 			};
             using (var s = store.OpenSession(DatabaseName))
 			{
-				s.Store(new AuthorizationUser
+				s.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
 				{
 					Id = UserId,
 					Name = "Ayende Rahien",
@@ -139,14 +139,14 @@ No one may perform operation Company/Bid on companies/1
 
 				s.Store(company);
 
-				s.SetAuthorizationFor(company, new DocumentAuthorization());// deny everyone
+				client::Raven.Client.Authorization.AuthorizationClientExtensions.SetAuthorizationFor(s, company, new client::Raven.Bundles.Authorization.Model.DocumentAuthorization());// deny everyone
 
 				s.SaveChanges();
 			}
 
             using (var s = store.OpenSession(DatabaseName))
 			{
-				s.SecureFor(UserId, "Company/Bid");
+				client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(s, UserId, "Company/Bid");
 
 				Assert.Equal(0, s.Advanced.LuceneQuery<Company>()
 									.WaitForNonStaleResults()

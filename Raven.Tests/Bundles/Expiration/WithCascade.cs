@@ -3,15 +3,16 @@ using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Linq;
 using System.Threading;
+
 using Raven.Abstractions.Data;
 using Raven.Bundles.CascadeDelete;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Server;
-using Raven.Tests;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.Expiration
+namespace Raven.Tests.Bundles.Expiration
 {
 	public class WithCascade : RavenTest
 	{

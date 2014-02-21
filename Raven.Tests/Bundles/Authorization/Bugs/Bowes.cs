@@ -1,11 +1,12 @@
 ﻿extern alias client;
-
 using System.Collections.Generic;
 using System.Linq;
+
 using Raven.Client;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.Authorization.Bugs
+namespace Raven.Tests.Bundles.Authorization.Bugs
 {
 	public class Bowes : AuthorizationTest
 	{

@@ -5,13 +5,12 @@
 //-----------------------------------------------------------------------
 extern alias client;
 using System.Collections.Generic;
-using Raven.Bundles.Authorization;
+
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Bundles.Tests.Authorization;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.Authorization.Bugs
+namespace Raven.Tests.Bundles.Authorization.Bugs
 {
 	public class Mojo2_Failed : AuthorizationTest
 	{

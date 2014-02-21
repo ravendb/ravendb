@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 
-namespace Raven.Bundles.Tests.UniqueConstraints
+using Xunit;
+
+using Raven.Client.UniqueConstraints;
+
+namespace Raven.Tests.Bundles.UniqueConstraints
 {
-	using Xunit;
-
-	using Raven.Client.UniqueConstraints;
-
-	public class ExtensionLoadTests : UniqueConstraintsTest
+    public class ExtensionLoadTests : UniqueConstraintsTest
 	{
 		[Fact]
 		public void Will_load_existing_doc_by_constraint()

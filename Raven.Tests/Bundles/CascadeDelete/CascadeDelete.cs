@@ -3,17 +3,17 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 
-using Raven.Abstractions.Data;
 using Raven.Bundles.CascadeDelete;
 using Raven.Client.Document;
 using Raven.Json.Linq;
-using Raven.Tests;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.CascadeDelete
+namespace Raven.Tests.Bundles.CascadeDelete
 {
 	public class CascadeDelete : RavenTest
 	{

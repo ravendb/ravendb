@@ -8,16 +8,15 @@ using System.ComponentModel.Composition.Hosting;
 using System.Configuration;
 using System.Data.Common;
 using System.Linq;
+
 using Raven.Abstractions.Indexing;
 using Raven.Bundles.IndexReplication;
 using Raven.Bundles.IndexReplication.Data;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
-using Raven.Tests;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.IndexReplication
+namespace Raven.Tests.Bundles.IndexReplication
 {
 	public class CanReplicateToSql : RavenTest
 	{

@@ -6,18 +6,19 @@
 
 extern alias client;
 using System.Collections.Generic;
+
 using Raven.Client.Exceptions;
-using client::Raven.Client.Authorization;
+
 using Xunit;
-using client::Raven.Bundles.Authorization.Model;
+
 using System.Linq;
 
-namespace Raven.Bundles.Tests.Authorization.Bugs
+namespace Raven.Tests.Bundles.Authorization.Bugs
 {
 	public class fampinheiro : AuthorizationTest
 	{
 
-		public class Person : AuthorizationUser
+		public class Person : client::Raven.Bundles.Authorization.Model.AuthorizationUser
 		{
 		}
 
@@ -37,10 +38,10 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 					Id = "people/1",
 					Name = "Person 1",
 					Roles = new List<string>(),
-					Permissions = new List<OperationPermission>()
+					Permissions = new List<client::Raven.Bundles.Authorization.Model.OperationPermission>()
 				};
 				session.Store(person);
-				person.Permissions.Add(new OperationPermission()
+				person.Permissions.Add(new client::Raven.Bundles.Authorization.Model.OperationPermission()
 				{
 					Operation = "resources",
 					Allow = true,
@@ -51,10 +52,10 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 					Id = "people/2",
 					Name = "Person 2",
 					Roles = new List<string>(),
-					Permissions = new List<OperationPermission>()
+					Permissions = new List<client::Raven.Bundles.Authorization.Model.OperationPermission>()
 				};
 				session.Store(person);
-				person.Permissions.Add(new OperationPermission()
+				person.Permissions.Add(new client::Raven.Bundles.Authorization.Model.OperationPermission()
 				{
 					Operation = "resources",
 					Allow = true,
@@ -67,7 +68,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 					Id = "resources/1"
 				};
 				session.Store(resource);
-				session.SetAuthorizationFor(resource, new DocumentAuthorization()
+				client::Raven.Client.Authorization.AuthorizationClientExtensions.SetAuthorizationFor(session, resource, new client::Raven.Bundles.Authorization.Model.DocumentAuthorization()
 				{
 					Tags = {"people/1"}
 				});
@@ -75,14 +76,14 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 			}
 			using (var session = store.OpenSession(DatabaseName))
 			{
-				session.SecureFor("people/1", "resources/view");
+				client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(session, "people/1", "resources/view");
 				session.Load<Resource>("resources/1");
 				var collection = session.Query<Resource>().ToList();
 				Assert.NotEmpty(collection);
 			}
 			using(var session = store.OpenSession(DatabaseName))
 			{
-				session.SecureFor("people/2", "resources/view");
+				client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(session, "people/2", "resources/view");
 				Assert.Throws<ReadVetoException>(() => session.Load<Resource>("resources/1"));
 				var collection = session.Query<Resource>().ToList();
 				Assert.Empty(collection);

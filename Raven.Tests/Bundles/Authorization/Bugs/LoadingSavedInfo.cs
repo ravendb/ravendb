@@ -6,11 +6,10 @@
 extern alias client;
 using System;
 using System.Linq;
-using client::Raven.Client.Authorization;
-using client::Raven.Bundles.Authorization.Model;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.Authorization.Bugs
+namespace Raven.Tests.Bundles.Authorization.Bugs
 {
 	public class LoadingSavedInfo : AuthorizationTest
 	{
@@ -23,7 +22,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 			};
             using (var s = store.OpenSession(DatabaseName))
 			{
-				s.Store(new AuthorizationUser
+				s.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
 				{
 					Id = UserId,
 					Name = "Ayende Rahien",
@@ -31,11 +30,11 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 
 				s.Store(company);
 
-				s.SetAuthorizationFor(company, new DocumentAuthorization
+				client::Raven.Client.Authorization.AuthorizationClientExtensions.SetAuthorizationFor(s, company, new client::Raven.Bundles.Authorization.Model.DocumentAuthorization
 				{
 					Permissions =
 									   {
-											   new DocumentPermission
+											   new client::Raven.Bundles.Authorization.Model.DocumentPermission
 											   {
 													   User = UserId,
 													   Allow = true,
@@ -51,7 +50,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 			{
                 using (var s = store.OpenSession(DatabaseName))
 				{
-					s.SecureFor(UserId, "Company/Bid");
+					client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(s, UserId, "Company/Bid");
 
 					var c = s.Load<Company>(company.Id);
 					c.Name = "other " + i;
@@ -63,7 +62,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 
             using (var s = store.OpenSession(DatabaseName))
 			{
-				s.SecureFor(UserId, "Company/Bid");
+				client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(s, UserId, "Company/Bid");
 
 				var load = s.Load<Company>(company.Id);
 				Assert.NotNull(load);
@@ -80,7 +79,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 			};
             using (var s = store.OpenSession(DatabaseName))
 			{
-				s.Store(new AuthorizationUser
+				s.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
 				{
 					Id = UserId,
 					Name = "Ayende Rahien",
@@ -88,11 +87,11 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 
 				s.Store(company);
 
-				s.SetAuthorizationFor(company, new DocumentAuthorization
+				client::Raven.Client.Authorization.AuthorizationClientExtensions.SetAuthorizationFor(s, company, new client::Raven.Bundles.Authorization.Model.DocumentAuthorization
 				{
 					Permissions =
 									   {
-											   new DocumentPermission
+											   new client::Raven.Bundles.Authorization.Model.DocumentPermission
 											   {
 													   User = UserId,
 													   Allow = true,
@@ -108,7 +107,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 			{
                 using (var s = store.OpenSession(DatabaseName))
 				{
-					s.SecureFor(UserId, "Company/Bid");
+					client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(s, UserId, "Company/Bid");
 
 					var c = s.Query<Company>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(3))).First();
 					c.Name = "other " + i;
@@ -120,7 +119,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 
             using (var s = store.OpenSession(DatabaseName))
 			{
-				s.SecureFor(UserId, "Company/Bid");
+				client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(s, UserId, "Company/Bid");
 
 				var load = s.Load<Company>(company.Id);
 				Assert.NotNull(load);

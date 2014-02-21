@@ -1,16 +1,17 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
-using Raven.Tests.Bundles.Replication;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.Replication
+namespace Raven.Tests.Bundles.Replication
 {
 	public class ReplicationWithOAuth : ReplicationBase
 	{
@@ -26,7 +27,7 @@ namespace Raven.Bundles.Tests.Replication
 			documentStore.ApiKey = "Ayende/abc";
 		}
 
-		protected override void SetupDestination(Abstractions.Replication.ReplicationDestination replicationDestination)
+		protected override void SetupDestination(Raven.Abstractions.Replication.ReplicationDestination replicationDestination)
 		{
 			replicationDestination.ApiKey = "Ayende/abc";
 		}

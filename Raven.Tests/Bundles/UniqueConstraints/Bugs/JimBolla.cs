@@ -5,10 +5,11 @@
 // //-----------------------------------------------------------------------
 using Raven.Client.Document;
 using Raven.Client.UniqueConstraints;
+
 using Xunit;
 using Xunit.Extensions;
 
-namespace Raven.Bundles.Tests.UniqueConstraints.Bugs
+namespace Raven.Tests.Bundles.UniqueConstraints.Bugs
 {
 	public class JimBolla : UniqueConstraintsTest
 	{
