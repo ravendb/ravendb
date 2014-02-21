@@ -30,7 +30,7 @@ class appUrl {
         userInfo: ko.computed(() => appUrl.forUserInfo(appUrl.currentDatabase())),
         databaseSettings: ko.computed(() => appUrl.forDatabaseSettings(appUrl.currentDatabase())),
         periodicBackup: ko.computed(() => appUrl.forPeriodicBackup(appUrl.currentDatabase())),
-        replication: ko.computed(() => appUrl.forReplication(appUrl.currentDatabase())),
+        replications: ko.computed(() => appUrl.forReplications(appUrl.currentDatabase())),
 
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null)
 	};
@@ -108,7 +108,7 @@ class appUrl {
         return "#settings/periodicBackup?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forReplication(db: database): string {
+    static forReplications(db: database): string {
         return "#settings/replication?" + appUrl.getEncodedDbPart(db);
     }
 
