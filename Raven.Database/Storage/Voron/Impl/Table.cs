@@ -1,4 +1,6 @@
-﻿namespace Raven.Database.Storage.Voron.Impl
+﻿using Raven.Database.Util.Streams;
+
+namespace Raven.Database.Storage.Voron.Impl
 {
 	using System;
 	using System.Collections.Concurrent;
@@ -7,8 +9,8 @@
 	{
 		private readonly ConcurrentDictionary<string, Index> tableIndexes;
 
-		public Table(string tableName, params string[] indexNames)
-			: base(tableName)
+		public Table(string tableName, IBufferPool bufferPool, params string[] indexNames)
+			: base(tableName, bufferPool)
 		{
 			tableIndexes = new ConcurrentDictionary<string, Index>();
 
@@ -22,7 +24,7 @@
 				throw new ArgumentNullException(indexName);
 
 			var indexKey = GetIndexKey(indexName);
-			return tableIndexes.GetOrAdd(indexKey, indexTreeName => new Index(indexTreeName));
+			return tableIndexes.GetOrAdd(indexKey, indexTreeName => new Index(indexTreeName, BufferPool));
 		}
 
 		public string GetIndexKey(string indexName)

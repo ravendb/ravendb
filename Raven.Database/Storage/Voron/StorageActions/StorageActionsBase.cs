@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 using System.Text;
 
+using Raven.Database.Util.Streams;
+
 namespace Raven.Database.Storage.Voron.StorageActions
 {
 	using System;
@@ -18,11 +20,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 	public abstract class StorageActionsBase
 	{
+	    private readonly IBufferPool bufferPool;
+
 		protected SnapshotReader Snapshot { get; private set; }
 
-		protected StorageActionsBase(SnapshotReader snapshot)
+		protected StorageActionsBase(SnapshotReader snapshot, IBufferPool bufferPool)
 		{
-			this.Snapshot = snapshot;
+		    this.bufferPool = bufferPool;
+			Snapshot = snapshot;
 		}
 
 		protected string CreateKey(params object[] values)
@@ -60,5 +65,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				return stream.ToJObject();
 			}
 		}
+
+        protected BufferPoolMemoryStream CreateStream()
+        {
+            return new BufferPoolMemoryStream(bufferPool);
+        }
 	}
 }
