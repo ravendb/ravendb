@@ -138,8 +138,14 @@
     <TypeScriptCompile Include="App\models\periodicBackupSetup.ts" />
     <TypeScriptCompile Include="App\commands\savePeriodicBackupSetupCommand.ts" />
     <TypeScriptCompile Include="App\viewmodels\periodicBackup.ts" />
+    <TypeScriptCompile Include="App\viewmodels\replications.ts" />
+    <TypeScriptCompile Include="App\models\replicationDestination.ts" />
+    <TypeScriptCompile Include="App\commands\getReplicationsCommand.ts" />
+    <TypeScriptCompile Include="App\models\replicationsSetup.ts" />
+    <TypeScriptCompile Include="App\commands\saveReplicationDocument.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\replications.html" />
     <Content Include="App\views\copyDocuments.html" />
     <Content Include="App\views\createDatabase.html" />
     <Content Include="App\views\databaseSettings.html" />
