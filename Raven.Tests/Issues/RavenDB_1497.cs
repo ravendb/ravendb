@@ -14,6 +14,7 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
@@ -40,6 +41,7 @@ namespace Raven.Tests.Issues
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
 			configuration.Settings["Raven/Esent/CircularLog"] = "false";
+			configuration.Settings["Raven/Voron/AllowIncrementalBackups"] = "true"; //for now all tests run under Voron - so this is needed
 			configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
 		}
 
@@ -105,7 +107,8 @@ namespace Raven.Tests.Issues
 				{
 					Settings =
 				{
-					{"Raven/Esent/CircularLog", "false"}
+					{"Raven/Esent/CircularLog", "false"},
+					{"Raven/Voron/AllowIncrementalBackups", "true"}
 				}
 
 				}, BackupDir, DataDir, s => output.Append(s), defrag: true);
