@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Abstractions.Linq;
+using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Json.Linq;
 using Xunit;
 
@@ -12,7 +14,8 @@ namespace Raven.Tests.Issues
     {
         public class Order
         {
-            public string Company;
+            public string Id { get; set; }
+            public string CompanyId { get; set; }
         }
 
         public class Company
@@ -22,12 +25,12 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanLoadWithoutClrType()
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewRemoteDocumentStore(true))
             {
                 store.DatabaseCommands.Put("companies/1", null, new RavenJObject(), new RavenJObject());
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Order{Company = "companies/1"});
+                    session.Store(new Order{CompanyId = "companies/1"});
                     session.SaveChanges();
                 }
                
@@ -41,22 +44,23 @@ namespace Raven.Tests.Issues
 
         [Fact]
         public void CanIncludeWithoutClrType()
-        {
-            using (var store = NewDocumentStore())
+        {          
+
+            using (var store = NewRemoteDocumentStore(true))
             {
                 store.DatabaseCommands.Put("companies/1", null, new RavenJObject(), new RavenJObject());
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Order{Company = "companies/1"});
+                    session.Store(new Order{CompanyId = "companies/1"});
                     session.SaveChanges();
                 }
 
 
                 using (var sesion = store.OpenSession())
                 {
-                    var order = sesion.Include<Order>(x => x.Company)
-                        .Load("orders/1");
-                    var company = sesion.Load<Company>(order.Company);
+                    var order = sesion.Include<Order>(x => x.CompanyId)
+                                      .Load("orders/1");
+                    var company = sesion.Load<Company>(order.CompanyId);
                     Assert.NotNull(company);
                 }
             }
