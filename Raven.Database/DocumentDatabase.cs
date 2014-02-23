@@ -191,8 +191,8 @@ namespace Raven.Database
 				AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
 				AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
 
-				Name = configuration.DatabaseName;
-				backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Current;
+                Name = configuration.DatabaseName;
+                backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Default;
 
 				ExtensionsState = new AtomicDictionary<object>();
 				Configuration = configuration;
@@ -216,7 +216,7 @@ namespace Raven.Database
 				TransactionalStorage = configuration.CreateTransactionalStorage(configuration.SelectStorageEngine(), workContext.HandleWorkNotifications);
 				if (TransactionalStorage.GetType() != typeof(Raven.Storage.Voron.TransactionalStorage))
 				{
-					if (Directory.Exists(configuration.DataDirectory))
+					if (Directory.Exists(configuration.DataDirectory) && Directory.EnumerateFileSystemEntries(configuration.DataDirectory).Any())
 						throw new InvalidOperationException(string.Format("We do not allow to run on a storage engine other then Voron, while we are in the early pre-release phase of RavenDB 3.0. You are currently running on {0}", TransactionalStorage.FriendlyName));
 
 					TransactionalStorage = new Raven.Storage.Voron.TransactionalStorage(configuration, workContext.HandleWorkNotifications);
@@ -1015,49 +1015,52 @@ namespace Raven.Database
 			}
 		}
 
-		private void AssertPutOperationNotVetoed(string key, RavenJObject metadata, RavenJObject document, TransactionInformation transactionInformation)
-		{
-			var vetoResult = PutTriggers
-				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(key, document, metadata, transactionInformation) })
-				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
-			if (vetoResult != null)
-			{
-				throw new OperationVetoedException("PUT vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
-			}
-		}
+        private void AssertPutOperationNotVetoed(string key, RavenJObject metadata, RavenJObject document, TransactionInformation transactionInformation)
+        {
+            var vetoResult = PutTriggers
+                .Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(key, document, metadata, transactionInformation) })
+                .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+            if (vetoResult != null)
+            {
+                throw new OperationVetoedException("PUT vetoed on document " + key + " by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+            }
+        }
 
-		private void AssertAttachmentPutOperationNotVetoed(string key, RavenJObject metadata, Stream data)
-		{
-			var vetoResult = AttachmentPutTriggers
-				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(key, data, metadata) })
-				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
-			if (vetoResult != null)
-			{
-				throw new OperationVetoedException("PUT vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
-			}
-		}
+        private void AssertAttachmentPutOperationNotVetoed(string key, RavenJObject metadata, Stream data)
+        {
+            var vetoResult = AttachmentPutTriggers
+                .Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(key, data, metadata) })
+                .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+            if (vetoResult != null)
+            {
+	            throw new OperationVetoedException("PUT vetoed on attachment " + key + " by " + vetoResult.Trigger +
+	                                               " because: " + vetoResult.VetoResult.Reason);
+            }
+        }
 
-		private void AssertAttachmentDeleteOperationNotVetoed(string key)
-		{
-			var vetoResult = AttachmentDeleteTriggers
-				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowDelete(key) })
-				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
-			if (vetoResult != null)
-			{
-				throw new OperationVetoedException("DELETE vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
-			}
-		}
+        private void AssertAttachmentDeleteOperationNotVetoed(string key)
+        {
+            var vetoResult = AttachmentDeleteTriggers
+                .Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowDelete(key) })
+                .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+            if (vetoResult != null)
+            {
+	            throw new OperationVetoedException("DELETE vetoed on attachment " + key + " by " + vetoResult.Trigger +
+	                                               " because: " + vetoResult.VetoResult.Reason);
+            }
+        }
 
-		private void AssertDeleteOperationNotVetoed(string key, TransactionInformation transactionInformation)
-		{
-			var vetoResult = DeleteTriggers
-				.Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowDelete(key, transactionInformation) })
-				.FirstOrDefault(x => x.VetoResult.IsAllowed == false);
-			if (vetoResult != null)
-			{
-				throw new OperationVetoedException("DELETE vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
-			}
-		}
+        private void AssertDeleteOperationNotVetoed(string key, TransactionInformation transactionInformation)
+        {
+            var vetoResult = DeleteTriggers
+                .Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowDelete(key, transactionInformation) })
+                .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+            if (vetoResult != null)
+            {
+	            throw new OperationVetoedException("DELETE vetoed on document " + key + " by " + vetoResult.Trigger +
+	                                               " because: " + vetoResult.VetoResult.Reason);
+            }
+        }
 
 		private static void RemoveMetadataReservedProperties(RavenJObject metadata)
 		{
@@ -2034,14 +2037,19 @@ namespace Raven.Database
 
 		}
 
-        public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize, CancellationToken token, ref int nextStart)
+		public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start,
+		                                                  int pageSize, CancellationToken token, ref int nextStart,
+														  string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
 		{
 			var list = new RavenJArray();
-			GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart, list.Add);
+			GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart, list.Add,
+			                               transformer, queryInputs);
 			return list;
 		}
 
-		public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize, CancellationToken token, ref int nextStart, Action<RavenJObject> addDoc)
+		public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize,
+		                                           CancellationToken token, ref int nextStart, Action<RavenJObject> addDoc,
+												   string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
 		{
 			if (idPrefix == null)
 				throw new ArgumentNullException("idPrefix");
@@ -2058,11 +2066,19 @@ namespace Raven.Database
 					var docsToSkip = canPerformRapidPagination ? 0 : start;
 			        int docCount;
 
+			        AbstractTransformer storedTransformer = null;
+			        if (transformer != null)
+					{
+						storedTransformer = IndexDefinitionStorage.GetTransformer(transformer);
+						if (storedTransformer == null)
+							throw new InvalidOperationException("No transformer with the name: " + transformer);
+					}
+					
 		            do
 		            {
 		                docCount = 0;
 		                var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize);
-		                var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState);
+		                var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState, queryInputs);
 
 		                foreach (var doc in docs)
 		                {
@@ -2087,7 +2103,38 @@ namespace Raven.Database
                                 continue;
 
 							token.ThrowIfCancellationRequested();
-							addDoc(document.ToJson());
+
+			                if (storedTransformer != null)
+			                {
+								using (new CurrentTransformationScope(documentRetriever))
+				                {
+					                var transformed =
+						                storedTransformer.TransformResultsDefinition(new[] {new DynamicJsonObject(document.ToJson())})
+						                                 .Select(x => JsonExtensions.ToJObject(x))
+						                                 .ToArray();
+
+									if (transformed.Length == 0)
+									{
+										throw new InvalidOperationException("The transform results function failed on a document: " + document.Key);
+									}
+
+									var transformedJsonDocument = new JsonDocument
+									{
+										Etag = document.Etag.HashWith(storedTransformer.GetHashCodeBytes()).HashWith(documentRetriever.Etag),
+										NonAuthoritativeInformation = document.NonAuthoritativeInformation,
+										LastModified = document.LastModified,
+										DataAsJson = new RavenJObject { { "$values", new RavenJArray(transformed) } },
+									};
+
+					                addDoc(transformedJsonDocument.ToJson());
+				                }
+
+			                }
+			                else
+			                {
+								addDoc(document.ToJson());
+			                }
+
 		                    addedDocs++;
 
 		                    if (addedDocs >= pageSize) 
@@ -2271,92 +2318,95 @@ namespace Raven.Database
 									  () => null, debugMode);
 		}
 
-		private PatchResultData ApplyPatchInternal(string docId, Etag etag,
-									   TransactionInformation transactionInformation,
-									   Func<RavenJObject, int, RavenJObject> patcher,
-									   Func<RavenJObject> patcherIfMissing,
-									   Func<IList<JsonDocument>> getDocsCreatedInPatch,
-									   bool debugMode)
-		{
-			if (docId == null) throw new ArgumentNullException("docId");
-			docId = docId.Trim();
-			var result = new PatchResultData
-			{
-				PatchResult = PatchResult.Patched
-			};
+        private PatchResultData ApplyPatchInternal(string docId, Etag etag,
+                                       TransactionInformation transactionInformation,
+                                       Func<RavenJObject, int, RavenJObject> patcher,
+                                       Func<RavenJObject> patcherIfMissing,
+                                       Func<IList<JsonDocument>> getDocsCreatedInPatch,
+                                       bool debugMode)
+        {
+            if (docId == null) throw new ArgumentNullException("docId");
+            docId = docId.Trim();
+            var result = new PatchResultData
+            {
+                PatchResult = PatchResult.Patched
+            };
 
-			bool shouldRetry = false;
-			int retries = 128;
-			Random rand = null;
-			do
-			{
-				var doc = Get(docId, transactionInformation);
+            bool shouldRetry = false;
+            int retries = 128;
+            Random rand = null;
+            do
+            {
+                var doc = Get(docId, transactionInformation);
+                log.Debug(() => string.Format("Preparing to apply patch on ({0}). Document found?: {1}.", docId, doc != null));
 
-				if (etag != null && doc != null && doc.Etag != etag)
-				{
-					Debug.Assert(doc.Etag != null);
-					throw new ConcurrencyException("Could not patch document '" + docId + "' because non current etag was used")
-					{
-						ActualETag = doc.Etag,
-						ExpectedETag = etag,
-					};
-				}
+                if (etag != null && doc != null && doc.Etag != etag)
+                {
+                    Debug.Assert(doc.Etag != null);
+                    log.Debug(() => string.Format("Got concurrent exception while tried to patch the following document ID: {0}", docId));
+                    throw new ConcurrencyException("Could not patch document '" + docId + "' because non current etag was used")
+                    {
+                        ActualETag = doc.Etag,
+                        ExpectedETag = etag,
+                    };
+                }
 
-				var jsonDoc = (doc != null ? patcher(doc.ToJson(), doc.SerializedSizeOnDisk) : patcherIfMissing());
-				if (jsonDoc == null)
-				{
-					result.PatchResult = PatchResult.DocumentDoesNotExists;
-				}
-				else
-				{
-					if (debugMode)
-					{
-						result.Document = jsonDoc;
-						result.PatchResult = PatchResult.Tested;
-					}
-					else
-					{
-						try
-						{
-							Put(doc == null ? docId : doc.Key, (doc == null ? null : doc.Etag), jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation);
+                var jsonDoc = (doc != null ? patcher(doc.ToJson(), doc.SerializedSizeOnDisk) : patcherIfMissing());
+                if (jsonDoc == null)
+                {
+                    log.Debug(() => string.Format("Preparing to apply patch on ({0}). DocumentDoesNotExists.", docId));
+                    result.PatchResult = PatchResult.DocumentDoesNotExists;
+                }
+                else
+                {
+                    if (debugMode)
+                    {
+                        result.Document = jsonDoc;
+                        result.PatchResult = PatchResult.Tested;
+                    }
+                    else
+                    {
+                        try
+                        {
+                            Put(doc == null ? docId : doc.Key, (doc == null ? null : doc.Etag), jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation);
 
-							var docsCreatedInPatch = getDocsCreatedInPatch();
-							if (docsCreatedInPatch != null && docsCreatedInPatch.Count > 0)
-							{
-								foreach (var docFromPatch in docsCreatedInPatch)
-								{
-									Put(docFromPatch.Key, docFromPatch.Etag, docFromPatch.DataAsJson,
-										docFromPatch.Metadata, transactionInformation);
-								}
-							}
-								shouldRetry = false;
-								result.PatchResult = PatchResult.Patched;
-						}
-						catch (ConcurrencyException)
-						{
-							if (TransactionalStorage.IsAlreadyInBatch)
-								throw;
-							if (retries-- > 0)
-							{
-								shouldRetry = true;
-								if (rand == null)
-									rand = new Random();
-								Thread.Sleep(rand.Next(5, Math.Max(retries * 2, 10)));
-								continue;
-							}
+                            var docsCreatedInPatch = getDocsCreatedInPatch();
+                            if (docsCreatedInPatch != null && docsCreatedInPatch.Count > 0)
+                            {
+                                foreach (var docFromPatch in docsCreatedInPatch)
+                                {
+                                    Put(docFromPatch.Key, docFromPatch.Etag, docFromPatch.DataAsJson,
+                                        docFromPatch.Metadata, transactionInformation);
+                                }
+                            }
+                            shouldRetry = false;
+                            result.PatchResult = PatchResult.Patched;
+                        }
+                        catch (ConcurrencyException)
+                        {
+                            if (TransactionalStorage.IsAlreadyInBatch)
+                                throw;
+                            if (retries-- > 0)
+                            {
+                                shouldRetry = true;
+                                if (rand == null)
+                                    rand = new Random();
+                                Thread.Sleep(rand.Next(5, Math.Max(retries * 2, 10)));
+                                continue;
+                            }
 
-							throw;
-						}
-					}
-				}
+                            throw;
+                        }
+                    }
+                }
 
-				if (shouldRetry == false)
-					workContext.ShouldNotifyAboutWork(() => "PATCH " + docId);
+                if (shouldRetry == false)
+                    workContext.ShouldNotifyAboutWork(() => "PATCH " + docId);
 
-			} while (shouldRetry);
+            } while (shouldRetry);
 
-			return result;
-		}
+            return result;
+        }
 
 		public BatchResult[] Batch(IList<ICommandData> commands)
 		{

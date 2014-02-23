@@ -699,11 +699,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		private void VisitContains(MethodCallExpression expression)
 		{
 			var memberInfo = GetMember(expression.Arguments[0]);
-			var oldPath = currentPath;
-			currentPath = memberInfo.Path + ",";
 			var containsArgument = expression.Arguments[1];
-			VisitExpression(containsArgument);
-			currentPath = oldPath;
+
+			luceneQuery.WhereEquals(new WhereParams
+			{
+				FieldName = memberInfo.Path,
+				Value = GetValueFromExpression(containsArgument, containsArgument.Type),
+				IsAnalyzed = true,
+				AllowWildcards = false
+			});
+
 		}
 
 		private void VisitMemberAccess(MemberExpression memberExpression, bool boolValue)
@@ -965,10 +970,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				case "Contains":
 				{
 					var memberInfo = GetMember(expression.Object);
-					var oldPath = currentPath;
-					currentPath = memberInfo.Path + ",";
-					VisitExpression(expression.Arguments[0]);
-					currentPath = oldPath;
+
+					var containsArgument = expression.Arguments[0];
+
+					luceneQuery.WhereEquals(new WhereParams
+					{
+						FieldName = memberInfo.Path,
+						Value = GetValueFromExpression(containsArgument, containsArgument.Type),
+						IsAnalyzed = true,
+						AllowWildcards = false
+					});
 		
 					break;
 				}

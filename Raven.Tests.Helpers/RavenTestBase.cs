@@ -149,8 +149,7 @@ namespace Raven.Tests.Helpers
 			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
 		}
 
-		public DocumentStore
-			NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, [CallerMemberName] string databaseName = null,
+		public DocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, [CallerMemberName] string databaseName = null,
 				bool runInMemory = true,
 				string dataDirectory = null,
 				string requestedStorage = null,
@@ -209,7 +208,7 @@ namespace Raven.Tests.Helpers
 			string requestedStorage = null,
 			bool enableAuthentication = false,
 			string activeBundles = null,
-			Action<RavenConfiguration> configureServer = null,
+			Action<InMemoryRavenConfiguration> configureServer = null,
             [CallerMemberName] string databaseName = null)
 		{
 		    databaseName = NormalizeDatabaseName(databaseName != Constants.SystemDatabase ? databaseName : null);
@@ -333,7 +332,10 @@ namespace Raven.Tests.Helpers
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-            Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? TimeSpan.FromSeconds(20)));
+		    bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? TimeSpan.FromSeconds(20));
+		    if (spinUntil == false)
+		        WaitForUserToContinueTheTest((EmbeddableDocumentStore) store);
+		    Assert.True(spinUntil);
 		}
 
 		public static void WaitForIndexing(DocumentDatabase db)

@@ -52,11 +52,11 @@
     <Reference Include="System.Xml" />
     <Reference Include="xunit, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
+      <HintPath>..\SharedLibs\xunit\xunit.dll</HintPath>
     </Reference>
     <Reference Include="xunit.extensions, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\xunit.extensions.1.9.2\lib\net20\xunit.extensions.dll</HintPath>
+      <HintPath>..\SharedLibs\xunit\xunit.extensions.dll</HintPath>
     </Reference>
     <Reference Include="xunit.runner.msbuild">
       <HintPath>..\packages\xunit.1.9.1\lib\net20\xunit.runner.msbuild.dll</HintPath>
@@ -74,6 +74,7 @@
     </Compile>
     <Compile Include="Load\LoadBigFile.cs" />
     <Compile Include="Races\FailedIntermittently.cs" />
+    <Compile Include="Races\Georgios.cs" />
     <Compile Include="Storage\MultiThreaded\BatchOperation.cs" />
     <Compile Include="Storage\MultiThreaded\MultiThreaded.cs" />
     <Compile Include="Storage\MultiThreaded\PutAndBatchOperation.cs" />
@@ -88,10 +89,6 @@
     <Compile Include="Tenants\ConcurrentlyOpenedTenantsUsingEsent.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Bundles\Raven.Bundles.Tests\Raven.Bundles.Tests.csproj">
-      <Project>{35CFAB1C-7934-4481-AC0D-7102F7DEE7F8}</Project>
-      <Name>Raven.Bundles.Tests</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>

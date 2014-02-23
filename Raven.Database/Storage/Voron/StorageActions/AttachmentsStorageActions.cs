@@ -1,4 +1,6 @@
-﻿using Voron;
+﻿using Raven.Database.Util.Streams;
+
+using Voron;
 using Voron.Impl;
 
 namespace Raven.Database.Storage.Voron.StorageActions
@@ -36,8 +38,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 										 SnapshotReader snapshot, 
 									     IUuidGenerator uuidGenerator, 
                                          TableStorage tableStorage,
-										 Raven.Storage.Voron.TransactionalStorage transactionalStorage)
-            :base(snapshot)
+                                         Raven.Storage.Voron.TransactionalStorage transactionalStorage, 
+                                         IBufferPool bufferPool)
+            :base(snapshot, bufferPool)
 		{
 			this.attachmentsTable = attachmentsTable;
 			this.writeBatch = writeBatch;
@@ -106,7 +109,7 @@ but the attachment itself was found. Data corruption?", key));
 				{
 					try
 					{
-						var tempStream = new MemoryStream();
+					    var tempStream = CreateStream();
 						data.CopyTo(tempStream);
 						tempStream.Seek(0, SeekOrigin.Begin);
 						attachmentsTable.Add(writeBatch.Value, loweredKey, tempStream);
@@ -382,7 +385,7 @@ but the attachment itself was found. Data corruption?", key));
 
         private void WriteAttachmentMetadata(string key, Etag etag, RavenJObject headers)
 		{
-			var memoryStream = new MemoryStream();
+            var memoryStream = CreateStream();
 			memoryStream.Write(etag);
 			headers.WriteTo(memoryStream);
 

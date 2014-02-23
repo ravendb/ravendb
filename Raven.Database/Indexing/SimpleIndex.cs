@@ -88,7 +88,7 @@ namespace Raven.Database.Indexing
                         .ToList();
 
                     var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
-                    var missingReferencedDocs = new ConcurrentQueue<HashSet<string>>();
+					var missingReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
 
                     BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, (partition) =>
                     {

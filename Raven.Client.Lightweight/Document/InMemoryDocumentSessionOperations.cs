@@ -1165,12 +1165,23 @@ more responsive application.
             deferedCommands.AddRange(commands);
         }
 
-        /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-        /// </summary>
-        public virtual void Dispose()
-        {
-        }
+		/// <summary>
+		/// Version this entity when it is saved.  Use when Versioning bundle configured to ExcludeUnlessExplicit.
+		/// </summary>
+		/// <param name="entity">The entity.</param>
+		public void ExplicitlyVersion(object entity)
+		{
+			var metadata = GetMetadataFor(entity);
+
+			metadata[Constants.RavenCreateVersion] = true;
+		}
+
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
+		public virtual void Dispose()
+		{
+		}
 
         /// <summary>
         /// Commits the specified tx id.

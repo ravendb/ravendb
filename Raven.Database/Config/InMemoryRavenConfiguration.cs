@@ -100,6 +100,9 @@ namespace Raven.Database.Config
 
 			DisablePerformanceCounters = ravenSettings.DisablePerformanceCounters.Value;
 
+		    PrewarmFacetsOnIndexingMaxAge = ravenSettings.PrewarmFacetsOnIndexingMaxAge.Value;
+		    PrewarmFacetsSyncronousWaitTime = ravenSettings.PrewarmFacetsSyncronousWaitTime.Value;
+
 			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
 
 			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
@@ -161,6 +164,7 @@ namespace Raven.Database.Config
 			TimeToWaitBeforeRunningAbandonedIndexes = ravenSettings.TimeToWaitBeforeRunningAbandonedIndexes.Value;
 
 			ResetIndexOnUncleanShutdown = ravenSettings.ResetIndexOnUncleanShutdown.Value;
+			DisableInMemoryIndexing = ravenSettings.DisableInMemoryIndexing.Value;
 
 			SetupTransactionMode();
 
@@ -217,6 +221,8 @@ namespace Raven.Database.Config
 			}
 
 			AllowLocalAccessWithoutAuthorization = ravenSettings.AllowLocalAccessWithoutAuthorization.Value;
+
+		    VoronMaxBufferPoolSize = Math.Max(2, ravenSettings.VoronMaxBufferPoolSize.Value);
 
 			PostInit();
 		}
@@ -645,6 +651,11 @@ namespace Raven.Database.Config
 		}
 
 		/// <summary>
+		/// Prevent index from being kept in memory. Default: false
+		/// </summary>
+		public bool DisableInMemoryIndexing { get; set; }
+
+		/// <summary>
 		/// What sort of transaction mode to use. 
 		/// Allowed values: 
 		/// Lazy - faster, but can result in data loss in the case of server crash. 
@@ -834,7 +845,27 @@ namespace Raven.Database.Config
 		/// </summary>
 		public bool DisablePerformanceCounters { get; set; }
 
-		[Browsable(false)]
+        /// <summary>
+        /// What is the maximum age of a facet query that we should consider when prewarming
+        /// the facet cache when finishing an indexing batch
+        /// </summary>
+	    public TimeSpan PrewarmFacetsOnIndexingMaxAge { get; set; }
+	    
+        /// <summary>
+        /// The time we should wait for pre-warming the facet cache from existing query after an indexing batch
+        /// in a syncronous manner (after that, the pre warm still runs, but it will do so in a background thread).
+        /// Facet queries that will try to use it will have to wait until it is over
+        /// </summary>
+        public TimeSpan PrewarmFacetsSyncronousWaitTime { get; set; }
+
+        /// <summary>
+        /// You can use this setting to specify a maximum buffer pool size that can be used for transactional storage (in gigabytes). 
+        /// By default it is 4.
+        /// Minimum value is 2.
+        /// </summary>
+        public int VoronMaxBufferPoolSize { get; set; }
+
+	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public void SetSystemDatabase()
 		{
