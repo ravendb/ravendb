@@ -410,14 +410,14 @@ more responsive application.
         /// <param name="metadata">The metadata.</param>
         /// <returns></returns>
         object TrackEntity(Type entityType, string key, RavenJObject document, RavenJObject metadata, bool noTracking)
-        {
+        {            
             if (string.IsNullOrEmpty(key))
             {
                 return JsonObjectToClrInstancesWithoutTracking(entityType, document);
             }
             document.Remove("@metadata");
             object entity;
-            if (entitiesByKey.TryGetValue(key, out entity) == false)
+            if( (entitiesByKey.TryGetValue(key, out entity) == false) || (entity==null))//!!
             {
                 entity = ConvertToEntity(entityType, key, document, metadata);
             }
@@ -445,7 +445,14 @@ more responsive application.
                     ETag = HttpExtensions.EtagHeaderToEtag(etag),
                     Key = key
                 };
-                entitiesByKey[key] = entity;
+
+                DynamicJsonObject dynEntity = entity as DynamicJsonObject; //!!!
+                if( ((dynEntity != null) && (dynEntity.Count()!=0)) || (dynEntity==null))
+                     entitiesByKey[key] = entity;
+                else
+                {
+                    entitiesByKey[key] = null;
+                }
             }
 
             return entity;

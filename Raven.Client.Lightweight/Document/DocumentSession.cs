@@ -231,9 +231,13 @@ namespace Raven.Client.Document
             if (IsDeleted(id))
                 return default(T);
             object existingEntity;
+
             if (entitiesByKey.TryGetValue(id, out existingEntity))
             {
-                return (T)existingEntity;
+                if (existingEntity is T)  //!!
+                    return (T)existingEntity;
+
+               
             }
 
             IncrementRequestCount();
