@@ -334,7 +334,7 @@ namespace Raven.Tests.Helpers
 				databaseCommands = databaseCommands.ForDatabase(db);
 		    bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? TimeSpan.FromSeconds(20));
 		    if (spinUntil == false)
-		        WaitForUserToContinueTheTest((EmbeddableDocumentStore) store);
+		        WaitForUserToContinueTheTest(store);
 		    Assert.True(spinUntil);
 		}
 
