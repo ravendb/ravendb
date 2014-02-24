@@ -144,6 +144,9 @@
     <TypeScriptCompile Include="App\commands\getReplicationsCommand.ts" />
     <TypeScriptCompile Include="App\models\replicationsSetup.ts" />
     <TypeScriptCompile Include="App\commands\saveReplicationDocument.ts" />
+    <TypeScriptCompile Include="App\models\replicationConfig.ts" />
+    <TypeScriptCompile Include="App\commands\saveAutomaticConflictResolutionDocument.ts" />
+    <TypeScriptCompile Include="App\commands\getAutomaticConflictResolutionDocumentCommand.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\replications.html" />
