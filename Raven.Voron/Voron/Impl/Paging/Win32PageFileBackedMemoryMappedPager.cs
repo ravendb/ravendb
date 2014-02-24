@@ -150,7 +150,7 @@ namespace Voron.Impl.Paging
 
 					if (newAlloctedBaseAddress == null || newAlloctedBaseAddress == (byte*)0)
 					{
-						Trace.WriteLine("Failed to remap file continuously. Unmapping already mapped files and re-trying");
+						Debug.WriteLine("Failed to remap file continuously. Unmapping already mapped files and re-trying");
 						UndoMappings(allocationInfoAfterReallocation);
 						failedToAllocate = true;
 						break;
