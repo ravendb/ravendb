@@ -1,25 +1,23 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
 using Voron.Debugging;
-using Voron.Trees;
 using Voron.Util;
 
 namespace Voron.Impl
 {
-    using System;
-    using System.Collections.Concurrent;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.IO;
-    using System.Linq;
-    using System.Threading;
-    using Extensions;
-
     public class TransactionMergingWriter : IDisposable
     {
         private readonly StorageEnvironment _env;
 
+        private readonly CancellationToken _cancellationToken;
+
         private readonly ConcurrentQueue<OutstandingWrite> _pendingWrites = new ConcurrentQueue<OutstandingWrite>();
-        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly ManualResetEventSlim _stopWrites = new ManualResetEventSlim();
         private readonly ManualResetEventSlim _hasWrites = new ManualResetEventSlim();
         private readonly DebugJournal _debugJournal;
@@ -35,12 +33,13 @@ namespace Voron.Impl
 
         private readonly Lazy<Task> _backgroundTask;
 
-        internal TransactionMergingWriter(StorageEnvironment env, DebugJournal debugJournal = null)
+        internal TransactionMergingWriter(StorageEnvironment env, CancellationToken cancellationToken, DebugJournal debugJournal = null)
         {
             _env = env;
+            _cancellationToken = cancellationToken;
             _stopWrites.Set();
             _debugJournal = debugJournal;
-            _backgroundTask = new Lazy<Task>(() => Task.Factory.StartNew(BackgroundWriter, _cancellationTokenSource.Token,
+            _backgroundTask = new Lazy<Task>(() => Task.Factory.StartNew(BackgroundWriter, _cancellationToken,
                                                                          TaskCreationOptions.LongRunning,
                                                                          TaskScheduler.Current));
         }
@@ -80,22 +79,23 @@ namespace Voron.Impl
 
         private void BackgroundWriter()
         {
-            var cancellationToken = _cancellationTokenSource.Token;
-            while (cancellationToken.IsCancellationRequested == false)
+            while (_cancellationToken.IsCancellationRequested == false)
             {
-                _stopWrites.Wait(cancellationToken);
+                _cancellationToken.ThrowIfCancellationRequested();
+
+                _stopWrites.Wait(_cancellationToken);
                 _hasWrites.Reset();
 
                 OutstandingWrite write;
                 while (_pendingWrites.TryDequeue(out write))
                 {
-                    HandleActualWrites(write);
+                    HandleActualWrites(write, _cancellationToken);
                 }
-                _hasWrites.Wait(cancellationToken);
+                _hasWrites.Wait(_cancellationToken);
             }
         }
 
-        private void HandleActualWrites(OutstandingWrite mine)
+        private void HandleActualWrites(OutstandingWrite mine, CancellationToken token)
         {
             List<OutstandingWrite> writes = null;
             try
@@ -103,7 +103,7 @@ namespace Voron.Impl
                 writes = BuildBatchGroup(mine);
                 using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    HandleOperations(tx, writes.SelectMany(x => x.Batch.Operations));
+                    HandleOperations(tx, writes.SelectMany(x => x.Batch.Operations), _cancellationToken);
 
                     try
                     {
@@ -147,10 +147,12 @@ namespace Voron.Impl
             SplitWrites(writes);
         }
 
-        private void HandleOperations(Transaction tx, IEnumerable<WriteBatch.BatchOperation> operations)
+        private void HandleOperations(Transaction tx, IEnumerable<WriteBatch.BatchOperation> operations, CancellationToken token)
         {
             foreach (var g in operations.GroupBy(x => x.TreeName))
             {
+                token.ThrowIfCancellationRequested();
+
                 var tree = tx.State.GetTree(tx, g.Key);
                 // note that the ordering is done purely for performance reasons
                 // we rely on the fact that there can be only a single operation per key in
@@ -158,6 +160,8 @@ namespace Voron.Impl
                 // concurrent merged writes
                 foreach (var operation in g.OrderBy(x => x.Key, SliceEqualityComparer.Instance))
                 {
+                    token.ThrowIfCancellationRequested();
+
                     operation.Reset();
                     DebugActionType actionType;
                     switch (operation.Type)
@@ -196,9 +200,11 @@ namespace Voron.Impl
                 var write = writes[index];
                 try
                 {
+                    _cancellationToken.ThrowIfCancellationRequested();
+
                     using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
                     {
-                        HandleOperations(tx, write.Batch.Operations);
+                        HandleOperations(tx, write.Batch.Operations, _cancellationToken);
                         tx.Commit();
                         write.Completed();
                     }
@@ -299,7 +305,6 @@ namespace Voron.Impl
 
         public void Dispose()
         {
-            _cancellationTokenSource.Cancel();
             _stopWrites.Set();
             _hasWrites.Set();
 
@@ -314,7 +319,7 @@ namespace Voron.Impl
             }
             catch (AggregateException e)
             {
-                if (e.InnerException is TaskCanceledException)
+                if (e.InnerException is TaskCanceledException || e.InnerException is OperationCanceledException)
                     return;
                 throw;
             }
