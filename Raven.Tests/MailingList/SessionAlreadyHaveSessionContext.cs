@@ -16,7 +16,9 @@ namespace Raven.Tests.MailingList
         {
             using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
-                var inFlightTransactionalState = ((EsentInFlightTransactionalState)store.DocumentDatabase.InFlightTransactionalState);
+                var inFlightTransactionalState = store.DocumentDatabase.InFlightTransactionalState as EsentInFlightTransactionalState;
+                if (inFlightTransactionalState == null)
+                    return;
                 var transactionalStorage = (TransactionalStorage)store.DocumentDatabase.TransactionalStorage;
                 using (var context = inFlightTransactionalState.CreateEsentTransactionContext())
                 {
