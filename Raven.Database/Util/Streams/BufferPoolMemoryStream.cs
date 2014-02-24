@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace Raven.Database.Util.Streams
@@ -54,7 +55,8 @@ namespace Raven.Database.Util.Streams
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            var read = (int)Math.Min(count, _length - _position);
+            var read = (int)Math.Min(count, _length - _position);			
+
             Buffer.BlockCopy(_buffer, _position, buffer, offset, read);
             _position += read;
             return read;
@@ -63,6 +65,8 @@ namespace Raven.Database.Util.Streams
         public override void Write(byte[] buffer, int offset, int count)
         {
             EnsureCapacity(_position + count);
+			Debug.Assert(buffer.Length + offset <= _buffer.Length + _position," EnsureCapacity() should grow the underlying buffer to a proper size");
+
             Buffer.BlockCopy(buffer, offset, _buffer, _position, count);
             _position += count;
             _length = Math.Max(_length, _position);
@@ -74,11 +78,21 @@ namespace Raven.Database.Util.Streams
             _length = value;
         }
 
-        private void EnsureCapacity(long value)
+        private void EnsureCapacity(long requestedCapacity)
         {
-            if (value <= _buffer.Length)
+            if (requestedCapacity <= _buffer.Length)
                 return;
-            var newBuffer = _bufferPool.TakeBuffer(_buffer.Length * 2);
+
+			//estimate that the needed buffer growth is at most twice the old length
+	        var estimatedNewCapacity = _buffer.Length * 2;
+
+			//precaution -> to make sure casting long to int is ok (I doubt this will ever be not ok, but still)
+			Debug.Assert(requestedCapacity <= Int32.MaxValue,"should never grow buffer to these sizes");
+
+			//if the required capacity is more than the estimated growth, grow the buffer by the requested capacity
+			var newCapacity = (requestedCapacity <= estimatedNewCapacity) ? estimatedNewCapacity : (int)requestedCapacity;
+	        var newBuffer = _bufferPool.TakeBuffer(newCapacity);
+
             Buffer.BlockCopy(_buffer, 0, newBuffer, 0, _position);
             _bufferPool.ReturnBuffer(_buffer);
             _buffer = newBuffer;

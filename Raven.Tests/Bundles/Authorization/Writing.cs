@@ -6,6 +6,8 @@
 extern alias client;
 using System;
 
+using Raven.Abstractions.Connection;
+
 using Xunit;
 
 namespace Raven.Tests.Bundles.Authorization
@@ -40,7 +42,12 @@ namespace Raven.Tests.Bundles.Authorization
 				company.Name = "Stampeding Rhinos";
 				s.Store(company);
 
-				Assert.Throws<InvalidOperationException>(() => s.SaveChanges());
+				var e = Assert.Throws<ErrorResponseException>(() => s.SaveChanges());
+
+                Assert.Contains("OperationVetoedException", e.Message);
+                Assert.Contains("PUT vetoed on document companies/1", e.Message);
+                Assert.Contains("Raven.Bundles.Authorization.Triggers.AuthorizationPutTrigger", e.Message);
+                Assert.Contains("Could not find any permissions for operation: Company/Rename on companies/1 for user Authorization/Users/Ayende", e.Message);
 			}
 		}
 

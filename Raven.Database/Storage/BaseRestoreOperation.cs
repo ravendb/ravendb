@@ -10,7 +10,8 @@ namespace Raven.Database.Storage
 {
     public abstract class BaseRestoreOperation
     {
-        protected static readonly ILog log = LogManager.GetCurrentClassLogger();
+	    private const string IndexesSubfolder = "Indexes";
+	    protected static readonly ILog log = LogManager.GetCurrentClassLogger();
 
         protected readonly Action<string> output;
 
@@ -150,9 +151,9 @@ namespace Raven.Database.Storage
                                        .OrderByDescending(dir => dir)
                                        .ToList();
 
-            if (directories.Count == 0)
+	        if (directories.Count == 0)
             {
-                foreach (var backupIndex in Directory.GetDirectories(Path.Combine(backupLocation, "Indexes")))
+                foreach (var backupIndex in Directory.GetDirectories(Path.Combine(backupLocation, IndexesSubfolder)))
                 {
                     var indexName = Path.GetFileName(backupIndex);
                     var indexPath = Path.Combine(indexLocation, indexName);
@@ -172,12 +173,12 @@ namespace Raven.Database.Storage
             }
 
             var latestIncrementalBackupDirectory = directories.First();
-            if (Directory.Exists(Path.Combine(latestIncrementalBackupDirectory, "Indexes")) == false)
+            if (Directory.Exists(Path.Combine(latestIncrementalBackupDirectory, IndexesSubfolder)) == false)
                 return;
 
             directories.Add(backupLocation); // add the root (first full backup) to the end of the list (last place to look for)
 
-            foreach (var index in Directory.GetDirectories(Path.Combine(latestIncrementalBackupDirectory, "Indexes")))
+            foreach (var index in Directory.GetDirectories(Path.Combine(latestIncrementalBackupDirectory, IndexesSubfolder)))
             {
                 var indexName = Path.GetFileName(index);
                 var indexPath = Path.Combine(indexLocation, indexName);
@@ -199,7 +200,7 @@ namespace Raven.Database.Storage
 
                         foreach (var directory in directories)
                         {
-                            var possiblePathToFile = Path.Combine(directory, indexName, neededFile);
+                            var possiblePathToFile = Path.Combine(directory,IndexesSubfolder , indexName, neededFile);
                             if (File.Exists(possiblePathToFile) == false)
                                 continue;
 
