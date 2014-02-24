@@ -1,0 +1,1422 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>metrics</name>
+    </assembly>
+    <members>
+        <member name="T:metrics.Core.ICopyable`1">
+            <summary>
+            A marker for types that can copy themselves to another type
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="P:metrics.Core.ICopyable`1.Copy">
+            <summary>
+            Obtains a copy of the current type that is used in <see cref="T:metrics.Support.ReadOnlyDictionary`2"/> to provide immutability
+            </summary>
+        </member>
+        <member name="P:metrics.Core.IMetered.RateUnit">
+            <summary>
+            Returns the meter's rate unit
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:metrics.Core.IMetered.EventType">
+            <summary>
+            Returns the type of events the meter is measuring
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:metrics.Core.IMetered.Count">
+            <summary>
+             Returns the number of events which have been marked
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:metrics.Core.IMetered.FifteenMinuteRate">
+            <summary>
+            Returns the fifteen-minute exponentially-weighted moving average rate at
+            which events have occured since the meter was created
+            <remarks>
+            This rate has the same exponential decay factor as the fifteen-minute load
+            average in the top Unix command.
+            </remarks> 
+            </summary>
+        </member>
+        <member name="P:metrics.Core.IMetered.FiveMinuteRate">
+            <summary>
+            Returns the five-minute exponentially-weighted moving average rate at
+            which events have occured since the meter was created
+            <remarks>
+            This rate has the same exponential decay factor as the five-minute load
+            average in the top Unix command.
+            </remarks>
+            </summary>
+        </member>
+        <member name="P:metrics.Core.IMetered.MeanRate">
+            <summary>
+            Returns the mean rate at which events have occured since the meter was created
+            </summary>
+        </member>
+        <member name="P:metrics.Core.IMetered.OneMinuteRate">
+            <summary>
+            Returns the one-minute exponentially-weighted moving average rate at
+            which events have occured since the meter was created
+            <remarks>
+            This rate has the same exponential decay factor as the one-minute load
+            average in the top Unix command.
+            </remarks>
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Core.TimerMetricBase.Clear">
+            <summary>
+            Clears all recorded durations
+            </summary>
+        </member>
+        <member name="M:metrics.Core.TimerMetricBase.Percentiles(System.Double[])">
+            <summary>
+            Returns an array of durations at the given percentiles
+            </summary>
+        </member>
+        <member name="P:metrics.Core.TimerMetricBase.DurationUnit">
+            <summary>
+             Returns the timer's duration scale unit
+            </summary>
+        </member>
+        <member name="P:metrics.Core.TimerMetricBase.RateUnit">
+            <summary>
+            Returns the meter's rate unit
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:metrics.Core.TimerMetricBase.Count">
+            <summary>
+             Returns the number of events which have been marked
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:metrics.Core.TimerMetricBase.FifteenMinuteRate">
+            <summary>
+            Returns the fifteen-minute exponentially-weighted moving average rate at
+            which events have occured since the meter was created
+            <remarks>
+            This rate has the same exponential decay factor as the fifteen-minute load
+            average in the top Unix command.
+            </remarks> 
+            </summary>
+        </member>
+        <member name="P:metrics.Core.TimerMetricBase.FiveMinuteRate">
+            <summary>
+            Returns the five-minute exponentially-weighted moving average rate at
+            which events have occured since the meter was created
+            <remarks>
+            This rate has the same exponential decay factor as the five-minute load
+            average in the top Unix command.
+            </remarks>
+            </summary>
+        </member>
+        <member name="P:metrics.Core.TimerMetricBase.MeanRate">
+            <summary>
+            Returns the mean rate at which events have occured since the meter was created
+            </summary>
+        </member>
+        <member name="P:metrics.Core.TimerMetricBase.OneMinuteRate">
+            <summary>
+            Returns the one-minute exponentially-weighted moving average rate at
+            which events have occured since the meter was created
+            <remarks>
+            This rate has the same exponential decay factor as the one-minute load
+            average in the top Unix command.
+            </remarks>
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:metrics.Core.TimerMetricBase.Max">
+            <summary>
+            Returns the longest recorded duration
+            </summary>
+        </member>
+        <member name="P:metrics.Core.TimerMetricBase.Min">
+            <summary>
+            Returns the shortest recorded duration
+            </summary>
+        </member>
+        <member name="P:metrics.Core.TimerMetricBase.Mean">
+            <summary>
+             Returns the arithmetic mean of all recorded durations
+            </summary>
+        </member>
+        <member name="P:metrics.Core.TimerMetricBase.StdDev">
+            <summary>
+            Returns the standard deviation of all recorded durations
+            </summary>
+        </member>
+        <member name="P:metrics.Core.TimerMetricBase.EventType">
+            <summary>
+            Returns the type of events the meter is measuring
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:metrics.Core.TimerMetricBase.Values">
+            <summary>
+            Returns a list of all recorded durations in the timers's sample
+            </summary>
+        </member>
+        <member name="M:metrics.Core.CallbackTimerMetric.Time">
+            <summary>
+            Starts recording an event. Call stop on the returned object (context) to finish the timing.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Core.CallbackTimerMetric.CallbackTimerMetricContext.#ctor(System.Action{System.Int64})">
+            <summary>
+            create a new context. pass the callback function that will be invoked with the elapsed ticks count
+            </summary>
+            <param name="ticksCallback"></param>
+        </member>
+        <member name="T:metrics.Core.HistogramMetric">
+            <summary>
+            A metric which calculates the distribution of a value
+            <see href="http://www.johndcook.com/standard_deviation.html">Accurately computing running variance</see>
+            </summary>
+        </member>
+        <member name="M:metrics.Core.HistogramMetric.#ctor(metrics.Core.HistogramMetric.SampleType)">
+            <summary>
+            Creates a new <see cref="T:metrics.Core.HistogramMetric"/> with the given sample type
+            </summary>
+        </member>
+        <member name="M:metrics.Core.HistogramMetric.#ctor(metrics.Stats.ISample)">
+            <summary>
+            Creates a new <see cref="T:metrics.Core.HistogramMetric"/> with the given sample
+            </summary>
+        </member>
+        <member name="M:metrics.Core.HistogramMetric.Clear">
+            <summary>
+            Clears all recorded values
+            </summary>
+        </member>
+        <member name="M:metrics.Core.HistogramMetric.Update(System.Int32)">
+            <summary>
+            Adds a recorded value
+            </summary>
+        </member>
+        <member name="M:metrics.Core.HistogramMetric.Update(System.Int64)">
+            <summary>
+            Adds a recorded value
+            </summary>
+        </member>
+        <member name="M:metrics.Core.HistogramMetric.Percentiles(System.Double[])">
+            <summary>
+            Returns an array of values at the given percentiles
+            </summary>
+        </member>
+        <member name="P:metrics.Core.HistogramMetric.Count">
+            <summary>
+            Returns the number of values recorded
+            </summary>
+        </member>
+        <member name="P:metrics.Core.HistogramMetric.Max">
+            <summary>
+            Returns the largest recorded value
+            </summary>
+        </member>
+        <member name="P:metrics.Core.HistogramMetric.Min">
+            <summary>
+            Returns the smallest recorded value
+            </summary>
+        </member>
+        <member name="P:metrics.Core.HistogramMetric.Mean">
+            <summary>
+            Returns the arithmetic mean of all recorded values
+            </summary>
+        </member>
+        <member name="P:metrics.Core.HistogramMetric.StdDev">
+            <summary>
+            Returns the standard deviation of all recorded values
+            </summary>
+        </member>
+        <member name="P:metrics.Core.HistogramMetric.Values">
+            <summary>
+            Returns a list of all values in the histogram's sample
+            </summary>
+        </member>
+        <member name="F:metrics.Core.HistogramMetric.SampleType.Uniform">
+            <summary>
+            Uses a uniform sample of 1028 elements, which offers a 99.9%
+            confidence level with a 5% margin of error assuming a normal
+            distribution.
+            </summary>
+        </member>
+        <member name="F:metrics.Core.HistogramMetric.SampleType.Biased">
+            <summary>
+            Uses an exponentially decaying sample of 1028 elements, which offers
+            a 99.9% confidence level with a 5% margin of error assuming a normal
+            distribution, and an alpha factor of 0.015, which heavily biases
+            the sample to the past 5 minutes of measurements.
+            </summary>
+        </member>
+        <member name="T:metrics.Reporting.ReporterBase">
+            <summary>
+             A reporter that periodically prints out formatted application metrics to a specified <see cref="T:System.IO.TextWriter"/>
+            </summary>
+        </member>
+        <member name="M:metrics.Reporting.ReporterBase.Start(System.Int64,metrics.TimeUnit)">
+            <summary>
+            Starts the reporting task for periodic output
+            </summary>
+            <param name="period">The period between successive displays</param>
+            <param name="unit">The period time unit</param>
+        </member>
+        <member name="T:metrics.Core.TimerMetric">
+            <summary>
+            A timer metric which aggregates timing durations and provides duration
+            statistics, plus throughput statistics via <see cref="T:metrics.Core.MeterMetric"/>.
+            </summary>
+        </member>
+        <member name="M:metrics.Core.TimerMetric.Time``1(System.Func{``0})">
+            <summary>
+            Times and records the duration of an event
+            </summary>
+            <typeparam name="T">The type of the value returned by the event</typeparam>
+            <param name="event">A function whose duration should be timed</param>
+        </member>
+        <member name="M:metrics.Core.TimerMetric.Time(System.Action)">
+            <summary>
+            Times and records the duration of an event
+            </summary>
+            <param name="event">An action whose duration should be timed</param>
+        </member>
+        <member name="T:metrics.MachineMetrics">
+            <summary>
+            A convenience class for installing global, machine-level metrics
+            <seealso href="http://technet.microsoft.com/en-us/library/cc768048.aspx#XSLTsection132121120120" />
+            <seealso href="http://msdn.microsoft.com/en-us/library/w8f5kw2e%28v=VS.71%29.aspx" />
+            </summary>
+        </member>
+        <member name="T:metrics.Reporting.FileReporter">
+            <summary>
+            A file-based reporter that outputs formatted metrics to a single flat file
+            </summary>
+        </member>
+        <member name="T:metrics.Reporting.SampledFileReporter">
+            <summary>
+            A file-based reporter that produces a timestamped-suffixed output file for each sample collection
+            </summary>
+        </member>
+        <member name="T:metrics.Stats.LimitedTimeSample">
+            <summary>
+            A sample of items from the recent past
+            </summary>
+        </member>
+        <member name="T:metrics.Stats.ISample`1">
+            <summary>
+             A statistically representative sample of a data stream
+            </summary>
+        </member>
+        <member name="T:metrics.Stats.ISample">
+            <summary>
+             A statistically representative sample of a data stream
+            </summary>
+        </member>
+        <member name="M:metrics.Stats.ISample.Clear">
+            <summary>
+            Clears all recorded values
+            </summary>
+        </member>
+        <member name="M:metrics.Stats.ISample.Update(System.Int64)">
+            <summary>
+            Adds a new recorded value to the sample
+            </summary>
+        </member>
+        <member name="P:metrics.Stats.ISample.Count">
+            <summary>
+            Returns the number of values recorded
+            </summary>
+        </member>
+        <member name="P:metrics.Stats.ISample.Values">
+            <summary>
+             Returns a copy of the sample's values
+            </summary>
+        </member>
+        <member name="M:metrics.Stats.LimitedTimeSample.#ctor(metrics.Stats.IDateTimeSupplier,System.TimeSpan,System.TimeSpan)">
+            <summary>
+            for testing
+            </summary>
+        </member>
+        <member name="T:metrics.Support.Volatile`1">
+            <summary>
+            Provides support for volatile operations around a typed value
+            </summary>
+        </member>
+        <member name="T:metrics.Support.VolatileDouble">
+            <summary>
+            Provides support for volatile operations around a <see cref="T:System.Double"/> value
+            </summary>
+        </member>
+        <member name="T:metrics.Support.AtomicLong">
+            <summary>
+            Provides support for atomic operations around a <see cref="T:System.Int64"/> value
+            </summary>
+        </member>
+        <member name="M:metrics.Support.AtomicLong.Get">
+            <summary>
+            Get the current value
+            </summary>
+        </member>
+        <member name="M:metrics.Support.AtomicLong.Set(System.Int64)">
+            <summary>
+            Set to the given value
+            </summary>
+        </member>
+        <member name="M:metrics.Support.AtomicLong.AddAndGet(System.Int64)">
+            <summary>
+            Atomically add the given value to the current value
+            </summary>
+        </member>
+        <member name="M:metrics.Support.AtomicLong.IncrementAndGet">
+            <summary>
+            Atomically increments by one and returns the current value
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Support.AtomicLong.CompareAndSet(System.Int64,System.Int64)">
+            <summary>
+            Atomically set the value to the given updated value if the current value == expected value
+            </summary>
+            <param name="expected">The expected value</param>
+            <param name="updated">The new value</param>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Support.AtomicLong.GetAndSet(System.Int64)">
+            <summary>
+            Set to the given value and return the previous value
+            </summary>
+        </member>
+        <member name="M:metrics.Support.AtomicLong.GetAndAdd(System.Int64)">
+            <summary>
+            Adds the given value and return the previous value
+            </summary>
+        </member>
+        <member name="T:metrics.Core.CLRProfiler">
+            <summary>
+            A wrapper around available .NET performance counters
+            <seealso href="http://msdn.microsoft.com/en-us/library/w8f5kw2e%28v=VS.71%29.aspx" />
+            </summary>
+        </member>
+        <member name="M:metrics.Core.CLRProfiler.ClearCounters">
+            <summary>
+            Clears all lazily-initialized performance counters from memory
+            </summary>
+        </member>
+        <member name="M:metrics.Core.CLRProfiler.DumpTrackedThreads">
+            <summary>
+            Dumps all alive threads created via the <see cref="T:metrics.Util.NamedThreadFactory"/>
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfBytesInAllHeaps">
+            <summary>
+            Displays the sum of the Gen 1 Heap Size, Gen 2 Heap Size, and the Large Object Heap Size counters. This counter indicates the current memory allocated in bytes on the garbage collection heaps.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfGCHandles">
+            <summary>
+            Displays the current number of garbage collection handles in use. Garbage collection handles are handles to resources external to the common language runtime and the managed environment.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfGen0Collections">
+            <summary>
+            Displays the number of times the generation 0 objects (that is, the youngest, most recently allocated objects) are garbage collected since the application started.
+            Generation 0 garbage collection occurs when the available memory in generation 0 is not sufficient to satisfy an allocation request. This counter is incremented at the end of a generation 0 garbage collection. Higher generation garbage collections include all lower generation collections. This counter is explicitly incremented when a higher generation (generation 1 or 2) garbage collection occurs.
+            This counter displays the last observed value. The _Global_ counter value is not accurate and should be ignored.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfGen1Collections">
+            <summary>
+            Displays the number of times the generation 1 objects are garbage collected since the application started.
+            The counter is incremented at the end of a generation 1 garbage collection. Higher generation garbage collections include all lower generation collections. This counter is explicitly incremented when a higher generation (generation 2) garbage collection occurs.
+            This counter displays the last observed value. The _Global_ counter value is not accurate and should be ignored.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfGen2Collections">
+            <summary>
+            Displays the number of times the generation 2 objects are garbage collected since the application started. The counter is incremented at the end of a generation 2 garbage collection (also called a full garbage collection).
+            This counter displays the last observed value. The _Global_ counter value is not accurate and should be ignored.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfInducedGC">
+            <summary>
+            Displays the peak number of times garbage collection was performed because of an explicit call to GC.Collect. It is good practice to let the garbage collector tune the frequency of its collections.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfPinnedObjects">
+            <summary>
+            Displays the number of pinned objects encountered in the last garbage collection. A pinned object is one that the garbage collector cannot move in memory. This counter tracks the pinned objects only in the heaps that are garbage collected. For example, a generation 0 garbage collection causes enumeration of pinned objects only in the generation 0 heap.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfSinkBlocksInUse">
+            <summary>
+            Displays the current number of syncronization blocks in use. Synchronization blocks are per-object data structures allocated for storing synchronization information. Synchronization blocks hold weak references to managed objects and must be scanned by the garbage collector. Synchronization blocks are not limited to storing synchronization information; they can also store COM interop metadata. This counter indicates performance problems with heavy use of synchronization primitives.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfTotalCommittedBytes">
+            <summary>
+            Displays the amount of virtual memory, in bytes, currently committed by the garbage collector. Committed memory is the physical memory for which space has been reserved in the disk paging file.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfTotalReservedBytes">
+            <summary>
+            Displays the amount of virtual memory. in bytes, currently reserved by the garbage collector. Reserved memory is the virtual memory space reserved for the application but no disk or main memory pages have been used.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalPercentTimeInGC">
+            <summary>
+            Displays the percentage of elapsed time that was spent performing a garbage collection since the last garbage collection cycle. This counter usually indicates the work done by the garbage collector to collect and compact memory on behalf of the application. This counter is updated only at the end of every garbage collection. This counter is not an average; its value reflects the last observed value.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalAllocatedBytesPerSecond">
+            <summary>
+            Displays the number of bytes per second allocated on the garbage collection heap. This counter is updated at the end of every garbage collection, not at each allocation. This counter is not an average over time; it displays the difference between the values observed in the last two samples divided by the duration of the sample interval.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalFinalizationSurvivors">
+            <summary>
+            Displays the number of garbage-collected objects that survive a collection because they are waiting to be finalized. If these objects hold references to other objects, those objects also survive but are not counted by this counter. The Promoted Finalization-Memory from Gen 0 and Promoted Finalization-Memory from Gen 1 counters represent all the memory that survived due to finalization.    
+            This counter is not cumulative; it is updated at the end of every garbage collection with the count of the survivors during that particular collection only. This counter indicates the extra overhead that the application might incur because of finalization.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalGen0HeapSize">
+            <summary>
+            Displays the maximum bytes that can be allocated in generation 0; it does not indicate the current number of bytes allocated in generation 0.
+            A generation 0 garbage collection occurs when the allocations since the last collection exceed this size. The generation 0 size is tuned by the garbage collector and can change during the execution of the application. At the end of a generation 0 collection the size of the generation 0 heap is 0 bytes. This counter displays the size, in bytes, of allocations that invokes the next generation 0 garbage collection.
+            This counter is updated at the end of a garbage collection, not at each allocation.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalGen0PromotedBytesPerSecond">
+            <summary>
+            Displays the bytes per second that are promoted from generation 0 to generation 1. Memory is promoted when it survives a garbage collection. This counter is an indicator of relatively long-lived objects being created per second.
+            This counter displays the difference between the values observed in the last two samples divided by the duration of the sample interval.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalGen1HeapSize">
+            <summary>
+            Displays the current number of bytes in generation 1; this counter does not display the maximum size of generation 1. Objects are not directly allocated in this generation; they are promoted from previous generation 0 garbage collections. This counter is updated at the end of a garbage collection, not at each allocation.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalGen1PromotedBytesPerSecond">
+            <summary>
+            Displays the bytes per second that are promoted from generation 1 to generation 2. Objects that are promoted only because they are waiting to be finalized are not included in this counter.
+            Memory is promoted when it survives a garbage collection. Nothing is promoted from generation 2 because it is the oldest generation. This counter is an indicator of very long-lived objects being created per second.
+            This counter displays the difference between the values observed in the last two samples divided by the duration of the sample interval.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalGen2HeapSize">
+            <summary>
+            Displays the current number of bytes in generation 2. Objects are not directly allocated in this generation; they are promoted from generation 1 during previous generation 1 garbage collections. This counter is updated at the end of a garbage collection, not at each allocation.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalLargeObjectHeapSize">
+            <summary>
+            Displays the current size, in bytes, of the Large Object Heap. Objects that are greater than approximately 85,000 bytes are treated as large objects by the garbage collector and are directly allocated in a special heap; they are not promoted through the generations. This counter is updated at the end of a garbage collection, not at each allocation.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalPromotedFinalizationMemoryFromGen0">
+            <summary>
+            Displays the bytes of memory that are promoted from generation 0 to generation 1 only because they are waiting to be finalized. This counter is not cumulative; it displays the value observed at the end of the last garbage collection.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalPromotedMemoryFromGen0">
+            <summary>
+            Displays the bytes of memory that survive garbage collection and are promoted from generation 0 to generation 1. Objects that are promoted only because they are waiting to be finalized are not included in this counter. This counter is not cumulative; it displays the value observed at the end of the last garbage collection.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalPromotedMemoryFromGen1">
+            <summary>
+            Displays the bytes of memory that survive garbage collection and are promoted from generation 1 to generation 2. Objects that are promoted only because they are waiting to be finalized are not included in this counter. This counter is not cumulative; it displays the value observed at the end of the last garbage collection. This counter is reset to 0 if the last garbage collection was a generation 0 collection only.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfCurrentLogicalThreads">
+            <summary>
+            Displays the number of current managed thread objects in the application. This counter maintains the count of both running and stopped threads. This counter is not an average over time; it displays only the last observed value.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfCurrentPhysicalThreads">
+            <summary>
+            Displays the number of native operating system threads created and owned by the common language runtime to act as underlying threads for managed thread objects. This counter's value does not include the threads used by the runtime in its internal operations; it is a subset of the threads in the operating system process.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfCurrentRecognizedThreads">
+            <summary>
+            Displays the number of threads that are currently recognized by the runtime. These threads are associated with a corresponding managed thread object. The runtime does not create these threads, but they have run inside the runtime at least once.
+            Only unique threads are tracked; threads with the same thread ID that reenter the runtime or are recreated after the thread exits are not counted twice.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfTotalRecognizedThreads">
+            <summary>
+            Displays the total number of threads that have been recognized by the runtime since the application started. These threads are associated with a corresponding managed thread object. The runtime does not create these threads, but they have run inside the runtime at least once.
+            Only unique threads are tracked; threads with the same thread ID that reenter the runtime or are recreated after the thread exits are not counted twice.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalContentionRatePerSecond">
+            <summary>
+            Displays the rate at which threads in the runtime attempt to acquire a managed lock unsuccessfully.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalCurrentQueueLength">
+            <summary>
+            Displays the total number of threads that are currently waiting to acquire a managed lock in the application. This counter is not an average over time; it displays the last observed value.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalQueueLengthPerSecond">
+            <summary>
+            Displays the number of threads per second that are waiting to acquire a lock in the application. This counter is not an average over time; it displays the difference between the values observed in the last two samples divided by the duration of the sample interval.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalQueueLengthPeak">
+            <summary>
+            Displays the total number of threads that waited to acquire a managed lock since the application started.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalRateOfRecognizedThreadsPerSecond">
+            <summary>
+            Displays the number of threads per second that have been recognized by the runtime. These threads are associated with a corresponding managed thread object. The runtime does not create these threads, but they have run inside the runtime at least once.
+            Only unique threads are tracked; threads with the same thread ID that reenter the runtime or are recreated after the thread exits are not counted twice.
+            This counter is not an average over time; it displays the difference between the values observed in the last two samples divided by the duration of the sample interval.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalTotalNumberOfContentions">
+            <summary>
+            Displays the total number of times that threads in the runtime have attempted to acquire a managed lock unsuccessfully.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalBytesReceived">
+            <summary>
+            Displays the cumulative number of bytes received over all open socket connections since the process started. This number includes data and any protocol information that is not defined by TCP/IP.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalBytesSent">
+            <summary>
+            Displays the cumulative number of bytes sent over all open socket connections since the process started. This number includes data and any protocol information that is not defined by TCP/IP.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalConnectionsEstablished">
+            <summary>
+            Displays the cumulative number of socket connections established for this process since it started.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalDatagramsReceived">
+            <summary>
+            Displays the cumulative number of datagram packets received since the process started.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalDatagramsSent">
+            <summary>
+            Displays the cumulative number of datagram packets sent since the process started.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalHttpWebRequestAverageLifetime">
+            <summary>
+            The average time to completion for all HttpWebRequest objects that ended in the last interval within the AppDomain since the process started.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalHttpWebRequestAverageQueueTime">
+            <summary>
+            The average time-on-queue for all HttpWebRequest objects that left the queue in the last interval within the AppDomain since the process started.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalHttpWebRequestsCreatedPerSecond">
+            <summary>
+            The number of HttpWebRequest objects created per second within the AppDomain.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalHttpWebRequestsQueuedPerSecond">
+            <summary>
+            The number of HttpWebRequest objects that were added to the queue per second within the AppDomain.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalHttpWebRequestsAbortedPerSecond">
+            <summary>
+            The number of HttpWebRequest objects where the application called the Abort method per second within the AppDomain.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalHttpWebRequestsFailedPerSecond">
+            <summary>
+            The number of HttpWebRequest objects that received a failed status code from the server per second within the AppDomain.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfExceptionsThrown">
+            <summary>
+            Displays the total number of exceptions thrown since the application started. This includes both .NET exceptions and unmanaged exceptions that are converted into .NET exceptions. For example, an HRESULT returned from unmanaged code is converted to an exception in managed code.
+            This counter includes both handled and unhandled exceptions. Exceptions that are rethrown are counted again.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfExceptionsThrownPerSecond">
+            <summary>
+            Displays the number of exceptions thrown per second. This includes both .NET exceptions and unmanaged exceptions that are converted into .NET exceptions. For example, an HRESULT returned from unmanaged code is converted to an exception in managed code.
+            This counter includes both handled and unhandled exceptions. It is not an average over time; it displays the difference between the values observed in the last two samples divided by the duration of the sample interval. This counter is an indicator of potential performance problems if a large (>100s) number of exceptions are thrown. 
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfExceptionFiltersPerSecond">
+            <summary>
+            Displays the number of .NET exception filters executed per second. An exception filter evaluates regardless of whether an exception is handled.
+            This counter is not an average over time; it displays the difference between the values observed in the last two samples divided by the duration of the sample interval.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalNumberOfExceptionFinallysPerSecond">
+            <summary>
+            Displays the number of finally blocks executed per second. A finally block is guaranteed to be executed regardless of how the try block was exited. Only the finally blocks executed for an exception are counted; finally blocks on normal code paths are not counted by this counter.
+            This counter is not an average over time; it displays the difference between the values observed in the last two samples divided by the duration of the sample interval.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.GlobalThrowToCatchDepthPerSecond">
+            <summary>
+            Displays the number of stack frames traversed, from the frame that threw the exception to the frame that handled the exception, per second. This counter resets to zero when an exception handler is entered, so nested exceptions show the handler-to-handler stack depth.
+            This counter is not an average over time; it displays the difference between the values observed in the last two samples divided by the duration of the sample interval.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfBytesInAllHeaps">
+            <summary>
+            Displays the sum of the Gen 1 Heap Size, Gen 2 Heap Size, and the Large Object Heap Size counters. This counter indicates the current memory allocated in bytes on the garbage collection heaps.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfGCHandles">
+            <summary>
+            Displays the current number of garbage collection handles in use. Garbage collection handles are handles to resources external to the common language runtime and the managed environment.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfGen0Collections">
+            <summary>
+            Displays the number of times the generation 0 objects (that is, the youngest, most recently allocated objects) are garbage collected since the application started.
+            Generation 0 garbage collection occurs when the available memory in generation 0 is not sufficient to satisfy an allocation request. This counter is incremented at the end of a generation 0 garbage collection. Higher generation garbage collections include all lower generation collections. This counter is explicitly incremented when a higher generation (generation 1 or 2) garbage collection occurs.
+            This counter displays the last observed value. The _Process_ counter value is not accurate and should be ignored.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfGen1Collections">
+            <summary>
+            Displays the number of times the generation 1 objects are garbage collected since the application started.
+            The counter is incremented at the end of a generation 1 garbage collection. Higher generation garbage collections include all lower generation collections. This counter is explicitly incremented when a higher generation (generation 2) garbage collection occurs.
+            This counter displays the last observed value. The _Process_ counter value is not accurate and should be ignored.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfGen2Collections">
+            <summary>
+            Displays the number of times the generation 2 objects are garbage collected since the application started. The counter is incremented at the end of a generation 2 garbage collection (also called a full garbage collection).
+            This counter displays the last observed value. The _Process_ counter value is not accurate and should be ignored.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfInducedGC">
+            <summary>
+            Displays the peak number of times garbage collection was performed because of an explicit call to GC.Collect. It is good practice to let the garbage collector tune the frequency of its collections.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfPinnedObjects">
+            <summary>
+            Displays the number of pinned objects encountered in the last garbage collection. A pinned object is one that the garbage collector cannot move in memory. This counter tracks the pinned objects only in the heaps that are garbage collected. For example, a generation 0 garbage collection causes enumeration of pinned objects only in the generation 0 heap.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfSinkBlocksInUse">
+            <summary>
+            Displays the current number of syncronization blocks in use. Synchronization blocks are per-object data structures allocated for storing synchronization information. Synchronization blocks hold weak references to managed objects and must be scanned by the garbage collector. Synchronization blocks are not limited to storing synchronization information; they can also store COM interop metadata. This counter indicates performance problems with heavy use of synchronization primitives.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfTotalCommittedBytes">
+            <summary>
+            Displays the amount of virtual memory, in bytes, currently committed by the garbage collector. Committed memory is the physical memory for which space has been reserved in the disk paging file.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfTotalReservedBytes">
+            <summary>
+            Displays the amount of virtual memory. in bytes, currently reserved by the garbage collector. Reserved memory is the virtual memory space reserved for the application but no disk or main memory pages have been used.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessPercentTimeInGC">
+            <summary>
+            Displays the percentage of elapsed time that was spent performing a garbage collection since the last garbage collection cycle. This counter usually indicates the work done by the garbage collector to collect and compact memory on behalf of the application. This counter is updated only at the end of every garbage collection. This counter is not an average; its value reflects the last observed value.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessAllocatedBytesPerSecond">
+            <summary>
+            Displays the number of bytes per second allocated on the garbage collection heap. This counter is updated at the end of every garbage collection, not at each allocation. This counter is not an average over time; it displays the difference between the values observed in the last two samples divided by the duration of the sample interval.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessFinalizationSurvivors">
+            <summary>
+            Displays the number of garbage-collected objects that survive a collection because they are waiting to be finalized. If these objects hold references to other objects, those objects also survive but are not counted by this counter. The Promoted Finalization-Memory from Gen 0 and Promoted Finalization-Memory from Gen 1 counters represent all the memory that survived due to finalization.    
+            This counter is not cumulative; it is updated at the end of every garbage collection with the count of the survivors during that particular collection only. This counter indicates the extra overhead that the application might incur because of finalization.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessGen0HeapSize">
+            <summary>
+            Displays the maximum bytes that can be allocated in generation 0; it does not indicate the current number of bytes allocated in generation 0.
+            A generation 0 garbage collection occurs when the allocations since the last collection exceed this size. The generation 0 size is tuned by the garbage collector and can change during the execution of the application. At the end of a generation 0 collection the size of the generation 0 heap is 0 bytes. This counter displays the size, in bytes, of allocations that invokes the next generation 0 garbage collection.
+            This counter is updated at the end of a garbage collection, not at each allocation.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessGen0PromotedBytesPerSecond">
+            <summary>
+            Displays the bytes per second that are promoted from generation 0 to generation 1. Memory is promoted when it survives a garbage collection. This counter is an indicator of relatively long-lived objects being created per second.
+            This counter displays the difference between the values observed in the last two samples divided by the duration of the sample interval.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessGen1HeapSize">
+            <summary>
+            Displays the current number of bytes in generation 1; this counter does not display the maximum size of generation 1. Objects are not directly allocated in this generation; they are promoted from previous generation 0 garbage collections. This counter is updated at the end of a garbage collection, not at each allocation.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessGen1PromotedBytesPerSecond">
+            <summary>
+            Displays the bytes per second that are promoted from generation 1 to generation 2. Objects that are promoted only because they are waiting to be finalized are not included in this counter.
+            Memory is promoted when it survives a garbage collection. Nothing is promoted from generation 2 because it is the oldest generation. This counter is an indicator of very long-lived objects being created per second.
+            This counter displays the difference between the values observed in the last two samples divided by the duration of the sample interval.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessGen2HeapSize">
+            <summary>
+            Displays the current number of bytes in generation 2. Objects are not directly allocated in this generation; they are promoted from generation 1 during previous generation 1 garbage collections. This counter is updated at the end of a garbage collection, not at each allocation.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessLargeObjectHeapSize">
+            <summary>
+            Displays the current size, in bytes, of the Large Object Heap. Objects that are greater than approximately 85,000 bytes are treated as large objects by the garbage collector and are directly allocated in a special heap; they are not promoted through the generations. This counter is updated at the end of a garbage collection, not at each allocation.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessId">
+            <summary>
+            Displays the process ID of the CLR process instance that is being monitored.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessPromotedFinalizationMemoryFromGen0">
+            <summary>
+            Displays the bytes of memory that are promoted from generation 0 to generation 1 only because they are waiting to be finalized. This counter is not cumulative; it displays the value observed at the end of the last garbage collection.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessPromotedMemoryFromGen0">
+            <summary>
+            Displays the bytes of memory that survive garbage collection and are promoted from generation 0 to generation 1. Objects that are promoted only because they are waiting to be finalized are not included in this counter. This counter is not cumulative; it displays the value observed at the end of the last garbage collection.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessPromotedMemoryFromGen1">
+            <summary>
+            Displays the bytes of memory that survive garbage collection and are promoted from generation 1 to generation 2. Objects that are promoted only because they are waiting to be finalized are not included in this counter. This counter is not cumulative; it displays the value observed at the end of the last garbage collection. This counter is reset to 0 if the last garbage collection was a generation 0 collection only.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfCurrentLogicalThreads">
+            <summary>
+            Displays the number of current managed thread objects in the application. This counter maintains the count of both running and stopped threads. This counter is not an average over time; it displays only the last observed value.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfCurrentPhysicalThreads">
+            <summary>
+            Displays the number of native operating system threads created and owned by the common language runtime to act as underlying threads for managed thread objects. This counter's value does not include the threads used by the runtime in its internal operations; it is a subset of the threads in the operating system process.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfCurrentRecognizedThreads">
+            <summary>
+            Displays the number of threads that are currently recognized by the runtime. These threads are associated with a corresponding managed thread object. The runtime does not create these threads, but they have run inside the runtime at least once.
+            Only unique threads are tracked; threads with the same thread ID that reenter the runtime or are recreated after the thread exits are not counted twice.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfTotalRecognizedThreads">
+            <summary>
+            Displays the total number of threads that have been recognized by the runtime since the application started. These threads are associated with a corresponding managed thread object. The runtime does not create these threads, but they have run inside the runtime at least once.
+            Only unique threads are tracked; threads with the same thread ID that reenter the runtime or are recreated after the thread exits are not counted twice.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessContentionRatePerSecond">
+            <summary>
+            Displays the rate at which threads in the runtime attempt to acquire a managed lock unsuccessfully.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessCurrentQueueLength">
+            <summary>
+            Displays the total number of threads that are currently waiting to acquire a managed lock in the application. This counter is not an average over time; it displays the last observed value.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessQueueLengthPerSecond">
+            <summary>
+            Displays the number of threads per second that are waiting to acquire a lock in the application. This counter is not an average over time; it displays the difference between the values observed in the last two samples divided by the duration of the sample interval.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessQueueLengthPeak">
+            <summary>
+            Displays the total number of threads that waited to acquire a managed lock since the application started.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessRateOfRecognizedThreadsPerSecond">
+            <summary>
+            Displays the number of threads per second that have been recognized by the runtime. These threads are associated with a corresponding managed thread object. The runtime does not create these threads, but they have run inside the runtime at least once.
+            Only unique threads are tracked; threads with the same thread ID that reenter the runtime or are recreated after the thread exits are not counted twice.
+            This counter is not an average over time; it displays the difference between the values observed in the last two samples divided by the duration of the sample interval.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessTotalNumberOfContentions">
+            <summary>
+            Displays the total number of times that threads in the runtime have attempted to acquire a managed lock unsuccessfully.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessBytesReceived">
+            <summary>
+            Displays the cumulative number of bytes received over all open socket connections since the process started. This number includes data and any protocol information that is not defined by TCP/IP.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessBytesSent">
+            <summary>
+            Displays the cumulative number of bytes sent over all open socket connections since the process started. This number includes data and any protocol information that is not defined by TCP/IP.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessConnectionsEstablished">
+            <summary>
+            Displays the cumulative number of socket connections established for this process since it started.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessDatagramsReceived">
+            <summary>
+            Displays the cumulative number of datagram packets received since the process started.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessDatagramsSent">
+            <summary>
+            Displays the cumulative number of datagram packets sent since the process started.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessHttpWebRequestAverageLifetime">
+            <summary>
+            The average time to completion for all HttpWebRequest objects that ended in the last interval within the AppDomain since the process started.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessHttpWebRequestAverageQueueTime">
+            <summary>
+            The average time-on-queue for all HttpWebRequest objects that left the queue in the last interval within the AppDomain since the process started.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessHttpWebRequestsCreatedPerSecond">
+            <summary>
+            The number of HttpWebRequest objects created per second within the AppDomain.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessHttpWebRequestsQueuedPerSecond">
+            <summary>
+            The number of HttpWebRequest objects that were added to the queue per second within the AppDomain.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessHttpWebRequestsAbortedPerSecond">
+            <summary>
+            The number of HttpWebRequest objects where the application called the Abort method per second within the AppDomain.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessHttpWebRequestsFailedPerSecond">
+            <summary>
+            The number of HttpWebRequest objects that received a failed status code from the server per second within the AppDomain.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfExceptionsThrown">
+            <summary>
+            Displays the total number of exceptions thrown since the application started. This includes both .NET exceptions and unmanaged exceptions that are converted into .NET exceptions. For example, an HRESULT returned from unmanaged code is converted to an exception in managed code.
+            This counter includes both handled and unhandled exceptions. Exceptions that are rethrown are counted again.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfExceptionsThrownPerSecond">
+            <summary>
+            Displays the number of exceptions thrown per second. This includes both .NET exceptions and unmanaged exceptions that are converted into .NET exceptions. For example, an HRESULT returned from unmanaged code is converted to an exception in managed code.
+            This counter includes both handled and unhandled exceptions. It is not an average over time; it displays the difference between the values observed in the last two samples divided by the duration of the sample interval. This counter is an indicator of potential performance problems if a large (>100s) number of exceptions are thrown. 
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfExceptionFiltersPerSecond">
+            <summary>
+            Displays the number of .NET exception filters executed per second. An exception filter evaluates regardless of whether an exception is handled.
+            This counter is not an average over time; it displays the difference between the values observed in the last two samples divided by the duration of the sample interval.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessNumberOfExceptionFinallysPerSecond">
+            <summary>
+            Displays the number of finally blocks executed per second. A finally block is guaranteed to be executed regardless of how the try block was exited. Only the finally blocks executed for an exception are counted; finally blocks on normal code paths are not counted by this counter.
+            This counter is not an average over time; it displays the difference between the values observed in the last two samples divided by the duration of the sample interval.
+            </summary>
+        </member>
+        <member name="P:metrics.Core.CLRProfiler.ProcessThrowToCatchDepthPerSecond">
+            <summary>
+            Displays the number of stack frames traversed, from the frame that threw the exception to the frame that handled the exception, per second. This counter resets to zero when an exception handler is entered, so nested exceptions show the handler-to-handler stack depth.
+            This counter is not an average over time; it displays the difference between the values observed in the last two samples divided by the duration of the sample interval.
+            </summary>
+        </member>
+        <member name="T:metrics.Core.CounterMetric">
+            <summary>
+            An atomic counter metric
+            </summary>
+        </member>
+        <member name="T:metrics.Core.GaugeMetric">
+            <summary>
+            An untyped version of a gauge for reporting purposes
+            </summary>
+        </member>
+        <member name="T:metrics.Core.GaugeMetric`1">
+            <summary>
+            A gauge metric is an instantaneous reading of a particular value. To
+            instrument a queue's depth, for example:
+            <example>
+            <code> 
+            var queue = new Queue{int}();
+            var gauge = new GaugeMetric{int}(() => queue.Count);
+            </code>
+            </example>
+            </summary>
+        </member>
+        <member name="T:metrics.HealthCheck">
+            <summary>
+            A template class for an encapsulated service health check
+            </summary>
+        </member>
+        <member name="T:metrics.HealthChecks">
+            <summary>
+            A manager class for health checks
+            </summary>
+        </member>
+        <member name="M:metrics.HealthChecks.Register(System.String,System.Func{metrics.HealthCheck.Result})">
+            <summary>
+            Registers an application <see cref="T:metrics.HealthCheck"/> with a given name
+            </summary>
+            <param name="name">The named health check instance</param>
+            <param name="check">The <see cref="T:metrics.HealthCheck"/> function</param>
+        </member>
+        <member name="M:metrics.HealthChecks.RunHealthChecks">
+            <summary>
+            Runs the registered health checks and returns a map of the results.
+            </summary>
+        </member>
+        <member name="P:metrics.HealthChecks.HasHealthChecks">
+            <summary>
+            Returns <code>true</code>  <see cref="T:metrics.HealthCheck"/>s have been registered, <code>false</code> otherwise
+            </summary>
+        </member>
+        <member name="T:metrics.Core.MeterMetric">
+            <summary>
+            A meter metric which measures mean throughput and one-, five-, and fifteen-minute exponentially-weighted moving average throughputs.
+            </summary>
+            <see href="http://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average">EMA</see>
+        </member>
+        <member name="M:metrics.Core.MeterMetric.Mark">
+            <summary>
+            Mark the occurrence of an event
+            </summary>
+        </member>
+        <member name="M:metrics.Core.MeterMetric.Mark(System.Int64)">
+            <summary>
+            Mark the occurrence of a given number of events
+            </summary>
+        </member>
+        <member name="P:metrics.Core.MeterMetric.RateUnit">
+            <summary>
+            Returns the meter's rate unit
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:metrics.Core.MeterMetric.EventType">
+            <summary>
+            Returns the type of events the meter is measuring
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:metrics.Core.MeterMetric.Count">
+            <summary>
+             Returns the number of events which have been marked
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:metrics.Core.MeterMetric.FifteenMinuteRate">
+            <summary>
+            Returns the fifteen-minute exponentially-weighted moving average rate at
+            which events have occured since the meter was created
+            <remarks>
+            This rate has the same exponential decay factor as the fifteen-minute load
+            average in the top Unix command.
+            </remarks> 
+            </summary>
+        </member>
+        <member name="P:metrics.Core.MeterMetric.FiveMinuteRate">
+            <summary>
+            Returns the five-minute exponentially-weighted moving average rate at
+            which events have occured since the meter was created
+            <remarks>
+            This rate has the same exponential decay factor as the five-minute load
+            average in the top Unix command.
+            </remarks>
+            </summary>
+        </member>
+        <member name="P:metrics.Core.MeterMetric.MeanRate">
+            <summary>
+            Returns the mean rate at which events have occured since the meter was created
+            </summary>
+        </member>
+        <member name="P:metrics.Core.MeterMetric.OneMinuteRate">
+            <summary>
+            Returns the one-minute exponentially-weighted moving average rate at
+            which events have occured since the meter was created
+            <remarks>
+            This rate has the same exponential decay factor as the one-minute load
+            average in the top Unix command.
+            </remarks>
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:metrics.Core.MetricName">
+            <summary>
+            A hash key for storing metrics associated by the parent class and name pair
+            </summary>
+        </member>
+        <member name="T:metrics.Metrics">
+            <summary>
+            A set of factory methods for creating centrally registered metric instances
+            </summary>
+            <see href="https://github.com/codahale/metrics"/>
+            <seealso href="http://codahale.com/codeconf-2011-04-09-metrics-metrics-everywhere.pdf" />
+        </member>
+        <member name="M:metrics.Metrics.InstallPerformanceCounterGauge(System.String,System.String,System.String,System.String)">
+            <summary>
+            A convenience method for installing a gauge that is bound to a <see cref="T:System.Diagnostics.PerformanceCounter"/>
+            </summary>
+            <param name="category">The performance counter category</param>
+            <param name="counter">The performance counter name</param>
+            <param name="instance">The performance counter instance, if applicable</param>
+            <param name="label">A label to distinguish the metric in polling reports</param>
+        </member>
+        <member name="M:metrics.Metrics.InstallPerformanceCounterGauge(System.String,System.String,System.String)">
+            <summary>
+            A convenience method for installing a gauge that is bound to a <see cref="T:System.Diagnostics.PerformanceCounter"/>
+            </summary>
+            <param name="category">The performance counter category</param>
+            <param name="counter">The performance counter name</param>
+            <param name="label">A label to distinguish the metric in polling reports</param>
+        </member>
+        <member name="M:metrics.Metrics.Gauge``1(System.Type,System.String,System.Func{``0})">
+            <summary>
+            Creates a new gauge metric and registers it under the given type and name
+            </summary>
+            <typeparam name="T">The type the gauge measures</typeparam>
+            <param name="owner">The type that owns the metric</param>
+            <param name="name">The metric name</param>
+            <param name="evaluator">The gauge evaluation function</param>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Metrics.Counter(System.Type,System.String)">
+            <summary>
+            Creates a new counter metric and registers it under the given type and name
+            </summary>
+            <param name="owner">The type that owns the metric</param>
+            <param name="name">The metric name</param>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Metrics.Counter(System.String,System.String)">
+            <summary>
+            Creates a new counter metric and registers it under the given type and name
+            </summary>
+            <param name="context">The context for this metric</param>
+            <param name="name">The metric name</param>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Metrics.Histogram(System.Type,System.String,System.Boolean)">
+            <summary>
+            Creates a new histogram metric and registers it under the given type and name
+            </summary>
+            <param name="owner">The type that owns the metric</param>
+            <param name="name">The metric name</param>
+            <param name="biased">Whether the sample type is biased or uniform</param>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Metrics.Histogram(System.String,System.String,System.Boolean)">
+            <summary>
+            Creates a new histogram metric and registers it under the given type and name
+            </summary>
+            <param name="context">The context for this metric</param>
+            <param name="name">The metric name</param>
+            <param name="biased">Whether the sample type is biased or uniform</param>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Metrics.Histogram(System.Type,System.String)">
+            <summary>
+            Creates a new non-biased histogram metric and registers it under the given type and name
+            </summary>
+            <param name="owner">The type that owns the metric</param>
+            <param name="name">The metric name</param>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Metrics.Histogram(System.String,System.String)">
+            <summary>
+            Creates a new non-biased histogram metric and registers it under the given type and name
+            </summary>
+            <param name="context">The context for this the metric</param>
+            <param name="name">The metric name</param>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Metrics.Meter(System.Type,System.String,System.String,metrics.TimeUnit)">
+            <summary>
+            Creates a new meter metric and registers it under the given type and name
+            </summary>
+            <param name="owner">The type that owns the metric</param>
+            <param name="name">The metric name</param>
+            <param name="eventType">The plural name of the type of events the meter is measuring (e.g., <code>"requests"</code>)</param>
+            <param name="unit">The rate unit of the new meter</param>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Metrics.Meter(System.String,System.String,System.String,metrics.TimeUnit)">
+            <summary>
+            Creates a new meter metric and registers it under the given type and name
+            </summary>
+            <param name="context">The context for this metric</param>
+            <param name="name">The metric name</param>
+            <param name="eventType">The plural name of the type of events the meter is measuring (e.g., <code>"requests"</code>)</param>
+            <param name="unit">The rate unit of the new meter</param>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Metrics.Timer(System.Type,System.String,metrics.TimeUnit,metrics.TimeUnit)">
+            <summary>
+            Creates a new timer metric and registers it under the given type and name
+            </summary>
+            <param name="owner">The type that owns the metric</param>
+            <param name="name">The metric name</param>
+            <param name="durationUnit">The duration scale unit of the new timer</param>
+            <param name="rateUnit">The rate unit of the new timer</param>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Metrics.CallbackTimer(System.Type,System.String,metrics.TimeUnit,metrics.TimeUnit)">
+            <summary>
+            Creates a new timer metric and registers it under the given type and name
+            </summary>
+            <param name="owner">The type that owns the metric</param>
+            <param name="name">The metric name</param>
+            <param name="durationUnit">The duration scale unit of the new timer</param>
+            <param name="rateUnit">The rate unit of the new timer</param>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Metrics.ManualTimer(System.Type,System.String,metrics.TimeUnit,metrics.TimeUnit)">
+            <summary>
+            Creates a new metric that can be used to add manual timings into the system. A manual timing
+            is a timing that is measured not by the metrics system but by the client site and must be added
+            into metrics as an additional measurement.
+            </summary>
+            <param name="owner">The type that owns the metric</param>
+            <param name="name">The metric name</param>
+            <param name="durationUnit">The duration scale unit of the new timer</param>
+            <param name="rateUnit">The rate unit of the new timer</param>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Metrics.TimedCounter(System.String,System.String,System.String)">
+            <summary>
+            Creates a new meter metric and registers it under the given type and name
+            </summary>
+            <param name="context">The context for this metric</param>
+            <param name="name">The metric name</param>
+            <param name="eventType">The plural name of the type of events the meter is measuring (e.g., <code>"requests"</code>)</param>
+            <param name="unit">The rate unit of the new meter</param>
+            <param name="rate">The rate  of the new meter</param>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Metrics.EnableConsoleReporting(System.Int64,metrics.TimeUnit)">
+            <summary>
+            Enables the console reporter and causes it to print to STDOUT with the specified period
+            </summary>
+            <param name="period">The period between successive outputs</param>
+            <param name="unit">The time unit of the period</param>
+        </member>
+        <member name="M:metrics.Metrics.Clear">
+            <summary>
+            Clears all previously registered metrics
+            </summary>
+        </member>
+        <member name="P:metrics.Metrics.All">
+            <summary>
+            Returns a copy of all currently registered metrics in an immutable collection
+            </summary>
+        </member>
+        <member name="P:metrics.Metrics.AllSorted">
+            <summary>
+            Returns a copy of all currently registered metrics in an immutable collection, sorted by owner and name
+            </summary>
+        </member>
+        <member name="T:metrics.Stats.EWMA">
+            <summary>
+             An exponentially-weighted moving average
+            </summary>
+            <see href="http://www.teamquest.com/pdfs/whitepaper/ldavg1.pdf"/>
+            <see href="http://www.teamquest.com/pdfs/whitepaper/ldavg2.pdf" />
+        </member>
+        <member name="M:metrics.Stats.EWMA.OneSecondEWMA">
+            <summary>
+            Creates a new EWMA which is equivalent to one second load average and which expects to be ticked every 1 seconds.
+            </summary>
+        </member>
+        <member name="M:metrics.Stats.EWMA.OneMinuteEWMA">
+            <summary>
+            Creates a new EWMA which is equivalent to the UNIX one minute load average and which expects to be ticked every 5 seconds.
+            </summary>
+        </member>
+        <member name="M:metrics.Stats.EWMA.FiveMinuteEWMA">
+            <summary>
+            Creates a new EWMA which is equivalent to the UNIX five minute load average and which expects to be ticked every 5 seconds.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Stats.EWMA.FifteenMinuteEWMA">
+            <summary>
+             Creates a new EWMA which is equivalent to the UNIX fifteen minute load average and which expects to be ticked every 5 seconds.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:metrics.Stats.EWMA.#ctor(System.Double,System.Int64,metrics.TimeUnit)">
+            <summary>
+            Create a new EWMA with a specific smoothing constant.
+            </summary>
+            <param name="alpha">The smoothing constant</param>
+            <param name="interval">The expected tick interval</param>
+            <param name="intervalUnit">The time unit of the tick interval</param>
+        </member>
+        <member name="M:metrics.Stats.EWMA.Update(System.Int64)">
+            <summary>
+             Update the moving average with a new value.
+            </summary>
+            <param name="n"></param>
+        </member>
+        <member name="M:metrics.Stats.EWMA.Tick">
+            <summary>
+            Mark the passage of time and decay the current rate accordingly.
+            </summary>
+        </member>
+        <member name="M:metrics.Stats.EWMA.Rate(metrics.TimeUnit)">
+            <summary>
+            Returns the rate in the given units of time.
+            </summary>
+        </member>
+        <member name="T:metrics.Stats.ExponentiallyDecayingSample">
+            <summary>
+            An exponentially-decaying random sample of {@code long}s. Uses Cormode et
+            al's forward-decaying priority reservoir sampling method to produce a
+            statistically representative sample, exponentially biased towards newer
+            entries.
+            </summary>
+            <see href="http://www.research.att.com/people/Cormode_Graham/library/publications/CormodeShkapenyukSrivastavaXu09.pdf">
+            Cormode et al. Forward Decay: A Practical Time Decay Model for Streaming
+            Systems. ICDE '09: Proceedings of the 2009 IEEE International Conference on
+            Data Engineering (2009)
+            </see>
+        </member>
+        <member name="M:metrics.Stats.ExponentiallyDecayingSample.#ctor(System.Int32,System.Double)">
+            <param name="reservoirSize">The number of samples to keep in the sampling reservoir</param>
+            <param name="alpha">The exponential decay factor; the higher this is, the more biased the sample will be towards newer values</param>
+        </member>
+        <member name="M:metrics.Stats.ExponentiallyDecayingSample.Clear">
+            <summary>
+            Clears all recorded values
+            </summary>
+        </member>
+        <member name="M:metrics.Stats.ExponentiallyDecayingSample.Update(System.Int64)">
+            <summary>
+            Adds a new recorded value to the sample
+            </summary>
+        </member>
+        <member name="M:metrics.Stats.ExponentiallyDecayingSample.Rescale(System.Int64,System.Int64)">
+            <summary>
+            "A common feature of the above techniques—indeed, the key technique that
+            allows us to track the decayed weights efficiently—is that they maintain
+            counts and other quantities based on g(ti − L), and only scale by g(t − L)
+            at query time. But while g(ti −L)/g(t−L) is guaranteed to lie between zero
+            and one, the intermediate values of g(ti − L) could become very large. For
+            polynomial functions, these values should not grow too large, and should be
+            effectively represented in practice by floating point values without loss of
+            precision. For exponential functions, these values could grow quite large as
+            new values of (ti − L) become large, and potentially exceed the capacity of
+            common floating point types. However, since the values stored by the
+            algorithms are linear combinations of g values (scaled sums), they can be
+            rescaled relative to a new landmark. That is, by the analysis of exponential
+            decay in Section III-A, the choice of L does not affect the final result. We
+            can therefore multiply each value based on L by a factor of exp(−α(L′ − L)),
+            and obtain the correct value as if we had instead computed relative to a new
+            landmark L′ (and then use this new L′ at query time). This can be done with
+            a linear pass over whatever data structure is being used."
+            </summary>
+            <param name="now"></param>
+            <param name="next"></param>
+        </member>
+        <member name="P:metrics.Stats.ExponentiallyDecayingSample.Count">
+            <summary>
+            Returns the number of values recorded
+            </summary>
+        </member>
+        <member name="P:metrics.Stats.ExponentiallyDecayingSample.Values">
+            <summary>
+             Returns a copy of the sample's values
+            </summary>
+        </member>
+        <member name="T:metrics.Stats.UniformSample">
+            <summary>
+            A random sample of a stream of <code>long</code>s. Uses Vitter's Algorithm R to
+            produce a statistically representative sample.
+            <see href="http://www.cs.umd.edu/~samir/498/vitter.pdf">Random Sampling with a Reservoir</see>
+            </summary>
+        </member>
+        <member name="M:metrics.Stats.UniformSample.Clear">
+            <summary>
+            Clears all recorded values
+            </summary>
+        </member>
+        <member name="M:metrics.Stats.UniformSample.Update(System.Int64)">
+            <summary>
+            Adds a new recorded value to the sample
+            </summary>
+        </member>
+        <member name="P:metrics.Stats.UniformSample.Count">
+            <summary>
+            Returns the number of values recorded
+            </summary>
+        </member>
+        <member name="P:metrics.Stats.UniformSample.Values">
+            <summary>
+            Returns a copy of the sample's values
+            </summary>
+        </member>
+        <member name="T:metrics.Support.Random">
+            <summary>
+            Provides statistically relevant random number generation
+            </summary>
+        </member>
+        <member name="T:metrics.Support.ReadOnlyDictionary`2">
+            <summary>
+            Provides an immutable dictionary
+            </summary>
+        </member>
+        <member name="T:metrics.TimeUnit">
+            <summary>
+            Provides support for timing values
+            <see href="http://download.oracle.com/javase/6/docs/api/java/util/concurrent/TimeUnit.html"/>
+            </summary>
+        </member>
+        <member name="T:metrics.TimeUnitExtensions">
+            <summary>
+            Provides enum methods for timing values
+            </summary>
+        </member>
+        <member name="T:metrics.Support.VolatileLong">
+            <summary>
+            Provides support for volatile operations around a <see cref="T:System.Int64"/> value
+            </summary>
+        </member>
+        <member name="T:metrics.Util.NamedThreadFactory">
+            <summary>
+            A simple named thread factory, used to track interesting threads (whose traces can be dumped).
+            </summary>
+        </member>
+        <member name="M:metrics.Util.NamedThreadFactory.Dump">
+            <summary>
+            Dumps all threads that have been added via <see cref="M:metrics.Util.NamedThreadFactory.New(System.Action,System.Threading.ThreadPriority)"/>.
+            <remarks>
+                - It's not possible to enumerate managed CLR threads at runtime in code
+            </remarks>
+            </summary> 
+            <returns></returns>
+        </member>
+        <member name="T:metrics.Support.ThreadGroup">
+            <summary>
+            Provides a thread group for tracking
+            </summary>
+        </member>
+    </members>
+</doc>

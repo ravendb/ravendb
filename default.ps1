@@ -21,25 +21,26 @@ properties {
 	
 	$core_db_dlls = @(
         "$base_dir\Raven.Database\bin\$global:configuration\Raven.Abstractions.???", 
+		"$base_dir\Raven.Database\bin\$global:configuration\Raven.Client.Lightweight.???", 
+		"$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
         (Get-DependencyPackageFiles 'NLog.2'), 
         "$base_dir\Raven.Database\bin\$global:configuration\Jint.Raven.???",
-				"$base_dir\Raven.Database\bin\$global:configuration\Lucene.Net.???",
-				"$base_dir\Raven.Database\bin\$global:configuration\Microsoft.Data.Edm.???",
-				"$base_dir\Raven.Database\bin\$global:configuration\Microsoft.WindowsAzure.Storage.???",
-				"$base_dir\Raven.Database\bin\$global:configuration\Microsoft.Data.OData.???",
-				"$base_dir\Raven.Database\bin\$global:configuration\Microsoft.WindowsAzure.ConfigurationManager.???",
-				"$base_dir\Raven.Database\bin\$global:configuration\Lucene.Net.Contrib.Spatial.NTS.???", 
-				"$base_dir\Raven.Database\bin\$global:configuration\Spatial4n.Core.NTS.???", 
-				"$base_dir\Raven.Database\bin\$global:configuration\GeoAPI.dll", 
-				"$base_dir\Raven.Database\bin\$global:configuration\NetTopologySuite.dll", 
-				"$base_dir\Raven.Database\bin\$global:configuration\PowerCollections.dll", 
-				"$base_dir\Raven.Database\bin\$global:configuration\ICSharpCode.NRefactory.???", 
-				"$base_dir\Raven.Database\bin\$global:configuration\ICSharpCode.NRefactory.CSharp.???", 
-				"$base_dir\Raven.Database\bin\$global:configuration\Mono.Cecil.???", 
-				"$base_dir\Raven.Database\bin\$global:configuration\Esent.Interop.???", 
-				"$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
-				"$base_dir\Raven.Database\bin\$global:configuration\AWS.Extensions.???", 
-				"$base_dir\Raven.Database\bin\$global:configuration\AWSSDK.???" ) 
+		"$base_dir\Raven.Database\bin\$global:configuration\Lucene.Net.???",
+		"$base_dir\Raven.Database\bin\$global:configuration\Microsoft.Data.Edm.???",
+		"$base_dir\Raven.Database\bin\$global:configuration\Microsoft.WindowsAzure.Storage.???",
+		"$base_dir\Raven.Database\bin\$global:configuration\Microsoft.Data.OData.???",
+		"$base_dir\Raven.Database\bin\$global:configuration\Microsoft.WindowsAzure.ConfigurationManager.???",
+		"$base_dir\Raven.Database\bin\$global:configuration\Lucene.Net.Contrib.Spatial.NTS.???", 
+		"$base_dir\Raven.Database\bin\$global:configuration\Spatial4n.Core.NTS.???", 
+		"$base_dir\Raven.Database\bin\$global:configuration\GeoAPI.dll", 
+		"$base_dir\Raven.Database\bin\$global:configuration\NetTopologySuite.dll", 
+		"$base_dir\Raven.Database\bin\$global:configuration\PowerCollections.dll", 
+		"$base_dir\Raven.Database\bin\$global:configuration\ICSharpCode.NRefactory.???", 
+		"$base_dir\Raven.Database\bin\$global:configuration\ICSharpCode.NRefactory.CSharp.???", 
+		"$base_dir\Raven.Database\bin\$global:configuration\Mono.Cecil.???", 
+		"$base_dir\Raven.Database\bin\$global:configuration\Esent.Interop.???",
+		"$base_dir\Raven.Database\bin\$global:configuration\AWS.Extensions.???", 
+		"$base_dir\Raven.Database\bin\$global:configuration\AWSSDK.???" ) 
 	
 	$web_dlls = ( @( "$base_dir\Raven.Web\bin\Raven.Web.???"  ) + $core_db_dlls)
 	

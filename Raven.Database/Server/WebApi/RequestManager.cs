@@ -73,8 +73,9 @@ namespace Raven.Database.Server.WebApi
 	    private void OnBeforeRequest(object sender, BeforeRequestWebApiEventArgs args)
 	    {
 	        var documentDatabase = args.Database;
-	        documentDatabase.WorkContext.PerformanceCounters.RequestsPerSecond.Increment();
-            documentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.Increment();
+
+            documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.Mark();
+            documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.Mark();
 	    }
 
 	    public void Init()
@@ -351,8 +352,9 @@ namespace Raven.Database.Server.WebApi
 		    }
 		    finally
 		    {
-                controller.Database.WorkContext.PerformanceCounters.ConcurrentRequests.Decrement();		        
-		    }
+               //!! controller.Database.WorkContext.PerformanceCounters.ConcurrentRequests.Decrement(); //??
+               
+            }
 
 			if (ravenUiRequest || logHttpRequestStatsParam == null || sw == null)
 				return;

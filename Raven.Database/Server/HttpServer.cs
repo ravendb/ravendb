@@ -248,9 +248,31 @@ namespace Raven.Database.Server
 							TotalDatabaseHumaneSize = DatabaseSize.Humane(totalDatabaseSize),
 							CountOfDocuments = documentDatabase.Database.Statistics.CountOfDocuments,
                             CountOfAttachments = documentDatabase.Database.Statistics.CountOfAttachments,
-							RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.PerformanceCounters.RequestsPerSecond.NextValue(), 2),
-							ConcurrentRequests = (int)documentDatabase.Database.WorkContext.PerformanceCounters.ConcurrentRequests.NextValue(),
-							DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.Database.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
+                            //RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.PerformanceCounters.RequestsPerSecond.NextValue(), 2),
+                            //ConcurrentRequests = (int)documentDatabase.Database.WorkContext.PerformanceCounters.ConcurrentRequests.NextValue(),
+                            //DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.Database.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
+                            //MeanRate = documentDatabase.Database.WorkContext.PerformanceCounters.RequestsMeter.MeanRate,
+                            //OneMinuteRate = documentDatabase.Database.WorkContext.PerformanceCounters.RequestsMeter.OneMinuteRate,
+                            //Count = documentDatabase.Database.WorkContext.PerformanceCounters.RequestsMeter.Count,
+                            //CounterRequestsPerSecond = documentDatabase.Database.WorkContext.PerformanceCounters.RequestsPerSecondCounter.CurrentValue
+
+                           // RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.RequestsPerSecondCounter.CurrentValue),//!!!!
+
+                         //   ConcurrentRequests = (int)documentDatabase.Database.WorkContext.PerformanceCounters.ConcurrentRequests.NextValue(),
+                            DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.Database.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
+                            //DocsPerSecondCounter = documentDatabase.Database.WorkContext.MetricsCounters.RequestsMeter.Count,
+                            //IndexedPerSecondCounter = documentDatabase.Database.WorkContext.MetricsCounters.RequestsMeter.Count,
+                            //ReducedPerSecondCounter = documentDatabase.Database.WorkContext.MetricsCounters.RequestsMeter.Count,
+                            //Count = documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.Count,
+                            //MeanRate = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.MeanRate,2),
+                            //OneMinuteRate = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.OneMinuteRate, 2),
+                            //FiveMinuteRate = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.FiveMinuteRate, 2),  //??RequestsMeter not required
+                            //FifteenMinuteRate = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.ConcurrentRequests.FifteenMinuteRate, 2),
+
+                            //CounterRequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.MetricsCounters.RequestsPerSecondCounter.CurrentValue, 2)
+
+                           
+
 						}
 				};
 			}
@@ -839,7 +861,7 @@ namespace Raven.Database.Server
 			}
 			finally
 			{
-				CurrentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.Decrement();
+				//!!CurrentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.Decrement();
 				ResetThreadLocalState();
 				if (onResponseEnd != null)
 					onResponseEnd();
@@ -903,8 +925,10 @@ namespace Raven.Database.Server
 		protected void OnDispatchingRequest(IHttpContext ctx)
 		{
 			ctx.Response.AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion);
-			CurrentDatabase.WorkContext.PerformanceCounters.RequestsPerSecond.Increment();
-			CurrentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.Increment();
+            
+            CurrentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.Mark();
+            CurrentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.Mark();
+
 		}
 
 		public DocumentDatabase CurrentDatabase

@@ -5,7 +5,7 @@ import router = require("plugins/router");
 // Helper class with static methods for generating app URLs.
 class appUrl {
 
-    //static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
+    //private static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
     private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
 
@@ -30,6 +30,7 @@ class appUrl {
         userInfo: ko.computed(() => appUrl.forUserInfo(appUrl.currentDatabase())),
         databaseSettings: ko.computed(() => appUrl.forDatabaseSettings(appUrl.currentDatabase())),
         periodicBackup: ko.computed(() => appUrl.forPeriodicBackup(appUrl.currentDatabase())),
+        replications: ko.computed(() => appUrl.forReplications(appUrl.currentDatabase())),
 
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null)
 	};
@@ -105,6 +106,10 @@ class appUrl {
 
     static forPeriodicBackup(db: database): string {
         return "#settings/periodicBackup?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forReplications(db: database): string {
+        return "#settings/replication?" + appUrl.getEncodedDbPart(db);
     }
 
 	static forDocuments(collection?: string, db: database = appUrl.getDatabase()): string {

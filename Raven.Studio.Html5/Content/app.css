@@ -100,7 +100,8 @@ body {
 .settings-container {
   margin-top: 10px;
 }
-.settings-container .api-key-card {
+.settings-container .api-key-card,
+.settings-container .replication-destination-card {
   display: inline-block;
   width: 500px;
   margin-right: 20px;
@@ -374,3 +375,4 @@ footer ul {
     margin-bottom: 0;
   }
 }
+/*# sourceMappingURL=app.css.map */
