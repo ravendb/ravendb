@@ -231,9 +231,16 @@ namespace Raven.Client.Document
             if (IsDeleted(id))
                 return default(T);
             object existingEntity;
+
             if (entitiesByKey.TryGetValue(id, out existingEntity))
             {
                 return (T)existingEntity;
+            }
+            JsonDocument value;
+            if (includedDocumentsByKey.TryGetValue(id, out value))
+            {
+                includedDocumentsByKey.Remove(id);
+                return TrackEntity<T>(value);
             }
 
             IncrementRequestCount();
