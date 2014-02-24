@@ -45,7 +45,7 @@ properties {
 	
 	$web_files = @("$base_dir\DefaultConfigs\web.config", "$base_dir\DefaultConfigs\NLog.Ignored.config" )
 	
-	$server_files = ( @( "$base_dir\Raven.Server\bin\$global:configuration\\Raven.Server.???", "$base_dir\Raven.Server\bin\$global:configuration\\Raven.Studio.xap", "$base_dir\DefaultConfigs\NLog.Ignored.config") + $core_db_dlls )
+	$server_files = ( @( "$base_dir\Raven.Server\bin\$global:configuration\\Raven.Server.???", "$base_dir\Raven.Studio\bin\$global:configuration\\Raven.Studio.xap", "$base_dir\DefaultConfigs\NLog.Ignored.config") + $core_db_dlls )
 		
 	$client_dlls = @( (Get-DependencyPackageFiles 'NLog.2'), "$base_dir\Raven.Client.MvcIntegration\bin\$global:configuration\\Raven.Client.MvcIntegration.???", 
 					"$base_dir\Raven.Client.Lightweight\bin\$global:configuration\\Raven.Abstractions.???", "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\\Raven.Client.Lightweight.???")
