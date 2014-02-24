@@ -261,10 +261,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			var lowerKey = CreateKey(key);
+			var loweredKey = CreateKey(key);
+			
+			if(etag != null)
+				EnsureDocumentEtagMatch(loweredKey, etag, "DELETE");
 
 			ushort? existingVersion;
-			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch.Value, out existingVersion))
+			if (!tableStorage.Documents.Contains(Snapshot, loweredKey, writeBatch.Value, out existingVersion))
 			{
 				logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
 				metadata = null;
@@ -272,7 +275,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				return false;
 			}
 
-			if (!metadataIndex.Contains(Snapshot, lowerKey, writeBatch.Value)) //data exists, but metadata is not --> precaution, should never be true
+			if (!metadataIndex.Contains(Snapshot, loweredKey, writeBatch.Value)) //data exists, but metadata is not --> precaution, should never be true
 			{
 				var errorString = string.Format("Document with key '{0}' was found, but its metadata wasn't found --> possible data corruption", key);
 				throw new ApplicationException(errorString);
@@ -284,13 +287,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			deletedETag = etag != null ? existingEtag : documentMetadata.Etag;
 
-			tableStorage.Documents.Delete(writeBatch.Value, lowerKey, existingVersion);
-			metadataIndex.Delete(writeBatch.Value, lowerKey);
+			tableStorage.Documents.Delete(writeBatch.Value, loweredKey, existingVersion);
+			metadataIndex.Delete(writeBatch.Value, loweredKey);
 
 			tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
 						  .Delete(writeBatch.Value, deletedETag);
 
-			documentCacher.RemoveCachedDocument(lowerKey, etag);
+			documentCacher.RemoveCachedDocument(loweredKey, etag);
 
 			logger.Debug("Deleted document with key = '{0}'", key);
 
