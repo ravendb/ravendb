@@ -98,8 +98,6 @@ namespace Raven.Database.Config
 			MaxIndexWritesBeforeRecreate = ravenSettings.MaxIndexWritesBeforeRecreate.Value;
 			MaxIndexOutputsPerDocument = ravenSettings.MaxIndexOutputsPerDocument.Value;
 
-			DisablePerformanceCounters = ravenSettings.DisablePerformanceCounters.Value;
-
 			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
 
 			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
@@ -828,11 +826,6 @@ namespace Raven.Database.Config
 		/// Default value: 15. In order to disable this check set value to -1.
 		/// </summary>
 		public int MaxIndexOutputsPerDocument { get; set; }
-
-		/// <summary>
-		/// If True then no PerformanceCounters will be used. Default: false
-		/// </summary>
-		public bool DisablePerformanceCounters { get; set; }
 
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
