@@ -16,14 +16,13 @@ namespace Raven.Tests.Bundles.UniqueConstraints.Bugs
 		[Fact]
 		public void Round_Trip_Includes_Expected_Metadata()
 		{
-			var original = new User() { Email = "foo@bar.com", Username = "Foo" };
+			var original = new User { Email = "foo@bar.com", Username = "Foo" };
 
 			using (var documentStore = InitializeDocumentStore(new UniqueConstraintsStoreListener(new CustomUniqueConstraintsTypeDictionary())))
 			{
 				using (var session = documentStore.OpenSession())
 				{
 					session.Store(original);
-
 					session.SaveChanges();
 				}
 
@@ -41,7 +40,7 @@ namespace Raven.Tests.Bundles.UniqueConstraints.Bugs
 		[Fact]
 		public void Constraints_Are_Unique_Per_Tenant()
 		{
-			var original = new User() { Email = "foo@bar.com", Username = "Foo" };
+			var original = new User { Email = "foo@bar.com", Username = "Foo" };
 
 			using (var documentStore1 = InitializeDocumentStore(new UniqueConstraintsStoreListener(new CustomUniqueConstraintsTypeDictionary()), 8078))
 			using (var documentStore2 = InitializeDocumentStore(new UniqueConstraintsStoreListener()))
