@@ -1,11 +1,12 @@
 ﻿extern alias client;
-
 using System.Collections.Generic;
 using System.Linq;
+
 using Raven.Client;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.Authorization.Bugs
+namespace Raven.Tests.Bundles.Authorization.Bugs
 {
 	public class Bowes : AuthorizationTest
 	{
@@ -167,13 +168,13 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 		[Fact]
 		public void ShouldWork()
 		{
-			using (var session = store.OpenSession())
+			using (var session = store.OpenSession(DatabaseName))
 			{
 				SetupData(session);
 				session.SaveChanges();
 			}
 
-			using (var session = store.OpenSession())
+			using (var session = store.OpenSession(DatabaseName))
 			{
 				client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(session, "Users/4", "OrgDocs/View");
 

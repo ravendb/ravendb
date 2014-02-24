@@ -1,9 +1,10 @@
 using System;
 using System.Configuration;
 using System.Data.Common;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.IndexReplication
+namespace Raven.Tests.Bundles.IndexReplication
 {
 	[CLSCompliant(false)]
 	public class FactIfSqlServerIsAvailable : FactAttribute

@@ -3,15 +3,18 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
+
+using Raven.Abstractions.Data;
 using Raven.Bundles.CascadeDelete;
 using Raven.Client.Document;
 using Raven.Json.Linq;
-using Raven.Tests;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.CascadeDelete
+namespace Raven.Tests.Bundles.CascadeDelete
 {
 	public class CascadeDelete : RavenTest
 	{
@@ -19,12 +22,12 @@ namespace Raven.Bundles.Tests.CascadeDelete
 
 		public CascadeDelete()
 		{
-			var ravenDbServer = GetNewServer(configureServer: configuration =>
+			var ravenDbServer = GetNewServer(databaseName: Constants.SystemDatabase, configureServer: configuration =>
 			{
 				configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof (CascadeDeleteTrigger).Assembly));
 			});
 
-			documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer);
+            documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, databaseName: Constants.SystemDatabase);
 		}
 
 		[Fact]

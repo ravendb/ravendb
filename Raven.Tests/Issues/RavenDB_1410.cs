@@ -74,12 +74,11 @@ namespace Raven.Tests.Issues
 
 
 				//stream query with no existing index/only dynamic index should throw no index exist exception
-				var exception = Assert.Throws<AggregateException>(() =>
+				Assert.Throws<InvalidOperationException>(() =>
 				{
+// ReSharper disable once AccessToDisposedClosure
 					session.Advanced.Stream(query);
-				});
-
-				Assert.IsType<InvalidOperationException>(exception.GetBaseException());
+				});				
 			}
 		}
 

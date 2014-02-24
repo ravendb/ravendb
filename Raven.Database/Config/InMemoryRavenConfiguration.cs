@@ -222,6 +222,8 @@ namespace Raven.Database.Config
 
 			AllowLocalAccessWithoutAuthorization = ravenSettings.AllowLocalAccessWithoutAuthorization.Value;
 
+		    VoronMaxBufferPoolSize = Math.Max(2, ravenSettings.VoronMaxBufferPoolSize.Value);
+
 			PostInit();
 		}
 
@@ -855,6 +857,13 @@ namespace Raven.Database.Config
         /// Facet queries that will try to use it will have to wait until it is over
         /// </summary>
         public TimeSpan PrewarmFacetsSyncronousWaitTime { get; set; }
+
+        /// <summary>
+        /// You can use this setting to specify a maximum buffer pool size that can be used for transactional storage (in gigabytes). 
+        /// By default it is 4.
+        /// Minimum value is 2.
+        /// </summary>
+        public int VoronMaxBufferPoolSize { get; set; }
 
 	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]

@@ -58,6 +58,25 @@ namespace Raven.Client.Document.Async
 										.ContinueWith(task => (IEnumerable<T>)task.Result.Select(TrackEntity<T>).ToList());
 		}
 
+		public Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25,
+		                                                    string exclude = null, RavenPagingInformation pagingInformation = null,
+		                                                    Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			var transformer = new TTransformer().TransformerName;
+
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+			{
+				configure(configuration);
+			}
+
+			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude,
+			                                             pagingInformation: pagingInformation, transformer: transformer,
+			                                             queryInputs: configuration.QueryInputs)
+			                            .ContinueWith(
+				                            task => (IEnumerable<TResult>) task.Result.Select(TrackEntity<TResult>).ToList());
+		}
+
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query)
 		{
 			return StreamAsync(query, new Reference<QueryHeaderInformation>());

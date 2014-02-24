@@ -36,7 +36,8 @@ namespace Raven.Client
 		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
 		TResult[] LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0,
 		                                                  int pageSize = 25, string exclude = null,
-		                                                  RavenPagingInformation pagingInformation = null)
+		                                                  RavenPagingInformation pagingInformation = null,
+														  Action<ILoadConfiguration> configure = null)
 			where TTransformer : AbstractTransformerCreationTask, new();
 
 		/// <summary>

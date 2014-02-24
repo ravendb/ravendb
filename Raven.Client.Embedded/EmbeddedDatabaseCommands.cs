@@ -135,7 +135,7 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
 		                                 RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
-		                                 string exclude = null, string transformer = null)
+										 string exclude = null, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
 		{
 			pageSize = Math.Min(pageSize, database.Configuration.MaxPageSize);
 
@@ -154,7 +154,7 @@ namespace Raven.Client.Embedded
 
 			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, actualStart,
 			                                                                          pageSize, CancellationToken.None,
-			                                                                          ref nextPageStart, transformer);
+			                                                                          ref nextPageStart, transformer, queryInputs);
 
 			if (pagingInformation != null)
 				pagingInformation.Fill(start, pageSize, nextPageStart);
@@ -643,7 +643,7 @@ namespace Raven.Client.Embedded
 						if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) &&
 							e is IndexDoesNotExistsException)
 						{
-							throw new InvalidOperationException(@"StreamQuery() does not support querying dynamic indexes. It is designed to be used with large data-sets and is unlikely to return all data-set after 15 sec of indexing, like Query() does.",e);
+							throw new InvalidOperationException(@"StreamQuery does not support querying dynamic indexes. It is designed to be used with large data-sets and is unlikely to return all data-set after 15 sec of indexing, like Query() does.",e);
 						}
 
 						throw;

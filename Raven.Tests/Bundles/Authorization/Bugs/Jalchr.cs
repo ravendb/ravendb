@@ -4,13 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 extern alias client;
-using client::Raven.Client.Authorization;
-using client::Raven.Bundles.Authorization.Model;
-
 using System.Collections.Generic;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.Authorization.Bugs
+namespace Raven.Tests.Bundles.Authorization.Bugs
 {
 	public class Jalchr : AuthorizationTest
 	{
@@ -31,22 +29,22 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 		private void ExecuteSecuredOperation(string userId)
 		{
 			string operation = "operation";
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
-				AuthorizationUser user = new AuthorizationUser { Id = userId, Name = "Name" };
-				user.Permissions = new List<OperationPermission>
+				client::Raven.Bundles.Authorization.Model.AuthorizationUser user = new client::Raven.Bundles.Authorization.Model.AuthorizationUser { Id = userId, Name = "Name" };
+				user.Permissions = new List<client::Raven.Bundles.Authorization.Model.OperationPermission>
 				{
-					new OperationPermission {Allow = true, Operation = operation}
+					new client::Raven.Bundles.Authorization.Model.OperationPermission {Allow = true, Operation = operation}
 				};
 				s.Store(user);
 
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+            using (var s = store.OpenSession(DatabaseName))
 			{
-				var authorizationUser = s.Load<AuthorizationUser>(userId);
-				Assert.True(AuthorizationClientExtensions.IsAllowed(s, authorizationUser, operation));
+				var authorizationUser = s.Load<client::Raven.Bundles.Authorization.Model.AuthorizationUser>(userId);
+				Assert.True(client::Raven.Client.Authorization.AuthorizationClientExtensions.IsAllowed(s, authorizationUser, operation));
 			}
 		}
 	}

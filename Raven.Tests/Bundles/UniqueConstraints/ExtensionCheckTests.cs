@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 
-namespace Raven.Bundles.Tests.UniqueConstraints
+using Raven.Client.UniqueConstraints;
+
+using Xunit;
+
+namespace Raven.Tests.Bundles.UniqueConstraints
 {
-	using Raven.Client.UniqueConstraints;
-
-	using Xunit;
-
-	public class ExtensionCheckTests : UniqueConstraintsTest
+    public class ExtensionCheckTests : UniqueConstraintsTest
 	{
 		[Fact]
 		public void Will_load_all_documents_based_on_constraint()

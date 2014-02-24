@@ -1,4 +1,4 @@
-namespace Raven.Bundles.Tests
+namespace Raven.Tests.Bundles
 {
 	public class Company
 	{

@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Database.Util.Streams;
+
 namespace Raven.Database.Storage.Voron.StorageActions
 {
 	using System;
@@ -33,8 +35,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private readonly IStorageActionsAccessor currentStorageActionsAccessor;
 
-		public IndexingStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, Reference<WriteBatch> writeBatch, IStorageActionsAccessor storageActionsAccessor)
-			: base(snapshot)
+        public IndexingStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, Reference<WriteBatch> writeBatch, IStorageActionsAccessor storageActionsAccessor, IBufferPool bufferPool)
+			: base(snapshot, bufferPool)
 		{
 			this.tableStorage = tableStorage;
 			this.generator = generator;

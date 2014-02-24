@@ -1,5 +1,6 @@
 ﻿
 using Raven.Abstractions.Extensions;
+using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
@@ -15,8 +16,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		private readonly TableStorage tableStorage;
 		private readonly Reference<WriteBatch> writeBatch;
 
-		public StalenessStorageActions(TableStorage tableStorage, SnapshotReader snapshot, Reference<WriteBatch> writeBatch)
-			: base(snapshot)
+		public StalenessStorageActions(TableStorage tableStorage, SnapshotReader snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool)
+			: base(snapshot, bufferPool)
 		{
 			this.tableStorage = tableStorage;
 			this.writeBatch = writeBatch;

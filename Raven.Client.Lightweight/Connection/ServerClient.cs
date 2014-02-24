@@ -104,11 +104,14 @@ namespace Raven.Client.Connection
 		/// Gets documents for the specified key prefix
 		/// </summary>
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
-			RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null, string transformer = null)
+		                                 RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
+		                                 string exclude = null, string transformer = null,
+		                                 Dictionary<string, RavenJToken> queryInputs = null)
 		{
 			return
-				asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude, transformer)
-					.ResultUnwrap();
+				asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude,
+				                                  transformer, queryInputs)
+				                 .ResultUnwrap();
 		}
 
 		/// <summary>
@@ -404,7 +407,7 @@ namespace Raven.Client.Connection
 			out QueryHeaderInformation queryHeaderInfo)
 		{
 			var reference = new Reference<QueryHeaderInformation>();
-			var streamQueryAsync = asyncServerClient.StreamQueryAsync(index, query, reference).Result;
+			var streamQueryAsync = asyncServerClient.StreamQueryAsync(index, query, reference).ResultUnwrap();
 			queryHeaderInfo = reference.Value;
 			return new AsycnEnumerableWrapper<RavenJObject>(streamQueryAsync);
 		}

@@ -5,10 +5,12 @@
 //-----------------------------------------------------------------------
 extern alias client;
 using System.Collections.Generic;
+
 using Raven.Client;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.Authorization.Bugs
+namespace Raven.Tests.Bundles.Authorization.Bugs
 {
 	public class Mojo2 : AuthorizationTest
 	{
@@ -67,12 +69,12 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 		[Fact]
 		public void Create_Library_And_Set_Permission_For_Roles_Administrators_And_For_User_Andrea()
 		{
-			using (IDocumentSession session = store.OpenSession())
+            using (IDocumentSession session = store.OpenSession(DatabaseName))
 			{
 				SetupRoles(session);
 				SetupUsers(session);
 			}
-			using (IDocumentSession session = store.OpenSession())
+            using (IDocumentSession session = store.OpenSession(DatabaseName))
 			{
 				var library = new Library { Id = "library/andrea-lib" };
 				session.Store(library);
@@ -106,7 +108,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 				session.SaveChanges();
 			}
 
-			using (IDocumentSession session = store.OpenSession())
+            using (IDocumentSession session = store.OpenSession(DatabaseName))
 			{
 				var paolo = session.Load<client::Raven.Bundles.Authorization.Model.AuthorizationUser>("paolo");
 

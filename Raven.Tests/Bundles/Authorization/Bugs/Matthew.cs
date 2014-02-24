@@ -1,11 +1,13 @@
 extern alias client;
 using Raven.Client.Exceptions;
-using client::Raven.Bundles.Authorization.Model;
+
 using System.Collections.Generic;
+
 using Raven.Client;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.Authorization.Bugs
+namespace Raven.Tests.Bundles.Authorization.Bugs
 {
 	public class Matthew : AuthorizationTest
     {
@@ -13,15 +15,15 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
         public void AuthorizationDemo_Works()
         {
             // Arrange
-            using (IDocumentSession session = store.OpenSession())
+            using (IDocumentSession session = store.OpenSession(DatabaseName))
             {
                 session.Store(
-                    new AuthorizationRole
+                    new client::Raven.Bundles.Authorization.Model.AuthorizationRole
                         {
                             Id = "Authorization/Roles/Nurses",
                             Permissions =
                                 {
-                                    new OperationPermission
+                                    new client::Raven.Bundles.Authorization.Model.OperationPermission
                                         {
                                             Allow = true,
                                             Operation = "Appointment/Schedule",
@@ -32,12 +34,12 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 
                 // Allow doctors to authorize hospitalizations
                 session.Store(
-                    new AuthorizationRole
+                    new client::Raven.Bundles.Authorization.Model.AuthorizationRole
                         {
                             Id = "Authorization/Roles/Doctors",
                             Permissions =
                                 {
-                                    new OperationPermission
+                                    new client::Raven.Bundles.Authorization.Model.OperationPermission
                                         {
                                             Allow = true,
                                             Operation = "Hospitalization/Authorize",
@@ -49,7 +51,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
                 var maryMallon = new Patient {Id = "Patients/MaryMallon"};
                 session.Store(maryMallon);
 	            client::Raven.Client.Authorization.AuthorizationClientExtensions.SetAuthorizationFor(session, maryMallon,
-	                                                                                                 new DocumentAuthorization
+	                                                                                                 new client::Raven.Bundles.Authorization.Model.DocumentAuthorization
 		                                                                                                 {
 			                                                                                                 Tags =
 				                                                                                                 {
@@ -60,14 +62,14 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 
                 // Associate Doctor with clinic
                 session.Store(
-                    new AuthorizationUser
+                    new client::Raven.Bundles.Authorization.Model.AuthorizationUser
                         {
                             Id = "Authorization/Users/DrHowser",
                             Name = "Doogie Howser",
                             Roles = {"Authorization/Roles/Doctors"},
                             Permissions =
                                 {
-                                    new OperationPermission
+                                    new client::Raven.Bundles.Authorization.Model.OperationPermission
                                         {
                                             Allow = true,
                                             Operation = "Patient/View",
@@ -80,7 +82,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 
 
             // Assert
-            using (IDocumentSession session = store.OpenSession())
+            using (IDocumentSession session = store.OpenSession(DatabaseName))
             {
 	            client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(session,
 	                                                                                       "Authorization/Users/NotDrHowser",

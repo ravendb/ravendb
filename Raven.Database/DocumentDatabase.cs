@@ -2144,17 +2144,17 @@ namespace Raven.Database
 
 		public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start,
 		                                                  int pageSize, CancellationToken token, ref int nextStart,
-		                                                  string transformer = null)
+														  string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
 		{
 			var list = new RavenJArray();
 			GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart, list.Add,
-			                               transformer);
+			                               transformer, queryInputs);
 			return list;
 		}
 
 		public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize,
 		                                           CancellationToken token, ref int nextStart, Action<RavenJObject> addDoc,
-		                                           string transformer = null)
+												   string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
 		{
 			if (idPrefix == null)
 				throw new ArgumentNullException("idPrefix");
@@ -2183,7 +2183,7 @@ namespace Raven.Database
 		            {
 		                docCount = 0;
 		                var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize);
-		                var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState);
+		                var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState, queryInputs);
 
 		                foreach (var doc in docs)
 		                {

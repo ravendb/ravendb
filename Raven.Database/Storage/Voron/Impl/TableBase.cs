@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
 
+using Raven.Database.Util.Streams;
+
 namespace Raven.Database.Storage.Voron.Impl
 {
 	using System;
@@ -20,13 +22,16 @@ namespace Raven.Database.Storage.Voron.Impl
 
 	public abstract class TableBase
 	{
-		public string TableName { get; private set; }
+        protected IBufferPool BufferPool { get; private set; }
 
-		protected TableBase(string tableName)
+	    public string TableName { get; private set; }
+
+		protected TableBase(string tableName, IBufferPool bufferPool)
 		{
-			if (string.IsNullOrEmpty(tableName))
+		    if (string.IsNullOrEmpty(tableName))
 				throw new ArgumentNullException(tableName);
 
+            BufferPool = bufferPool;
 			TableName = tableName;
 		}
 
@@ -37,7 +42,10 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public virtual void Add(WriteBatch writeBatch, string key, byte[] value, ushort? expectedVersion = null)
 		{
-			var stream = new MemoryStream(value) { Position = 0 };
+		    var stream = new BufferPoolMemoryStream(BufferPool);
+            stream.Write(value, 0, value.Length);
+		    stream.Position = 0;
+
 			writeBatch.Add(key, stream, TableName, expectedVersion);
 		}
 
@@ -48,9 +56,9 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public virtual void Add(WriteBatch writeBatch, Slice key, RavenJToken value, ushort? expectedVersion = null)
 		{
-			var stream = new MemoryStream(); //TODO : change to BufferPoolStream
-			value.WriteTo(stream);
-			stream.Position = 0;
+            var stream = new BufferPoolMemoryStream(BufferPool);
+            value.WriteTo(stream);
+            stream.Position = 0;
 
 			writeBatch.Add(key, stream, TableName, expectedVersion);
 		}

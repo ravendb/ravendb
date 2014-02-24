@@ -330,12 +330,12 @@ namespace Raven.Client.Embedded
 
 		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize,
 		                                            RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
-		                                            string exclude = null, string transformer = null)
+													string exclude = null, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
 		{
 			// Should add a 'matches' parameter? Setting to null for now.
 			return
 				new CompletedTask<JsonDocument[]>(databaseCommands.StartsWith(keyPrefix, matches, start, pageSize, pagingInformation,
-				                                                              metadataOnly, exclude, transformer));
+				                                                              metadataOnly, exclude, transformer, queryInputs));
 		}
 
 		public IDisposable ForceReadFromMaster()

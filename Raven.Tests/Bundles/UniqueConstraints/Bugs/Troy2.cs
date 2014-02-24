@@ -4,12 +4,12 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 using System;
-using Raven.Client;
-using Raven.Client.Document;
+
 using Raven.Client.UniqueConstraints;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.UniqueConstraints.Bugs
+namespace Raven.Tests.Bundles.UniqueConstraints.Bugs
 {
 	public class Troy2 : UniqueConstraintsTest
 	{

@@ -1067,6 +1067,7 @@
     <Compile Include="Util\Streams\BufferPool.cs" />
     <Compile Include="Util\Streams\BufferPoolStream.cs" />
     <Compile Include="Util\Streams\PartialStream.cs" />
+    <Compile Include="Util\Streams\BufferPoolMemoryStream.cs" />
     <Compile Include="Util\WildcardMatcher.cs" />
   </ItemGroup>
   <ItemGroup>

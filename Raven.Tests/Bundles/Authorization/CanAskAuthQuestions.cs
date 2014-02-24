@@ -1,11 +1,9 @@
 extern alias client;
-using client::Raven.Client.Authorization;
-using client::Raven.Bundles.Authorization.Model;
-
 using System.Collections.Generic;
+
 using Xunit;
 
-namespace Raven.Bundles.Tests.Authorization
+namespace Raven.Tests.Bundles.Authorization
 {
 	public class CanAskAuthQuestionsFromServer : AuthorizationTest
 	{
@@ -16,9 +14,9 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				Name = "Hibernating Rhinos"
 			};
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
-				s.Store(new AuthorizationUser
+				s.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
 				{
 					Id = UserId,
 					Name = "Ayende Rahien",
@@ -26,11 +24,11 @@ namespace Raven.Bundles.Tests.Authorization
 
 				s.Store(company);
 
-				s.SetAuthorizationFor(company, new DocumentAuthorization
+				client::Raven.Client.Authorization.AuthorizationClientExtensions.SetAuthorizationFor(s, company, new client::Raven.Bundles.Authorization.Model.DocumentAuthorization
 				{
 					Permissions =
 						{
-							new DocumentPermission
+							new client::Raven.Bundles.Authorization.Model.DocumentPermission
 							{
 								Role = "Admins",
 								Allow = true,
@@ -42,24 +40,24 @@ namespace Raven.Bundles.Tests.Authorization
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
-				var isOperationAllowedOnDocument = s.Advanced.IsOperationAllowedOnDocument(UserId, "Company/Bid", "companies/1");
+				var isOperationAllowedOnDocument = client::Raven.Client.Authorization.AuthorizationClientExtensions.IsOperationAllowedOnDocument(s.Advanced, UserId, "Company/Bid", "companies/1");
 				Assert.False(isOperationAllowedOnDocument.IsAllowed);
 				Assert.Equal("Could not find any permissions for operation: Company/Bid on companies/1 for user Authorization/Users/Ayende.\r\nOnly the following may perform operation Company/Bid on companies/1:\r\n\tOperation: Company/Bid, User: , Role: Admins, Allow: True, Priority: 0\r\n",
 					isOperationAllowedOnDocument.Reasons[0]);
 			}
 
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
-				var user = s.Load<AuthorizationUser>(UserId);
+				var user = s.Load<client::Raven.Bundles.Authorization.Model.AuthorizationUser>(UserId);
 				user.Roles = new List<string> { "Admins" };
 				s.SaveChanges();
 			}
 
-			using (var s = store.OpenSession())
+			using (var s = store.OpenSession(DatabaseName))
 			{
-				var isOperationAllowedOnDocument = s.Advanced.IsOperationAllowedOnDocument(UserId, "Company/Bid", "companies/1");
+				var isOperationAllowedOnDocument = client::Raven.Client.Authorization.AuthorizationClientExtensions.IsOperationAllowedOnDocument(s.Advanced, UserId, "Company/Bid", "companies/1");
 				Assert.True(isOperationAllowedOnDocument.IsAllowed);
 				Assert.Equal(new[] { "Operation: Company/Bid, User: , Role: Admins, Allow: True, Priority: 0" }, isOperationAllowedOnDocument.Reasons.ToArray());
 			}
