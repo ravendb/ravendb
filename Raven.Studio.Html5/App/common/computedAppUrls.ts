@@ -19,6 +19,7 @@ interface computedAppUrls {
     userInfo: KnockoutComputed<string>;
     databaseSettings: KnockoutComputed<string>;
     periodicBackup: KnockoutComputed<string>;
+    replications: KnockoutComputed<string>;
 
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
 }

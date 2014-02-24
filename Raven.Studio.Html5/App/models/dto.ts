@@ -264,3 +264,26 @@ interface indexQueryResultsDto {
     SkippedResults: number;
     TotalResults: number;
 }
+
+interface replicationDestinationDto {
+    Url: string;
+    Username: string;
+    Password: string;
+    Domain: string;
+    ApiKey: string;
+    Database: string;
+    TransitiveReplicationBehavior: string;
+    IgnoredClient: boolean;
+    Disabled: boolean;
+    ClientVisibleUrl: string;
+}
+
+interface replicationsDto {
+    Destinations: replicationDestinationDto[];
+    Source: string;
+}
+
+interface replicationConfigDto {
+    DocumentConflictResolution: string;
+    AttachmentConflictResolution: string;
+}
