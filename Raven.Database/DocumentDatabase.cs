@@ -306,8 +306,6 @@ namespace Raven.Database
 			workContext.IndexStorage = IndexStorage;
 			workContext.TransactionalStorage = TransactionalStorage;
 			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
-
-			workContext.Init(Name);
 		}
 
 		private void DomainUnloadOrProcessExit(object sender, EventArgs eventArgs)
@@ -828,8 +826,7 @@ namespace Raven.Database
 
 		public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-          //  workContext.PerformanceCounters.DocsPerSecond.Increment(); //!! for remove
-            workContext.MetricsCounters.DocsPerSecond.Increment();
+            workContext.MetricsCounters.DocsPerSecond.Mark();
             key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
 			RemoveReservedProperties(document);
 			RemoveMetadataReservedProperties(metadata);
