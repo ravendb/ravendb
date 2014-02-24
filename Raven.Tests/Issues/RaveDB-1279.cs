@@ -20,6 +20,7 @@ namespace Raven.Tests.Issues
 
         public class Company
         {
+            public string Name { get; set; }
         }
 
         [Fact]
@@ -27,7 +28,7 @@ namespace Raven.Tests.Issues
         {
             using (var store = NewRemoteDocumentStore(true))
             {
-                store.DatabaseCommands.Put("companies/1", null, new RavenJObject(), new RavenJObject());
+                store.DatabaseCommands.Put("companies/1", null, new RavenJObject{{"Name","HR"}}, new RavenJObject());
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Order{CompanyId = "companies/1"});
@@ -37,7 +38,7 @@ namespace Raven.Tests.Issues
                 using (var sesion = store.OpenSession())
                 {
                     var company = sesion.Load<Company>("companies/1");
-                    Assert.NotNull(company);
+                    Assert.Equal("HR", company.Name);
                 }
             }
         }
@@ -48,7 +49,7 @@ namespace Raven.Tests.Issues
 
             using (var store = NewRemoteDocumentStore(true))
             {
-                store.DatabaseCommands.Put("companies/1", null, new RavenJObject(), new RavenJObject());
+                store.DatabaseCommands.Put("companies/1", null, new RavenJObject { { "Name", "HR" } }, new RavenJObject());
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Order{CompanyId = "companies/1"});
@@ -61,7 +62,8 @@ namespace Raven.Tests.Issues
                     var order = sesion.Include<Order>(x => x.CompanyId)
                                       .Load("orders/1");
                     var company = sesion.Load<Company>(order.CompanyId);
-                    Assert.NotNull(company);
+                    Assert.Equal("HR", company.Name);
+                    Assert.Equal(1, sesion.Advanced.NumberOfRequests);
                 }
             }
         }

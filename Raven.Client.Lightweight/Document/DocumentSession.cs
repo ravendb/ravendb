@@ -234,10 +234,13 @@ namespace Raven.Client.Document
 
             if (entitiesByKey.TryGetValue(id, out existingEntity))
             {
-                if (existingEntity is T)  //!!
-                    return (T)existingEntity;
-
-               
+                return (T)existingEntity;
+            }
+            JsonDocument value;
+            if (includedDocumentsByKey.TryGetValue(id, out value))
+            {
+                includedDocumentsByKey.Remove(id);
+                return TrackEntity<T>(value);
             }
 
             IncrementRequestCount();
