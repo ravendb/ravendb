@@ -212,7 +212,7 @@ namespace Raven.Storage.Esent
                     return getDatabaseTransactionVersionSizeInBytesErrorValue = -1;
                 var category = new PerformanceCounterCategory(categoryName);
                 var instances = category.GetInstanceNames();
-                var ravenInstance = instances.FirstOrDefault(x => x.StartsWith(uniquePrefix));
+                var ravenInstance = instances.FirstOrDefault(x => x.Contains(uniquePrefix));
                 const string counterName = "Version Buckets Allocated";
                 if (ravenInstance == null || !category.CounterExists(counterName))
                 {

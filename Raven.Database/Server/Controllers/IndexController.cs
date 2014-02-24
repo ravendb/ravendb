@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -113,7 +112,7 @@ namespace Raven.Database.Server.Controllers
 		[HttpPost]
 		[Route("indexes/{*id}")]
 		[Route("databases/{databaseName}/indexes/{*id}")]
-		public HttpResponseMessage IndexPost(string id)
+		public async Task<HttpResponseMessage >IndexPost(string id)
 		{
 			var index = id;
 			if ("forceWriteToDisk".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
@@ -124,6 +123,15 @@ namespace Raven.Database.Server.Controllers
 
 			if ("lockModeChange".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
 				return HandleIndexLockModeChange(index);
+
+			if ("true".Equals(GetQueryStringValue("postQuery"), StringComparison.InvariantCultureIgnoreCase))
+			{
+				var postedQuery = await ReadStringAsync();
+				
+				SetPostRequestQuery(postedQuery);
+
+				return IndexGet(id);
+			}
 
 			return GetMessageWithString("Not idea how to handle a POST on " + index + " with op=" +
 										(GetQueryStringValue("op") ?? "<no val specified>"));

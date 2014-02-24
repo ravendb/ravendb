@@ -18,18 +18,17 @@ namespace Raven.Tests.MailingList.Everett
 		[Fact]
 		public void query_for_object_with_byte_array_with_TypeNameHandling_All()
 		{
-			using (var server = GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" })
+			using (var store = NewRemoteDocumentStore(configureStore: documentStore =>
 			{
-				store.Conventions = new DocumentConvention
+				documentStore.Conventions = new DocumentConvention
 				{
 					CustomizeJsonSerializer = serializer =>
 					{
 						serializer.TypeNameHandling = TypeNameHandling.All;
 					},
 				};
-				store.Initialize();
-
+			}))
+			{
 				var json = GetResourceText("DocumentWithBytes.txt");
 				var jsonSerializer = new DocumentConvention().CreateSerializer();
 				var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
@@ -56,10 +55,8 @@ namespace Raven.Tests.MailingList.Everett
 		[Fact]
 		public void query_for_object_with_byte_array_with_default_TypeNameHandling()
 		{
-			using (var server = GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" })
+			using (var store = NewRemoteDocumentStore())
 			{
-				store.Initialize();
 
 				var json = GetResourceText("DocumentWithBytes.txt");
 				var jsonSerializer = new DocumentConvention().CreateSerializer();
@@ -87,18 +84,17 @@ namespace Raven.Tests.MailingList.Everett
 		[Fact]
 		public void load_object_with_byte_array_with_TypeNameHandling_All()
 		{
-			using (var server = GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" })
+			using (var store = NewRemoteDocumentStore(configureStore: documentStore =>
 			{
-				store.Conventions = new DocumentConvention
+				documentStore.Conventions = new DocumentConvention
 				{
 					CustomizeJsonSerializer = serializer =>
 					{
 						serializer.TypeNameHandling = TypeNameHandling.All;
 					},
-				};
-				store.Initialize();
-
+				};				
+			}))
+			{
 				var json = GetResourceText("DocumentWithBytes.txt");
 				var jsonSerializer = new DocumentConvention().CreateSerializer();
 				var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
@@ -112,20 +108,15 @@ namespace Raven.Tests.MailingList.Everett
 				}
 
 				using (var session = store.OpenSession())
-				{
 					session.Load<DesignResources>("resources/123");
-				}
 			}
 		}
 
 		[Fact]
 		public void load_object_with_byte_array_with_default_TypeNameHandling()
 		{
-			using (var server = GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" })
+			using (var store = NewRemoteDocumentStore())
 			{
-				store.Initialize();
-
 				var json = GetResourceText("DocumentWithBytes.txt");
 				var jsonSerializer = new DocumentConvention().CreateSerializer();
 				var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));

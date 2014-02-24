@@ -133,14 +133,18 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                 {
                     foreach (var operation in patcher.GetOperations())
                     {
-                        var key = operation.Key;
-                        var document = operation.Value;
-                        var isPut = document != null;
-
-                        if (isPut)
-                            database.Put(key, document.Etag, document.DataAsJson, document.Metadata, null);
-                        else
-                            database.Delete(key, null, null);
+	                    switch (operation.Type)
+	                    {
+							case ScriptedJsonPatcher.OperationType.Put:
+			                    database.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson,
+			                                 operation.Document.Metadata, null);
+								break;
+							case ScriptedJsonPatcher.OperationType.Delete:
+								database.Delete(operation.DocumentKey, null, null);
+								break;
+							default:
+								throw new ArgumentOutOfRangeException("operation.Type");
+	                    }    
                     }
                 });
             }

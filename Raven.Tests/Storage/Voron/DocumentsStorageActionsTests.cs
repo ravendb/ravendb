@@ -224,7 +224,7 @@ using Raven.Database.Plugins;
 
 		private void DocumentStorage_DocumentAdd_And_DocumentRead_Internal(string requestedStorage, string documentKey,OrderedPartCollection<AbstractDocumentCodec> documentCodecs = null)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage,null,true,documentCodecs))
+            using (var storage = NewTransactionalStorage(requestedStorage, dataDir: null, runInMemory: true, documentCodecs: documentCodecs))
 			{
 				AddDocumentResult addResult = null;
 				storage.Batch(

@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Text;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
@@ -189,7 +190,7 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Gets the index query URL.
 		/// </summary>
-		public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includePageSizeEvenIfNotExplicitlySet = true)
+		public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
 		{
 			if (operationUrl.EndsWith("/"))
 				operationUrl = operationUrl.Substring(0, operationUrl.Length - 1);
@@ -200,7 +201,7 @@ namespace Raven.Abstractions.Data
 				.Append("/")
 				.Append(index);
 
-			AppendQueryString(path, includePageSizeEvenIfNotExplicitlySet);
+			AppendQueryString(path, includePageSizeEvenIfNotExplicitlySet, includeQuery);
 
 			return path.ToString();
 		}
@@ -220,11 +221,11 @@ namespace Raven.Abstractions.Data
 			return sb.ToString();
 		}
 
-		public void AppendQueryString(StringBuilder path, bool includePageSizeEvenIfNotExplicitlySet = true)
+		public void AppendQueryString(StringBuilder path, bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
 		{
 			path.Append("?");
 
-			AppendMinimalQueryString(path);
+			AppendMinimalQueryString(path, includeQuery);
 
 			if (Start != 0)
 				path.Append("&start=").Append(Start);
@@ -285,12 +286,12 @@ namespace Raven.Abstractions.Data
 				path.Append("&explainScores=true");
 		}
 
-		private void AppendMinimalQueryString(StringBuilder path)
+		private void AppendMinimalQueryString(StringBuilder path, bool appendQuery = true)
 		{
-			if (string.IsNullOrEmpty(Query) == false)
+			if (string.IsNullOrEmpty(Query) == false && appendQuery)
 			{
-				path.Append("&query=")
-				    .Append(Uri.EscapeDataString(Query));
+				path.Append("&query=");
+				path.Append(EscapingHelper.EscapeLongDataString(Query));
 			}
 			
 			if (string.IsNullOrEmpty(DefaultField) == false)

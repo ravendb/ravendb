@@ -17,7 +17,10 @@ class queryIndexCommand extends commandBase {
         });
 
         var selector = (results: indexQueryResultsDto) => new pagedResultSet(results.Results.map(d => new document(d)), results.TotalResults, results);
-        return this.query(url + urlArgs, null, this.db, selector);
+        var queryTask = this.query(url + urlArgs, null, this.db, selector);
+        queryTask.fail((response: JQueryXHR) => this.reportError("Error querying index", response.responseText, response.statusText));
+
+        return queryTask;
     }
 }
 

@@ -262,7 +262,22 @@ namespace Raven.Database.Server.WebApi
 			return true;
 		}
 
-		private void ResetThreadLocalState()
+        public void SetThreadLocalState(HttpHeaders innerHeaders, string databaseName)
+        {
+            CurrentOperationContext.Headers.Value = new NameValueCollection();
+            foreach (var innerHeader in innerHeaders)
+                CurrentOperationContext.Headers.Value[innerHeader.Key] = innerHeader.Value.FirstOrDefault();
+
+            CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = string.Empty;
+            CurrentOperationContext.User.Value = null;
+
+            LogContext.DatabaseName.Value = databaseName;
+            var disposable = LogManager.OpenMappedContext("database", databaseName ?? Constants.SystemDatabase);
+
+            CurrentOperationContext.RequestDisposables.Value.Add(disposable);
+        }
+
+		public void ResetThreadLocalState()
 		{
 			try
 			{

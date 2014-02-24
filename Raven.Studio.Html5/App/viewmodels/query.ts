@@ -1,3 +1,4 @@
+import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import indexDefinition = require("models/indexDefinition");
@@ -5,7 +6,10 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import pagedList = require("common/pagedList");
+import pagedResultSet = require("common/pagedResultSet");
 import queryIndexCommand = require("commands/queryIndexCommand");
+import moment = require("moment");
+import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 
 class query extends viewModelBase {
 
@@ -18,9 +22,10 @@ class query extends viewModelBase {
     queryText = ko.observable("");
     queryResults = ko.observable<pagedList>();
     selectedResultIndices = ko.observableArray<number>();
+    queryStats = ko.observable<indexQueryResultsDto>();
+    selectedIndexEditUrl: KnockoutComputed<string>;
 
     static containerSelector = "#queryContainer";
-    static emptyResultsFetcher = (skip: number, take: number) => $.Deferred().resolve([]);
 
     constructor() {
         super();
@@ -29,6 +34,7 @@ class query extends viewModelBase {
         this.termsUrl = ko.computed(() => this.selectedIndex() ? appUrl.forTerms(this.selectedIndex(), this.activeDatabase()) : null);
         this.statsUrl = ko.computed(() => appUrl.forStatus(this.activeDatabase()));
         this.hasSelectedIndex = ko.computed(() => this.selectedIndex() != null);
+        this.selectedIndexEditUrl = ko.computed(() => this.selectedIndex() ? appUrl.forEditIndex(this.selectedIndex(), this.activeDatabase()) : '');
 
         aceEditorBindingHandler.install();
     }
@@ -64,17 +70,39 @@ class query extends viewModelBase {
             .execute()
             .done((stats: databaseStatisticsDto) => {
                 this.indexNames(stats.Indexes.map(i => i.PublicName));
-                this.selectedIndex(indexToSelect || this.indexNames().first());
+                this.setSelectedIndex(indexToSelect || this.indexNames().first());
             });
     }
 
     runQuery() {
         var selectedIndex = this.selectedIndex();
         if (selectedIndex) {
-            var resultsFetcher = (skip: number, take: number) => new queryIndexCommand(selectedIndex, this.activeDatabase(), skip, take, this.queryText()).execute();
+            var resultsFetcher = (skip: number, take: number) => {
+                var command = new queryIndexCommand(selectedIndex, this.activeDatabase(), skip, take, this.queryText());
+                return command
+                    .execute()
+                    .done((queryResults: pagedResultSet) => this.queryStats(queryResults.additionalResultInfo));
+            };
             var resultsList = new pagedList(resultsFetcher);
             this.queryResults(resultsList);
         }
+    }
+
+    setSelectedIndex(indexName: string) {
+        this.selectedIndex(indexName);
+        this.runQuery();
+
+        // Reflect the new index in the address bar.
+        var url = appUrl.forQuery(this.activeDatabase(), indexName);
+        var navOptions: DurandalNavigationOptions = {
+            replace: true,
+            trigger: false
+        };
+        router.navigate(url, navOptions);
+        NProgress.done();
+    }
+
+    deleteDocsMatchingQuery() {
     }
 }
 

@@ -20,7 +20,7 @@
                     <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu" data-bind="foreach: indexNames">
-                    <li data-bind="click: $root.selectedIndex.bind($data)"><a href="#" data-bind="text: $data"></a></li>
+                    <li data-bind="click: $root.setSelectedIndex.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
                 </ul>
             </div>
         </li>
@@ -46,7 +46,7 @@
                     <i class="fa fa-cog"></i> <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
-                    <li><a href="#">TODO: Default operator</a></li>
+                    <li><a href="#">Default operator</a> <label class="btn btn-default">OR</label><label class="btn btn-default">AND</label></li>
                     <li><a href="#">Show Fields</a></li>
                     <li><a href="#">Index Entries</a></li>
                 </ul>
@@ -69,7 +69,7 @@
         </div>
 
         <div class="btn-group">
-            <button class="btn btn-danger use-bootstrap-tooltip" title="Delete all documents matching the query" data-bind="enable: hasSelectedIndex"><i class="fa fa-trash-o"></i></button>
+            <button class="btn btn-danger use-bootstrap-tooltip" title="Delete all documents matching the query" data-bind="enable: hasSelectedIndex, click: deleteDocsMatchingQuery"><i class="fa fa-trash-o"></i></button>
         </div>
     </div>
     <br />
@@ -93,13 +93,39 @@
         </div>
 
         <div class="form-group">
-            <label id="indexQueryLabelContainer" class="col-sm-1 control-label">
-                Results
-            </label>
+            <div class="col-sm-1">
+                <label id="indexQueryLabelContainer" class="col-sm-1 control-label">
+                    Results
+                </label>
+            </div>
             <div class="col-md-11">
-                <div class="row">
-                    <div class="col-md-11">
-                        <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid' }"></div>
+                <div id="queryResultsPanel" class="panel panel-default" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 30 }">
+                    <div class="panel-heading">
+                        <table class="table table-condensed" style="margin-bottom: 0;">
+                            <thead>
+                                <tr>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th>Duration</th>
+                                    <th>Index</th>
+                                    <th>Etag</th>
+                                    <th>JSON</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr data-bind="with: queryStats">
+                                    <td data-bind="text: TotalResults"></td>
+                                    <td data-bind="text: IsStale ? 'Stale' : 'Up to date'"></td>
+                                    <td data-bind="text: DurationMilliseconds + 'ms'"></td>
+                                    <td><a data-bind="text: $root.selectedIndex, attr: { href: $root.selectedIndexEditUrl }"></a></td>
+                                    <td data-bind="text: ResultEtag"></td>
+                                    <td><a data-bind="attr: { href: '#' }">Raw JSON</a></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="panel-body">
+                        <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', dynamicHeightTargetSelector: 'footer', dynamicHeightBottomMargin: 120, useContextMenu: false, showIds: false, showCheckboxes: false }"></div>
                     </div>
                 </div>
             </div>

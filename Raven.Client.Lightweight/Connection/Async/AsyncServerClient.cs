@@ -20,7 +20,6 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 #else
-using System.Transactions;
 #endif
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
@@ -43,7 +42,6 @@ using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Listeners;
-using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
@@ -1185,46 +1183,60 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-        public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null)
-        {
-            return ExecuteWithReplication("GET", operationMetadata =>
-            {
-                var metadata = new RavenJObject();
-                AddTransactionInformation(metadata);
+        public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize,
+		                            RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null,
+									string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
+		{
+			return ExecuteWithReplication("GET", operationMetadata =>
+			{
+				var metadata = new RavenJObject();
+				AddTransactionInformation(metadata);
 
-                var actualStart = start;
+				var actualStart = start;
 
-                var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
-                if (nextPage)
-                    actualStart = pagingInformation.NextPageStart;
+				var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
+				if (nextPage)
+					actualStart = pagingInformation.NextPageStart;
 
-                var actualUrl = string.Format("{0}/docs?startsWith={1}&matches={5}&exclude={4}&start={2}&pageSize={3}", operationMetadata.Url,
-                                              Uri.EscapeDataString(keyPrefix), actualStart.ToInvariantString(), pageSize.ToInvariantString(), exclude, matches);
+				var actualUrl = string.Format("{0}/docs?startsWith={1}&matches={5}&exclude={4}&start={2}&pageSize={3}", operationMetadata.Url,
+											  Uri.EscapeDataString(keyPrefix), actualStart.ToInvariantString(), pageSize.ToInvariantString(), exclude, matches);
 
-                if (metadataOnly)
-                    actualUrl += "&metadata-only=true";
+				if (metadataOnly)
+					actualUrl += "&metadata-only=true";
 
-                if (nextPage)
-                    actualUrl += "&next-page=true";
+				if (string.IsNullOrEmpty(transformer) == false)
+				{
+					actualUrl += "&transformer=" + transformer;
 
-                var request = jsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(this, actualUrl.NoCache(), "GET", metadata, operationMetadata.Credentials, convention)
-                        .AddOperationHeaders(OperationsHeaders));
+					if (queryInputs != null)
+					{
+						actualUrl = queryInputs.Aggregate(actualUrl,
+											 (current, queryInput) =>
+											 current + ("&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value)));
+					}
+				}
 
-                request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+				if (nextPage)
+					actualUrl += "&next-page=true";
 
-                return request.ReadResponseJsonAsync()
-                        .ContinueWith(task =>
-                        {
-                            int nextPageStart;
-                            if (pagingInformation != null && int.TryParse(request.ResponseHeaders[Constants.NextPageStart], out nextPageStart))
-                                pagingInformation.Fill(start, pageSize, nextPageStart);
+				var request = jsonRequestFactory.CreateHttpJsonRequest(
+					new CreateHttpJsonRequestParams(this, actualUrl.NoCache(), "GET", metadata, operationMetadata.Credentials, convention)
+						.AddOperationHeaders(OperationsHeaders));
 
-                            return SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)task.Result)
-                                .OfType<RavenJObject>())
-                                .ToArray();
-                        });
-            });
+				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+				return request.ReadResponseJsonAsync()
+						.ContinueWith(task =>
+						{
+							int nextPageStart;
+							if (pagingInformation != null && int.TryParse(request.ResponseHeaders[Constants.NextPageStart], out nextPageStart))
+								pagingInformation.Fill(start, pageSize, nextPageStart);
+
+							return SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)task.Result)
+								.OfType<RavenJObject>())
+								.ToArray();
+						});
+			});
         }
 
 		/// <summary>
@@ -1272,10 +1284,13 @@ namespace Raven.Client.Connection.Async
 		/// <returns></returns>
 		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
-			return ExecuteWithReplication("GET", async operationMetadata =>
+			var method = query.Query != null && query.Query.Length > 32760 ? "POST" : "GET";
+
+			return ExecuteWithReplication(method, async operationMetadata =>
 			{
 				EnsureIsNotNullOrEmpty(index, "index");
-				var path = query.GetIndexQueryUrl(operationMetadata.Url, index, "indexes");
+				string path = query.GetIndexQueryUrl(operationMetadata.Url, index, "indexes", includeQuery: method == "GET");
+
 				if (metadataOnly)
 					path += "&metadata-only=true";
 				if (indexEntriesOnly)
@@ -1285,13 +1300,19 @@ namespace Raven.Client.Connection.Async
 					path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 				}
 
+				if (method == "POST")
+					path += "&postQuery=true";
+
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-                        new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", operationMetadata.Credentials, convention)
+						new CreateHttpJsonRequestParams(this, path.NoCache(), method, operationMetadata.Credentials, convention)
 						{
 							AvoidCachingRequest = query.DisableCaching
 						}.AddOperationHeaders(OperationsHeaders));
 
 				request.AddReplicationStatusHeaders(operationMetadata.Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+				if (method == "POST")
+					await request.WriteAsync(query.Query).ConfigureAwait(false);
 
 				ErrorResponseException responseException;
 				try
@@ -1721,10 +1742,16 @@ namespace Raven.Client.Connection.Async
 #else
 		public async Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
 		{
+			var method = query.Query != null && query.Query.Length > 32760 ? "POST" : "GET";
+
 			EnsureIsNotNullOrEmpty(index, "index");
-			string path = query.GetIndexQueryUrl(url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false);
+			string path = query.GetIndexQueryUrl(url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: method == "GET");
+
+			if (method == "POST")
+				path += "&postQuery=true";
+
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
+					new CreateHttpJsonRequestParams(this, path.NoCache(), method, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
 							.AddOperationHeaders(OperationsHeaders))
 																			.AddReplicationStatusHeaders(Url, url, replicationInformer,
 																																	 convention.FailoverBehavior,
@@ -1745,7 +1772,30 @@ namespace Raven.Client.Connection.Async
 			}
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 
-			var response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
+			HttpResponseMessage response;
+			try
+			{
+				if (method == "POST")
+				{
+					response = await request.ExecuteRawResponseAsync(query.Query).ConfigureAwait(false);
+				}
+				else
+				{
+					response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
+				}
+			}
+			catch (Exception e)
+			{
+				if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) && request.ResponseStatusCode == HttpStatusCode.NotFound)
+				{
+					throw new InvalidOperationException(
+						@"StreamQuery does not support querying dynamic indexes. It is designed to be used with large data-sets and is unlikely to return all data-set after 15 sec of indexing, like Query() does.",
+						e);
+				}
+
+				throw;
+			}
+			
 			queryHeaderInfo.Value = new QueryHeaderInformation
 			{
 				Index = response.Headers.GetFirstValue("Raven-Index"),
@@ -2326,7 +2376,7 @@ namespace Raven.Client.Connection.Async
 
 		public async Task<string> GetSingleAuthToken()
 		{
-			var tokenRequest = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
+			var tokenRequest = CreateRequest("/singleAuthToken".NoCache(), "GET", disableRequestCompression: true);
 
             var response = await tokenRequest.ReadResponseJsonAsync().ConfigureAwait(false);
 			return response.Value<string>("Token");
@@ -2334,7 +2384,7 @@ namespace Raven.Client.Connection.Async
 
 		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
 		{
-			var request = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
+			var request = CreateRequest("/singleAuthToken".NoCache(), "GET", disableRequestCompression: true);
 
 			request.DisableAuthentication();
 			request.AddOperationHeader("Single-Use-Auth-Token", token);

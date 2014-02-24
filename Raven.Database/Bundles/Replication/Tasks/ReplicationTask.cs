@@ -786,7 +786,7 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				lastEtag = docsToReplicate[docsToReplicate.Count - 1].Etag;
 			}
-			return docsToReplicate.Concat(actions.Lists.Read("Raven/Replication/Docs/Tombstones", result.LastEtag, lastEtag, 1024)
+			return docsToReplicate.Concat(actions.Lists.Read(Constants.RavenReplicationDocsTombstones, result.LastEtag, lastEtag, 1024)
 							.Select(x => new JsonDocument
 							{
 								Etag = x.Etag,
@@ -954,7 +954,6 @@ namespace Raven.Bundles.Replication.Tasks
 
 			if (string.IsNullOrWhiteSpace(jsonDeserialization.Source))
 			{
-				Console.WriteLine("Updating replication source " + docDb.Configuration.Port + " " + docDb.Name);
 				jsonDeserialization.Source = docDb.TransactionalStorage.Id.ToString();
 				try
 				{

@@ -18,5 +18,15 @@ namespace Raven.Database.Server.Security
 				"/OAuth/API-Key",
 				"/OAuth/Cookie",
 			};
+
+		public static bool IsNeverSecretUrl(string requestUrl)
+		{
+			return Urls.Contains(requestUrl) || IsHtml5StudioUrl(requestUrl);
+		}
+
+		private static bool IsHtml5StudioUrl(string requestUrl)
+		{
+			return requestUrl.StartsWith("/studio/");
+		}
 	}
 }

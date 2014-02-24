@@ -149,8 +149,7 @@ namespace Raven.Tests.Helpers
 			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
 		}
 
-		public DocumentStore
-			NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, [CallerMemberName] string databaseName = null,
+		public DocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, [CallerMemberName] string databaseName = null,
 				bool runInMemory = true,
 				string dataDirectory = null,
 				string requestedStorage = null,
@@ -209,7 +208,7 @@ namespace Raven.Tests.Helpers
 			string requestedStorage = null,
 			bool enableAuthentication = false,
 			string activeBundles = null,
-			Action<RavenConfiguration> configureServer = null,
+			Action<InMemoryRavenConfiguration> configureServer = null,
             [CallerMemberName] string databaseName = null)
 		{
 		    databaseName = NormalizeDatabaseName(databaseName != Constants.SystemDatabase ? databaseName : null);
@@ -281,7 +280,7 @@ namespace Raven.Tests.Helpers
 			return ravenDbServer;
 		}
 
-		public ITransactionalStorage NewTransactionalStorage(string requestedStorage = null, string dataDir = null, bool runInMemory = false, OrderedPartCollection<AbstractDocumentCodec> documentCodecs = null)
+		public ITransactionalStorage NewTransactionalStorage(string requestedStorage = null, string dataDir = null, string tempDir = null, bool runInMemory = false, OrderedPartCollection<AbstractDocumentCodec> documentCodecs = null)
 		{
 			ITransactionalStorage newTransactionalStorage;
 			string storageType = GetDefaultStorageType(requestedStorage);
@@ -293,6 +292,8 @@ namespace Raven.Tests.Helpers
 				FileSystemDataDirectory = Path.Combine(dataDirectory, "FileSystem"),
 				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 			};
+
+            ravenConfiguration.Settings["Raven/Voron/TempPath"] = tempDir;
 
 			if (storageType == "munin")
 				newTransactionalStorage = new Storage.Managed.TransactionalStorage(ravenConfiguration, () => { });
@@ -331,7 +332,10 @@ namespace Raven.Tests.Helpers
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-            Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? TimeSpan.FromSeconds(20)));
+		    bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? TimeSpan.FromSeconds(20));
+		    if (spinUntil == false)
+		        WaitForUserToContinueTheTest(store);
+		    Assert.True(spinUntil);
 		}
 
 		public static void WaitForIndexing(DocumentDatabase db)
@@ -343,6 +347,54 @@ namespace Raven.Tests.Helpers
 		{
 			Assert.True(SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15)));
 		}
+
+        protected PeriodicBackupStatus GetPerodicBackupStatus(DocumentDatabase db)
+	    {
+            return GetPerodicBackupStatus(key => db.Get(key, null));
+	    }
+
+        protected PeriodicBackupStatus GetPerodicBackupStatus(IDatabaseCommands commands)
+        {
+            return GetPerodicBackupStatus(commands.Get);
+        }
+
+        private PeriodicBackupStatus GetPerodicBackupStatus(Func<string, JsonDocument> getDocument)
+        {
+            var jsonDocument = getDocument(PeriodicBackupStatus.RavenDocumentKey);
+            if (jsonDocument == null)
+                return new PeriodicBackupStatus();
+
+            return jsonDocument.DataAsJson.JsonDeserialization<PeriodicBackupStatus>();
+        }
+
+        protected void WaitForPeriodicBackup(DocumentDatabase db, PeriodicBackupStatus previousStatus)
+        {
+            WaitForPeriodicBackup(key => db.Get(key, null), previousStatus);
+        }
+
+        protected void WaitForPeriodicBackup(IDatabaseCommands commands, PeriodicBackupStatus previousStatus)
+        {
+            WaitForPeriodicBackup(commands.Get, previousStatus);
+        }
+
+        private void WaitForPeriodicBackup(Func<string, JsonDocument> getDocument, PeriodicBackupStatus previousStatus)
+        {
+            PeriodicBackupStatus currentStatus = null;
+            var done = SpinWait.SpinUntil(() =>
+            {
+                currentStatus = GetPerodicBackupStatus(getDocument);
+                return currentStatus.LastDocsEtag != previousStatus.LastDocsEtag ||
+                       currentStatus.LastAttachmentsEtag != previousStatus.LastAttachmentsEtag ||
+                       currentStatus.LastDocsDeletionEtag != previousStatus.LastDocsDeletionEtag ||
+                       currentStatus.LastAttachmentDeletionEtag != previousStatus.LastAttachmentDeletionEtag;
+            }, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
+            Assert.True(done);
+            previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
+            previousStatus.LastAttachmentsEtag = currentStatus.LastAttachmentsEtag;
+            previousStatus.LastDocsDeletionEtag = currentStatus.LastDocsDeletionEtag;
+            previousStatus.LastAttachmentDeletionEtag = currentStatus.LastAttachmentDeletionEtag;
+
+        }
 
 		protected void WaitForBackup(DocumentDatabase db, bool checkError)
 		{

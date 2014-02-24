@@ -75,7 +75,7 @@ namespace Raven.Tests.Indexes
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(10));
             }
         }
 

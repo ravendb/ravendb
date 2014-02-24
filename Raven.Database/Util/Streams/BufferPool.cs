@@ -35,9 +35,7 @@ namespace Raven.Database.Util.Streams
 				if (stackTrace == null)
 					return;
 
-				throw new InvalidOperationException(
-					"A buffer was leaked. Initial allocation:" + Environment.NewLine + stackTrace
-					);
+				throw new InvalidOperationException("A buffer was leaked. Initial allocation:" + Environment.NewLine + stackTrace);
 			}
 		}
 		private ConditionalWeakTable<byte[], BufferTracker> trackLeakedBuffers = new ConditionalWeakTable<byte[], BufferTracker>();

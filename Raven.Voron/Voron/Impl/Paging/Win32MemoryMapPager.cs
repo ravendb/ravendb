@@ -51,7 +51,6 @@ namespace Voron.Impl.Paging
 				? MemoryMappedFileAccess.Read
 				: MemoryMappedFileAccess.ReadWrite;
 
-			Trace.WriteLine(string.Format("creating/opening file (name = {0}), access type = {1}", file, _memoryMappedFileAccess));
 			_handle = NativeFileMethods.CreateFile(file, access,
 			   NativeFileShare.Read | NativeFileShare.Write | NativeFileShare.Delete, IntPtr.Zero,
 			   NativeFileCreationDisposition.OpenAlways, options, IntPtr.Zero);

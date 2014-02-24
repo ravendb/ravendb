@@ -16,7 +16,7 @@ namespace Raven.Smuggler.Imports
 	public class SmugglerJintHelper
 	{
 		private static JintEngine jint;
-		private static Dictionary<string, JTokenType> propertiesTypeByName;
+		private static Dictionary<JsInstance, KeyValuePair<RavenJValue, object>> propertiesByValue = new Dictionary<JsInstance, KeyValuePair<RavenJValue, object>>();
 		
 		public static void Initialize(SmugglerOptions options)
 		{
@@ -34,7 +34,7 @@ namespace Raven.Smuggler.Imports
 					}};", options.TransformScript));
 			}
 
-			propertiesTypeByName = new Dictionary<string, JTokenType>();
+			propertiesByValue = new Dictionary<JsInstance, KeyValuePair<RavenJValue, object>>();
 		}
 
 		public static RavenJObject Transform(string transformScript, RavenJObject input)
@@ -70,12 +70,12 @@ namespace Raven.Smuggler.Imports
 					case JsInstance.CLASS_FUNCTION:
 						continue;
 				}
-				rjo[key] = ToRavenJToken(jsInstance, key);
+				rjo[key] = ToRavenJToken(jsInstance);
 			}
 			return rjo;
 		}
 
-		private static RavenJToken ToRavenJToken(JsInstance v, string propertyName)
+		private static RavenJToken ToRavenJToken(JsInstance v)
 		{
 			switch (v.Class)
 			{
@@ -89,14 +89,23 @@ namespace Raven.Smuggler.Imports
 				case JsInstance.CLASS_NUMBER:
 					var num = (double)v.Value;
 
-					JTokenType type;
-					if (propertiesTypeByName.TryGetValue(propertyName, out type))
+					KeyValuePair<RavenJValue, object> property;
+					if (propertiesByValue.TryGetValue(v, out property))
 					{
-						if (type == JTokenType.Float)
-							return new RavenJValue(num);
-						if (type == JTokenType.Integer)
+						var originalValue = property.Key;
+						if (originalValue.Type == JTokenType.Float)
+			                return new RavenJValue(num);
+						if (originalValue.Type == JTokenType.Integer)
+				        {
+							// If the current value is exactly as the original value, we can return the original value before we made the JS conversion, 
+							// which will convert a Int64 to jsFloat.
+							var originalJsValue = property.Value;
+							if (originalJsValue is double && Math.Abs(num - (double)originalJsValue) < double.Epsilon)
+								return originalValue;
+					        
 							return new RavenJValue((long) num);
-					}
+				        }
+			        }
 
 					// If we don't have the type, assume that if the number ending with ".0" it actually an integer.
 					var integer = Math.Truncate(num);
@@ -121,7 +130,7 @@ namespace Raven.Smuggler.Imports
 					for (int i = 0; i < jsArray.Length; i++)
 					{
 						var jsInstance = jsArray.get(i);
-						var ravenJToken = ToRavenJToken(jsInstance, propertyName);
+						var ravenJToken = ToRavenJToken(jsInstance);
 						if (ravenJToken == null)
 							continue;
 						rja.Add(ravenJToken);
@@ -143,10 +152,13 @@ namespace Raven.Smuggler.Imports
 			var jsObject = global.ObjectClass.New();
 			foreach (var prop in doc)
 			{
-				if (prop.Value is RavenJValue)
-					propertiesTypeByName[prop.Key] = prop.Value.Type;
-				var val = ToJsInstance(global, prop.Value);
-				jsObject.DefineOwnProperty(prop.Key, val);
+				var jsValue = ToJsInstance(global, prop.Value);
+
+				var value = prop.Value as RavenJValue;
+				if (value != null)
+					propertiesByValue[jsValue] = new KeyValuePair<RavenJValue, object>(value, jsValue.Value);
+
+				jsObject.DefineOwnProperty(prop.Key, jsValue);
 			}
 			return jsObject;
 		}

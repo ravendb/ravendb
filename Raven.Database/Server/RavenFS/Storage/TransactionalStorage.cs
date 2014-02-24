@@ -191,8 +191,7 @@ namespace Raven.Database.Server.RavenFS.Storage
 		{
 			try
 			{
-				Trace.WriteLine(
-					"Disposing esent resources from finalizer! You should call Storage.Dispose() instead!");
+				Trace.WriteLine("Disposing esent resources from finalizer! You should call Storage.Dispose() instead!");
 				Api.JetTerm2(instance, TermGrbit.Abrupt);
 			}
 			catch (Exception exception)

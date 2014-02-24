@@ -28,6 +28,7 @@ using Raven.Server;
 using Raven.Tests.Helpers;
 using Xunit;
 using System.Linq;
+using Path = System.IO.Path;
 
 namespace Raven.Tests.Bundles.Replication
 {

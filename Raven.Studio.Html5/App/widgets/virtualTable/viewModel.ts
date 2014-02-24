@@ -29,37 +29,53 @@ class ctor {
     viewportHeight = ko.observable(0);
     virtualRowCount = ko.observable(0);
     grid: JQuery;
-    gridSelector: string;
     focusableGridSelector: string;
-    columns = ko.observableArray<column>([
-        new column("__IsChecked", 38),
-        new column("Id", ctor.idColumnWidth)
-    ]);
+    columns = ko.observableArray<column>();
     gridViewport: JQuery;
     scrollThrottleTimeoutHandle = 0;
     firstVisibleRow: row = null;
-    selectedIndices: KnockoutObservableArray<number>;
+    settings: {
+        documentsSource: KnockoutObservable<pagedList>;
+        dynamicHeightTargetSelector: string;
+        dynamicHeightBottomMargin: number;
+        gridSelector: string;
+        selectedIndices: KnockoutObservableArray<number>;
+        showCheckboxes: boolean;
+        showIds: boolean;
+        useContextMenu: boolean;
+    }
 
     constructor() {
     }
 
     activate(settings: any) {
-        var docsSource: KnockoutObservable<pagedList> = settings.documentsSource;
-        this.items = docsSource();
-        //this.viewportHeight(settings.height);
-        this.gridSelector = settings.gridSelector;
-        this.focusableGridSelector = this.gridSelector + " .ko-grid";
-        this.virtualHeight = ko.computed(() => this.rowHeight * this.virtualRowCount());
-        this.selectedIndices = settings.selectedIndices;
+        var defaults = {
+            dynamicHeightTargetSelector: "footer",
+            dynamicHeightBottomMargin: 0,
+            showCheckboxes: true,
+            showIds: true,
+            useContextMenu: true
+        };
+        this.settings = $.extend(defaults, settings);
 
-        docsSource.subscribe(list => {
+        this.items = this.settings.documentsSource();
+        this.focusableGridSelector = this.settings.gridSelector + " .ko-grid";
+        this.virtualHeight = ko.computed(() => this.rowHeight * this.virtualRowCount());
+        if (this.settings.showCheckboxes !== false) {
+            this.columns.push(new column("__IsChecked", 38));
+        }
+        if (this.settings.showIds !== false) {
+            this.columns.push(new column("Id", ctor.idColumnWidth));
+        }
+
+        this.settings.documentsSource.subscribe(list => {
             this.recycleRows().forEach(r => {
                 r.resetCells();
                 r.isInUse(false);
             });
             this.items = list;
-            this.selectedIndices.removeAll();
-            this.columns.splice(2, this.columns().length - 1); // Remove all but the first 2 column (checked and ID)
+            this.settings.selectedIndices.removeAll();
+            this.columns.remove(c => (c.name !== 'Id' && c.name !== '__IsChecked'));
             this.gridViewport.scrollTop(0);
             this.onGridScrolled();
         });
@@ -68,20 +84,23 @@ class ctor {
     // Attached is called by Durandal when the view is attached to the DOM.
     // We use this to setup some UI-specific things like context menus, row creation, keyboard shortcuts, etc.
     attached() {
-        this.grid = $(this.gridSelector);
+        this.grid = $(this.settings.gridSelector);
         if (this.grid.length !== 1) {
-            throw new Error("There should be 1 " + this.gridSelector + " on the page, but found " + this.grid.length.toString());
+            throw new Error("There should be 1 " + this.settings.gridSelector + " on the page, but found " + this.grid.length.toString());
         }
 
         this.gridViewport = this.grid.find(".ko-grid-viewport-container");
         this.gridViewport.on('DynamicHeightSet', () => this.onWindowHeightChanged());
         this.gridViewport.scroll(() => this.onGridScrolled());
-        this.setupContextMenu();
         this.setupKeyboardShortcuts();
+        if (this.settings.useContextMenu) {
+            this.setupContextMenu();
+        }
     }
 
     detached() {
-        $(this.gridSelector).unbind('keydown.jwerty');
+        $(this.settings.gridSelector).unbind('keydown.jwerty');
+        this.gridViewport.off('DynamicHeightSet');
     }
 
     calculateRecycleRowCount() {
@@ -93,7 +112,7 @@ class ctor {
     createRecycleRows(rowCount: number) {
         var rows = [];
         for (var i = 0; i < rowCount; i++) {
-            var newRow = new row();
+            var newRow = new row(this.settings.showIds);
             newRow.createPlaceholderCells(this.columns().map(c => c.name));
             newRow.rowIndex(i);
             var desiredTop = i * this.rowHeight;
@@ -109,6 +128,12 @@ class ctor {
 
         window.clearTimeout(this.scrollThrottleTimeoutHandle);
         this.scrollThrottleTimeoutHandle = setTimeout(() => this.loadRowData(), 100);
+        
+        // COMMENTED OUT: while requestAnimationFrame works, there are some problems:
+        // 1. It needs polyfill on IE9 and earlier.
+        // 2. While the screen redraws much faster, it results in a more laggy scroll.
+        //window.cancelAnimationFrame(this.scrollThrottleTimeoutHandle);
+        //this.scrollThrottleTimeoutHandle = window.requestAnimationFrame(() => this.loadRowData());
     }
 
     onWindowHeightChanged() {
@@ -131,7 +156,7 @@ class ctor {
         jwerty.key(keys, e => {
             e.preventDefault();
             handler();
-        }, this, this.gridSelector);
+        }, this, this.settings.gridSelector);
     }
 
     setupContextMenu() {
@@ -153,7 +178,7 @@ class ctor {
     }
 
     loadRowData() {
-        if (this.items) {
+        if (this.items && this.firstVisibleRow) {
             // The scrolling has paused for a minute. See if we have all the data needed.
             var firstVisibleIndex = this.firstVisibleRow.rowIndex();
             var fetchTask = this.items.fetch(firstVisibleIndex, this.recycleRows().length);
@@ -182,7 +207,7 @@ class ctor {
         if (selectedDoc) {
             var id = selectedDoc.getId();
             var collectionName = this.items.collectionName;
-            var itemIndex = this.selectedIndices().first();
+            var itemIndex = this.settings.selectedIndices().first();
             router.navigate(appUrl.forEditDoc(id, collectionName, itemIndex));
         }
     }
@@ -255,7 +280,7 @@ class ctor {
                 rowAtPosition.top(desiredNewRowY);
                 rowAtPosition.rowIndex(rowIndex);
                 rowAtPosition.resetCells();
-                rowAtPosition.isChecked(this.selectedIndices.indexOf(rowIndex) !== -1);
+                rowAtPosition.isChecked(this.settings.selectedIndices.indexOf(rowIndex) !== -1);
             }
 
             if (!this.firstVisibleRow) {
@@ -301,26 +326,26 @@ class ctor {
     toggleRowChecked(row: row, isShiftSelect = false) {
         var rowIndex = row.rowIndex();
         var isChecked = row.isChecked();
-        var firstIndex = <number>this.selectedIndices.first();
-        var toggledIndices: Array<number> = isShiftSelect && this.selectedIndices().length > 0 ? this.getRowIndicesRange(firstIndex, rowIndex) : [rowIndex];
+        var firstIndex = <number>this.settings.selectedIndices.first();
+        var toggledIndices: Array<number> = isShiftSelect && this.settings.selectedIndices().length > 0 ? this.getRowIndicesRange(firstIndex, rowIndex) : [rowIndex];
         if (!isChecked) {
             // Going from unchecked to checked.
-            if (this.selectedIndices.indexOf(rowIndex) === -1) {
+            if (this.settings.selectedIndices.indexOf(rowIndex) === -1) {
                 toggledIndices
-                    .filter(i => !this.selectedIndices.contains(i))
+                    .filter(i => !this.settings.selectedIndices.contains(i))
                     .reverse()
-                    .forEach(i => this.selectedIndices.unshift(i));
+                    .forEach(i => this.settings.selectedIndices.unshift(i));
             }
         } else {
             // Going from checked to unchecked.
-            this.selectedIndices.removeAll(toggledIndices);
+            this.settings.selectedIndices.removeAll(toggledIndices);
         }
 
-        this.recycleRows().forEach(r => r.isChecked(this.selectedIndices().contains(r.rowIndex())));
+        this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex())));
     }
 
     selectNone() {
-        this.selectedIndices([]);
+        this.settings.selectedIndices([]);
         this.recycleRows().forEach(r => r.isChecked(false));
     }
 
@@ -329,7 +354,7 @@ class ctor {
         for (var i = 0; i < this.items.totalResultCount(); i++) {
             allIndices.push(i);
         }
-        this.selectedIndices(allIndices);
+        this.settings.selectedIndices(allIndices);
         this.recycleRows().forEach(r => r.isChecked(true));
     }
 
@@ -361,11 +386,11 @@ class ctor {
     }
 
     getSelectedDocs(max?: number): Array<document> {
-        if (!this.items || this.selectedIndices().length === 0) {
+        if (!this.items || this.settings.selectedIndices().length === 0) {
             return [];
         }
-        var sliced = max ? <number[]>this.selectedIndices.slice(0, max) : null;
-        var maxSelectedIndices = sliced || <number[]>this.selectedIndices();
+        var sliced = max ? <number[]>this.settings.selectedIndices.slice(0, max) : null;
+        var maxSelectedIndices = sliced || <number[]>this.settings.selectedIndices();
         return this.items.getCachedItemsAt(maxSelectedIndices);
     }
 
@@ -373,14 +398,6 @@ class ctor {
         var documents = this.getSelectedDocs();
         var deleteDocsVm = new deleteDocuments(documents, this.focusableGridSelector);
         app.showDialog(deleteDocsVm);
-    }
-
-    private focusGridAfterDialogDismissal() {
-        // This appears to be a bug in durandal:
-        // After showing a dialog, the focus doesn't return to the previously-focused element.
-        // Since we use shortcut keys on the grid, we need to bring the focus back to the grid.
-        // Calling it immediately doesn't work because the 
-        setTimeout(() => $(".ko-grid").focus(), 1);
     }
 }
 

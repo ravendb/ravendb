@@ -21,7 +21,7 @@ function Get-Git-Commit
 
 function Get-DependencyPackageFiles
 {
-	param([string]$packageName, [string]$frameworkVersion = "net40")
+	param([string]$packageName, [string]$frameworkVersion = "net45")
 	
 	$fullPackageName = Get-ChildItem "$base_dir\packages\$packageName.*" | 
 								Sort-Object Name -Descending | 

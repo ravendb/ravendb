@@ -234,10 +234,15 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="Backup\ProgressNotifier.cs" />
+    <Compile Include="Bundles\PeriodicBackups\Triggers\AttachmentAncestryPutTrigger.cs" />
+    <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Plugins\LocalAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\RemoteAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\RemoteDocumentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\LocalDocumentReplicationConflictResolver.cs" />
+    <Compile Include="Bundles\PeriodicBackups\Controllers\AdminPeriodicBackupController.cs" />
+    <Compile Include="Bundles\PeriodicBackups\Triggers\AncestryPutTrigger.cs" />
+    <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualDeleteTrigger.cs" />
     <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTask.cs" />
@@ -299,6 +304,7 @@
     <Compile Include="Server\Controllers\BundlesApiController.cs" />
     <Compile Include="Server\Controllers\RavenBaseApiController.cs" />
     <Compile Include="Server\Contents\StaticHeadContent.cs" />
+    <Compile Include="Server\Controllers\StudioController.cs" />
     <Compile Include="Server\RavenDBOptions.cs" />
     <Compile Include="Server\Connections\IEventsTransport.cs" />
     <Compile Include="Server\Connections\ChangesPushContent.cs" />
@@ -325,7 +331,6 @@
     <Compile Include="Server\Controllers\PluginController.cs" />
     <Compile Include="Server\Controllers\QueriesController.cs" />
     <Compile Include="Server\Controllers\RavenDbApiController.cs" />
-    <Compile Include="Server\Controllers\RavenDbUiController.cs" />
     <Compile Include="Server\Controllers\SilverlightController.cs" />
     <Compile Include="Server\Controllers\SingleAuthTokenController.cs" />
     <Compile Include="Server\Controllers\StaticController.cs" />
@@ -1065,6 +1070,7 @@
     <Compile Include="Util\Streams\BufferPool.cs" />
     <Compile Include="Util\Streams\BufferPoolStream.cs" />
     <Compile Include="Util\Streams\PartialStream.cs" />
+    <Compile Include="Util\Streams\BufferPoolMemoryStream.cs" />
     <Compile Include="Util\WildcardMatcher.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -1176,6 +1182,9 @@
     <EmbeddedResource Include="Server\WebUI\js\rdb.jsonEditor\rdb.jsonEditor.js" />
     <EmbeddedResource Include="Server\WebUI\statistics.html" />
     <EmbeddedResource Include="Server\WebUI\view.html" />
+    <EmbeddedResource Include="..\Raven.Studio.Html5\**">
+      <Link>Server\Html5Studio\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Commercial\RavenDB.public" />
@@ -1201,10 +1210,9 @@
     </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
       <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
-      <Name>Voron %28Voron\Voron%29</Name>
+      <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
   <Target Name="BeforeBuild">
