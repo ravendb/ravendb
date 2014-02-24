@@ -572,14 +572,14 @@ task CreateNugetPackages -depends Compile, InitNuget {
 
 	New-Item $nuget_dir\RavenDB.Embedded\lib\net45 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Embedded.nuspec $nuget_dir\RavenDB.Embedded\RavenDB.Embedded.nuspec
-	@("Raven.Client.Embedded.???") |% { Copy-Item "$base_dir\Raven.Client.Embedded\bin\$global:configuration\\net45\$_" $nuget_dir\RavenDB.Embedded\lib\net45 }
+	@("Raven.Client.Embedded.???") |% { Copy-Item "$base_dir\Raven.Client.Embedded\bin\$global:configuration\$_" $nuget_dir\RavenDB.Embedded\lib\net45 }
 	
 	# Client packages
 	@("Authorization", "UniqueConstraints") | Foreach-Object { 
 		$name = $_;
 		New-Item $nuget_dir\RavenDB.Client.$name\lib\net45 -Type directory | Out-Null
 		Copy-Item $base_dir\NuGet\RavenDB.Client.$name.nuspec $nuget_dir\RavenDB.Client.$name\RavenDB.Client.$name.nuspec
-		@("$base_dir\Bundles\Raven.Client.$_\bin\$global:configuration\\net45\Raven.Client.$_.???") |% { Copy-Item $_ $nuget_dir\RavenDB.Client.$name\lib\net45 }
+		@("$base_dir\Bundles\Raven.Client.$_\bin\$global:configuration\Raven.Client.$_.???") |% { Copy-Item $_ $nuget_dir\RavenDB.Client.$name\lib\net45 }
 	}
 	
 	New-Item $nuget_dir\RavenDB.Bundles.Authorization\lib\net45 -Type directory | Out-Null
