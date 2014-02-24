@@ -37,7 +37,7 @@
                     <i class="fa fa-plus"></i> Add <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
-                    <li><a href="#">Sort By</a></li>
+                    <li><a href="#" data-bind="click: addSortBy">Sort By</a></li>
                     <li><a href="#">Transformer</a></li>
                 </ul>
             </div>
@@ -91,13 +91,50 @@
                 </div>
             </div>
         </div>
+        <div class="form-group" data-bind="visible: sortBys().length > 0">
+            <label class="col-sm-1 control-label">
+                Sort By
+            </label>
+            <div class="col-md-4" data-bind="foreach: sortBys">
+                <div class="panel" data-bind="css: { 'panel-default': fieldName, 'panel-warning': !fieldName() }">
+                    <div class="panel-heading">
+                        <div class="btn-group col-md-11">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="text: fieldNameOrDefault"></span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.indexFields">
+                                <li><a href="#" data-bind="text: $data, click: $parent.fieldName.bind($data)"></a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <button type="button" class="close use-bootstrap-tooltip" data-bind="click: $root.sortBys.remove.bind($root.sortBys, $data)" title="Remove this sort from the query">&times;</button>
+                        </div>
+                        <div class="clearfix"></div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="btn-group">
+                            <label class="btn btn-primary" data-bind="click: ascending.bind(true), css: { active: ascending }">
+                                Ascending
+                            </label>
+                            <label class="btn btn-primary" data-bind="click: descending.bind(true), css: { active: descending }">
+                                Descending
+                            </label>
+                            <label class="btn btn-primary" data-bind="click: rangeAscending.bind(true), css: { active: rangeAscending }">
+                                Range Ascending
+                            </label>
+                            <label class="btn btn-primary" data-bind="click: rangeDescending.bind(true), css: { active: rangeDescending }">
+                                Range Descending
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="form-group">
-            <div class="col-sm-1">
-                <label id="indexQueryLabelContainer" class="col-sm-1 control-label">
-                    Results
-                </label>
-            </div>
+            <label id="indexQueryLabelContainer" class="col-sm-1 control-label">
+                Results
+            </label>
             <div class="col-md-11">
                 <div id="queryResultsPanel" class="panel panel-default" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 30 }">
                     <div class="panel-heading">
