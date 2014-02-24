@@ -66,7 +66,7 @@ namespace Voron
 			
 			if(Writer != null)
 				Writer.Dispose();
-			Writer = new TransactionMergingWriter(this, DebugJournal);
+            Writer = new TransactionMergingWriter(this, _cancellationTokenSource.Token, DebugJournal);
 	    }
 #endif
 
@@ -94,7 +94,7 @@ namespace Voron
                 State.FreeSpaceRoot.Name = Constants.FreeSpaceTreeName;
                 State.Root.Name = Constants.RootTreeName;
 
-                Writer = new TransactionMergingWriter(this);
+                Writer = new TransactionMergingWriter(this, _cancellationTokenSource.Token);
 
                 if (_options.ManualFlushing == false)
                     _flushingTask = FlushWritesToDataFileAsync();
@@ -221,7 +221,7 @@ namespace Voron
 			    if (Writer != null && value != null)
 			    {
 				    Writer.Dispose();
-				    Writer = new TransactionMergingWriter(this, _debugJournal);
+                    Writer = new TransactionMergingWriter(this, _cancellationTokenSource.Token, _debugJournal);
 			    }
 
 		    }

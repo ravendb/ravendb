@@ -106,7 +106,15 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public void Write(WriteBatch writeBatch)
 		{
-			env.Writer.Write(writeBatch);
+		    try
+		    {
+                env.Writer.Write(writeBatch);
+		    }
+		    catch (AggregateException ae)
+		    {
+		        if (ae.InnerException is OperationCanceledException == false) // this can happen during storage disposal
+		            throw;
+		    }
 		}
 
 		public long GetEntriesCount(TableBase table)
