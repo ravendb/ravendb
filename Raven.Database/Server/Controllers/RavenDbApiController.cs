@@ -49,22 +49,15 @@ namespace Raven.Database.Server.Controllers
 			{
 				result = await RequestManager.HandleActualRequest(this, async () =>
 				{
-					SetHeaders();
+                    RequestManager.SetThreadLocalState(InnerHeaders, DatabaseName);
 					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
 				}, httpException => GetMessageWithObject(new {Error = httpException.Message}, HttpStatusCode.ServiceUnavailable));
 			}
 
 			RequestManager.AddAccessControlHeaders(this, result);
+            RequestManager.ResetThreadLocalState();
 
 			return result;
-		}
-
-		private void SetHeaders()
-		{
-			foreach (var innerHeader in InnerHeaders)
-			{
-				CurrentOperationContext.Headers.Value[innerHeader.Key] = innerHeader.Value.FirstOrDefault();
-			}
 		}
 
 		private async Task<HttpResponseMessage> ExecuteActualRequest(HttpControllerContext controllerContext, CancellationToken cancellationToken,
