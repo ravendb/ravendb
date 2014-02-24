@@ -63,11 +63,15 @@ namespace Raven.Abstractions.Data
         public DateTime LastFullBackup { get; set; }
 		public Etag LastDocsEtag { get; set; }
 		public Etag LastAttachmentsEtag { get; set; }
+        public Etag LastDocsDeletionEtag { get; set; }
+        public Etag LastAttachmentDeletionEtag { get; set; }
 
 		public PeriodicBackupStatus()
 		{
 			LastDocsEtag = Etag.Empty;
 			LastAttachmentsEtag = Etag.Empty;
+		    LastDocsDeletionEtag = Etag.Empty;
+		    LastAttachmentDeletionEtag = Etag.Empty;
 		}
 	}
 }

@@ -186,7 +186,7 @@
       <Name>Raven.Abstractions</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
-      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
+      <Project>{212823cd-25e1-41ac-92d1-d6df4d53fc85}</Project>
       <Name>Raven.Database</Name>
     </ProjectReference>
   </ItemGroup>

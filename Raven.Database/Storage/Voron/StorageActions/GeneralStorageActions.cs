@@ -1,31 +1,28 @@
-﻿using System.IO;
-using Raven.Database.Storage.Voron.Impl;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Voron.Impl;
+﻿using System;
+
 using Raven.Abstractions.Extensions;
-using System.Threading;
+using Raven.Database.Storage.Voron.Impl;
+using Raven.Database.Util.Streams;
+
+using Voron.Impl;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
-    public class GeneralStorageActions : IGeneralStorageActions
+    public class GeneralStorageActions : StorageActionsBase, IGeneralStorageActions
     {
 	    private const int PulseTreshold = 16 * 1024;
 	    private readonly Table generalTable;
 	    private readonly TableStorage storage;
 		private readonly Reference<WriteBatch> writeBatch;
-        private readonly SnapshotReader snapshot;
 
 		private int maybePulseCount;
 
-		public GeneralStorageActions(TableStorage storage,Table generalTable, Reference<WriteBatch> writeBatch, SnapshotReader snapshot)
+		public GeneralStorageActions(TableStorage storage,Table generalTable, Reference<WriteBatch> writeBatch, SnapshotReader snapshot, IBufferPool bufferPool)
+            :base(snapshot, bufferPool)
 		{
 			this.storage = storage;
             this.generalTable = generalTable;
             this.writeBatch = writeBatch;
-            this.snapshot = snapshot;
         }
 
         public long GetNextIdentityValue(string name)
@@ -34,13 +31,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				throw new ArgumentNullException("name");
 
             var lowerKeyName = name.ToLowerInvariant();
-            if (!generalTable.Contains(snapshot, lowerKeyName, writeBatch.Value))
+            if (!generalTable.Contains(Snapshot, lowerKeyName, writeBatch.Value))
             {
                 generalTable.Add(writeBatch.Value, lowerKeyName, BitConverter.GetBytes((long) 1), expectedVersion: 0);
                 return 1;
             }
 
-	        var readResult = generalTable.Read(snapshot, lowerKeyName, writeBatch.Value);
+            var readResult = generalTable.Read(Snapshot, lowerKeyName, writeBatch.Value);
             using (var stream = readResult.Reader.AsStream())
             {
                 var newValue = stream.ReadInt64() + 1;

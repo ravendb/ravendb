@@ -15,6 +15,7 @@ using System.Linq;
 
 namespace Raven.Abstractions.Smuggler
 {
+    using System.Text.RegularExpressions;
     public class SmugglerOptions
     {
         private int batchSize;
@@ -27,10 +28,13 @@ namespace Raven.Abstractions.Smuggler
             OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
             Timeout = TimeSpan.FromSeconds(30);
             ShouldExcludeExpired = false;
-            StartAttachmentsEtag = StartDocsEtag = Etag.Empty;
+	        StartDocsDeletionEtag = StartAttachmentsDeletionEtag = StartAttachmentsEtag = StartDocsEtag = Etag.Empty;
             Limit = int.MaxValue;
 		    MaxStepsForTransformScript = 10*1000;
+	        ExportDeletions = false;
         }
+
+        public bool ExportDeletions { get; set; }
 
         /// <summary>
         /// Start exporting from the specified documents etag
@@ -41,6 +45,16 @@ namespace Raven.Abstractions.Smuggler
         /// Start exporting from the specified attachments etag
         /// </summary>
         public Etag StartAttachmentsEtag { get; set; }
+
+        /// <summary>
+        /// Start exporting from the specified document deletion etag
+        /// </summary>
+        public Etag StartDocsDeletionEtag { get; set; }
+
+        /// <summary>
+        /// Start exporting from the specified attachment deletion etag
+        /// </summary>
+        public Etag StartAttachmentsDeletionEtag { get; set; }
 
         /// <summary>
         /// The number of document or attachments or indexes or transformers to load in each call to the RavenDB database.
@@ -70,33 +84,41 @@ namespace Raven.Abstractions.Smuggler
         /// </summary>
         public List<FilterSetting> Filters { get; set; }
 
-        public virtual bool MatchFilters(RavenJToken item)
-        {
-            foreach (var filter in Filters)
-            {
-                bool matchedFilter = false;
-                foreach (var tuple in item.SelectTokenWithRavenSyntaxReturningFlatStructure(filter.Path))
-                {
-                    if (tuple == null || tuple.Item1 == null)
-                        continue;
-                    var val = tuple.Item1.Type == JTokenType.String
-                                ? tuple.Item1.Value<string>()
-                                : tuple.Item1.ToString(Formatting.None);
-                    matchedFilter |= filter.Values.Any(value => String.Equals(val, value, StringComparison.OrdinalIgnoreCase)) ==
-                                     filter.ShouldMatch;
-                }
-                if (matchedFilter == false)
-                    return false;
-            }
-            return true;
-        }
+		public virtual bool MatchFilters(RavenJToken item)
+		{
+			foreach (var filter in Filters)
+			{
+			    bool anyRecords = false;
+				bool matchedFilter = false;
+				foreach (var tuple in item.SelectTokenWithRavenSyntaxReturningFlatStructure(filter.Path))
+				{
+					if (tuple == null || tuple.Item1 == null)
+						continue;
+
+				    anyRecords = true;
+
+					var val = tuple.Item1.Type == JTokenType.String
+								? tuple.Item1.Value<string>()
+								: tuple.Item1.ToString(Formatting.None);
+					matchedFilter |= filter.Values.Any(value => String.Equals(val, value, StringComparison.OrdinalIgnoreCase)) ==
+									 filter.ShouldMatch;
+				}
+
+                if (filter.ShouldMatch == false && anyRecords == false) // RDBQA-7
+                    return true;
+
+				if (matchedFilter == false)
+					return false;
+			}
+			return true;
+		}
 
         /// <summary>
         /// Should we exclude any documents which have already expired by checking the expiration meta property created by the expiration bundle
         /// </summary>
         public bool ShouldExcludeExpired { get; set; }
 
-        public virtual bool ExcludeExpired(RavenJToken item)
+        public virtual bool ExcludeExpired(RavenJToken item, DateTime now)
         {
             var metadata = item.Value<RavenJObject>("@metadata");
 
@@ -121,8 +143,8 @@ namespace Raven.Abstractions.Smuggler
                 return false;
             }
 
-            return dateTime >= SystemTime.UtcNow;
-        }
+            return dateTime < now;
+		}
 
 	    /// <summary>
 	    /// The timeout for requests
@@ -216,5 +238,28 @@ namespace Raven.Abstractions.Smuggler
 		{
 			Values = new List<string>();
 		}
+
+        private static readonly Regex Regex = new Regex(@"('[^']+'|[^,]+)");
+
+	    public static List<string> ParseValues(string value)
+	    {
+            var results = new List<string>();
+
+            if (string.IsNullOrEmpty(value))
+                return results;
+
+	        var matches = Regex.Matches(value);
+	        for (var i = 0; i < matches.Count; i++)
+	        {
+	            var match = matches[i].Value;
+	            
+	            if (match.StartsWith("'") && match.EndsWith("'"))
+                    match = match.Substring(1, match.Length - 2);
+
+                results.Add(match);
+	        }
+
+	        return results;
+	    }
 	}
 }

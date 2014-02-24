@@ -96,6 +96,7 @@
     <Compile Include="Storage\Batches.cs" />
     <Compile Include="Storage\BigValue.cs" />
     <Compile Include="Storage\Concurrency.cs" />
+    <Compile Include="Storage\Files.cs" />
     <Compile Include="Storage\FreeScratchPages.cs" />
     <Compile Include="Storage\MemoryMapWithoutBackingPagerTest.cs" />
     <Compile Include="Storage\MultiTransactions.cs" />

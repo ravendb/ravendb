@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Database.Util.Streams;
+
 namespace Raven.Database.Storage.Voron.StorageActions
 {
 	using System.Collections.Generic;
@@ -25,8 +27,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private readonly Reference<WriteBatch> writeBatch;
 
-		public ListsStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, Reference<WriteBatch> writeBatch)
-			: base(snapshot)
+        public ListsStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool)
+			: base(snapshot, bufferPool)
 		{
 			this.tableStorage = tableStorage;
 			this.generator = generator;
@@ -125,7 +127,23 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public void RemoveAllBefore(string name, Etag etag)
+	    public ListItem ReadLast(string name)
+	    {
+            var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
+	        var nameKey = CreateKey(name);
+
+	        using (var iterator = listsByName.MultiRead(Snapshot, nameKey))
+	        {
+                if (!iterator.Seek(Slice.AfterAllKeys))
+                    return null;
+
+                var etag = Etag.Parse(iterator.CurrentKey.ToString());
+
+	            return ReadInternal(etag);
+	        }
+	    }
+
+	    public void RemoveAllBefore(string name, Etag etag)
 		{
 			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
@@ -149,7 +167,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						var key = value.Value<string>("key");
 
 						tableStorage.Lists.Delete(writeBatch.Value, currentEtag.ToString());
-						listsByName.MultiDelete(writeBatch.Value, nameKey, etag.ToString());
+                        listsByName.MultiDelete(writeBatch.Value, nameKey, currentEtag.ToString());
 						listsByNameAndKey.Delete(writeBatch.Value, CreateKey(name, key));
 					}
 				}

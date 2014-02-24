@@ -113,6 +113,11 @@ namespace Raven.Client.Indexes
 		public IDictionary<string, SpatialOptions> SpatialIndexesStrings { get; set; }
 
 		/// <summary>
+		/// Prevent index from being kept in memory. Default: false
+		/// </summary>
+		public bool DisableInMemoryIndexing { get; set; }
+
+		/// <summary>
 		/// Max number of allowed indexing outputs per one source document
 		/// </summary>
 		public int? MaxIndexOutputsPerDocument { get; set; }
@@ -163,6 +168,7 @@ namespace Raven.Client.Indexes
 				Suggestions = ConvertToStringDictionary(Suggestions),
 				TermVectors =  ConvertToStringDictionary(TermVectors),
 				SpatialIndexes = ConvertToStringDictionary(SpatialIndexes),
+				DisableInMemoryIndexing = DisableInMemoryIndexing,
 				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
 			};
 

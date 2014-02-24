@@ -65,6 +65,9 @@ namespace Raven.Database.Server.Controllers
 		                Database.GetDocuments(GetStart(), GetPageSize(Database.Configuration.MaxPageSize), GetEtagFromQueryString(), cts.Token));
 		        else
 		        {
+			        var transformer = GetQueryStringValue("transformer");
+			        var queryInputs = ExtractQueryInputs();
+
 		            msg =
 		                GetMessageWithObject(
 		                    Database.GetDocumentsWithIdStartingWith(
@@ -74,7 +77,7 @@ namespace Raven.Database.Server.Controllers
 		                        GetStart(),
 		                        GetPageSize(Database.Configuration.MaxPageSize),
 		                        cts.Token,
-		                        ref nextPageStart));
+		                        ref nextPageStart, transformer, queryInputs));
 		        }
 
 		        WriteHeaders(new RavenJObject { { Constants.NextPageStart, nextPageStart } }, lastDocEtag, msg);

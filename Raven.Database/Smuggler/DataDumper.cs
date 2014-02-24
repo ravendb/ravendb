@@ -6,7 +6,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -34,14 +33,73 @@ namespace Raven.Database.Smuggler
 			EnsuredDatabaseExists = true;
 		}
 
-		protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="jsonWriter"></param>
+        /// <param name="options"></param>
+        /// <param name="result"></param>
+        /// <param name="maxEtags">Max etags are inclusive</param>
+        protected async override void ExportDeletions(JsonTextWriter jsonWriter, SmugglerOptions options, ExportDataResult result, LastEtagsInfo maxEtags)
+        {
+            jsonWriter.WritePropertyName("DocsDeletions");
+            jsonWriter.WriteStartArray();
+            result.LastDocDeleteEtag = await ExportDocumentsDeletion(options, jsonWriter, result.LastDocDeleteEtag, maxEtags.LastDocDeleteEtag.IncrementBy(1));
+            jsonWriter.WriteEndArray();
+
+            jsonWriter.WritePropertyName("AttachmentsDeletions");
+            jsonWriter.WriteStartArray();
+            result.LastAttachmentsDeleteEtag = await ExportAttachmentsDeletion(options, jsonWriter, result.LastAttachmentsDeleteEtag, maxEtags.LastAttachmentsDeleteEtag.IncrementBy(1));
+            jsonWriter.WriteEndArray();
+        }
+
+
+	    protected override void PurgeTombstones(ExportDataResult result)
+	    {
+	        database.TransactionalStorage.Batch(accessor =>
+	        {
+                // since remove all before is inclusive, but we want last etag for function FetchCurrentMaxEtags we modify ranges
+	            accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicBackupsDocsTombstones, result.LastDocDeleteEtag.IncrementBy(-1));
+                accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicBackupsAttachmentsTombstones, result.LastAttachmentsDeleteEtag.IncrementBy(-1));
+	        });
+	    }
+
+	    public override LastEtagsInfo FetchCurrentMaxEtags()
+	    {
+	        LastEtagsInfo result = null;
+            database.TransactionalStorage.Batch(accessor =>
+            {
+                result = new LastEtagsInfo
+                         {
+                             LastDocsEtag = accessor.Staleness.GetMostRecentDocumentEtag(),
+                             LastAttachmentsEtag = accessor.Staleness.GetMostRecentAttachmentEtag()
+                         };
+
+                var lastDocumentTombstone = accessor.Lists.ReadLast(Constants.RavenPeriodicBackupsDocsTombstones);
+                if (lastDocumentTombstone != null)
+                    result.LastDocDeleteEtag = lastDocumentTombstone.Etag;
+
+                var attachmentTombstones = 
+                    accessor.Lists.Read(Constants.RavenPeriodicBackupsAttachmentsTombstones, Etag.Empty, null, int.MaxValue)
+                            .OrderBy(x => x.Etag).ToArray();
+                if (attachmentTombstones.Any())
+                {
+                    result.LastAttachmentsDeleteEtag = attachmentTombstones.Last().Etag;
+                }
+            });
+
+	        return result;
+	    }
+
+	    protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
 		{
 			var totalCount = 0;
+	        var maxEtagReached = false;
 		    while (true)
 		    {
 		        try
 		        {
-		            if (SmugglerOptions.Limit - totalCount <= 0)
+		            if (SmugglerOptions.Limit - totalCount <= 0 || maxEtagReached)
 		            {
 		                ShowProgress("Done with reading attachments, total: {0}", totalCount);
 		                return lastEtag;
@@ -66,9 +124,16 @@ namespace Raven.Database.Smuggler
 		            ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", array.Length, totalCount);
 		            foreach (var item in array)
 		            {
-		                item.WriteTo(jsonWriter);
+		                
+		                var tempLastEtag = item.Value<string>("Etag");
+                        if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
+                        {
+                            maxEtagReached = true;
+                            break;
+                        }
+                        item.WriteTo(jsonWriter);
+		                lastEtag = tempLastEtag;
 		            }
-		            lastEtag = Etag.Parse(array.Last().Value<string>("Etag"));
 		        }
 		        catch (Exception e)
 		        {
@@ -82,6 +147,25 @@ namespace Raven.Database.Smuggler
 		    }
 		}
 
+        protected Task<Etag> ExportDocumentsDeletion(SmugglerOptions options, JsonTextWriter jsonWriter, Etag startDocsEtag, Etag maxEtag)
+        {
+            var lastEtag = startDocsEtag;
+            database.TransactionalStorage.Batch(accessor =>
+            {
+                foreach (var listItem in accessor.Lists.Read(Constants.RavenPeriodicBackupsDocsTombstones, startDocsEtag, maxEtag, int.MaxValue))
+                {
+                    var o = new RavenJObject
+                    {
+                        {"Key", listItem.Key}
+                    };
+                    o.WriteTo(jsonWriter);
+                    lastEtag = listItem.Etag;
+                }
+            });
+            return new CompletedTask<Etag>(lastEtag);
+
+        }
+
 		protected override Task<RavenJArray> GetTransformers(int start)
 		{
 			return new CompletedTask<RavenJArray>(database.GetTransformers(start, SmugglerOptions.BatchSize));
@@ -90,7 +174,6 @@ namespace Raven.Database.Smuggler
 		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int limit)
 		{
 			const int dummy = 0;
-
 			var enumerator = database.GetDocuments(dummy, Math.Min(SmugglerOptions.BatchSize, limit), lastEtag, CancellationToken.None)
 				.ToList()
 				.Cast<RavenJObject>()
@@ -119,6 +202,39 @@ namespace Raven.Database.Smuggler
 
 			return new CompletedTask();
 		}
+
+	    protected override Task DeleteAttachment(string key)
+	    {
+            database.DeleteStatic(key, null);
+            return new CompletedTask();
+	    }
+
+	    protected Task<Etag> ExportAttachmentsDeletion(SmugglerOptions options, JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
+	    {
+            var lastEtag = startAttachmentsDeletionEtag;
+            database.TransactionalStorage.Batch(accessor =>
+            {
+                foreach (var listItem in accessor.Lists.Read(Constants.RavenPeriodicBackupsAttachmentsTombstones, startAttachmentsDeletionEtag, maxAttachmentEtag, int.MaxValue))
+                {
+                    var o = new RavenJObject
+                    {
+                        {"Key", listItem.Key}
+                    };
+                    o.WriteTo(jsonWriter);
+                    lastEtag = listItem.Etag;
+                }
+            });
+            return new CompletedTask<Etag>(lastEtag);
+	    }
+
+	    protected override Task DeleteDocument(string key)
+        {
+            if (key != null)
+            {
+                database.Delete(key, null, null);
+            }
+            return new CompletedTask();
+        }
 
 		protected override Task PutDocument(RavenJObject document)
 		{

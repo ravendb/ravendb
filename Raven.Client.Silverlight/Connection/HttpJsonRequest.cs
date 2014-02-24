@@ -133,9 +133,13 @@ namespace Raven.Client.Silverlight.Connection
             return RavenJToken.Parse(result);
         }
 
-        public Task ExecuteRequestAsync()
+        public async Task<RavenJToken> ExecuteRequestAsync()
         {
-            return ReadResponseStringAsync();
+            var s = await ReadResponseStringAsync();
+
+            if (string.IsNullOrEmpty(s))
+                return null;
+            return RavenJToken.Parse(s);
         }
 
         private bool isRequestSentToServer;
@@ -563,5 +567,10 @@ namespace Raven.Client.Silverlight.Connection
         {
             throw new NotImplementedException();
         }
+
+		public async Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
+		{
+			throw new NotImplementedException();
+		}
     }
 }

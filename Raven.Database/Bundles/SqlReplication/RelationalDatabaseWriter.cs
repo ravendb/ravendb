@@ -347,7 +347,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					AlertLevel = AlertLevel.Error,
 					CreatedAt = SystemTime.UtcNow,
 					Exception = e.ToString(),
-					Title = "Sql Replication Count not find factory provider",
+					Title = "Sql Replication could not find factory provider",
 					Message = string.Format("Could not find factory provider {0} to replicate to sql for {1}, ignoring", cfg.FactoryName,
 									cfg.Name),
 					UniqueKey = string.Format("Sql Replication Provider Not Found: {0}, {1}", cfg.Name, cfg.FactoryName)

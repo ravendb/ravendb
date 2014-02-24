@@ -62,7 +62,7 @@ namespace Raven.Studio.Infrastructure
 
 	    public static void NavigateToExternal(string uriString)
 	    {
-	        if (uriString.StartsWith("http://") == false)
+			if (uriString.StartsWith("http://") == false && uriString.StartsWith("https://") == false)
 	        {
 	            var ravendbUrl = ApplicationModel.Current.Server.Value.Url;
 	            uriString = ravendbUrl + "/" + uriString;

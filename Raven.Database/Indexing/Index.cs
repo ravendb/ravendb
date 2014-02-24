@@ -81,16 +81,17 @@ namespace Raven.Database.Indexing
 		private volatile bool disposed;
 		private RavenIndexWriter indexWriter;
 		private SnapshotDeletionPolicy snapshotter;
-		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
+		private readonly IndexSearcherHolder currentIndexSearcherHolder;
 
-		private ConcurrentDictionary<string, IndexingPerformanceStats> currentlyIndexing = new ConcurrentDictionary<string, IndexingPerformanceStats>();
+		private readonly ConcurrentDictionary<string, IndexingPerformanceStats> currentlyIndexing = new ConcurrentDictionary<string, IndexingPerformanceStats>();
 		private readonly ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 		private bool forceWriteToDisk;
 
 		protected Index(Directory directory, int id, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
-			if (directory == null) throw new ArgumentNullException("directory");
+		    currentIndexSearcherHolder = new IndexSearcherHolder(id ,context);
+		    if (directory == null) throw new ArgumentNullException("directory");
 			if (indexDefinition == null) throw new ArgumentNullException("indexDefinition");
 			if (viewGenerator == null) throw new ArgumentNullException("viewGenerator");
 
@@ -1529,8 +1530,8 @@ namespace Raven.Database.Indexing
 		}
 
         protected void UpdateDocumentReferences(IStorageActionsAccessor actions, 
-            ConcurrentQueue<IDictionary<string, HashSet<string>>> allReferencedDocs, 
-            ConcurrentQueue<HashSet<string>> missingReferencedDocs)
+            ConcurrentQueue<IDictionary<string, HashSet<string>>> allReferencedDocs,
+			ConcurrentQueue<IDictionary<string, HashSet<string>>> missingReferencedDocs)
         {
             IDictionary<string, HashSet<string>> result;
             while (allReferencedDocs.TryDequeue(out result))
@@ -1544,22 +1545,21 @@ namespace Raven.Database.Indexing
             var task = new TouchMissingReferenceDocumentTask
             {
 				Index = IndexId, // so we will get IsStale properly
-                Keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                MissingReferences = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
             };
 
 			var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(IndexId, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
-            HashSet<string> docs;
+			IDictionary<string, HashSet<string>> docs;
             while (missingReferencedDocs.TryDequeue(out docs))
             {
-                
                 foreach (var doc in docs)
                 {
-                    if (set.TryRemove(doc))
+                    if (set.TryRemove(doc.Key))
                         continue;
-                    task.Keys.Add(doc);
+                    task.MissingReferences.Add(doc);
                 }
             }
-            if (task.Keys.Count == 0)
+            if (task.MissingReferences.Count == 0)
                 return;
             actions.Tasks.AddTask(task, SystemTime.UtcNow);
         }

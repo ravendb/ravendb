@@ -1,4 +1,6 @@
-﻿namespace Raven.Database.Storage.Voron.StorageActions
+﻿using Raven.Database.Util.Streams;
+
+namespace Raven.Database.Storage.Voron.StorageActions
 {
 	using System.Linq;
 
@@ -44,8 +46,9 @@
 			IDocumentCacher documentCacher,
 			Reference<WriteBatch> writeBatch,
 			SnapshotReader snapshot,
-			TableStorage tableStorage)
-			: base(snapshot)
+            TableStorage tableStorage, 
+            IBufferPool bufferPool)
+			: base(snapshot, bufferPool)
 		{
 			this.uuidGenerator = uuidGenerator;
 			this.documentCodecs = documentCodecs;
@@ -440,7 +443,7 @@
 		//returns true if it was update operation
 		private bool WriteDocumentMetadata(JsonDocumentMetadata metadata)
 		{
-			var metadataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream
+            var metadataStream = CreateStream();
 
 			metadataStream.Write(metadata.Etag);
 			metadataStream.Write(metadata.Key);
@@ -481,7 +484,7 @@
 				var existingCachedDocument = documentCacher.GetCachedDocument(loweredKey, etag);
 
 				var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : stream.ToJObject();
-				var lastModified = lastModifiedDateTimeBinary > 0 ? DateTime.FromBinary(lastModifiedDateTimeBinary) : (DateTime?) null;
+			    var lastModified = DateTime.FromBinary(lastModifiedDateTimeBinary);
 
 				return new JsonDocumentMetadata
 				{
@@ -516,7 +519,7 @@
 				};
 			}
 
-			var dataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream                  
+            var dataStream = CreateStream();
 
 
 			using (var finalDataStream = documentCodecs.Aggregate((Stream) new UndisposableStream(dataStream),

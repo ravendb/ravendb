@@ -284,6 +284,7 @@
     <Compile Include="Util\Encryptors\FipsEncryptor.cs" />
     <Compile Include="Util\Encryptors\HashEncryptorBase.cs" />
     <Compile Include="Util\Encryptors\IEncryptor.cs" />
+    <Compile Include="Util\EscapingHelper.cs" />
     <Compile Include="Util\EtagUtil.cs" />
     <Compile Include="Util\IAsyncEnumerator.cs" />
     <Compile Include="Util\IncludesUtil.cs" />

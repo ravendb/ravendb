@@ -64,7 +64,39 @@ namespace Raven.Smuggler
 			ConnectionStringOptions = connectionStringOptions;
 		}
 
-		public override async Task ImportData(SmugglerImportOptions importOptions, SmugglerOptions options, Stream stream)
+	    protected override void PurgeTombstones(ExportDataResult result)
+	    {
+	        throw new NotImplementedException("Purge tombstones is not supported for Command Line Smuggler");
+	    }
+
+	    protected override void ExportDeletions(JsonTextWriter jsonWriter, SmugglerOptions options, ExportDataResult result,
+	                                            LastEtagsInfo maxEtagsToFetch)
+	    {
+	        throw new NotImplementedException("Exporting deletions is not supported for Command Line Smuggler");
+	    }
+
+	    public override LastEtagsInfo FetchCurrentMaxEtags()
+	    {
+	        return new LastEtagsInfo
+	        {
+	            LastAttachmentsDeleteEtag = null,
+	            LastDocDeleteEtag = null,
+	            LastAttachmentsEtag = null,
+	            LastDocsEtag = null
+	        };
+	    }
+
+	    protected override Task DeleteDocument(string documentId)
+	    {
+	        return Commands.DeleteDocumentAsync(documentId);
+        }
+
+        protected override Task DeleteAttachment(string key)
+        {
+            return Commands.DeleteAttachmentAsync(key, null);
+	    }
+
+	    public override async Task ImportData(SmugglerImportOptions importOptions, SmugglerOptions options, Stream stream)
 		{
             SetSmugglerOptions(options);
 
@@ -215,8 +247,13 @@ namespace Raven.Smuggler
 			}
 		}
 
-		protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
+		protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
 		{
+            if (maxEtag != null)
+            {
+                throw new ArgumentException("We don't support maxEtag in SmugglerApi", maxEtag);
+            }
+
 			var totalCount = 0;
 			while (true)
 			{

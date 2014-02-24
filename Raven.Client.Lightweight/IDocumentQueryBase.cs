@@ -97,6 +97,32 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		TSelf Skip(int count);
 
+#if !SILVERLIGHT
+        /// <summary>
+        ///   Returns first element or default value for type if sequence is empty.
+        /// </summary>
+        /// <returns></returns>
+        T FirstOrDefault();
+
+        /// <summary>
+        ///   Returns first element or throws if sequence is empty.
+        /// </summary>
+        /// <returns></returns>
+        T First();
+
+        /// <summary>
+        ///   Returns first element or default value for given type if sequence is empty. Throws if sequence contains more than one element.
+        /// </summary>
+        /// <returns></returns>
+        T SingleOrDefault();
+
+        /// <summary>
+        ///   Returns first element or throws if sequence is empty or contains more than one element.
+        /// </summary>
+        /// <returns></returns>
+        T Single();
+#endif
+
 		/// <summary>
 		///   Filter the results from the index using the specified where clause.
 		/// </summary>

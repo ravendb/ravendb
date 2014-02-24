@@ -1,7 +1,4 @@
 ﻿using System.Linq;
-using Amazon.ImportExport.Model;
-using Microsoft.Isam.Esent.Interop;
-
 
 namespace Raven.Database.Storage.Voron.Impl
 {
@@ -11,13 +8,12 @@ namespace Raven.Database.Storage.Voron.Impl
 	using Raven.Database.Config;
 
 	using global::Voron;
-	using global::Voron.Impl;
 
 	public class MemoryMapPersistenceSource : IPersistenceSource
 	{
-
 		private readonly string directoryPath;
 
+        private readonly string tempPath;
 
 		public MemoryMapPersistenceSource(InMemoryRavenConfiguration configuration)
 		{
@@ -30,11 +26,12 @@ namespace Raven.Database.Storage.Voron.Impl
 				!allowIncrementalBackupsSetting.Equals("false", StringComparison.OrdinalIgnoreCase))
 				throw new ArgumentException("Raven/Voron/AllowIncrementalBackups settings key contains invalid value");
 
-
 			directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
 			var filePathFolder = new DirectoryInfo(directoryPath);
 		    if (filePathFolder.Exists == false)
 		        filePathFolder.Create();
+
+		    tempPath = configuration.Settings["Raven/Voron/TempPath"];
 
 			Initialize(Convert.ToBoolean(allowIncrementalBackupsSetting));
 		}
@@ -47,7 +44,7 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			CreatedNew = Directory.EnumerateFileSystemEntries(directoryPath).Any() == false;
 
-			Options = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(directoryPath)
+            Options = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(directoryPath, tempPath)
 			{
 				IncrementalBackupEnabled = allowIncrementalBackups
 			};
