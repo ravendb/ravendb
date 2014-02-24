@@ -6,6 +6,7 @@
 extern alias client;
 using System;
 
+using Raven.Abstractions.Connection;
 using Raven.Client.Document;
 
 using Xunit;
@@ -40,7 +41,12 @@ namespace Raven.Tests.Bundles.Authorization
 			{
 				client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(s, UserId, "Company/Rename");
 
-				Assert.Throws<InvalidOperationException>(() => ((DocumentSession)s).DatabaseCommands.Delete(company.Id, null));
+				var e = Assert.Throws<ErrorResponseException>(() => ((DocumentSession)s).DatabaseCommands.Delete(company.Id, null));
+
+                Assert.Contains("OperationVetoedException", e.Message);
+                Assert.Contains("Raven.Bundles.Authorization.Triggers.AuthorizationDeleteTrigger", e.Message);
+                Assert.Contains("Could not find any permissions for operation: Company/Rename on companies/1 for user Authorization/Users/Ayende", e.Message);
+                Assert.Contains("No one may perform operation Company/Rename on companies/1", e.Message);
 			}
 		}
 
