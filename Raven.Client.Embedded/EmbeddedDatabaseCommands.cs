@@ -619,7 +619,7 @@ namespace Raven.Client.Embedded
 						{
 							database.TransactionalStorage.Batch(accessor =>
 							{
-								using (var op = new DocumentDatabase.DatabaseQueryOperation(database, index, query, accessor))
+								using (var op = new DocumentDatabase.DatabaseQueryOperation(database, index, query, accessor, CancellationToken.None))
 								{
 									op.Init();
 									localQueryHeaderInfo = op.Header;

@@ -213,14 +213,22 @@ namespace Raven.Database
 					IndexReaderWarmers = IndexReaderWarmers
 				};
 
-				TransactionalStorage = configuration.CreateTransactionalStorage(configuration.SelectStorageEngine(), workContext.HandleWorkNotifications);
-				if (TransactionalStorage.GetType() != typeof(Raven.Storage.Voron.TransactionalStorage))
-				{
-					if (Directory.Exists(configuration.DataDirectory) && Directory.EnumerateFileSystemEntries(configuration.DataDirectory).Any())
-						throw new InvalidOperationException(string.Format("We do not allow to run on a storage engine other then Voron, while we are in the early pre-release phase of RavenDB 3.0. You are currently running on {0}", TransactionalStorage.FriendlyName));
+			    string storageEngine = configuration.SelectStorageEngine();
+			    if (string.Equals("voron", storageEngine, StringComparison.OrdinalIgnoreCase) == false)
+			    {
+			        if (Directory.Exists(configuration.DataDirectory) &&
+			            Directory.EnumerateFileSystemEntries(configuration.DataDirectory).Any())
+			            throw new InvalidOperationException(
+			                string.Format(
+			                    "We do not allow to run on a storage engine other then Voron, while we are in the early pre-release phase of RavenDB 3.0. You are currently running on {0}",
+			                    storageEngine));
 
-					TransactionalStorage = new Raven.Storage.Voron.TransactionalStorage(configuration, workContext.HandleWorkNotifications);
-				}
+                    Trace.WriteLine("Forcing database to run on Voron - pre release behavior only, mind");
+			        storageEngine = "voron";
+
+			    }
+
+			    TransactionalStorage = configuration.CreateTransactionalStorage(storageEngine , workContext.HandleWorkNotifications);
 
 				try
 				{
@@ -310,8 +318,6 @@ namespace Raven.Database
 			workContext.IndexStorage = IndexStorage;
 			workContext.TransactionalStorage = TransactionalStorage;
 			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
-
-			workContext.Init(Name);
 		}
 
 		private void DomainUnloadOrProcessExit(object sender, EventArgs eventArgs)
@@ -832,8 +838,8 @@ namespace Raven.Database
 
 		public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-            workContext.PerformanceCounters.DocsPerSecond.Increment();
-			key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
+            workContext.MetricsCounters.DocsPerSecond.Mark();
+            key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
 			RemoveReservedProperties(document);
 			RemoveMetadataReservedProperties(metadata);
 			Etag newEtag = Etag.Empty;
@@ -1364,154 +1370,32 @@ namespace Raven.Database
 			return findIndexCreationOptions;
 		}
 
-        public QueryResultWithIncludes Query(string index, IndexQuery query, CancellationToken token)
+        public QueryResultWithIncludes Query(string index, IndexQuery query, CancellationToken externalCancellationToken)
 		{
 			QueryResultWithIncludes result = null;
-			TransactionalStorage.Batch(accessor =>
-			{
-				using (var op = new DatabaseQueryOperation(this, index, query, accessor)
-				{
-					ShouldSkipDuplicateChecking = query.SkipDuplicateChecking
-				})
-				{
-					var list = new List<RavenJObject>();
-					op.Init();
-					op.Execute(list.Add);
-					op.Result.Results = list;
-					result = op.Result;
-				}
-			});
-			return result;
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(externalCancellationToken, workContext.CancellationToken))
+            {
+                var cancellationToken = cts.Token;
+
+                TransactionalStorage.Batch(
+                    accessor =>
+                    {
+                        using (var op = new DatabaseQueryOperation(this, index, query, accessor, cancellationToken)
+                                        {
+                                            ShouldSkipDuplicateChecking = query.SkipDuplicateChecking
+                                        })
+                        {
+                            var list = new List<RavenJObject>();
+                            op.Init();
+                            op.Execute(list.Add);
+                            op.Result.Results = list;
+                            result = op.Result;
+                        }
+                    });
+            }
+
+            return result;
 		}
-
-        public QueryResultWithIncludes Query(string indexName, IndexQuery query, CancellationToken externalCancellationToken, Action<QueryHeaderInformation> headerInfo, Action<RavenJObject> onResult)
-		{
-	        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(externalCancellationToken, workContext.CancellationToken))
-	        {
-                indexName = indexName != null ? indexName.Trim() : null;
-
-				var cancellationToken = cts.Token;
-				var queryStat = AddToCurrentlyRunningQueryList(indexName, query);
-				try
-				{
-					var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
-				var scoreExplanations = new Dictionary<string, string>();
-				Func<IndexQueryResult, object> tryRecordHighlightingAndScoreExplanation = queryResult =>
-					{
-					if (queryResult.Key == null)
-						return null;
-					if (queryResult.Highligtings != null)
-							highlightings.Add(queryResult.Key, queryResult.Highligtings);
-					if (queryResult.ScoreExplanation != null)
-						scoreExplanations.Add(queryResult.Key, queryResult.ScoreExplanation);
-						return null;
-					};
-					var stale = false;
-					Tuple<DateTime, Etag> indexTimestamp = Tuple.Create(DateTime.MinValue, Etag.Empty);
-					Etag resultEtag = Etag.Empty;
-					var nonAuthoritativeInformation = false;
-
-					if (string.IsNullOrEmpty(query.ResultsTransformer) == false)
-					{
-						query.FieldsToFetch = new[] { Constants.AllFields };
-					}
-
-					var duration = Stopwatch.StartNew();
-					var idsToLoad = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-					TransactionalStorage.Batch(
-						actions =>
-						{
-						var viewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
-						var index = IndexDefinitionStorage.GetIndexDefinition(indexName);
-							if (viewGenerator == null)
-							throw new IndexDoesNotExistsException("Could not find index named: " + indexName);
-
-						resultEtag = GetIndexEtag(index.Name, null, query.ResultsTransformer);
-
-						stale = actions.Staleness.IsIndexStale(index.IndexId, query.Cutoff, lastCollectionEtags.OptimizeCutoffForIndex(viewGenerator, query.CutoffEtag));
-
-							if (stale == false && query.Cutoff == null && query.CutoffEtag == null)
-							{
-							var indexInstance = IndexStorage.GetIndexInstance(indexName);
-								stale = stale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
-							}
-						indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index.IndexId);
-						var indexFailureInformation = actions.Indexing.GetFailureRate(index.IndexId);
-							if (indexFailureInformation.IsInvalidIndex)
-							{
-								throw new IndexDisabledException(indexFailureInformation);
-							}
-							var docRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState, query.QueryInputs, idsToLoad);
-						var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.IsDistinct,
-																  viewGenerator.ReduceDefinition == null
-																	? Constants.DocumentIdFieldName
-																	: Constants.ReduceKeyFieldName);
-							Func<IndexQueryResult, bool> shouldIncludeInResults =
-							result => docRetriever.ShouldIncludeResultInQuery(result, index, fieldsToFetch, query.SkipDuplicateChecking);
-						var indexQueryResults = IndexStorage.Query(indexName, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers, cancellationToken);
-						indexQueryResults = new ActiveEnumerable<IndexQueryResult>(indexQueryResults);
-
-							var transformerErrors = new List<string>();
-							var results = GetQueryResults(query, viewGenerator, docRetriever,
-														  from queryResult in indexQueryResults
-													  let doc = docRetriever.RetrieveDocumentForQuery(queryResult, index, fieldsToFetch, query.SkipDuplicateChecking)
-														  where doc != null
-														  let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation ?? false)
-													  let __ = tryRecordHighlightingAndScoreExplanation(queryResult)
-														  select doc, transformerErrors, cancellationToken);
-
-							if (headerInfo != null)
-							{
-								headerInfo(new QueryHeaderInformation
-								{
-								Index = indexName,
-								IsStable = stale,
-								ResultEtag = resultEtag,
-								IndexTimestamp = indexTimestamp.Item1,
-								IndexEtag = indexTimestamp.Item2,
-								TotalResults = query.TotalSize.Value
-							});
-						}
-						using (new CurrentTransformationScope(docRetriever))
-						{
-							foreach (var result in results)
-							{
-									cancellationToken.ThrowIfCancellationRequested();
-									onResult(result);
-								}
-								if (transformerErrors.Count > 0)
-								{
-									throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
-								}
-
-							}
-
-
-						});
-
-					return new QueryResultWithIncludes
-					{
-					IndexName = indexName,
-						IsStale = stale,
-						NonAuthoritativeInformation = nonAuthoritativeInformation,
-						SkippedResults = query.SkippedResults.Value,
-						TotalResults = query.TotalSize.Value,
-						IndexTimestamp = indexTimestamp.Item1,
-						IndexEtag = indexTimestamp.Item2,
-						ResultEtag = resultEtag,
-						IdsToInclude = idsToLoad,
-						LastQueryTime = SystemTime.UtcNow,
-						Highlightings = highlightings,
-					DurationMilliseconds = duration.ElapsedMilliseconds,
-					ScoreExplanations = scoreExplanations
-					};
-				}
-				finally
-				{
-				RemoveFromCurrentlyRunningQueryList(indexName, queryStat);
-				}
-	        }
-        }
 
 		public class DatabaseQueryOperation : IDisposable
 		{
@@ -1520,7 +1404,10 @@ namespace Raven.Database
 			private readonly string indexName;
 			private readonly IndexQuery query;
 			private readonly IStorageActionsAccessor actions;
-			private readonly ExecutingQueryInfo queryStat;
+
+		    private readonly CancellationToken cancellationToken;
+
+		    private readonly ExecutingQueryInfo queryStat;
 			public QueryResultWithIncludes Result = new QueryResultWithIncludes();
 			public QueryHeaderInformation Header;
 			private bool stale;
@@ -1535,13 +1422,14 @@ namespace Raven.Database
 			private Dictionary<string, string> scoreExplanations;
 			private HashSet<string> idsToLoad;
 
-			public DatabaseQueryOperation(DocumentDatabase database, string indexName, IndexQuery query, IStorageActionsAccessor actions)
+			public DatabaseQueryOperation(DocumentDatabase database, string indexName, IndexQuery query, IStorageActionsAccessor actions, CancellationToken cancellationToken)
 			{
 				this.database = database;
 				this.indexName = indexName != null ? indexName.Trim() : null;
 				this.query = query;
 				this.actions = actions;
-				queryStat = database.AddToCurrentlyRunningQueryList(indexName, query);
+			    this.cancellationToken = cancellationToken;
+			    queryStat = database.AddToCurrentlyRunningQueryList(indexName, query);
 			}
 
 			public void Init()
@@ -1599,7 +1487,7 @@ namespace Raven.Database
 						: Constants.ReduceKeyFieldName);
 				Func<IndexQueryResult, bool> shouldIncludeInResults =
 					result => docRetriever.ShouldIncludeResultInQuery(result, index, fieldsToFetch, ShouldSkipDuplicateChecking);
-				var indexQueryResults = database.IndexStorage.Query(indexName, query, shouldIncludeInResults, fieldsToFetch, database.IndexQueryTriggers, CancellationToken.None);
+				var indexQueryResults = database.IndexStorage.Query(indexName, query, shouldIncludeInResults, fieldsToFetch, database.IndexQueryTriggers, cancellationToken);
 				indexQueryResults = new ActiveEnumerable<IndexQueryResult>(indexQueryResults);
 
 				transformerErrors = new List<string>();
@@ -1609,7 +1497,7 @@ namespace Raven.Database
 					where doc != null
 					let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation ?? false)
 					let __ = tryRecordHighlightingAndScoreExplanation(queryResult)
-                    select doc, transformerErrors, CancellationToken.None);
+                    select doc, transformerErrors, cancellationToken);
 
 				Header = new QueryHeaderInformation
 				{
@@ -1628,6 +1516,7 @@ namespace Raven.Database
 				{
 					foreach (var result in results)
 					{
+                        cancellationToken.ThrowIfCancellationRequested();
 						onResult(result);
 					}
 					if (transformerErrors.Count > 0)

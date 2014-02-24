@@ -120,7 +120,7 @@ namespace Raven.Database.Server.Controllers
 
                 try
                 {
-                    var queryOp = new DocumentDatabase.DatabaseQueryOperation(Database, index, query, accessor);
+                    var queryOp = new DocumentDatabase.DatabaseQueryOperation(Database, index, query, accessor, cts.Token);
                     queryOp.Init();
 				msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor,
 					mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" });

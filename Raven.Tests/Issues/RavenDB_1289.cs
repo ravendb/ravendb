@@ -159,7 +159,7 @@ namespace Raven.Tests.Issues
 		{
 			return new DocumentStore
 			{
-				Url = string.Format("http://arek-win:{0}/", port),
+				Url = string.Format("http://localhost:{0}/", port),
 				DefaultDatabase = databaseName,
 				Conventions =
 				{

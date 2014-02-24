@@ -76,7 +76,7 @@ namespace Raven.Database.Server.Controllers
 			});
 		}
 
-		[HttpGet]
+		[HttpPost]
 		[Route("debug/index-fields")]
 		[Route("databases/{databaseName}/debug/index-fields")]
 		public async Task<HttpResponseMessage> IndexFields()
