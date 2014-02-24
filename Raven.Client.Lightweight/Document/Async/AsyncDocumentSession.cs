@@ -330,22 +330,26 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		/// <param name="id">The id.</param>
 		/// <returns></returns>
-		public Task<T> LoadAsync<T>(string id)
+		public async Task<T> LoadAsync<T>(string id)
 		{
 			if (id == null) throw new ArgumentNullException("id", "The document id cannot be null");
 			object entity;
 			if (entitiesByKey.TryGetValue(id, out entity))
 			{
-				var tcs = new TaskCompletionSource<T>();
-				tcs.TrySetResult((T)entity);
-				return tcs.Task;
+			    return (T) entity;
 			}
-			if (IsDeleted(id))
-				return new CompletedTask<T>(null);
+		    JsonDocument value;
+		    if (includedDocumentsByKey.TryGetValue(id, out value))
+		    {
+		        includedDocumentsByKey.Remove(id);
+		        return TrackEntity<T>(value);
+		    }
+		    if (IsDeleted(id))
+		        return default(T);
 
 			IncrementRequestCount();
 			var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
-			return CompleteLoadAsync<T>(id, loadOperation);
+			return await CompleteLoadAsync<T>(id, loadOperation);
 		}
 
 		private async Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation)
