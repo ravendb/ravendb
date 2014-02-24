@@ -112,6 +112,9 @@
     <Reference Include="Lucene.Net.Contrib.Spatial.NTS">
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
     </Reference>
+    <Reference Include="metrics">
+      <HintPath>..\SharedLibs\metrics.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.Data.Edm, Version=5.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Data.Edm.5.6.0\lib\net40\Microsoft.Data.Edm.dll</HintPath>
@@ -1054,10 +1057,10 @@
     <Compile Include="Util\CompositeDisposable.cs" />
     <Compile Include="Util\DatabaseMemoryTarget.cs" />
     <Compile Include="Util\IPerformanceCounter.cs" />
+    <Compile Include="Util\MetricsCountersManager.cs" />
     <Compile Include="Util\NoOpPerformanceCounter.cs" />
     <Compile Include="Util\OutputTicker.cs" />
     <Compile Include="Util\PerformanceCounterAttribute.cs" />
-    <Compile Include="Util\PerformanceCountersManager.cs" />
     <Compile Include="Util\PerformanceCountersUtils.cs" />
     <Compile Include="Util\PerformanceCounterWrapper.cs" />
     <Compile Include="Util\PortUtil.cs" />

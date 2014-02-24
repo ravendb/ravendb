@@ -98,7 +98,6 @@ namespace Raven.Database.Config
 			MaxIndexWritesBeforeRecreate = ravenSettings.MaxIndexWritesBeforeRecreate.Value;
 			MaxIndexOutputsPerDocument = ravenSettings.MaxIndexOutputsPerDocument.Value;
 
-			DisablePerformanceCounters = ravenSettings.DisablePerformanceCounters.Value;
 
 		    PrewarmFacetsOnIndexingMaxAge = ravenSettings.PrewarmFacetsOnIndexingMaxAge.Value;
 		    PrewarmFacetsSyncronousWaitTime = ravenSettings.PrewarmFacetsSyncronousWaitTime.Value;
@@ -840,11 +839,7 @@ namespace Raven.Database.Config
 		/// </summary>
 		public int MaxIndexOutputsPerDocument { get; set; }
 
-		/// <summary>
-		/// If True then no PerformanceCounters will be used. Default: false
-		/// </summary>
-		public bool DisablePerformanceCounters { get; set; }
-
+		[Browsable(false)]
         /// <summary>
         /// What is the maximum age of a facet query that we should consider when prewarming
         /// the facet cache when finishing an indexing batch
