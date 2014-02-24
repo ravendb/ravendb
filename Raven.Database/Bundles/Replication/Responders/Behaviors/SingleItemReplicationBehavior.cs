@@ -115,7 +115,7 @@ namespace Raven.Bundles.Replication.Responders
 				createdConflict = CreateConflict(id, newDocumentConflictId, existingDocumentConflictId, existingItem,
 					existingMetadata);
 			}
-			
+
 			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
 				Database.RaiseNotifications(new ReplicationConflictNotification()
 				                            {
