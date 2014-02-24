@@ -22,7 +22,6 @@ properties {
 	$core_db_dlls = @(
         "$base_dir\Raven.Database\bin\$global:configuration\\Raven.Abstractions.???", 
         (Get-DependencyPackageFiles 'NLog.2'), 
-        (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), 
         "$base_dir\Raven.Database\bin\$global:configuration\\Jint.Raven.???",
 				"$base_dir\Raven.Database\bin\$global:configuration\\Lucene.Net.???",
 				"$base_dir\Raven.Database\bin\$global:configuration\\Microsoft.Data.Edm.???",
@@ -265,7 +264,7 @@ task CopyEmbeddedClient {
 }
 
 task CopySilverlight { 
-	$silverlight_dlls + @((Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl4)) | 
+	$silverlight_dlls + @((Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl5)) | 
 		ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Silverlight }
 }
 
