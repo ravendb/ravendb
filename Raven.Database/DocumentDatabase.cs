@@ -213,16 +213,22 @@ namespace Raven.Database
 					IndexReaderWarmers = IndexReaderWarmers
 				};
 
-				TransactionalStorage = configuration.CreateTransactionalStorage(configuration.SelectStorageEngine(), workContext.HandleWorkNotifications);
-				if (TransactionalStorage.GetType() != typeof(Raven.Storage.Voron.TransactionalStorage))
-				{
-					if (Directory.Exists(configuration.DataDirectory) && Directory.EnumerateFileSystemEntries(configuration.DataDirectory).Any())
-						throw new InvalidOperationException(string.Format("We do not allow to run on a storage engine other then Voron, while we are in the early pre-release phase of RavenDB 3.0. You are currently running on {0}", TransactionalStorage.FriendlyName));
+			    string storageEngine = configuration.SelectStorageEngine();
+			    if (string.Equals("voron", storageEngine, StringComparison.OrdinalIgnoreCase) == false)
+			    {
+			        if (Directory.Exists(configuration.DataDirectory) &&
+			            Directory.EnumerateFileSystemEntries(configuration.DataDirectory).Any())
+			            throw new InvalidOperationException(
+			                string.Format(
+			                    "We do not allow to run on a storage engine other then Voron, while we are in the early pre-release phase of RavenDB 3.0. You are currently running on {0}",
+			                    storageEngine));
 
-                    TransactionalStorage.Dispose();
                     Trace.WriteLine("Forcing database to run on Voron - pre release behavior only, mind");
-					TransactionalStorage = new Raven.Storage.Voron.TransactionalStorage(configuration, workContext.HandleWorkNotifications);
-				}
+			        storageEngine = "voron";
+
+			    }
+
+			    TransactionalStorage = configuration.CreateTransactionalStorage(storageEngine , workContext.HandleWorkNotifications);
 
 				try
 				{
