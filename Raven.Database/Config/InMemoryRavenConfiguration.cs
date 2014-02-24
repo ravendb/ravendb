@@ -963,7 +963,8 @@ namespace Raven.Database.Config
 					return typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 			}
 
-			return DefaultStorageTypeName ?? typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
+			//if all else fails, select Voron as default
+			return DefaultStorageTypeName ?? typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
 		}
 
 		public void Dispose()
