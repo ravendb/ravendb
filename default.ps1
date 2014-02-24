@@ -21,6 +21,7 @@ properties {
 	
 	$core_db_dlls = @(
         "$base_dir\Raven.Database\bin\$global:configuration\Raven.Abstractions.???", 
+		"$base_dir\Raven.Database\bin\$global:configuration\Raven.Client.Lightweight.???", 
 		"$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
         (Get-DependencyPackageFiles 'NLog.2'), 
         "$base_dir\Raven.Database\bin\$global:configuration\Jint.Raven.???",
