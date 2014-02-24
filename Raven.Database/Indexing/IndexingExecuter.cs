@@ -113,6 +113,9 @@ namespace Raven.Database.Indexing
 		{
 			indexesToWorkOn = context.Configuration.IndexingScheduler.FilterMapIndexes(indexesToWorkOn);
 
+			if(indexesToWorkOn.Count == 0)
+				return;
+
             var lastIndexedGuidForAllIndexes =
                    indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToEtag();
             var startEtag = CalculateSynchronizationEtag(synchronizationEtag, lastIndexedGuidForAllIndexes);
@@ -126,24 +129,52 @@ namespace Raven.Database.Indexing
 
 			indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = true);
 
+	        var takenFromBatch = false;
+
 			try
 			{
-				jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(startEtag);
+				var newIndexesWithPrecomputedDocs = indexesToWorkOn.All(x => x.Index.HasPrecomputedDocumentsForMap); // IndexingScheduler gives a priority for such indexes and returns them together
+
+				if (newIndexesWithPrecomputedDocs == false)
+				{
+					jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(startEtag);
+					takenFromBatch = true;
+				}
 
 				if (Log.IsDebugEnabled)
 				{
-					Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-							  jsonDocs.Count, startEtag, string.Join(", ", jsonDocs.Select(x => x.Key)));
+					if (newIndexesWithPrecomputedDocs == false)
+						Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
+								  jsonDocs.Count, startEtag, string.Join(", ", jsonDocs.Select(x => x.Key)));
+					else
+					{
+						Log.Debug("Found precomputed documents that requires indexing for a new indexes:");
+						
+						foreach (var indexToWorkOn in indexesToWorkOn)
+						{
+							Log.Debug("New index name: {0}, precomputed docs to index: {1}",
+							          indexToWorkOn.Index.PublicName,
+							          string.Join(", ",
+							                      indexToWorkOn.Index.PrecomputedIndexingBatch.Result.Documents.Take(
+								                      autoTuner.NumberOfItemsToIndexInSingleBatch).Select(x => x.Key)));
+						}
+					}
 				}
 
-				context.ReportIndexingActualBatchSize(jsonDocs.Count);
+				if(takenFromBatch)
+					context.ReportIndexingActualBatchSize(jsonDocs.Count);
+
 				context.CancellationToken.ThrowIfCancellationRequested();
 
-				if (jsonDocs.Count <= 0)
+				if (newIndexesWithPrecomputedDocs == false && jsonDocs.Count <= 0)
 					return;
 
 				var sw = Stopwatch.StartNew();
-				lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
+				if (newIndexesWithPrecomputedDocs == false)
+					lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
+				else
+					DoActualIndexingWithPrecomputedDocs(indexesToWorkOn);
+
 				indexingDuration = sw.Elapsed;
 			}
 			catch (OperationCanceledException)
@@ -158,7 +189,8 @@ namespace Raven.Database.Indexing
 					prefetchingBehavior.UpdateAutoThrottler(jsonDocs, indexingDuration);
 				}
 
-				prefetchingBehavior.BatchProcessingComplete();
+				if(takenFromBatch)
+					prefetchingBehavior.BatchProcessingComplete();
 
 				indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = false);
 			}
@@ -177,6 +209,24 @@ namespace Raven.Database.Indexing
 																  index => HandleIndexingFor(index, lastEtag, lastModified));
 
 			return lastEtag;
+		}
+
+		private void DoActualIndexingWithPrecomputedDocs(IList<IndexToWorkOn> indexesToWorkOn)
+		{
+			BackgroundTaskExecuter.Instance.ExecuteAll(context, indexesToWorkOn, (indexToWorkOn, i) =>
+			{
+				var precomputedIndexingBatch = indexToWorkOn.Index.PrecomputedIndexingBatch.Result;
+
+				var jsonDocs = precomputedIndexingBatch.RemoveAndReturnDocuments(autoTuner.NumberOfItemsToIndexInSingleBatch);
+				var etag = precomputedIndexingBatch.LastIndexedETag;
+				var lastModified = precomputedIndexingBatch.LastModified;
+				var filteredDocs = FilterIndexes(new List<IndexToWorkOn> {indexToWorkOn}, jsonDocs, etag).First();
+
+				HandleIndexingFor(filteredDocs, etag, lastModified);
+
+				if (precomputedIndexingBatch.Documents.Count == 0)
+					indexToWorkOn.Index.PrecomputedIndexingBatch = null;
+			});
 		}
 
 		private void HandleIndexingFor(IndexingBatchForIndex batchForIndex, Etag lastEtag, DateTime lastModified)

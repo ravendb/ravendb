@@ -240,6 +240,7 @@
     <Compile Include="Bundles\PeriodicBackups\Controllers\AdminPeriodicBackupController.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\AncestryPutTrigger.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualDeleteTrigger.cs" />
+    <Compile Include="Indexing\PrecomputedIndexingBatch.cs" />
     <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTask.cs" />

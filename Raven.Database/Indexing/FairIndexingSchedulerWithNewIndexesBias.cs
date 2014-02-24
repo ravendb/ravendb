@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 
 namespace Raven.Database.Indexing
@@ -33,17 +34,28 @@ namespace Raven.Database.Indexing
 			if (indexes.Count == 0)
 				return indexes;
 
+			var indexesWithPrecomputedDocs = indexes
+				.Where(x => x.Index.PrecomputedIndexingBatch != null && x.Index.PrecomputedIndexingBatch.Status == TaskStatus.RanToCompletion)
+				.ToList();
+
+			if(indexesWithPrecomputedDocs.Count > 0)
+				return indexesWithPrecomputedDocs;
+
 			var indexesByIndexedEtag = indexes
+				.Where(x => x.Index.PrecomputedIndexingBatch == null || x.Index.PrecomputedIndexingBatch.Status == TaskStatus.RanToCompletion)
 				.GroupBy(x => x.LastIndexedEtag, new RoughEtagEqualityAndComparison())
 				.OrderBy(x => x.Key, new RoughEtagEqualityAndComparison())
 				.ToList();
+
+			if (indexesByIndexedEtag.Count == 0)
+				return Enumerable.Empty<IndexToWorkOn>().ToList();
 
 			if (indexesByIndexedEtag.Count == 1)
 			{
 				currentRepeated = 0;
 				current = 0;
 				activeFiltering = false;
-				return indexes; // they all have the same one, so there aren't any delayed / new indexes
+				return indexesByIndexedEtag[0].ToList(); // they all have the same one, so there aren't any delayed / new indexes
 			}
 
 			activeFiltering = true;
