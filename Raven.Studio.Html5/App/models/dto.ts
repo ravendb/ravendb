@@ -282,3 +282,8 @@ interface replicationsDto {
     Destinations: replicationDestinationDto[];
     Source: string;
 }
+
+interface replicationConfigDto {
+    DocumentConflictResolution: string;
+    AttachmentConflictResolution: string;
+}
