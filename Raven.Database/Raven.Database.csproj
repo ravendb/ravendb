@@ -1061,7 +1061,6 @@
     <Compile Include="Util\NoOpPerformanceCounter.cs" />
     <Compile Include="Util\OutputTicker.cs" />
     <Compile Include="Util\PerformanceCounterAttribute.cs" />
-    <Compile Include="Util\PerformanceCountersManager.cs" />
     <Compile Include="Util\PerformanceCountersUtils.cs" />
     <Compile Include="Util\PerformanceCounterWrapper.cs" />
     <Compile Include="Util\PortUtil.cs" />
