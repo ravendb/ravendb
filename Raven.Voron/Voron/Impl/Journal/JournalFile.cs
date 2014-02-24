@@ -94,7 +94,7 @@ namespace Voron.Impl.Journal
 
 #if DEBUG
             Trace.WriteLine(
-                "Disposing a journal file from finalizer! It should be diposed by using JournalFile.Release() instead!. Log file number: " +
+                "Disposing a journal file from finalizer! It should be disposed by using JournalFile.Release() instead!. Log file number: " +
                 Number + ". Number of references: " + _refs + " " + _st);
 #endif
         }

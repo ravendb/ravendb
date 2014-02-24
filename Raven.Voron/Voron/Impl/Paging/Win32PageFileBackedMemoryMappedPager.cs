@@ -128,7 +128,7 @@ namespace Voron.Impl.Paging
 				{
 					var message =
 						string.Format(
-							"Unable to allocate more pages - unsucsessfully tried to allocate continuous block of size = {0} bytes\r\n" +
+							"Unable to allocate more pages - unsuccessfully tried to allocate continuous block of size = {0} bytes\r\n" +
 							"It is likely that we are suffering from virtual memory exhaustion or memory fragmentation.\r\n" +
 							"64 bits process: {1}\r\n" +
 							"If you are running in 32 bits, this is expected, and you need to run in 64 bits to resume normal operations.\r\n" +
