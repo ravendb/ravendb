@@ -1409,7 +1409,8 @@ namespace Raven.Database
                 })
                 {
                     op.Init();
-                    if (op.Header.TotalResults > (countOfDocuments * 0.25) ||
+                    if (op.Header.TotalResults == 0 || 
+                        op.Header.TotalResults > (countOfDocuments * 0.25) ||
                         (op.Header.TotalResults > Configuration.MaxNumberOfItemsToIndexInSingleBatch * 4))
                     {
                         // we don't apply this optimization if the total number of results is more than
@@ -1452,7 +1453,8 @@ namespace Raven.Database
                 };
             });
 
-            indexingExecuter.IndexPrecomputedBatch(result);
+            if (result.Documents == null || result.Documents.Count == 0)
+                indexingExecuter.IndexPrecomputedBatch(result);
 
         }
 
