@@ -41,8 +41,6 @@
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <DocumentationFile>bin\Release\Raven.Client.Lightweight.xml</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
-    <DocumentationFile>bin\Release\Raven.Client.Lightweight.XML</DocumentationFile>
-    <DocumentationFile>..\build\Raven.Client.Lightweight.XML</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
