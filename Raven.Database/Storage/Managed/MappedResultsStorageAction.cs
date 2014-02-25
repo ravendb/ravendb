@@ -544,15 +544,15 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(int view, string key, int level, int start, int take)
+		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(int view, string reduceKey, int level, int start, int take)
 		{
 			var results = storage.ReduceResults["ByViewReduceKeyLevelAndBucket"].SkipTo(new RavenJObject
 			{
 				{"view", view},
-				{"reduceKey", key},
+				{"reduceKey", reduceKey},
 				{"level", level}
 			}).TakeWhile(x => view == x.Value<int>("view") &&
-							  string.Equals(key, x.Value<string>("reduceKey"), StringComparison.OrdinalIgnoreCase) &&
+							  string.Equals(reduceKey, x.Value<string>("reduceKey"), StringComparison.OrdinalIgnoreCase) &&
 							  level == x.Value<int>("level"))
 				.Skip(start)
 				.Take(take);
