@@ -35,7 +35,7 @@ namespace Raven.Database.Indexing
 				return indexes;
 
 			var indexesByIndexedEtag = indexes
-                .Where(x => x.Index.PrecomputedIndexing == null) // indexes with precomputed docs are processes separately
+                .Where(x => x.Index.IsMapIndexingInProgress) // indexes with precomputed docs are processes separately
 				.GroupBy(x => x.LastIndexedEtag, new RoughEtagEqualityAndComparison())
 				.OrderBy(x => x.Key, new RoughEtagEqualityAndComparison())
 				.ToList();

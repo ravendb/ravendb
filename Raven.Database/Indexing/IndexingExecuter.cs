@@ -186,7 +186,7 @@ namespace Raven.Database.Indexing
 			return lastEtag;
 		}
 
-        public void IndexPrecomputedBatch(PrecomputedIndexing.Batch precomputedBatch)
+        public void IndexPrecomputedBatch(PrecomputedIndexingBatch precomputedBatch)
         {
             context.MetricsCounters.IndexedPerSecond.Mark(precomputedBatch.Documents.Count);
 

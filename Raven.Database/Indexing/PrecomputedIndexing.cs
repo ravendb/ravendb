@@ -10,18 +10,12 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Database.Indexing
 {
-	public class PrecomputedIndexing
+	public class PrecomputedIndexingBatch
 	{
-        public class Batch
-        {
-            public Etag LastIndexed;
-            public DateTime LastModified;
-            public List<JsonDocument> Documents;
-            public Index Index;
-        }
+        public Etag LastIndexed;
+        public DateTime LastModified;
+        public List<JsonDocument> Documents;
+        public Index Index;
 
-	    public Task<Batch> RetrieveDocuments { get; set; }
-
-        public Task IndexDocuments { get; set; }
 	}
 }

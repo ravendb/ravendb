@@ -24,7 +24,7 @@ namespace Raven.Database.Indexing
         protected int workCounter;
         protected int lastFlushedWorkCounter;
         protected BaseBatchSizeAutoTuner autoTuner;
-		protected ConcurrentDictionary<int, Index> currentlyProcessedIndexes = new ConcurrentDictionary<int, Index>(); 
+        protected ConcurrentDictionary<int, Index> currentlyProcessedIndexes = new ConcurrentDictionary<int, Index>();
 
         protected AbstractIndexingExecuter(WorkContext context)
         {
@@ -96,8 +96,8 @@ namespace Raven.Database.Indexing
                     {
                         foundWork = true; // we want to keep on trying, anyway, not wait for the timeout or more work
 #if DEBUG
-						if(Debugger.IsAttached)
-							Debugger.Break();
+                        if (Debugger.IsAttached)
+                            Debugger.Break();
 #endif
                         Log.ErrorException("Failed to execute indexing", e);
                         if (IsEsentOutOfMemory(e))
@@ -213,52 +213,52 @@ namespace Raven.Database.Indexing
         {
             Etag synchronizationEtag = null;
 
-                var indexesToWorkOn = new List<IndexToWorkOn>();
-            var localFoundOnlyIdleWork = new Reference<bool> {Value = true};
-                transactionalStorage.Batch(actions =>
+            var indexesToWorkOn = new List<IndexToWorkOn>();
+            var localFoundOnlyIdleWork = new Reference<bool> { Value = true };
+            transactionalStorage.Batch(actions =>
+            {
+                foreach (var indexesStat in actions.Indexing.GetIndexesStats().Where(IsValidIndex))
                 {
-                    foreach (var indexesStat in actions.Indexing.GetIndexesStats().Where(IsValidIndex))
-                    {
                     var failureRate = actions.Indexing.GetFailureRate(indexesStat.Id);
-                        if (failureRate.IsInvalidIndex)
-                        {
-                            Log.Info("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
-                                       indexesStat.Id,
-                                           failureRate.FailureRate);
-                            continue;
-                        }
-                        synchronizationEtag = synchronizationEtag ?? GetSynchronizationEtag();
+                    if (failureRate.IsInvalidIndex)
+                    {
+                        Log.Info("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
+                                   indexesStat.Id,
+                                       failureRate.FailureRate);
+                        continue;
+                    }
+                    synchronizationEtag = synchronizationEtag ?? GetSynchronizationEtag();
 
-                        if (IsIndexStale(indexesStat, synchronizationEtag, actions, isIdle, localFoundOnlyIdleWork) == false)
-                            continue;
-                        var indexToWorkOn = GetIndexToWorkOn(indexesStat);
+                    if (IsIndexStale(indexesStat, synchronizationEtag, actions, isIdle, localFoundOnlyIdleWork) == false)
+                        continue;
+                    var indexToWorkOn = GetIndexToWorkOn(indexesStat);
                     var index = context.IndexStorage.GetIndexInstance(indexesStat.Id);
                     if (index == null) // not there
-                            continue;
+                        continue;
 
-                        indexToWorkOn.Index = index;
-                        indexesToWorkOn.Add(indexToWorkOn);
-                    }
-                });
-                onlyFoundIdleWork = localFoundOnlyIdleWork.Value;
-                if (indexesToWorkOn.Count == 0)
-                    return false;
+                    indexToWorkOn.Index = index;
+                    indexesToWorkOn.Add(indexToWorkOn);
+                }
+            });
+            onlyFoundIdleWork = localFoundOnlyIdleWork.Value;
+            if (indexesToWorkOn.Count == 0)
+                return false;
 
-                context.UpdateFoundWork();
-                context.CancellationToken.ThrowIfCancellationRequested();
+            context.UpdateFoundWork();
+            context.CancellationToken.ThrowIfCancellationRequested();
 
-				using (context.IndexDefinitionStorage.CurrentlyIndexing())
-				{
-					ExecuteIndexingWork(indexesToWorkOn, synchronizationEtag);
-				}
+            using (context.IndexDefinitionStorage.CurrentlyIndexing())
+            {
+                ExecuteIndexingWork(indexesToWorkOn, synchronizationEtag);
+            }
 
             return true;
         }
 
-		public Index[] GetCurrentlyProcessingIndexes()
-		{
-			return currentlyProcessedIndexes.Values.ToArray();
-		}
+        public Index[] GetCurrentlyProcessingIndexes()
+        {
+            return currentlyProcessedIndexes.Values.ToArray();
+        }
 
         protected abstract IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat);
 

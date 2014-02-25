@@ -1606,8 +1606,6 @@ namespace Raven.Database.Indexing
 					PublicName, numberOfAlreadyProducedOutputs, sourceDocumentId, maxNumberOfIndexOutputs));
         }
 
-		public PrecomputedIndexing PrecomputedIndexing { get; set; }
-
 		internal class IndexByIdEqualityComparer : IEqualityComparer<Index>
 		{
 			public bool Equals(Index x, Index y)
