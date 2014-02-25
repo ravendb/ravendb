@@ -1606,16 +1606,7 @@ namespace Raven.Database.Indexing
 					PublicName, numberOfAlreadyProducedOutputs, sourceDocumentId, maxNumberOfIndexOutputs));
         }
 
-		public Task<PrecomputedIndexingBatch> PrecomputedIndexingBatch { get; set; }
-
-		public bool HasPrecomputedDocumentsForMap
-		{
-			get
-			{
-			    var precomputedIndexingBatch = PrecomputedIndexingBatch;
-			    return precomputedIndexingBatch != null && precomputedIndexingBatch.Status == TaskStatus.RanToCompletion;
-			}
-		}
+		public PrecomputedIndexing PrecomputedIndexing { get; set; }
 
 		internal class IndexByIdEqualityComparer : IEqualityComparer<Index>
 		{

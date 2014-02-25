@@ -46,58 +46,131 @@ namespace Raven.Tests.Issues
 			}
 		}
 
+        public class FooMapReduceIndex : AbstractIndexCreationTask<Foo, FooMapReduceIndex.Result>
+        {
+             public class Result
+             {
+                 public string Item { get; set; }
+                 public int Count { get; set; }
+             }
+
+            public FooMapReduceIndex()
+            {
+                Map = foos => from f in foos select new {f.Item, Count = 1};
+                Reduce =
+                    results =>
+                    from result in results
+                    group result by result.Item
+                    into g select new {Item = g.Key, Count = g.Sum(x => x.Count)};
+            }
+        }
+
 		public class MultiMapOutput
 		{
 			public string Item { get; set; }
 		}
 
 		[Fact]
-		public void ShouldWork_Optimization_NewIndexedWillGetPrecomputedDocumentsToIndexToAvoidRetrievingFromDisk()
+		public void OptimizationShouldWork_NewIndexedWillGetPrecomputedDocumentsToIndexToAvoidRetrievingAllDocumentsFromDisk()
 		{
-			using (var store = NewDocumentStore())
-			{
-				using (var session = store.OpenSession())
-				{
-					for (int i = 0; i < 10; i++)
-					{
-						session.Store(new Foo
-						{
-							Item = "Ball/" + i
-						});
+		    using (var store = NewDocumentStore())
+		    {
+		        using (var session = store.OpenSession())
+		        {
+		            for (int i = 0; i < 10; i++)
+		            {
+		                session.Store(new Foo
+		                {
+		                    Item = "Ball/" + i % 2
+		                });
 
-						session.Store(new Bar
-						{
-							Item = "Computer/" + i
-						});
-					}
+		                session.Store(new Bar
+		                {
+		                    Item = "Computer/" + i
+		                });
+		            }
 
-					for (int i = 0; i < 10000; i++)
-					{
-						session.Store(new Baz
-						{
-							Item = "Baz/" + i
-						});
-					}
+		            for (int i = 0; i < 10000; i++)
+		            {
+		                session.Store(new Baz
+		                {
+		                    Item = "Baz/" + i
+		                });
+		            }
 
-					session.SaveChanges();
-				}
+		            session.SaveChanges();
+		        }
 
-				WaitForIndexing(store.DocumentDatabase);
+		        WaitForIndexing(store.DocumentDatabase);
 
-				new SingleMapIndex().Execute(store);
-				new MultiMapIndex().Execute(store);
+		        new SingleMapIndex().Execute(store);
+		        new MultiMapIndex().Execute(store);
+                new FooMapReduceIndex().Execute(store);
 
-				WaitForIndexing(store.DocumentDatabase);
+		        WaitForIndexing(store.DocumentDatabase);
 
-				using (var session = store.OpenSession())
-				{
-					var count1 = session.Query<Foo, SingleMapIndex>().Count();
-					Assert.Equal(10, count1);
+		        using (var session = store.OpenSession())
+		        {
+		            var count1 = session.Query<Foo, SingleMapIndex>().Count();
+		            Assert.Equal(10, count1);
 
-					var count2 = session.Query<MultiMapOutput, MultiMapIndex>().Count();
-					Assert.Equal(20, count2);
-				}
-			}
+		            var count2 = session.Query<MultiMapOutput, MultiMapIndex>().Count();
+		            Assert.Equal(20, count2);
+
+		            var count3 = session.Query<FooMapReduceIndex.Result, FooMapReduceIndex>().ToList();
+                    Assert.Equal(2, count3.Count);
+		        }
+
+		        using (var session = store.OpenSession())
+		        {
+		            session.Store(new Foo
+		            {
+		                Item = "Ball/" + 999
+		            });
+
+		            session.SaveChanges();
+
+		            var count1 = session.Query<Foo, SingleMapIndex>().Customize(x => x.WaitForNonStaleResults()).Count();
+		            Assert.Equal(11, count1);
+
+		            var count2 =
+		                session.Query<MultiMapOutput, MultiMapIndex>().Customize(x => x.WaitForNonStaleResults()).Count();
+		            Assert.Equal(21, count2);
+
+                    var count3 = session.Query<FooMapReduceIndex.Result, FooMapReduceIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
+                    Assert.Equal(3, count3.Count);
+		        }
+		    }
 		}
+
+	    [Fact]
+	    public void NewIndexesForWhichOptimizationIsNotAppliedShouldBeProcessesCorrectly()
+	    {
+	        using (var store = NewDocumentStore())
+	        {
+	            using (var session = store.OpenSession())
+	            {
+	                for (int i = 0; i < 10000; i++)
+	                {
+	                    session.Store(new Foo
+	                    {
+	                        Item = "Foo/" + i
+	                    });
+	                }
+
+	                session.SaveChanges();
+	            }
+
+                WaitForIndexing(store.DocumentDatabase);
+
+                new SingleMapIndex().Execute(store);
+
+	            using (var session = store.OpenSession())
+	            {
+	                var count = session.Query<Foo, SingleMapIndex>().Customize(x => x.WaitForNonStaleResults()).Count();
+	                Assert.Equal(10000, count);
+	            }
+	        }
+	    }
 	}
 }

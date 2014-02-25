@@ -34,23 +34,8 @@ namespace Raven.Database.Indexing
 			if (indexes.Count == 0)
 				return indexes;
 
-			var indexesWithPrecomputedDocs = indexes
-				.Where(x =>
-				{
-				    var precomputedIndexingBatch = x.Index.PrecomputedIndexingBatch;
-				    return precomputedIndexingBatch != null && precomputedIndexingBatch.Status == TaskStatus.RanToCompletion;
-				})
-				.ToList();
-
-			if(indexesWithPrecomputedDocs.Count > 0)
-				return indexesWithPrecomputedDocs;
-
 			var indexesByIndexedEtag = indexes
-				.Where(x =>
-				{
-				    var indexingBatch = x.Index.PrecomputedIndexingBatch;
-				    return indexingBatch == null || indexingBatch.Status == TaskStatus.RanToCompletion;
-				})
+                .Where(x => x.Index.PrecomputedIndexing == null) // indexes with precomputed docs are processes separately
 				.GroupBy(x => x.LastIndexedEtag, new RoughEtagEqualityAndComparison())
 				.OrderBy(x => x.Key, new RoughEtagEqualityAndComparison())
 				.ToList();
