@@ -1610,7 +1610,11 @@ namespace Raven.Database.Indexing
 
 		public bool HasPrecomputedDocumentsForMap
 		{
-			get { return PrecomputedIndexingBatch != null && PrecomputedIndexingBatch.Status == TaskStatus.RanToCompletion; }
+			get
+			{
+			    var precomputedIndexingBatch = PrecomputedIndexingBatch;
+			    return precomputedIndexingBatch != null && precomputedIndexingBatch.Status == TaskStatus.RanToCompletion;
+			}
 		}
 
 		public void PrecomputedDocumentsHasBeenIndexed()
