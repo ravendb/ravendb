@@ -144,19 +144,18 @@ namespace Raven.Database.Indexing
 				if (Log.IsDebugEnabled)
 				{
 					if (newIndexesWithPrecomputedDocs == false)
-						Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-								  jsonDocs.Count, startEtag, string.Join(", ", jsonDocs.Select(x => x.Key)));
+                    {
+                        Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
+								  jsonDocs.Count, startEtag, string.Join(", ", jsonDocs.Select(x => x.Key)));}
 					else
 					{
 						Log.Debug("Found precomputed documents that requires indexing for a new indexes:");
 						
 						foreach (var indexToWorkOn in indexesToWorkOn)
 						{
-							Log.Debug("New index name: {0}, precomputed docs to index: {1}",
+							Log.Debug("New index name: {0}, precomputed docs remaining to index: {1}",
 							          indexToWorkOn.Index.PublicName,
-							          string.Join(", ",
-							                      indexToWorkOn.Index.PrecomputedIndexingBatch.Result.Documents.Take(
-								                      autoTuner.NumberOfItemsToIndexInSingleBatch).Select(x => x.Key)));
+                                      indexToWorkOn.Index.PrecomputedIndexingBatch.Result.Documents.Count);
 						}
 					}
 				}
