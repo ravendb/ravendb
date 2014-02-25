@@ -225,16 +225,19 @@ task TestWinRT -depends Compile, CopyServer {
 task Vnext3 {
 	$global:uploadCategory = "RavenDB-Unstable"
 	$global:uploadMode = "Vnext3"
+	$global:configuration = "Release"
 }
 
 task Unstable {
 	$global:uploadCategory = "RavenDB-Unstable"
 	$global:uploadMode = "Unstable"
+	$global:configuration = "Release"
 }
 
 task Stable {
 	$global:uploadCategory = "RavenDB"
 	$global:uploadMode = "Stable"
+	$global:configuration = "Release"
 }
 
 task RunTests -depends Test,TestSilverlight,TestWinRT
