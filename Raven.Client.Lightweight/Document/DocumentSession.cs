@@ -412,12 +412,7 @@ namespace Raven.Client.Document
                 multiLoadOperation.Complete<T>();
             }
 
-            return ids.Select(id =>
-            {
-                object val;
-                entitiesByKey.TryGetValue(id, out val);
-                return (T)val;
-            }).ToArray();
+            return ids.Select(Load<T>).ToArray();
         }
 
         /// <summary>

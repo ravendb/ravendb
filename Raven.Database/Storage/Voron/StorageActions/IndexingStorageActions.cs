@@ -196,9 +196,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			ushort version;
 			var indexStats = Load(tableStorage.LastIndexedEtags, key, out version);
 
-			if (Buffers.Compare(indexStats.Value<byte[]>("lastEtag"), etag.ToByteArray()) >= 0)
-				return;
-
 			indexStats["lastEtag"] = etag.ToByteArray();
 			indexStats["lastTimestamp"] = timestamp;
 

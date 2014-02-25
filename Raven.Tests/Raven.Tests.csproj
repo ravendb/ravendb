@@ -270,6 +270,7 @@
     <Compile Include="Bugs\CaseSensitiveDeletes.cs" />
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
+    <Compile Include="Bugs\EntityWithStack.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
     <Compile Include="Bundles\Authorization\AuthorizationTest.cs" />
     <Compile Include="Bundles\Authorization\Bugs\Bowes.cs" />
@@ -323,6 +324,7 @@
     <Compile Include="Issues\RavenDB_1302.cs" />
     <Compile Include="Issues\RavenDB_1289.cs" />
     <Compile Include="Issues\RaveDB-1279.cs" />
+    <Compile Include="Issues\RavenDB_1411.cs" />
     <Compile Include="Issues\RavenDB_1466.cs" />
     <Compile Include="Issues\RavenDB_1305.cs" />
     <Compile Include="Issues\RavenDB_1443 .cs" />
@@ -372,6 +374,7 @@
     <Compile Include="Issues\RavenDB_1717.cs" />
     <Compile Include="Issues\RavenDB_1735.cs" />
     <Compile Include="Issues\RavenDB_1749.cs" />
+    <Compile Include="Issues\RavenDB_1760.cs" />
     <Compile Include="Issues\RDBQA_4.cs" />
     <Compile Include="Issues\RavenDB_1553.cs" />
     <Compile Include="Issues\RavenDB_1555.cs" />

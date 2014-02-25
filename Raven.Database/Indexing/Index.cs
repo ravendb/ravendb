@@ -14,6 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -1604,7 +1605,6 @@ namespace Raven.Database.Indexing
                     "Index will be disabled.  Please verify this index definition and consider a re-design of your entities.",
 					PublicName, numberOfAlreadyProducedOutputs, sourceDocumentId, maxNumberOfIndexOutputs));
         }
-
 
 		internal class IndexByIdEqualityComparer : IEqualityComparer<Index>
 		{

@@ -1187,7 +1187,7 @@ namespace Raven.Client.Connection.Async
 		                            RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null,
 									string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
 		{
-			return ExecuteWithReplication("GET", operationMetadata =>
+			return ExecuteWithReplication("GET", async operationMetadata =>
 			{
 				var metadata = new RavenJObject();
 				AddTransactionInformation(metadata);
@@ -1225,17 +1225,26 @@ namespace Raven.Client.Connection.Async
 
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-				return request.ReadResponseJsonAsync()
-						.ContinueWith(task =>
-						{
-							int nextPageStart;
-							if (pagingInformation != null && int.TryParse(request.ResponseHeaders[Constants.NextPageStart], out nextPageStart))
-								pagingInformation.Fill(start, pageSize, nextPageStart);
+				var result = (RavenJArray) await request.ReadResponseJsonAsync();
 
-							return SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)task.Result)
-								.OfType<RavenJObject>())
-								.ToArray();
-						});
+				int nextPageStart;
+				if (pagingInformation != null && int.TryParse(request.ResponseHeaders[Constants.NextPageStart], out nextPageStart))
+					pagingInformation.Fill(start, pageSize, nextPageStart);
+
+				var docResults = result.OfType<RavenJObject>().ToList();
+				var startsWithResults = SerializationHelper.RavenJObjectsToJsonDocuments(docResults.Select(x => (RavenJObject)x.CloneToken()))
+																				.ToArray();
+				return await RetryOperationBecauseOfConflict(operationMetadata, docResults, startsWithResults,
+													() => StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation,
+														  metadataOnly, exclude, transformer, queryInputs),
+													conflictedResultId =>
+												   new ConflictException(
+													   "Conflict detected on " +
+													   conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
+													   ", conflict must be resolved before the document will be accessible", true)
+												   {
+													   ConflictedVersionIds = new[] { conflictedResultId }
+												   });
 			});
         }
 
