@@ -1453,7 +1453,7 @@ namespace Raven.Database
                 };
             });
 
-            if (result.Documents == null || result.Documents.Count == 0)
+            if (result != null && result.Documents != null && result.Documents.Count > 0)
                 indexingExecuter.IndexPrecomputedBatch(result);
 
         }
