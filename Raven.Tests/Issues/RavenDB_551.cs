@@ -4,9 +4,12 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Json.Linq;
+using Raven.Tests.Bundles.MoreLikeThis;
 using Xunit;
+using Xunit.Extensions;
 using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Tests.Issues
@@ -14,18 +17,58 @@ namespace Raven.Tests.Issues
 	public class RavenDB_551 : RavenTest
 	{
 		[Fact]
+		public void Non_parallel_delete_with_optimistic_concurrency_should_not_throw_concurrency_exceptions()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				string id;
+				using (var session = documentStore.OpenSession())
+				{
+					var data = new MyData();
+					session.Store(data);
+					session.SaveChanges();
+
+					id = data.Id;
+				}
+
+				IDocumentSession session1 = null;
+				IDocumentSession session2 = null;
+				try
+				{
+					session1 = documentStore.OpenSession();
+					session1.Advanced.UseOptimisticConcurrency = true;
+
+					session2 = documentStore.OpenSession();
+					session2.Advanced.UseOptimisticConcurrency = true;
+
+					var dataFromSession1 = session1.Load<MyData>(id);
+					var dataFromSession2 = session2.Load<MyData>(id);
+					Assert.NotSame(dataFromSession1,dataFromSession2);
+
+					session1.Delete(dataFromSession1);
+					session2.Delete(dataFromSession2);
+					
+					Assert.DoesNotThrow(() => session1.SaveChanges());
+					Assert.DoesNotThrow(() => session2.SaveChanges());
+				}
+				finally
+				{
+					if (session1 != null) session1.Dispose();
+					if (session2 != null) session2.Dispose();
+				}
+			}
+		}
+
+		[Fact]
 		public void ManyConcurrentDeleteForSameId()
 		{
-			using(GetNewServer())
-			using (var store = new DocumentStore
-				{
-					Url = "http://localhost:8079"
-				})
+			using(var store = NewRemoteDocumentStore(configureStore: documentStore =>
 			{
-				store.EnlistInDistributedTransactions = true;
-				store.ResourceManagerId = new Guid("5402132f-32b5-423e-8b3c-b6e27c5e00fa");
-				store.Initialize();
-
+				documentStore.EnlistInDistributedTransactions = true;
+				documentStore.ResourceManagerId = new Guid("5402132f-32b5-423e-8b3c-b6e27c5e00fa");
+								
+			}))
+			{			
 				string id;
 				int concurrentExceptionsThrown = 0;
 				int concurrentDeleted = 0;
