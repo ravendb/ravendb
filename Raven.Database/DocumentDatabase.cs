@@ -21,6 +21,7 @@ using Lucene.Net.Support;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
+using Raven.Client.Indexes;
 using Raven.Database.Commercial;
 using Raven.Database.Impl.DTC;
 using Raven.Database.Impl.Synchronization;
@@ -1326,13 +1327,117 @@ namespace Raven.Database
 				InvokeSuggestionIndexing(name, definition);
 
 				actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);
-				workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
 			});
 
+			var documentsByEntityNameIndex = new RavenDocumentsByEntityName().IndexName;
+
+			if (name.Equals(documentsByEntityNameIndex, StringComparison.InvariantCultureIgnoreCase) == false &&
+			    IndexStorage.HasIndex(documentsByEntityNameIndex))
+			{
+				// optimization of handling new index creation when the number of document in a database is significantly greater than
+				// number of documents that this index applies to - let us use built-in RavenDocumentsByEntityName to get just appropriate documents
+
+				var index = IndexStorage.GetIndexInstance(definition.IndexId);
+				TryComputeDocumentsForNewIndex(index, definition);
+			}
+
+			workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
 			// The act of adding it here make it visible to other threads
 			// we have to do it in this way so first we prepare all the elements of the 
 			// index, then we add it to the storage in a way that make it public
 			IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
+		}
+
+		private void TryComputeDocumentsForNewIndex(Index index, IndexDefinition definition)
+		{
+			index.PrecomputedIndexingBatch = Task.Factory.StartNew(() =>
+			{
+				var documentsByEntityNameIndex = new RavenDocumentsByEntityName().IndexName;
+
+				long countOfDocuments = 0;
+
+				var result = new PrecomputedIndexingBatch();
+
+				TransactionalStorage.Batch(actions => countOfDocuments = actions.Documents.GetDocumentsCount());
+
+				var numberOfDocsToApplyOptimization = countOfDocuments * 0.01; // optimize if it concerns no more than 1% of all docs
+
+				using (var cts = new CancellationTokenSource())
+				{
+					var docsToIndex = new List<JsonDocument>();
+
+					var entityTagQuery = new StringBuilder();
+
+					var tags = new List<string>();
+
+					foreach (var entityName in IndexDefinitionStorage.GetViewGenerator(definition.IndexId).ForEntityNames)
+					{
+						if (entityTagQuery.Length > 0)
+							entityTagQuery.Clear();
+
+						entityTagQuery.Append("Tag:[[");
+						entityTagQuery.Append(entityName);
+						entityTagQuery.Append("]]");
+
+						tags.Add(entityTagQuery.ToString());
+					}
+
+					var query = string.Join(" OR ", tags);
+
+					Etag lastIndexedEtagByRavenDocumentsByEntityName = Etag.Empty;
+					DateTime lastModifiedByRavenDocumentsByEntityName = new DateTime();
+
+					TransactionalStorage.Batch(actions =>
+					{
+						var stats =
+							actions.Indexing.GetIndexStats(IndexDefinitionStorage.GetIndexDefinition(documentsByEntityNameIndex).IndexId);
+
+						lastIndexedEtagByRavenDocumentsByEntityName = stats.LastIndexedEtag;
+						lastModifiedByRavenDocumentsByEntityName = stats.LastIndexedTimestamp;
+					});
+
+					try
+					{
+						Query(documentsByEntityNameIndex, new IndexQuery()
+						{
+							Query = query,
+							Cutoff = SystemTime.UtcNow
+						}, cts.Token, null, document =>
+						{
+							var metadata = document.Value<RavenJObject>(Constants.Metadata);
+							var key = metadata.Value<string>("@id");
+							var etag = Etag.Parse(metadata.Value<string>("@etag"));
+							var lastModified = DateTime.Parse(metadata.Value<string>(Constants.LastModified));
+							document.Remove(Constants.Metadata);
+
+							docsToIndex.Add(new JsonDocument()
+							{
+								DataAsJson = document,
+								Etag = etag,
+								Key = key,
+								LastModified = lastModified,
+								SkipDeleteFromIndex = true,
+								Metadata = metadata
+							});
+
+							if (docsToIndex.Count > numberOfDocsToApplyOptimization)
+								cts.Cancel();
+						});
+
+						result.Set(lastIndexedEtagByRavenDocumentsByEntityName, lastModifiedByRavenDocumentsByEntityName, docsToIndex);
+					}
+					catch (OperationCanceledException)
+					{
+						// to many documents to apply optimization
+						// ignore an already marked index as optimized and process it as usual
+						index.PrecomputedIndexingBatch = null; 
+						return null;
+					}
+				}
+
+				return result;
+
+			}, TaskCreationOptions.LongRunning);
 		}
 
 		private void InvokeSuggestionIndexing(string name, IndexDefinition definition)

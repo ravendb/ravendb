@@ -14,6 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -1605,6 +1606,17 @@ namespace Raven.Database.Indexing
 					PublicName, numberOfAlreadyProducedOutputs, sourceDocumentId, maxNumberOfIndexOutputs));
         }
 
+		public Task<PrecomputedIndexingBatch> PrecomputedIndexingBatch { get; set; }
+
+		public bool HasPrecomputedDocumentsForMap
+		{
+			get { return PrecomputedIndexingBatch != null && PrecomputedIndexingBatch.Status == TaskStatus.RanToCompletion; }
+		}
+
+		public void PrecomputedDocumentsHasBeenIndexed()
+		{
+			PrecomputedIndexingBatch = null;
+		}
 
 		internal class IndexByIdEqualityComparer : IEqualityComparer<Index>
 		{
