@@ -3,9 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-
-#if !SILVERLIGHT
-#endif
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -19,25 +16,15 @@ using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Storage;
-#if CLIENT
-using RavenFS.Client;
-#else
-
-#endif
 
 namespace Raven.Database.Server.RavenFS.Extensions
 {
-	#if !CLIENT
-
-#endif
 
 	/// <summary>
 	/// Extensions for handling metadata
 	/// </summary>
 	public static class MetadataExtensions
 	{
-#if !CLIENT
-
 		public static void AddHeaders(HttpResponseMessage context, FileAndPages fileAndPages)
 		{
 			foreach (var key in fileAndPages.Metadata.AllKeys)
@@ -137,7 +124,6 @@ namespace Raven.Database.Server.RavenFS.Extensions
 				}
 			}
 		}
-#endif
 
 		private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{

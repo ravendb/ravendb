@@ -12,7 +12,6 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.RavenFS;
 using Raven.Client.RavenFS.Connections;
-using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;

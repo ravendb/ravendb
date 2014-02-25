@@ -11,10 +11,12 @@ using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Extensions;
@@ -26,12 +28,16 @@ using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Enum = System.Enum;
 
 namespace Raven.Database.Config
 {
 	public class InMemoryRavenConfiguration
 	{
-		private CompositionContainer container;
+	    private const string MuninTypeName = "munin";
+	    public const string VoronTypeName = "voron";
+	    private const string EsentTypeName = "esent";
+	    private CompositionContainer container;
 		private bool containerExternallySet;
 		private string dataDirectory;
 		private string pluginsDirectory;
@@ -98,7 +104,6 @@ namespace Raven.Database.Config
 			MaxIndexWritesBeforeRecreate = ravenSettings.MaxIndexWritesBeforeRecreate.Value;
 			MaxIndexOutputsPerDocument = ravenSettings.MaxIndexOutputsPerDocument.Value;
 
-			DisablePerformanceCounters = ravenSettings.DisablePerformanceCounters.Value;
 
 		    PrewarmFacetsOnIndexingMaxAge = ravenSettings.PrewarmFacetsOnIndexingMaxAge.Value;
 		    PrewarmFacetsSyncronousWaitTime = ravenSettings.PrewarmFacetsSyncronousWaitTime.Value;
@@ -150,7 +155,7 @@ namespace Raven.Database.Config
 
 			if (string.IsNullOrEmpty(DefaultStorageTypeName))
 			{
-				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "voron";
+				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? VoronTypeName;
 			}
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
@@ -840,11 +845,7 @@ namespace Raven.Database.Config
 		/// </summary>
 		public int MaxIndexOutputsPerDocument { get; set; }
 
-		/// <summary>
-		/// If True then no PerformanceCounters will be used. Default: false
-		/// </summary>
-		public bool DisablePerformanceCounters { get; set; }
-
+		[Browsable(false)]
         /// <summary>
         /// What is the maximum age of a facet query that we should consider when prewarming
         /// the facet cache when finishing an indexing batch
@@ -919,18 +920,7 @@ namespace Raven.Database.Config
 
 		public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork)
 		{
-			switch (storageEngine.ToLowerInvariant())
-			{
-				case "esent":
-					storageEngine = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
-					break;
-				case "munin":
-					storageEngine = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
-					break;
-                case "voron":
-                    storageEngine = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
-                    break;
-            }
+			storageEngine = StorageEngineAssemblyNameByTypeName(storageEngine);
 			var type = Type.GetType(storageEngine);
 
 			if (type == null)
@@ -939,32 +929,53 @@ namespace Raven.Database.Config
 			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork);
 		}
 
-		public string SelectStorageEngine()
+
+        //TODO : perhaps refactor with enums?
+	    public static string StorageEngineAssemblyNameByTypeName(string typeName)
+	    {
+	        switch (typeName.ToLowerInvariant())
+	        {
+	            case EsentTypeName:
+	                typeName = typeof (Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
+	                break;
+	            case MuninTypeName:
+	                typeName = typeof (Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
+	                break;
+	            case VoronTypeName:
+	                typeName = typeof (Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+	                break;
+                default:
+                    throw new ArgumentException("Invalid storage engine type name");
+	        }
+	        return typeName;
+	    }	  
+
+	    public string SelectStorageEngineAndFetchTypeName()
 		{
 			if (RunInMemory)
 			{
-                if (!string.IsNullOrEmpty(DefaultStorageTypeName) && DefaultStorageTypeName.Equals("voron", StringComparison.InvariantCultureIgnoreCase))
-                    return typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+			    if (!string.IsNullOrWhiteSpace(DefaultStorageTypeName) &&
+			        DefaultStorageTypeName.Equals(EsentTypeName, StringComparison.InvariantCultureIgnoreCase))
+			        return EsentTypeName;
 
-                return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
+                return VoronTypeName;                
 			}
 
-			if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
+            if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
 			{
 				if (File.Exists(Path.Combine(DataDirectory, "Raven.ravendb")))
 				{
-					return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
+					return MuninTypeName;
 				}
 				if (File.Exists(Path.Combine(DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
                 {
-                    return typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+                    return VoronTypeName;
                 }
 				if (File.Exists(Path.Combine(DataDirectory, "Data")))
-					return typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
+					return EsentTypeName;
 			}
 
-			//if all else fails, select Voron as default
-			return DefaultStorageTypeName ?? typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+	        return DefaultStorageTypeName ?? VoronTypeName;
 		}
 
 		public void Dispose()

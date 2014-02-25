@@ -36,7 +36,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		private readonly IDocumentCacher documentCacher;
 
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
-
+        private readonly Dictionary<Etag, Etag> etagTouches = new Dictionary<Etag, Etag>();
 		private readonly TableStorage tableStorage;
 
 		private readonly Index metadataIndex;
@@ -383,6 +383,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			keyByEtagIndex.Delete(writeBatch.Value, preTouchEtag);
 			keyByEtagIndex.Add(writeBatch.Value, newEtag, lowerKey);
+            etagTouches.Add(preTouchEtag, afterTouchEtag);
 
 			logger.Debug("TouchDocument() - document with key = '{0}'", key);
 		}
@@ -418,8 +419,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			var existingEtag = metadata.Etag;
 
+           
 			if (etag != null)
 			{
+                Etag next;
+                while (etagTouches.TryGetValue(etag, out next))
+                {
+                    etag = next;
+                }
+
 				if (existingEtag != etag)
 				{
 					if (etag == Etag.Empty)
