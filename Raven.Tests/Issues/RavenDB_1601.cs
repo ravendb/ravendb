@@ -269,7 +269,7 @@ PutDocument(docId, type);
                 {
                     var animalType = s.Load<AnimalType>("AnimalTypes/Dog");
                     Assert.Equal(2, animalType.Count);
-                    TODO: VerifyOperationsCount(s, 4, 2);
+                    VerifyOperationsCount(s, 4, 2);
                 }
             }
         }
