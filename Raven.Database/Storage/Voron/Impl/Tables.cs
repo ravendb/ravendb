@@ -101,7 +101,7 @@ namespace Raven.Database.Storage.Voron.Impl
 			{
 				public const string ByView = "by_view";
 
-				public const string ByViewAndLevelAndReduceKey  = "by_view_and_level_and_reduce_key";
+				public const string ByViewAndLevelAndHashedReduceKey  = "by_view_and_level_and_hashed_reduce_key";
 
 				public const string ByViewAndLevel = "by_view_and_level";
 			}
@@ -129,9 +129,9 @@ namespace Raven.Database.Storage.Voron.Impl
 
 				public const string ByView = "by_view";
 
-				public const string ByViewAndReduceKey = "by_view_and_reduce_key";
+				public const string ByViewAndHashedReduceKey = "by_view_and_hashed_reduce_key";
 
-				public const string ByViewAndReduceKeyAndSourceBucket = "by_view_and_reduce_key_and_source_bucket";
+				public const string ByViewAndHashedReduceKeyAndSourceBucket = "by_view_and_hashed_reduce_key_and_source_bucket";
 
 				public const string Data = "data";
 			}
@@ -163,13 +163,13 @@ namespace Raven.Database.Storage.Voron.Impl
 
 			public class Indices
 			{
-				public const string ByViewAndReduceKeyAndLevelAndSourceBucket = "by_view_and_reduce_key_and_level_and_source_bucket";
+				public const string ByViewAndHashedReduceKeyAndLevelAndSourceBucket = "by_view_and_hashed_reduce_key_and_level_and_source_bucket";
 
-				public const string ByViewAndReduceKeyAndLevelAndBucket = "by_view_and_reduce_key_and_level_and_bucket";
+				public const string ByViewAndHashedReduceKeyAndLevelAndBucket = "by_view_and_hashed_reduce_key_and_level_and_bucket";
 
 				public const string ByView = "by_view";
 
-				public const string ByViewAndReduceKeyAndLevel = "by_view_and_reduce_key_and_level";
+				public const string ByViewAndHashedReduceKeyAndLevel = "by_view_and_hashed_reduce_key_and_level";
 
 				public const string Data = "data";
 			}

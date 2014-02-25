@@ -54,8 +54,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					{ "data", data }
 				});
 
-			listsByName.MultiAdd(writeBatch.Value, CreateKey(name), etagAsString);
-			listsByNameAndKey.Add(writeBatch.Value, CreateKey(name, key), etagAsString);
+			listsByName.MultiAdd(writeBatch.Value, CreateLowercasedKey(name), etagAsString);
+			listsByNameAndKey.Add(writeBatch.Value, CreateLowercasedKey(name, key), etagAsString);
 		}
 
 		public void Remove(string name, string key)
@@ -63,7 +63,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
 
-			var nameAndKey = CreateKey(name, key);
+			var nameAndKey = CreateLowercasedKey(name, key);
 
 			var read = listsByNameAndKey.Read(Snapshot, nameAndKey, writeBatch.Value);
 			if (read == null)
@@ -75,7 +75,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					var etag = reader.ReadToEnd();
 					tableStorage.Lists.Delete(writeBatch.Value, etag);
-					listsByName.MultiDelete(writeBatch.Value, CreateKey(name), etag);
+					listsByName.MultiDelete(writeBatch.Value, CreateLowercasedKey(name), etag);
 					listsByNameAndKey.Delete(writeBatch.Value, nameAndKey);
 				}
 			}
@@ -85,7 +85,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
 
-			using (var iterator = listsByName.MultiRead(Snapshot, CreateKey(name)))
+			using (var iterator = listsByName.MultiRead(Snapshot, CreateLowercasedKey(name)))
 			{
 				if (!iterator.Seek(start.ToString()))
 					yield break;
@@ -111,7 +111,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public ListItem Read(string name, string key)
 		{
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
-			var nameAndKey = CreateKey(name, key);
+			var nameAndKey = CreateLowercasedKey(name, key);
 
 			var read = listsByNameAndKey.Read(Snapshot, nameAndKey, writeBatch.Value);
 			if (read == null)
@@ -130,7 +130,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	    public ListItem ReadLast(string name)
 	    {
             var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
-	        var nameKey = CreateKey(name);
+	        var nameKey = CreateLowercasedKey(name);
 
 	        using (var iterator = listsByName.MultiRead(Snapshot, nameKey))
 	        {
@@ -148,7 +148,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
 
-			var nameKey = CreateKey(name);
+			var nameKey = CreateLowercasedKey(name);
 
 			using (var iterator = listsByName.MultiRead(Snapshot, nameKey))
 			{
@@ -168,7 +168,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 						tableStorage.Lists.Delete(writeBatch.Value, currentEtag.ToString());
                         listsByName.MultiDelete(writeBatch.Value, nameKey, currentEtag.ToString());
-						listsByNameAndKey.Delete(writeBatch.Value, CreateKey(name, key));
+						listsByNameAndKey.Delete(writeBatch.Value, CreateLowercasedKey(name, key));
 					}
 				}
 				while (iterator.MoveNext());
