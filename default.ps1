@@ -18,24 +18,6 @@ properties {
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
 	$global:configuration = "Debug"
-	
-	$core_db_dlls = @( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???" ) 
-	
-	$web_dlls = ( @( "$base_dir\Raven.Web\bin\Raven.Web.???"  ) + $core_db_dlls)
-	
-	$web_files = @("$base_dir\DefaultConfigs\web.config", "$base_dir\DefaultConfigs\NLog.Ignored.config" )
-	
-	$server_files = ( @( "$base_dir\Raven.Server\bin\$global:configuration\Raven.Server.???", "$base_dir\DefaultConfigs\NLog.Ignored.config") + $core_db_dlls )
-		
-	$client_dlls = @( "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\Raven.Client.Lightweight.???")
-		
-	$silverlight_dlls = @("$base_dir\Raven.Client.Silverlight\bin\$global:configuration\Raven.Client.Silverlight.???",
-	"$base_dir\Raven.Client.Silverlight\bin\$global:configuration\AsyncCtpLibrary_Silverlight5.???", 
-	"$base_dir\Raven.Client.Silverlight\bin\$global:configuration\DH.Scrypt.???", "$base_dir\Raven.Client.Silverlight\bin\$global:configuration\Microsoft.CompilerServices.AsyncTargetingPack.Silverlight5.???")
- 
-	$all_client_dlls = ( @( "$base_dir\Raven.Client.Embedded\bin\$global:configuration\Raven.Client.Embedded.???") + $core_db_dlls )
-	  
-	$test_prjs = @("$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll" )
 }
 
 task default -depends Stable,Test, DoReleasePart1
@@ -101,6 +83,7 @@ task FullStorageTest {
 task Test -depends Compile {
 	Clear-Host
 	
+	$test_prjs = @("$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll" )
 	Write-Host $test_prjs
 	
 	$xUnit = "$lib_dir\xunit\xunit.console.clr4.exe"
@@ -241,11 +224,19 @@ task CleanOutputDirectory {
 	Remove-Item $buildartifacts_dir\Output -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-task CopyEmbeddedClient { 
+task CopyEmbeddedClient {
+	$all_client_dlls = @( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
+	"$base_dir\Raven.Client.Embedded\bin\$global:configuration\Raven.Client.Embedded.???")
+
 	$all_client_dlls | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\EmbeddedClient }
 }
 
-task CopySilverlight { 
+task CopySilverlight {
+	$silverlight_dlls = @("$base_dir\Raven.Client.Silverlight\bin\$global:configuration\Raven.Client.Silverlight.???",
+		"$base_dir\Raven.Client.Silverlight\bin\$global:configuration\AsyncCtpLibrary_Silverlight5.???", 
+		"$base_dir\Raven.Client.Silverlight\bin\$global:configuration\DH.Scrypt.???", 
+		"$base_dir\Raven.Client.Silverlight\bin\$global:configuration\Microsoft.CompilerServices.AsyncTargetingPack.Silverlight5.???")
+
 	$silverlight_dlls + @((Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl5)) | 
 		ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Silverlight }
 }
@@ -265,12 +256,15 @@ task CopyBackup {
 }
 
 task CopyClient {
+	$client_dlls = @( "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\Raven.Client.Lightweight.???")
 	$client_dlls | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Client }
 }
 
 task CopyWeb {
-	$web_dlls | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Web\bin }
-	$web_files | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Web }
+	@( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
+		"$base_dir\Raven.Web\bin\Raven.Web.???"  ) | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Web\bin }
+	@("$base_dir\DefaultConfigs\web.config", 
+		"$base_dir\DefaultConfigs\NLog.Ignored.config" ) | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Web }
 }
 
 task CopyBundles {
@@ -284,6 +278,9 @@ task CopyBundles {
 }
 
 task CopyServer -depends CreateOutpuDirectories {
+	$server_files = @( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
+		"$base_dir\Raven.Server\bin\$global:configuration\Raven.Server.???",
+		"$base_dir\DefaultConfigs\NLog.Ignored.config")
 	$server_files | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Server }
 	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $buildartifacts_dir\Output\Server\Raven.Server.exe.config
 }
