@@ -30,24 +30,39 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			Snapshot = snapshot;
 		}
 
+		protected string CreateLowercasedKey(params object[] values)
+		{
+			return CreateKeyInternal(true, values);
+		}
+
 		protected string CreateKey(params object[] values)
+		{
+			return CreateKeyInternal(false, values);
+		}
+
+		private string CreateKeyInternal(bool isLowerCasedKey, params object[] values)
 		{
 			if (values == null || values.Length == 0)
 				throw new InvalidOperationException("Cannot create an empty key.");
 
-		    if (values.Length == 1)
-		        return values[0].ToString().ToLowerInvariant();
+			if (values.Length == 1)
+				return LowercasedKey(isLowerCasedKey, values[0].ToString());
 
-		    var sb = new StringBuilder();
+			var sb = new StringBuilder();
 			for (var i = 0; i < values.Length; i++)
 			{
 				var value = values[i];
-			    sb.Append(value.ToString().ToLowerInvariant());
+				sb.Append(LowercasedKey(isLowerCasedKey, value.ToString()));
 			    if (i < values.Length - 1)
 			        sb.Append("/");
 			}
 
 		    return sb.ToString();
+		}
+
+		private string LowercasedKey(bool isLowerCasedKey, string key)
+		{
+			return isLowerCasedKey ? key.ToLowerInvariant() : key;
 		}
 
 		protected RavenJObject LoadJson(Table table, Slice key, WriteBatch writeBatch, out ushort version)

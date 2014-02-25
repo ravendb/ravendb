@@ -74,6 +74,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Voron", "Raven.Voron\Voron\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Encryption.IndexFileCodec", "Bundles\Raven.Bundles.Encryption.IndexFileCodec\Raven.Bundles.Encryption.IndexFileCodec.csproj", "{1BB3D982-9675-400D-A247-547C071FBE35}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Voron.Tests", "Raven.Voron\Voron.Tests\Voron.Tests.csproj", "{3C2CD044-CF12-48D1-9C43-64A9058C165E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -480,6 +482,20 @@ Global
 		{1BB3D982-9675-400D-A247-547C071FBE35}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{1BB3D982-9675-400D-A247-547C071FBE35}.Release|x64.ActiveCfg = Release|Any CPU
 		{1BB3D982-9675-400D-A247-547C071FBE35}.Release|x86.ActiveCfg = Release|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Release|ARM.ActiveCfg = Release|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Release|x64.ActiveCfg = Release|Any CPU
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -502,5 +518,6 @@ Global
 		{2FF37223-8F38-4584-821A-9BEB6D76F7A1} = {DB851A36-F2E8-4584-BB39-3CEC4928651B}
 		{C36D71A5-F8F3-45A5-A632-80854926E55E} = {DB851A36-F2E8-4584-BB39-3CEC4928651B}
 		{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390} = {39702BB0-5ADB-4A50-91FE-AB72D7276C42}
+		{3C2CD044-CF12-48D1-9C43-64A9058C165E} = {39702BB0-5ADB-4A50-91FE-AB72D7276C42}
 	EndGlobalSection
 EndGlobal
