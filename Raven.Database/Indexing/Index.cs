@@ -1617,11 +1617,6 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void PrecomputedDocumentsHasBeenIndexed()
-		{
-			PrecomputedIndexingBatch = null;
-		}
-
 		internal class IndexByIdEqualityComparer : IEqualityComparer<Index>
 		{
 			public bool Equals(Index x, Index y)
