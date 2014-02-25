@@ -129,50 +129,26 @@ namespace Raven.Database.Indexing
 
 			indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = true);
 
-	        var takenFromBatch = false;
-
 			try
 			{
-				var newIndexesWithPrecomputedDocs = indexesToWorkOn.All(x => x.Index.HasPrecomputedDocumentsForMap); // IndexingScheduler gives a priority for such indexes and returns them together
-
-				if (newIndexesWithPrecomputedDocs == false)
-				{
-					jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(startEtag);
-					takenFromBatch = true;
-				}
-
+				jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(startEtag);
+					
 				if (Log.IsDebugEnabled)
 				{
-					if (newIndexesWithPrecomputedDocs == false)
-                    {
                         Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-								  jsonDocs.Count, startEtag, string.Join(", ", jsonDocs.Select(x => x.Key)));}
-					else
-					{
-						Log.Debug("Found precomputed documents that requires indexing for a new indexes:");
-						
-						foreach (var indexToWorkOn in indexesToWorkOn)
-						{
-							Log.Debug("New index name: {0}, precomputed docs remaining to index: {1}",
-							          indexToWorkOn.Index.PublicName,
-                                      indexToWorkOn.Index.PrecomputedIndexingBatch.Result.Documents.Count);
-						}
-					}
+								  jsonDocs.Count, startEtag, string.Join(", ", jsonDocs.Select(x => x.Key)));
 				}
 
-				if(takenFromBatch)
-					context.ReportIndexingActualBatchSize(jsonDocs.Count);
+				context.ReportIndexingActualBatchSize(jsonDocs.Count);
 
 				context.CancellationToken.ThrowIfCancellationRequested();
 
-				if (newIndexesWithPrecomputedDocs == false && jsonDocs.Count <= 0)
+				if (jsonDocs.Count <= 0)
 					return;
 
 				var sw = Stopwatch.StartNew();
-				if (newIndexesWithPrecomputedDocs == false)
-					lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
-				else
-					DoActualIndexingWithPrecomputedDocs(indexesToWorkOn);
+
+				lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
 
 				indexingDuration = sw.Elapsed;
 			}
@@ -188,8 +164,7 @@ namespace Raven.Database.Indexing
 					prefetchingBehavior.UpdateAutoThrottler(jsonDocs, indexingDuration);
 				}
 
-				if(takenFromBatch)
-					prefetchingBehavior.BatchProcessingComplete();
+				prefetchingBehavior.BatchProcessingComplete();
 
 				indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = false);
 			}
@@ -211,23 +186,32 @@ namespace Raven.Database.Indexing
 			return lastEtag;
 		}
 
-		private void DoActualIndexingWithPrecomputedDocs(IList<IndexToWorkOn> indexesToWorkOn)
-		{
-			BackgroundTaskExecuter.Instance.ExecuteAll(context, indexesToWorkOn, (indexToWorkOn, i) =>
-			{
-				var precomputedIndexingBatch = indexToWorkOn.Index.PrecomputedIndexingBatch.Result;
+        public void IndexPrecomputedBatch(PrecomputedIndexing.Batch precomputedBatch)
+        {
+            context.MetricsCounters.IndexedPerSecond.Mark(precomputedBatch.Documents.Count);
 
-				var jsonDocs = precomputedIndexingBatch.RemoveAndReturnDocuments(autoTuner.NumberOfItemsToIndexInSingleBatch);
-				var etag = precomputedIndexingBatch.LastIndexedETag;
-				var lastModified = precomputedIndexingBatch.LastModified;
-				var filteredDocs = FilterIndexes(new List<IndexToWorkOn> {indexToWorkOn}, jsonDocs, etag).First();
+            var indexToWorkOn = new IndexToWorkOn()
+            {
+                Index = precomputedBatch.Index,
+                IndexId = precomputedBatch.Index.indexId,
+                LastIndexedEtag = Etag.Empty
+            };
 
-				HandleIndexingFor(filteredDocs, etag, lastModified);
+            var indexingBatchForIndex =
+                FilterIndexes(new List<IndexToWorkOn>() {indexToWorkOn}, precomputedBatch.Documents,
+                              precomputedBatch.LastIndexed).FirstOrDefault();
 
-				if (precomputedIndexingBatch.Documents.Count == 0)
-					indexToWorkOn.Index.PrecomputedIndexingBatch = null;
-			});
-		}
+            if (indexingBatchForIndex == null)
+                return;
+
+            if (Log.IsDebugEnabled)
+            {
+                Log.Debug("Going to index precomputed documents for a new index {0}. Count of precomputed docs {1}",
+                          precomputedBatch.Index.PublicName, precomputedBatch.Documents.Count);
+            }
+
+            HandleIndexingFor(indexingBatchForIndex, precomputedBatch.LastIndexed, precomputedBatch.LastModified);
+        }
 
 		private void HandleIndexingFor(IndexingBatchForIndex batchForIndex, Etag lastEtag, DateTime lastModified)
 		{
