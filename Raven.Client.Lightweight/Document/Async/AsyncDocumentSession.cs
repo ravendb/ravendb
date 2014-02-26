@@ -231,7 +231,7 @@ namespace Raven.Client.Document.Async
 #if !SILVERLIGHT
  null,
 #endif
- AsyncDatabaseCommands, index, new string[0], new string[0], listeners.QueryListeners, isMapReduce);
+ AsyncDatabaseCommands, index, new string[0], new string[0], theListeners.QueryListeners, isMapReduce);
 		}
 
 		/// <summary>
@@ -248,7 +248,7 @@ namespace Raven.Client.Document.Async
 #if !SILVERLIGHT
  null,
 #endif
- AsyncDatabaseCommands, indexName, new string[0], new string[0], listeners.QueryListeners, false);
+ AsyncDatabaseCommands, indexName, new string[0], new string[0], theListeners.QueryListeners, false);
 		}
 
 		/// <summary>
