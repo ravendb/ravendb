@@ -134,7 +134,7 @@ namespace Raven.Database.Server.WebApi
 	            Interlocked.Decrement(ref concurrentRequests);
 	            try
 	            {
-	                FinalizeRequestProcessing(controller, response, sw, ravenUiRequest: false /*TODO: check*/);
+	                FinalizeRequestProcessing(controller, response, sw);
 	            }
 	            catch (Exception e)
 	            {
@@ -332,7 +332,7 @@ namespace Raven.Database.Server.WebApi
 			Interlocked.Decrement(ref physicalRequestsCount);
 		}
 
-		private void FinalizeRequestProcessing(RavenDbApiController controller, HttpResponseMessage response, Stopwatch sw, bool ravenUiRequest)
+		private void FinalizeRequestProcessing(RavenDbApiController controller, HttpResponseMessage response, Stopwatch sw)
 		{
 			LogHttpRequestStatsParams logHttpRequestStatsParam = null;
 		    try
@@ -350,24 +350,18 @@ namespace Raven.Database.Server.WebApi
 		    {
 		        Logger.WarnException("Could not gather information to log request stats", e);
 		    }
-		    finally
-		    {
-               //!! controller.Database.WorkContext.PerformanceCounters.ConcurrentRequests.Decrement(); //??
-               
-            }
 
-			if (ravenUiRequest || logHttpRequestStatsParam == null || sw == null)
+		    if (logHttpRequestStatsParam == null || sw == null)
 				return;
 
 			sw.Stop();
-           
+
+		    controller.Database.WorkContext.MetricsCounters.RequestDuationMetric.Update(sw.ElapsedMilliseconds);
 
 			LogHttpRequestStats(logHttpRequestStatsParam, controller.DatabaseName);
 
 			TraceRequest(logHttpRequestStatsParam, controller.DatabaseName);
 
-			//TODO: log
-			//OutputSavedLogItems(logger);
 		}
 
 		private void TraceRequest(LogHttpRequestStatsParams requestLog, string databaseName)

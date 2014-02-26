@@ -20,6 +20,7 @@ namespace Raven.Database.Util
     {
         readonly Metrics dbMetrics = new Metrics();
 
+        public HistogramMetric RequestDuationMetric { get; private set; }
         public PerSecondCounterMetric DocsPerSecond { get; private set; }
 
         public PerSecondCounterMetric IndexedPerSecond { get; private set; }
@@ -34,7 +35,9 @@ namespace Raven.Database.Util
         public MetricsCountersManager()
         {
             ConcurrentRequests = dbMetrics.Meter("metrics", "req/sec", "Concurrent Requests Meter", TimeUnit.Seconds);
-            
+
+            RequestDuationMetric = dbMetrics.Histogram("metrics", "req duration");
+
             DocsPerSecond = dbMetrics.TimedCounter("metrics", "docs/sec", "Docs Per Second Counter");
             RequestsPerSecondCounter = dbMetrics.TimedCounter("metrics", "req/sec counter", "Requests Per Second");
             ReducedPerSecond = dbMetrics.TimedCounter("metrics", "reduces/sec", "Reduced Per Second Counter");
