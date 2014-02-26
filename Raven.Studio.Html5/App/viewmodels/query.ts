@@ -11,6 +11,7 @@ import queryIndexCommand = require("commands/queryIndexCommand");
 import moment = require("moment");
 import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import querySort = require("models/querySort");
+import getTransformersCommand = require("commands/getTransformersCommand");
 
 class query extends viewModelBase {
 
@@ -27,6 +28,8 @@ class query extends viewModelBase {
     selectedIndexEditUrl: KnockoutComputed<string>;
     sortBys = ko.observableArray<querySort>();
     indexFields = ko.observableArray<string>();
+    transformer = ko.observable<string>();
+    allTransformers = ko.observableArray<transformerDto>();
 
     static containerSelector = "#queryContainer";
 
@@ -38,14 +41,15 @@ class query extends viewModelBase {
         this.statsUrl = ko.computed(() => appUrl.forStatus(this.activeDatabase()));
         this.hasSelectedIndex = ko.computed(() => this.selectedIndex() != null);
         this.selectedIndexEditUrl = ko.computed(() => this.selectedIndex() ? appUrl.forEditIndex(this.selectedIndex(), this.activeDatabase()) : '');
-
-        aceEditorBindingHandler.install();
+        
+        aceEditorBindingHandler.install();        
     }
 
     activate(indexToSelect?: string) {
         super.activate(indexToSelect);
 
         this.fetchAllIndexes(indexToSelect);
+        this.fetchAllTransformers();
     }
 
     attached() {
@@ -77,14 +81,21 @@ class query extends viewModelBase {
             });
     }
 
+    fetchAllTransformers() {
+        new getTransformersCommand(this.activeDatabase())
+            .execute()
+            .done((results: transformerDto[]) => this.allTransformers(results));
+    }
+
     runQuery() {
         var selectedIndex = this.selectedIndex();
         if (selectedIndex) {
             var queryText = this.queryText();
             var sorts = this.sortBys().filter(s => s.fieldName() != null);
             var database = this.activeDatabase();
+            var transformer = this.transformer();
             var resultsFetcher = (skip: number, take: number) => {
-                var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts);
+                var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer);
                 return command
                     .execute()
                     .done((queryResults: pagedResultSet) => this.queryStats(queryResults.additionalResultInfo));
@@ -121,6 +132,25 @@ class query extends viewModelBase {
         sort.fieldName.subscribe(() => this.runQuery());
         sort.sortDirection.subscribe(() => this.runQuery());
         this.sortBys.push(sort);
+    }
+
+    removeSortBy(sortBy: querySort) {
+        this.sortBys.remove(sortBy);
+        this.runQuery();
+    }
+
+    addTransformer() {
+        this.transformer("");
+    }
+
+    selectTransformer(transformer: transformerDto) {
+        this.transformer(transformer.name);
+        this.runQuery();
+    }
+
+    removeTransformer() {
+        this.transformer(null);
+        this.runQuery();
     }
 
     deleteDocsMatchingQuery() {
