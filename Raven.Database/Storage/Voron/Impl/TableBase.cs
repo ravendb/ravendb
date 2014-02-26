@@ -49,9 +49,9 @@ namespace Raven.Database.Storage.Voron.Impl
 			writeBatch.Add(key, stream, TableName, expectedVersion);
 		}
 
-		public virtual void Add(WriteBatch writeBatch, Slice key, Stream value, ushort? expectedVersion = null)
+		public virtual void Add(WriteBatch writeBatch, Slice key, Stream value, ushort? expectedVersion = null, bool shouldIgnoreConcurrencyExceptions = false)
 		{
-			writeBatch.Add(key, value, TableName, expectedVersion);
+			writeBatch.Add(key, value, TableName, expectedVersion, shouldIgnoreConcurrencyExceptions);
 		}
 
 		public virtual void Add(WriteBatch writeBatch, Slice key, RavenJToken value, ushort? expectedVersion = null)
