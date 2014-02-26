@@ -297,8 +297,9 @@ namespace Raven.Storage.Voron
 				return current.Value != null;
 			}
 		}
+        public bool SupportsDtc { get { return false; } }
 
-		public void Compact(InMemoryRavenConfiguration configuration)
+	    public void Compact(InMemoryRavenConfiguration configuration)
 		{
 			//Voron storage does not support compaction
 		}
@@ -332,7 +333,7 @@ namespace Raven.Storage.Voron
 
 		public InFlightTransactionalState GetInFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
 		{            
-		    return new VoronInFlightTransactionalState(put, delete, this);
+		    return new DtcNotSupportedTransactionalState(FriendlyName, put, delete);
 		}
 
 		public IList<string> ComputeDetailedStorageInformation()

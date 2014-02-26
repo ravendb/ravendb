@@ -15,8 +15,11 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanQueryDtcForUncommittedItem()
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
+                if (store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
+
                 using (var tx = new TransactionScope())
                 {
                     Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
@@ -44,8 +47,11 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void NothingToDo_ButCommitIsCAlled()
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
+                if (store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
+
                 using (var tx = new TransactionScope())
                 using (var session = store.OpenSession())
                 {

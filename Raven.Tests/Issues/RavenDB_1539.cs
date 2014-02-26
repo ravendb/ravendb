@@ -23,9 +23,12 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void Several_SaveChanges_for_the_same_document_in_single_transaction_and_the_same_session_should_work()
 		{
-			using (var documentStore = NewRemoteDocumentStore(runInMemory: false, requestedStorage: "voron"))
+            using (var documentStore = NewRemoteDocumentStore(runInMemory: false, requestedStorage: "esent"))
 			using (var session = documentStore.OpenSession())
 			{
+                if(documentStore.DatabaseCommands.GetStatistics().SupportsDtc == false)
+                    return;
+
 				session.Advanced.UseOptimisticConcurrency = true;
 				session.Advanced.AllowNonAuthoritativeInformation = false;
 
@@ -49,9 +52,12 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void Several_SaveChanges_for_the_same_document_in_single_transaction_should_allow_commit_without_concurrency_exception()
 		{
-			using (var documentStore = NewRemoteDocumentStore(runInMemory: false, requestedStorage: "voron"))
+            using (var documentStore = NewRemoteDocumentStore(runInMemory: false, requestedStorage: "esent"))
 			using (var session = documentStore.OpenSession())
 			{
+                if (documentStore.DatabaseCommands.GetStatistics().SupportsDtc == false)
+                    return;
+
 				session.Advanced.UseOptimisticConcurrency = true;
 				session.Advanced.AllowNonAuthoritativeInformation = false;
 
@@ -81,6 +87,9 @@ namespace Raven.Tests.Issues
 			using (var documentStore = NewRemoteDocumentStore(runInMemory: false, requestedStorage: "voron"))
 			using (var session = documentStore.OpenSession())
 			{
+                if (documentStore.DatabaseCommands.GetStatistics().SupportsDtc == false)
+                    return;
+
 				session.Advanced.UseOptimisticConcurrency = true;
 				session.Advanced.AllowNonAuthoritativeInformation = false;
 

@@ -250,6 +250,8 @@ namespace Raven.Storage.Esent
             return e.Error == JET_err.InvalidInstance;
         }
 
+        public bool SupportsDtc { get { return true; } }
+
         void ITransactionalStorage.Compact(InMemoryRavenConfiguration cfg)
         {
             Compact(cfg, (sesid, snp, snt, data) => JET_err.Success);

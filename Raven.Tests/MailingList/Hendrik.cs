@@ -23,9 +23,11 @@ namespace Raven.Tests.MailingList
 
 			var barrier = new Barrier(2);
 
-			using(GetNewServer())
+            using (GetNewServer(requestedStorage: "esent"))
 			using (var documentStore = new DocumentStore() { Url = "http://localhost:8079", EnlistInDistributedTransactions = true }.Initialize())
 			{
+                if(documentStore.DatabaseCommands.GetStatistics().SupportsDtc == false)
+                    return;
 
 				using (var session = documentStore.OpenSession())
 				{
@@ -73,9 +75,12 @@ namespace Raven.Tests.MailingList
 
 			var barrier = new Barrier(2);
 
-			using (GetNewServer())
+            using (GetNewServer(requestedStorage: "esent"))
 			using (var documentStore = new DocumentStore() { Url = "http://localhost:8079", EnlistInDistributedTransactions = true }.Initialize())
 			{
+                if(documentStore.DatabaseCommands.GetStatistics().SupportsDtc == false)
+                    return;
+
 				using (var session = documentStore.OpenSession())
 				{
 					session.Store(new LocationView { Id = id });

@@ -13,8 +13,11 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void ShouldWork()
 		{
-			using(var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
+                if(store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
+
 				using(var tx = new TransactionScope())
 				using (var s = store.OpenSession())
 				{

@@ -409,6 +409,7 @@ namespace Raven.Database
                     DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
                     Errors = workContext.Errors,
                     DatabaseId = TransactionalStorage.Id,
+                    SupportsDtc = TransactionalStorage.SupportsDtc,
                     Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Put" })
                         .Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Delete" }))
                         .Concat(ReadTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Read" }))
@@ -1193,6 +1194,9 @@ namespace Raven.Database
 
         public void PrepareTransaction(string txId)
         {
+            if (TransactionalStorage.SupportsDtc == false)
+                throw new InvalidOperationException("DTC is not supported by " + TransactionalStorage.FriendlyName + " storage.");
+
             try
             {
                 inFlightTransactionalState.Prepare(txId);
@@ -1208,6 +1212,9 @@ namespace Raven.Database
 
         public void Commit(string txId)
         {
+            if (TransactionalStorage.SupportsDtc == false)
+                throw new InvalidOperationException("DTC is not supported by " + TransactionalStorage.FriendlyName + " storage.");
+
             try
             {
                 try

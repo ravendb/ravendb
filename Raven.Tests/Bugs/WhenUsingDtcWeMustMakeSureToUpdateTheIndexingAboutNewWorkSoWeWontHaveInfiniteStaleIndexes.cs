@@ -21,6 +21,9 @@ namespace Raven.Tests.Bugs
 			// This must run on ESENT to expose the failure
 			using (var store = NewRemoteDocumentStore(databaseName: "Test", requestedStorage: "esent"))
 			{
+                if(store.DatabaseCommands.GetStatistics().SupportsDtc == false)
+                    return;
+
 				for (var i = 1; i < 10; i++)
 				{
 					try
