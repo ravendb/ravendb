@@ -287,3 +287,11 @@ interface replicationConfigDto {
     DocumentConflictResolution: string;
     AttachmentConflictResolution: string;
 }
+
+interface transformerDto {
+    name: string;
+    definition: {
+        TransformResults: string;
+        Name: string;
+    }
+}

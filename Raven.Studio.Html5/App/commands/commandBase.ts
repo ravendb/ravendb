@@ -41,9 +41,9 @@ class commandBase {
             var value = args[prop];
             if (value instanceof Array) {
                 for (var i = 0; i < value.length; i++) {
-                    propNameAndValues.push(prop + "=" + encodeURIComponent(value));
+                    propNameAndValues.push(prop + "=" + encodeURIComponent(value[i]));
                 }
-            } else {
+            } else if (value !== undefined) {
                 propNameAndValues.push(prop + "=" + encodeURIComponent(value));
             }
         }

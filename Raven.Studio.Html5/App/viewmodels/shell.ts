@@ -39,7 +39,7 @@ class shell {
         
         this.appUrls = appUrl.forCurrentDatabase();
 
-        new dynamicHeightBindingHandler().install();
+        dynamicHeightBindingHandler.install();
 	}
 
     activate() {
