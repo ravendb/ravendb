@@ -45,6 +45,8 @@ namespace Raven.Abstractions.Data
 
         public MeterData Requests { get; set; }
 
+        public HistogramData RequestsDuration { get; set; }
+
         public class HistogramData
         {
             public long Counter { get; set; }
@@ -52,7 +54,6 @@ namespace Raven.Abstractions.Data
             public double Min { get; set; }
             public double Mean { get; set; }
             public double Stdev { get; set; }
-            public double Var { get; set; }
             public Dictionary<string, double> Percentiles { get; set; }
 
             public HistogramData()
