@@ -3,9 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Collections.Generic;
 using System.Text;
-using System.Web.UI.WebControls;
+
 using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Storage.Voron.StorageActions
@@ -31,39 +30,24 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			Snapshot = snapshot;
 		}
 
-		protected Slice CreateLowercasedKey(params object[] values)
-		{
-			return CreateKeyInternal(true, values);
-		}
-
-		protected Slice CreateKey(params object[] values)
-		{
-			return CreateKeyInternal(false, values);
-		}
-
-		private Slice CreateKeyInternal(bool isLowerCasedKey, params object[] values)
+		protected string CreateKey(params object[] values)
 		{
 			if (values == null || values.Length == 0)
 				throw new InvalidOperationException("Cannot create an empty key.");
 
-			var list = new List<byte>();
+		    if (values.Length == 1)
+		        return values[0].ToString().ToLowerInvariant();
+
+		    var sb = new StringBuilder();
 			for (var i = 0; i < values.Length; i++)
 			{
 				var value = values[i];
-
-				var bytes = value as byte[];
-				list.AddRange(bytes ?? Encoding.UTF8.GetBytes(LowercasedKey(isLowerCasedKey, value.ToString())));
-
-				if (i < values.Length - 1)
-			        list.Add((byte)'/');
+			    sb.Append(value.ToString().ToLowerInvariant());
+			    if (i < values.Length - 1)
+			        sb.Append("/");
 			}
 
-		    return new Slice(list.ToArray());
-		}
-
-		private string LowercasedKey(bool isLowerCasedKey, string key)
-		{
-			return isLowerCasedKey ? key.ToLowerInvariant() : key;
+		    return sb.ToString();
 		}
 
 		protected RavenJObject LoadJson(Table table, Slice key, WriteBatch writeBatch, out ushort version)
