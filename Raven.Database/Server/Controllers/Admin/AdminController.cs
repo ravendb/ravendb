@@ -289,8 +289,6 @@ namespace Raven.Database.Server.Controllers.Admin
                 },
                 LoadedDatabases =
                     from documentDatabase in allDbs
-                    let metrics = documentDatabase.WorkContext.MetricsCounters
-                    let percentiles = metrics.RequestDuationMetric.Percentiles(0.5, 0.75, 0.95, 0.99, 0.999, 0.9999)
                     let indexStorageSize = documentDatabase.GetIndexStorageSizeOnDisk()
                     let transactionalStorageSize = documentDatabase.GetTransactionalStorageSizeOnDisk()
                     let totalDatabaseSize = indexStorageSize + transactionalStorageSize.AllocatedSizeInBytes
@@ -314,37 +312,8 @@ namespace Raven.Database.Server.Controllers.Admin
                         CountOfDocuments = documentDatabase.Statistics.CountOfDocuments,
                         CountOfAttachments = documentDatabase.Statistics.CountOfAttachments,
 
-                        RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue,3),
-                        DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue,3),
-                        IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
-                        ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
-
                         DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
-                        RequestsDuration = new LoadedDatabaseStatistics.HistogramData
-                        {
-                            Counter = metrics.RequestDuationMetric.Count,
-                            Max = metrics.RequestDuationMetric.Max,
-                            Mean = metrics.RequestDuationMetric.Mean,
-                            Min = metrics.RequestDuationMetric.Min,
-                            Stdev = metrics.RequestDuationMetric.StdDev,
-                            Percentiles = new Dictionary<string, double>
-                            {
-                                {"50%", percentiles[0]},
-                                {"75%", percentiles[1]},
-                                {"95%", percentiles[2]},
-                                {"99%", percentiles[3]},
-                                {"99.9%", percentiles[4]},
-                                {"99.99%", percentiles[5]},
-                            }
-                        },
-                        Requests = new LoadedDatabaseStatistics.MeterData
-                        {
-                            Count = metrics.ConcurrentRequests.Count,
-                            FifteenMinuteRate = Math.Round(metrics.ConcurrentRequests.FifteenMinuteRate, 3),
-                            FiveMinuteRate = Math.Round(metrics.ConcurrentRequests.FiveMinuteRate,3),
-                            MeanRate = Math.Round(metrics.ConcurrentRequests.MeanRate, 3),
-                            OneMinuteRate = Math.Round(metrics.ConcurrentRequests.OneMinuteRate,3),
-                        }
+                        Metrics = documentDatabase.CreateMetrics()
                     }
             };
 
