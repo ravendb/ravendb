@@ -6,6 +6,8 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
 using Raven.Abstractions.Util;
+using Raven.Client.Document;
+using Raven.Client.Document.Async;
 using Raven.Json.Linq;
 
 namespace Raven.Client.UniqueConstraints
@@ -20,7 +22,11 @@ namespace Raven.Client.UniqueConstraints
 
 		public static T LoadByUniqueConstraint<T>(this IDocumentSession session, Expression<Func<T, object>> keySelector, object value)
 		{
-			var propertyName = GetPropropertyNameForKeySelector<T>(keySelector);
+			var documentStoreListeners = ((DocumentSession)session).Listeners.StoreListeners;
+			var uniqueConstraintsStoreListener = documentStoreListeners.OfType<UniqueConstraintsStoreListener>().FirstOrDefault();
+			if(uniqueConstraintsStoreListener == null)
+				throw new InvalidOperationException("Could not find UniqueConstraintsStoreListener in the session listeners, did you forget to register it?");
+			var propertyName = GetPropropertyNameForKeySelector(keySelector, uniqueConstraintsStoreListener.UniqueConstraintsTypeDictionary);
 
 			return LoadByUniqueConstraintInternal<T>(session, propertyName, new object[] { value }).FirstOrDefault();
 		}
@@ -28,7 +34,12 @@ namespace Raven.Client.UniqueConstraints
 
 		public static T[] LoadByUniqueConstraint<T>(this IDocumentSession session, Expression<Func<T, object>> keySelector, params object[] values)
 		{
-			var propertyName = GetPropropertyNameForKeySelector<T>(keySelector);
+			var documentStoreListeners = ((DocumentSession)session).Listeners.StoreListeners;
+			var uniqueConstraintsStoreListener = documentStoreListeners.OfType<UniqueConstraintsStoreListener>().FirstOrDefault();
+			if (uniqueConstraintsStoreListener == null)
+				throw new InvalidOperationException("Could not find UniqueConstraintsStoreListener in the session listeners, did you forget to register it?");
+			
+			var propertyName = GetPropropertyNameForKeySelector<T>(keySelector, uniqueConstraintsStoreListener.UniqueConstraintsTypeDictionary);
 
 			return LoadByUniqueConstraintInternal<T>(session, propertyName, values);
 		}
@@ -79,15 +90,15 @@ namespace Raven.Client.UniqueConstraints
 
 
 
-		private static string GetPropropertyNameForKeySelector<T>(Expression<Func<T, object>> keySelector)
+		private static string GetPropropertyNameForKeySelector<T>(Expression<Func<T, object>> keySelector, UniqueConstraintsTypeDictionary uniqueConstraintsTypeDictionary)
 		{
-			var body = GetMemberExpression(keySelector);
+			var body = GetMemberExpression(keySelector, uniqueConstraintsTypeDictionary);
 			var propertyName = body.Member.Name;
 			return propertyName;
 		}
 
 
-	    private static MemberExpression GetMemberExpression<T>(Expression<Func<T, object>> keySelector)
+		private static MemberExpression GetMemberExpression<T>(Expression<Func<T, object>> keySelector, UniqueConstraintsTypeDictionary uniqueConstraintsTypeDictionary)
 	    {
 	        MemberExpression body;
 	        if (keySelector.Body is MemberExpression)
@@ -101,8 +112,15 @@ namespace Raven.Client.UniqueConstraints
 	        }
 			bool isDef = Attribute.IsDefined(body.Member, typeof(UniqueConstraintAttribute));
 
+
 			if (isDef == false)
 			{
+				if (uniqueConstraintsTypeDictionary.GetProperties(body.Member.DeclaringType).Any(x=>x.Configuration.Name == body.Member.Name))
+				{
+					return body;
+				}
+
+
 				var msg = string.Format(
 					"You are calling LoadByUniqueConstraints on {0}.{1}, but you haven't marked this property with [UniqueConstraint]",
 					body.Member.DeclaringType.Name, body.Member.Name);
@@ -143,9 +161,15 @@ namespace Raven.Client.UniqueConstraints
 
 		public static Task<T> LoadByUniqueConstraintAsync<T>(this IAsyncDocumentSession session, Expression<Func<T, object>> keySelector, object value)
 		{
+
+			var documentStoreListeners = ((AsyncDocumentSession)session).Listeners.StoreListeners;
+			var uniqueConstraintsStoreListener = documentStoreListeners.OfType<UniqueConstraintsStoreListener>().FirstOrDefault();
+			if (uniqueConstraintsStoreListener == null)
+				throw new InvalidOperationException("Could not find UniqueConstraintsStoreListener in the session listeners, did you forget to register it?");
+			
 			if (value == null) throw new ArgumentNullException("value", "The unique value cannot be null");
 			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof (T));
-            var body = GetMemberExpression(keySelector);
+            var body = GetMemberExpression(keySelector, uniqueConstraintsStoreListener.UniqueConstraintsTypeDictionary);
 			var propertyName = body.Member.Name;
 		    var att = (UniqueConstraintAttribute) Attribute.GetCustomAttribute(body.Member, typeof (UniqueConstraintAttribute));
 
