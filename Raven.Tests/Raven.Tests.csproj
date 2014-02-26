@@ -318,6 +318,7 @@
     <Compile Include="Issues\1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client.cs" />
+    <Compile Include="Issues\RavenDB_1538.cs" />
     <Compile Include="Issues\RavenDB_1297 .cs" />
     <Compile Include="Issues\RavenDB_1285.cs" />
     <Compile Include="Issues\RavenDB_1540.cs" />
@@ -1743,7 +1744,7 @@
     </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
       <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
-      <Name>Voron</Name>
+      <Name>Voron %28Voron\Voron%29</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

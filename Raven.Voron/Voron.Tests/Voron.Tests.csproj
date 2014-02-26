@@ -121,7 +121,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Voron\Voron.csproj">
       <Project>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</Project>
-      <Name>Voron</Name>
+      <Name>Voron %28Voron\Voron%29</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

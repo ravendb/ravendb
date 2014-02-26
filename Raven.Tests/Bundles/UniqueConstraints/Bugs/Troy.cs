@@ -15,7 +15,7 @@ namespace Raven.Tests.Bundles.UniqueConstraints.Bugs
 	{
 		public class UserAccount
 		{
-			[UniqueConstraint]
+			[UniqueConstraint(CaseInsensitive = true)]
 			public string UserName { get; set; }
 			public string Email { get; set; }
 			public string FirstName { get; set; }

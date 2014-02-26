@@ -39,17 +39,37 @@ namespace Raven.Bundles.UniqueConstraints
 
 				foreach (var uniqueValue in uniqueValues)
 				{
-					Database.Put(
-                        prefix + Util.EscapeUniqueValue(uniqueValue, constraint.CaseInsensitive),
+				    var escapedUniqueValue = Util.EscapeUniqueValue(uniqueValue, constraint.CaseInsensitive);
+                    var uniqueConstraintsDocumentKey = prefix + escapedUniqueValue;
+                    var uniqueConstraintsDocument = Database.Get(uniqueConstraintsDocumentKey, transactionInformation);
+
+				    uniqueConstraintsDocument = uniqueConstraintsDocument != null ? ConvertUniqueConstraintsDocumentIfNecessary(uniqueConstraintsDocument) : new JsonDocument(); // converting for backward compatibility
+
+				    uniqueConstraintsDocument.DataAsJson[escapedUniqueValue] = RavenJObject.FromObject(new { RelatedId = key });
+				    uniqueConstraintsDocument.Metadata[Constants.IsConstraintDocument] = true;
+
+				    Database.Put(
+                        uniqueConstraintsDocumentKey,
 						null,
-						RavenJObject.FromObject(new {RelatedId = key}),
-						new RavenJObject { { Constants.IsConstraintDocument, true } },
+						uniqueConstraintsDocument.DataAsJson,
+						uniqueConstraintsDocument.Metadata,
 						transactionInformation);
 				}
 			}
 		}
 
-		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+	    private JsonDocument ConvertUniqueConstraintsDocumentIfNecessary(JsonDocument uniqueConstraintsDocument)
+	    {
+            // TODO convert from old format to new
+
+	        var oldFormat = uniqueConstraintsDocument.DataAsJson.ContainsKey("RelatedId");
+            if (oldFormat == false)
+                return uniqueConstraintsDocument;
+
+	        throw new NotImplementedException();
+	    }
+
+	    public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			if (key.StartsWith("Raven/"))
 			{
@@ -84,14 +104,19 @@ namespace Raven.Bundles.UniqueConstraints
 
 				foreach (var uniqueValue in uniqueValues)
 				{
-                    var checkDoc = Database.Get(prefix + Util.EscapeUniqueValue(uniqueValue, constraint.CaseInsensitive), transactionInformation);
+                    var escapedUniqueValue = Util.EscapeUniqueValue(uniqueValue, constraint.CaseInsensitive);
+				    var checkDocKey = prefix + escapedUniqueValue;
+                    var checkDoc = Database.Get(checkDocKey, transactionInformation);
 
 					if (checkDoc == null)
 						continue;
 
-					var checkId = checkDoc.DataAsJson.Value<string>("RelatedId");
+				    RavenJToken value;
+                    var checkId = checkDoc.DataAsJson.TryGetValue(escapedUniqueValue, out value)
+                        ? value.Value<string>("RelatedId")
+                        : checkDoc.DataAsJson.Value<string>("RelatedId");
 
-					if (checkId != key)
+					if (!string.IsNullOrEmpty(checkId) && checkId != key)
 						invalidFields.Append(constraint.PropName + ", ");
 				}
 			}
@@ -155,7 +180,15 @@ namespace Raven.Bundles.UniqueConstraints
 				
 			    foreach (var oldUniqueValue in oldUniqueValues)
 			    {
-                    Database.Delete(prefix + Util.EscapeUniqueValue(oldUniqueValue, constraint.CaseInsensitive), null, transactionInformation);
+                    var escapedUniqueValue = Util.EscapeUniqueValue(oldUniqueValue, constraint.CaseInsensitive);
+                    var uniqueConstraintsDocumentKey = prefix + escapedUniqueValue;
+                    var uniqueConstraintsDocument = Database.Get(uniqueConstraintsDocumentKey, transactionInformation);
+
+			        if (uniqueConstraintsDocument == null || !uniqueConstraintsDocument.DataAsJson.Remove(escapedUniqueValue))
+			            continue;
+
+			        if (uniqueConstraintsDocument.DataAsJson.Keys.Count == 0)
+                        Database.Delete(uniqueConstraintsDocumentKey, null, transactionInformation);
 			    }
 
 			}

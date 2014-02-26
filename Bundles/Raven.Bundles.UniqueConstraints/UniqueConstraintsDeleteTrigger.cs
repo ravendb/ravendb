@@ -43,7 +43,29 @@ namespace Raven.Bundles.UniqueConstraints
 
 				foreach (var uniqueValue in uniqueValues)
 				{
-					Database.Delete(prefix + Util.EscapeUniqueValue(uniqueValue, constraint.CaseInsensitive), null, transactionInformation);
+                    var escapedUniqueValue = Util.EscapeUniqueValue(uniqueValue, constraint.CaseInsensitive);
+                    var uniqueConstraintsDocumentKey = prefix + escapedUniqueValue;
+                    var uniqueConstraintsDocument = Database.Get(uniqueConstraintsDocumentKey, transactionInformation);
+
+                    if (uniqueConstraintsDocument == null)
+                        continue;
+
+				    var oldFormat = uniqueConstraintsDocument.DataAsJson.ContainsKey("RelatedId");
+				    var removed = uniqueConstraintsDocument.DataAsJson.Remove(escapedUniqueValue);
+
+                    if (uniqueConstraintsDocument.DataAsJson.Keys.Count == 0 || oldFormat) //backward compatibility
+                    {
+                        Database.Delete(uniqueConstraintsDocumentKey, null, transactionInformation);
+                    }
+                    else if (removed)
+                    {
+                        Database.Put(
+                            uniqueConstraintsDocumentKey,
+                            null,
+                            uniqueConstraintsDocument.DataAsJson,
+                            uniqueConstraintsDocument.Metadata,
+                            transactionInformation);
+                    }
 				}
 			}
 		}
