@@ -50,10 +50,9 @@ namespace Raven.Bundles.UniqueConstraints
                     if (uniqueConstraintsDocument == null)
                         continue;
 
-				    var oldFormat = uniqueConstraintsDocument.DataAsJson.ContainsKey("RelatedId");
-				    var removed = uniqueConstraintsDocument.DataAsJson.Remove(escapedUniqueValue);
+				    var removed = RemoveConstraintFromUniqueConstraintDocument(uniqueConstraintsDocument, escapedUniqueValue);
 
-                    if (uniqueConstraintsDocument.DataAsJson.Keys.Count == 0 || oldFormat) //backward compatibility
+                    if (ShouldRemoveUniqueConstraintDocument(uniqueConstraintsDocument))
                     {
                         Database.Delete(uniqueConstraintsDocumentKey, null, transactionInformation);
                     }
@@ -69,5 +68,31 @@ namespace Raven.Bundles.UniqueConstraints
 				}
 			}
 		}
+
+	    private static bool ShouldRemoveUniqueConstraintDocument(JsonDocument uniqueConstraintsDocument)
+	    {
+            if (!uniqueConstraintsDocument.DataAsJson.ContainsKey("Constraints"))
+                return true;
+
+            if (uniqueConstraintsDocument.DataAsJson.Keys.Count == 0)
+                return true;
+
+            var constraints = (RavenJObject)uniqueConstraintsDocument.DataAsJson["Constraints"];
+
+            if (constraints.Keys.Count == 0)
+                return true;
+
+	        return false;
+	    }
+
+	    private static bool RemoveConstraintFromUniqueConstraintDocument(JsonDocument uniqueConstraintsDocument, string escapedUniqueValue)
+        {
+            if (!uniqueConstraintsDocument.DataAsJson.ContainsKey("Constraints"))
+                return false;
+
+            var constraints = (RavenJObject)uniqueConstraintsDocument.DataAsJson["Constraints"];
+
+            return constraints.Remove(escapedUniqueValue);
+        }
 	}
 }

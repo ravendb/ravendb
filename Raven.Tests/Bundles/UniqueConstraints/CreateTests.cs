@@ -62,7 +62,7 @@ namespace Raven.Tests.Bundles.UniqueConstraints
                 var constraintDocument = session.Load<dynamic>("UniqueConstraints/Users/Email/" + key);
 
 				Assert.NotNull(constraintDocument);
-				Assert.Equal(constraintDocument[key].RelatedId, user.Id);
+				Assert.Equal(constraintDocument.Constraints[key].RelatedId, user.Id);
 			}
 		}
 

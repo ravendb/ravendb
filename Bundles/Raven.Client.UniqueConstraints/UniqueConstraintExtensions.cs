@@ -7,15 +7,21 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Raven.Client.Document;
 using Raven.Client.Document.Async;
-using Raven.Json.Linq;
 
 namespace Raven.Client.UniqueConstraints
 {
 	public static class UniqueConstraintExtensions
 	{
-		public class ConstraintDocument : Dictionary<string, ConstraintDocument.Inner>
+		public class ConstraintDocument
 		{
+		    public ConstraintDocument()
+		    {
+		        Constraints = new Dictionary<string, Inner>();
+		    }
+
 		    public string RelatedId { get; set; }
+
+            public Dictionary<string, Inner> Constraints { get; set; } 
 
             public string GetRelatedIdFor(string key)
             {
@@ -23,7 +29,7 @@ namespace Raven.Client.UniqueConstraints
                     return RelatedId;
 
                 Inner inner;
-                if (TryGetValue(key, out inner))
+                if (Constraints.TryGetValue(key, out inner))
                     return inner.RelatedId;
 
                 return null;
@@ -93,7 +99,7 @@ namespace Raven.Client.UniqueConstraints
 
                 var constraintDocs = session
                 .Include<ConstraintDocument>(x => x.RelatedId)
-                .Include<ConstraintDocument>(x => x.Values.Select(c => c.RelatedId))
+                .Include<ConstraintDocument>(x => x.Constraints.Values.Select(c => c.RelatedId))
                 .Load(constraintsIds.Select(x => x.Id).ToArray());
 
                 var existingDocsIds = new List<string>();
@@ -176,7 +182,7 @@ namespace Raven.Client.UniqueConstraints
 
 			var constraintDocs = session
                 .Include<ConstraintDocument>(x => x.RelatedId)
-                .Include<ConstraintDocument>(x => x.Values.Select(c => c.RelatedId))
+                .Include<ConstraintDocument>(x => x.Constraints.Values.Select(c => c.RelatedId))
                 .Load(constraintsIds.Select(x => x.Id).ToArray());
 
 	        var existingDocsIds = new List<string>();
@@ -219,7 +225,7 @@ namespace Raven.Client.UniqueConstraints
 
             var constraintDoc = await session
                 .Include<ConstraintDocument>(x => x.RelatedId)
-                .Include(x => x.Values.Select(c => c.RelatedId))
+                .Include(x => x.Constraints.Values.Select(c => c.RelatedId))
                 .LoadAsync(uniqueId);
 
             if (constraintDoc == null)
@@ -246,7 +252,7 @@ namespace Raven.Client.UniqueConstraints
 
             var constraintDocs = await session
                 .Include<ConstraintDocument>(x => x.RelatedId)
-                .Include(x => x.Values.Select(c => c.RelatedId))
+                .Include(x => x.Constraints.Values.Select(c => c.RelatedId))
                 .LoadAsync(constraintsIds.Select(x => x.Id).ToArray());
 
             var existingDocsIds = new List<string>();
