@@ -67,9 +67,13 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanQueryDtcForUncommittedItem()
         {
-            using (GetNewServer())
+            using (var server = GetNewServer())
             using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
             {
+
+				if (server.SystemDatabase.TransactionalStorage.SupportsDtc == false)
+					return;
+
                 for (int i = 0; i < 150; i++)
                 {
                     string id;
@@ -107,9 +111,13 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanQueryDtcForUncommittedItem()
         {
-            using (GetNewServer(runInMemory: false))
+            using (var server = GetNewServer(runInMemory: false))
             using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
             {
+
+				if (server.SystemDatabase.TransactionalStorage.SupportsDtc == false)
+					return;
+
                 for (int i = 0; i < 150; i++)
                 {
                     string id;

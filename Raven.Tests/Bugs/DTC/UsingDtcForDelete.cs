@@ -17,6 +17,8 @@ namespace Raven.Tests.Bugs.DTC
 		{
 			using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
+				if (store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+					return;
 				documentKey = "tester123";
 
 				var transactionInformation = new TransactionInformation

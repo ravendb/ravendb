@@ -21,6 +21,8 @@ namespace Raven.Tests.Bugs
 		{
 			using (var documentStore = NewDocumentStore(requestedStorage:storage))
 			{
+				if (documentStore.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+					return;
 				var company = new Company { Name = "Company Name" };
 				var session = documentStore.OpenSession();
 				using (RavenTransactionAccessor.StartTransaction())
@@ -49,6 +51,8 @@ namespace Raven.Tests.Bugs
 		{
 			using (var documentStore = NewDocumentStore(requestedStorage:storage))
 			{
+				if (documentStore.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+					return;
 				using (RavenTransactionAccessor.StartTransaction())
 				{
 					using (var session = documentStore.OpenSession())

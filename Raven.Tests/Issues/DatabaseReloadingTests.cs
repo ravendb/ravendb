@@ -28,6 +28,9 @@ namespace Raven.Tests.Issues
                 Url = "http://localhost:8079"
             }.Initialize())
             {
+
+				if (server.SystemDatabase.TransactionalStorage.SupportsDtc == false)
+					return;
                 store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument { Id = TenantName, Settings = { {"Raven/DataDir", @"~\Databases\Mine"} }, });
 
                 var tx1 = new TransactionInformation {Id = Guid.NewGuid().ToString()};
@@ -57,6 +60,9 @@ namespace Raven.Tests.Issues
                 Url = "http://localhost:8079"
             }.Initialize())
             {
+				if (server.SystemDatabase.TransactionalStorage.SupportsDtc == false)
+					return;
+                
                 store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument { Id = TenantName, Settings = { { "Raven/DataDir", @"~\Databases\Mine" } }, });
 
                 var tx1 = new TransactionInformation { Id = Guid.NewGuid().ToString() };
@@ -87,6 +93,9 @@ namespace Raven.Tests.Issues
 			using (var server = GetNewServer(runInMemory: false))
             using (var store = NewRemoteDocumentStore(ravenDbServer:server))
             {
+				if (server.SystemDatabase.TransactionalStorage.SupportsDtc == false)
+					return;
+                
                 store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument { Id = TenantName, Settings = { { "Raven/DataDir", @"~\Databases\Mine" } }, });
 
                 var tx1 = new TransactionInformation { Id = Guid.NewGuid().ToString() };
