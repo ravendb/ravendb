@@ -335,7 +335,7 @@ namespace Raven.Tests.Helpers
 		    bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? TimeSpan.FromSeconds(20));
 		    if (spinUntil == false)
 		        WaitForUserToContinueTheTest(store);
-		    Assert.True(spinUntil);
+		    Assert.True(spinUntil, "Indexes took took long to become unstale");
 		}
 
 		public static void WaitForIndexing(DocumentDatabase db)
