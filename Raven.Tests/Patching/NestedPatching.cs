@@ -74,8 +74,8 @@ namespace Raven.Tests.Patching
 					},
 				});
 
-			Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post 1""},{""author"":""ayende"",""text"":""good post 2""}],""user"":{""name"":""rahien"",""id"":13}}",
-				patchedDoc.ToString(Formatting.None));
+            Assert.Equal(RavenJToken.Parse(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post 1""},{""author"":""ayende"",""text"":""good post 2""}],""user"":{""name"":""rahien"",""id"":13}}"),
+				patchedDoc,new RavenJTokenEqualityComparer());
 		}
 
 		[Fact]
@@ -96,8 +96,8 @@ namespace Raven.Tests.Patching
 					},
 				});
 
-			Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post 1""},{""author"":""ayende"",""text"":""good post 2""}],""user"":{""name"":""rahien"",""id"":13}}",
-				patchedDoc.ToString(Formatting.None));
+            Assert.Equal(RavenJToken.Parse(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post 1""},{""author"":""ayende"",""text"":""good post 2""}],""user"":{""name"":""rahien"",""id"":13}}"),
+				patchedDoc, new RavenJTokenEqualityComparer());
 		}
 
 		[Fact]

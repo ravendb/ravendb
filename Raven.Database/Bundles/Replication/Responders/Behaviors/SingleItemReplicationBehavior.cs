@@ -70,8 +70,17 @@ namespace Raven.Bundles.Replication.Responders
 
 			if (TryResolveConflict(id, metadata, incoming, existingItem))
 			{
-				AddWithoutConflict(id, existingEtag, metadata, incoming);
-				return;
+                if (metadata.ContainsKey("Raven-Remove-Document-Marker") &&
+                   metadata.Value<bool>("Raven-Remove-Document-Marker"))
+                {
+                    DeleteItem(id, null);
+                    MarkAsDeleted(id, metadata);
+                }
+                else
+                {
+                    AddWithoutConflict(id, existingEtag, metadata, incoming);
+                }
+                return;
 			}
 
 			CreatedConflict createdConflict;
@@ -170,6 +179,21 @@ namespace Raven.Bundles.Replication.Responders
 				MarkAsDeleted(id, metadata);
 				return;
 			}
+
+            if (TryResolveConflict(id, metadata, incoming, existingItem))
+            {
+                if (metadata.ContainsKey("Raven-Remove-Document-Marker") &&
+                    metadata.Value<bool>("Raven-Remove-Document-Marker"))
+                {
+                    DeleteItem(id, null);
+                    MarkAsDeleted(id, metadata);
+                }
+                else
+                {
+                    AddWithoutConflict(id, existingEtag, metadata, incoming);
+                }
+                return;
+            }
 
 			CreatedConflict createdConflict;
 
