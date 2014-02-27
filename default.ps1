@@ -73,7 +73,7 @@ properties {
 		$test_prjs = @("Raven.Tests.dll","Raven.Bundles.Tests.dll" )
 }
 
-task default -depends Stable,Test, DoReleasePart1
+task default -depends Test, DoReleasePart1
 
 task Verify40 {
 	if( (ls "$env:windir\Microsoft.NET\Framework\v4.0*") -eq $null ) {
