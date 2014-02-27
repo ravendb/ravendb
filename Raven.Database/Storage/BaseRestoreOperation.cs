@@ -28,6 +28,8 @@ namespace Raven.Database.Storage
             this.output = output;			
         }
 
+        public abstract void Execute();
+
         protected void LogFailureAndRethrow(Exception e)
         {
             output("Restore Operation: Failure! Could not restore database!");
