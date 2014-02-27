@@ -274,6 +274,8 @@ namespace Raven.Database.Server.Controllers.Admin
 		    var allDbs = new List<DocumentDatabase>();
             DatabasesLandlord.ForAllDatabases(allDbs.Add);
 		    var currentConfiguration = DatabasesLandlord.SystemConfiguration;
+
+            
             var stats =  new AdminStatistics
             {
                 ServerName = currentConfiguration.ServerName,
@@ -287,7 +289,6 @@ namespace Raven.Database.Server.Controllers.Admin
                 },
                 LoadedDatabases =
                     from documentDatabase in allDbs
-                    let metrics = documentDatabase.WorkContext.MetricsCounters
                     let indexStorageSize = documentDatabase.GetIndexStorageSizeOnDisk()
                     let transactionalStorageSize = documentDatabase.GetTransactionalStorageSizeOnDisk()
                     let totalDatabaseSize = indexStorageSize + transactionalStorageSize.AllocatedSizeInBytes
@@ -311,21 +312,8 @@ namespace Raven.Database.Server.Controllers.Admin
                         CountOfDocuments = documentDatabase.Statistics.CountOfDocuments,
                         CountOfAttachments = documentDatabase.Statistics.CountOfAttachments,
 
-                        RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue,3),
-                        DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue,3),
-                        IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
-                        ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
-
                         DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
-
-                        Requests = new LoadedDatabaseStatistics.MeterData
-                        {
-                            Count = metrics.ConcurrentRequests.Count,
-                            FifteenMinuteRate = Math.Round(metrics.ConcurrentRequests.FifteenMinuteRate, 3),
-                            FiveMinuteRate = Math.Round(metrics.ConcurrentRequests.FiveMinuteRate,3),
-                            MeanRate = Math.Round(metrics.ConcurrentRequests.MeanRate, 3),
-                            OneMinuteRate = Math.Round(metrics.ConcurrentRequests.OneMinuteRate,3),
-                        }
+                        Metrics = documentDatabase.CreateMetrics()
                     }
             };
 

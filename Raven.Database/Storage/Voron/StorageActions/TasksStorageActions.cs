@@ -64,9 +64,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					{ "task", task.AsBytes() }
 				}, 0);
 
-			tasksByType.MultiAdd(writeBatch.Value, CreateLowercasedKey(type), idAsString);
-			tasksByIndex.MultiAdd(writeBatch.Value, CreateLowercasedKey(index), idAsString);
-			tasksByIndexAndType.MultiAdd(writeBatch.Value, CreateLowercasedKey(index, type), idAsString);
+			tasksByType.MultiAdd(writeBatch.Value, CreateKey(type), idAsString);
+			tasksByIndex.MultiAdd(writeBatch.Value, CreateKey(index), idAsString);
+			tasksByIndexAndType.MultiAdd(writeBatch.Value, CreateKey(index, type), idAsString);
 		}
 
 		public bool HasTasks
@@ -84,7 +84,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public T GetMergedTask<T>() where T : DatabaseTask
 		{
-			var type = CreateLowercasedKey(typeof(T).FullName);
+			var type = CreateKey(typeof(T).FullName);
 			var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
 
 			using (var iterator = tasksByType.MultiRead(Snapshot, type))
@@ -127,7 +127,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var type = task.GetType().FullName;
 			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
 
-			using (var iterator = tasksByIndexAndType.MultiRead(Snapshot, CreateLowercasedKey(task.Index, type)))
+			using (var iterator = tasksByIndexAndType.MultiRead(Snapshot, CreateKey(task.Index, type)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
@@ -175,9 +175,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
 
 			tableStorage.Tasks.Delete(writeBatch.Value, taskId);
-			tasksByType.MultiDelete(writeBatch.Value, CreateLowercasedKey(type), taskId);
-			tasksByIndex.MultiDelete(writeBatch.Value, CreateLowercasedKey(index), taskId);
-			tasksByIndexAndType.MultiDelete(writeBatch.Value, CreateLowercasedKey(index, type), taskId);
+			tasksByType.MultiDelete(writeBatch.Value, CreateKey(type), taskId);
+			tasksByIndex.MultiDelete(writeBatch.Value, CreateKey(index), taskId);
+			tasksByIndexAndType.MultiDelete(writeBatch.Value, CreateKey(index, type), taskId);
 		}
 
 

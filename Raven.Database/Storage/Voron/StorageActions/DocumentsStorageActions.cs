@@ -210,7 +210,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				return null;
 			}
 
-			var lowerKey = CreateLowercasedKey(key);
+			var lowerKey = CreateKey(key);
 			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch.Value))
 			{
 				logger.Debug("Document with key='{0}' was not found", key);
@@ -248,7 +248,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			var lowerKey = CreateLowercasedKey(key);
+			var lowerKey = CreateKey(key);
 
 			if (tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch.Value))
 				return ReadDocumentMetadata(key);
@@ -262,7 +262,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			var loweredKey = CreateLowercasedKey(key);
+			var loweredKey = CreateKey(key);
 			
 			if(etag != null)
 				EnsureDocumentEtagMatch(loweredKey, etag, "DELETE");
@@ -347,7 +347,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			if (!overwriteExisting && tableStorage.Documents.Contains(Snapshot, CreateLowercasedKey(key), writeBatch.Value))
+			if (!overwriteExisting && tableStorage.Documents.Contains(Snapshot, CreateKey(key), writeBatch.Value))
 			{
 				throw new ConcurrencyException(string.Format("InsertDocument() - overwriteExisting is false and document with key = '{0}' already exists", key));
 			}
@@ -360,7 +360,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			var lowerKey = CreateLowercasedKey(key);
+			var lowerKey = CreateKey(key);
 
 			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch.Value))
 			{
@@ -468,7 +468,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			metadataStream.Position = 0;
 
-			var loweredKey = CreateLowercasedKey(metadata.Key);
+			var loweredKey = CreateKey(metadata.Key);
 
 			ushort? existingVersion;
 			var isUpdate = metadataIndex.Contains(Snapshot, loweredKey, writeBatch.Value, out existingVersion);
@@ -479,7 +479,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private JsonDocumentMetadata ReadDocumentMetadata(string key)
 		{
-			var loweredKey = CreateLowercasedKey(key);
+			var loweredKey = CreateKey(key);
 
 			var metadataReadResult = metadataIndex.Read(Snapshot, loweredKey, writeBatch.Value);
 			if (metadataReadResult == null)
@@ -510,7 +510,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		private bool WriteDocumentData(string key, Etag etag, RavenJObject data, RavenJObject metadata, out Etag newEtag, out Etag existingEtag, out DateTime savedAt)
 		{
 			var keyByEtagDocumentIndex = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
-			var loweredKey = CreateLowercasedKey(key);
+			var loweredKey = CreateKey(key);
 
 			ushort? existingVersion;
 			var isUpdate = tableStorage.Documents.Contains(Snapshot, loweredKey, writeBatch.Value, out existingVersion);
@@ -555,7 +555,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private RavenJObject ReadDocumentData(string key, Etag existingEtag, RavenJObject metadata)
 		{
-			var loweredKey = CreateLowercasedKey(key);
+			var loweredKey = CreateKey(key);
 
 			var existingCachedDocument = documentCacher.GetCachedDocument(loweredKey, existingEtag);
 			if (existingCachedDocument != null)

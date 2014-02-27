@@ -25,7 +25,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public bool IsIndexStale(int id, DateTime? cutOff, Etag cutoffEtag)
 		{
-			var key = CreateLowercasedKey(id);
+			var key = CreateKey(id);
 
 			ushort version;
 			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch.Value, out version);
@@ -91,7 +91,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public bool IsReduceStale(int id)
 		{
 			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
-			using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, CreateLowercasedKey(id)))
+			using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, CreateKey(id)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return false;
@@ -102,7 +102,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public bool IsMapStale(int id)
 		{
-			var key = CreateLowercasedKey(id);
+			var key = CreateKey(id);
 
 			ushort version;
 			var read = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch.Value, out version);
@@ -117,7 +117,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public Tuple<DateTime, Etag> IndexLastUpdatedAt(int id)
 		{
-			var key = CreateLowercasedKey(id);
+			var key = CreateKey(id);
 
 			ushort version;
 			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch.Value, out version);
@@ -167,7 +167,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public int GetIndexTouchCount(int id)
 		{
-			var key = CreateLowercasedKey(id);
+			var key = CreateKey(id);
 
 			ushort version;
 			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch.Value, out version);
