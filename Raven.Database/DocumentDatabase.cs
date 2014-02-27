@@ -1303,7 +1303,7 @@ namespace Raven.Database
 
             PutNewIndexIntoStorage(name, definition);
 
-            workContext.ClearErrorsFor(name);
+            WorkContext.ClearErrorsFor(name);
 
             TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
             {
@@ -1353,7 +1353,7 @@ namespace Raven.Database
             // index, then we add it to the storage in a way that make it public
             IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
 
-            workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
+            WorkContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
             WorkContext.NotifyAboutWork();
         }
 
