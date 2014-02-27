@@ -25,7 +25,7 @@ namespace Raven.Database.Storage.Esent.Backup
 			this.defrag = defrag;
 		}
 
-		public void Execute()
+		public override void Execute()
 		{
 			if (File.Exists(Path.Combine(backupLocation, "RavenDB.Backup")) == false)
 			{
