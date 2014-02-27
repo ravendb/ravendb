@@ -30,6 +30,9 @@ class query extends viewModelBase {
     indexFields = ko.observableArray<string>();
     transformer = ko.observable<string>();
     allTransformers = ko.observableArray<transformerDto>();
+    isDefaultOperatorOr = ko.observable(true);
+    showFields = ko.observable(false);
+    indexEntries = ko.observable(false);
 
     static containerSelector = "#queryContainer";
 
@@ -94,8 +97,11 @@ class query extends viewModelBase {
             var sorts = this.sortBys().filter(s => s.fieldName() != null);
             var database = this.activeDatabase();
             var transformer = this.transformer();
+            var showFields = this.showFields();
+            var indexEntries = this.indexEntries();
+            var useAndOperator = this.isDefaultOperatorOr() === false;
             var resultsFetcher = (skip: number, take: number) => {
-                var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer);
+                var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
                 return command
                     .execute()
                     .done((queryResults: pagedResultSet) => this.queryStats(queryResults.additionalResultInfo));
@@ -150,6 +156,26 @@ class query extends viewModelBase {
 
     removeTransformer() {
         this.transformer(null);
+        this.runQuery();
+    }
+
+    setOperatorOr() {
+        this.isDefaultOperatorOr(true);
+        this.runQuery();
+    }
+
+    setOperatorAnd() {
+        this.isDefaultOperatorOr(false);
+        this.runQuery();
+    }
+
+    toggleShowFields() {
+        this.showFields(!this.showFields());
+        this.runQuery();
+    }
+
+    toggleIndexEntries() {
+        this.indexEntries(!this.indexEntries());
         this.runQuery();
     }
 
