@@ -1377,6 +1377,9 @@ namespace Raven.Database
                             log.Warn("Could not apply precomputed batch for index " + index, t.Exception);
                         }
                         index.IsMapIndexingInProgress = false;
+						WorkContext.ShouldNotifyAboutWork(() => "Precomputed indexing batch for " + index.PublicName + " is completed");
+						WorkContext.NotifyAboutWork();
+
                     });
             }
             catch (Exception)
