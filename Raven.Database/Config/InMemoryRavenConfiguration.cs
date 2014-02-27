@@ -34,7 +34,6 @@ namespace Raven.Database.Config
 {
 	public class InMemoryRavenConfiguration
 	{
-	    private const string MuninTypeName = "munin";
 	    public const string VoronTypeName = "voron";
 	    private const string EsentTypeName = "esent";
 	    private CompositionContainer container;
@@ -627,7 +626,7 @@ namespace Raven.Database.Config
 
 		/// <summary>
 		/// What storage type to use (see: RavenDB Storage engines)
-		/// Allowed values: esent, voron, munin
+		/// Allowed values: esent, voron
 		/// Default: esent
 		/// </summary>
 		public string DefaultStorageTypeName
@@ -938,9 +937,6 @@ namespace Raven.Database.Config
 	            case EsentTypeName:
 	                typeName = typeof (Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 	                break;
-	            case MuninTypeName:
-	                typeName = typeof (Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
-	                break;
 	            case VoronTypeName:
 	                typeName = typeof (Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
 	                break;
@@ -963,10 +959,6 @@ namespace Raven.Database.Config
 
             if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
 			{
-				if (File.Exists(Path.Combine(DataDirectory, "Raven.ravendb")))
-				{
-					return MuninTypeName;
-				}
 				if (File.Exists(Path.Combine(DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
                 {
                     return VoronTypeName;

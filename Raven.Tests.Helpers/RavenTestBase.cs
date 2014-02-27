@@ -295,9 +295,7 @@ namespace Raven.Tests.Helpers
 
             ravenConfiguration.Settings["Raven/Voron/TempPath"] = tempDir;
 
-			if (storageType == "munin")
-				newTransactionalStorage = new Storage.Managed.TransactionalStorage(ravenConfiguration, () => { });
-			else if (storageType == "voron")
+			if (storageType == "voron")
 				newTransactionalStorage = new Storage.Voron.TransactionalStorage(ravenConfiguration, () => { });
 			else
 				newTransactionalStorage = new Storage.Esent.TransactionalStorage(ravenConfiguration, () => { });

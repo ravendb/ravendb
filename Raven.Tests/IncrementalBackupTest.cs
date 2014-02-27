@@ -41,13 +41,6 @@ namespace Raven.Tests
 					session.SaveChanges();
                 }
 
-                if (store.DocumentDatabase.TransactionalStorage.FriendlyName == "Munin")
-                {
-                    var exception = Assert.Throws<InvalidOperationException>(() => store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument()));
-                    Assert.Contains("Backup operation is not supported when running in memory. ", exception.Message);
-                    return;
-                }
-
 			    var indexDefinitionsFolder = Path.Combine(store.DocumentDatabase.Configuration.DataDirectory,"IndexDefinitions");
 			    if (!Directory.Exists(indexDefinitionsFolder))
 			        Directory.CreateDirectory(indexDefinitionsFolder);

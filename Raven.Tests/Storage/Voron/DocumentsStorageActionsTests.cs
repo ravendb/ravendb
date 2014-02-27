@@ -361,7 +361,7 @@ using Raven.Database.Plugins;
 		}
 
 		[Theory]
-		[InlineData("voron")]
+        [PropertyData("Storages")]
 		public void DocumentStorage_Massive_AddDocuments_DeleteDocuments_No_Errors(string storageName)
 		{
 			const int DOCUMENT_COUNT = 750;

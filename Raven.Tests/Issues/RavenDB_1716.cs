@@ -14,8 +14,7 @@ namespace Raven.Tests.Issues
     public class RavenDB_1716 : RavenTest
     {
         [Theory]
-        [InlineData("esent")]
-        [InlineData("voron")]
+        [PropertyData("Storages")]
         public async Task Restore_operation_works_async(string storage)
         {
             var backupDir = NewDataPath("BackupDatabase");
