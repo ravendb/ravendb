@@ -243,6 +243,7 @@
     <Compile Include="Bundles\PeriodicBackups\Controllers\AdminPeriodicBackupController.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\AncestryPutTrigger.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualDeleteTrigger.cs" />
+    <Compile Include="Impl\DTC\DtcNotSupportedTransactionalState.cs" />
     <Compile Include="Indexing\PrecomputedIndexing.cs" />
     <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
@@ -288,7 +289,6 @@
     <Compile Include="Extensions\CancellationTokenSource.cs" />
     <Compile Include="Impl\DTC\EsentInFlightTransactionalState.cs" />
     <Compile Include="Impl\DTC\EsentTransactionContext.cs" />
-    <Compile Include="Impl\DTC\MuninInFlightTransactionalState.cs" />
     <Compile Include="Indexing\IndependentBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
     <Compile Include="LastCollectionEtags.cs" />
@@ -1048,7 +1048,6 @@
     <Compile Include="Storage\Voron\StorageActions\TasksStorageActions.cs" />
     <Compile Include="Storage\Voron\TransactionalStorage.cs" />
     <Compile Include="Storage\Voron\UndisposableStream.cs" />
-    <Compile Include="Storage\Voron\VoronInFlightTransactionalState.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\DatabaseTask.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />

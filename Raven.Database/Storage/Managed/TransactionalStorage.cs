@@ -50,7 +50,7 @@ namespace Raven.Storage.Managed
 		private IUuidGenerator uuidGenerator;
 		private readonly IDocumentCacher documentCacher;
 	    private DisposableAction exitLockDisposable;
-		private MuninInFlightTransactionalState inFlightTransactionalState;
+		private DtcNotSupportedTransactionalState inFlightTransactionalState;
 
 	    public IPersistentSource PersistenceSource
 		{
@@ -282,8 +282,9 @@ namespace Raven.Storage.Managed
 		{
 			get { return current.Value != null; }
 		}
+        public bool SupportsDtc { get { return false; } }
 
-		public void Compact(InMemoryRavenConfiguration compactConfiguration)
+	    public void Compact(InMemoryRavenConfiguration compactConfiguration)
 		{
 			using (var ps = new FileBasedPersistentSource(compactConfiguration.DataDirectory, "Raven", configuration.TransactionMode == TransactionMode.Safe))
 			using (var storage = new TableStorage(ps))
@@ -320,7 +321,7 @@ namespace Raven.Storage.Managed
 
 	    public InFlightTransactionalState GetInFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
 		{
-			return inFlightTransactionalState ?? (inFlightTransactionalState = new MuninInFlightTransactionalState(this, put, delete));
+			return inFlightTransactionalState ?? (inFlightTransactionalState = new DtcNotSupportedTransactionalState(FriendlyName, put, delete));
 		}
 
 		public void ClearCaches()

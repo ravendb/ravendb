@@ -6,6 +6,7 @@ using NLog;
 using Raven.Tests.Bugs.DTC;
 using Raven.Tests.Bundles.Replication;
 using Raven.Tests.Bundles.Replication.Bugs;
+using Raven.Tests.Faceted;
 using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
@@ -22,8 +23,8 @@ namespace Raven.Tryouts
 			{
 				Console.WriteLine("Test loop #"+ i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new RavenDB_406())
-					x.ShouldServeFromCacheIfThereWasNoChange();
+				using (var x = new LazyFacets())
+					x.Default_operator_not_honoured_remote_store_ToFacetsLazy();
 			}
 			
 		}

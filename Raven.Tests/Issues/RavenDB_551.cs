@@ -62,13 +62,16 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ManyConcurrentDeleteForSameId()
 		{
-			using(var store = NewRemoteDocumentStore(configureStore: documentStore =>
+			using(var store = NewRemoteDocumentStore(requestedStorage: "esent", configureStore: documentStore =>
 			{
 				documentStore.EnlistInDistributedTransactions = true;
 				documentStore.ResourceManagerId = new Guid("5402132f-32b5-423e-8b3c-b6e27c5e00fa");
 								
 			}))
-			{			
+			{
+                if (store.DatabaseCommands.GetStatistics().SupportsDtc == false)
+                    return;
+
 				string id;
 				int concurrentExceptionsThrown = 0;
 				int concurrentDeleted = 0;

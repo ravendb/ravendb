@@ -40,6 +40,7 @@ namespace Raven.Database.Storage
 		bool HandleException(Exception exception);
 
 		bool IsAlreadyInBatch { get; }
+        bool SupportsDtc { get; }
 
 		void Compact(InMemoryRavenConfiguration configuration);
 		Guid ChangeId();
