@@ -485,10 +485,6 @@ namespace Raven.Tests.Helpers
                 url = embeddableDocumentStore.Configuration.ServerUrl;
 		    }
 
-		    documentStore.DatabaseCommands.Put("Pls Delete Me", null,
-		        RavenJObject.FromObject(new {StackTrace = new StackTrace(true)}),
-		        new RavenJObject());
-
 			using (server)
 			{
 				Process.Start(url); // start the server
@@ -496,7 +492,7 @@ namespace Raven.Tests.Helpers
 				do
 				{
 					Thread.Sleep(100);
-				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null && (debug == false || Debugger.IsAttached));
+				} while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
 			}
 		}
 
@@ -510,16 +506,13 @@ namespace Raven.Tests.Helpers
 				Url = url ?? "http://localhost:8079"
 			})
 			{
-				documentStore.Initialize();
-				documentStore.DatabaseCommands.Put("Pls Delete Me", null,
-												   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }), new RavenJObject());
-
+			
 				Process.Start(documentStore.Url); // start the server
 
 				do
 				{
 					Thread.Sleep(100);
-				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null && (debug == false || Debugger.IsAttached));
+				} while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
 			}
 		}
 
