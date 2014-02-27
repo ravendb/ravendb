@@ -1,4 +1,7 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Security.Policy;
+using Voron.Exceptions;
 
 namespace Voron.Impl
 {
@@ -112,7 +115,7 @@ namespace Voron.Impl
 			_sliceEqualityComparer = new SliceEqualityComparer();
 		}
 
-		public void Add(Slice key, Stream value, string treeName, ushort? version = null)
+		public void Add(Slice key, Stream value, string treeName, ushort? version = null,bool shouldIgnoreConcurrencyExceptions = false)
 		{
 			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
 			if (value == null) throw new ArgumentNullException("value");
@@ -123,7 +126,10 @@ namespace Voron.Impl
 				throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 
 
-			AddOperation(new BatchOperation(key, value, version, treeName, BatchOperationType.Add));
+			var batchOperation = new BatchOperation(key, value, version, treeName, BatchOperationType.Add);
+			if(shouldIgnoreConcurrencyExceptions)
+				batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
+			AddOperation(batchOperation);
 		}
 
 		public void Delete(Slice key, string treeName, ushort? version = null)
@@ -204,8 +210,16 @@ namespace Voron.Impl
 
 		public class BatchOperation
 		{
-			private readonly long originalStreamPosition;
+#if DEBUG
+			private readonly StackTrace stackTrace;
+			public StackTrace StackTrace
+			{
+				get { return stackTrace; }
+			}
+#endif
 
+			private readonly long originalStreamPosition;
+			private readonly HashSet<Type> exceptionTypesToIgnore = new HashSet<Type>(); 
 			private readonly Action reset = delegate { };
 
 			public BatchOperation(Slice key, Stream value, ushort? version, string treeName, BatchOperationType type)
@@ -218,6 +232,10 @@ namespace Voron.Impl
 
 					reset = () => value.Position = originalStreamPosition;
 				}
+
+#if DEBUG
+				stackTrace = new StackTrace();
+#endif
 			}
 
 			public BatchOperation(Slice key, Slice value, ushort? version, string treeName, BatchOperationType type)
@@ -250,6 +268,12 @@ namespace Voron.Impl
 			public BatchOperationType Type { get; private set; }
 
 			public ushort? Version { get; private set; }
+			
+			public HashSet<Type> ExceptionTypesToIgnore
+			{
+				get { return exceptionTypesToIgnore; }
+			}
+
 
 			public void SetVersionFrom(BatchOperation other)
 			{
@@ -261,6 +285,12 @@ namespace Voron.Impl
 			public void Reset()
 			{
 				reset();
+			}
+
+			public void SetIgnoreExceptionOnExecution<T>()
+				where T : Exception
+			{
+				ExceptionTypesToIgnore.Add(typeof (T));
 			}
 		}
 

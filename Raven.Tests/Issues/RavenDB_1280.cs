@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -12,28 +13,30 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void Referenced_Docs_Are_Indexed_During_Heavy_Writing()
 		{
-			const int iterations = 8000;
+			const int iterations = 6000;
 
 			using (var documentStore = NewRemoteDocumentStore(requestedStorage:"esent"))
 			{
-				new EmailIndex().Execute(documentStore);
-
+				Trace.Write("Making parallel inserts...");
 				Parallel.For(0, iterations, i =>
 				{
+// ReSharper disable once AccessToDisposedClosure
 					using (var session = documentStore.OpenSession())
 					{
 						session.Store(new EmailDocument {Id = "Emails/"+ i,To = "root@localhost", From = "nobody@localhost", Subject = "Subject" + i});
 						session.SaveChanges();
 					}
 
+// ReSharper disable once AccessToDisposedClosure
 					using (var session = documentStore.OpenSession())
 					{
 						session.Store(new EmailText { Id = "Emails/" + i + "/text", Body = "MessageBody" + i });
 						session.SaveChanges();
 					}
 				});
-
-				WaitForIndexing(documentStore);
+				
+				new EmailIndex().Execute(documentStore);
+				WaitForIndexing(documentStore,null,TimeSpan.FromMinutes(1));
 
 				using (var session = documentStore.OpenSession())
 				{

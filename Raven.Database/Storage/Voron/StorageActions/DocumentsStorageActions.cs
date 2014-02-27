@@ -1,4 +1,5 @@
-﻿using Raven.Database.Util.Streams;
+﻿using System.Runtime.CompilerServices;
+using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
@@ -338,8 +339,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public void IncrementDocumentCount(int value)
 		{
-			//nothing to do here
-			//TODO : verify if this is the case - I might be missing something
+			//nothing to do here			
 		}
 
 		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool overwriteExisting)
@@ -377,7 +377,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			preTouchEtag = metadata.Etag;
 			metadata.Etag = newEtag;
 
-			WriteDocumentMetadata(metadata);
+			WriteDocumentMetadata(metadata,shouldIgnoreConcurrencyExceptions:true);
 
 			var keyByEtagIndex = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
 
@@ -452,7 +452,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		}
 
 		//returns true if it was update operation
-		private bool WriteDocumentMetadata(JsonDocumentMetadata metadata)
+		private bool WriteDocumentMetadata(JsonDocumentMetadata metadata,bool shouldIgnoreConcurrencyExceptions = false)
 		{
             var metadataStream = CreateStream();
 
@@ -472,7 +472,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			ushort? existingVersion;
 			var isUpdate = metadataIndex.Contains(Snapshot, loweredKey, writeBatch.Value, out existingVersion);
-			metadataIndex.Add(writeBatch.Value, loweredKey, metadataStream, existingVersion);
+			metadataIndex.Add(writeBatch.Value, loweredKey, metadataStream, existingVersion, shouldIgnoreConcurrencyExceptions);
 
 			return isUpdate;
 		}
@@ -579,6 +579,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private string CreateLowercasedKey(string key)
+		{
+			return key.ToLowerInvariant();
+		}
 
 		public DebugDocumentStats GetDocumentStatsVerySlowly()
 		{
