@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using Raven.Database.Util.Streams;
+﻿using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
@@ -577,12 +576,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					return documentData;	
 				}
 			}
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private string CreateLowercasedKey(string key)
-		{
-			return key.ToLowerInvariant();
 		}
 
 		public DebugDocumentStats GetDocumentStatsVerySlowly()
