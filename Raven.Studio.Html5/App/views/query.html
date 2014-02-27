@@ -46,9 +46,14 @@
                     <i class="fa fa-cog"></i> <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
-                    <li><a href="#">Default operator</a> <label class="btn btn-default">OR</label><label class="btn btn-default">AND</label></li>
-                    <li><a href="#">Show Fields</a></li>
-                    <li><a href="#">Index Entries</a></li>
+                    <li style="padding-left: 20px;">
+                        <div class="btn-group">
+                            <label class="btn btn-default use-bootstrap-tooltip" data-bind="click: setOperatorOr, css: { active: isDefaultOperatorOr }" title="Set the default operator to OR">Or</label>
+                            <label class="btn btn-default use-bootstrap-tooltip" data-bind="click: setOperatorAnd, css: { active: !isDefaultOperatorOr() }" title="Set the default operator to AND">And</label>
+                        </div>
+                    </li>
+                    <li><a href="#"><label class="btn btn-default" data-bind="click: toggleShowFields, css: { active: showFields }">Show Fields</label></a></li>
+                    <li><a href="#"><label class="btn btn-default" data-bind="click: toggleIndexEntries, css: { active: indexEntries }">Index Entries</label></a></li>
                 </ul>
             </div>
             <a class="btn btn-default use-bootstrap-tooltip" data-bind="attr: { href: editIndexUrl }, enable: hasSelectedIndex" title="Edit the index (F2)"><i class="fa fa-pencil"></i></a>
