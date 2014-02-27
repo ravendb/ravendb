@@ -18,8 +18,7 @@ namespace Raven.Tests.Bundles.Encryption
 	public class EncryptionBackupAndRestore : RavenTest
 	{
 		[Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public async Task CanRestoreAnEncryptedDatabase(string storageEngineTypeName)
 		{			
 			IOExtensions.DeleteDirectory(@"~\Databases\Db1".ToFullPath());

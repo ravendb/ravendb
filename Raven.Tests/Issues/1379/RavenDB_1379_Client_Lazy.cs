@@ -17,8 +17,7 @@ namespace Raven.Tests.Issues
         }
 
 	    [Theory]
-	    [InlineData("voron")]
-	    [InlineData("esent")]
+        [PropertyData("Storages")]
 	    public void PagingWithoutFilters(string requestedStorage)
 	    {
 	        using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
@@ -89,8 +88,7 @@ namespace Raven.Tests.Issues
 	    }
 
         [Theory]
-        [InlineData("voron")]
-        [InlineData("esent")]
+        [PropertyData("Storages")]
         public void PagingWithoutFilters_Remote(string requestedStorage)
         {
             using (var documentStore = NewRemoteDocumentStore(requestedStorage: requestedStorage))
@@ -161,8 +159,7 @@ namespace Raven.Tests.Issues
         }
 
         [Theory]
-        [InlineData("voron")]
-        [InlineData("esent")]
+        [PropertyData("Storages")]
         public void PagingWithoutFiltersWithPagingInformation(string requestedStorage)
         {
             using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
@@ -247,8 +244,7 @@ namespace Raven.Tests.Issues
         }
 
         [Theory]
-        [InlineData("voron")]
-        [InlineData("esent")]
+        [PropertyData("Storages")]
         public void PagingWithoutFiltersWithPagingInformation_Remote(string requestedStorage)
         {
             using (var documentStore = NewRemoteDocumentStore(requestedStorage: requestedStorage))
@@ -333,8 +329,7 @@ namespace Raven.Tests.Issues
         }
 
         [Theory]
-        [InlineData("voron")]
-        [InlineData("esent")]
+        [PropertyData("Storages")]
         public void PagingWithExcludesWithPagingInformation(string requestedStorage)
         {
             using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
@@ -415,8 +410,7 @@ namespace Raven.Tests.Issues
         }
 
         [Theory]
-        [InlineData("voron")]
-        [InlineData("esent")]
+        [PropertyData("Storages")]
         public void PagingWithExcludesWithPagingInformation_Remote(string requestedStorage)
         {
             using (var documentStore = NewRemoteDocumentStore(requestedStorage: requestedStorage))
@@ -497,8 +491,7 @@ namespace Raven.Tests.Issues
         }
 
         [Theory]
-        [InlineData("voron")]
-        [InlineData("esent")]
+        [PropertyData("Storages")]
         public void PagingWithMatchesWithPagingInformation(string requestedStorage)
         {
             using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
@@ -578,8 +571,7 @@ namespace Raven.Tests.Issues
         }
 
         [Theory]
-        [InlineData("voron")]
-        [InlineData("esent")]
+        [PropertyData("Storages")]
         public void PagingWithMatchesWithPagingInformation_Remote(string requestedStorage)
         {
             using (var documentStore = NewRemoteDocumentStore(requestedStorage: requestedStorage))

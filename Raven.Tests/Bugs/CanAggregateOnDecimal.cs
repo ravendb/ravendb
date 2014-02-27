@@ -80,8 +80,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public void Reduce(string storageName)
 		{
 			using (var store = NewDocumentStore(requestedStorage:storageName))

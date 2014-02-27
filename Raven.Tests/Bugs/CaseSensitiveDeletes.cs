@@ -13,8 +13,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public void ShouldWork_WithCount(string storageName)
 		{
 			using (var documentStore = NewDocumentStore(requestedStorage:storageName))
@@ -46,8 +45,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public void ShouldWork_WithAnotherQuery(string storageName)
 		{
 			using (var documentStore = NewDocumentStore(requestedStorage: storageName))

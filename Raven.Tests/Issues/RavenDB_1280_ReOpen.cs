@@ -23,8 +23,7 @@ namespace Raven.Tests.Bugs
         }
 
         [Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public void Can_Index_With_Missing_LoadDocument_References(string storageTypeName)
         {
             const int iterations = 8000;

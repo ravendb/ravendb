@@ -17,9 +17,7 @@ namespace Raven.Tests.Issues
 	public class RavenDB_1435 : RavenTest
 	{
 		[Theory]
-		[InlineData("esent")]
-		[InlineData("voron")] //TODO : investigate already disposed pager issue at voron,happened once
-		[InlineData("munin")]
+        [PropertyData("Storages")]
 		public void ShouldWork(string requestedStorage)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
