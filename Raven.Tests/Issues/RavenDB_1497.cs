@@ -147,29 +147,6 @@ namespace Raven.Tests.Issues
 					Assert.Equal(2, docs.Results.Count);
 
 				}
-				//QueryResult docs = null;
-
-				//for (int i = 0; i < 500; i++)
-				//{
-				//	docs = db.Query("Users/ByName", new IndexQuery
-				//	{
-				//		Query = "Name:*",
-				//		Start = 0,
-				//		PageSize = 10
-				//	});
-				//	if (docs.IsStale == false)
-				//		break;
-
-				//	Thread.Sleep(100);
-				//}
-
-				//Assert.NotNull(docs);
-				//Assert.Equal(2, docs.Results.Count);
-
-				//var jObject = db.Get("ayende", null).ToJson();
-				//Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
-				//jObject = db.Get("itamar", null).ToJson();
-				//Assert.Equal("itamar@ayende.com", jObject.Value<string>("email"));
 			}
 		}
 	}
