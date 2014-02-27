@@ -56,7 +56,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (String.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-            var loweredKey = CreateLowercasedKey(key);
+            var loweredKey = CreateKey(key);
 
 			var keyByETagIndice = attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag);
             var isUpdate = attachmentsTable.Contains(Snapshot, loweredKey, writeBatch.Value);
@@ -138,7 +138,7 @@ but the attachment itself was found. Data corruption?", key));
 			if (String.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			var loweredKey = CreateLowercasedKey(key);
+            var loweredKey = CreateKey(key);
 
             if (!attachmentsTable.Contains(Snapshot, loweredKey, writeBatch.Value))
 			{
@@ -169,7 +169,7 @@ but the attachment itself was found. Data corruption?", key));
 
 		public Attachment GetAttachment(string key)
 		{
-			var loweredKey = CreateLowercasedKey(key);
+            var loweredKey = CreateKey(key);
 
             if (!attachmentsTable.Contains(Snapshot, loweredKey, writeBatch.Value))
 				return null;
@@ -212,7 +212,7 @@ but the attachment itself was found. Data corruption?", key));
             return tableStorage.GetEntriesCount(tableStorage.Attachments);
 	    }
 
-	    internal Stream GetAttachmentStream(string key)
+	    internal Stream GetAttachmentStream(Slice key)
 		{
             if (!attachmentsTable.Contains(Snapshot, key, writeBatch.Value))
 				return new MemoryStream();
@@ -355,7 +355,7 @@ but the attachment itself was found. Data corruption?", key));
 			return attachmentInfo;
 		}
 
-		private Etag ReadCurrentEtag(string key)
+		private Etag ReadCurrentEtag(Slice key)
 		{
             var metadataReadResult = metadataIndex.Read(Snapshot, key, writeBatch.Value);
 			if (metadataReadResult == null)
@@ -366,7 +366,7 @@ but the attachment itself was found. Data corruption?", key));
 			}
 		}
 
-        private RavenJObject ReadAttachmentMetadata(string key, out Etag etag)
+        private RavenJObject ReadAttachmentMetadata(Slice key, out Etag etag)
 		{
             var metadataReadResult = metadataIndex.Read(Snapshot, key, writeBatch.Value);
 			if (metadataReadResult == null) //precaution
@@ -383,7 +383,7 @@ but the attachment itself was found. Data corruption?", key));
 			}
 		}
 
-        private void WriteAttachmentMetadata(string key, Etag etag, RavenJObject headers)
+        private void WriteAttachmentMetadata(Slice key, Etag etag, RavenJObject headers)
 		{
             var memoryStream = CreateStream();
 			memoryStream.Write(etag);
@@ -393,7 +393,7 @@ but the attachment itself was found. Data corruption?", key));
             metadataIndex.Add(writeBatch.Value, key, memoryStream);
 		}
 
-        private bool IsAttachmentEtagMatch(string key, Etag etag, out Etag existingEtag)
+        private bool IsAttachmentEtagMatch(Slice key, Etag etag, out Etag existingEtag)
 		{
             existingEtag = ReadCurrentEtag(key);
 
