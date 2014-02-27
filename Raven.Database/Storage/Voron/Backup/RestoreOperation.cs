@@ -3,7 +3,6 @@ using System.Linq;
 using Raven.Database.Config;
 using System;
 using System.IO;
-using Raven.Database.Storage.Voron.Impl;
 using Voron;
 using Voron.Impl.Backup;
 
