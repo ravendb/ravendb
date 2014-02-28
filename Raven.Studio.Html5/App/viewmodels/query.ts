@@ -12,6 +12,7 @@ import moment = require("moment");
 import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import querySort = require("models/querySort");
 import getTransformersCommand = require("commands/getTransformersCommand");
+import deleteDocumentsMatchingQueryConfirm = require("viewmodels/deleteDocumentsMatchingQueryConfirm");
 
 class query extends viewModelBase {
 
@@ -90,7 +91,7 @@ class query extends viewModelBase {
             .done((results: transformerDto[]) => this.allTransformers(results));
     }
 
-    runQuery() {
+    runQuery(): pagedList {
         var selectedIndex = this.selectedIndex();
         if (selectedIndex) {
             var queryText = this.queryText();
@@ -108,7 +109,11 @@ class query extends viewModelBase {
             };
             var resultsList = new pagedList(resultsFetcher);
             this.queryResults(resultsList);
+
+            return resultsList;
         }
+
+        return null;
     }
 
     setSelectedIndex(indexName: string) {
@@ -180,6 +185,24 @@ class query extends viewModelBase {
     }
 
     deleteDocsMatchingQuery() {
+        // Run the query so that we have an idea of what we'll be deleting.
+        var queryResult = this.runQuery();
+        queryResult
+            .fetch(0, 1)
+            .done((results: pagedResultSet) => {
+                if (results.totalResultCount === 0) {
+                    app.showMessage("There are no documents matching your query.", "Nothing to do");
+                } else {
+                    this.promptDeleteDocsMatchingQuery(results.totalResultCount);
+                }
+            });
+    }
+
+    promptDeleteDocsMatchingQuery(resultCount: number) {
+        var viewModel = new deleteDocumentsMatchingQueryConfirm(this.selectedIndex(), this.queryText(), resultCount, this.activeDatabase());
+        app
+            .showDialog(viewModel)
+            .done(() => this.runQuery());
     }
 }
 

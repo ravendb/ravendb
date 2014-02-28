@@ -73,6 +73,7 @@
     <TypeScriptCompile Include="App\commands\createDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteCollectionCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDatabaseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\deleteDocsMatchingQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentsCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\getAlertsCommand.ts" />
@@ -117,6 +118,7 @@
     <TypeScriptCompile Include="App\viewmodels\databases.ts" />
     <TypeScriptCompile Include="App\viewmodels\databaseSettings.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteDatabaseConfirm.ts" />
+    <TypeScriptCompile Include="App\viewmodels\deleteDocumentsMatchingQueryConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteDocuments.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteIndexesConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\dialogViewModelBase.ts" />
@@ -150,6 +152,7 @@
     <TypeScriptCompile Include="App\commands\getAutomaticConflictResolutionDocumentCommand.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\deleteDocumentsMatchingQueryConfirm.html" />
     <Content Include="App\views\replications.html" />
     <Content Include="App\views\copyDocuments.html" />
     <Content Include="App\views\createDatabase.html" />
