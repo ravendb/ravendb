@@ -58,11 +58,11 @@ namespace Raven.Tests.Issues
             public int Deletes { get; set; }
         }
 
-        private void VerifyOperationsCount(IDocumentSession session, int expectedIndexInvocations, int expectedDeleteInvocations)
+        private void VerifyOperationsCount(IDocumentSession session, int expectedMinIndexInvocations, int expectedMinDeleteInvocations)
         {
             var opCounter = session.Load<RavenJObject>("opCounter");
-            Assert.Equal(expectedIndexInvocations, opCounter.Value<int>("Index"));
-            Assert.Equal(expectedDeleteInvocations, opCounter.Value<int>("Deletes"));
+            Assert.True(expectedMinIndexInvocations <= opCounter.Value<int>("Index"));
+            Assert.True(expectedMinDeleteInvocations <= opCounter.Value<int>("Deletes"));
         }
 
         [Fact]

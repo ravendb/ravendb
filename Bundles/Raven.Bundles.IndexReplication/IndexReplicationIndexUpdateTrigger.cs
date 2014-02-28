@@ -162,7 +162,7 @@ namespace Raven.Bundles.IndexReplication
 				commands.Enqueue(cmd);
 			}
 
-			public override void OnIndexEntryDeleted(string entryKey)
+			public override void OnIndexEntryDeleted(string entryKey, Document document)
 			{
 				var cmd = _providerFactory.CreateCommand();
 				var parameter = cmd.CreateParameter();
