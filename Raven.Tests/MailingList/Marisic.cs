@@ -11,7 +11,7 @@ namespace Raven.Tests.MailingList
 	public class Marisic : RavenTest
 	{
 		[Fact]
-		public void StartsWith_Munin_Embedded()
+		public void StartsWith_Embedded()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -47,7 +47,7 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void StartsWith_Munin_Remote()
+		public void StartsWith_Remote()
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
@@ -155,7 +155,7 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void StartsWith_Munin_Embedded_Async()
+		public void StartsWith_Embedded_Async()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -191,7 +191,7 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void StartsWith_Munin_Remote_Async()
+		public void StartsWith_Remote_Async()
 		{
 			using (var store = NewRemoteDocumentStore())
 			{

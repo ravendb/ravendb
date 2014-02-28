@@ -318,6 +318,7 @@
     <Compile Include="Issues\1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client.cs" />
+    <Compile Include="Issues\RavenDB_1538.cs" />
     <Compile Include="Issues\RavenDB_1297 .cs" />
     <Compile Include="Issues\RavenDB_1285.cs" />
     <Compile Include="Issues\RavenDB_1540.cs" />
@@ -375,6 +376,7 @@
     <Compile Include="Issues\RavenDB_1735.cs" />
     <Compile Include="Issues\RavenDB_1749.cs" />
     <Compile Include="Issues\RavenDB_1760.cs" />
+    <Compile Include="Issues\RDBQA_1.cs" />
     <Compile Include="Issues\RDBQA_4.cs" />
     <Compile Include="Issues\RavenDB_1553.cs" />
     <Compile Include="Issues\RavenDB_1555.cs" />
@@ -1511,7 +1513,6 @@
     <Compile Include="Storage\Attachments.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Storage\Bugs\OpenAfterCompaction.cs" />
     <Compile Include="Storage\DocEtag.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -1539,19 +1540,6 @@
     <Compile Include="MultiGet\MultiGetProfiling.cs" />
     <Compile Include="MultiGet\MultiGetQueries.cs" />
     <Compile Include="MultiGet\MultiGetSecurity.cs" />
-    <Compile Include="Munin\Bugs\Compaction.cs" />
-    <Compile Include="Munin\Bugs\MultiThreadedWrites.cs" />
-    <Compile Include="Munin\CanWorkWithTwoDicsInSameFile.cs" />
-    <Compile Include="Munin\Conflicts.cs" />
-    <Compile Include="Munin\MultiDicInSingleFile.cs" />
-    <Compile Include="Munin\MyToDoList.cs" />
-    <Compile Include="Munin\Optimize.cs" />
-    <Compile Include="Munin\Puts.cs" />
-    <Compile Include="Munin\PutsAfterRestart.cs" />
-    <Compile Include="Munin\Removes.cs" />
-    <Compile Include="Munin\SimpleFileTest.cs" />
-    <Compile Include="Munin\ToDo.cs" />
-    <Compile Include="Munin\ToDoRepository.cs" />
     <Compile Include="NotModified\DocumentNotModified.cs" />
     <Compile Include="Patching\MetadataPatching.cs" />
     <Compile Include="MailingList\Phil-Updated.cs" />
@@ -1743,7 +1731,7 @@
     </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
       <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
-      <Name>Voron</Name>
+      <Name>Voron %28Voron\Voron%29</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
