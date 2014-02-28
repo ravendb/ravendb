@@ -4,7 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Linq;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
+using Raven.Tests.Issues;
 using Xunit;
 
 namespace Raven.Tests.Bugs

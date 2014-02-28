@@ -119,8 +119,8 @@ namespace Raven.Database.Server.Controllers.Admin
 				}
 			}
 
-			if (File.Exists(Path.Combine(restoreRequest.RestoreLocation, "Raven.ravendb")))
-				ravenConfiguration.DefaultStorageTypeName = typeof (Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
+            if (File.Exists(Path.Combine(restoreRequest.RestoreLocation, Voron.Impl.Constants.DatabaseFilename)))
+                ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
 			else if (Directory.Exists(Path.Combine(restoreRequest.RestoreLocation, "new")))
 				ravenConfiguration.DefaultStorageTypeName = typeof (Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 
@@ -274,6 +274,8 @@ namespace Raven.Database.Server.Controllers.Admin
 		    var allDbs = new List<DocumentDatabase>();
             DatabasesLandlord.ForAllDatabases(allDbs.Add);
 		    var currentConfiguration = DatabasesLandlord.SystemConfiguration;
+
+            
             var stats =  new AdminStatistics
             {
                 ServerName = currentConfiguration.ServerName,
@@ -309,9 +311,9 @@ namespace Raven.Database.Server.Controllers.Admin
                         TotalDatabaseHumaneSize = DatabaseSize.Humane(totalDatabaseSize),
                         CountOfDocuments = documentDatabase.Statistics.CountOfDocuments,
                         CountOfAttachments = documentDatabase.Statistics.CountOfAttachments,
-                        RequestsPerSecond = Math.Round(documentDatabase.WorkContext.PerformanceCounters.RequestsPerSecond.NextValue(), 2),
-                        ConcurrentRequests = (int)documentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.NextValue(),
+
                         DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
+                        Metrics = documentDatabase.CreateMetrics()
                     }
             };
 

@@ -1,4 +1,6 @@
-﻿namespace Raven.Database.Storage.Voron.StorageActions
+﻿using Raven.Database.Util.Streams;
+
+namespace Raven.Database.Storage.Voron.StorageActions
 {
 	using System.Linq;
 
@@ -34,7 +36,7 @@
 		private readonly IDocumentCacher documentCacher;
 
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
-
+        private readonly Dictionary<Etag, Etag> etagTouches = new Dictionary<Etag, Etag>();
 		private readonly TableStorage tableStorage;
 
 		private readonly Index metadataIndex;
@@ -44,8 +46,9 @@
 			IDocumentCacher documentCacher,
 			Reference<WriteBatch> writeBatch,
 			SnapshotReader snapshot,
-			TableStorage tableStorage)
-			: base(snapshot)
+            TableStorage tableStorage, 
+            IBufferPool bufferPool)
+			: base(snapshot, bufferPool)
 		{
 			this.uuidGenerator = uuidGenerator;
 			this.documentCodecs = documentCodecs;
@@ -258,10 +261,13 @@
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			var lowerKey = CreateKey(key);
+			var loweredKey = CreateKey(key);
+			
+			if(etag != null)
+				EnsureDocumentEtagMatch(loweredKey, etag, "DELETE");
 
 			ushort? existingVersion;
-			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch.Value, out existingVersion))
+			if (!tableStorage.Documents.Contains(Snapshot, loweredKey, writeBatch.Value, out existingVersion))
 			{
 				logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
 				metadata = null;
@@ -269,7 +275,7 @@
 				return false;
 			}
 
-			if (!metadataIndex.Contains(Snapshot, lowerKey, writeBatch.Value)) //data exists, but metadata is not --> precaution, should never be true
+			if (!metadataIndex.Contains(Snapshot, loweredKey, writeBatch.Value)) //data exists, but metadata is not --> precaution, should never be true
 			{
 				var errorString = string.Format("Document with key '{0}' was found, but its metadata wasn't found --> possible data corruption", key);
 				throw new ApplicationException(errorString);
@@ -281,13 +287,13 @@
 
 			deletedETag = etag != null ? existingEtag : documentMetadata.Etag;
 
-			tableStorage.Documents.Delete(writeBatch.Value, lowerKey, existingVersion);
-			metadataIndex.Delete(writeBatch.Value, lowerKey);
+			tableStorage.Documents.Delete(writeBatch.Value, loweredKey, existingVersion);
+			metadataIndex.Delete(writeBatch.Value, loweredKey);
 
 			tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
 						  .Delete(writeBatch.Value, deletedETag);
 
-			documentCacher.RemoveCachedDocument(lowerKey, etag);
+			documentCacher.RemoveCachedDocument(loweredKey, etag);
 
 			logger.Debug("Deleted document with key = '{0}'", key);
 
@@ -332,8 +338,7 @@
 
 		public void IncrementDocumentCount(int value)
 		{
-			//nothing to do here
-			//TODO : verify if this is the case - I might be missing something
+			//nothing to do here			
 		}
 
 		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool overwriteExisting)
@@ -371,12 +376,13 @@
 			preTouchEtag = metadata.Etag;
 			metadata.Etag = newEtag;
 
-			WriteDocumentMetadata(metadata);
+			WriteDocumentMetadata(metadata,shouldIgnoreConcurrencyExceptions:true);
 
 			var keyByEtagIndex = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
 
 			keyByEtagIndex.Delete(writeBatch.Value, preTouchEtag);
 			keyByEtagIndex.Add(writeBatch.Value, newEtag, lowerKey);
+            etagTouches.Add(preTouchEtag, afterTouchEtag);
 
 			logger.Debug("TouchDocument() - document with key = '{0}'", key);
 		}
@@ -412,8 +418,15 @@
 
 			var existingEtag = metadata.Etag;
 
+           
 			if (etag != null)
 			{
+                Etag next;
+                while (etagTouches.TryGetValue(etag, out next))
+                {
+                    etag = next;
+                }
+
 				if (existingEtag != etag)
 				{
 					if (etag == Etag.Empty)
@@ -438,9 +451,9 @@
 		}
 
 		//returns true if it was update operation
-		private bool WriteDocumentMetadata(JsonDocumentMetadata metadata)
+		private bool WriteDocumentMetadata(JsonDocumentMetadata metadata,bool shouldIgnoreConcurrencyExceptions = false)
 		{
-			var metadataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream
+            var metadataStream = CreateStream();
 
 			metadataStream.Write(metadata.Etag);
 			metadataStream.Write(metadata.Key);
@@ -458,7 +471,7 @@
 
 			ushort? existingVersion;
 			var isUpdate = metadataIndex.Contains(Snapshot, loweredKey, writeBatch.Value, out existingVersion);
-			metadataIndex.Add(writeBatch.Value, loweredKey, metadataStream, existingVersion);
+			metadataIndex.Add(writeBatch.Value, loweredKey, metadataStream, existingVersion, shouldIgnoreConcurrencyExceptions);
 
 			return isUpdate;
 		}
@@ -481,7 +494,7 @@
 				var existingCachedDocument = documentCacher.GetCachedDocument(loweredKey, etag);
 
 				var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : stream.ToJObject();
-				var lastModified = lastModifiedDateTimeBinary > 0 ? DateTime.FromBinary(lastModifiedDateTimeBinary) : (DateTime?) null;
+			    var lastModified = DateTime.FromBinary(lastModifiedDateTimeBinary);
 
 				return new JsonDocumentMetadata
 				{
@@ -516,7 +529,7 @@
 				};
 			}
 
-			var dataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream                  
+            var dataStream = CreateStream();
 
 
 			using (var finalDataStream = documentCodecs.Aggregate((Stream) new UndisposableStream(dataStream),
@@ -564,7 +577,6 @@
 				}
 			}
 		}
-
 
 		public DebugDocumentStats GetDocumentStatsVerySlowly()
 		{

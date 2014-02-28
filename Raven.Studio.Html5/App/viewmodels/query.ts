@@ -1,15 +1,16 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
-import indexDefinition = require("models/indexDefinition");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import pagedList = require("common/pagedList");
 import pagedResultSet = require("common/pagedResultSet");
 import queryIndexCommand = require("commands/queryIndexCommand");
 import moment = require("moment");
 import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
+import querySort = require("models/querySort");
 
 class query extends viewModelBase {
 
@@ -24,6 +25,8 @@ class query extends viewModelBase {
     selectedResultIndices = ko.observableArray<number>();
     queryStats = ko.observable<indexQueryResultsDto>();
     selectedIndexEditUrl: KnockoutComputed<string>;
+    sortBys = ko.observableArray<querySort>();
+    indexFields = ko.observableArray<string>();
 
     static containerSelector = "#queryContainer";
 
@@ -77,8 +80,11 @@ class query extends viewModelBase {
     runQuery() {
         var selectedIndex = this.selectedIndex();
         if (selectedIndex) {
+            var queryText = this.queryText();
+            var sorts = this.sortBys().filter(s => s.fieldName() != null);
+            var database = this.activeDatabase();
             var resultsFetcher = (skip: number, take: number) => {
-                var command = new queryIndexCommand(selectedIndex, this.activeDatabase(), skip, take, this.queryText());
+                var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts);
                 return command
                     .execute()
                     .done((queryResults: pagedResultSet) => this.queryStats(queryResults.additionalResultInfo));
@@ -89,8 +95,16 @@ class query extends viewModelBase {
     }
 
     setSelectedIndex(indexName: string) {
+        this.sortBys.removeAll();
         this.selectedIndex(indexName);
         this.runQuery();
+
+        // Fetch the index definition so that we get an updated list of fields.
+        new getIndexDefinitionCommand(indexName, this.activeDatabase())
+            .execute()
+            .done((result: indexDefinitionContainerDto) => {
+                this.indexFields(result.Index.Fields);
+            });
 
         // Reflect the new index in the address bar.
         var url = appUrl.forQuery(this.activeDatabase(), indexName);
@@ -100,6 +114,13 @@ class query extends viewModelBase {
         };
         router.navigate(url, navOptions);
         NProgress.done();
+    }
+
+    addSortBy() {
+        var sort = new querySort();
+        sort.fieldName.subscribe(() => this.runQuery());
+        sort.sortDirection.subscribe(() => this.runQuery());
+        this.sortBys.push(sort);
     }
 
     deleteDocsMatchingQuery() {

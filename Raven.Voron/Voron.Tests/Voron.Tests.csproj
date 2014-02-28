@@ -121,7 +121,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Voron\Voron.csproj">
       <Project>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</Project>
-      <Name>Voron</Name>
+      <Name>Voron %28Voron\Voron%29</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -138,7 +138,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="RavenDB.snk" />

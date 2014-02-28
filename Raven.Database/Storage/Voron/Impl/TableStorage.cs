@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Database.Util.Streams;
+
 using Voron.Impl.Backup;
 
 namespace Raven.Database.Storage.Voron.Impl
@@ -20,16 +22,19 @@ namespace Raven.Database.Storage.Voron.Impl
 	{
 		private readonly IPersistenceSource persistenceSource;
 
-		private readonly StorageEnvironment env;
+	    private readonly IBufferPool bufferPool;
 
-		public TableStorage(IPersistenceSource persistenceSource)
+	    private readonly StorageEnvironment env;
+
+		public TableStorage(IPersistenceSource persistenceSource, IBufferPool bufferPool)
 		{
-			if(persistenceSource == null)
+			if (persistenceSource == null)
 				throw new ArgumentNullException("persistenceSource");
 
 			this.persistenceSource = persistenceSource;
-			
-			Debug.Assert(persistenceSource.Options != null);
+		    this.bufferPool = bufferPool;
+
+		    Debug.Assert(persistenceSource.Options != null);
 			env = new StorageEnvironment(persistenceSource.Options);
 
 			Initialize();
@@ -101,7 +106,15 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public void Write(WriteBatch writeBatch)
 		{
-			env.Writer.Write(writeBatch);
+		    try
+		    {
+                env.Writer.Write(writeBatch);
+		    }
+		    catch (AggregateException ae)
+		    {
+		        if (ae.InnerException is OperationCanceledException == false) // this can happen during storage disposal
+		            throw;
+		    }
 		}
 
 		public long GetEntriesCount(TableBase table)
@@ -292,22 +305,22 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		private void Initialize()
 		{
-			Documents = new Table(Tables.Documents.TableName, Tables.Documents.Indices.KeyByEtag, Tables.Documents.Indices.Metadata);
-			Details = new Table(Tables.Details.TableName);
-			IndexingStats = new Table(Tables.IndexingStats.TableName);
-			LastIndexedEtags = new Table(Tables.LastIndexedEtags.TableName);
-			DocumentReferences = new Table(Tables.DocumentReferences.TableName, Tables.DocumentReferences.Indices.ByRef, Tables.DocumentReferences.Indices.ByView, Tables.DocumentReferences.Indices.ByViewAndKey, Tables.DocumentReferences.Indices.ByKey);
-			Queues = new Table(Tables.Queues.TableName, Tables.Queues.Indices.ByName, Tables.Queues.Indices.Data);
-			Lists = new Table(Tables.Lists.TableName, Tables.Lists.Indices.ByName, Tables.Lists.Indices.ByNameAndKey);
-			Tasks = new Table(Tables.Tasks.TableName, Tables.Tasks.Indices.ByIndexAndType, Tables.Tasks.Indices.ByType, Tables.Tasks.Indices.ByIndex);
-			ScheduledReductions = new Table(Tables.ScheduledReductions.TableName, Tables.ScheduledReductions.Indices.ByView, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey, Tables.ScheduledReductions.Indices.ByViewAndLevel);
-			MappedResults = new Table(Tables.MappedResults.TableName, Tables.MappedResults.Indices.ByView, Tables.MappedResults.Indices.ByViewAndDocumentId, Tables.MappedResults.Indices.ByViewAndReduceKey, Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket, Tables.MappedResults.Indices.Data);
-			ReduceKeyCounts = new Table(Tables.ReduceKeyCounts.TableName, Tables.ReduceKeyCounts.Indices.ByView);
-			ReduceKeyTypes = new Table(Tables.ReduceKeyTypes.TableName, Tables.ReduceKeyTypes.Indices.ByView);
-			Attachments = new Table(Tables.Attachments.TableName, Tables.Attachments.Indices.ByEtag, Tables.Attachments.Indices.Metadata);
-			ReduceResults = new Table(Tables.ReduceResults.TableName, Tables.ReduceResults.Indices.ByView, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket, Tables.ReduceResults.Indices.Data);
-			General = new Table(Tables.General.TableName);
-			ReduceStats = new Table(Tables.ReduceStats.TableName);
+			Documents = new Table(Tables.Documents.TableName, bufferPool, Tables.Documents.Indices.KeyByEtag, Tables.Documents.Indices.Metadata);
+			Details = new Table(Tables.Details.TableName, bufferPool);
+            IndexingStats = new Table(Tables.IndexingStats.TableName, bufferPool);
+            LastIndexedEtags = new Table(Tables.LastIndexedEtags.TableName, bufferPool);
+            DocumentReferences = new Table(Tables.DocumentReferences.TableName, bufferPool, Tables.DocumentReferences.Indices.ByRef, Tables.DocumentReferences.Indices.ByView, Tables.DocumentReferences.Indices.ByViewAndKey, Tables.DocumentReferences.Indices.ByKey);
+            Queues = new Table(Tables.Queues.TableName, bufferPool, Tables.Queues.Indices.ByName, Tables.Queues.Indices.Data);
+            Lists = new Table(Tables.Lists.TableName, bufferPool, Tables.Lists.Indices.ByName, Tables.Lists.Indices.ByNameAndKey);
+            Tasks = new Table(Tables.Tasks.TableName, bufferPool, Tables.Tasks.Indices.ByIndexAndType, Tables.Tasks.Indices.ByType, Tables.Tasks.Indices.ByIndex);
+            ScheduledReductions = new Table(Tables.ScheduledReductions.TableName, bufferPool, Tables.ScheduledReductions.Indices.ByView, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey, Tables.ScheduledReductions.Indices.ByViewAndLevel);
+            MappedResults = new Table(Tables.MappedResults.TableName, bufferPool, Tables.MappedResults.Indices.ByView, Tables.MappedResults.Indices.ByViewAndDocumentId, Tables.MappedResults.Indices.ByViewAndReduceKey, Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket, Tables.MappedResults.Indices.Data);
+            ReduceKeyCounts = new Table(Tables.ReduceKeyCounts.TableName, bufferPool, Tables.ReduceKeyCounts.Indices.ByView);
+            ReduceKeyTypes = new Table(Tables.ReduceKeyTypes.TableName, bufferPool, Tables.ReduceKeyTypes.Indices.ByView);
+            Attachments = new Table(Tables.Attachments.TableName, bufferPool, Tables.Attachments.Indices.ByEtag, Tables.Attachments.Indices.Metadata);
+            ReduceResults = new Table(Tables.ReduceResults.TableName, bufferPool, Tables.ReduceResults.Indices.ByView, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket, Tables.ReduceResults.Indices.Data);
+            General = new Table(Tables.General.TableName, bufferPool);
+            ReduceStats = new Table(Tables.ReduceStats.TableName, bufferPool);
 		}
 
 	}

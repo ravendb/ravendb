@@ -1,4 +1,6 @@
-﻿namespace Raven.Database.Storage.Voron.StorageActions
+﻿using Raven.Database.Util.Streams;
+
+namespace Raven.Database.Storage.Voron.StorageActions
 {
 	using System;
 	using System.Collections.Generic;
@@ -31,8 +33,8 @@
 
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 
-		public MappedResultsStorageActions(TableStorage tableStorage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, SnapshotReader snapshot, Reference<WriteBatch> writeBatch)
-			: base(snapshot)
+        public MappedResultsStorageActions(TableStorage tableStorage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, SnapshotReader snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool)
+			: base(snapshot, bufferPool)
 		{
 			this.tableStorage = tableStorage;
 			this.generator = generator;
@@ -75,7 +77,7 @@
 
 			var mappedResultsData = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.Data);
 
-			var ms = new MemoryStream();// TODO - use BufferPoolStream
+            var ms = CreateStream();
 			using (var stream = documentCodecs.Aggregate((Stream) new UndisposableStream(ms), (ds, codec) => codec.Value.Encode(reduceKey, data, null, ds)))
 			{
 				data.WriteTo(stream);
@@ -587,7 +589,7 @@
 				tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByView);
 			var reduceResultsData = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.Data);
 
-			var ms = new MemoryStream();// TODO - use BufferPoolStream
+            var ms = CreateStream();
 			using (
 				var stream = documentCodecs.Aggregate((Stream) new UndisposableStream(ms),
 					(ds, codec) => codec.Value.Encode(reduceKey, data, null, ds)))

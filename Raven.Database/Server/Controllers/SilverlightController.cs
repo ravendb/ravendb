@@ -59,8 +59,8 @@ namespace Raven.Database.Server.Controllers
 				}
 			});
 #endif
-			
-			return matchingPath != null ? WriteFile(matchingPath) : WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.WebDir, "Raven.Studio.xap");
+
+			return matchingPath != null ? WriteFile(matchingPath) : WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.WebDir, "Raven.Database.Server.WebUI", "Raven.Studio.xap");
 		}
 
 		public static IEnumerable<string> GetPaths(string fileName, string webDir)

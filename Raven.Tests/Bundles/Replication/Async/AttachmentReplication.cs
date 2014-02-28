@@ -105,8 +105,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 		}
 
 		[Theory]
-		[InlineData("esent")]
-		//[InlineData("voron")]
+        [PropertyData("Storages")]
 		public void When_replicating_and_an_attachment_is_already_there_will_result_in_conflict(string storageType)
 		{
 			var store1 = CreateStore(requestedStorageType:storageType);

@@ -65,8 +65,7 @@ namespace Raven.Client.Document.SessionOperations
 			for (var i = 0; i < includeResults.Length; i++)
 			{
 				var include = includeResults[i];
-				var entityType = includes.Length > i ? includes[i].Value : typeof(object);
-				sessionOperations.TrackEntity(entityType, include);
+				sessionOperations.TrackIncludedDocumnet(include);
 			}
 
 			var transformedResults = TransformResults().ToList();

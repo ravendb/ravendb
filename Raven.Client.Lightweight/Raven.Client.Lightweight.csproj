@@ -41,8 +41,6 @@
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <DocumentationFile>bin\Release\Raven.Client.Lightweight.xml</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
-    <DocumentationFile>bin\Release\Raven.Client.Lightweight.XML</DocumentationFile>
-    <DocumentationFile>..\build\Raven.Client.Lightweight.XML</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
@@ -115,32 +113,15 @@
     <Compile Include="RavenFS\Changes\NotificationSubject.cs" />
     <Compile Include="RavenFS\Changes\ServerNotifications.cs" />
     <Compile Include="RavenFS\Changes\TaskErrorExtensions.cs" />
-    <Compile Include="RavenFS\ConfigChange.cs" />
-    <Compile Include="RavenFS\ConflictDetected.cs" />
-    <Compile Include="RavenFS\ConflictItem.cs" />
-    <Compile Include="RavenFS\ConflictNotification.cs" />
-    <Compile Include="RavenFS\ConflictResolutionStrategy.cs" />
-    <Compile Include="RavenFS\ConflictResolved.cs" />
     <Compile Include="RavenFS\Connections\FileConvention.cs" />
     <Compile Include="RavenFS\Connections\ReplicationInformer.cs" />
     <Compile Include="RavenFS\Connections\ReplicationInformerLocalCache.cs" />
-    <Compile Include="RavenFS\DestinationSyncResult.cs" />
     <Compile Include="RavenFS\ExceptionExtensions.cs" />
-    <Compile Include="RavenFS\FileChange.cs" />
-    <Compile Include="RavenFS\FileInfo.cs" />
-    <Compile Include="RavenFS\FilesSortOptions.cs" />
-    <Compile Include="RavenFS\FileStatus.cs" />
-    <Compile Include="RavenFS\Heartbeat.cs" />
-    <Compile Include="RavenFS\HistoryItem.cs" />
     <Compile Include="RavenFS\ListenableStream.cs" />
     <Compile Include="RavenFS\ListPage.cs" />
     <Compile Include="RavenFS\NameValueCollectionJsonConverter.cs" />
-    <Compile Include="RavenFS\Notification.cs" />
-    <Compile Include="RavenFS\Abstructions\SynchronizationConstants.cs" />
     <Compile Include="RavenFS\NotificationJSonUtilities.cs" />
     <Compile Include="RavenFS\RavenFileSystemClient.cs" />
-    <Compile Include="RavenFS\RdcStats.cs" />
-    <Compile Include="RavenFS\ServerStats.cs" />
     <Compile Include="RavenFS\Shard\DefaultShardResolutionStrategy.cs" />
     <Compile Include="RavenFS\Shard\IShardAccessStrategy.cs" />
     <Compile Include="RavenFS\Shard\IShardResolutionStrategy.cs" />
@@ -149,23 +130,13 @@
     <Compile Include="RavenFS\Shard\ShardPagingInfo.cs" />
     <Compile Include="RavenFS\Shard\ShardRequestData.cs" />
     <Compile Include="RavenFS\Shard\ShardStrategy.cs" />
-    <Compile Include="RavenFS\Signature.cs" />
-    <Compile Include="RavenFS\SignatureManifest.cs" />
     <Compile Include="RavenFS\SourceSynchronizationInformation.cs" />
     <Compile Include="RavenFS\StringUtils.cs" />
-    <Compile Include="RavenFS\SynchronizationConfirmation.cs" />
-    <Compile Include="RavenFS\SynchronizationDetails.cs" />
-    <Compile Include="RavenFS\SynchronizationException.cs" />
-    <Compile Include="RavenFS\SynchronizationReport.cs" />
-    <Compile Include="RavenFS\SynchronizationType.cs" />
-    <Compile Include="RavenFS\SynchronizationUpdate.cs" />
-    <Compile Include="RavenFS\UploadFailed.cs" />
     <Compile Include="RavenFS\Util\TaskExtensions.cs" />
     <Compile Include="RavenPagingInformation.cs" />
     <Compile Include="Shard\ShardedRavenQueryInspector.cs" />
     <Compile Include="Spatial\SpatialCriteria.cs" />
     <Compile Include="Spatial\SpatialCriteriaFactory.cs" />
-    <Compile Include="Util\AsyncCountdownEvent.cs" />
     <Compile Include="Util\EvictItemsFromCacheBasedOnChanges.cs" />
     <Compile Include="Changes\IDatabaseChanges.cs" />
     <Compile Include="Changes\LocalConnectionState.cs" />

@@ -42,7 +42,7 @@ namespace Raven.Database.Config
 			{"Raven/Tenants/FrequencyToCheckForIdleDatabases", "int", null, "The time in seconds to check for an idle tenant database"},
 
 			// Storage
-			{"Raven/StorageTypeName", "string", "esent, voron, munin or Assembly Qualified Name", "The storage engine to use for the database. Default: esent."},
+			{"Raven/StorageTypeName", "string", "esent, voron or Assembly Qualified Name", "The storage engine to use for the database. Default: esent."},
 
 			// Indexing
 			{"Raven/MaxNumberOfItemsToIndexInSingleBatch", "int", null, "The max number of items that will be indexed in a single batch. Larger batch size result in faster indexing, but higher memory usage."},
@@ -84,6 +84,7 @@ namespace Raven.Database.Config
 			//Voron	
 			{"Raven/Voron/AllowIncrementalBackups", "bool", "true / false", "Defaults to false. If you want to use incremental backups, you need to turn this to true, but then journal files will not be deleted on backup."},
             {"Raven/Voron/TempPath", "string", null, "You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file."},
+            {"Raven/Voron/MaxBufferPoolSize", "long", null, "You can use this setting to specify a maximum buffer pool size that can be used for transactional storage (in gigabytes). By default it is 4. Minimum value is 2."},
 
 			// Advanced
 			{"Raven/TransactionMode", "string", "lazy,safe", "What transaction mode to use. Safe transaction mode ensures data consistency, but is slower. Lazy is faster, but may result in a data loss if the server crashes. Default: Safe."},

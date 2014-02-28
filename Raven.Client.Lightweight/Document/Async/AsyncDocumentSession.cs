@@ -58,6 +58,25 @@ namespace Raven.Client.Document.Async
 										.ContinueWith(task => (IEnumerable<T>)task.Result.Select(TrackEntity<T>).ToList());
 		}
 
+		public Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25,
+		                                                    string exclude = null, RavenPagingInformation pagingInformation = null,
+		                                                    Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			var transformer = new TTransformer().TransformerName;
+
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+			{
+				configure(configuration);
+			}
+
+			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude,
+			                                             pagingInformation: pagingInformation, transformer: transformer,
+			                                             queryInputs: configuration.QueryInputs)
+			                            .ContinueWith(
+				                            task => (IEnumerable<TResult>) task.Result.Select(TrackEntity<TResult>).ToList());
+		}
+
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query)
 		{
 			return StreamAsync(query, new Reference<QueryHeaderInformation>());
@@ -212,7 +231,7 @@ namespace Raven.Client.Document.Async
 #if !SILVERLIGHT
  null,
 #endif
- AsyncDatabaseCommands, index, new string[0], new string[0], listeners.QueryListeners, isMapReduce);
+ AsyncDatabaseCommands, index, new string[0], new string[0], theListeners.QueryListeners, isMapReduce);
 		}
 
 		/// <summary>
@@ -229,7 +248,7 @@ namespace Raven.Client.Document.Async
 #if !SILVERLIGHT
  null,
 #endif
- AsyncDatabaseCommands, indexName, new string[0], new string[0], listeners.QueryListeners, false);
+ AsyncDatabaseCommands, indexName, new string[0], new string[0], theListeners.QueryListeners, false);
 		}
 
 		/// <summary>
@@ -330,22 +349,26 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		/// <param name="id">The id.</param>
 		/// <returns></returns>
-		public Task<T> LoadAsync<T>(string id)
+		public async Task<T> LoadAsync<T>(string id)
 		{
 			if (id == null) throw new ArgumentNullException("id", "The document id cannot be null");
 			object entity;
 			if (entitiesByKey.TryGetValue(id, out entity))
 			{
-				var tcs = new TaskCompletionSource<T>();
-				tcs.TrySetResult((T)entity);
-				return tcs.Task;
+			    return (T) entity;
 			}
-			if (IsDeleted(id))
-				return new CompletedTask<T>(null);
+		    JsonDocument value;
+		    if (includedDocumentsByKey.TryGetValue(id, out value))
+		    {
+		        includedDocumentsByKey.Remove(id);
+		        return TrackEntity<T>(value);
+		    }
+		    if (IsDeleted(id))
+		        return default(T);
 
 			IncrementRequestCount();
 			var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
-			return CompleteLoadAsync<T>(id, loadOperation);
+			return await CompleteLoadAsync<T>(id, loadOperation);
 		}
 
 		private async Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation)

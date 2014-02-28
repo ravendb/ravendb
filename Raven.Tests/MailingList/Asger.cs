@@ -11,7 +11,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void putting_and_patching_in_same_transaction()
 		{
-			using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
 				Assert.DoesNotThrow(() =>
 				{

@@ -11,8 +11,7 @@ namespace Raven.Tests.Issues
 	public class RavenDB_1379 : RavenTest
 	{
 	    [Theory]
-	    [InlineData("voron")]
-	    [InlineData("esent")]
+        [PropertyData("Storages")]
 	    public void PagingWithoutFilters(string requestedStorage)
 	    {
 	        using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
@@ -81,8 +80,7 @@ namespace Raven.Tests.Issues
 	    }
 
 		[Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public void PagingWithoutFiltersWithNextPageStart(string requestedStorage)
 		{
 			using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
@@ -149,8 +147,7 @@ namespace Raven.Tests.Issues
 		}
 
         [Theory]
-        [InlineData("voron")]
-        [InlineData("esent")]
+        [PropertyData("Storages")]
         public void PagingWithExcludes(string requestedStorage)
         {
             using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
@@ -215,8 +212,7 @@ namespace Raven.Tests.Issues
         }
 
         [Theory]
-        [InlineData("voron")]
-        [InlineData("esent")]
+        [PropertyData("Storages")]
         public void PagingWithMatches(string requestedStorage)
         {
             using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
@@ -277,8 +273,7 @@ namespace Raven.Tests.Issues
         }
 
 	    [Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public void GetDocumentsWithIdStartingWith_Should_Not_Count_Excluded_Docs(string requestedStorage)
 		{
 			using(var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
@@ -313,8 +308,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
-		[InlineData("voron")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public void GetDocumentsWithIdStartingWith_Should_Not_Count_Excluded_Docs_WithNonZeroStart(string requestedStorage)
 		{
 			using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))

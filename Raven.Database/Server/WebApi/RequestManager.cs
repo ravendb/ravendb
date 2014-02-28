@@ -73,8 +73,9 @@ namespace Raven.Database.Server.WebApi
 	    private void OnBeforeRequest(object sender, BeforeRequestWebApiEventArgs args)
 	    {
 	        var documentDatabase = args.Database;
-	        documentDatabase.WorkContext.PerformanceCounters.RequestsPerSecond.Increment();
-            documentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.Increment();
+
+            documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.Mark();
+            documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.Mark();
 	    }
 
 	    public void Init()
@@ -133,7 +134,7 @@ namespace Raven.Database.Server.WebApi
 	            Interlocked.Decrement(ref concurrentRequests);
 	            try
 	            {
-	                FinalizeRequestProcessing(controller, response, sw, ravenUiRequest: false /*TODO: check*/);
+	                FinalizeRequestProcessing(controller, response, sw);
 	            }
 	            catch (Exception e)
 	            {
@@ -261,7 +262,22 @@ namespace Raven.Database.Server.WebApi
 			return true;
 		}
 
-		private void ResetThreadLocalState()
+        public void SetThreadLocalState(HttpHeaders innerHeaders, string databaseName)
+        {
+            CurrentOperationContext.Headers.Value = new NameValueCollection();
+            foreach (var innerHeader in innerHeaders)
+                CurrentOperationContext.Headers.Value[innerHeader.Key] = innerHeader.Value.FirstOrDefault();
+
+            CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = string.Empty;
+            CurrentOperationContext.User.Value = null;
+
+            LogContext.DatabaseName.Value = databaseName;
+            var disposable = LogManager.OpenMappedContext("database", databaseName ?? Constants.SystemDatabase);
+
+            CurrentOperationContext.RequestDisposables.Value.Add(disposable);
+        }
+
+		public void ResetThreadLocalState()
 		{
 			try
 			{
@@ -316,7 +332,7 @@ namespace Raven.Database.Server.WebApi
 			Interlocked.Decrement(ref physicalRequestsCount);
 		}
 
-		private void FinalizeRequestProcessing(RavenDbApiController controller, HttpResponseMessage response, Stopwatch sw, bool ravenUiRequest)
+		private void FinalizeRequestProcessing(RavenDbApiController controller, HttpResponseMessage response, Stopwatch sw)
 		{
 			LogHttpRequestStatsParams logHttpRequestStatsParam = null;
 		    try
@@ -334,23 +350,18 @@ namespace Raven.Database.Server.WebApi
 		    {
 		        Logger.WarnException("Could not gather information to log request stats", e);
 		    }
-		    finally
-		    {
-                controller.Database.WorkContext.PerformanceCounters.ConcurrentRequests.Decrement();		        
-		    }
 
-			if (ravenUiRequest || logHttpRequestStatsParam == null || sw == null)
+		    if (logHttpRequestStatsParam == null || sw == null)
 				return;
 
 			sw.Stop();
-           
+
+		    controller.Database.WorkContext.MetricsCounters.RequestDuationMetric.Update(sw.ElapsedMilliseconds);
 
 			LogHttpRequestStats(logHttpRequestStatsParam, controller.DatabaseName);
 
 			TraceRequest(logHttpRequestStatsParam, controller.DatabaseName);
 
-			//TODO: log
-			//OutputSavedLogItems(logger);
 		}
 
 		private void TraceRequest(LogHttpRequestStatsParams requestLog, string databaseName)

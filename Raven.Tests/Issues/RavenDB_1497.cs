@@ -14,6 +14,7 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
@@ -40,6 +41,7 @@ namespace Raven.Tests.Issues
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
 			configuration.Settings["Raven/Esent/CircularLog"] = "false";
+			configuration.Settings["Raven/Voron/AllowIncrementalBackups"] = "true"; //for now all tests run under Voron - so this is needed
 			configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
 		}
 
@@ -105,7 +107,8 @@ namespace Raven.Tests.Issues
 				{
 					Settings =
 				{
-					{"Raven/Esent/CircularLog", "false"}
+					{"Raven/Esent/CircularLog", "false"},
+					{"Raven/Voron/AllowIncrementalBackups", "true"}
 				}
 
 				}, BackupDir, DataDir, s => output.Append(s), defrag: true);
@@ -144,29 +147,6 @@ namespace Raven.Tests.Issues
 					Assert.Equal(2, docs.Results.Count);
 
 				}
-				//QueryResult docs = null;
-
-				//for (int i = 0; i < 500; i++)
-				//{
-				//	docs = db.Query("Users/ByName", new IndexQuery
-				//	{
-				//		Query = "Name:*",
-				//		Start = 0,
-				//		PageSize = 10
-				//	});
-				//	if (docs.IsStale == false)
-				//		break;
-
-				//	Thread.Sleep(100);
-				//}
-
-				//Assert.NotNull(docs);
-				//Assert.Equal(2, docs.Results.Count);
-
-				//var jObject = db.Get("ayende", null).ToJson();
-				//Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
-				//jObject = db.Get("itamar", null).ToJson();
-				//Assert.Equal("itamar@ayende.com", jObject.Value<string>("email"));
 			}
 		}
 	}

@@ -1,27 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.InteropServices;
+using NLog;
 using Raven.Tests.Bugs.DTC;
 using Raven.Tests.Bundles.Replication;
+using Raven.Tests.Bundles.Replication.Bugs;
+using Raven.Tests.Faceted;
+using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
 {
 	class Program
 	{
+		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+
 		private static void Main(string[] args)
 		{
 			CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("pl-PL");
 			CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("pl-PL");
 			for (int i = 0; i < 1000; i++)
 			{
-				Console.Clear();
-				Console.WriteLine(i);
-
+				Console.WriteLine("Test loop #"+ i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new FailoverDisabled())
-				{
-					x.CanDisableFailoverByDisablingDestination();
-				}
+				using (var x = new LazyFacets())
+					x.Default_operator_not_honoured_remote_store_ToFacetsLazy();
 			}
 			
 		}

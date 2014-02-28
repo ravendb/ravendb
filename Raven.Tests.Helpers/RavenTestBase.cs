@@ -149,8 +149,7 @@ namespace Raven.Tests.Helpers
 			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
 		}
 
-		public DocumentStore
-			NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, [CallerMemberName] string databaseName = null,
+		public DocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, [CallerMemberName] string databaseName = null,
 				bool runInMemory = true,
 				string dataDirectory = null,
 				string requestedStorage = null,
@@ -209,7 +208,7 @@ namespace Raven.Tests.Helpers
 			string requestedStorage = null,
 			bool enableAuthentication = false,
 			string activeBundles = null,
-			Action<RavenConfiguration> configureServer = null,
+			Action<InMemoryRavenConfiguration> configureServer = null,
             [CallerMemberName] string databaseName = null)
 		{
 		    databaseName = NormalizeDatabaseName(databaseName != Constants.SystemDatabase ? databaseName : null);
@@ -296,9 +295,7 @@ namespace Raven.Tests.Helpers
 
             ravenConfiguration.Settings["Raven/Voron/TempPath"] = tempDir;
 
-			if (storageType == "munin")
-				newTransactionalStorage = new Storage.Managed.TransactionalStorage(ravenConfiguration, () => { });
-			else if (storageType == "voron")
+			if (storageType == "voron")
 				newTransactionalStorage = new Storage.Voron.TransactionalStorage(ravenConfiguration, () => { });
 			else
 				newTransactionalStorage = new Storage.Esent.TransactionalStorage(ravenConfiguration, () => { });
@@ -333,7 +330,10 @@ namespace Raven.Tests.Helpers
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-            Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? TimeSpan.FromSeconds(2000)));
+		    bool spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? TimeSpan.FromSeconds(20));
+		    if (spinUntil == false)
+		        WaitForUserToContinueTheTest(store);
+		    Assert.True(spinUntil, "Indexes took took long to become unstale");
 		}
 
 		public static void WaitForIndexing(DocumentDatabase db)
@@ -483,10 +483,6 @@ namespace Raven.Tests.Helpers
                 url = embeddableDocumentStore.Configuration.ServerUrl;
 		    }
 
-		    documentStore.DatabaseCommands.Put("Pls Delete Me", null,
-		        RavenJObject.FromObject(new {StackTrace = new StackTrace(true)}),
-		        new RavenJObject());
-
 			using (server)
 			{
 				Process.Start(url); // start the server
@@ -494,7 +490,7 @@ namespace Raven.Tests.Helpers
 				do
 				{
 					Thread.Sleep(100);
-				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null && (debug == false || Debugger.IsAttached));
+				} while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
 			}
 		}
 
@@ -508,16 +504,13 @@ namespace Raven.Tests.Helpers
 				Url = url ?? "http://localhost:8079"
 			})
 			{
-				documentStore.Initialize();
-				documentStore.DatabaseCommands.Put("Pls Delete Me", null,
-												   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }), new RavenJObject());
-
+			
 				Process.Start(documentStore.Url); // start the server
 
 				do
 				{
 					Thread.Sleep(100);
-				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null && (debug == false || Debugger.IsAttached));
+				} while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
 			}
 		}
 

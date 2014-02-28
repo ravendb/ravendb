@@ -4,6 +4,8 @@ using Raven.Database;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Voron;
 using Raven.Database.Storage.Voron.Backup;
+using Raven.Database.Util.Streams;
+
 using VoronExceptions = Voron.Exceptions;
 using Task = System.Threading.Tasks.Task;
 
@@ -44,13 +46,15 @@ namespace Raven.Storage.Voron
 
 		private TableStorage tableStorage;
 
+	    private IBufferPool bufferPool;
+
 		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
 		{
 			this.configuration = configuration;
 			this.onCommit = onCommit;
 			documentCacher = new DocumentCacher(configuration);
 			exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
-
+            bufferPool = new BufferPool(configuration.VoronMaxBufferPoolSize * 1024 * 1024 * 1024, int.MaxValue); // 2GB max buffer size (voron limit)
 		}
 
 		public void Dispose()
@@ -65,6 +69,9 @@ namespace Raven.Storage.Voron
 
 				if (tableStorage != null)
 					tableStorage.Dispose();
+
+                if (bufferPool != null)
+                    bufferPool.Dispose();
 			}
 			finally
 			{
@@ -92,7 +99,7 @@ namespace Raven.Storage.Voron
 			var writeBatchReference = new Reference<WriteBatch> { Value = new WriteBatch() };
 			
 			var accessor = new StorageActionsAccessor(uuidGenerator, _documentCodecs,
-                    documentCacher, writeBatchReference, snapshot, tableStorage, this);
+                    documentCacher, writeBatchReference, snapshot, tableStorage, this, bufferPool);
 			accessor.OnDispose += () =>
 			{
 				snapshot.Dispose();
@@ -159,7 +166,7 @@ namespace Raven.Storage.Voron
                     writeBatchRef.Value = new WriteBatch() {DisposeAfterWrite = false};// prevent from disposing after write to allow read from batch OnStorageCommit
                     var storageActionsAccessor = new StorageActionsAccessor(uuidGenerator, _documentCodecs,
                                                                             documentCacher, writeBatchRef, snapshot,
-                                                                            tableStorage, this);
+                                                                            tableStorage, this, bufferPool);
 
                     if (disableBatchNesting.Value == null)
                         current.Value = storageActionsAccessor;
@@ -204,7 +211,7 @@ namespace Raven.Storage.Voron
 
 			var persistenceSource = configuration.RunInMemory ? (IPersistenceSource)new MemoryPersistenceSource() : new MemoryMapPersistenceSource(configuration);
 
-			tableStorage = new TableStorage(persistenceSource);
+			tableStorage = new TableStorage(persistenceSource, bufferPool);
 
 			if (persistenceSource.CreatedNew)
 			{
@@ -290,8 +297,9 @@ namespace Raven.Storage.Voron
 				return current.Value != null;
 			}
 		}
+        public bool SupportsDtc { get { return false; } }
 
-		public void Compact(InMemoryRavenConfiguration configuration)
+	    public void Compact(InMemoryRavenConfiguration configuration)
 		{
 			//Voron storage does not support compaction
 		}
@@ -325,7 +333,7 @@ namespace Raven.Storage.Voron
 
 		public InFlightTransactionalState GetInFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
 		{            
-		    return new VoronInFlightTransactionalState(put, delete, this);
+		    return new DtcNotSupportedTransactionalState(FriendlyName, put, delete);
 		}
 
 		public IList<string> ComputeDetailedStorageInformation()

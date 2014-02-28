@@ -44,6 +44,9 @@ namespace Raven.Tests.Issues
 
 			using(var documentStore = NewRemoteDocumentStore(requestedStorage:"esent",runInMemory:false))
 			{
+                if(documentStore.DatabaseCommands.GetStatistics().SupportsDtc == false)
+                    return;
+
 				documentStore.Conventions.ShouldCacheRequest = url => false;
 				documentStore.Conventions.ShouldAggressiveCacheTrackChanges = false;
 				documentStore.Conventions.ShouldSaveChangesForceAggressiveCacheCheck = false;

@@ -37,6 +37,15 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(Database.TransportState.DebugStatuses);
 		}
 
+
+        [HttpGet]
+        [Route("debug/metrics")]
+        [Route("databases/{databaseName}/debug/metrics")]
+        public HttpResponseMessage Metrics()
+        {
+            return GetMessageWithObject(Database.CreateMetrics());
+        }
+
 		[HttpGet]
 		[Route("debug/config")]
 		[Route("databases/{databaseName}/debug/config")]
@@ -76,7 +85,7 @@ namespace Raven.Database.Server.Controllers
 			});
 		}
 
-		[HttpGet]
+		[HttpPost]
 		[Route("debug/index-fields")]
 		[Route("databases/{databaseName}/debug/index-fields")]
 		public async Task<HttpResponseMessage> IndexFields()

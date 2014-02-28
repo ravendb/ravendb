@@ -28,7 +28,7 @@ namespace Raven.Tests.Document
 
 		public DocumentStoreEmbeddedTests()
 		{
-			documentStore = NewDocumentStore();
+            documentStore = NewDocumentStore(requestedStorage: "esent");
 		}
 
 		public override void Dispose()
@@ -40,6 +40,9 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void CanUseTransactionsToIsolateSaves()
 		{
+            if(documentStore.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                return;
+
 			var company = new Company { Name = "Company Name" };
 			using (var session = documentStore.OpenSession())
 			{
@@ -126,6 +129,9 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void WillProcessAllDifferentDocumentsEnlistedInATransaction()
 		{
+            if(documentStore.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                return;
+
 			using (var tx = new TransactionScope())
 			{
 				using (var session = documentStore.OpenSession())
@@ -277,6 +283,9 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void CanUseTransactionsToIsolateDelete()
 		{
+            if(documentStore.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                return;
+
 			var company = new Company { Name = "Company Name" };
 			using (var session = documentStore.OpenSession())
 			{

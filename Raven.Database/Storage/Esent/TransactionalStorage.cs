@@ -26,6 +26,7 @@ using Raven.Database.Impl.DTC;
 using Raven.Database.Plugins;
 using System.Linq;
 using Raven.Database.Storage;
+using Raven.Database.Storage.Esent.Backup;
 using Raven.Database.Storage.Esent.Debug;
 using Raven.Database.Util;
 using Raven.Json.Linq;
@@ -202,8 +203,6 @@ namespace Raven.Storage.Esent
 
         public long GetDatabaseTransactionVersionSizeInBytes()
         {
-            if (configuration.DisablePerformanceCounters)
-                return -4;
             if (getDatabaseTransactionVersionSizeInBytesErrorValue != 0)
                 return getDatabaseTransactionVersionSizeInBytesErrorValue;
 
@@ -214,7 +213,7 @@ namespace Raven.Storage.Esent
                     return getDatabaseTransactionVersionSizeInBytesErrorValue = -1;
                 var category = new PerformanceCounterCategory(categoryName);
                 var instances = category.GetInstanceNames();
-                var ravenInstance = instances.FirstOrDefault(x => x.StartsWith(uniquePrefix));
+                var ravenInstance = instances.FirstOrDefault(x => x.Contains(uniquePrefix));
                 const string counterName = "Version Buckets Allocated";
                 if (ravenInstance == null || !category.CounterExists(counterName))
                 {
@@ -251,6 +250,8 @@ namespace Raven.Storage.Esent
             // after the database was already shut down.
             return e.Error == JET_err.InvalidInstance;
         }
+
+        public bool SupportsDtc { get { return true; } }
 
         void ITransactionalStorage.Compact(InMemoryRavenConfiguration cfg)
         {

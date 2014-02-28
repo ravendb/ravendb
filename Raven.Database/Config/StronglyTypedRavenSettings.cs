@@ -34,6 +34,16 @@ namespace Raven.Database.Config
 			MemoryCacheLimitCheckInterval =
 				new TimeSpanSetting(settings["Raven/MemoryCacheLimitCheckInterval"], MemoryCache.Default.PollingInterval,
 				                    TimeSpanArgumentType.FromParse);
+
+            PrewarmFacetsSyncronousWaitTime =
+                new TimeSpanSetting(settings["Raven/PrewarmFacetsSyncronousWaitTime"], TimeSpan.FromSeconds(3),
+                                    TimeSpanArgumentType.FromParse);
+
+            PrewarmFacetsOnIndexingMaxAge =
+                new TimeSpanSetting(settings["Raven/PrewarmFacetsOnIndexingMaxAge"], TimeSpan.FromMinutes(10),
+                                    TimeSpanArgumentType.FromParse);
+			
+			
 			MaxIndexingRunLatency =
 				new TimeSpanSetting(settings["Raven/MaxIndexingRunLatency"], TimeSpan.FromMinutes(5),
 				                    TimeSpanArgumentType.FromParse);
@@ -41,8 +51,6 @@ namespace Raven.Database.Config
 				new IntegerSetting(settings["Raven/MaxIndexWritesBeforeRecreate"], 256 * 1024);
 			MaxIndexOutputsPerDocument = 
 				new IntegerSetting(settings["Raven/MaxIndexOutputsPerDocument"], 15);
-			DisablePerformanceCounters =
-				new BooleanSetting(settings["Raven/DisablePerformanceCounters"], false);
 
 			MaxNumberOfItemsToIndexInSingleBatch =
 				new IntegerSettingWithMin(settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"],
@@ -66,7 +74,8 @@ namespace Raven.Database.Config
 				new BooleanSetting(settings["Raven/CreateAutoIndexesForAdHocQueriesIfNeeded"], true);
 			ResetIndexOnUncleanShutdown =
 				new BooleanSetting(settings["Raven/ResetIndexOnUncleanShutdown"], false);
-			
+			DisableInMemoryIndexing =
+				new BooleanSetting(settings["Raven/DisableInMemoryIndexing"], false);
 			DataDir =
 				new StringSetting(settings["Raven/DataDir"], @"~\Data");
 			IndexStoragePath =
@@ -134,6 +143,8 @@ namespace Raven.Database.Config
 
 			MaxStepsForScript = new IntegerSetting(settings["Raven/MaxStepsForScript"], 10*1000);
 			AdditionalStepsForScriptBasedOnDocumentSize = new IntegerSetting(settings["Raven/AdditionalStepsForScriptBasedOnDocumentSize"], 5);
+
+            VoronMaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
 		}
 
 	    
@@ -169,7 +180,11 @@ namespace Raven.Database.Config
 
 		public TimeSpanSetting MaxIndexingRunLatency { get; private set; }
 
-		public IntegerSettingWithMin MaxNumberOfItemsToIndexInSingleBatch { get; private set; }
+        public TimeSpanSetting PrewarmFacetsOnIndexingMaxAge { get; private set; }
+
+        public TimeSpanSetting PrewarmFacetsSyncronousWaitTime { get; private set; }
+
+        public IntegerSettingWithMin MaxNumberOfItemsToIndexInSingleBatch { get; private set; }
 
 		public IntegerSetting AvailableMemoryForRaisingIndexBatchSizeLimit { get; private set; }
 
@@ -186,6 +201,8 @@ namespace Raven.Database.Config
 		public BooleanSetting CreateAutoIndexesForAdHocQueriesIfNeeded { get; private set; }
 
 		public BooleanSetting ResetIndexOnUncleanShutdown { get; private set; }
+
+		public BooleanSetting DisableInMemoryIndexing { get; private set; }
 
 		public StringSetting DataDir { get; private set; }
 
@@ -256,7 +273,8 @@ namespace Raven.Database.Config
 
 		public IntegerSetting MaxIndexOutputsPerDocument { get; private set; }
     
-        public BooleanSetting DisablePerformanceCounters { get; set; }
 		public TimeSpanSetting DatbaseOperationTimeout { get; private set; }
+
+        public IntegerSetting VoronMaxBufferPoolSize { get; private set; }
 	}
 }

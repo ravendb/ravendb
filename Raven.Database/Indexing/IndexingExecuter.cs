@@ -113,6 +113,9 @@ namespace Raven.Database.Indexing
 		{
 			indexesToWorkOn = context.Configuration.IndexingScheduler.FilterMapIndexes(indexesToWorkOn);
 
+			if(indexesToWorkOn.Count == 0)
+				return;
+
             var lastIndexedGuidForAllIndexes =
                    indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToEtag();
             var startEtag = CalculateSynchronizationEtag(synchronizationEtag, lastIndexedGuidForAllIndexes);
@@ -129,21 +132,24 @@ namespace Raven.Database.Indexing
 			try
 			{
 				jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(startEtag);
-
+					
 				if (Log.IsDebugEnabled)
 				{
-					Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-							  jsonDocs.Count, startEtag, string.Join(", ", jsonDocs.Select(x => x.Key)));
+                        Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
+								  jsonDocs.Count, startEtag, string.Join(", ", jsonDocs.Select(x => x.Key)));
 				}
 
 				context.ReportIndexingActualBatchSize(jsonDocs.Count);
+
 				context.CancellationToken.ThrowIfCancellationRequested();
 
 				if (jsonDocs.Count <= 0)
 					return;
 
 				var sw = Stopwatch.StartNew();
+
 				lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
+
 				indexingDuration = sw.Elapsed;
 			}
 			catch (OperationCanceledException)
@@ -170,7 +176,8 @@ namespace Raven.Database.Indexing
 			var lastModified = lastByEtag.LastModified.Value;
 			var lastEtag = lastByEtag.Etag;
 
-			context.PerformanceCounters.IndexedPerSecond.IncrementBy(jsonDocs.Count);
+            context.MetricsCounters.IndexedPerSecond.Mark(jsonDocs.Count);
+            
 			var result = FilterIndexes(indexesToWorkOn, jsonDocs, lastEtag).ToList();
 
 			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, result,
@@ -178,6 +185,33 @@ namespace Raven.Database.Indexing
 
 			return lastEtag;
 		}
+
+        public void IndexPrecomputedBatch(PrecomputedIndexingBatch precomputedBatch)
+        {
+            context.MetricsCounters.IndexedPerSecond.Mark(precomputedBatch.Documents.Count);
+
+            var indexToWorkOn = new IndexToWorkOn()
+            {
+                Index = precomputedBatch.Index,
+                IndexId = precomputedBatch.Index.indexId,
+                LastIndexedEtag = Etag.Empty
+            };
+
+            var indexingBatchForIndex =
+                FilterIndexes(new List<IndexToWorkOn>() {indexToWorkOn}, precomputedBatch.Documents,
+                              precomputedBatch.LastIndexed).FirstOrDefault();
+
+            if (indexingBatchForIndex == null)
+                return;
+
+            if (Log.IsDebugEnabled)
+            {
+                Log.Debug("Going to index precomputed documents for a new index {0}. Count of precomputed docs {1}",
+                          precomputedBatch.Index.PublicName, precomputedBatch.Documents.Count);
+            }
+
+            HandleIndexingFor(indexingBatchForIndex, precomputedBatch.LastIndexed, precomputedBatch.LastModified);
+        }
 
 		private void HandleIndexingFor(IndexingBatchForIndex batchForIndex, Etag lastEtag, DateTime lastModified)
 		{

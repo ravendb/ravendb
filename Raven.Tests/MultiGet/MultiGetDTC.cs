@@ -10,8 +10,12 @@ namespace Raven.Tests.MultiGet
 		[Fact]
 		public void CanUseMultiGetToBatchGetDocumentRequests()
 		{
-			using (GetNewServer())
-			using (var docStore = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
+            using (var server = GetNewServer(requestedStorage: "esent"))
+			{
+                if(server.SystemDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
+
+                using (var docStore = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
 			{
 				for (int i = 0; i < 10; i++)
 				{
@@ -38,7 +42,7 @@ namespace Raven.Tests.MultiGet
 					}
 				}
 
-			}
+			}}
 		}
 	}
 }

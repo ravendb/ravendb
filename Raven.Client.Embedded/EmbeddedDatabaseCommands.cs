@@ -133,7 +133,9 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
-		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null)
+		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
+		                                 RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
+										 string exclude = null, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
 		{
 			pageSize = Math.Min(pageSize, database.Configuration.MaxPageSize);
 
@@ -150,12 +152,29 @@ namespace Raven.Client.Embedded
 				nextPageStart = actualStart;
 			}
 
-			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, actualStart, pageSize, CancellationToken.None, ref nextPageStart);
+			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, actualStart,
+			                                                                          pageSize, CancellationToken.None,
+			                                                                          ref nextPageStart, transformer, queryInputs);
 
 			if (pagingInformation != null)
 				pagingInformation.Fill(start, pageSize, nextPageStart);
 
-			return SerializationHelper.RavenJObjectsToJsonDocuments(documentsWithIdStartingWith.OfType<RavenJObject>()).ToArray();
+		    var docResults = documentsWithIdStartingWith.OfType<RavenJObject>().ToList();
+
+		    var startsWithResults = SerializationHelper.RavenJObjectsToJsonDocuments(docResults.Select(x => (RavenJObject) x.CloneToken()))
+		                                                                        .ToArray();
+
+            return RetryOperationBecauseOfConflict(docResults, startsWithResults,
+                                                    () => StartsWith(keyPrefix, matches, start, pageSize, pagingInformation,
+                                                          metadataOnly, exclude, transformer, queryInputs),
+                                                    conflictedResultId =>
+                                                   new ConflictException(
+                                                       "Conflict detected on " +
+                                                       conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
+                                                       ", conflict must be resolved before the document will be accessible", true)
+                                                   {
+                                                       ConflictedVersionIds = new[] { conflictedResultId }
+                                                   });
 		}
 
 		/// <summary>
@@ -615,7 +634,7 @@ namespace Raven.Client.Embedded
 						{
 							database.TransactionalStorage.Batch(accessor =>
 							{
-								using (var op = new DocumentDatabase.DatabaseQueryOperation(database, index, query, accessor))
+								using (var op = new DocumentDatabase.DatabaseQueryOperation(database, index, query, accessor, CancellationToken.None))
 								{
 									op.Init();
 									localQueryHeaderInfo = op.Header;
@@ -639,7 +658,7 @@ namespace Raven.Client.Embedded
 						if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) &&
 							e is IndexDoesNotExistsException)
 						{
-							throw new InvalidOperationException(@"StreamQuery() does not support querying dynamic indexes. It is designed to be used with large data-sets and is unlikely to return all data-set after 15 sec of indexing, like Query() does.",e);
+							throw new InvalidOperationException(@"StreamQuery does not support querying dynamic indexes. It is designed to be used with large data-sets and is unlikely to return all data-set after 15 sec of indexing, like Query() does.",e);
 						}
 
 						throw;
@@ -718,7 +737,7 @@ namespace Raven.Client.Embedded
 				                pageSize,
 				                CancellationToken.None,
 				                ref nextPageStart,
-				                addItem);
+				                addItem, null);
 
 				            return nextPageStart;
 				        }

@@ -105,6 +105,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\NetTopologySuite.dll</HintPath>
     </Reference>
+    <Reference Include="NLog, Version=2.1.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\NLog.2.1.0\lib\net45\NLog.dll</HintPath>
+    </Reference>
     <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
@@ -180,9 +184,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <None Include="NLog.config" />
     <None Include="NLog.config">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <SubType>Designer</SubType>
     </None>
     <None Include="packages.config" />
   </ItemGroup>
@@ -202,6 +205,15 @@
       <Project>{3C2CD044-CF12-48D1-9C43-64A9058C165E}</Project>
       <Name>Voron.Tests</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="xunit">
+      <HintPath>..\SharedLibs\xunit\xunit.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.extensions, Version=1.9.2.0, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\xunit\xunit.extensions.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />

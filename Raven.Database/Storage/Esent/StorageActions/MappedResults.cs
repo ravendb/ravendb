@@ -684,7 +684,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 		}
 
-		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(int view, string key, int level, int start, int take)
+		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(int view, string reduceKey, int level, int start, int take)
 		{
 			if (take <= 0)
 				yield break;
@@ -720,7 +720,7 @@ namespace Raven.Storage.Esent.StorageActions
 					continue;
 				if (levelFromDb > level)
 					break;
-				var keyCompare = string.Compare(key, keyFromDb, StringComparison.OrdinalIgnoreCase);
+				var keyCompare = string.Compare(reduceKey, keyFromDb, StringComparison.OrdinalIgnoreCase);
 				if (keyCompare != 0)
 					continue;
 

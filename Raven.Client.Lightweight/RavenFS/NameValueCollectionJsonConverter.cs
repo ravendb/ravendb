@@ -2,11 +2,7 @@
 using System.Collections.Specialized;
 using Raven.Imports.Newtonsoft.Json;
 
-#if !CLIENT && !SILVERLIGHT
-namespace RavenFS.Util
-#else
 namespace Raven.Client.RavenFS
-#endif
 {
 	public class NameValueCollectionJsonConverter : JsonConverter
 	{

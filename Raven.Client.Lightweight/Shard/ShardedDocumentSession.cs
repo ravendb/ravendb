@@ -686,7 +686,7 @@ namespace Raven.Client.Shard
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false)
 		{
 			return new ShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, null,
-											   listeners.QueryListeners, isMapReduce);
+											   theListeners.QueryListeners, isMapReduce);
 		}
 
 		public IDocumentQuery<T> LuceneQuery<T>()
@@ -785,6 +785,40 @@ namespace Raven.Client.Shard
 			}, (dbCmd, i) => dbCmd.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude));
 
 			return results.SelectMany(x => x).Select(TrackEntity<T>)
+						  .ToArray();
+		}
+
+		public TResult[] LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0,
+																 int pageSize = 25, string exclude = null,
+																 RavenPagingInformation pagingInformation = null, 
+																 Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			var transformer = new TTransformer().TransformerName;
+
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+			{
+				configure(configuration);
+			}
+
+			IncrementRequestCount();
+			var shards = GetCommandsToOperateOn(new ShardRequestData
+			{
+				EntityType = typeof(TResult),
+				Keys = { keyPrefix }
+			});
+
+			var results = shardStrategy.ShardAccessStrategy.Apply(shards, new ShardRequestData
+			{
+				EntityType = typeof (TResult),
+				Keys = {keyPrefix}
+			},
+			(dbCmd, i) =>
+			dbCmd.StartsWith(keyPrefix, matches, start, pageSize,
+							exclude: exclude, transformer: transformer,
+							queryInputs: configuration.QueryInputs));
+
+			return results.SelectMany(x => x).Select(TrackEntity<TResult>)
 						  .ToArray();
 		}
 

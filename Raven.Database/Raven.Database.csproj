@@ -112,6 +112,9 @@
     <Reference Include="Lucene.Net.Contrib.Spatial.NTS">
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
     </Reference>
+    <Reference Include="metrics">
+      <HintPath>..\SharedLibs\metrics.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.Data.Edm, Version=5.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Data.Edm.5.6.0\lib\net40\Microsoft.Data.Edm.dll</HintPath>
@@ -240,6 +243,10 @@
     <Compile Include="Bundles\PeriodicBackups\Controllers\AdminPeriodicBackupController.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\AncestryPutTrigger.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualDeleteTrigger.cs" />
+    <Compile Include="Impl\DTC\DtcNotSupportedTransactionalState.cs" />
+    <Compile Include="Indexing\PrecomputedIndexing.cs" />
+    <Compile Include="Plugins\Builtins\ReadOnlyDeleteTrigger.cs" />
+    <Compile Include="Plugins\Builtins\ReadOnlyPutTrigger.cs" />
     <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTask.cs" />
@@ -284,7 +291,6 @@
     <Compile Include="Extensions\CancellationTokenSource.cs" />
     <Compile Include="Impl\DTC\EsentInFlightTransactionalState.cs" />
     <Compile Include="Impl\DTC\EsentTransactionContext.cs" />
-    <Compile Include="Impl\DTC\MuninInFlightTransactionalState.cs" />
     <Compile Include="Indexing\IndependentBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
     <Compile Include="LastCollectionEtags.cs" />
@@ -301,6 +307,7 @@
     <Compile Include="Server\Controllers\BundlesApiController.cs" />
     <Compile Include="Server\Controllers\RavenBaseApiController.cs" />
     <Compile Include="Server\Contents\StaticHeadContent.cs" />
+    <Compile Include="Server\Controllers\StudioController.cs" />
     <Compile Include="Server\RavenDBOptions.cs" />
     <Compile Include="Server\Connections\IEventsTransport.cs" />
     <Compile Include="Server\Connections\ChangesPushContent.cs" />
@@ -327,7 +334,6 @@
     <Compile Include="Server\Controllers\PluginController.cs" />
     <Compile Include="Server\Controllers\QueriesController.cs" />
     <Compile Include="Server\Controllers\RavenDbApiController.cs" />
-    <Compile Include="Server\Controllers\RavenDbUiController.cs" />
     <Compile Include="Server\Controllers\SilverlightController.cs" />
     <Compile Include="Server\Controllers\SingleAuthTokenController.cs" />
     <Compile Include="Server\Controllers\StaticController.cs" />
@@ -926,6 +932,7 @@
     <Compile Include="Server\WebApi\Handlers\GZipToJsonAndCompressHandler.cs" />
     <Compile Include="Server\WebApi\RequestManager.cs" />
     <Compile Include="Smuggler\DataDumper.cs" />
+    <Compile Include="Storage\BaseBackupOperation.cs" />
     <Compile Include="Storage\BaseRestoreOperation.cs" />
     <Compile Include="Storage\DatabaseSizeInformation.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
@@ -983,44 +990,6 @@
     <Compile Include="Storage\ITasksStorageActions.cs" />
     <Compile Include="Storage\ITransactionalStorage.cs" />
     <Compile Include="Queries\SuggestionQueryRunner.cs" />
-    <Compile Include="Storage\Managed\AttachmentsStorageActions.cs" />
-    <Compile Include="Storage\Managed\Backup\BackupOperation.cs" />
-    <Compile Include="Storage\Managed\Backup\RestoreOperation.cs" />
-    <Compile Include="Storage\Managed\DocumentsStorageActions.cs" />
-    <Compile Include="Storage\Managed\GeneralStorageActions.cs" />
-    <Compile Include="Storage\Managed\Impl\TableStorage.cs" />
-    <Compile Include="Storage\Managed\IndexingStorageActions.cs" />
-    <Compile Include="Storage\Managed\ListsStorageActions.cs" />
-    <Compile Include="Storage\Managed\MappedResultsStorageAction.cs" />
-    <Compile Include="Storage\Managed\Munin\AbstractPersistentSource.cs" />
-    <Compile Include="Storage\Managed\Munin\Command.cs" />
-    <Compile Include="Storage\Managed\Munin\CommandType.cs" />
-    <Compile Include="Storage\Managed\Munin\Database.cs" />
-    <Compile Include="Storage\Managed\Munin\FileBasedPersistentSource.cs" />
-    <Compile Include="Storage\Managed\Munin\IComparerAndEquality.cs" />
-    <Compile Include="Storage\Managed\Munin\IPersistentSource.cs" />
-    <Compile Include="Storage\Managed\Munin\MemoryPersistentSource.cs" />
-    <Compile Include="Storage\Managed\Munin\ModifiedJTokenComparer.cs" />
-    <Compile Include="Storage\Managed\Munin\PersistentDictionaryState.cs" />
-    <Compile Include="Storage\Managed\Munin\PositionInFile.cs" />
-    <Compile Include="Storage\Managed\Munin\RavenJTokenComparer.cs" />
-    <Compile Include="Storage\Managed\Munin\ReadOnlyFileBasedPersistentSource.cs" />
-    <Compile Include="Storage\Managed\Munin\RecordingComparer.cs" />
-    <Compile Include="Storage\Managed\Munin\RemoteManagedStorageState.cs" />
-    <Compile Include="Storage\Managed\Munin\ReverseComparableByteArrayWhichIgnoresNull.cs" />
-    <Compile Include="Storage\Managed\Munin\SecondaryIndex.cs" />
-    <Compile Include="Storage\Managed\Munin\Table.cs" />
-    <Compile Include="Storage\Managed\Munin\Tree\AVLTree.cs" />
-    <Compile Include="Storage\Managed\Munin\Tree\EmptyAVLTree.cs" />
-    <Compile Include="Storage\Managed\Munin\Tree\EmptyStack.cs" />
-    <Compile Include="Storage\Managed\Munin\Tree\IBinarySearchTree.cs" />
-    <Compile Include="Storage\Managed\Munin\Tree\IStack.cs" />
-    <Compile Include="Storage\Managed\Munin\Tree\Stack.cs" />
-    <Compile Include="Storage\Managed\QueueStorageActions.cs" />
-    <Compile Include="Storage\Managed\StalenessStorageActions.cs" />
-    <Compile Include="Storage\Managed\StorageActionsAccessor.cs" />
-    <Compile Include="Storage\Managed\TasksStorageActions.cs" />
-    <Compile Include="Storage\Managed\TransactionalStorage.cs" />
     <Compile Include="Storage\Voron\Backup\BackupOperation.cs" />
     <Compile Include="Storage\Voron\Backup\RestoreOperation.cs" />
     <Compile Include="Storage\Voron\StorageActions\DocumentsStorageActions.cs" />
@@ -1044,7 +1013,6 @@
     <Compile Include="Storage\Voron\StorageActions\TasksStorageActions.cs" />
     <Compile Include="Storage\Voron\TransactionalStorage.cs" />
     <Compile Include="Storage\Voron\UndisposableStream.cs" />
-    <Compile Include="Storage\Voron\VoronInFlightTransactionalState.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\DatabaseTask.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
@@ -1054,10 +1022,10 @@
     <Compile Include="Util\CompositeDisposable.cs" />
     <Compile Include="Util\DatabaseMemoryTarget.cs" />
     <Compile Include="Util\IPerformanceCounter.cs" />
+    <Compile Include="Util\MetricsCountersManager.cs" />
     <Compile Include="Util\NoOpPerformanceCounter.cs" />
     <Compile Include="Util\OutputTicker.cs" />
     <Compile Include="Util\PerformanceCounterAttribute.cs" />
-    <Compile Include="Util\PerformanceCountersManager.cs" />
     <Compile Include="Util\PerformanceCountersUtils.cs" />
     <Compile Include="Util\PerformanceCounterWrapper.cs" />
     <Compile Include="Util\PortUtil.cs" />
@@ -1066,6 +1034,7 @@
     <Compile Include="Util\Streams\BufferPool.cs" />
     <Compile Include="Util\Streams\BufferPoolStream.cs" />
     <Compile Include="Util\Streams\PartialStream.cs" />
+    <Compile Include="Util\Streams\BufferPoolMemoryStream.cs" />
     <Compile Include="Util\WildcardMatcher.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -1177,6 +1146,9 @@
     <EmbeddedResource Include="Server\WebUI\js\rdb.jsonEditor\rdb.jsonEditor.js" />
     <EmbeddedResource Include="Server\WebUI\statistics.html" />
     <EmbeddedResource Include="Server\WebUI\view.html" />
+    <EmbeddedResource Include="..\Raven.Studio.Html5\**">
+      <Link>Server\Html5Studio\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Commercial\RavenDB.public" />
@@ -1205,7 +1177,6 @@
       <Name>Voron %28Voron\Voron%29</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
   <Target Name="BeforeBuild">

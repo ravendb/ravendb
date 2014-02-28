@@ -25,6 +25,17 @@ namespace Raven.Client
 		Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null);
 
 		/// <summary>
+		///  Loads documents with the specified key prefix and applies the specified results transformer against the results
+		/// </summary>
+		/// <typeparam name="TTransformer">The transformer to use in this load operation</typeparam>
+		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
+		Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null,
+		                                                                   int start = 0,
+		                                                                   int pageSize = 25, string exclude = null,
+		                                                                   RavenPagingInformation pagingInformation = null,
+		                                                                   Action<ILoadConfiguration> configure = null)
+			where TTransformer : AbstractTransformerCreationTask, new();
+		/// <summary>
 		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>

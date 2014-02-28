@@ -22,9 +22,7 @@ namespace Raven.Tests.Issues
 	    private int b = 200;
 
 		[Theory]
-		[InlineData("munin")]
-		[InlineData("esent")]
-		[InlineData("voron")]
+        [PropertyData("Storages")]
 		public void ShouldRemoveAllMapResultsAfterDeletingIndex(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
@@ -54,9 +52,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
-		[InlineData("munin")]
-		[InlineData("esent")]
-		[InlineData("voron")]
+        [PropertyData("Storages")]
 		public void ShouldRemoveAllReduceResultsAfterDeletingIndex(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
@@ -86,9 +82,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
-		[InlineData("munin")]
-		[InlineData("esent")]
-		[InlineData("voron")]
+        [PropertyData("Storages")]
 		public void ShouldRemoveAllScheduledReductionsAfterDeletingIndex(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))

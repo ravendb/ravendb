@@ -62,7 +62,8 @@ namespace Raven.Tests.Issues
             RegisterRouteForOnlySysDb<LogsController>(a => a.LogsGet());
             RegisterRouteForOnlySysDb<OAuthController>(a => a.ApiKeyPost());
             RegisterRouteForOnlySysDb<PluginController>(a => a.PlugingsStatusGet());
-            RegisterRouteForOnlySysDb<RavenDbUiController>(a => a.RavenUiGet(null));
+            RegisterRouteForOnlySysDb<StudioController>(a => a.RavenUiGet(null));
+            RegisterRouteForOnlySysDb<StudioController>(a => a.GetStudioFile(null));
             RegisterRouteForOnlySysDb<SilverlightController>(a => a.SilverlightUi(string.Empty));
             RegisterRouteForOnlySysDb<ConfigController>(a => a.Get());
             RegisterRouteForOnlySysDb<ConfigController>(a => a.Get(string.Empty));

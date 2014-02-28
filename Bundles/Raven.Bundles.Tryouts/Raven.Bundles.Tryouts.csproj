@@ -56,12 +56,6 @@
     <Compile Include="Program.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Bundles.Tests\Raven.Bundles.Tests.csproj">
-      <Project>{35CFAB1C-7934-4481-AC0D-7102F7DEE7F8}</Project>
-      <Name>Raven.Bundles.Tests</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="app.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

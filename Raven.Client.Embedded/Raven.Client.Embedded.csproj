@@ -15,7 +15,7 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\ravendb\</SolutionDir>
     <RestorePackages>true</RestorePackages>
     <TargetFrameworkProfile />
-	<FodyPath>..\packages\Fody.1.14.0</FodyPath>
+    <FodyPath>..\packages\Fody.1.14.0</FodyPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -39,8 +39,6 @@
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <DocumentationFile>bin\Release\Raven.Client.Embedded.xml</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
-    <DocumentationFile>bin\Release\Raven.Client.Embedded.XML</DocumentationFile>
-    <DocumentationFile>..\build\Raven.Client.Embedded.XML</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>

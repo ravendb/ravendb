@@ -231,9 +231,16 @@ namespace Raven.Client.Document
             if (IsDeleted(id))
                 return default(T);
             object existingEntity;
+
             if (entitiesByKey.TryGetValue(id, out existingEntity))
             {
                 return (T)existingEntity;
+            }
+            JsonDocument value;
+            if (includedDocumentsByKey.TryGetValue(id, out value))
+            {
+                includedDocumentsByKey.Remove(id);
+                return TrackEntity<T>(value);
             }
 
             IncrementRequestCount();
@@ -339,16 +346,16 @@ namespace Raven.Client.Document
         internal object ProjectionToInstance(RavenJObject y, Type type)
         {
             HandleInternalMetadata(y);
-            foreach (var conversionListener in listeners.ExtendedConversionListeners)
+            foreach (var conversionListener in theListeners.ExtendedConversionListeners)
             {
                 conversionListener.BeforeConversionToEntity(null, y, null);
             }
             var instance = y.Deserialize(type, Conventions);
-            foreach (var conversionListener in listeners.ConversionListeners)
+            foreach (var conversionListener in theListeners.ConversionListeners)
             {
                 conversionListener.DocumentToEntity(null, instance, y, null);
             }
-            foreach (var conversionListener in listeners.ExtendedConversionListeners)
+            foreach (var conversionListener in theListeners.ExtendedConversionListeners)
             {
                 conversionListener.AfterConversionToEntity(null, y, null, instance);
             }
@@ -405,12 +412,7 @@ namespace Raven.Client.Document
                 multiLoadOperation.Complete<T>();
             }
 
-            return ids.Select(id =>
-            {
-                object val;
-                entitiesByKey.TryGetValue(id, out val);
-                return (T)val;
-            }).ToArray();
+            return ids.Select(Load<T>).ToArray();
         }
 
         /// <summary>
@@ -694,7 +696,7 @@ namespace Raven.Client.Document
         /// <returns></returns>
         public IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false)
         {
-            return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, listeners.QueryListeners, isMapReduce);
+            return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, theListeners.QueryListeners, isMapReduce);
         }
 
         /// <summary>
@@ -917,7 +919,28 @@ namespace Raven.Client.Document
                                    .ToArray();
         }
 
-        public Lazy<TResult[]> MoreLikeThis<TResult>(MoreLikeThisQuery query)
+	    public TResult[] LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0,
+	                                                             int pageSize = 25, string exclude = null,
+	                                                             RavenPagingInformation pagingInformation = null,
+	                                                             Action<ILoadConfiguration> configure = null)
+		    where TTransformer : AbstractTransformerCreationTask, new()
+	    {
+		    var transformer = new TTransformer().TransformerName;
+
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+			{
+				configure(configuration);
+			}
+
+		    return
+			    DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude,
+			                                pagingInformation: pagingInformation, transformer: transformer, queryInputs: configuration.QueryInputs)
+			                    .Select(TrackEntity<TResult>)
+			                    .ToArray();
+	    }
+
+	    public Lazy<TResult[]> MoreLikeThis<TResult>(MoreLikeThisQuery query)
         {
             var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, null, null);
             var lazyOp = new LazyMoreLikeThisOperation<TResult>(multiLoadOperation, query);

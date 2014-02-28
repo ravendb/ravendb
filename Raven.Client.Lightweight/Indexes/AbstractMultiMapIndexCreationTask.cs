@@ -84,7 +84,8 @@ namespace Raven.Client.Indexes
 				IndexesStrings = IndexesStrings,
 				StoresStrings = StoresStrings,
 				TermVectorsStrings = TermVectorsStrings,
-				SpatialIndexesStrings = SpatialIndexesStrings
+				SpatialIndexesStrings = SpatialIndexesStrings,
+				DisableInMemoryIndexing = DisableInMemoryIndexing,
 			}.ToIndexDefinition(Conventions, validateMap: false);
 			foreach (var map in maps.Select(generateMap => generateMap()))
 			{

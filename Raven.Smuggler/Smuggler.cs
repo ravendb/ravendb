@@ -140,6 +140,8 @@ namespace Raven.Smuggler
 
         private static async Task<Etag> ExportDocuments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptions options, ServerSupportedFeatures exportStoreSupportedFeatures)
         {
+            var now = SystemTime.UtcNow;
+
             string lastEtag = options.StartDocsEtag;
             var totalCount = 0;
             var lastReport = SystemTime.UtcNow;
@@ -168,7 +170,7 @@ namespace Raven.Smuggler
 
                                 if (!options.MatchFilters(document))
                                     continue;
-                                if (options.ShouldExcludeExpired && options.ExcludeExpired(document))
+                                if (options.ShouldExcludeExpired && options.ExcludeExpired(document, now))
                                     continue;
 
                                 var metadata = document.Value<RavenJObject>("@metadata");
@@ -216,7 +218,7 @@ namespace Raven.Smuggler
 
                                         if (!options.MatchFilters(document))
                                             continue;
-                                        if (options.ShouldExcludeExpired && options.ExcludeExpired(document))
+                                        if (options.ShouldExcludeExpired && options.ExcludeExpired(document, now))
                                             continue;
 
                                         bulkInsertOperation.Store(document, metadata, id);

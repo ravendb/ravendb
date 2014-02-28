@@ -404,7 +404,7 @@ namespace Raven.Database.Prefetching
 		public bool FilterDocuments(JsonDocument document)
 		{
 			HashSet<Etag> etags;
-			return (documentsToRemove.TryGetValue(document.Key, out etags) && etags.Contains(document.Etag)) == false;
+			return (documentsToRemove.TryGetValue(document.Key, out etags) && etags.Any(x => x.CompareTo(document.Etag) >= 0)) == false;
 		}
 
 		public void AfterDelete(string key, Etag deletedEtag)
