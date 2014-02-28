@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Util.Streams;
 using Raven.Database;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Voron;

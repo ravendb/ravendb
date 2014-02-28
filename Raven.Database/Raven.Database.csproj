@@ -1066,7 +1066,6 @@
     <Compile Include="Util\PortUtil.cs" />
     <Compile Include="Util\SequentialUuidGenerator.cs" />
     <Compile Include="Util\SortedKeyList.cs" />
-    <Compile Include="Util\Streams\BufferPool.cs" />
     <Compile Include="Util\Streams\BufferPoolStream.cs" />
     <Compile Include="Util\Streams\PartialStream.cs" />
     <Compile Include="Util\Streams\BufferPoolMemoryStream.cs" />

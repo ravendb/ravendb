@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Abstractions.Util.Streams;
+
 namespace Raven.Tests.Server.Runner
 {
 	using System;
@@ -15,7 +17,6 @@ namespace Raven.Tests.Server.Runner
 	using Raven.Database.Extensions;
 	using Raven.Database.Server;
 	using Raven.Database.Server.Abstractions;
-	using Raven.Database.Util.Streams;
 
 	using Raven.Tests.Server.Runner.Responders;
 
