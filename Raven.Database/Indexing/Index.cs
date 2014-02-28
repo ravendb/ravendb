@@ -336,7 +336,10 @@ namespace Raven.Database.Indexing
             IndexSearcher searcher = null;
             using (GetSearcher(out searcher))
             {
-                var topDocs = searcher.Search(new TermQuery(term), 50); //TODO: walk through all docs!
+                var collector = new GatherAllCollector();
+                searcher.Search(new TermQuery(term), collector);
+                var topDocs = collector.ToTopDocs();
+                
                 foreach (var scoreDoc in topDocs.ScoreDocs)
                 {
                     var document = searcher.Doc(scoreDoc.Doc);
