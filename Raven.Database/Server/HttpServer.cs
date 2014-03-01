@@ -23,6 +23,7 @@ using System.Threading.Tasks;
 using Jint;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Abstractions.Util.Streams;
 using Raven.Database.Commercial;
 using Raven.Database.Plugins;
 using Raven.Database.Server.Connections;

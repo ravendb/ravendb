@@ -1,6 +1,7 @@
 ﻿using System;
 
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.Impl;
 using Raven.Database.Util.Streams;
 

@@ -130,7 +130,7 @@ namespace Raven.Abstractions.Data
 			return new Etag
 			{
 				restarts = BitConverter.ToInt64(bytes.Take(8).Reverse().ToArray(), 0),
-				changes = BitConverter.ToInt64(bytes.Skip(8).Reverse().ToArray(), 0)
+				changes = BitConverter.ToInt64(bytes.Skip(8).Take(8).Reverse().ToArray(), 0)
 			};
 		}
 
