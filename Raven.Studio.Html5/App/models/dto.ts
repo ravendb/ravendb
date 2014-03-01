@@ -295,3 +295,15 @@ interface transformerDto {
         Name: string;
     }
 }
+
+interface storedQueryDto {
+    id: string;
+    isPinned: boolean;
+    queryText: string;
+    sorts: string[];
+    databaseName: string;
+    transformerName: string;
+    showFields: boolean;
+    indexEntries: boolean;
+    useAndOperator: boolean;
+}
