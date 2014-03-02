@@ -1411,10 +1411,12 @@ namespace Raven.Database
                 var lastIndexedEtagByRavenDocumentsByEntityName = stats.LastIndexedEtag;
                 var lastModifiedByRavenDocumentsByEntityName = stats.LastIndexedTimestamp;
 
+	            var cts = new CancellationTokenSource();
+				using(var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, WorkContext.CancellationToken))
                 using (var op = new DatabaseQueryOperation(this, documentsByEntityNameIndex, new IndexQuery
                 {
                     Query = query
-                }, actions, WorkContext.CancellationToken)
+                }, actions, linked.Token)
                 {
                     ShouldSkipDuplicateChecking = true
                 })
@@ -1430,6 +1432,15 @@ namespace Raven.Database
                         // to index in a single batch. The idea here is that we need to keep the amount
                         // of memory we use to a manageable level even when introducing a new index to a BIG 
                         // database
+	                    try
+	                    {
+							cts.Cancel();
+							// we have to run just a little bit of the query to properly setup the disposal
+		                    op.Execute(o => { });
+	                    }
+	                    catch (OperationCanceledException)
+	                    {
+	                    }
                         return;
                     }
 
@@ -1680,6 +1691,9 @@ namespace Raven.Database
             public void Dispose()
             {
                 database.RemoveFromCurrentlyRunningQueryList(indexName, queryStat);
+				var resultsAsDisposable = results as IDisposable;
+				if(resultsAsDisposable != null)
+					resultsAsDisposable.Dispose();
             }
         }
 
