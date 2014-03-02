@@ -99,6 +99,12 @@ namespace Raven.Client.Document.Async
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)query);
 			var indexQuery = ravenQueryInspector.GetIndexQuery(true);
+
+            if (indexQuery.WaitForNonStaleResults || indexQuery.WaitForNonStaleResultsAsOfNow)
+                throw new NotSupportedException(
+                    "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
+
+
             var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery, queryHeaderInformation).ConfigureAwait(false);
 			var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation(null);
 			queryOperation.DisableEntitiesTracking = true;
