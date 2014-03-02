@@ -460,6 +460,10 @@ namespace Raven.Database.Server.Controllers
 			var resourceAssembly = typeof(IHttpContext).Assembly;
 			var resourceNames = resourceAssembly.GetManifestResourceNames();
 			var lowercasedResourceName = resourceNames.FirstOrDefault(s => string.Equals(s, resourceName, StringComparison.OrdinalIgnoreCase));
+		    if (lowercasedResourceName == null)
+		    {
+		        return GetEmptyMessage(HttpStatusCode.NotFound);
+		    }
 			using (var resource = resourceAssembly.GetManifestResourceStream(lowercasedResourceName))
 			{
 				if (resource == null)
