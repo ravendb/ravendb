@@ -344,7 +344,6 @@
     <Compile Include="Server\Controllers\TransactionController.cs" />
     <Compile Include="Server\Controllers\TransformersController.cs" />
     <Compile Include="Server\OwinHttpServer.cs" />
-    <Compile Include="Server\RavenFS\Config\InMemoryConfiguration.cs" />
     <Compile Include="Server\RavenFS\Config\ServerUrlUtil.cs" />
     <Compile Include="Server\RavenFS\Controllers\ConfigController.cs" />
     <Compile Include="Server\RavenFS\Controllers\FilesController.cs" />
