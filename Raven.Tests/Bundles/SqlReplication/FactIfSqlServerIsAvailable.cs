@@ -10,9 +10,13 @@ namespace Raven.Tests.Bundles.SqlReplication
 	{
 		public static ConnectionStringSettings ConnectionStringSettings { get; set; }
 
-		public FactIfSqlServerIsAvailable()
+		static FactIfSqlServerIsAvailable()
 		{
 			ConnectionStringSettings = GetAppropriateConnectionStringNameInternal();
+		}
+
+		public FactIfSqlServerIsAvailable()
+		{
 			if (ConnectionStringSettings == null)
 			{
 				base.Skip = "Could not find a connection string with a valid database to connect to, skipping the test";
