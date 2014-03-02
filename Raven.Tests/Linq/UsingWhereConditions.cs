@@ -20,27 +20,20 @@ using Xunit;
  */
 namespace Raven.Tests.Linq
 {
-	public class UsingWhereConditions
+	public class UsingWhereConditions : RavenTest
 	{
 		[Fact]
 		public void Can_Use_Where()
 		{
-			//When running in the XUnit GUI strange things happen is we just create a path relative to 
-			//the .exe itself, so make our folder in the System temp folder instead ("<user>\AppData\Local\Temp")
-			string directoryName =  Path.Combine(Path.GetTempPath(), "ravendb.RavenWhereTests");
-			IOExtensions.DeleteDirectory(directoryName);
-
-			using (var db = new EmbeddableDocumentStore { DataDirectory = directoryName })
+			using (var db = NewDocumentStore())
 			{
-				db.Initialize();
-
-				string indexName = "CommitByRevision";
+				const string indexName = "CommitByRevision";
 				using (var session = db.OpenSession())
 	            {
 					AddData(session);                    
 
 					db.DatabaseCommands.DeleteIndex(indexName);
-					var result = db.DatabaseCommands.PutIndex<CommitInfo, CommitInfo>(indexName,
+					var result = db.DatabaseCommands.PutIndex(indexName,
 							new IndexDefinitionBuilder<CommitInfo, CommitInfo>
 							{
 								Map = docs => from doc in docs
@@ -144,7 +137,7 @@ namespace Raven.Tests.Linq
 					//There are 2 CommitInfos which has Revision >=7  || <= 1 
 					Assert.Equal(2, Results.ToArray().Count());
 	            }
-			}            
+			}
 		}
 
 		private static string Repo = "/svn/repo/";
