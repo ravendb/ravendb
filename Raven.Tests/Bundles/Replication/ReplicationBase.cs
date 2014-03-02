@@ -6,11 +6,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Tasks;
@@ -28,7 +26,6 @@ using Raven.Server;
 using Raven.Tests.Helpers;
 using Xunit;
 using System.Linq;
-using Path = System.IO.Path;
 
 namespace Raven.Tests.Bundles.Replication
 {

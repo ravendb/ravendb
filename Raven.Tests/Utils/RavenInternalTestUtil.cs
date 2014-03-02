@@ -15,7 +15,7 @@ namespace Raven.Tests.Utils
 {
 	public class RavenInternalTestUtil
 	{
-		private static void OpenTestsNotSubclassingRavenTest()
+		public static void OpenTestsNotSubclassingRavenTest()
 		{
 			var array = typeof(RavenTest).Assembly.GetTypes()
 										  .Where(t => t.GetMethods().Any(m => m.GetCustomAttributes(typeof(FactAttribute), true).Length > 0))

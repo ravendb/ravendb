@@ -3,17 +3,13 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
-using Lucene.Net.Documents;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Json.Linq;
-using Raven.Database.Indexing;
 using Raven.Database.Linq;
-using Raven.Database.Plugins;
 using Xunit;
 
 namespace Raven.Tests.Views
