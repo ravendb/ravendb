@@ -26,6 +26,7 @@ using Raven.Database.Impl.DTC;
 using Raven.Database.Plugins;
 using System.Linq;
 using Raven.Database.Storage;
+using Raven.Database.Storage.Esent.Backup;
 using Raven.Database.Storage.Esent.Debug;
 using Raven.Database.Util;
 using Raven.Json.Linq;

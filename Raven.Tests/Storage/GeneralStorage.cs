@@ -12,8 +12,6 @@ using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Tasks;
-using Raven.Munin;
-using Raven.Storage.Managed.Impl;
 using Xunit;
 using System.Linq;
 
@@ -63,71 +61,6 @@ namespace Raven.Tests.Storage
 			var id = doc["@metadata"].Value<string>("@id");
 			Assert.False(string.IsNullOrWhiteSpace(id));
 			Assert.DoesNotThrow(() => new Guid(id));
-		}
-
-		[Fact]
-		public void CanProperlyHandleDeletingThreeItemsBothFromPK_And_SecondaryIndexes()
-		{
-			var cmds = new[]
-			{
-				@"{""Cmd"":""Put"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABQ=="",""time"":""\/Date(1290420997504)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergeable"":true},""TableId"":9,""TxId"":""NiAAMOT72EC/We7rnZS/Fw==""}"
-				,
-				@"{""Cmd"":""Put"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABg=="",""time"":""\/Date(1290420997509)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergeable"":true},""TableId"":9,""TxId"":""NiAAMOT72EC/We7rnZS/Fw==""}"
-				,
-				@"{""Cmd"":""Put"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABw=="",""time"":""\/Date(1290420997509)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergeable"":true},""TableId"":9,""TxId"":""NiAAMOT72EC/We7rnZS/Fw==""}"
-				,
-				@"{""Cmd"":""Commit"",""TableId"":9,""TxId"":""NiAAMOT72EC/We7rnZS/Fw==""}",
-				@"{""Cmd"":""Del"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABg=="",""time"":""\/Date(1290420997509)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergeable"":true},""TableId"":9,""TxId"":""wM3q3VA0XkWecl5WBr9Cfw==""}"
-				,
-				@"{""Cmd"":""Del"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABw=="",""time"":""\/Date(1290420997509)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergeable"":true},""TableId"":9,""TxId"":""wM3q3VA0XkWecl5WBr9Cfw==""}"
-				,
-				@"{""Cmd"":""Del"",""Key"":{""index"":""Raven/DocumentsByEntityName"",""id"":""AAAAAAAAAAEAAAAAAAAABQ=="",""time"":""\/Date(1290420997504)\/"",""type"":""Raven.Database.Tasks.RemoveFromIndexTask"",""mergeable"":true},""TableId"":9,""TxId"":""wM3q3VA0XkWecl5WBr9Cfw==""}"
-				,
-				@"{""Cmd"":""Commit"",""TableId"":9,""TxId"":""wM3q3VA0XkWecl5WBr9Cfw==""}",
-			};
-
-			var tableStorage = new TableStorage(new MemoryPersistentSource());
-
-			foreach (var cmdText in cmds)
-			{
-				var command = RavenJObject.Parse(cmdText);
-				var tblId = command.Value<int>("TableId");
-
-				var table = tableStorage.Tables[tblId];
-
-				var txId = new Guid(Convert.FromBase64String(command.Value<string>("TxId")));
-
-				var key = command["Key"] as RavenJObject;
-				if (key != null)
-				{
-					foreach (var property in key.ToArray())// nothing in .NET supports iterating & modifying at the same time, no news here
-					{
-						if (property.Value.Type != JTokenType.String)
-							continue;
-						var value = property.Value.Value<string>();
-						if (value.EndsWith("==") == false)
-							continue;
-
-						key[property.Key] = Convert.FromBase64String(value);
-					}
-				}
-
-				switch (command.Value<string>("Cmd"))
-				{
-					case "Put":
-						table.Put(command["Key"], new byte[] { 1, 2, 3 }, txId);
-						break;
-					case "Del":
-						table.Remove(command["Key"], txId);
-						break;
-					case "Commit":
-						table.CompleteCommit(txId);
-						break;
-				}
-			}
-
-			Assert.Empty(tableStorage.Tasks);
-			Assert.Null(tableStorage.Tasks["ByIndexAndTime"].LastOrDefault());
 		}
 
 		[Fact]
