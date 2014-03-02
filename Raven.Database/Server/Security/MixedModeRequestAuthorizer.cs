@@ -94,7 +94,7 @@ namespace Raven.Database.Server.Security
 			return windowsRequestAuthorizer.Authorize(context, IgnoreDb.Urls.Contains(requestUrl));
 		}
 
-		public bool TryAuthorize(RavenDbApiController controller, out HttpResponseMessage msg)
+        public bool TryAuthorize(RavenBaseApiController controller, out HttpResponseMessage msg)
 		{
 			var requestUrl = controller.GetRequestUrl();
 			if (NeverSecret.Urls.Contains(requestUrl))
@@ -167,7 +167,7 @@ namespace Raven.Database.Server.Security
 			return true;
 		}
 
-		private bool TryAuthorizeSingleUseAuthToken(RavenDbApiController controller, string token, out HttpResponseMessage msg)
+        private bool TryAuthorizeSingleUseAuthToken(RavenBaseApiController controller, string token, out HttpResponseMessage msg)
 		{
 			OneTimeToken value;
 			if (singleUseAuthTokens.TryRemove(token, out value) == false)
@@ -180,8 +180,8 @@ namespace Raven.Database.Server.Security
 				return false;
 			}
 
-			if (string.Equals(value.DatabaseName, controller.DatabaseName, StringComparison.InvariantCultureIgnoreCase) == false &&
-				(value.DatabaseName == "<system>" && controller.DatabaseName == null) == false)
+			if (string.Equals(value.DatabaseName, controller.TenantName, StringComparison.InvariantCultureIgnoreCase) == false &&
+                (value.DatabaseName == "<system>" && controller.TenantName == null) == false)
 			{
 				msg = controller.GetMessageWithObject(
 					new

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -10,9 +11,12 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
+using System.Web.Http.Routing;
+using Raven.Abstractions;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Client.RavenFS;
+using Raven.Database.Config;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Notifications;
@@ -21,36 +25,131 @@ using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
+using Raven.Database.Server.Security;
+using Raven.Database.Server.Tenancy;
+using Raven.Database.Server.WebApi;
 using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
 	public abstract class RavenFsApiController : RavenBaseApiController
 	{
+	    private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
+
 		private PagingInfo paging;
 		private NameValueCollection queryString;
 
-		private RavenFileSystem ravenFileSystem;
+	    private FileSystemsLandlord landlord;
+	    private RequestManager requestManager;
 
-		public RavenFileSystem RavenFileSystem
+        public RequestManager RequestManager
+        {
+            get
+            {
+                if (Configuration == null)
+                    return requestManager;
+                return (RequestManager)Configuration.Properties[typeof(RequestManager)];
+            }
+        }
+	    public RavenFileSystem RavenFileSystem
 		{
-			get 
+			get
 			{
-				return ravenFileSystem ;
+			    var fs = FileSystemsLandlord.GetFileSystemInternal(FileSystemName);
+                if (fs == null)
+                {
+                    throw new InvalidOperationException("Could not find a file system named: " + FileSystemName);
+                }
+
+                return fs.Result;
 			}
 		}
 
-		public override Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
+		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
 		{
 			InnerInitialization(controllerContext);
-			return base.ExecuteAsync(controllerContext, cancellationToken);
+            var authorizer = (MixedModeRequestAuthorizer)controllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+            var result = new HttpResponseMessage();
+            if (InnerRequest.Method.Method != "OPTIONS")
+            {
+                result = await RequestManager.HandleActualRequest(this, async () =>
+                {
+                    RequestManager.SetThreadLocalState(InnerHeaders, FileSystemName);
+                    return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
+                }, httpException => GetMessageWithObject(new { Error = httpException.Message }, HttpStatusCode.ServiceUnavailable));
+            }
+
+            RequestManager.AddAccessControlHeaders(this, result);
+            RequestManager.ResetThreadLocalState();
+
+            return result;
 		}
+
+
+        private async Task<HttpResponseMessage> ExecuteActualRequest(HttpControllerContext controllerContext, CancellationToken cancellationToken,
+            MixedModeRequestAuthorizer authorizer)
+        {
+            HttpResponseMessage authMsg;
+            if (authorizer.TryAuthorize(this, out authMsg) == false)
+                return authMsg;
+
+            var internalHeader = GetHeader("Raven-internal-request");
+            if (internalHeader == null || internalHeader != "true")
+                RequestManager.IncrementRequestCount();
+
+            var fileSystemInternal = await FileSystemsLandlord.GetFileSystemInternal(FileSystemName);
+            if (fileSystemInternal == null)
+            {
+                var msg = "Could not find a file system named: " + FileSystemName;
+                return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
+            }
+
+            var sp = Stopwatch.StartNew();
+
+            var result = await base.ExecuteAsync(controllerContext, cancellationToken);
+            sp.Stop();
+            AddRavenHeader(result, sp);
+
+            return result;
+        }
+
 
 		protected override void InnerInitialization(HttpControllerContext controllerContext)
 		{
-			base.InnerInitialization(controllerContext);
-			ravenFileSystem = (RavenFileSystem)controllerContext.Configuration.Properties[typeof(RavenFileSystem)];
+            base.InnerInitialization(controllerContext);
+            landlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
+            requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
+
+            var values = controllerContext.Request.GetRouteData().Values;
+            if (values.ContainsKey("MS_SubRoutes"))
+            {
+                var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
+                var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("fileSystemName"));
+
+                if (selectedData != null)
+                    FileSystemName = selectedData.Values["fileSystemName"] as string;
+            }
+            else
+            {
+                if (values.ContainsKey("fileSystemName"))
+                    FileSystemName = values["fileSystemName"] as string;
+            }
+		    if (FileSystemName == null)
+		        throw new InvalidOperationException("Could not find file system name for this request");
 		}
+
+	    public string FileSystemName { get; private set; }
+
+	    public FileSystemsLandlord FileSystemsLandlord
+        {
+            get
+            {
+                if (Configuration == null)
+                    return landlord;
+                return (FileSystemsLandlord)Configuration.Properties[typeof(FileSystemsLandlord)];
+            }
+        }
+
 
 		public NotificationPublisher Publisher
 		{
@@ -72,7 +171,12 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			get { return RavenFileSystem.Historian; }
 		}
 
-		private NameValueCollection QueryString
+	    public override InMemoryRavenConfiguration SystemConfiguration
+	    {
+	        get { return FileSystemsLandlord.SystemConfiguration; }
+	    }
+
+	    private NameValueCollection QueryString
 		{
 			get { return queryString ?? (queryString = HttpUtility.ParseQueryString(Request.RequestUri.Query)); }
 		}
@@ -242,5 +346,78 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			public int PageSize;
 			public int Start;
 		}
+
+
+
+        public override bool SetupRequestToProperDatabase(RequestManager rm)
+        {
+            var tenantId = FileSystemName;
+
+            if (string.IsNullOrWhiteSpace(tenantId))
+            {
+                throw new HttpException(503, "Could not find a file system with no name");
+            }
+
+            Task<RavenFileSystem> resourceStoreTask;
+            bool hasDb;
+            try
+            {
+                hasDb = landlord.TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
+            }
+            catch (Exception e)
+            {
+                var msg = "Could open file system named: " + tenantId;
+                Logger.WarnException(msg, e);
+                throw new HttpException(503, msg, e);
+            }
+            if (hasDb)
+            {
+                try
+                {
+                    if (resourceStoreTask.Wait(TimeSpan.FromSeconds(30)) == false)
+                    {
+                        var msg = "The filesystem " + tenantId +
+                                  " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, file system loading continues.";
+                        Logger.Warn(msg);
+                        throw new HttpException(503, msg);
+                    }
+                    var args = new BeforeRequestWebApiEventArgs()
+                    {
+                        Controller = this,
+                        IgnoreRequest = false,
+                        TenantId = tenantId,
+                        FileSystem = resourceStoreTask.Result
+                    };
+                    rm.OnBeforeRequest(args);
+                    if (args.IgnoreRequest)
+                        return false;
+                }
+                catch (Exception e)
+                {
+                    var msg = "Could open file system named: " + tenantId;
+                    Logger.WarnException(msg, e);
+                    throw new HttpException(503, msg, e);
+                }
+
+                landlord.LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
+            }
+            else
+            {
+                var msg = "Could not find a file system named: " + tenantId;
+                Logger.Warn(msg);
+                throw new HttpException(503, msg);
+            }
+            return true;
+        }
+
+	    public override string TenantName
+	    {
+	        get { return "fs/" + FileSystemName; }
+	    }
+
+	    public override void MarkRequestDuration(long duration)
+	    {
+	        // TODO
+	    }
 	}
 }
