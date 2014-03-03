@@ -20,7 +20,7 @@ namespace Raven.Tests.Bugs.Errors
 
             var responseException = ErrorResponseException.FromResponseMessage(responseMesage, true);
             var exception = await AssertAsync.Throws<InvalidOperationException>(async () => await responseException.TryReadErrorResponseObject<string>());
-            Assert.Contains("Exception occeured reading the string: ", exception.Message);
+            Assert.Contains("Exception occured reading the string: ", exception.Message);
         }
     }
 }
