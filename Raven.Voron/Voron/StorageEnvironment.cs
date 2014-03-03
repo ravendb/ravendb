@@ -307,8 +307,8 @@ namespace Voron
                             {
                                 if (ae.InnerException == null)
                                     throw;
-	                            if (ae.InnerException is OperationCanceledException == false)
-		                            throw ae.InnerException;
+                                if (ae.InnerException is OperationCanceledException == false)
+                                    throw;
                             }
                             break;
                     }
