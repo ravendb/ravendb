@@ -1,0 +1,4 @@
+﻿class backupDatabase {
+}
+
+export = backupDatabase; 
