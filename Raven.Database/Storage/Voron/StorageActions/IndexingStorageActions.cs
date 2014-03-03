@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Abstractions.Util.Streams;
 using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Storage.Voron.StorageActions

@@ -15,6 +15,7 @@ using System.Web.Http.Routing;
 using Raven.Abstractions;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util.Streams;
 using Raven.Client.RavenFS;
 using Raven.Database.Config;
 using Raven.Database.Server.Controllers;

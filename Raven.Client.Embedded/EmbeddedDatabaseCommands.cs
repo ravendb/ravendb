@@ -598,7 +598,7 @@ namespace Raven.Client.Embedded
 				var key = header;
 
 				// Need to be removed when we remove the embedded.
-				if(DateTime.Now > new DateTime(2014,3,1))
+				if(DateTime.Now > new DateTime(2014,4,1))
                     throw new Exception("This is an ugly code that was supposed to be fixed by this time: RavenDB-1484");
 				if (sort == SortOptions.Long && key.EndsWith("_Range"))
 				{

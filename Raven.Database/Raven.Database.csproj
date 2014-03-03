@@ -247,6 +247,7 @@
     <Compile Include="Indexing\PrecomputedIndexing.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyDeleteTrigger.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyPutTrigger.cs" />
+    <Compile Include="Linq\Ast\TransformDynamicInvocationExpressions.cs" />
     <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTask.cs" />
@@ -1029,7 +1030,6 @@
     <Compile Include="Util\PortUtil.cs" />
     <Compile Include="Util\SequentialUuidGenerator.cs" />
     <Compile Include="Util\SortedKeyList.cs" />
-    <Compile Include="Util\Streams\BufferPool.cs" />
     <Compile Include="Util\Streams\BufferPoolStream.cs" />
     <Compile Include="Util\Streams\PartialStream.cs" />
     <Compile Include="Util\Streams\BufferPoolMemoryStream.cs" />
