@@ -673,6 +673,7 @@ namespace Raven.Tests.Issues
                 using (var store = new DocumentStore
                 {
                     Url = "http://localhost:8079"
+
                 })
                 {
                     databaseName = store.DefaultDatabase;
@@ -682,7 +683,7 @@ namespace Raven.Tests.Issues
 
                 var options = new SmugglerOptions
                 {
-                    Limit = 1500,
+                    Limit = 1900,
                     Incremental = true
                 };
 

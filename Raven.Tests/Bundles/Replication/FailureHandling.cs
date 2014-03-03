@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 using System.Threading;
 using Raven.Client.Exceptions;
-using Raven.Tests.Bundles.Versioning;
 using Xunit;
 
 namespace Raven.Tests.Bundles.Replication

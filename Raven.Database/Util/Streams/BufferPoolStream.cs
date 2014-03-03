@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 
+using Raven.Abstractions.Util.Streams;
+
 namespace Raven.Database.Util.Streams
 {
 	public class BufferPoolStream : Stream

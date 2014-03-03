@@ -316,12 +316,14 @@
     <Compile Include="Bundles\UniqueConstraints\ExtensionLoadTests.cs" />
     <Compile Include="Bundles\UniqueConstraints\UniqueConstraintsTest.cs" />
     <Compile Include="Bundles\UniqueConstraints\UpdateTests.cs" />
+    <Compile Include="EmptyDisposable.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client.cs" />
     <Compile Include="Issues\RavenDB_1538.cs" />
     <Compile Include="Issues\RavenDB_1297 .cs" />
     <Compile Include="Issues\RavenDB_1285.cs" />
+    <Compile Include="Issues\RavenDB_1461.cs" />
     <Compile Include="Issues\RavenDB_1395.cs" />
     <Compile Include="Issues\RavenDB_1540.cs" />
     <Compile Include="Issues\RavenDB_1302.cs" />
@@ -363,16 +365,12 @@
     <Compile Include="Issues\RavenDB_1561.cs" />
     <Compile Include="Issues\RavenDB_1560.cs" />
     <Compile Include="Issues\RavenDB_1595.cs" />
-    <Compile Include="Issues\RavenDB_1603.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="Issues\RavenDB_1565.cs" />
     <Compile Include="Issues\RavenDB_1594.cs" />
     <Compile Include="Issues\RavenDB_1609.cs" />
     <Compile Include="Issues\RavenDB_1610.cs" />
     <Compile Include="Issues\RavenDB_1650.cs" />
     <Compile Include="Issues\RavenDB_1666.cs" />
-    <Compile Include="Issues\RavenDB_1701.cs" />
     <Compile Include="Issues\RavenDB_1716.cs" />
     <Compile Include="Issues\RavenDB_1717.cs" />
     <Compile Include="Issues\RavenDB_1735.cs" />
@@ -385,6 +383,8 @@
     <Compile Include="Issues\RavenDB_1562.cs" />
     <Compile Include="Issues\RavenDB_1598_MappingComplexProperties.cs" />
     <Compile Include="Issues\RavenDB_1600.cs" />
+    <Compile Include="Issues\RavenDB_1601.cs" />
+    <Compile Include="Issues\RavenDB_1603.cs" />
     <Compile Include="Issues\RavenDB_1733.cs" />
     <Compile Include="Issues\RDBQA_11.cs" />
     <Compile Include="Issues\RDBQA_7.cs" />
@@ -1072,6 +1072,7 @@
     <Compile Include="NestedIndexing\Item.cs" />
     <Compile Include="NestedIndexing\WithMapReduce.cs" />
     <Compile Include="NonIncrementalBackupRestoreTest.cs" />
+    <Compile Include="NoNonDisposableTests.cs" />
     <Compile Include="Notifications\ReplicationConflicts.cs" />
     <Compile Include="Notifications\ReplicationConflicts_Embedded.cs" />
     <Compile Include="Patching\BigDoc.cs" />

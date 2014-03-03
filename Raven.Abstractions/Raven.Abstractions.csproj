@@ -320,6 +320,9 @@
     <Compile Include="Util\RavenQuery.cs" />
     <Compile Include="Util\SizeLimitedConcurrentDictionary.cs" />
     <Compile Include="Util\SizeLimitedConcurrentSet.cs" />
+    <Compile Include="Util\Streams\BufferPool.cs" />
+    <Compile Include="Util\Streams\IBufferPool.cs" />
+    <Compile Include="Util\Streams\NoBufferPool.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Dynamic.snk">
