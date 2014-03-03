@@ -11,6 +11,8 @@ import queryIndexCommand = require("commands/queryIndexCommand");
 import moment = require("moment");
 import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import querySort = require("models/querySort");
+import getTransformersCommand = require("commands/getTransformersCommand");
+import deleteDocumentsMatchingQueryConfirm = require("viewmodels/deleteDocumentsMatchingQueryConfirm");
 
 class query extends viewModelBase {
 
@@ -27,6 +29,11 @@ class query extends viewModelBase {
     selectedIndexEditUrl: KnockoutComputed<string>;
     sortBys = ko.observableArray<querySort>();
     indexFields = ko.observableArray<string>();
+    transformer = ko.observable<string>();
+    allTransformers = ko.observableArray<transformerDto>();
+    isDefaultOperatorOr = ko.observable(true);
+    showFields = ko.observable(false);
+    indexEntries = ko.observable(false);
 
     static containerSelector = "#queryContainer";
 
@@ -38,14 +45,15 @@ class query extends viewModelBase {
         this.statsUrl = ko.computed(() => appUrl.forStatus(this.activeDatabase()));
         this.hasSelectedIndex = ko.computed(() => this.selectedIndex() != null);
         this.selectedIndexEditUrl = ko.computed(() => this.selectedIndex() ? appUrl.forEditIndex(this.selectedIndex(), this.activeDatabase()) : '');
-
-        aceEditorBindingHandler.install();
+        
+        aceEditorBindingHandler.install();        
     }
 
     activate(indexToSelect?: string) {
         super.activate(indexToSelect);
 
         this.fetchAllIndexes(indexToSelect);
+        this.fetchAllTransformers();
     }
 
     attached() {
@@ -54,7 +62,7 @@ class query extends viewModelBase {
         $("#indexQueryLabel").popover({
             html: true,
             trigger: 'hover',
-            container: '#indexQueryLabelContainer',
+            container: '.form-horizontal',
             content: 'Queries use Lucene syntax. Examples:<pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
         });
     }
@@ -77,21 +85,36 @@ class query extends viewModelBase {
             });
     }
 
-    runQuery() {
+    fetchAllTransformers() {
+        new getTransformersCommand(this.activeDatabase())
+            .execute()
+            .done((results: transformerDto[]) => this.allTransformers(results));
+    }
+
+    runQuery(): pagedList {
         var selectedIndex = this.selectedIndex();
         if (selectedIndex) {
             var queryText = this.queryText();
             var sorts = this.sortBys().filter(s => s.fieldName() != null);
             var database = this.activeDatabase();
+            var transformer = this.transformer();
+            var showFields = this.showFields();
+            var indexEntries = this.indexEntries();
+            var useAndOperator = this.isDefaultOperatorOr() === false;
             var resultsFetcher = (skip: number, take: number) => {
-                var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts);
+                var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
                 return command
                     .execute()
                     .done((queryResults: pagedResultSet) => this.queryStats(queryResults.additionalResultInfo));
             };
             var resultsList = new pagedList(resultsFetcher);
             this.queryResults(resultsList);
+            //this.recordQueryRun
+
+            return resultsList;
         }
+
+        return null;
     }
 
     setSelectedIndex(indexName: string) {
@@ -123,7 +146,64 @@ class query extends viewModelBase {
         this.sortBys.push(sort);
     }
 
+    removeSortBy(sortBy: querySort) {
+        this.sortBys.remove(sortBy);
+        this.runQuery();
+    }
+
+    addTransformer() {
+        this.transformer("");
+    }
+
+    selectTransformer(transformer: transformerDto) {
+        this.transformer(transformer.name);
+        this.runQuery();
+    }
+
+    removeTransformer() {
+        this.transformer(null);
+        this.runQuery();
+    }
+
+    setOperatorOr() {
+        this.isDefaultOperatorOr(true);
+        this.runQuery();
+    }
+
+    setOperatorAnd() {
+        this.isDefaultOperatorOr(false);
+        this.runQuery();
+    }
+
+    toggleShowFields() {
+        this.showFields(!this.showFields());
+        this.runQuery();
+    }
+
+    toggleIndexEntries() {
+        this.indexEntries(!this.indexEntries());
+        this.runQuery();
+    }
+
     deleteDocsMatchingQuery() {
+        // Run the query so that we have an idea of what we'll be deleting.
+        var queryResult = this.runQuery();
+        queryResult
+            .fetch(0, 1)
+            .done((results: pagedResultSet) => {
+                if (results.totalResultCount === 0) {
+                    app.showMessage("There are no documents matching your query.", "Nothing to do");
+                } else {
+                    this.promptDeleteDocsMatchingQuery(results.totalResultCount);
+                }
+            });
+    }
+
+    promptDeleteDocsMatchingQuery(resultCount: number) {
+        var viewModel = new deleteDocumentsMatchingQueryConfirm(this.selectedIndex(), this.queryText(), resultCount, this.activeDatabase());
+        app
+            .showDialog(viewModel)
+            .done(() => this.runQuery());
     }
 }
 

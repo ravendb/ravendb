@@ -365,11 +365,7 @@ Configuration options:
 			try
 			{
 				var ravenConfiguration = new RavenConfiguration();
-				if (File.Exists(Path.Combine(backupLocation, "Raven.ravendb")))
-				{
-					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
-				}
-                else if (File.Exists(Path.Combine(backupLocation, "Raven.voron")))
+				if (File.Exists(Path.Combine(backupLocation, "Raven.voron")))
                 {
                     ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;                    
                 }

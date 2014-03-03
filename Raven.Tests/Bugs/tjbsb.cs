@@ -30,8 +30,11 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void WorkWithTransaction()
 		{
-			using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
+                if(store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
+
 				using (var scope = new TransactionScope())
 				using (var session = store.OpenSession())
 				{
@@ -53,8 +56,11 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void WorkWithTransactionAndNoAllowNonAuthoritativeInformation()
 		{
-			using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
+                if(store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
+
 				using (new TransactionScope())
 				{
 					using (var session = store.OpenSession())

@@ -346,16 +346,16 @@ namespace Raven.Client.Document
         internal object ProjectionToInstance(RavenJObject y, Type type)
         {
             HandleInternalMetadata(y);
-            foreach (var conversionListener in listeners.ExtendedConversionListeners)
+            foreach (var conversionListener in theListeners.ExtendedConversionListeners)
             {
                 conversionListener.BeforeConversionToEntity(null, y, null);
             }
             var instance = y.Deserialize(type, Conventions);
-            foreach (var conversionListener in listeners.ConversionListeners)
+            foreach (var conversionListener in theListeners.ConversionListeners)
             {
                 conversionListener.DocumentToEntity(null, instance, y, null);
             }
-            foreach (var conversionListener in listeners.ExtendedConversionListeners)
+            foreach (var conversionListener in theListeners.ExtendedConversionListeners)
             {
                 conversionListener.AfterConversionToEntity(null, y, null, instance);
             }
@@ -412,12 +412,7 @@ namespace Raven.Client.Document
                 multiLoadOperation.Complete<T>();
             }
 
-            return ids.Select(id =>
-            {
-                object val;
-                entitiesByKey.TryGetValue(id, out val);
-                return (T)val;
-            }).ToArray();
+            return ids.Select(Load<T>).ToArray();
         }
 
         /// <summary>
@@ -591,6 +586,11 @@ namespace Raven.Client.Document
         {
             var ravenQueryInspector = ((IRavenQueryInspector)query);
             var indexQuery = ravenQueryInspector.GetIndexQuery(false);
+
+            if (indexQuery.WaitForNonStaleResults || indexQuery.WaitForNonStaleResultsAsOfNow)
+                throw new NotSupportedException(
+                    "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
+
             var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
             return YieldQuery(query, enumerator);
         }
@@ -701,7 +701,7 @@ namespace Raven.Client.Document
         /// <returns></returns>
         public IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false)
         {
-            return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, listeners.QueryListeners, isMapReduce);
+            return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, theListeners.QueryListeners, isMapReduce);
         }
 
         /// <summary>

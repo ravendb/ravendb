@@ -18,8 +18,11 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void WouldBeIndexedProperly()
 		{
-			using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
+                if (store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
+
 				using (var session = store.OpenSession())
 				{
 					// Create the temp index before we populate the db.

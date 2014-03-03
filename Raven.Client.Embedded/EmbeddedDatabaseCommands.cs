@@ -10,14 +10,12 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
-using Raven.Client.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.Listeners;
 using Raven.Database.Data;
@@ -34,7 +32,6 @@ using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Queries;
 using Raven.Database.Server;
-using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
@@ -159,7 +156,22 @@ namespace Raven.Client.Embedded
 			if (pagingInformation != null)
 				pagingInformation.Fill(start, pageSize, nextPageStart);
 
-			return SerializationHelper.RavenJObjectsToJsonDocuments(documentsWithIdStartingWith.OfType<RavenJObject>()).ToArray();
+		    var docResults = documentsWithIdStartingWith.OfType<RavenJObject>().ToList();
+
+		    var startsWithResults = SerializationHelper.RavenJObjectsToJsonDocuments(docResults.Select(x => (RavenJObject) x.CloneToken()))
+		                                                                        .ToArray();
+
+            return RetryOperationBecauseOfConflict(docResults, startsWithResults,
+                                                    () => StartsWith(keyPrefix, matches, start, pageSize, pagingInformation,
+                                                          metadataOnly, exclude, transformer, queryInputs),
+                                                    conflictedResultId =>
+                                                   new ConflictException(
+                                                       "Conflict detected on " +
+                                                       conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
+                                                       ", conflict must be resolved before the document will be accessible", true)
+                                                   {
+                                                       ConflictedVersionIds = new[] { conflictedResultId }
+                                                   });
 		}
 
 		/// <summary>
@@ -582,9 +594,6 @@ namespace Raven.Client.Embedded
 
 				var key = header;
 
-				// Need to be removed when we remove the embedded.
-				if(DateTime.Now > new DateTime(2014,3,1))
-                    throw new Exception("This is an ugly code that was supposed to be fixed by this time: RavenDB-1484");
 				if (sort == SortOptions.Long && key.EndsWith("_Range"))
 				{
 					key = key.Substring(0, key.Length - "_Range".Length);

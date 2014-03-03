@@ -80,7 +80,6 @@
     <Compile Include="Model\IPermission.cs" />
     <Compile Include="Model\OperationPermission.cs" />
     <Compile Include="OperationAllowedResult.cs" />
-    <Compile Include="Responders\IsAllowed.cs" />
     <Compile Include="Triggers\AuthorizationDeleteTrigger.cs" />
     <Compile Include="Triggers\AuthorizationPutTrigger.cs" />
     <Compile Include="Triggers\AuthorizationReadTrigger.cs" />

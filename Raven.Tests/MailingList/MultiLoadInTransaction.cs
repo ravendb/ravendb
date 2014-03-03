@@ -13,7 +13,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void InsertAndSingleSelect()
 		{
-			using (var store = NewRemoteDocumentStore())
+            using (var store = NewRemoteDocumentStore(requestedStorage: "esent"))
 			{
 				var expected = new Bar { Id = "test/bar/1", Foo = "Some value" };
 				using (new TransactionScope())

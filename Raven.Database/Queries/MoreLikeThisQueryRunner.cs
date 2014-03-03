@@ -4,19 +4,17 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
-using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Bundles.MoreLikeThis;
+using Raven.Database.Data;
 using Raven.Database.Indexing;
-using Raven.Database.Server.Responders;
 using Index = Raven.Database.Indexing.Index;
 
 namespace Raven.Database.Queries

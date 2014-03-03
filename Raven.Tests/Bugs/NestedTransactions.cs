@@ -10,34 +10,42 @@ namespace Raven.Tests.Bugs
 {
 	public class NestedTransactions : RavenTest
 	{
-		[Fact]
-		public void ShouldBeASingleTransaction()
-		{
-			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" })
-			{
-				store.Initialize();
+	    [Fact]
+	    public void ShouldBeASingleTransaction()
+	    {
+            using (var server = GetNewServer(requestedStorage: "esent"))
+	        {
+                if (server.SystemDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
+                
+	            using (var store = new DocumentStore {Url = "http://localhost:8079"})
+	            {
+	                store.Initialize();
 
-				using (var outer = new TransactionScope(TransactionScopeOption.Required))
-				{
-					var id = Guid.NewGuid().ToString();
-					SaveObject(store, id);
-					var loaded = LoadObject(store, id);
+	                using (var outer = new TransactionScope(TransactionScopeOption.Required))
+	                {
+	                    var id = Guid.NewGuid().ToString();
+	                    SaveObject(store, id);
+	                    var loaded = LoadObject(store, id);
 
-					Assert.NotNull(loaded);
-					
-					outer.Complete();
-				}
-			}
-		}
+	                    Assert.NotNull(loaded);
+
+	                    outer.Complete();
+	                }
+	            }
+	        }
+	    }
 
 
-		[Fact]
+	    [Fact]
 		public void ShouldBeASingleTransaction_Embedded()
 		{
-			using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
 				store.Initialize();
+
+                if(store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
 
 				using (var outer = new TransactionScope(TransactionScopeOption.Required))
 				{

@@ -15,9 +15,7 @@ namespace Raven.Tests.Issues
         int b = 200;
 
 		[Theory]
-		[InlineData("munin")]
-		[InlineData("esent")]
-		[InlineData("voron")]
+        [PropertyData("Storages")]
 		public void ShouldRemoveDataFromReduceKeysCountsOnIndexDelete(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
@@ -63,9 +61,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
-		[InlineData("munin")]
-		[InlineData("esent")]
-		[InlineData("voron")]
+        [PropertyData("Storages")]
 		public void ShouldRemoveDataFromReduceKeysCountsWhenReduceKeyIsGone(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
@@ -112,9 +108,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
-		[InlineData("munin")]
-		[InlineData("esent")]
-		[InlineData("voron")]
+        [PropertyData("Storages")]
 		public void ShouldRemoveDataFromReduceKeysCountsOnDeletingAllMappedResultsForView(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
@@ -151,9 +145,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
-		[InlineData("munin")]
-		[InlineData("esent")]
-		[InlineData("voron")]
+        [PropertyData("Storages")]
 		public void ShouldRemoveDataFromReduceKeysStatusOnIndexDelete(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
@@ -193,9 +185,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
-		[InlineData("munin")]
-		[InlineData("esent")]
-		[InlineData("voron")]
+        [PropertyData("Storages")]
 		public void ShouldRemoveDataFromReduceKeysStatusWhenReduceKeyIsGone(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))

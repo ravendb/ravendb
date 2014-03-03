@@ -367,7 +367,7 @@ namespace Voron.Impl.Journal
 				_waj = waj;
 			}
 
-			public void ApplyLogsToDataFile(long oldestActiveTransaction, Transaction transaction = null)
+			public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, Transaction transaction = null)
 			{
                 bool locked = false;
                 if (_flushingSemaphore.IsWriteLockHeld == false)
@@ -379,6 +379,9 @@ namespace Voron.Impl.Journal
 
 				try
 				{
+				    if (token.IsCancellationRequested)
+				        return;
+
 					var alreadyInWriteTx = transaction != null && transaction.Flags == TransactionFlags.ReadWrite;
 
 					var jrnls = _waj._files.Select(x => x.GetSnapshot()).OrderBy(x => x.Number).ToList();
@@ -574,14 +577,19 @@ namespace Voron.Impl.Journal
 
 			private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles, Transaction txw)
 			{
-				foreach (var jrnl in _waj._files)
-				{
-                    jrnl.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
-				}
-				foreach (var journalFile in unusedJournalFiles)
+				// we have to free pages of the unused journals before the remaining ones that are still in use
+ 				// to prevent reading from them by any read transaction (read transactions search journals from the newest
+ 				// to read the most updated version)
+ 				foreach (var journalFile in unusedJournalFiles.OrderBy(x => x.Number))
 				{
 					journalFile.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
 				}
+
+
+				foreach (var jrnl in _waj._files.OrderBy(x => x.Number))
+ 				{
+					jrnl.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
+ 				}
 			}
 
 			private List<JournalFile> GetUnusedJournalFiles(List<JournalSnapshot> jrnls)

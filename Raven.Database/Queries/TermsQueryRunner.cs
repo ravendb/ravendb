@@ -31,7 +31,10 @@ namespace Raven.Database.Queries
 
 			var result = new HashSet<string>();
 			IndexSearcher currentIndexSearcher;
-      var indexDefinition = database.IndexDefinitionStorage.GetIndexDefinition(index);
+			var indexDefinition = database.IndexDefinitionStorage.GetIndexDefinition(index);
+			if(indexDefinition == null) //prevent NRE if needed
+				throw new ArgumentException("index definition not found","index");
+
 			using(database.IndexStorage.GetCurrentIndexSearcher(indexDefinition.IndexId, out currentIndexSearcher))
 			{
 				if(currentIndexSearcher == null)

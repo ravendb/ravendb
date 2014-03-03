@@ -20,9 +20,7 @@ namespace Raven.Tests.Issues
 	    private int test = 100;
 
 		[Theory]
-		[InlineData("munin")]
-		[InlineData("esent")]
-		[InlineData("voron")]
+        [PropertyData("Storages")]
 		public void NumberOfLoadedItemsToReduceShouldBeLimited(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
@@ -50,9 +48,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
-		[InlineData("munin")]
-		[InlineData("esent")]
-		[InlineData("voron")]
+        [PropertyData("Storages")]
 		public void LimitOfLoadedItemsShouldNotBreakInTheMiddleOfBucket(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))

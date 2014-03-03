@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using NLog;
 using Raven.Tests.Bugs.DTC;
 using Raven.Tests.Bundles.Replication;
 using Raven.Tests.Bundles.Replication.Bugs;
+using Raven.Tests.Faceted;
 using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
@@ -18,12 +20,17 @@ namespace Raven.Tryouts
 		{
 			CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("pl-PL");
 			CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("pl-PL");
+		    var sp = Stopwatch.StartNew();
 			for (int i = 0; i < 1000; i++)
 			{
-				Console.WriteLine("Test loop #"+ i);
+				Console.WriteLine("Test loop #"+ i + " prev " + sp.ElapsedMilliseconds);
+			    Console.ReadLine();
+                Console.Clear();
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new RavenDB_406())
-					x.ShouldServeFromCacheIfThereWasNoChange();
+                sp.Reset();
+                sp.Start();
+                using (var x = new RavenDB_578())
+					x.DeletingConflictedDocumentOnServer1ShouldCauseConflictOnServer2AndResolvingItOnServer2ShouldRecreateDocumentOnServer1();
 			}
 			
 		}

@@ -427,7 +427,7 @@ namespace Raven.Client.Shard
 
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string indexName, bool isMapReduce = false)
 		{
-			return new AsyncShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, null, listeners.QueryListeners, isMapReduce);
+			return new AsyncShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, null, theListeners.QueryListeners, isMapReduce);
 		}
 
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()

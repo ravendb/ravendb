@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_483
+	public class RavenDB_483 : NoDisposalNeeded
 	{
 		[Fact]
 		public void WillNotForgetCastToNullableDateTime()

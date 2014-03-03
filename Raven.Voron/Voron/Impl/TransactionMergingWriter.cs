@@ -164,31 +164,38 @@ namespace Voron.Impl
 
                     operation.Reset();
                     DebugActionType actionType;
-                    switch (operation.Type)
-                    {
-                        case WriteBatch.BatchOperationType.Add:
-                            tree.Add(tx, operation.Key, operation.Value as Stream, operation.Version);
-                            actionType = DebugActionType.Add;
-                            break;
-                        case WriteBatch.BatchOperationType.Delete:
-                            tree.Delete(tx, operation.Key, operation.Version);
-                            actionType = DebugActionType.Delete;
-                            break;
-                        case WriteBatch.BatchOperationType.MultiAdd:
-                            tree.MultiAdd(tx, operation.Key, operation.Value as Slice, operation.Version);
-                            actionType = DebugActionType.MultiAdd;
-                            break;
-                        case WriteBatch.BatchOperationType.MultiDelete:
-                            tree.MultiDelete(tx, operation.Key, operation.Value as Slice, operation.Version);
-                            actionType = DebugActionType.MultiDelete;
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
+	                try
+	                {
+		                switch (operation.Type)
+		                {
+			                case WriteBatch.BatchOperationType.Add:
+				                tree.Add(tx, operation.Key, operation.Value as Stream, operation.Version);
+				                actionType = DebugActionType.Add;
+				                break;
+			                case WriteBatch.BatchOperationType.Delete:
+				                tree.Delete(tx, operation.Key, operation.Version);
+				                actionType = DebugActionType.Delete;
+				                break;
+			                case WriteBatch.BatchOperationType.MultiAdd:
+				                tree.MultiAdd(tx, operation.Key, operation.Value as Slice, operation.Version);
+				                actionType = DebugActionType.MultiAdd;
+				                break;
+			                case WriteBatch.BatchOperationType.MultiDelete:
+				                tree.MultiDelete(tx, operation.Key, operation.Value as Slice, operation.Version);
+				                actionType = DebugActionType.MultiDelete;
+				                break;
+			                default:
+				                throw new ArgumentOutOfRangeException();
+		                }
 
-                    if (ShouldRecordToDebugJournal)
-                        _debugJournal.RecordAction(actionType, operation.Key, g.Key, operation.Value);
-
+		                if (ShouldRecordToDebugJournal)
+			                _debugJournal.RecordAction(actionType, operation.Key, g.Key, operation.Value);
+	                }
+	                catch (Exception e)
+	                {
+		                if (operation.ExceptionTypesToIgnore.Contains(e.GetType()) == false)
+			                throw;
+	                }
                 }
             }
         }

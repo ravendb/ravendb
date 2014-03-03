@@ -182,6 +182,36 @@ class appUrl {
         return "#indexes/terms/" + encodeURIComponent(index) + "?" + databasePart;
     }
 
+    static forImportDatabase(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#tasks/importDatabase?" + databasePart;
+    }
+
+    static forExportDatabase(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#tasks/exportDatabase?" + databasePart;
+    }
+
+    static forBackupDatabase(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#tasks/backupDatabase?" + databasePart;
+    }
+
+    static forToggleIndexing(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#tasks/toggleIndexing?" + databasePart;
+    }
+
+    static forSampleData(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#tasks/sampleData?" + databasePart;
+    }
+
+    static forCsvImport(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#tasks/csvImport?" + databasePart;
+    }
+
 	/**
 	* Gets the database from the current web browser address. Returns the system database if no database name is found.
 	*/

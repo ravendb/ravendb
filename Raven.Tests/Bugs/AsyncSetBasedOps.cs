@@ -23,8 +23,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Theory]
-		[InlineData("esent")]
-		[InlineData("voron")]
+		[PropertyData("Storages")]
 		public async Task AwaitAsyncPatchByIndexShouldWork(string storageTypeName)
 		{
 			using (var store = NewRemoteDocumentStore(fiddler:true,requestedStorage:storageTypeName))

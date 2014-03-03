@@ -33,8 +33,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
-		[InlineData("esent")]
-		[InlineData("voron")] //TODO : investigate Voron issue --> access violation exception when this runs
+        [PropertyData("Storages")]
 		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt(string storageName)
 		{
 			using (var db = new DocumentDatabase(new RavenConfiguration
@@ -115,8 +114,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
-		[InlineData("esent")]
-		//[InlineData("voron")] 
+        [PropertyData("Storages")]
 		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt(string storageName)
 		{
 			using (var db = new DocumentDatabase(new RavenConfiguration

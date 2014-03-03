@@ -43,6 +43,7 @@ class ctor {
         showCheckboxes: boolean;
         showIds: boolean;
         useContextMenu: boolean;
+        maxHeight: string;
     }
 
     constructor() {
@@ -54,7 +55,8 @@ class ctor {
             dynamicHeightBottomMargin: 0,
             showCheckboxes: true,
             showIds: true,
-            useContextMenu: true
+            useContextMenu: true,
+            maxHeight: 'none'
         };
         this.settings = $.extend(defaults, settings);
 

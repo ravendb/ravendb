@@ -35,7 +35,7 @@ class settings extends viewModelBase {
     }
 
     /**
-    * Checks whether the route can be navigated to. Returns true if it can be navigated to, or an redirect URI if it can't be navigated to.
+    * Checks whether the route can be navigated to. Returns true if it can be navigated to, or a redirect URI if it can't be navigated to.
     * This is used for preventing a navigating to system-only pages when the current databagse is non-system, and vice-versa.
     */
     getValidRoute(instance: Object, instruction: DurandalRouteInstruction): any {

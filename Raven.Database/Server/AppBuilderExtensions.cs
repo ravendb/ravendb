@@ -70,19 +70,24 @@ namespace Owin
 #if DEBUG
 			app.UseInterceptor();
 #endif
-		
-			app.UseWebApi(CreateHttpCfg(options.Landlord, options.MixedModeRequestAuthorizer, options.RequestManager, options.FileSystem));
+
+		    app.UseWebApi(CreateHttpCfg(options.DatabaseLandlord, options.FileSystemLandlord,
+		        options.MixedModeRequestAuthorizer, options.RequestManager));
 			
 			return app;
 		}
 
-		private static HttpConfiguration CreateHttpCfg(DatabasesLandlord databasesLandlord, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, RequestManager requestManager, RavenFileSystem fileSystem)
+		private static HttpConfiguration CreateHttpCfg(
+            DatabasesLandlord databasesLandlord, 
+            FileSystemsLandlord fileSystemsLandlord,
+            MixedModeRequestAuthorizer mixedModeRequestAuthorizer, 
+            RequestManager requestManager)
 		{
 			var cfg = new HttpConfiguration();
 			cfg.Properties[typeof(DatabasesLandlord)] = databasesLandlord;
+            cfg.Properties[typeof(FileSystemsLandlord)] = fileSystemsLandlord;
 			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = mixedModeRequestAuthorizer;
 			cfg.Properties[typeof(RequestManager)] = requestManager;
-			cfg.Properties[typeof (RavenFileSystem)] = fileSystem;
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
 			cfg.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new NaveValueCollectionJsonConverterOnlyForConfigFormatters());
 

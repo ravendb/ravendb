@@ -16,8 +16,11 @@ namespace Raven.Tests.Bugs.DTC
 		{
 			const int callCount = 10000;
 
-			using (var documentStore = NewDocumentStore())
+            using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
 			{
+                if(documentStore.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
+
 				int documentId;
 
 				// create test document

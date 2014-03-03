@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Abstractions.Util.Streams;
 using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Storage.Voron.StorageActions
@@ -195,9 +196,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			ushort version;
 			var indexStats = Load(tableStorage.LastIndexedEtags, key, out version);
-
-			if (Buffers.Compare(indexStats.Value<byte[]>("lastEtag"), etag.ToByteArray()) >= 0)
-				return;
 
 			indexStats["lastEtag"] = etag.ToByteArray();
 			indexStats["lastTimestamp"] = timestamp;

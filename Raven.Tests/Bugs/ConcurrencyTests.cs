@@ -10,8 +10,11 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void With_id_convention_with_transaction()
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
+                if (store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
+
                 store.Conventions.RegisterIdConvention<Contact>((dbname, commands, contact) => contact.Name);
 
                 using (var session = store.OpenSession())
@@ -55,8 +58,10 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void With_id_convention_without_transaction()
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
+                if (store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
 
                 store.Conventions.RegisterIdConvention<Contact>((dbname, commands, contact) => contact.Name);
 
@@ -96,8 +101,10 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void Without_id_convention_with_transaction()
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
+                if (store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
 
                 using (var session = store.OpenSession())
                 {
