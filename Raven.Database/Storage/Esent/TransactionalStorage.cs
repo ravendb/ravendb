@@ -60,6 +60,8 @@ namespace Raven.Storage.Esent
         [ImportMany]
         public OrderedPartCollection<ISchemaUpdate> Updaters { get; set; }
 
+        private static readonly object UpdateLocker = new object();
+
         static TransactionalStorage()
         {
             try
@@ -456,27 +458,30 @@ namespace Raven.Storage.Esent
                             Console.WriteLine();
                         }))
                         {
-                            do
+                            lock (UpdateLocker)
                             {
-                                var updater = Updaters.FirstOrDefault(update => update.Value.FromSchemaVersion == schemaVersion);
-                                if (updater == null)
-                                    throw new InvalidOperationException(
-                                        string.Format(
-                                            "The version on disk ({0}) is different that the version supported by this library: {1}{2}You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.",
-                                            schemaVersion, SchemaCreator.SchemaVersion, Environment.NewLine));
+                                do
+                                {
+                                    var updater = Updaters.FirstOrDefault(update => update.Value.FromSchemaVersion == schemaVersion);
+                                    if (updater == null)
+                                        throw new InvalidOperationException(
+                                            string.Format(
+                                                "The version on disk ({0}) is different that the version supported by this library: {1}{2}You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.",
+                                                schemaVersion, SchemaCreator.SchemaVersion, Environment.NewLine));
 
-                                log.Info("Updating schema from version {0}: ", schemaVersion);
-                                Console.WriteLine("Updating schema from version {0}: ", schemaVersion);
+                                    log.Info("Updating schema from version {0}: ", schemaVersion);
+                                    Console.WriteLine("Updating schema from version {0}: ", schemaVersion);
 
-                                ticker.Start();
+                                    ticker.Start();
 
-                                updater.Value.Init(generator, configuration);
-                                updater.Value.Update(session, dbid, Output);
-                                schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
+                                    updater.Value.Init(generator, configuration);
+                                    updater.Value.Update(session, dbid, Output);
+                                    schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
 
-                                ticker.Stop();
+                                    ticker.Stop();
 
-                            } while (schemaVersion != SchemaCreator.SchemaVersion);
+                                } while (schemaVersion != SchemaCreator.SchemaVersion);
+                            }
                         }
                     }
                 });
