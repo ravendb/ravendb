@@ -27,7 +27,7 @@ interface MomentInput {
 
 interface Duration {
 
-    humanize(): string;
+    humanize(includeSuffix?: boolean): string;
 
     milliseconds(): number;
     asMilliseconds(): number;
@@ -324,7 +324,3 @@ interface MomentStatic {
 }
 
 declare var moment: MomentStatic;
-
-declare module "moment" {
-    export = moment;
-}

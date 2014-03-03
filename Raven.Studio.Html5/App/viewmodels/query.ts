@@ -109,7 +109,7 @@ class query extends viewModelBase {
             };
             var resultsList = new pagedList(resultsFetcher);
             this.queryResults(resultsList);
-            this.recordQueryRun
+            //this.recordQueryRun
 
             return resultsList;
         }
