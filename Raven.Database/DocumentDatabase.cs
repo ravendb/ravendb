@@ -2444,18 +2444,18 @@ namespace Raven.Database
         public BatchResult[] Batch(IList<ICommandData> commands)
         {
             using (TransactionalStorage.WriteLock())
-            {
+            {				
                 var shouldRetryIfGotConcurrencyError =
-                commands.All(x => (x is PatchCommandData || x is ScriptedPatchCommandData));
+                commands.All(x => ((x is PatchCommandData || IsScriptedPatchCommandDataWithoutEtagProperty(x)) && (x.Etag == null)));
                 if (shouldRetryIfGotConcurrencyError)
                 {
                     var sp = Stopwatch.StartNew();
-                    var result = BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(commands);
+					var result = BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(commands);
                     log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
                     return result;
                 }
 
-                BatchResult[] results = null;
+				BatchResult[] results = null;
                 TransactionalStorage.Batch(actions =>
                 {
                     results = ProcessBatch(commands);
@@ -2464,6 +2464,18 @@ namespace Raven.Database
                 return results;
             }
         }
+
+	    private bool IsScriptedPatchCommandDataWithoutEtagProperty(ICommandData commandData)
+	    {
+		    var scriptedPatchCommandData = commandData as ScriptedPatchCommandData;
+
+		    const string scriptEtagKey = "'@etag':";
+		    const string etagKey = "etag";		    
+
+		    return scriptedPatchCommandData != null &&
+				   scriptedPatchCommandData.Patch.Script.Replace(" ",String.Empty).Contains(scriptEtagKey) == false &&
+				   scriptedPatchCommandData.Patch.Values.ContainsKey(etagKey) == false;
+	    }
 
         private BatchResult[] BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(IList<ICommandData> commands)
         {
