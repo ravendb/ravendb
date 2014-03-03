@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using NLog;
+using Raven.Abstractions;
 using Raven.Abstractions.Util;
 using Raven.Client.RavenFS;
 using Raven.Database.Config;
@@ -41,8 +42,12 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			synchronizationQueue = new SynchronizationQueue();
 			synchronizationStrategy = new SynchronizationStrategy(storage, sigGenerator);
 
+		    LastSuccessfulSynchronizationTime = DateTime.MinValue;
+
 			InitializeTimer();
 		}
+
+        public DateTime LastSuccessfulSynchronizationTime { get; private set; }
 
 		public string ServerUrl
 		{
@@ -173,15 +178,15 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 				if (reports.Length > 0)
 				{
-					var successfullSynchronizationsCount = reports.Count(x => x.Exception == null);
+					var successfulSynchronizationsCount = reports.Count(x => x.Exception == null);
 
 					var failedSynchronizationsCount = reports.Count(x => x.Exception != null);
 
-					if (successfullSynchronizationsCount > 0 || failedSynchronizationsCount > 0)
+					if (successfulSynchronizationsCount > 0 || failedSynchronizationsCount > 0)
 					{
 						Log.Debug(
 							"Synchronization to a destination {0} has completed. {1} file(s) were synchronized successfully, {2} synchronization(s) were failed",
-							destinationUrl, successfullSynchronizationsCount, failedSynchronizationsCount);
+							destinationUrl, successfulSynchronizationsCount, failedSynchronizationsCount);
 					}
 
 					destinationSyncResult.Reports = reports;
@@ -361,6 +366,8 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 					moreDetails = string.Format(". {0} bytes were transfered and {1} bytes copied. Need list length was {2}",
 												report.BytesTransfered, report.BytesCopied, report.NeedListLength);
 				}
+
+                UpdateSuccessfulSynchronizationTime();
 
 				Log.Debug("{0} to {1} has finished successfully{2}", work.ToString(), destinationUrl, moreDetails);
 			}
@@ -596,6 +603,11 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			Log.Debug("Cancellation of active synchronizations of a file '{0}'", fileName);
 			Queue.CancelActiveSynchronizations(fileName);
 		}
+
+        private void UpdateSuccessfulSynchronizationTime()
+        {
+            LastSuccessfulSynchronizationTime = SystemTime.UtcNow;
+        }
 
 		private static void LogFilesInfo(string message, ICollection<FileHeader> files)
 		{
