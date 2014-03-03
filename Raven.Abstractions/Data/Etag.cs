@@ -14,6 +14,16 @@ namespace Raven.Abstractions.Data
 {
 	public class Etag : IEquatable<Etag>, IComparable<Etag>
 	{
+		private static readonly string[] _byteToHexLookupTable = new string[byte.MaxValue];
+
+		static Etag()
+		{
+			for (byte b = Byte.MinValue; b < Byte.MaxValue; b++)
+			{
+				_byteToHexLookupTable[b] = b.ToString("X2");
+			}
+		}
+
 		public override int GetHashCode()
 		{
 			unchecked
@@ -96,14 +106,8 @@ namespace Raven.Abstractions.Data
 
 		private IEnumerable<byte> ToBytes()
 		{
-			foreach (var source in BitConverter.GetBytes(restarts).Reverse())
-			{
-				yield return source;
-			}
-			foreach (var source in BitConverter.GetBytes(changes).Reverse())
-			{
-				yield return source;
-			}
+			return BitConverter.GetBytes(restarts).Reverse()
+				.Concat(BitConverter.GetBytes(changes).Reverse());
 		}
 
 		public byte[] ToByteArray()
@@ -113,15 +117,13 @@ namespace Raven.Abstractions.Data
 
 		public override string ToString()
 		{
-			var sb = new StringBuilder(36);
-			foreach (var by in ToBytes())
-			{
-				sb.Append(by.ToString("X2"));
-			}
+			var sb = ToBytes().ToList().Aggregate(new StringBuilder(36), 
+				(stringBuilder, b) => stringBuilder.Append(_byteToHexLookupTable[b]));
+
 			sb.Insert(8, "-")
-					.Insert(13, "-")
-					.Insert(18, "-")
-					.Insert(23, "-");
+			  .Insert(13, "-")
+			  .Insert(18, "-")
+			  .Insert(23, "-");
 			return sb.ToString();
 		}
 
