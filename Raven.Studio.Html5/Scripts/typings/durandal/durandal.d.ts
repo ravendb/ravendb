@@ -1402,8 +1402,8 @@ interface DurandalNavigationOptions {
 interface DurandalRouteConfiguration {
     title?: string;
     moduleId?: string;
-    hash?: string;
-    route?: string;
+    hash?: any;
+    route?: any;
     routePattern?: RegExp;
     isActive?: KnockoutComputed<boolean>;
     nav: any;
