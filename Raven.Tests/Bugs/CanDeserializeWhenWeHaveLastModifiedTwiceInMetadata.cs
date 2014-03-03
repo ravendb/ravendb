@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class CanDeserializeWhenWeHaveLastModifiedTwiceInMetadata
+    public class CanDeserializeWhenWeHaveLastModifiedTwiceInMetadata : NoDisposalNeeded
 	{
 		[Fact]
 		public void LegacyRavenLastModifiedMetadata()

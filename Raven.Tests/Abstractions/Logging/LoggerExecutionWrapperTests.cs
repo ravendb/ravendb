@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Abstractions.Logging
 {
-	public class LoggerExecutionWrapperTests
+	public class LoggerExecutionWrapperTests : NoDisposalNeeded
 	{
 		private readonly LoggerExecutionWrapper sut;
 		private readonly FakeLogger fakeLogger;
