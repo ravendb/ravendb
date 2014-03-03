@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.IO;
 using System.Reflection;
 using Raven.Client.Document;
@@ -10,7 +11,7 @@ using Raven.Server;
 
 namespace Raven.Tests.Bundles.CompressionAndEncryption
 {
-	public class CompressionAndEncryption
+	public class CompressionAndEncryption : IDisposable
 	{
 		protected readonly string path;
 		protected readonly DocumentStore documentStore;
