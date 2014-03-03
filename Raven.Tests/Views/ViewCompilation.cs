@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Raven.Tests.Views
 {
-	public class ViewCompilation
+	public class ViewCompilation : NoDisposalNeeded
 	{
 		private const string map =
 			@"from post in docs
