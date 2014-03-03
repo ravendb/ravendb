@@ -14,8 +14,6 @@ using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using System.Net.Http;
-using Raven.Database.Server.Responders;
-using Raven.Database.Server.Tenancy;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -302,13 +300,13 @@ namespace Raven.Database.Server.Controllers.Admin
 								documentDatabase.WorkContext.LastWorkTime
 							}.Max(),
                         TransactionalStorageAllocatedSize = transactionalStorageSize.AllocatedSizeInBytes,
-                        TransactionalStorageAllocatedSizeHumaneSize = DatabaseSize.Humane(transactionalStorageSize.AllocatedSizeInBytes),
+                        TransactionalStorageAllocatedSizeHumaneSize = SizeHelper.Humane(transactionalStorageSize.AllocatedSizeInBytes),
                         TransactionalStorageUsedSize = transactionalStorageSize.UsedSizeInBytes,
-                        TransactionalStorageUsedSizeHumaneSize = DatabaseSize.Humane(transactionalStorageSize.UsedSizeInBytes),
+                        TransactionalStorageUsedSizeHumaneSize = SizeHelper.Humane(transactionalStorageSize.UsedSizeInBytes),
                         IndexStorageSize = indexStorageSize,
-                        IndexStorageHumaneSize = DatabaseSize.Humane(indexStorageSize),
+                        IndexStorageHumaneSize = SizeHelper.Humane(indexStorageSize),
                         TotalDatabaseSize = totalDatabaseSize,
-                        TotalDatabaseHumaneSize = DatabaseSize.Humane(totalDatabaseSize),
+                        TotalDatabaseHumaneSize = SizeHelper.Humane(totalDatabaseSize),
                         CountOfDocuments = documentDatabase.Statistics.CountOfDocuments,
                         CountOfAttachments = documentDatabase.Statistics.CountOfAttachments,
 

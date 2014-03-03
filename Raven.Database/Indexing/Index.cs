@@ -34,7 +34,6 @@ using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
-using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Database.Util;
@@ -135,7 +134,7 @@ namespace Raven.Database.Indexing
 					return "false";
 				try
 				{
-					return "true (" + DatabaseSize.Humane(ramDirectory.SizeInBytes()) + ")";
+                    return "true (" + SizeHelper.Humane(ramDirectory.SizeInBytes()) + ")";
 				}
 				catch (AlreadyClosedException)
 				{

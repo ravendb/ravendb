@@ -29,7 +29,6 @@ using Raven.Database.Prefetching;
 using Raven.Database.Queries;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
-using Raven.Database.Server.Responders.Debugging;
 using Raven.Database.Util;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
@@ -61,9 +60,6 @@ namespace Raven.Database
     public class DocumentDatabase : IDisposable
     {
         private readonly InMemoryRavenConfiguration configuration;
-
-        [ImportMany]
-        public OrderedPartCollection<AbstractRequestResponder> RequestResponders { get; set; }
 
         [ImportMany]
         public OrderedPartCollection<IStartupTask> StartupTasks { get; set; }
