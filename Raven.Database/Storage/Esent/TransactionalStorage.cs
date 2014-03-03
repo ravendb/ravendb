@@ -458,8 +458,13 @@ namespace Raven.Storage.Esent
                             Console.WriteLine();
                         }))
                         {
-                            lock (UpdateLocker)
+                            bool lockTaken = false;
+                            try
                             {
+                                Monitor.TryEnter(UpdateLocker, TimeSpan.FromSeconds(15), ref lockTaken);
+                                if (lockTaken == false)
+                                    throw new TimeoutException("Could not take upgrade lock after 15 seconds, probably another database is upgrading itself and we can't interupt it midway. Please try again later");
+
                                 do
                                 {
                                     var updater = Updaters.FirstOrDefault(update => update.Value.FromSchemaVersion == schemaVersion);
@@ -481,6 +486,11 @@ namespace Raven.Storage.Esent
                                     ticker.Stop();
 
                                 } while (schemaVersion != SchemaCreator.SchemaVersion);
+                            }
+                            finally
+                            {
+                                if(lockTaken)
+                                    Monitor.Exit(UpdateLocker);
                             }
                         }
                     }
