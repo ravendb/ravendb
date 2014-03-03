@@ -5,8 +5,8 @@ import router = require("plugins/router");
 // Helper class with static methods for generating app URLs.
 class appUrl {
 
-    private static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
-    //private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
+    //private static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
+    private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
 
 	// Stores some computed values that update whenever the current database updates.
@@ -180,6 +180,36 @@ class appUrl {
     static forTerms(index: string, db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#indexes/terms/" + encodeURIComponent(index) + "?" + databasePart;
+    }
+
+    static forImportDatabase(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#tasks/importDatabase?" + databasePart;
+    }
+
+    static forExportDatabase(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#tasks/exportDatabase?" + databasePart;
+    }
+
+    static forBackupDatabase(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#tasks/backupDatabase?" + databasePart;
+    }
+
+    static forToggleIndexing(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#tasks/toggleIndexing?" + databasePart;
+    }
+
+    static forSampleData(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#tasks/sampleData?" + databasePart;
+    }
+
+    static forCsvImport(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#tasks/csvImport?" + databasePart;
     }
 
 	/**
