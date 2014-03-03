@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class StringIsNullOrEmpty : RavenTest
+	public class StringIsNullOrEmpty : NoDisposalNeeded
 	{
 		[Fact]
 		public void ShouldWork()

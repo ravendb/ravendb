@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class DynamicQueryMapping : RavenTest
+	public class DynamicQueryMapping : NoDisposalNeeded
 	{
 		[Fact]
 		public void CanExtractTermsFromRangedQuery()

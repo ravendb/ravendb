@@ -18,7 +18,7 @@ namespace Raven.Tests.Bugs
 		}
 	}
 
-	public class Smuggler : RavenTest
+	public class Smuggler : NoDisposalNeeded
 	{
 		[Fact]
 		public void should_respect_defaultdb_properly()

@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.QueryOptimizer
 {
-	public class LinqToQueryParameters : RavenTest
+	public class LinqToQueryParameters : NoDisposalNeeded
 	{
 		[Fact]
 		public void SimpleProperties()

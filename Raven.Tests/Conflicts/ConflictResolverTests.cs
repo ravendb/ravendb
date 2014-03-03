@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Conflicts
 {
-	public class ConflictResolverTests : RavenTest
+	public class ConflictResolverTests : NoDisposalNeeded
 	{
 		[Fact]
 		public void CanResolveEmpty()

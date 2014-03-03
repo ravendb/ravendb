@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class CreateIndexesWithCasting : RavenTest
+	public class CreateIndexesWithCasting : NoDisposalNeeded
 	{
 		[Fact]
 		public void WillPreserverTheCasts()

@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class ConnectionStringParsing : RavenTest
+	public class ConnectionStringParsing : NoDisposalNeeded
 	{
 		[Fact]
 		public void EnsureWellFormedConnectionStrings_ParsingWithEndingSemicolons_Successful()

@@ -16,7 +16,7 @@ namespace Raven.Tests.Faceted
 		public Double Price { get; set; }
 	}
 
-	public class FacetAdvancedAPI : RavenTest
+	public class FacetAdvancedAPI : NoDisposalNeeded
 	{
 		[Fact]
 		public void CanUseNewAPIToDoMultipleQueries()

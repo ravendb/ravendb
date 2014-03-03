@@ -258,17 +258,10 @@ namespace Raven.Abstractions.Extensions
         /// </summary>
         public static byte[] ReadEntireBlock(this Stream stream, int count)
         {
-            var buffer = BufferPool.TakeBuffer(count);
+            var buffer = new byte[count];
+            stream.ReadEntireBlock(buffer, 0, count);
 
-            try
-            {
-                stream.ReadEntireBlock(buffer, 0, count);
-                return buffer;
-            }
-            finally
-            {
-                BufferPool.ReturnBuffer(buffer);
-            }
+            return buffer;
         }
 
         /// <summary>

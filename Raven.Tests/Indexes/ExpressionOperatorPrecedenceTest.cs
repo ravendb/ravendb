@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class ExpressionOperatorPrecedenceTest : RavenTest
+	public class ExpressionOperatorPrecedenceTest : NoDisposalNeeded
 	{
 		[Fact]
 		public void operators_of_same_precedence_do_need_parenthesis()

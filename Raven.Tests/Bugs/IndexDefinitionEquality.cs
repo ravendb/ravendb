@@ -10,7 +10,7 @@ using Raven.Client.Indexes;
 
 namespace Raven.Tests.Bugs
 {
-	public class IndexDefinitionEquality : RavenTest
+	public class IndexDefinitionEquality : NoDisposalNeeded
 	{
 		[Fact]
 		public void TransformResultsFactoredIntoEqualityCheck()

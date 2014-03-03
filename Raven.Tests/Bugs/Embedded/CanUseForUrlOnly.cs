@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Embedded
 {
-	public class CanUseForUrlOnly : RavenTest
+	public class CanUseForUrlOnly : NoDisposalNeeded
 	{
 		[Fact]
 		public void WontCreateDirectory()

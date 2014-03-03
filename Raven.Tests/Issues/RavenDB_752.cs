@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_752 : RavenTest
+	public class RavenDB_752 : NoDisposalNeeded
 	{
 		[Fact]
 		public void ReplicationInformerShouldThrowAfterSecondTimeout()

@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-    public class CanReadLuceneProjectedDateTimeOffset : RavenTest
+    public class CanReadLuceneProjectedDateTimeOffset : NoDisposalNeeded
     {
         [Fact]
         public void Can_read_date_time_offset_from_lucene_query()

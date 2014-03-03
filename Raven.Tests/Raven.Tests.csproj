@@ -315,6 +315,7 @@
     <Compile Include="Bundles\UniqueConstraints\ExtensionLoadTests.cs" />
     <Compile Include="Bundles\UniqueConstraints\UniqueConstraintsTest.cs" />
     <Compile Include="Bundles\UniqueConstraints\UpdateTests.cs" />
+    <Compile Include="EmptyDisposable.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client.cs" />
@@ -1070,6 +1071,7 @@
     <Compile Include="NestedIndexing\Item.cs" />
     <Compile Include="NestedIndexing\WithMapReduce.cs" />
     <Compile Include="NonIncrementalBackupRestoreTest.cs" />
+    <Compile Include="NoNonDisposableTests.cs" />
     <Compile Include="Notifications\ReplicationConflicts.cs" />
     <Compile Include="Notifications\ReplicationConflicts_Embedded.cs" />
     <Compile Include="Patching\BigDoc.cs" />

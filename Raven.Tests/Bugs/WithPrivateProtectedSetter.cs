@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class WithPrivateProtectedSetter : RavenTest
+	public class WithPrivateProtectedSetter : NoDisposalNeeded
 	{
 		[Fact]
 		public void CanSerializeToJsonCorrectly()

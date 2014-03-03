@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class AmbiguousMatchExceptionTest : RavenTest
+	public class AmbiguousMatchExceptionTest : NoDisposalNeeded
 	{
 		public class GeneralThing
 		{

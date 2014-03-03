@@ -15,7 +15,7 @@ namespace Raven.Tests.Issues
 {
 	using Raven.Abstractions.Connection;
 
-	public class ReplicationBehavior : RavenTest
+	public class ReplicationBehavior : NoDisposalNeeded
 	{
 		[Fact]
 		public void BackoffStrategy()

@@ -9,7 +9,7 @@ using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Tests.Bugs
 {
-	public class LuceneIndexing : RavenTest
+	public class LuceneIndexing : NoDisposalNeeded
 	{
 		[Fact]
 		public void MrsJones()

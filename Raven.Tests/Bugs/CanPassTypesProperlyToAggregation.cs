@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class CanPassTypesProperlyToAggregation : RavenTest
+	public class CanPassTypesProperlyToAggregation : NoDisposalNeeded
 	{
 		private class Coin
 		{

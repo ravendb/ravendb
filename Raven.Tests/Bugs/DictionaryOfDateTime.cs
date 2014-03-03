@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class DictionaryOfDateTime : RavenTest
+	public class DictionaryOfDateTime : NoDisposalNeeded
 	{
 		public class WithDic
 		{

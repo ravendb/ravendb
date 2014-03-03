@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Json
 {
-	public class RavenJObjects : RavenTest
+	public class RavenJObjects : NoDisposalNeeded
 	{
 		[Fact]
 		public void CanIgnoreUnassignedProperties()

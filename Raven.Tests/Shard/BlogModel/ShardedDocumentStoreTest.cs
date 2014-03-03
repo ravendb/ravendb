@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Shard.BlogModel
 {
-	public class ShardedDocumentStoreTest : RavenTest
+	public class ShardedDocumentStoreTest : NoDisposalNeeded
 	{
 		[Fact]
 		public void WillThrowIsThereIsNoShards()

@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Spatial
 {
-	public class GeoJsonWktConverterTests : RavenTest
+	public class GeoJsonWktConverterTests : NoDisposalNeeded
 	{
 		private readonly GeoJsonWktConverter reader;
 		private readonly WKTReader wktReader = new WKTReader();

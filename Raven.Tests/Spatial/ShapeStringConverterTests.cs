@@ -6,7 +6,7 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Spatial
 {
-	public class ShapeStringConverterTests : RavenTest
+	public class ShapeStringConverterTests : NoDisposalNeeded
 	{
 		[Theory]
 		[CriticalCultures]

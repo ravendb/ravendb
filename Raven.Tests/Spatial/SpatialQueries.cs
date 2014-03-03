@@ -31,7 +31,7 @@ namespace Raven.Tests.Spatial
 		[Fact]
 		public void CanRunSpatialQueriesInMemory()
 		{
-			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
+			using (var documentStore = NewDocumentStore(runInMemory: true))
 			{
 				new SpatialQueriesInMemoryTestIdx().Execute(documentStore);
 			}

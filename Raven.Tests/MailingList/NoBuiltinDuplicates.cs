@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Raven.Tests.MailingList
 {
-	public class NoBuiltinDuplicates : RavenTest
+	public class NoBuiltinDuplicates : NoDisposalNeeded
 	{
 		[Fact]
 		public void ShouldNotHaveDuplicates()

@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using System.Linq;
-using Raven.Client.Embedded;
 using Raven.Database.Extensions;
 using Xunit;
 

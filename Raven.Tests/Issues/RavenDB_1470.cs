@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class RavenDB_1470
+	public class RavenDB_1470 : NoDisposalNeeded
 	{
 		[Fact]
 		public void Etag_to_Guid_conversion()

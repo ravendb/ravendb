@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Bundles.MoreLikeThis
 {
-	public class MoreLikeThisQueryParametersTests : RavenTest
+	public class MoreLikeThisQueryParametersTests : NoDisposalNeeded
 	{
 		[Fact]
 		public void CanEncodeDecodeRequestByDocumentId()
