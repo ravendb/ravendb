@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
+
 using Raven.Abstractions.Data;
 
-namespace Raven.Database.Server.Responders.Debugging
+namespace Raven.Database.Data
 {
     public class ExecutingQueryInfo
     {

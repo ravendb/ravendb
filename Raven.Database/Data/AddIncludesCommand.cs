@@ -6,11 +6,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
-namespace Raven.Database.Server.Responders
+namespace Raven.Database.Data
 {
 	public class AddIncludesCommand
 	{
