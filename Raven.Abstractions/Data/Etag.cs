@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Linq;
+using Raven.Abstractions.Util;
 #if SILVERLIGHT || NETFX_CORE
 using Raven.Abstractions.Util;
 #else
@@ -14,16 +16,7 @@ namespace Raven.Abstractions.Data
 {
 	public class Etag : IEquatable<Etag>, IComparable<Etag>
 	{
-		private static readonly string[] _byteToHexLookupTable = new string[byte.MaxValue + 1];
-
-		static Etag()
-		{
-			for (byte b = Byte.MinValue; b < Byte.MaxValue; b++)
-			{
-				_byteToHexLookupTable[b] = b.ToString("X2");
-			}
-		}
-
+	
 		public override int GetHashCode()
 		{
 			unchecked
@@ -117,14 +110,19 @@ namespace Raven.Abstractions.Data
 
 		public override string ToString()
 		{
-			var sb = ToBytes().ToList().Aggregate(new StringBuilder(36), 
-				(stringBuilder, b) => stringBuilder.Append(_byteToHexLookupTable[b]));
+			var etagBytes = ToBytes().ToList();
+			var sb = etagBytes.Aggregate(new StringBuilder(36), 
+				(stringBuilder, b) => stringBuilder.Append(GenericUtil.ByteToHexAsStringLookup[b]));
 
 			sb.Insert(8, "-")
 			  .Insert(13, "-")
 			  .Insert(18, "-")
 			  .Insert(23, "-");
-			return sb.ToString();
+
+			var etagAsString = sb.ToString();
+			Debug.Assert(etagAsString.Length == 36); //prevent stupid bugs if something is refactored
+
+			return etagAsString;
 		}
 
 		public static Etag Parse(byte[] bytes)
@@ -155,7 +153,7 @@ namespace Raven.Abstractions.Data
 			if (string.IsNullOrEmpty(str))
 				throw new ArgumentException("str cannot be empty or null");
 			if (str.Length != 36)
-				throw new ArgumentException("str must be 36 characters");
+				throw new ArgumentException(string.Format("str must be 36 characters. Perhaps you are trying to parse non-etag as etag? (string that was passed into Etag::Parse is {0})", str));
 
 			var buffer = new byte[16]
 			{
