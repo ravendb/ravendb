@@ -4,11 +4,6 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO.Compression;
-#if SILVERLIGHT
-using Ionic.Zlib;
-#else
-
-#endif
 
 namespace Raven.Abstractions.Connection
 {

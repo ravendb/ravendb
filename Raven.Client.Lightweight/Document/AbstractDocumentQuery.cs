@@ -1784,11 +1784,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 				if (queryOperation.IsAcceptable(result) == false)
 					{
-#if SILVERLIGHT
-					await TaskEx.Delay(100);
-#else
 					await Task.Delay(100);
-#endif
 					return await ExecuteActualQueryAsync();
 						}
 						InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);

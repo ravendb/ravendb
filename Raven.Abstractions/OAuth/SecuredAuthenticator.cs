@@ -11,14 +11,6 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
-#if SILVERLIGHT
-using System.Diagnostics;
-using System.Net.Browser;
-
-using Raven.Client.Changes;
-using Raven.Client.Connection;
-#endif
-
 namespace Raven.Abstractions.OAuth
 {
     public class SecuredAuthenticator : AbstractAuthenticator
@@ -35,7 +27,7 @@ namespace Raven.Abstractions.OAuth
             {
                 if (e.Client != null)
                     e.Client.DefaultRequestHeaders.Add("Has-Api-Key", "true");
-#if !NETFX_CORE && !SILVERLIGHT
+#if !NETFX_CORE
                 if (e.Request != null)
                     e.Request.Headers["Has-Api-Key"] = "true";
 #endif
@@ -44,11 +36,7 @@ namespace Raven.Abstractions.OAuth
 
         private Tuple<HttpWebRequest, string> PrepareOAuthRequest(string oauthSource, string serverRSAExponent, string serverRSAModulus, string challenge, string apiKey)
         {
-#if !SILVERLIGHT
             var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
-#else
-			var authRequest = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(oauthSource));
-#endif
             authRequest.Headers["grant_type"] = "client_credentials";
             authRequest.Accept = "application/json;charset=UTF-8";
             authRequest.Method = "POST";
@@ -226,11 +214,7 @@ namespace Raven.Abstractions.OAuth
 					});
                 }
 
-                var requestUri = oauthSource
-#if SILVERLIGHT
-				.NoCache()
-#endif
-;
+                var requestUri = oauthSource;
 
                 var response = await httpClient.PostAsync(requestUri, data != null ? (HttpContent)new CompressedStringContent(data, true) : new StringContent(""))
                                                .AddUrlIfFaulting(new Uri(requestUri))
@@ -266,46 +250,10 @@ namespace Raven.Abstractions.OAuth
                 using (var reader = new StreamReader(stream))
                 {
                     CurrentOauthToken = reader.ReadToEnd();
-
-
-#if SILVERLIGHT
-					BrowserCookieToAllowUserToUseStandardRequests(baseUrl, reader.ReadToEnd());
-#endif
                     return (Action<HttpClient>)(SetAuthorization);
                 }
             }
         }
 
-#if SILVERLIGHT
-		private void BrowserCookieToAllowUserToUseStandardRequests(string baseUrl, string currentOauthToken)
-		{
-			var webRequest = WebRequestCreator.BrowserHttp.Create(new Uri(baseUrl + "/OAuth/Cookie"));
-			webRequest.Headers["Authorization"] = currentOauthToken;
-			webRequest.Headers["Has-Api-Key"] = "True";
-			webRequest.Method = "POST";
-			webRequest.BeginGetResponse(ar =>
-			{
-				try
-				{
-					using (webRequest.EndGetResponse(ar))
-					{
-
-					}
-				}
-				catch (WebException we)
-				{
-					Debug.WriteLine("Failed to set browser cookie: " + we.Message);
-					using(we.Response)
-					{
-						
-					}
-				}
-				catch (Exception e)
-				{
-					Debug.WriteLine("Failed to set browser cookie: " + e.Message);
-				}
-			}, null);
-		}
-#endif
     }
 }

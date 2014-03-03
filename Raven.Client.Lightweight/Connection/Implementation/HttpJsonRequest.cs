@@ -7,7 +7,7 @@ using Raven.Client.Extensions;
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
 #else
 using System.Collections.Specialized;

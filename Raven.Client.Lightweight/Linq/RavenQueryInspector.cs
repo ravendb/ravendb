@@ -290,26 +290,6 @@ namespace Raven.Client.Linq
 			return ((IRavenQueryInspector) luceneQuery).GetLastEqualityTerm();
 		}
 
-#if SILVERLIGHT
-		/// <summary>
-		///   This function exists solely to forbid calling ToList() on a queryable in Silverlight.
-		/// </summary>
-		[Obsolete("You cannot execute a query synchronously from the Silverlight client. Instead, use queryable.ToListAsync().", true)]
-		public static IList<TOther> ToList<TOther>()
-		{
-			throw new NotSupportedException();
-		}
-
-		/// <summary>
-		///   This function exists solely to forbid calling ToArray() on a queryable in Silverlight.
-		/// </summary>
-		[Obsolete("You cannot execute a query synchronously from the Silverlight client. Instead, use queryable.ToListAsync().", true)]
-		public static TOther[] ToArray<TOther>()
-		{
-			throw new NotSupportedException();
-		}
-#endif
-
 		/// <summary>
 		/// Set the fields to fetch
 		/// </summary>

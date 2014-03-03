@@ -21,19 +21,12 @@ namespace Raven.Abstractions.Connection
 		/// <value>The request.</value>
 		public HttpClient Client { get; set; }
 
-#if !SILVERLIGHT && !NETFX_CORE 
+#if !NETFX_CORE 
 		/// <summary>
 		/// Gets or sets the web request.
 		/// </summary>
 		/// <value>The request.</value>
 		public WebRequest Request { get; set; }
-#endif
-
-#if SILVERLIGHT
-	/// <summary>
-	/// The RavenDB json request
-	/// </summary>
-		public Client.Silverlight.Connection.HttpJsonRequest JsonRequest { get; set; }
 #endif
 
 		public OperationCredentials Credentials { get; set; }

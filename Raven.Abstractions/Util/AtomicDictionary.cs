@@ -4,9 +4,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Abstractions.Extensions;
-#if SILVERLIGHT
-using Raven.Abstractions.Util;
-#endif
 
 namespace Raven.Abstractions.Util
 {

@@ -3,12 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
-#if SILVERLIGHT
-using System.Windows.Browser;
-#endif
-#if SILVERLIGHT
-using Raven.Client.Silverlight.Connection;
-#elif NETFX_CORE
+#if NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #endif
 
@@ -85,14 +80,7 @@ namespace Raven.Client.Connection
 
 		public static string Doc(this string url, string key)
 		{
-
-			return url + "/docs/" 
-#if SILVERLIGHT 
-				+ HttpUtility.UrlEncode(key)
-#else
-				+ key
-#endif
-				;
+			return url + "/docs/" + key;
 		}
 
 		public static string Docs(this string url, int start, int pageSize)

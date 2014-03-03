@@ -65,9 +65,7 @@ namespace Raven.Client.Shard
 		{
 			var buffer = queryResults.SelectMany(x => x.IndexEtag.ToByteArray()).ToArray();
 			Etag indexEtag;
-#if SILVERLIGHT
-			indexEtag = new Etag(Convert.ToBase64String(MD5Core.GetHash(buffer)));
-#elif  NETFX_CORE
+#if  NETFX_CORE
 			indexEtag = new Etag(Convert.ToBase64String(MD5.HashCore(buffer)));			
 #else
 			using (var md5 = MD5.Create())

@@ -14,9 +14,7 @@ using Raven.Client.Document.DTC;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Client.Document;
-#if SILVERLIGHT
-using Raven.Client.Silverlight.Connection;
-#elif NETFX_CORE
+#if NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #else
 using Raven.Abstractions.Util.Encryptors;

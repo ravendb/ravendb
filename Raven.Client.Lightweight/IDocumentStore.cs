@@ -12,9 +12,7 @@ using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
-#if SILVERLIGHT
-using Raven.Client.Silverlight.Connection;
-#elif NETFX_CORE
+#if NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #else
 using System.Collections.Specialized;

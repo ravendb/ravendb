@@ -22,7 +22,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Document;
@@ -104,7 +104,7 @@ namespace Raven.Client.Connection
 		/// Updates the replication information if needed.
 		/// </summary>
 		/// <param name="serverClient">The server client.</param>
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 		public Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient)
 #else
 		public Task UpdateReplicationInformationIfNeeded(ServerClient serverClient)
@@ -311,7 +311,7 @@ namespace Raven.Client.Connection
 		/// Refreshes the replication information.
 		/// Expert use only.
 		/// </summary>
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 		public Task RefreshReplicationInformation(AsyncServerClient commands)
 		{
 			lock (this)

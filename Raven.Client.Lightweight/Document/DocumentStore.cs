@@ -24,10 +24,7 @@ using System.Threading.Tasks;
 using Raven.Client.Document.Async;
 using Raven.Client.Util;
 
-#if SILVERLIGHT
-using System.Net.Browser;
-using Raven.Client.Silverlight.Connection;
-#elif NETFX_CORE
+#if NETFX_CORE
 using System.Collections.Concurrent;
 using Raven.Client.WinRT.Connection;
 #else
@@ -52,7 +49,7 @@ namespace Raven.Client.Document
 		private bool aggressiveCachingUsed;
 
 
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 		private readonly Dictionary<string, ReplicationInformer> replicationInformers = new Dictionary<string, ReplicationInformer>(StringComparer.OrdinalIgnoreCase);
 		private readonly object replicationInformersLocker = new object();
 #else
@@ -659,20 +656,6 @@ namespace Raven.Client.Document
 			};
 #endif
 
-#if SILVERLIGHT
-			WebRequest.RegisterPrefix("http://", WebRequestCreator.ClientHttp);
-			WebRequest.RegisterPrefix("https://", WebRequestCreator.ClientHttp);
-			
-			// required to ensure just a single auth dialog
-			var task = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, (Url + "/docs?pageSize=0").NoCache(), "GET", new OperationCredentials(ApiKey, Credentials), Conventions))
-				.ExecuteRequestAsync();
-			
-			jsonRequestFactory.ConfigureRequest += (sender, args) =>
-			{
-				args.JsonRequest.WaitForTask = task;
-			};
-#endif
-
 			asyncDatabaseCommandsGenerator = () =>
 			{
 				var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, listeners.ConflictListeners);
@@ -694,7 +677,7 @@ namespace Raven.Client.Document
 			}
 			ReplicationInformer result;
 
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 			lock (replicationInformersLocker)
 			{
 				if (!replicationInformers.TryGetValue(key, out result))

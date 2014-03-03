@@ -423,7 +423,7 @@ namespace Raven.Client.Linq
 		}
 
 		private static readonly Regex castingRemover = new Regex(@"(?<!\\)[\(\)]",
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 				RegexOptions.None
 #else
 				RegexOptions.Compiled
@@ -1525,12 +1525,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			return executeQueryWithProjectionType.Invoke(this, new object[0]);
 		}
 
-#if SILVERLIGHT
-		private object ExecuteQuery<TProjection>()
-		{
-			throw new NotImplementedException("Not done yet");
-		}
-#else
 		private object ExecuteQuery<TProjection>()
 		{
 			var renamedFields = FieldsToFetch.Select(field =>
@@ -1557,7 +1551,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			}
 			return executeQuery;
 		}
-#endif
 
 		public void RenameResults(QueryResult queryResult)
 		{
