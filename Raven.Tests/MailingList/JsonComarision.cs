@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class JsonComarision
+	public class JsonComarision : RavenTest
 	{
 		[Fact]
 		public void ShouldNotThrow()

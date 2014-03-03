@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Querying
 {
-	public class UsingStronglyTypedDocumentQuery
+	public class UsingStronglyTypedDocumentQuery : RavenTest
 	{
 		private IDocumentQuery<IndexedUser> CreateUserQuery()
 		{

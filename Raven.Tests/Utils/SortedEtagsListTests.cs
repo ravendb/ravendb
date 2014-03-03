@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.Utils
 {
-	public class SortedEtagsListTests
+	public class SortedEtagsListTests : RavenTest
 	{
 		private Etag zero = Etag.Empty;
 

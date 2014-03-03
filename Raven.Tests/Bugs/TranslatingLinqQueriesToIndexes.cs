@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class TranslatingLinqQueriesToIndexes
+	public class TranslatingLinqQueriesToIndexes : RavenTest
 	{
 		[Fact]
 		public void WillTranslateReferenceToIdTo__document_id()

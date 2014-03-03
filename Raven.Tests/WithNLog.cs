@@ -4,7 +4,7 @@ using Raven.Database.Server;
 
 namespace Raven.Tests
 {
-	public class WithNLog
+	public class WithNLog : RavenTest
 	{
 		static WithNLog()
 		{

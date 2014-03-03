@@ -18,7 +18,7 @@ using Xunit.Extensions;
 
 namespace Raven.Tests
 {
-	class IndexQueryUrl
+	class IndexQueryUrl : RavenTest
 	{
 		[Fact]
 		public void can_encode_and_decode_IndexQuery() 

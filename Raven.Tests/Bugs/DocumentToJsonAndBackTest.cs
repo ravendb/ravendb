@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class DocumentToJsonAndBackTest
+	public class DocumentToJsonAndBackTest : RavenTest
 	{
 		private readonly Page page;
 

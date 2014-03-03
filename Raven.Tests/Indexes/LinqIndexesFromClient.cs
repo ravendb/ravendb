@@ -19,7 +19,7 @@ using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class LinqIndexesFromClient
+	public class LinqIndexesFromClient : RavenTest
 	{
 		[Fact]
 		public void Convert_select_many_will_keep_doc_id()

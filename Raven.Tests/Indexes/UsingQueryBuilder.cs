@@ -15,7 +15,7 @@ using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Tests.Indexes
 {
-	public class UsingQueryBuilder
+	public class UsingQueryBuilder : RavenTest
 	{
 		[Fact]
 		public void Can_parse_Analyzed_simple_single_term()

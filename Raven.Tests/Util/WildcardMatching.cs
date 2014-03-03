@@ -10,7 +10,7 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Util
 {
-	public class WildcardMatching
+	public class WildcardMatching : RavenTest
 	{
 		[Theory]
 		[InlineValue("ay?nde", "ayende", true)]

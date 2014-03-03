@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Linq;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Xunit;
 
 namespace Raven.Tests.Issues.Ravendb718
 {
-	public class DateTime_QueryMultiMapTests
+	public class DateTime_QueryMultiMapTests : RavenTest
 	{
 		[Fact]
 		public void DateTime_SavedAs_Local_OnMultiMapIndex_QueriesAs_Unspecified()
@@ -31,11 +30,11 @@ namespace Raven.Tests.Issues.Ravendb718
 			DoTest(DateTime.UtcNow, DateTimeKind.Utc, DateTimeKind.Utc);
 		}
 
-		private static void DoTest(DateTime dt, DateTimeKind inKind, DateTimeKind outKind)
+		private void DoTest(DateTime dt, DateTimeKind inKind, DateTimeKind outKind)
 		{
 			Assert.Equal(inKind, dt.Kind);
 
-			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true })
+			using (var documentStore = NewDocumentStore(runInMemory: true))
 			{
 				documentStore.Initialize();
 				new FoosAndBars_ByDateTime().Execute(documentStore);

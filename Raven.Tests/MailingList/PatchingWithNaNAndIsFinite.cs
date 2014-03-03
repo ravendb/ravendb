@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class PatchingWithNaNAndIsFinite
+	public class PatchingWithNaNAndIsFinite : RavenTest
 	{
 		[Fact]
 		public void ShouldWork()

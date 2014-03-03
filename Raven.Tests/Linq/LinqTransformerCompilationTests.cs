@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Raven.Tests.Linq
 {
-	public class LinqTransformerCompilationTests
+	public class LinqTransformerCompilationTests : RavenTest
 	{
 		private const string query =
 			@"

@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.Util
 {
-	public class ReflectionUtilTest
+	public class ReflectionUtilTest : RavenTest
 	{
 		[Fact]
 		public void Can_generate_simple_type_name_for_simple_type()

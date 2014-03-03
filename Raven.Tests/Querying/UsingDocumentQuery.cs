@@ -12,7 +12,7 @@ using Raven.Client.Document;
 
 namespace Raven.Tests.Querying
 {
-	public class UsingDocumentQuery
+	public class UsingDocumentQuery : RavenTest
 	{
 		[Fact]
 		public void CanUnderstandSimpleEquality()

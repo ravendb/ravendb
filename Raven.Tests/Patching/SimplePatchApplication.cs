@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Raven.Tests.Patching
 {
-	public class SimplePatchApplication
+	public class SimplePatchApplication : RavenTest
 	{
 		private readonly RavenJObject doc = 
 			RavenJObject.Parse(@"{ title: ""A Blog Post"", body: ""html markup"", comments: [ {author: ""ayende"", text:""good post""}] }");

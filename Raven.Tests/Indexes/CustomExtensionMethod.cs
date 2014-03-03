@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class CustomExtensionMethod
+	public class CustomExtensionMethod : RavenTest
 	{
 		[Fact]
 		public void Custom_Extension_Method_Is_Translated_As_Method_Call()
