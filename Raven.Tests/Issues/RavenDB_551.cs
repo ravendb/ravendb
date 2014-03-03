@@ -5,11 +5,8 @@ using System.Transactions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Json.Linq;
-using Raven.Tests.Bundles.MoreLikeThis;
 using Xunit;
-using Xunit.Extensions;
 using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Tests.Issues
@@ -19,7 +16,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void Non_parallel_delete_with_optimistic_concurrency_should_not_throw_concurrency_exceptions()
 		{
-			using (var documentStore = NewDocumentStore())
+            using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
 			{
 				string id;
 				using (var session = documentStore.OpenSession())
@@ -146,8 +143,10 @@ namespace Raven.Tests.Issues
 		[Fact]
 	 	public void CanGetErrorOnOptimisticDeleteInTransaction()
 		{
-			using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
+			    if (store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+			        return;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new Item());
@@ -165,8 +164,10 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanGetErrorOnOptimisticDeleteInTransactionWhenModifiedInTransaction()
 		{
-			using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
+                if (store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new Item());
@@ -186,8 +187,10 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanGetErrorOnOptimisticDeleteInTransactionWhenDeletedInTransaction()
 		{
-			using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
+                if (store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new Item());
@@ -206,8 +209,10 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanGetErrorOnOptimisticDeleteInTransactionWhenDeletedInTransactionUsingOldEtag()
 		{
-			using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
+                if (store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new Item());
@@ -230,8 +235,10 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanGetErrorOnOptimisticDeleteInTransactionWhenDeletedInAnotherTransaction()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
+                if (store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
 				using (var session = store.OpenSession())
 				{
 					session.Store(new Item());
