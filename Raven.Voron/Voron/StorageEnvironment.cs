@@ -502,7 +502,7 @@ namespace Voron
 
 				            try
 				            {
-				                _journal.Applicator.ApplyLogsToDataFile(OldestTransaction);
+                                _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token);
 				            }
 				            catch (TimeoutException)
 				            {
@@ -518,7 +518,7 @@ namespace Voron
             if (_options.ManualFlushing == false)
                 throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
 
-           _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, tx);
+           _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token, tx);
         }
 
         public void AssertFlushingNotFailed()
