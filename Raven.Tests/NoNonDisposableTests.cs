@@ -14,7 +14,7 @@ namespace Raven.Tests
 {
     public class NoNonDisposableTests : IDisposable
     {
-        [Fact(Skip = "Currently waiting for RavenDB-1815")]
+        [Fact]
         public void ShouldExist()
         {
             var types = from test in typeof(NoNonDisposableTests).Assembly.GetTypes()
