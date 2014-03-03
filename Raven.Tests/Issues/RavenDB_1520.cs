@@ -37,16 +37,17 @@ namespace Raven.Tests.Issues
 			using (var ravenServer = GetNewServer(runInMemory: false,requestedStorage:"esent"))
 			using (var _ = NewRemoteDocumentStore(ravenDbServer: ravenServer, databaseName: "fooDB", runInMemory: false))
 			{
-                throw new NotSupportedException("Need to re-do this, since we are no longer have a single file system");
-				var systemDatabaseBackupOperation = new BackupOperation
-				{
-					BackupPath = BackupDir,
-					Database = Constants.SystemDatabase,
-                    //ServerUrl = ravenServer.Server.FileSystem.Configuration.ServerUrl
-				};
+			    using (var systemDatabaseBackupOperation = new BackupOperation
+			                                            {
+			                                                BackupPath = BackupDir,
+			                                                Database = Constants.SystemDatabase,
+			                                                ServerUrl = ravenServer.SystemDatabase.Configuration.ServerUrl
+			                                            })
+			    {
 
-				Assert.True(systemDatabaseBackupOperation.InitBackup());
-				WaitForBackup(ravenServer.SystemDatabase, true);
+			        Assert.True(systemDatabaseBackupOperation.InitBackup());
+			        WaitForBackup(ravenServer.SystemDatabase, true);
+			    }
 			}
 
 			Assert.DoesNotThrow(() => DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir, s => { }, defrag: false));
