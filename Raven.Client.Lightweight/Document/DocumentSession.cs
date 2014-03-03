@@ -586,9 +586,10 @@ namespace Raven.Client.Document
         {
             var ravenQueryInspector = ((IRavenQueryInspector)query);
             var indexQuery = ravenQueryInspector.GetIndexQuery(false);
-			
-			if(indexQuery.WaitForNonStaleResults)
-				throw new NotSupportedException("Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults customization is not supported.");
+
+            if (indexQuery.WaitForNonStaleResults || indexQuery.WaitForNonStaleResultsAsOfNow)
+                throw new NotSupportedException(
+                    "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
 
             var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
             return YieldQuery(query, enumerator);

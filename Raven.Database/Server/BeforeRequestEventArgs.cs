@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Controllers;
+using Raven.Database.Server.RavenFS;
 
 namespace Raven.Database.Server
 {
@@ -16,7 +17,8 @@ namespace Raven.Database.Server
 	{
 		public string TenantId { get; set; }
 		public DocumentDatabase Database { get; set; }
-		public bool IgnoreRequest { get; set; }
-		public RavenDbApiController Controller { get; set; }
+        public RavenFileSystem FileSystem { get; set; }
+        public bool IgnoreRequest { get; set; }
+        public RavenBaseApiController Controller { get; set; }
 	}
 }

@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util.Streams;
 using Raven.Database.Util.Streams;
 using Raven.Storage.Voron;
 

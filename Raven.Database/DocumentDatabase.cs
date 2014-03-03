@@ -224,7 +224,7 @@ namespace Raven.Database
                                 "We do not allow to run on a storage engine other then Voron, while we are in the early pre-release phase of RavenDB 3.0. You are currently running on {0}",
                                 storageEngineTypeName));
 
-                    Trace.WriteLine("Forcing database to run on Voron - pre release behavior only, mind");
+                    Trace.WriteLine("Forcing database to run on Voron - pre release behavior only, mind " + Path.GetFileName(Path.GetDirectoryName(configuration.DataDirectory)));
                     storageEngineTypeName = InMemoryRavenConfiguration.VoronTypeName;
 
                 }

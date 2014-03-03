@@ -63,14 +63,14 @@ namespace RavenFS.Tests
 
 		protected RavenFileSystem GetRavenFileSystem(int index)
 		{
-			return
-				disposables.OfType<RavenDbServer>().First(x => x.Server.FileSystem.Configuration.Port == Ports[index]).Server.FileSystem;
+            throw new NotSupportedException("Need to re-do this, since we are no longer have a single file system");
+            //return disposables.OfType<RavenDbServer>().First(x => x.Server.FileSystem.Configuration.Port == Ports[index]).Server.FileSystem;
 		}
 
 		protected RavenDbServer GetServer(int index)
 		{
-			return
-				disposables.OfType<RavenDbServer>().First(x => x.Server.FileSystem.Configuration.Port == Ports[index]);
+            throw new NotSupportedException("Need to re-do this, since we are no longer have a single file system");
+            //return disposables.OfType<RavenDbServer>().First(x => x.Server.FileSystem.Configuration.Port == Ports[index]);
 		}
 
 		public virtual void Dispose()

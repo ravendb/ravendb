@@ -1,6 +1,4 @@
-﻿using Raven.Database.Util.Streams;
-
-namespace Raven.Database.Storage.Voron.StorageActions
+﻿namespace Raven.Database.Storage.Voron.StorageActions
 {
 	using System.Linq;
 
@@ -16,6 +14,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	using Raven.Abstractions.Data;
 	using Raven.Abstractions.Exceptions;
 	using Raven.Abstractions.MEF;
+    using Raven.Abstractions.Util.Streams;
 	using Raven.Database.Impl;
 	using Raven.Database.Plugins;
 	using Raven.Database.Storage.Voron.Impl;

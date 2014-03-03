@@ -321,6 +321,7 @@
     <Compile Include="Issues\RavenDB_1538.cs" />
     <Compile Include="Issues\RavenDB_1297 .cs" />
     <Compile Include="Issues\RavenDB_1285.cs" />
+    <Compile Include="Issues\RavenDB_1461.cs" />
     <Compile Include="Issues\RavenDB_1395.cs" />
     <Compile Include="Issues\RavenDB_1540.cs" />
     <Compile Include="Issues\RavenDB_1302.cs" />
@@ -362,16 +363,12 @@
     <Compile Include="Issues\RavenDB_1561.cs" />
     <Compile Include="Issues\RavenDB_1560.cs" />
     <Compile Include="Issues\RavenDB_1595.cs" />
-    <Compile Include="Issues\RavenDB_1603.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="Issues\RavenDB_1565.cs" />
     <Compile Include="Issues\RavenDB_1594.cs" />
     <Compile Include="Issues\RavenDB_1609.cs" />
     <Compile Include="Issues\RavenDB_1610.cs" />
     <Compile Include="Issues\RavenDB_1650.cs" />
     <Compile Include="Issues\RavenDB_1666.cs" />
-    <Compile Include="Issues\RavenDB_1701.cs" />
     <Compile Include="Issues\RavenDB_1716.cs" />
     <Compile Include="Issues\RavenDB_1717.cs" />
     <Compile Include="Issues\RavenDB_1735.cs" />
@@ -384,6 +381,8 @@
     <Compile Include="Issues\RavenDB_1562.cs" />
     <Compile Include="Issues\RavenDB_1598_MappingComplexProperties.cs" />
     <Compile Include="Issues\RavenDB_1600.cs" />
+    <Compile Include="Issues\RavenDB_1601.cs" />
+    <Compile Include="Issues\RavenDB_1603.cs" />
     <Compile Include="Issues\RavenDB_1733.cs" />
     <Compile Include="Issues\RDBQA_11.cs" />
     <Compile Include="Issues\RDBQA_7.cs" />

@@ -33,6 +33,8 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void WhenUsingTransactionWillWorkIfDocumentEtagMatch()
 		{
+            if (db.TransactionalStorage.SupportsDtc == false)
+                return;
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
 			var doc = db.Get("ayende", null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
@@ -47,6 +49,8 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void AfterPuttingDocInTxWillChangeEtag()
 		{
+            if (db.TransactionalStorage.SupportsDtc == false)
+                return;
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
 			var doc = db.Get("ayende", null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
@@ -61,6 +65,8 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void AfterCommitWillNotRetainSameEtag()
 		{
+            if (db.TransactionalStorage.SupportsDtc == false)
+                return;
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
 			var doc = db.Get("ayende", null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
@@ -76,6 +82,8 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void WhenUsingTransactionWillFailIfDocumentEtagDoesNotMatch()
 		{
+            if (db.TransactionalStorage.SupportsDtc == false)
+                return;
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			Assert.Throws<ConcurrencyException>(

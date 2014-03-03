@@ -84,9 +84,11 @@ CREATE TABLE [dbo].[Orders]
 			}
 		}
 
-		[FactIfSqlServerIsAvailable]
+		[Fact]
 		public void SimpleTransformation()
 		{
+            if (FactIfSqlServerIsAvailable.ConnectionStringSettings == null)
+                return;
 			CreateRdbmsSchema();
 			using (var store = NewDocumentStore())
 			{
@@ -133,9 +135,11 @@ CREATE TABLE [dbo].[Orders]
 			}
 		}
 
-		[FactIfSqlServerIsAvailable]
+		[Fact]
 		public void ReplicateMultipleBatches()
 		{
+            if (FactIfSqlServerIsAvailable.ConnectionStringSettings == null)
+                return;
 			CreateRdbmsSchema();
 			using (var store = NewDocumentStore())
 			{
@@ -196,9 +200,11 @@ CREATE TABLE [dbo].[Orders]
 
 		}
 
-		[FactIfSqlServerIsAvailable]
+		[Fact]
 		public void CanUpdateToBeNoItemsInChildTable()
 		{
+            if (FactIfSqlServerIsAvailable.ConnectionStringSettings == null)
+                return;
 			CreateRdbmsSchema();
 			using (var store = NewDocumentStore())
 			{
@@ -244,9 +250,11 @@ CREATE TABLE [dbo].[Orders]
 			}
 		}
 
-		[FactIfSqlServerIsAvailable]
+		[Fact]
 		public void CanDelete()
 		{
+            if (FactIfSqlServerIsAvailable.ConnectionStringSettings == null)
+                return;
 			CreateRdbmsSchema();
 			using (var store = NewDocumentStore())
 			{
@@ -288,9 +296,11 @@ CREATE TABLE [dbo].[Orders]
 			}
 		}
 
-		[FactIfSqlServerIsAvailable]
+		[Fact]
 		public void WillLog()
 		{
+            if (FactIfSqlServerIsAvailable.ConnectionStringSettings == null)
+                return;
 			LogManager.RegisterTarget<DatabaseMemoryTarget>();
 
 			CreateRdbmsSchema();

@@ -68,7 +68,8 @@ namespace RavenFS.Tests
 
 		protected RavenFileSystem GetRavenFileSystem()
 		{
-			return server.Server.FileSystem;
+            throw new NotSupportedException("Need to re-do this, since we are no longer have a single file system");
+            //return server.Server.FileSystem;
 		}
 	}
 }

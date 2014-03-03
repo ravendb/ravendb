@@ -23,6 +23,7 @@ using System.Threading.Tasks;
 using Jint;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Abstractions.Util.Streams;
 using Raven.Database.Commercial;
 using Raven.Database.Plugins;
 using Raven.Database.Server.Connections;
@@ -39,7 +40,6 @@ using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
-using Raven.Database.Plugins.Builtins.Tenants;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 
@@ -194,15 +194,6 @@ namespace Raven.Database.Server
 			}
 		}
 
-		private void TenantDatabaseRemoved(object sender, TenantDatabaseModified.Event @event)
-		{
-			if (@event.Database != SystemDatabase)
-				return; // we ignore anything that isn't from the root db
-
-			logger.Info("Shutting down database {0} because the tenant database has been updated or removed", @event.Name);
-			CleanupDatabase(@event.Name, skipIfActive: false);
-		}
-
 		public AdminStatistics Statistics
 		{
 			get
@@ -312,7 +303,7 @@ namespace Raven.Database.Server
 			}
 			try
 			{
-				TenantDatabaseModified.Occured -= TenantDatabaseRemoved;
+                //TenantDatabaseModified.Occured -= TenantDatabaseRemoved;
 				var exceptionAggregator = new ExceptionAggregator(logger, "Could not properly dispose of HttpServer");
                 exceptionAggregator.Execute(() =>
                 {
@@ -469,7 +460,7 @@ namespace Raven.Database.Server
 
 		public void Init()
 		{
-			TenantDatabaseModified.Occured += TenantDatabaseRemoved;
+            //TenantDatabaseModified.Occured += TenantDatabaseRemoved;
 			serverTimer = new Timer(IdleOperations, null, frequencyToCheckForIdleDatabases, frequencyToCheckForIdleDatabases);
 		}
 

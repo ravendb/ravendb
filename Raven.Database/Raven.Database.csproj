@@ -247,6 +247,7 @@
     <Compile Include="Indexing\PrecomputedIndexing.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyDeleteTrigger.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyPutTrigger.cs" />
+    <Compile Include="Linq\Ast\TransformDynamicInvocationExpressions.cs" />
     <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTask.cs" />
@@ -344,7 +345,6 @@
     <Compile Include="Server\Controllers\TransactionController.cs" />
     <Compile Include="Server\Controllers\TransformersController.cs" />
     <Compile Include="Server\OwinHttpServer.cs" />
-    <Compile Include="Server\RavenFS\Config\InMemoryConfiguration.cs" />
     <Compile Include="Server\RavenFS\Config\ServerUrlUtil.cs" />
     <Compile Include="Server\RavenFS\Controllers\ConfigController.cs" />
     <Compile Include="Server\RavenFS\Controllers\FilesController.cs" />
@@ -636,8 +636,6 @@
     <Compile Include="Linq\Ast\TransformDynamicLambdaExpressions.cs" />
     <Compile Include="Linq\RecursiveFunction.cs" />
     <Compile Include="Plugins\Builtins\InvalidDocumentNames.cs" />
-    <Compile Include="Plugins\Builtins\Tenants\ModifiedTenantDatabase.cs" />
-    <Compile Include="Plugins\Builtins\Tenants\TenantDatabaseModified.cs" />
     <Compile Include="Plugins\Catalogs\BuiltinFilteringCatalog.cs" />
     <Compile Include="Plugins\AbstractIndexCodec.cs" />
     <Compile Include="Plugins\Catalogs\BundlesFilteredCatalog.cs" />
@@ -716,7 +714,6 @@
     <Compile Include="Linq\Ast\TransformNullCoalescingOperatorTransformer.cs" />
     <Compile Include="Plugins\AbstractAnalyzerGenerator.cs" />
     <Compile Include="Plugins\Builtins\CreateSilverlightIndexes.cs" />
-    <Compile Include="Plugins\Builtins\Tenants\RemoveTenantDatabase.cs" />
     <Compile Include="Plugins\IAlterConfiguration.cs" />
     <Compile Include="Queries\FacetedQueryRunner.cs" />
     <Compile Include="Queries\FacetedQueryRunnerExtensions.cs" />
@@ -924,7 +921,9 @@
     <Compile Include="Server\Connections\TransportState.cs" />
     <Compile Include="Server\Connections\TimeSensitiveStore.cs" />
     <Compile Include="Server\Startup.cs" />
+    <Compile Include="Server\Tenancy\AbstractLandlord.cs" />
     <Compile Include="Server\Tenancy\DatabaseLandlord.cs" />
+    <Compile Include="Server\Tenancy\FileSystemsLandlord.cs" />
     <Compile Include="Server\WebApi\Attributes\HttpEvalAttribute.cs" />
     <Compile Include="Server\WebApi\Attributes\HttpResetAttribute.cs" />
     <Compile Include="Server\WebApi\Filters\RavenExceptionFilterAttribute.cs" />
@@ -1031,7 +1030,6 @@
     <Compile Include="Util\PortUtil.cs" />
     <Compile Include="Util\SequentialUuidGenerator.cs" />
     <Compile Include="Util\SortedKeyList.cs" />
-    <Compile Include="Util\Streams\BufferPool.cs" />
     <Compile Include="Util\Streams\BufferPoolStream.cs" />
     <Compile Include="Util\Streams\PartialStream.cs" />
     <Compile Include="Util\Streams\BufferPoolMemoryStream.cs" />
