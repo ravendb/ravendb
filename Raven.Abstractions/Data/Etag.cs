@@ -14,7 +14,7 @@ namespace Raven.Abstractions.Data
 {
 	public class Etag : IEquatable<Etag>, IComparable<Etag>
 	{
-		private static readonly string[] _byteToHexLookupTable = new string[byte.MaxValue];
+		private static readonly string[] _byteToHexLookupTable = new string[byte.MaxValue + 1];
 
 		static Etag()
 		{
