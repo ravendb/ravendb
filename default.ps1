@@ -18,6 +18,7 @@ properties {
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
 	$global:configuration = "Debug"
+<<<<<<< HEAD
 	
 	$core_db_dlls = @(
         "$base_dir\Raven.Database\bin\$global:configuration\Raven.Abstractions.???", 
@@ -58,6 +59,8 @@ properties {
 	$all_client_dlls = ( @( "$base_dir\Raven.Client.Embedded\bin\$global:configuration\Raven.Client.Embedded.???") + $client_dlls + $core_db_dlls )
 	  
 	$test_prjs = @("$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll" )
+=======
+>>>>>>> upstream/new3
 }
 
 task default -depends Stable,Test, DoReleasePart1
@@ -123,6 +126,7 @@ task FullStorageTest {
 task Test -depends Compile {
 	Clear-Host
 	
+	$test_prjs = @("$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll" )
 	Write-Host $test_prjs
 	
 	$xUnit = "$lib_dir\xunit\xunit.console.clr4.exe"
@@ -225,16 +229,19 @@ task TestWinRT -depends Compile, CopyServer {
 task Vnext3 {
 	$global:uploadCategory = "RavenDB-Unstable"
 	$global:uploadMode = "Vnext3"
+	$global:configuration = "Release"
 }
 
 task Unstable {
 	$global:uploadCategory = "RavenDB-Unstable"
 	$global:uploadMode = "Unstable"
+	$global:configuration = "Release"
 }
 
 task Stable {
 	$global:uploadCategory = "RavenDB"
 	$global:uploadMode = "Stable"
+	$global:configuration = "Release"
 }
 
 task RunTests -depends Test,TestSilverlight,TestWinRT
@@ -260,11 +267,23 @@ task CleanOutputDirectory {
 	Remove-Item $buildartifacts_dir\Output -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-task CopyEmbeddedClient { 
+task CopyEmbeddedClient {
+	$all_client_dlls = @( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
+	"$base_dir\Raven.Client.Embedded\bin\$global:configuration\Raven.Client.Embedded.???")
+
 	$all_client_dlls | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\EmbeddedClient }
 }
 
+<<<<<<< HEAD
 task CopySilverlight { 
+=======
+task CopySilverlight {
+	$silverlight_dlls = @("$base_dir\Raven.Client.Silverlight\bin\$global:configuration\Raven.Client.Silverlight.???",
+		"$base_dir\Raven.Client.Silverlight\bin\$global:configuration\AsyncCtpLibrary_Silverlight5.???", 
+		"$base_dir\Raven.Client.Silverlight\bin\$global:configuration\DH.Scrypt.???", 
+		"$base_dir\Raven.Client.Silverlight\bin\$global:configuration\Microsoft.CompilerServices.AsyncTargetingPack.Silverlight5.???")
+
+>>>>>>> upstream/new3
 	$silverlight_dlls + @((Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl5)) | 
 		ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Silverlight }
 }
@@ -284,12 +303,15 @@ task CopyBackup {
 }
 
 task CopyClient {
+	$client_dlls = @( "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\Raven.Client.Lightweight.???")
 	$client_dlls | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Client }
 }
 
 task CopyWeb {
-	$web_dlls | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Web\bin }
-	$web_files | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Web }
+	@( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
+		"$base_dir\Raven.Web\bin\Raven.Web.???"  ) | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Web\bin }
+	@("$base_dir\DefaultConfigs\web.config", 
+		"$base_dir\DefaultConfigs\NLog.Ignored.config" ) | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Web }
 }
 
 task CopyBundles {
@@ -303,6 +325,9 @@ task CopyBundles {
 }
 
 task CopyServer -depends CreateOutpuDirectories {
+	$server_files = @( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
+		"$base_dir\Raven.Server\bin\$global:configuration\Raven.Server.???",
+		"$base_dir\DefaultConfigs\NLog.Ignored.config")
 	$server_files | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Server }
 	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $buildartifacts_dir\Output\Server\Raven.Server.exe.config
 }
@@ -549,7 +574,11 @@ task CreateNugetPackages -depends Compile, InitNuget {
 	New-Item $nuget_dir\RavenDB.Client\lib\sl50 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.nuspec $nuget_dir\RavenDB.Client\RavenDB.Client.nuspec
 	
+<<<<<<< HEAD
 	@("Raven.Abstractions.???", "Raven.Client.Lightweight.???") |% { Copy-Item "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\$_" $nuget_dir\RavenDB.Client\lib\net45 }
+=======
+	@("Raven.Client.Lightweight.???") |% { Copy-Item "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\$_" $nuget_dir\RavenDB.Client\lib\net45 }
+>>>>>>> upstream/new3
 	@("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |% { Copy-Item "$base_dir\Raven.Client.Silverlight\bin\$global:configuration\$_" $nuget_dir\RavenDB.Client\lib\sl50	}
 	
 	New-Item $nuget_dir\RavenDB.Client.MvcIntegration\lib\net45 -Type directory | Out-Null
@@ -558,17 +587,26 @@ task CreateNugetPackages -depends Compile, InitNuget {
 		
 	New-Item $nuget_dir\RavenDB.Database\lib\net45 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Database.nuspec $nuget_dir\RavenDB.Database\RavenDB.Database.nuspec
+<<<<<<< HEAD
 	@("Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
 		 "Esent.Interop.???", "ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???",
 		 "Jint.Raven.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll", "AWS.Extensions.???", "AWSSDK.???") `
+=======
+	@("Raven.Database.???") `
+>>>>>>> upstream/new3
 		 |% { Copy-Item "$base_dir\Raven.Database\bin\$global:configuration\$_" $nuget_dir\RavenDB.Database\lib\net45 }
 	
 	New-Item $nuget_dir\RavenDB.Server -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Server.nuspec $nuget_dir\RavenDB.Server\RavenDB.Server.nuspec
 	New-Item $nuget_dir\RavenDB.Server\tools -Type directory | Out-Null
+<<<<<<< HEAD
 	@("Esent.Interop.???", "ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???",
 		"Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",	"NewtonSoft.Json.???", "NLog.???", "Jint.Raven.???",
 		"Raven.Abstractions.???", "Raven.Database.???", "Raven.Server.???", "Raven.Smuggler.???", "AWS.Extensions.???", "AWSSDK.???") |% { Copy-Item "$base_dir\Raven.Server\bin\$global:configuration\$_" $nuget_dir\RavenDB.Server\tools }
+=======
+	@("Raven.Database.???", "Raven.Server.???") |% { Copy-Item "$base_dir\Raven.Server\bin\$global:configuration\$_" $nuget_dir\RavenDB.Server\tools }
+	@("Raven.Smuggler.???") |% { Copy-Item "$base_dir\Raven.Smuggler\bin\$global:configuration\$_" $nuget_dir\RavenDB.Server\tools }
+>>>>>>> upstream/new3
 	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $nuget_dir\RavenDB.Server\tools\Raven.Server.exe.config
 
 	New-Item $nuget_dir\RavenDB.Embedded\lib\net45 -Type directory | Out-Null

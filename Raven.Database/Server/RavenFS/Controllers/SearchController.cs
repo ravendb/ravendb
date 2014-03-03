@@ -10,7 +10,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 	public class SearchController : RavenFsApiController
 	{
 		[HttpGet]
-		[Route("ravenfs/search/Terms")]		
+        [Route("ravenfs/{fileSystemName}/search/Terms")]		
 		public string[] Terms()
 		{
 			IndexSearcher searcher;
@@ -21,7 +21,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-		[Route("ravenfs/search")]		
+        [Route("ravenfs/{fileSystemName}/search")]		
 		public SearchResults Get(string query, [FromUri] string[] sort)
 		{
 			int results;

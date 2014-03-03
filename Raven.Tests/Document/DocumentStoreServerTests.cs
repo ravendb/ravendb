@@ -801,6 +801,9 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Can_insert_with_transaction()
 		{
+            if(documentStore.DatabaseCommands.GetStatistics().SupportsDtc == false)
+                return;
+
 			const string id = "Company/id";
 			using (var session = documentStore.OpenSession())
 			{
@@ -822,6 +825,9 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Can_rollback_transaction_on_insert()
 		{
+            if(documentStore.DatabaseCommands.GetStatistics().SupportsDtc == false)
+                return;
+
 			string id;
 			using (var session = documentStore.OpenSession())
 			{

@@ -270,6 +270,7 @@
     <Compile Include="Bugs\CaseSensitiveDeletes.cs" />
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
+    <Compile Include="Bugs\EntityWithStack.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
     <Compile Include="Bundles\Authorization\AuthorizationTest.cs" />
     <Compile Include="Bundles\Authorization\Bugs\Bowes.cs" />
@@ -314,15 +315,20 @@
     <Compile Include="Bundles\UniqueConstraints\ExtensionLoadTests.cs" />
     <Compile Include="Bundles\UniqueConstraints\UniqueConstraintsTest.cs" />
     <Compile Include="Bundles\UniqueConstraints\UpdateTests.cs" />
+    <Compile Include="EmptyDisposable.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client.cs" />
+    <Compile Include="Issues\RavenDB_1538.cs" />
     <Compile Include="Issues\RavenDB_1297 .cs" />
     <Compile Include="Issues\RavenDB_1285.cs" />
+    <Compile Include="Issues\RavenDB_1461.cs" />
+    <Compile Include="Issues\RavenDB_1395.cs" />
     <Compile Include="Issues\RavenDB_1540.cs" />
     <Compile Include="Issues\RavenDB_1302.cs" />
     <Compile Include="Issues\RavenDB_1289.cs" />
     <Compile Include="Issues\RaveDB-1279.cs" />
+    <Compile Include="Issues\RavenDB_1411.cs" />
     <Compile Include="Issues\RavenDB_1466.cs" />
     <Compile Include="Issues\RavenDB_1305.cs" />
     <Compile Include="Issues\RavenDB_1443 .cs" />
@@ -358,26 +364,26 @@
     <Compile Include="Issues\RavenDB_1561.cs" />
     <Compile Include="Issues\RavenDB_1560.cs" />
     <Compile Include="Issues\RavenDB_1595.cs" />
-    <Compile Include="Issues\RavenDB_1603.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="Issues\RavenDB_1565.cs" />
     <Compile Include="Issues\RavenDB_1594.cs" />
     <Compile Include="Issues\RavenDB_1609.cs" />
     <Compile Include="Issues\RavenDB_1610.cs" />
     <Compile Include="Issues\RavenDB_1650.cs" />
     <Compile Include="Issues\RavenDB_1666.cs" />
-    <Compile Include="Issues\RavenDB_1701.cs" />
     <Compile Include="Issues\RavenDB_1716.cs" />
     <Compile Include="Issues\RavenDB_1717.cs" />
     <Compile Include="Issues\RavenDB_1735.cs" />
     <Compile Include="Issues\RavenDB_1749.cs" />
+    <Compile Include="Issues\RavenDB_1760.cs" />
+    <Compile Include="Issues\RDBQA_1.cs" />
     <Compile Include="Issues\RDBQA_4.cs" />
     <Compile Include="Issues\RavenDB_1553.cs" />
     <Compile Include="Issues\RavenDB_1555.cs" />
     <Compile Include="Issues\RavenDB_1562.cs" />
     <Compile Include="Issues\RavenDB_1598_MappingComplexProperties.cs" />
     <Compile Include="Issues\RavenDB_1600.cs" />
+    <Compile Include="Issues\RavenDB_1601.cs" />
+    <Compile Include="Issues\RavenDB_1603.cs" />
     <Compile Include="Issues\RavenDB_1733.cs" />
     <Compile Include="Issues\RDBQA_11.cs" />
     <Compile Include="Issues\RDBQA_7.cs" />
@@ -1065,6 +1071,7 @@
     <Compile Include="NestedIndexing\Item.cs" />
     <Compile Include="NestedIndexing\WithMapReduce.cs" />
     <Compile Include="NonIncrementalBackupRestoreTest.cs" />
+    <Compile Include="NoNonDisposableTests.cs" />
     <Compile Include="Notifications\ReplicationConflicts.cs" />
     <Compile Include="Notifications\ReplicationConflicts_Embedded.cs" />
     <Compile Include="Patching\BigDoc.cs" />
@@ -1508,7 +1515,6 @@
     <Compile Include="Storage\Attachments.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Storage\Bugs\OpenAfterCompaction.cs" />
     <Compile Include="Storage\DocEtag.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -1536,19 +1542,6 @@
     <Compile Include="MultiGet\MultiGetProfiling.cs" />
     <Compile Include="MultiGet\MultiGetQueries.cs" />
     <Compile Include="MultiGet\MultiGetSecurity.cs" />
-    <Compile Include="Munin\Bugs\Compaction.cs" />
-    <Compile Include="Munin\Bugs\MultiThreadedWrites.cs" />
-    <Compile Include="Munin\CanWorkWithTwoDicsInSameFile.cs" />
-    <Compile Include="Munin\Conflicts.cs" />
-    <Compile Include="Munin\MultiDicInSingleFile.cs" />
-    <Compile Include="Munin\MyToDoList.cs" />
-    <Compile Include="Munin\Optimize.cs" />
-    <Compile Include="Munin\Puts.cs" />
-    <Compile Include="Munin\PutsAfterRestart.cs" />
-    <Compile Include="Munin\Removes.cs" />
-    <Compile Include="Munin\SimpleFileTest.cs" />
-    <Compile Include="Munin\ToDo.cs" />
-    <Compile Include="Munin\ToDoRepository.cs" />
     <Compile Include="NotModified\DocumentNotModified.cs" />
     <Compile Include="Patching\MetadataPatching.cs" />
     <Compile Include="MailingList\Phil-Updated.cs" />

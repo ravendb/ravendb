@@ -21,8 +21,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Theory]
-		[InlineData("esent")]
-		[InlineData("voron")]
+        [PropertyData("Storages")]
 		public void WouldBeIndexedProperly(string requestedStorage)
 		{
 			using (var store = NewDocumentStore(requestedStorage: requestedStorage))

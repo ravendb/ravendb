@@ -53,12 +53,10 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="WindowsBase" />
-
     <Reference Include="xunit">
       <HintPath>..\..\SharedLibs\xunit\xunit.dll</HintPath>
     </Reference>
     <Reference Include="xunit.extensions">
-
       <HintPath>..\..\SharedLibs\xunit\xunit.extensions.dll</HintPath>
     </Reference>
   </ItemGroup>
@@ -140,7 +138,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="RavenDB.snk" />

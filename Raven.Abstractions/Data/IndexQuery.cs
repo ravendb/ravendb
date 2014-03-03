@@ -98,10 +98,16 @@ namespace Raven.Abstractions.Data
 		/// <value>The cutoff.</value>
 		public DateTime? Cutoff { get; set; }
 
-        /// <summary>
-        /// Get or sets the WaitForNonStaleResultsAsOfNow
-        /// </summary>
-        public bool WaitForNonStaleResultsAsOfNow { get; set; }
+		/// <summary>
+		/// Get or sets the WaitForNonStaleResultsAsOfNow
+		/// </summary>
+		public bool WaitForNonStaleResultsAsOfNow { get; set; }
+
+		
+		/// <summary>
+		/// Get or sets the WaitForNonStaleResults
+		/// </summary>
+		public bool WaitForNonStaleResults { get; set; }
 
 		/// <summary>
 		/// Gets or sets the cutoff etag
@@ -338,9 +344,10 @@ namespace Raven.Abstractions.Data
                    Equals(IsDistinct, other.IsDistinct) && 
                    Equals(FieldsToFetch, other.FieldsToFetch) && 
                    Equals(SortedFields, other.SortedFields) && 
-                   Cutoff.Equals(other.Cutoff) && 
-                   WaitForNonStaleResultsAsOfNow.Equals(other.WaitForNonStaleResultsAsOfNow) &&
-                   Equals(CutoffEtag, other.CutoffEtag) && 
+                   Cutoff.Equals(other.Cutoff) &&
+				   WaitForNonStaleResultsAsOfNow.Equals(other.WaitForNonStaleResultsAsOfNow) &&
+				   WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
+				   Equals(CutoffEtag, other.CutoffEtag) && 
                    String.Equals(DefaultField, other.DefaultField) && 
                    DefaultOperator == other.DefaultOperator && 
                    SkipTransformResults.Equals(other.SkipTransformResults) && 

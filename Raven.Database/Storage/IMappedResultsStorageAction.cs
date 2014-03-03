@@ -26,7 +26,7 @@ namespace Raven.Database.Storage
 		IEnumerable<string> GetKeysForIndexForDebug(int index, int start, int take);
 
 		IEnumerable<MappedResultInfo> GetMappedResultsForDebug(int index, string key, int start, int take);
-		IEnumerable<MappedResultInfo> GetReducedResultsForDebug(int index, string key, int level, int start, int take);
+		IEnumerable<MappedResultInfo> GetReducedResultsForDebug(int index, string reduceKey, int level, int start, int take);
 		IEnumerable<ScheduledReductionDebugInfo> GetScheduledReductionForDebug(int index, int start, int take);
 
 		void ScheduleReductions(int index, int level, ReduceKeyAndBucket reduceKeysAndBuckets);

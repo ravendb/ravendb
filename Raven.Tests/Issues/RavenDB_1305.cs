@@ -15,8 +15,7 @@ namespace Raven.Tests.Issues
     public class RavenDB_1305 : RavenTest
     {
         [Theory]
-        [InlineData("esent")]
-        [InlineData("voron")]
+        [PropertyData("Storages")]
         public void BulkInsertOperationShouldNotThrowConcurrencyExceptionOnDuplicateKeysWhenCheckForUpdatesIsEnabled(string requestedStorage)
         {
             using (var store = NewRemoteDocumentStore(requestedStorage: requestedStorage))
@@ -55,8 +54,7 @@ namespace Raven.Tests.Issues
         }
 
         [Theory]
-        [InlineData("esent")]
-        [InlineData("voron")]
+        [PropertyData("Storages")]
         public void BulkInsertOperationShouldThrowConcurrencyExceptionOnDuplicateKeysRemote(string requestedStorage)
         {
             using (var store = NewRemoteDocumentStore(requestedStorage: requestedStorage))
@@ -77,8 +75,7 @@ namespace Raven.Tests.Issues
         }
 
         [Theory]
-		[InlineData("esent")]
-        [InlineData("voron")]
+        [PropertyData("Storages")]
         public void BulkInsertOperationShouldThrowConcurrencyExceptionOnDuplicateKeys(string requestedStorage)
         {
 	        using (var store = NewDocumentStore(requestedStorage: requestedStorage))

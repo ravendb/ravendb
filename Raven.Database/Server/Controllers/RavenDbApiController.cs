@@ -14,8 +14,10 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
+using Raven.Database.Config;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
@@ -27,6 +29,8 @@ namespace Raven.Database.Server.Controllers
 {
 	public abstract class RavenDbApiController : RavenBaseApiController
 	{
+	    private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
+
 		public string DatabaseName
 		{
 			get;
@@ -137,12 +141,6 @@ namespace Raven.Database.Server.Controllers
 			return result;
 		}
 
-		private void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp)
-		{
-			AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion, msg);
-			AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
-		}
-
 		private void AddAccessControlHeaders(HttpResponseMessage msg)
 		{
 			if (string.IsNullOrEmpty(DatabasesLandlord.SystemConfiguration.AccessControlAllowOrigin))
@@ -184,7 +182,12 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-		private RequestManager requestManager;
+	    public override InMemoryRavenConfiguration SystemConfiguration
+	    {
+	        get { return DatabasesLandlord.SystemConfiguration; }
+	    }
+
+	    private RequestManager requestManager;
 		public RequestManager RequestManager
 		{
 			get
@@ -209,19 +212,7 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-		public StringBuilder CustomRequestTraceInfo { get; private set; }
-
-		public void AddRequestTraceInfo(string info)
-		{
-			if(string.IsNullOrEmpty(info))
-				return;
-
-			if (CustomRequestTraceInfo == null)
-				CustomRequestTraceInfo = new StringBuilder(info);
-			else
-				CustomRequestTraceInfo.Append(info);
-		}
-
+	
 		protected bool EnsureSystemDatabase()
 		{
 			return DatabasesLandlord.SystemDatabase == Database;
@@ -453,11 +444,7 @@ namespace Raven.Database.Server.Controllers
 			return stale;
 		}
 
-		public string GetRequestUrl()
-		{
-			var rawUrl = InnerRequest.RequestUri.PathAndQuery;
-			return UrlExtension.GetRequestUrlFromRawUrl(rawUrl, DatabasesLandlord.SystemConfiguration);
-		}
+	
 
 		protected void HandleReplication(HttpResponseMessage msg)
 		{
@@ -485,5 +472,88 @@ namespace Raven.Database.Server.Controllers
 				msg.Headers.TryAddWithoutValidation(Constants.RavenForcePrimaryServerCheck, "True");
 			}
 		}
+
+
+        public override bool SetupRequestToProperDatabase(RequestManager rm)
+        {
+            var tenantId = DatabaseName;
+
+            if (string.IsNullOrWhiteSpace(tenantId) || tenantId == "<system>")
+            {
+                landlord.LastRecentlyUsed.AddOrUpdate("System", SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
+                var args = new BeforeRequestWebApiEventArgs
+                {
+                    Controller = this,
+                    IgnoreRequest = false,
+                    TenantId = "System",
+                    Database = landlord.SystemDatabase
+                };
+                rm.OnBeforeRequest(args);
+                if (args.IgnoreRequest)
+                    return false;
+                return true;
+            }
+
+            Task<DocumentDatabase> resourceStoreTask;
+            bool hasDb;
+            try
+            {
+                hasDb = landlord.TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
+            }
+            catch (Exception e)
+            {
+                var msg = "Could open database named: " + tenantId;
+                Logger.WarnException(msg, e);
+                throw new HttpException(503, msg, e);
+            }
+            if (hasDb)
+            {
+                try
+                {
+                    if (resourceStoreTask.Wait(TimeSpan.FromSeconds(30)) == false)
+                    {
+                        var msg = "The database " + tenantId +
+                                  " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, database loading continues.";
+                        Logger.Warn(msg);
+                        throw new HttpException(503, msg);
+                    }
+                    var args = new BeforeRequestWebApiEventArgs()
+                    {
+                        Controller = this,
+                        IgnoreRequest = false,
+                        TenantId = tenantId,
+                        Database = resourceStoreTask.Result
+                    };
+                    rm.OnBeforeRequest(args);
+                    if (args.IgnoreRequest)
+                        return false;
+                }
+                catch (Exception e)
+                {
+                    var msg = "Could open database named: " + tenantId;
+                    Logger.WarnException(msg, e);
+                    throw new HttpException(503, msg, e);
+                }
+
+                landlord.LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
+            }
+            else
+            {
+                var msg = "Could not find a database named: " + tenantId;
+                Logger.Warn(msg);
+                throw new HttpException(503, msg);
+            }
+            return true;
+        }
+
+	    public override string TenantName
+	    {
+	        get { return DatabaseName; }
+	    }
+
+	    public override void MarkRequestDuration(long duration)
+	    {
+	        Database.WorkContext.MetricsCounters.RequestDuationMetric.Update(duration);
+	    }
 	}
 }

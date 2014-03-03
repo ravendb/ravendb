@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
+using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -64,20 +65,9 @@ namespace Raven.Database.Indexing
                         string documentId = doc.__document_id.ToString();
                         if (processedKeys.Add(documentId) == false)
                             return doc;
-                        batchers.ApplyAndIgnoreAllErrors(
-                            exception =>
-                            {
-                                logIndexing.WarnException(
-                                    string.Format("Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
-                                                  indexId, documentId),
-                                    exception);
-                                context.AddError(indexId,
-                                                 documentId,
-                                                 exception.Message,
-                                                 "OnIndexEntryDeleted Trigger"
-                                    );
-                            },
-                            trigger => trigger.OnIndexEntryDeleted(documentId));
+
+                        InvokeOnIndexEntryDeletedOnAllBatchers(batchers, docIdTerm.CreateTerm(documentId.ToLowerInvariant())); 
+                       
                         if (batch.SkipDeleteFromIndex[i] == false ||
                             context.ShouldRemoveFromIndex(documentId)) // maybe it is recently deleted?
                             indexWriter.DeleteDocuments(docIdTerm.CreateTerm(documentId.ToLowerInvariant()));
@@ -332,16 +322,9 @@ namespace Raven.Database.Indexing
                     .ToList();
 
                 keys.Apply(
-                    key => batchers.ApplyAndIgnoreAllErrors(
-                        exception =>
-                        {
-                            logIndexing.WarnException(
-                                string.Format("Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
-                                              indexId, key),
-                                exception);
-                            context.AddError(indexId, key, exception.Message, "OnIndexEntryDeleted Trigger");
-                        },
-                        trigger => trigger.OnIndexEntryDeleted(key)));
+                    key =>
+                    InvokeOnIndexEntryDeletedOnAllBatchers(batchers, new Term(Constants.DocumentIdFieldName, key)));
+
                 writer.DeleteDocuments(keys.Select(k => new Term(Constants.DocumentIdFieldName, k.ToLowerInvariant())).ToArray());
                 batchers.ApplyAndIgnoreAllErrors(
                     e =>

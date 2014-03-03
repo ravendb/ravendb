@@ -98,9 +98,17 @@ namespace Raven.Client.Document
         /// <summary>
         /// all the listeners for this session
         /// </summary>
-        protected readonly DocumentSessionListeners listeners;
+        protected readonly DocumentSessionListeners theListeners;
 
-        ///<summary>
+		/// <summary>
+		/// all the listeners for this session
+		/// </summary>
+		public DocumentSessionListeners Listeners
+	    {
+		    get { return theListeners; }
+	    }
+
+	    ///<summary>
         /// The document store associated with this session
         ///</summary>
         public IDocumentStore DocumentStore
@@ -138,7 +146,7 @@ namespace Raven.Client.Document
             Id = id;
             this.dbName = dbName;
             this.documentStore = documentStore;
-            this.listeners = listeners;
+            this.theListeners = listeners;
             ResourceManagerId = documentStore.ResourceManagerId;
             UseOptimisticConcurrency = false;
             AllowNonAuthoritativeInformation = true;
@@ -469,7 +477,11 @@ more responsive application.
                 if (entityType == typeof(RavenJObject))
                     return documentFound.CloneToken();
 
+<<<<<<< HEAD
                 foreach (var extendedDocumentConversionListener in listeners.ExtendedConversionListeners)
+=======
+                foreach (var extendedDocumentConversionListener in theListeners.ExtendedConversionListeners)
+>>>>>>> upstream/new3
                 {
                     extendedDocumentConversionListener.BeforeConversionToEntity(id, documentFound, metadata);
                 }
@@ -506,12 +518,20 @@ more responsive application.
                     }
                     GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
 
+<<<<<<< HEAD
                     foreach (var documentConversionListener in listeners.ConversionListeners)
+=======
+                    foreach (var documentConversionListener in theListeners.ConversionListeners)
+>>>>>>> upstream/new3
                     {
                         documentConversionListener.DocumentToEntity(id, entity, documentFound, metadata);
                     }
 
+<<<<<<< HEAD
                     foreach (var extendedDocumentConversionListener in listeners.ExtendedConversionListeners)
+=======
+                    foreach (var extendedDocumentConversionListener in theListeners.ExtendedConversionListeners)
+>>>>>>> upstream/new3
                     {
                         extendedDocumentConversionListener.AfterConversionToEntity(id, documentFound, metadata, entity);
                     }
@@ -633,7 +653,7 @@ more responsive application.
                 if (typeof(T) == typeof(RavenJObject))
                     return (T)(object)documentFound.CloneToken();
 
-                foreach (var extendedDocumentConversionListener in listeners.ExtendedConversionListeners)
+                foreach (var extendedDocumentConversionListener in theListeners.ExtendedConversionListeners)
                 {
                     extendedDocumentConversionListener.BeforeConversionToEntity(id, documentFound, metadata);
                 }
@@ -668,12 +688,20 @@ more responsive application.
                     }
                     GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
 
+<<<<<<< HEAD
                     foreach (var documentConversionListener in listeners.ConversionListeners)
+=======
+                    foreach (var documentConversionListener in theListeners.ConversionListeners)
+>>>>>>> upstream/new3
                     {
                         documentConversionListener.DocumentToEntity(id, entity, documentFound, metadata);
                     }
 
+<<<<<<< HEAD
                     foreach (var extendedDocumentConversionListener in listeners.ExtendedConversionListeners)
+=======
+                    foreach (var extendedDocumentConversionListener in theListeners.ExtendedConversionListeners)
+>>>>>>> upstream/new3
                     {
                         extendedDocumentConversionListener.AfterConversionToEntity(id, documentFound, metadata, entity);
                     }
@@ -956,7 +984,7 @@ more responsive application.
 
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, batchResult.Key);
 
-                foreach (var documentStoreListener in listeners.StoreListeners)
+                foreach (var documentStoreListener in theListeners.StoreListeners)
                 {
                     documentStoreListener.AfterStore(batchResult.Key, entity, batchResult.Metadata);
                 }
@@ -998,7 +1026,7 @@ more responsive application.
         {
             foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)).ToArray())
             {
-                foreach (var documentStoreListener in listeners.StoreListeners)
+                foreach (var documentStoreListener in theListeners.StoreListeners)
                 {
                     if (documentStoreListener.BeforeStore(entity.Value.Key, entity.Key, entity.Value.Metadata, entity.Value.OriginalValue))
                         EntityToJson.CachedJsonDocs.Remove(entity.Key);
@@ -1037,7 +1065,7 @@ more responsive application.
                 etag = UseOptimisticConcurrency ? etag : null;
                 result.Entities.Add(existingEntity);
 
-                foreach (var deleteListener in listeners.DeleteListeners)
+                foreach (var deleteListener in theListeners.DeleteListeners)
                 {
                     deleteListener.BeforeDelete(key, existingEntity, metadata != null ? metadata.Metadata : null);
                 }
@@ -1398,16 +1426,16 @@ more responsive application.
 
         private object ProjectionToInstance(RavenJObject y, Type type)
         {
-            foreach (var conversionListener in listeners.ExtendedConversionListeners)
+            foreach (var conversionListener in theListeners.ExtendedConversionListeners)
             {
                 conversionListener.BeforeConversionToEntity(null, y, null);
             }
             var instance = y.Deserialize(type, Conventions);
-            foreach (var conversionListener in listeners.ConversionListeners)
+            foreach (var conversionListener in theListeners.ConversionListeners)
             {
                 conversionListener.DocumentToEntity(null, instance, y, null);
             }
-            foreach (var conversionListener in listeners.ExtendedConversionListeners)
+            foreach (var conversionListener in theListeners.ExtendedConversionListeners)
             {
                 conversionListener.AfterConversionToEntity(null, y, null, instance);
             }

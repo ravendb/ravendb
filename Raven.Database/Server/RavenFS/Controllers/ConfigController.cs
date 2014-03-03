@@ -21,7 +21,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
 		[HttpGet]
-		[Route("ravenfs/config")]
+		[Route("ravenfs/{fileSystemName}/config")]
 		public string[] Get()
 		{
 			string[] names = null;
@@ -30,7 +30,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-		[Route("ravenfs/config")]
+        [Route("ravenfs/{fileSystemName}/config")]
 		public HttpResponseMessage Get(string name)
 		{
 			try
@@ -46,7 +46,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-		[Route("ravenfs/config/search")]
+        [Route("ravenfs/{fileSystemName}/config/search")]
 		public ConfigSearchResults ConfigNamesStartingWith(string prefix)
 		{
 			if (prefix == null)
@@ -71,7 +71,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPut]
-		[Route("ravenfs/config")]
+        [Route("ravenfs/{fileSystemName}/config")]
 		public async Task<HttpResponseMessage> Put(string name)
 		{
 			var jsonSerializer = new JsonSerializer
@@ -97,7 +97,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpDelete]
-		[Route("ravenfs/config")]
+        [Route("ravenfs/{fileSystemName}/config")]
 		public HttpResponseMessage Delete(string name)
 		{
 			ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor => accessor.DeleteConfig(name)),

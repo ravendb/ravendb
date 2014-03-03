@@ -119,8 +119,8 @@ namespace Raven.Database.Server.Controllers.Admin
 				}
 			}
 
-			if (File.Exists(Path.Combine(restoreRequest.RestoreLocation, "Raven.ravendb")))
-				ravenConfiguration.DefaultStorageTypeName = typeof (Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
+            if (File.Exists(Path.Combine(restoreRequest.RestoreLocation, Voron.Impl.Constants.DatabaseFilename)))
+                ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
 			else if (Directory.Exists(Path.Combine(restoreRequest.RestoreLocation, "new")))
 				ravenConfiguration.DefaultStorageTypeName = typeof (Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 
@@ -222,7 +222,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (configuration == null)
 				return GetMessageWithString("No database named: " + db, HttpStatusCode.NotFound);
 
-			DatabasesLandlord.LockDatabase(db, () => DatabasesLandlord.SystemDatabase.TransactionalStorage.Compact(configuration));
+			DatabasesLandlord.Lock(db, () => DatabasesLandlord.SystemDatabase.TransactionalStorage.Compact(configuration));
 
 			return GetEmptyMessage();
 		}
@@ -274,6 +274,8 @@ namespace Raven.Database.Server.Controllers.Admin
 		    var allDbs = new List<DocumentDatabase>();
             DatabasesLandlord.ForAllDatabases(allDbs.Add);
 		    var currentConfiguration = DatabasesLandlord.SystemConfiguration;
+
+            
             var stats =  new AdminStatistics
             {
                 ServerName = currentConfiguration.ServerName,
@@ -291,7 +293,7 @@ namespace Raven.Database.Server.Controllers.Admin
                     let indexStorageSize = documentDatabase.GetIndexStorageSizeOnDisk()
                     let transactionalStorageSize = documentDatabase.GetTransactionalStorageSizeOnDisk()
                     let totalDatabaseSize = indexStorageSize + transactionalStorageSize.AllocatedSizeInBytes
-                    let lastUsed = DatabasesLandlord.DatabaseLastRecentlyUsed.GetOrDefault(documentDatabase.Name ?? Constants.SystemDatabase)
+                    let lastUsed = DatabasesLandlord.LastRecentlyUsed.GetOrDefault(documentDatabase.Name ?? Constants.SystemDatabase)
                     select new LoadedDatabaseStatistics
                     {
                         Name = documentDatabase.Name,
@@ -311,6 +313,7 @@ namespace Raven.Database.Server.Controllers.Admin
                         CountOfDocuments = documentDatabase.Statistics.CountOfDocuments,
                         CountOfAttachments = documentDatabase.Statistics.CountOfAttachments,
 
+<<<<<<< HEAD
                         RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue,3),
                         DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue,3),
                         IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
@@ -326,6 +329,10 @@ namespace Raven.Database.Server.Controllers.Admin
                             MeanRate = Math.Round(metrics.ConcurrentRequests.MeanRate, 3),
                             OneMinuteRate = Math.Round(metrics.ConcurrentRequests.OneMinuteRate,3),
                         }
+=======
+                        DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
+                        Metrics = documentDatabase.CreateMetrics()
+>>>>>>> upstream/new3
                     }
             };
 

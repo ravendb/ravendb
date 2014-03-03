@@ -99,6 +99,12 @@ namespace Raven.Client.Document.Async
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)query);
 			var indexQuery = ravenQueryInspector.GetIndexQuery(true);
+
+            if (indexQuery.WaitForNonStaleResults || indexQuery.WaitForNonStaleResultsAsOfNow)
+                throw new NotSupportedException(
+                    "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
+
+
             var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery, queryHeaderInformation).ConfigureAwait(false);
 			var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation(null);
 			queryOperation.DisableEntitiesTracking = true;
@@ -231,7 +237,7 @@ namespace Raven.Client.Document.Async
 #if !SILVERLIGHT
  null,
 #endif
- AsyncDatabaseCommands, index, new string[0], new string[0], listeners.QueryListeners, isMapReduce);
+ AsyncDatabaseCommands, index, new string[0], new string[0], theListeners.QueryListeners, isMapReduce);
 		}
 
 		/// <summary>
@@ -248,7 +254,7 @@ namespace Raven.Client.Document.Async
 #if !SILVERLIGHT
  null,
 #endif
- AsyncDatabaseCommands, indexName, new string[0], new string[0], listeners.QueryListeners, false);
+ AsyncDatabaseCommands, indexName, new string[0], new string[0], theListeners.QueryListeners, false);
 		}
 
 		/// <summary>

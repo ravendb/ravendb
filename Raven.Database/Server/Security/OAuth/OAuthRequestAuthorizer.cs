@@ -75,7 +75,7 @@ namespace Raven.Database.Server.Security.OAuth
 			return true;
 		}
 
-		public bool TryAuthorize(RavenDbApiController controller, bool hasApiKey, bool ignoreDbAccess, out HttpResponseMessage msg)
+        public bool TryAuthorize(RavenBaseApiController controller, bool hasApiKey, bool ignoreDbAccess, out HttpResponseMessage msg)
 		{
 			var isGetRequest = IsGetRequest(controller.InnerRequest.Method.Method, controller.InnerRequest.RequestUri.AbsolutePath);
 			var allowUnauthenticatedUsers = // we need to auth even if we don't have to, for bundles that want the user 
@@ -127,7 +127,7 @@ namespace Raven.Database.Server.Security.OAuth
 			}
 
 			var writeAccess = isGetRequest == false;
-			if (!tokenBody.IsAuthorized(controller.DatabaseName, writeAccess))
+            if (!tokenBody.IsAuthorized(controller.TenantName, writeAccess))
 			{
 				if (allowUnauthenticatedUsers || ignoreDbAccess)
 				{
@@ -137,13 +137,13 @@ namespace Raven.Database.Server.Security.OAuth
 
 				msg = WriteAuthorizationChallenge(controller, 403, "insufficient_scope",
 					writeAccess ?
-					"Not authorized for read/write access for tenant " + controller.DatabaseName :
-					"Not authorized for tenant " + controller.DatabaseName);
+                    "Not authorized for read/write access for tenant " + controller.TenantName :
+					"Not authorized for tenant " + controller.TenantName);
 
 				return false;
 			}
 
-			controller.User = new OAuthPrincipal(tokenBody, controller.DatabaseName);
+            controller.User = new OAuthPrincipal(tokenBody, controller.TenantName);
 			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = tokenBody.UserId;
 			CurrentOperationContext.User.Value = controller.User;
 			msg = controller.GetEmptyMessage();
@@ -184,7 +184,7 @@ namespace Raven.Database.Server.Security.OAuth
 			return token;
 		}
 
-		static string GetToken(RavenDbApiController controller)
+        static string GetToken(RavenBaseApiController controller)
 		{
 			const string bearerPrefix = "Bearer ";
 
@@ -226,19 +226,19 @@ namespace Raven.Database.Server.Security.OAuth
 			ctx.Response.AddHeader("WWW-Authenticate", string.Format("Bearer realm=\"Raven\", error=\"{0}\",error_description=\"{1}\"", error, errorDescription));
 		}
 
-		HttpResponseMessage WriteAuthorizationChallenge(RavenDbApiController controller, int statusCode, string error, string errorDescription)
+        HttpResponseMessage WriteAuthorizationChallenge(RavenBaseApiController controller, int statusCode, string error, string errorDescription)
 		{
 			var msg = controller.GetEmptyMessage();
-			var landlord = controller.DatabasesLandlord;
-			if (string.IsNullOrEmpty(landlord.SystemConfiguration.OAuthTokenServer) == false)
+			var systemConfiguration = controller.SystemConfiguration;
+			if (string.IsNullOrEmpty(systemConfiguration.OAuthTokenServer) == false)
 			{
-				if (landlord.SystemConfiguration.UseDefaultOAuthTokenServer == false)
+				if (systemConfiguration.UseDefaultOAuthTokenServer == false)
 				{
-					controller.AddHeader("OAuth-Source", landlord.SystemConfiguration.OAuthTokenServer, msg);
+					controller.AddHeader("OAuth-Source", systemConfiguration.OAuthTokenServer, msg);
 				}
 				else
 				{
-					controller.AddHeader("OAuth-Source", new UriBuilder(landlord.SystemConfiguration.OAuthTokenServer)
+					controller.AddHeader("OAuth-Source", new UriBuilder(systemConfiguration.OAuthTokenServer)
 					{
 						Host = controller.InnerRequest.RequestUri.Host,
 						Port = controller.InnerRequest.RequestUri.Port

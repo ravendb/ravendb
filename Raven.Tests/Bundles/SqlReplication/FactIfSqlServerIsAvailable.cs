@@ -5,18 +5,13 @@ using Xunit;
 
 namespace Raven.Tests.Bundles.SqlReplication
 {
-	[CLSCompliant(false)]
-	public class FactIfSqlServerIsAvailable : FactAttribute
+	public class FactIfSqlServerIsAvailable
 	{
 		public static ConnectionStringSettings ConnectionStringSettings { get; set; }
 
-		public FactIfSqlServerIsAvailable()
+		static FactIfSqlServerIsAvailable()
 		{
 			ConnectionStringSettings = GetAppropriateConnectionStringNameInternal();
-			if (ConnectionStringSettings == null)
-			{
-				base.Skip = "Could not find a connection string with a valid database to connect to, skipping the test";
-			}
 		}
 
 		private static ConnectionStringSettings GetAppropriateConnectionStringNameInternal()

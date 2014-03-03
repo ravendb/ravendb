@@ -35,6 +35,7 @@ namespace Raven.Abstractions.Data
         public long CountOfDocuments { get; set; }
         public long CountOfAttachments { get; set; }
         public decimal DatabaseTransactionVersionSizeInMB { get; set; }
+<<<<<<< HEAD
 
         public double DocsWritesPerSecond { get; set; }
 
@@ -70,5 +71,8 @@ namespace Raven.Abstractions.Data
             public double FifteenMinuteRate { get; set; }
 
         }
+=======
+        public DatabaseMetrics Metrics { get; set; }
+>>>>>>> upstream/new3
     }
 }

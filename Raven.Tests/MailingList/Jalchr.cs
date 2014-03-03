@@ -257,14 +257,13 @@ namespace Raven.Tests.MailingList
                     count = query.Count();
                 }
 
-
+				WaitForIndexing(store);
 
                 var orderedList = list.OrderBy(x => x.CreatedDate).ToList();
                 using (var session = store.OpenSession())
                 {
                     RavenQueryStatistics stats;
-                    var query = session.Query<User, User_Entity>()
-                                       .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+                    var query = session.Query<User, User_Entity>()                                       
                                        .Statistics(out stats);
 
                     query = query.Where(x => x.CreatedDate >= start.Date);

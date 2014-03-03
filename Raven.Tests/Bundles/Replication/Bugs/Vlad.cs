@@ -37,6 +37,8 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 				session.SaveChanges();
 			}
 
+			WaitForIndexing(store);
+			
 			using (var session = store.OpenSession())
 			{
 				var selectGood = session.Query<SampleDoc>().ToList();

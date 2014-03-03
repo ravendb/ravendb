@@ -14,6 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -327,6 +328,37 @@ namespace Raven.Database.Indexing
 			}
 			return documentFromFields;
 		}
+
+        protected void InvokeOnIndexEntryDeletedOnAllBatchers(List<AbstractIndexUpdateTriggerBatcher> batchers, Term term)
+        {
+            if (!batchers.Any(batcher => batcher.RequiresDocumentOnIndexEntryDeleted)) return;
+            // find all documents
+            var key = term.Text;
+
+            IndexSearcher searcher = null;
+            using (GetSearcher(out searcher))
+            {
+                var collector = new GatherAllCollector();
+                searcher.Search(new TermQuery(term), collector);
+                var topDocs = collector.ToTopDocs();
+                
+                foreach (var scoreDoc in topDocs.ScoreDocs)
+                {
+                    var document = searcher.Doc(scoreDoc.Doc);
+                    batchers.ApplyAndIgnoreAllErrors(
+                        exception =>
+                        {
+                            logIndexing.WarnException(
+                                string.Format(
+                                    "Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
+                                    indexId, key),
+                                exception);
+                            context.AddError(indexId, key, exception.Message, "OnIndexEntryDeleted Trigger");
+                        },
+                        trigger => trigger.OnIndexEntryDeleted(key, document));
+                }
+            }
+        }
 
 		private static KeyValuePair<string, RavenJToken> CreateProperty(Field fld, Document document)
 		{
@@ -1604,7 +1636,6 @@ namespace Raven.Database.Indexing
                     "Index will be disabled.  Please verify this index definition and consider a re-design of your entities.",
 					PublicName, numberOfAlreadyProducedOutputs, sourceDocumentId, maxNumberOfIndexOutputs));
         }
-
 
 		internal class IndexByIdEqualityComparer : IEqualityComparer<Index>
 		{

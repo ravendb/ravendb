@@ -46,6 +46,8 @@ namespace Raven.Abstractions.Data
 		public FutureBatchStats[] Prefetches { get; set; }
 
 		public Guid DatabaseId { get; set; }
+
+        public bool SupportsDtc { get; set; }
 	}
 
 	public class ActualIndexingBatchSize

@@ -131,6 +131,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Raven.Abstractions\Util\Streams\IBufferPool.cs">
+      <Link>Abstractions\Util\Streams\IBufferPool.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Util\Streams\NoBufferPool.cs">
+      <Link>Abstractions\Util\Streams\NoBufferPool.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\*.cs" />
     <Compile Include="..\Raven.Client.Lightweight\Bundles\MoreLikeThis\*.cs">
       <Link>Bundles\MoreLikeThis\%(FileName)</Link>

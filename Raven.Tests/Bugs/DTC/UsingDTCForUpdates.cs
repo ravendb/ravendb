@@ -8,14 +8,14 @@ namespace Raven.Tests.Bugs.DTC
 {
 	public class UsingDTCForUpdates : RavenTest
 	{
-		[Theory]
-		[InlineData("esent")]
-		[InlineData("munin")]
-		[InlineData("voron")]
-		public void can_update_a_doc_within_transaction_scope(string storage)
+		[Fact]
+		public void can_update_a_doc_within_transaction_scope()
 		{
-			using (var documentStore = NewDocumentStore(requestedStorage:storage))
+            using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
 			{
+                if(documentStore.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
+
 				var id1 = Guid.NewGuid();
 				RavenJObject dummy = null;
 
@@ -43,8 +43,11 @@ namespace Raven.Tests.Bugs.DTC
 		[Fact]
 		public void can_update_a_doc_after_inserting_another_within_transaction_scope()
 		{
-			using (var documentStore = NewDocumentStore())
+            using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
 			{
+                if(documentStore.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
+                    return;
+
 				documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
 
 				var id1 = Guid.NewGuid();

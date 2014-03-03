@@ -60,6 +60,9 @@ namespace Raven.Tests.Issues
         [Fact]
         public void ReplicationDeleteByIndexRepro()
         {
+			if (servers.Any(server => server.SystemDatabase.TransactionalStorage.SupportsDtc == false))
+		        return;
+
             PrimaryDocumentStore.Initialize();
             SecondaryDocumentStore.Initialize();
 

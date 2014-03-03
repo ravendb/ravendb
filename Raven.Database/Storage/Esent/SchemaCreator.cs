@@ -592,6 +592,7 @@ namespace Raven.Storage.Esent
 							  szKey = "+view\0+level\0+source_bucket\0+hashed_reduce_key\0\0",
 						  });
 		}
+
 		private void CreateTasksTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
