@@ -305,6 +305,8 @@ namespace Voron
                             }
                             catch (AggregateException ae)
                             {
+                                if (ae.InnerException == null)
+                                    throw;
 	                            if (ae.InnerException is OperationCanceledException == false)
 		                            throw ae.InnerException;
                             }
