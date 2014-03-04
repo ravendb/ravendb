@@ -133,6 +133,15 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(Database.WorkContext.CurrentlyRunningQueries);
 		}
 
+        [HttpGet]
+        [Route("debug/suggest_index_merge")]
+        [Route("databases/{databaseName}/debug/suggest_index_merge")]
+        public HttpResponseMessage IndexMerge()
+        {
+            var mergeIndexSuggestions = Database.WorkContext.IndexDefinitionStorage.ProposeIndexMergeSuggestions();
+            return GetMessageWithObject(mergeIndexSuggestions);
+        }
+
 		[HttpGet]
 		[Route("debug/sl0w-d0c-c0unts")]
 		[Route("databases/{databaseName}/debug/sl0w-d0c-c0unts")]
