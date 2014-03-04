@@ -64,19 +64,19 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			return activeSynchronizations.Sum(queue => queue.Value.Count);
 		}
 
-		public int NumberOfActiveSynchronizationTasksFor(string destination)
+        public int NumberOfActiveSynchronizationTasksFor(SynchronizationDestination destination)
 		{
 			return
-				activeSynchronizations.GetOrAdd(destination, new ConcurrentDictionary<string, SynchronizationWorkItem>()).Count;
+				activeSynchronizations.GetOrAdd(destination.FileSystemUrl, new ConcurrentDictionary<string, SynchronizationWorkItem>()).Count;
 		}
 
-		public void EnqueueSynchronization(string destination, SynchronizationWorkItem workItem)
+        public void EnqueueSynchronization(SynchronizationDestination destination, SynchronizationWorkItem workItem)
 		{
-			pendingRemoveLocks.GetOrAdd(destination, new ReaderWriterLockSlim()).EnterUpgradeableReadLock();
+			pendingRemoveLocks.GetOrAdd(destination.FileSystemUrl, new ReaderWriterLockSlim()).EnterUpgradeableReadLock();
 
 			try
 			{
-				var pendingForDestination = pendingSynchronizations.GetOrAdd(destination,
+				var pendingForDestination = pendingSynchronizations.GetOrAdd(destination.FileSystemUrl,
 																			 new ConcurrentQueue<SynchronizationWorkItem>());
 
 				// if delete work is enqueued and there are other synchronization works for a given file then remove them from a queue
@@ -84,7 +84,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 					pendingForDestination.Any(
 						x => x.FileName == workItem.FileName && x.SynchronizationType != SynchronizationType.Delete))
 				{
-					pendingRemoveLocks.GetOrAdd(destination, new ReaderWriterLockSlim()).EnterWriteLock();
+					pendingRemoveLocks.GetOrAdd(destination.FileSystemUrl, new ReaderWriterLockSlim()).EnterWriteLock();
 
 					try
 					{
@@ -98,12 +98,12 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 						modifiedQueue.Enqueue(workItem);
 
-						pendingForDestination = pendingSynchronizations.AddOrUpdate(destination, modifiedQueue,
+						pendingForDestination = pendingSynchronizations.AddOrUpdate(destination.FileSystemUrl, modifiedQueue,
 																					(key, value) => modifiedQueue);
 					}
 					finally
 					{
-						pendingRemoveLocks.GetOrAdd(destination, new ReaderWriterLockSlim()).ExitWriteLock();
+						pendingRemoveLocks.GetOrAdd(destination.FileSystemUrl, new ReaderWriterLockSlim()).ExitWriteLock();
 					}
 				}
 
@@ -130,7 +130,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 					}
 				}
 
-				var activeForDestination = activeSynchronizations.GetOrAdd(destination,
+				var activeForDestination = activeSynchronizations.GetOrAdd(destination.FileSystemUrl,
 																		   new ConcurrentDictionary<string, SynchronizationWorkItem>
 																			   ());
 
@@ -148,18 +148,18 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			}
 			finally
 			{
-				pendingRemoveLocks.GetOrAdd(destination, new ReaderWriterLockSlim()).ExitUpgradeableReadLock();
+				pendingRemoveLocks.GetOrAdd(destination.FileSystemUrl, new ReaderWriterLockSlim()).ExitUpgradeableReadLock();
 			}
 		}
 
-		public bool TryDequePendingSynchronization(string destination, out SynchronizationWorkItem workItem)
+        public bool TryDequePendingSynchronization(SynchronizationDestination destination, out SynchronizationWorkItem workItem)
 		{
-			var readerWriterLockSlim = pendingRemoveLocks.GetOrAdd(destination, new ReaderWriterLockSlim());
+			var readerWriterLockSlim = pendingRemoveLocks.GetOrAdd(destination.FileSystemUrl, new ReaderWriterLockSlim());
 			readerWriterLockSlim.EnterReadLock();
 			try
 			{
 				ConcurrentQueue<SynchronizationWorkItem> pendingForDestination;
-				if (pendingSynchronizations.TryGetValue(destination, out pendingForDestination) == false)
+				if (pendingSynchronizations.TryGetValue(destination.FileSystemUrl, out pendingForDestination) == false)
 				{
 					workItem = null;
 					return false;
@@ -173,19 +173,19 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			}
 		}
 
-		public bool IsDifferentWorkForTheSameFileBeingPerformed(SynchronizationWorkItem work, string destination)
+        public bool IsDifferentWorkForTheSameFileBeingPerformed(SynchronizationWorkItem work, SynchronizationDestination destination)
 		{
 			ConcurrentDictionary<string, SynchronizationWorkItem> activeForDestination;
-			if (!activeSynchronizations.TryGetValue(destination, out activeForDestination))
+			if (!activeSynchronizations.TryGetValue(destination.FileSystemUrl, out activeForDestination))
 				return false;
 
 			SynchronizationWorkItem activeWork;
 			return activeForDestination.TryGetValue(work.FileName, out activeWork) && !activeWork.Equals(work);
 		}
 
-		public void SynchronizationStarted(SynchronizationWorkItem work, string destination)
+		public void SynchronizationStarted(SynchronizationWorkItem work, SynchronizationDestination destination)
 		{
-			var activeForDestination = activeSynchronizations.GetOrAdd(destination,
+			var activeForDestination = activeSynchronizations.GetOrAdd(destination.FileSystemUrl,
 																	   new ConcurrentDictionary<string, SynchronizationWorkItem>());
 
 			if (activeForDestination.TryAdd(work.FileName, work))
@@ -196,11 +196,11 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			}
 		}
 
-		public void SynchronizationFinished(SynchronizationWorkItem work, string destination)
+        public void SynchronizationFinished(SynchronizationWorkItem work, SynchronizationDestination destination)
 		{
 			ConcurrentDictionary<string, SynchronizationWorkItem> activeDestinationTasks;
 
-			if (activeSynchronizations.TryGetValue(destination, out activeDestinationTasks) == false)
+			if (activeSynchronizations.TryGetValue(destination.FileSystemUrl, out activeDestinationTasks) == false)
 			{
 				Log.Warn("Could not get an active synchronization queue for {0}", destination);
 				return;

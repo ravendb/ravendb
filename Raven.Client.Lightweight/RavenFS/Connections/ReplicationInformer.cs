@@ -13,6 +13,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Client.RavenFS.Connections
 {
@@ -27,7 +28,7 @@ namespace Raven.Client.RavenFS.Connections
 		protected readonly FileConvention Conventions;
 		protected DateTime LastReplicationUpdate = DateTime.MinValue;
 		private readonly object replicationLock = new object();
-		private List<string> replicationDestinations = new List<string>();
+        private List<SynchronizationDestination> replicationDestinations = new List<SynchronizationDestination>();
 		private static readonly List<string> Empty = new List<string>();
 		protected static int readStripingBase;
 
@@ -36,7 +37,7 @@ namespace Raven.Client.RavenFS.Connections
 		/// </summary>
 		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged = delegate { };
 
-		public List<string> ReplicationDestinations
+        public List<SynchronizationDestination> ReplicationDestinations
 		{
 			get { return replicationDestinations; }
 		}
@@ -49,7 +50,7 @@ namespace Raven.Client.RavenFS.Connections
 		{
 			get
 			{
-				return Conventions.FailoverBehavior == FailoverBehavior.FailImmediately ? Empty : replicationDestinations.ToList();
+				return Conventions.FailoverBehavior == FailoverBehavior.FailImmediately ? Empty : replicationDestinations.Select(x => x.FileSystemUrl).ToList();
 			}
 		}
 
@@ -531,7 +532,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 		/// </summary>
 		public async Task RefreshReplicationInformationAsync(RavenFileSystemClient serverClient)
 		{
-			var serverHash = ServerHash.GetServerHash(serverClient.ServerUrl);
+			var serverHash = ServerHash.GetServerHash(serverClient.ServerUrl + "/ravenfs/" + serverClient.FileSystemName);
 
 			try
 			{
@@ -542,8 +543,14 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 				}
 				else
 				{
-					var urls = result.GetValues("url");
-					replicationDestinations = urls == null ? new List<string>() : urls.ToList();
+				    var destinationStrings = result.GetValues("destination");
+
+                    if(destinationStrings == null)
+                        replicationDestinations = new List<SynchronizationDestination>();
+                    else
+                    {
+                        replicationDestinations = destinationStrings.Select(JsonConvert.DeserializeObject<SynchronizationDestination>).ToList();
+                    }
 				}
 			}
 			catch (Exception e)
@@ -560,14 +567,14 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			LastReplicationUpdate = SystemTime.UtcNow;
 		}
 
-		private void UpdateReplicationInformationFromDocument(IEnumerable<string> destinations)
+		private void UpdateReplicationInformationFromDocument(IEnumerable<SynchronizationDestination> destinations)
 		{
 			foreach (var destination in destinations)
 			{
 				FailureCounter value;
-				if (failureCounts.TryGetValue(destination, out value))
+				if (failureCounts.TryGetValue(destination.FileSystemUrl, out value))
 					continue;
-				failureCounts[destination] = new FailureCounter();
+				failureCounts[destination.FileSystemUrl] = new FailureCounter();
 			}
 		}
 

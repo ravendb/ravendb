@@ -6,7 +6,7 @@ using Xunit;
 
 namespace RavenFS.Tests.Bugs
 {
-	public class UploadFilesWithTheSameContentConcurrently : WebApiTest
+    public class UploadFilesWithTheSameContentConcurrently : RavenFsTestBase
 	{
 		[Fact]
 		public void ShouldWork()

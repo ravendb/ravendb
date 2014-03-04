@@ -132,6 +132,7 @@
     <Compile Include="RavenFS\Shard\ShardStrategy.cs" />
     <Compile Include="RavenFS\SourceSynchronizationInformation.cs" />
     <Compile Include="RavenFS\StringUtils.cs" />
+    <Compile Include="RavenFS\SynchronizationDestination.cs" />
     <Compile Include="RavenFS\Util\TaskExtensions.cs" />
     <Compile Include="RavenPagingInformation.cs" />
     <Compile Include="Shard\ShardedRavenQueryInspector.cs" />

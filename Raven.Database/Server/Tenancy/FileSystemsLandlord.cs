@@ -79,7 +79,7 @@ namespace Raven.Database.Server.Tenancy
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
             if (document.Settings["Raven/FileSystem/DataDir"] == null)
-                throw new InvalidOperationException("Could not find Raven/DataDir");
+                throw new InvalidOperationException("Could not find Raven/FileSystem/DataDir");
 
             if (document.Disabled)
                 throw new InvalidOperationException("The database has been disabled.");

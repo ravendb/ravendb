@@ -3,10 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.IsolatedStorage;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Client.RavenFS.Connections
 {
@@ -25,7 +24,7 @@ namespace Raven.Client.RavenFS.Connections
 #endif
 		}
 
-		public static List<string> TryLoadReplicationInformationFromLocalCache(string serverHash)
+        public static List<SynchronizationDestination> TryLoadReplicationInformationFromLocalCache(string serverHash)
 		{
 			try
 			{
@@ -40,7 +39,8 @@ namespace Raven.Client.RavenFS.Connections
 					{
 						var buffer = new byte[stream.Length];
 						var bytes = stream.Read(buffer, 0, (int)stream.Length);
-						return Encoding.UTF8.GetString(buffer, 0, bytes).Split(' ').ToList();
+					    Console.WriteLine(bytes);
+					    return JsonConvert.DeserializeObject<List<SynchronizationDestination>>(Encoding.UTF8.GetString(buffer, 0, bytes));
 					}
 				}
 			}
@@ -51,7 +51,7 @@ namespace Raven.Client.RavenFS.Connections
 			}
 		}
 
-		public static void TrySavingReplicationInformationToLocalCache(string serverHash, List<string> destinations)
+        public static void TrySavingReplicationInformationToLocalCache(string serverHash, List<SynchronizationDestination> destinations)
 		{
 			try
 			{
@@ -60,8 +60,7 @@ namespace Raven.Client.RavenFS.Connections
 					var path = "RavenFS Replication Information For - " + serverHash;
 					using (var stream = new IsolatedStorageFileStream(path, FileMode.Create, machineStoreForApplication))
 					{
-						var data = string.Join(" ", destinations);
-						var bytes = Encoding.UTF8.GetBytes(data);
+						var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(destinations));
 						stream.Write(bytes, 0, bytes.Length);
 					}
 				}

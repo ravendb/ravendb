@@ -10,7 +10,7 @@ using Xunit;
 
 namespace RavenFS.Tests.Shard
 {
-	public class SimpleSharding : MultiHostTestBase
+    public class SimpleSharding : RavenFsTestBase
 	{
 	    readonly ShardedRavenFileSystemClient shardedClient;
 
