@@ -14,6 +14,8 @@ using System.Text;
 using System.Threading;
 using Lucene.Net.Analysis.Standard;
 using Microsoft.Isam.Esent.Interop;
+using Mono.CSharp.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
@@ -24,6 +26,8 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
+using ICSharpCode.NRefactory.CSharp;
+using Raven.Database.Indexing;
 
 namespace Raven.Database.Storage
 {
@@ -32,7 +36,7 @@ namespace Raven.Database.Storage
         private const string IndexDefDir = "IndexDefinitions";
 
         private readonly ReaderWriterLockSlim currentlyIndexingLock = new ReaderWriterLockSlim();
-		public long currentlyIndexing;
+        public long currentlyIndexing;
 
         private readonly ConcurrentDictionary<int, AbstractViewGenerator> indexCache =
             new ConcurrentDictionary<int, AbstractViewGenerator>();
@@ -60,6 +64,7 @@ namespace Raven.Database.Storage
         private readonly InMemoryRavenConfiguration configuration;
         private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
 
+        private List<IndexMergeSuggestion> IndexMergeSuggestions { get; set; }
         public IndexDefinitionStorage(
             InMemoryRavenConfiguration configuration,
             ITransactionalStorage transactionalStorage,
@@ -67,6 +72,7 @@ namespace Raven.Database.Storage
             IEnumerable<AbstractViewGenerator> compiledGenerators,
             OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
         {
+            IndexMergeSuggestions = new List<IndexMergeSuggestion>();
             this.configuration = configuration;
             this.extensions = extensions; // this is used later in the ctor, so it must appears first
             this.path = Path.Combine(path, IndexDefDir);
@@ -128,7 +134,7 @@ namespace Raven.Database.Storage
 
         public string[] IndexNames
         {
-            get { return indexDefinitions.Values.OrderBy(x => x.Name).Select(x => x.Name).ToArray(); }
+            get { return IndexDefinitions.Values.OrderBy(x => x.Name).Select(x => x.Name).ToArray(); }
         }
 
         public int[] Indexes
@@ -151,9 +157,13 @@ namespace Raven.Database.Storage
                                            .ToArray();
             }
         }
+        public ConcurrentDictionary<int, IndexDefinition> IndexDefinitions
+        {
+            get { return indexDefinitions; }
+        }
 
 
-      public string CreateAndPersistIndex(IndexDefinition indexDefinition)
+        public string CreateAndPersistIndex(IndexDefinition indexDefinition)
         {
             var transformer = AddAndCompileIndex(indexDefinition);
             if (configuration.RunInMemory == false)
@@ -201,7 +211,7 @@ namespace Raven.Database.Storage
 
         public void UpdateIndexDefinitionWithoutUpdatingCompiledIndex(IndexDefinition definition)
         {
-            indexDefinitions.AddOrUpdate(definition.IndexId, s =>
+            IndexDefinitions.AddOrUpdate(definition.IndexId, s =>
             {
                 throw new InvalidOperationException(
                     "Cannot find index named: " +
@@ -242,7 +252,7 @@ namespace Raven.Database.Storage
 
         public void AddIndex(int id, IndexDefinition definition)
         {
-            indexDefinitions.AddOrUpdate(id, definition, (s1, def) =>
+            IndexDefinitions.AddOrUpdate(id, definition, (s1, def) =>
             {
                 if (def.IsCompiled)
                     throw new InvalidOperationException("Index " + id + " is a compiled index, and cannot be replaced");
@@ -268,7 +278,7 @@ namespace Raven.Database.Storage
             if (indexCache.TryRemove(id, out ignoredViewGenerator))
                 indexNameToId.TryRemove(ignoredViewGenerator.Name, out ignoredId);
             IndexDefinition ignoredIndexDefinition;
-            indexDefinitions.TryRemove(id, out ignoredIndexDefinition);
+            IndexDefinitions.TryRemove(id, out ignoredIndexDefinition);
             newDefinitionsThisSession.TryRemove(id, out ignoredIndexDefinition);
             if (configuration.RunInMemory)
                 return;
@@ -285,14 +295,14 @@ namespace Raven.Database.Storage
         {
             int id = 0;
             if (indexNameToId.TryGetValue(name, out id))
-                return indexDefinitions[id];
+                return IndexDefinitions[id];
             return null;
         }
 
         public IndexDefinition GetIndexDefinition(int id)
         {
             IndexDefinition value;
-            indexDefinitions.TryGetValue(id, out value);
+            IndexDefinitions.TryGetValue(id, out value);
             return value;
         }
 
@@ -304,6 +314,212 @@ namespace Raven.Database.Storage
             return null;
         }
 
+        public IndexMergeResults ProposeIndexMergeSuggestions()
+        {
+           
+            var indexMergeResults= CreatePossibleIndexMergeSuggestionsList(); 
+
+            return indexMergeResults;
+        }
+        public IndexMergeResults CreatePossibleIndexMergeSuggestionsList()
+        {
+            var parser = new CSharpParser();
+            var indexes = new List<QueryData>();
+
+
+            foreach (var kvp in IndexDefinitions)
+            {
+                var index = kvp.Value;
+                if (index.IsMapReduce)
+                    continue;
+
+                if(index.Maps.Count>1)  //no support for multiple maps
+                    continue;
+
+                var map = parser.ParseExpression(index.Map); // TODO: Multiple maps
+
+                var visitor = new Regina_PleaseRenameMeSoonest_Visitor();
+                map.AcceptVisitor(visitor);  
+                var curQuery = new QueryData
+                {
+                    IndexId = index.IndexId,
+                    IndexName = index.Name,
+                    OriginalQuery = index.Map, 
+
+                    HasWhere = visitor.HasWhere,
+                    FromExpression = visitor.FromExpression,
+                    FromIdentifier = visitor.FromIdentifier,
+                    NumberOfFromClauses = visitor.NumberOfFromClauses,
+                    SelectExpressions = visitor.SelectExpressions,
+                };
+                indexes.Add(curQuery);
+            }
+
+            //merge index data
+            var mergedQueries = new List<MergeProposal>();
+            foreach (var queryData in indexes)
+            {
+                var mergeData = new MergeProposal();
+
+                if (queryData.IsAlreadyMerged)
+                    continue;
+
+                queryData.IsAlreadyMerged = true;
+
+                List<string> failComments = new List<string>();
+                if (queryData.NumberOfFromClauses > 1)
+                {
+                    failComments.Add("Cannot merge indexes that have more than 1 from clause");
+                }
+                if (queryData.HasWhere)
+                {
+                    failComments.Add("Cannot merge indexes that have a where clause");
+                }
+                if (failComments.Count != 0)
+                {
+                    queryData.Comment = string.Join(Environment.NewLine, failComments);
+                    queryData.IsSuitedForMerge = false;
+                    var data = new MergeProposal
+                    {
+                        MergedData = queryData
+                    };
+                    mergedQueries.Add(data);
+                    continue;
+                }
+                
+                mergeData.ProposedForMerge.Add(queryData);
+                foreach (var curQueryData in indexes)
+                {
+                    if (curQueryData.IndexId == queryData.IndexId)
+                        continue;
+
+                    if (curQueryData.NumberOfFromClauses > 1)
+                        continue;
+
+                    if (curQueryData.IsAlreadyMerged)
+                        continue;
+
+                    if (curQueryData.FromExpression != queryData.FromExpression)
+                        continue;
+
+                    if (curQueryData.HasWhere)
+                        continue;
+//TODO: add compare for additional indexdef properties before merge decision
+                    if (CompareSelectExpression(curQueryData, queryData))
+                    {
+                        curQueryData.IsSuitedForMerge = true;
+                        mergeData.ProposedForMerge.Add(curQueryData);
+
+                    }
+
+                }
+
+                var newData = new MergeProposal
+                {
+                    ProposedForMerge = mergeData.ProposedForMerge,
+                    MergedData = mergeData.MergedData
+                };
+                mergedQueries.Add(newData);
+
+
+
+            }
+            var mergedResults = MergeIndexData(mergedQueries);
+            return mergedResults;
+
+        }
+        private bool CompareSelectExpression(QueryData expr1, QueryData expr2)
+        {
+            Expression ExpressionValue;
+            foreach (var pair in expr1.SelectExpressions)
+            {
+                string pairValueStr = pair.Value.ToString();
+                if (expr2.SelectExpressions.TryGetValue(pair.Key, out ExpressionValue)) //for the same key val has to be the same
+                {
+                    string expressionValueStr = ExpressionValue.ToString();
+                    if (!pairValueStr.Equals(expressionValueStr))
+                    {
+
+                        var splittedExp1 = pairValueStr.Split('.');  //required to add case where xxx. included and different
+                        var splittedExp2 = expressionValueStr.Split('.');
+                        if (splittedExp1[splittedExp1.Length - 1] != splittedExp2[splittedExp2.Length - 1])
+                            return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        private IndexMergeResults MergeIndexData(List<MergeProposal> indexDataForMerge)
+        {
+            var indexMergeResults = new IndexMergeResults();
+            var queryData = new QueryData();
+            foreach (var mergeProposal in indexDataForMerge)
+            {
+                var mergeSuggestion = new MergeSuggestions();
+                if (mergeProposal.ProposedForMerge.Count > 1)
+                {
+                    queryData = mergeProposal.ProposedForMerge.First();
+                    mergeSuggestion.MergedIndexName = queryData.IndexName;
+                    var suggestion = new StringBuilder();
+                    suggestion.Append("From " + queryData.FromIdentifier + " In " + queryData.FromExpression);
+                    var selectExpressionDict = new HashSet<string>();
+                    string canMergeIndexName=string.Empty;
+                    foreach (var curProposedData in mergeProposal.ProposedForMerge)
+                    {
+                        foreach (var curExpr in curProposedData.SelectExpressions)
+                        {
+                            var valueStr = curExpr.Value.ToString();
+                            if (curProposedData.FromIdentifier != queryData.FromIdentifier)
+                            {
+                                valueStr = valueStr.Replace(curProposedData.FromIdentifier, queryData.FromIdentifier);
+
+                            }
+                            var resultValue = valueStr.Split('=');
+                            selectExpressionDict.Add(resultValue[resultValue.Length - 1].Trim());
+                        }
+                        if (!string.Equals(queryData.IndexName, curProposedData.IndexName))
+                        {
+                            if(!string.IsNullOrEmpty(canMergeIndexName))
+                                 canMergeIndexName = canMergeIndexName + " " + curProposedData.IndexName;
+                            else
+                            {
+                                canMergeIndexName = curProposedData.IndexName;
+                            }   
+                        }
+                    }
+                    var sb = new StringBuilder();
+                    sb.Append("select new { ");
+                    foreach (var value in selectExpressionDict)
+                    {
+                        sb.Append(value);
+                        sb.Append(" ,");
+                    }
+                    suggestion.Append(" " + sb);
+                   
+                    int len = suggestion.ToString().Length;
+                    suggestion.Replace(",", "}", len - 2, 2);
+                    if (!mergeSuggestion.CanMergeWith.ContainsKey(canMergeIndexName))
+                        mergeSuggestion.CanMergeWith.Add(canMergeIndexName,suggestion.ToString());
+                }
+                else
+                {
+                    if (mergeProposal.MergedData != null)
+                        indexMergeResults.Unmergables.Add(mergeProposal.MergedData.IndexName,
+                            mergeProposal.MergedData.Comment);
+                }
+                if (mergeProposal.ProposedForMerge.Count > 1)
+                {
+                    if (!indexMergeResults.Suggestions.ContainsKey(mergeSuggestion.MergedIndexName))
+                        indexMergeResults.Suggestions.Add(mergeSuggestion.MergedIndexName, mergeSuggestion);
+                }
+            }
+            return indexMergeResults;
+        }
+
+       
+
+      
         public TransformerDefinition GetTransformerDefinition(int id)
         {
             TransformerDefinition value;
@@ -357,7 +573,7 @@ namespace Raven.Database.Storage
             foreach (
                 var a in
                     analyzerNames.Where(
-                        a => typeof (StandardAnalyzer).Assembly.GetType("Lucene.Net.Analysis." + a.Value) != null))
+                        a => typeof(StandardAnalyzer).Assembly.GetType("Lucene.Net.Analysis." + a.Value) != null))
             {
                 indexDefinition.Analyzers[a.Key] = "Lucene.Net.Analysis." + a.Value;
             }
@@ -372,19 +588,19 @@ namespace Raven.Database.Storage
         }
 
 
-	    public bool IsCurrentlyIndexing()
-	    {
-		    return Interlocked.Read(ref currentlyIndexing) != 0;
-	    }
+        public bool IsCurrentlyIndexing()
+        {
+            return Interlocked.Read(ref currentlyIndexing) != 0;
+        }
 
         public IDisposable CurrentlyIndexing()
         {
             currentlyIndexingLock.EnterReadLock();
-	        Interlocked.Increment(ref currentlyIndexing);
+            Interlocked.Increment(ref currentlyIndexing);
             return new DisposableAction(() =>
             {
-	            currentlyIndexingLock.ExitReadLock();
-	            Interlocked.Decrement(ref currentlyIndexing);
+                currentlyIndexingLock.ExitReadLock();
+                Interlocked.Decrement(ref currentlyIndexing);
             });
         }
 
@@ -462,4 +678,5 @@ namespace Raven.Database.Storage
             File.WriteAllText(Path.Combine(path, "transformers.txt"), sb.ToString());
         }
     }
+
 }

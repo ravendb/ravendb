@@ -435,7 +435,8 @@ namespace Raven.Database.Server.Controllers
 
 			var msg = new HttpResponseMessage
 			{
-				Content = new StreamContent(new FileStream(filePath, FileMode.Open))
+                //TODO: Fix this to avoid reading all the time
+				Content = new ByteArrayContent(File.ReadAllBytes(filePath))
 			};
 
 			WriteETag(fileEtag, msg);
