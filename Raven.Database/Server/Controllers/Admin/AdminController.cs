@@ -211,7 +211,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		public HttpResponseMessage Compact()
 		{
 			EnsureSystemDatabase();
-				
+
 			var db = InnerRequest.RequestUri.ParseQueryString()["database"];
 			if (string.IsNullOrWhiteSpace(db))
 				return GetMessageWithString("Compact request requires a valid database parameter", HttpStatusCode.BadRequest);
