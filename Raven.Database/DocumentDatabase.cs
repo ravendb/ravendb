@@ -18,6 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
 using Lucene.Net.Support;
+using NetTopologySuite.Utilities;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
@@ -1768,6 +1769,9 @@ namespace Raven.Database
                     actions =>
                     {
                         var definition = IndexDefinitionStorage.GetIndexDefinition(index);
+						if(definition == null)
+							throw new ArgumentException("specified index definition was not found","index");
+
                         isStale = actions.Staleness.IsIndexStale(definition.IndexId, query.Cutoff, null);
 
                         if (isStale == false && query.Cutoff == null)
