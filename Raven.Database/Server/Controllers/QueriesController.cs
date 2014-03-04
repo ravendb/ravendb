@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
-using Raven.Database.Server.Responders;
+using Raven.Database.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers

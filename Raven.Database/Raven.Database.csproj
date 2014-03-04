@@ -305,6 +305,7 @@
     <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="Server\AssemblyExtractor.cs" />
     <Compile Include="Server\Controllers\AdminBundlesApiController.cs" />
+    <Compile Include="Server\Controllers\Admin\AdminController.cs" />
     <Compile Include="Server\Controllers\BundlesApiController.cs" />
     <Compile Include="Server\Controllers\RavenBaseApiController.cs" />
     <Compile Include="Server\Contents\StaticHeadContent.cs" />
@@ -312,7 +313,6 @@
     <Compile Include="Server\RavenDBOptions.cs" />
     <Compile Include="Server\Connections\IEventsTransport.cs" />
     <Compile Include="Server\Connections\ChangesPushContent.cs" />
-    <Compile Include="Server\Controllers\Admin\AdminController.cs" />
     <Compile Include="Server\Controllers\Admin\AdminDatabasesController.cs" />
     <Compile Include="Server\Controllers\Admin\BaseAdminController.cs" />
     <Compile Include="Server\Controllers\BuildController.cs" />
@@ -470,9 +470,8 @@
     <Compile Include="Server\RavenFS\Util\StorageStream.cs" />
     <Compile Include="Server\RavenFS\Util\StorageStreamAccess.cs" />
     <Compile Include="Server\RavenFS\Util\SynchronizingFileStream.cs" />
-    <Compile Include="Server\Responders\AddIncludesCommand.cs" />
-    <Compile Include="Server\Responders\DatabaseSize.cs" />
-    <Compile Include="Server\Responders\Debugging\ExecutingQueryInfo.cs" />
+    <Compile Include="Data\AddIncludesCommand.cs" />
+    <Compile Include="Data\ExecutingQueryInfo.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
     <Compile Include="Extensions\ConcurrentQueueExtensions.cs" />
@@ -671,12 +670,10 @@
     <Compile Include="Server\Abstractions\IHttpRequest.cs" />
     <Compile Include="Server\Abstractions\IHttpResponse.cs" />
     <Compile Include="Server\Abstractions\UrlExtension.cs" />
-    <Compile Include="Server\AbstractRequestResponder.cs" />
     <Compile Include="Server\AnonymousUserAccessMode.cs" />
     <Compile Include="Server\CurrentOperationContext.cs" />
     <Compile Include="Extensions\HttpExtensions.cs" />
     <Compile Include="Server\HttpEndpointRegistration.cs" />
-    <Compile Include="Server\HttpServer.cs" />
     <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
@@ -685,8 +682,6 @@
     <Compile Include="Server\Security\MixedModeRequestAuthorizer.cs" />
     <Compile Include="Server\Security\NeverSecret.cs" />
     <Compile Include="Server\Security\OAuth\AccessToken.cs" />
-    <Compile Include="Server\Security\OAuth\OAuthApiKeyResponder.cs" />
-    <Compile Include="Server\Security\OAuth\OAuthCookie.cs" />
     <Compile Include="Server\Security\OAuth\OAuthRequestAuthorizer.cs" />
     <Compile Include="Server\Security\OAuth\OAuthServerHelper.cs" />
     <Compile Include="Server\Security\Triggers\OAuthPutTrigger.cs" />
@@ -1029,6 +1024,7 @@
     <Compile Include="Util\PerformanceCounterWrapper.cs" />
     <Compile Include="Util\PortUtil.cs" />
     <Compile Include="Util\SequentialUuidGenerator.cs" />
+    <Compile Include="Util\SizeHelper.cs" />
     <Compile Include="Util\SortedKeyList.cs" />
     <Compile Include="Util\Streams\BufferPoolStream.cs" />
     <Compile Include="Util\Streams\PartialStream.cs" />

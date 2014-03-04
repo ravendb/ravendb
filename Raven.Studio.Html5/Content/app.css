@@ -192,11 +192,14 @@ body {
   height: 120px;
 }
 #queryContainer .editor {
-  height: 120px;
+  height: 60px;
 }
 #queryContainer .popover {
   max-width: 450px;
   width: 450px;
+}
+#queryContainer .form-horizontal {
+  overflow: hidden auto;
 }
 .ko-grid {
   /*position: absolute;
@@ -375,3 +378,4 @@ footer ul {
     margin-bottom: 0;
   }
 }
+/*# sourceMappingURL=app.css.map */

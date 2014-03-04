@@ -1,0 +1,4 @@
+﻿class csvImport {
+}
+
+export = csvImport; 

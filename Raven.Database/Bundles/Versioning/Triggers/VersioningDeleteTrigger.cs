@@ -59,23 +59,28 @@ namespace Raven.Bundles.Versioning.Triggers
 			var versioningConfig = Database.GetDocumentVersioningConfiguration(versionInformer.Value[key]);
 	
 			
-			if (versioningConfig == null || !versioningConfig.PurgeOnDelete)
-				return;
+		    using (Database.DisableAllTriggersForCurrentThread())
+		    {
+                Database.TransactionalStorage.Batch(accessor =>
+                {
+                    foreach (var jsonDocument in  accessor.Documents.GetDocumentsWithIdStartingWith(key + "/revisions/", 0, int.MaxValue))
+                    {
+                        if(jsonDocument == null)
+                            continue;
+                        if (versioningConfig != null && versioningConfig.PurgeOnDelete)
+                        {
+                            Database.Delete(jsonDocument.Key, null, transactionInformation);
+                        }
+                        else
+                        {
+                            jsonDocument.Metadata.Remove(Constants.RavenReadOnly);
+                            accessor.Documents.AddDocument(jsonDocument.Key, jsonDocument.Etag, jsonDocument.DataAsJson, jsonDocument.Metadata);
+                        }
+                    }
 
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				while (true)
-				{
-					var revisionChildren = accessor.Documents.GetDocumentsWithIdStartingWith(key + "/revisions/", 0, 100).ToList();
-					if (revisionChildren.Count == 0)
-						break;
-
-					Debug.Assert(revisionChildren.All(rev => rev != null),"One ore more revision records are null. This should not be happening");
-
-					foreach (var revisionChild in revisionChildren)
-						Database.Delete(revisionChild.Key, null, transactionInformation);
-				}
-			});
+                
+                });
+		    }
 		}
 	}
 }

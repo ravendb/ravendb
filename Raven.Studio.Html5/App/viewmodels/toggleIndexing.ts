@@ -1,0 +1,4 @@
+﻿class toggleIndexing {
+}
+
+export = toggleIndexing; 

@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Json
 {
-	public class CloningTests
+	public class CloningTests : NoDisposalNeeded
 	{
 		public class Blog
 		{

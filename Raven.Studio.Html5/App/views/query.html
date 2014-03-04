@@ -37,8 +37,8 @@
                     <i class="fa fa-plus"></i> Add <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
-                    <li><a href="#" data-bind="click: addSortBy">Sort By</a></li>
-                    <li><a href="#">Transformer</a></li>
+                    <li><a href="#" class="use-bootstrap-tooltip" data-bind="click: addSortBy" accesskey="S" title="Add a field to sort by (Alt+S)" data-placement="right">Sort By</a></li>
+                    <li data-bind="visible: !transformer()"><a href="#" class="use-bootstrap-tooltip" data-bind="click: addTransformer" accesskey="T" title="Add a transformer to transform the results of the query (Alt+T)" data-placement="right">Transformer</a></li>
                 </ul>
             </div>
             <div class="btn-group">
@@ -46,9 +46,14 @@
                     <i class="fa fa-cog"></i> <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
-                    <li><a href="#">Default operator</a> <label class="btn btn-default">OR</label><label class="btn btn-default">AND</label></li>
-                    <li><a href="#">Show Fields</a></li>
-                    <li><a href="#">Index Entries</a></li>
+                    <li style="padding-left: 20px;">
+                        <div class="btn-group">
+                            <label class="btn btn-default use-bootstrap-tooltip" data-bind="click: setOperatorOr, css: { active: isDefaultOperatorOr }" title="Set the default operator to OR">Or</label>
+                            <label class="btn btn-default use-bootstrap-tooltip" data-bind="click: setOperatorAnd, css: { active: !isDefaultOperatorOr() }" title="Set the default operator to AND">And</label>
+                        </div>
+                    </li>
+                    <li><a href="#"><label class="btn btn-default" data-bind="click: toggleShowFields, css: { active: showFields }">Show Fields</label></a></li>
+                    <li><a href="#"><label class="btn btn-default" data-bind="click: toggleIndexEntries, css: { active: indexEntries }">Index Entries</label></a></li>
                 </ul>
             </div>
             <a class="btn btn-default use-bootstrap-tooltip" data-bind="attr: { href: editIndexUrl }, enable: hasSelectedIndex" title="Edit the index (F2)"><i class="fa fa-pencil"></i></a>
@@ -74,7 +79,7 @@
     </div>
     <br />
 
-    <form class="form-horizontal" role="form">
+    <form class="form-horizontal" role="form" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
         <div class="form-group">
             <label id="indexQueryLabelContainer" class="col-sm-1 control-label" data-placement="auto right" data-original-title="Index Query" data-trigger="hover">
                 <span id="indexQueryLabel" class="help-cursor">
@@ -95,7 +100,7 @@
             <label class="col-sm-1 control-label">
                 Sort By
             </label>
-            <div class="col-md-4" data-bind="foreach: sortBys">
+            <div class="col-md-5" data-bind="foreach: sortBys">
                 <div class="panel" data-bind="css: { 'panel-default': fieldName, 'panel-warning': !fieldName() }">
                     <div class="panel-heading">
                         <div class="btn-group col-md-11">
@@ -107,7 +112,7 @@
                             </ul>
                         </div>
                         <div>
-                            <button type="button" class="close use-bootstrap-tooltip" data-bind="click: $root.sortBys.remove.bind($root.sortBys, $data)" title="Remove this sort from the query">&times;</button>
+                            <button type="button" class="close use-bootstrap-tooltip" data-bind="click: $root.removeSortBy.bind($root, $data)" title="Remove this sort from the query">&times;</button>
                         </div>
                         <div class="clearfix"></div>
                     </div>
@@ -131,12 +136,36 @@
             </div>
         </div>
 
+        <div class="form-group" data-bind="visible: transformer() != null">
+            <label id="indexQueryLabelContainer" class="col-sm-1 control-label">
+                Transformer
+            </label>
+            <div class="col-md-5">
+                <div class="panel" data-bind="css: { 'panel-default': transformer, 'panel-warning': !transformer() }">
+                    <div class="panel-heading">
+                        <div class="btn-group col-md-11">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="text: transformer() ? transformer : 'Select a transformer'"></span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.allTransformers">
+                                <li><a href="#" data-bind="text: name, click: $root.selectTransformer.bind($root, $data)"></a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <button type="button" class="close use-bootstrap-tooltip" data-bind="click: $root.removeTransformer.bind($root)" title="Remove this sort from the query">&times;</button>
+                        </div>
+                        <div class="clearfix"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="form-group">
             <label id="indexQueryLabelContainer" class="col-sm-1 control-label">
                 Results
             </label>
             <div class="col-md-11">
-                <div id="queryResultsPanel" class="panel panel-default" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 30 }">
+                <div id="queryResultsPanel" class="panel panel-default">
                     <div class="panel-heading">
                         <table class="table table-condensed" style="margin-bottom: 0;">
                             <thead>
@@ -162,7 +191,7 @@
                         </table>
                     </div>
                     <div class="panel-body">
-                        <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', dynamicHeightTargetSelector: 'footer', dynamicHeightBottomMargin: 120, useContextMenu: false, showIds: false, showCheckboxes: false }"></div>
+                        <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', useContextMenu: false, showIds: false, showCheckboxes: false, maxHeight: '450px' }"></div>
                     </div>
                 </div>
             </div>
