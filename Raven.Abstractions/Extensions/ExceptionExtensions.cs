@@ -112,6 +112,17 @@ namespace Raven.Abstractions.Extensions
 			if (string.IsNullOrEmpty(response))
 				return null;
 
+
+		    try
+		    {
+		        var returnedValue = JsonConvert.DeserializeObject<T>(response);
+		    }
+		    catch (JsonReaderException readerException)
+		    {
+                throw new InvalidOperationException("Exception occured reading the string: " + ex.ResponseString, readerException);
+             
+		    }
+
 			return JsonConvert.DeserializeObject<T>(response);
 		}
 

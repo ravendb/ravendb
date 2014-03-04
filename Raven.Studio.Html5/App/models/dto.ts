@@ -287,3 +287,23 @@ interface replicationConfigDto {
     DocumentConflictResolution: string;
     AttachmentConflictResolution: string;
 }
+
+interface transformerDto {
+    name: string;
+    definition: {
+        TransformResults: string;
+        Name: string;
+    }
+}
+
+interface storedQueryDto {
+    id: string;
+    isPinned: boolean;
+    queryText: string;
+    sorts: string[];
+    databaseName: string;
+    transformerName: string;
+    showFields: boolean;
+    indexEntries: boolean;
+    useAndOperator: boolean;
+}

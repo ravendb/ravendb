@@ -271,6 +271,7 @@
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
     <Compile Include="Bugs\EntityWithStack.cs" />
+    <Compile Include="Issues\ActualValueInJsonReaderException.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
     <Compile Include="Bundles\Authorization\AuthorizationTest.cs" />
     <Compile Include="Bundles\Authorization\Bugs\Bowes.cs" />
@@ -293,9 +294,6 @@
     <Compile Include="Bundles\CascadeDelete\CascadeDelete.cs" />
     <Compile Include="Bundles\Company.cs" />
     <Compile Include="Bundles\Expiration\WithCascade.cs" />
-    <Compile Include="Bundles\IndexReplication\Bugs\Micro.cs" />
-    <Compile Include="Bundles\IndexReplication\FactIfSqlServerIsAvailable.cs" />
-    <Compile Include="Bundles\IndexReplication\ReplicateToSql.cs" />
     <Compile Include="Bundles\Replication\ReplicationDestinationDisabled.cs" />
     <Compile Include="Bundles\Replication\ReplicationWithOAuth.cs" />
     <Compile Include="Bundles\UniqueConstraints\Bugs\CaseInsensitive.cs" />
@@ -1681,10 +1679,6 @@
     <ProjectReference Include="..\Bundles\Raven.Bundles.CascadeDelete\Raven.Bundles.CascadeDelete.csproj">
       <Project>{d9ccc62f-0b4e-4b37-be7e-203d34b4ec4f}</Project>
       <Name>Raven.Bundles.CascadeDelete</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Bundles\Raven.Bundles.IndexReplication\Raven.Bundles.IndexReplication.csproj">
-      <Project>{2728bba7-5142-445e-baa5-142a25e0666d}</Project>
-      <Name>Raven.Bundles.IndexReplication</Name>
     </ProjectReference>
     <ProjectReference Include="..\Bundles\Raven.Bundles.UniqueConstraints\Raven.Bundles.UniqueConstraints.csproj">
       <Project>{4c026f8a-fb36-4a30-82e9-324d207f6b48}</Project>

@@ -111,8 +111,7 @@ namespace Raven.Samples.PrepareForRelease
 				"Raven.Abstractions",
 				"Raven.Client.Embedded",
 				"Raven.Client.Lightweight",
-				"Bundles",
-				"Raven.Bundles.IndexReplication",
+				"Bundles"
 			};
 
 			var lastLineHadReferenceToParentDirectory = false;

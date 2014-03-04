@@ -367,7 +367,7 @@ namespace Voron.Impl.Journal
 				_waj = waj;
 			}
 
-			public void ApplyLogsToDataFile(long oldestActiveTransaction, Transaction transaction = null)
+			public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, Transaction transaction = null)
 			{
                 bool locked = false;
                 if (_flushingSemaphore.IsWriteLockHeld == false)
@@ -379,6 +379,9 @@ namespace Voron.Impl.Journal
 
 				try
 				{
+				    if (token.IsCancellationRequested)
+				        return;
+
 					var alreadyInWriteTx = transaction != null && transaction.Flags == TransactionFlags.ReadWrite;
 
 					var jrnls = _waj._files.Select(x => x.GetSnapshot()).OrderBy(x => x.Number).ToList();

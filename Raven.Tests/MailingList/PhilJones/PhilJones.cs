@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList.PhilJones
 {
-	public class PhilJones1
+	public class PhilJones1 : NoDisposalNeeded
 	{
 		public class Bar
 		{
