@@ -12,17 +12,19 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Web;
+
 using Microsoft.Isam.Esent.Interop;
+
 using Raven.Abstractions.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc;
 using Raven.Database.Server.RavenFS.Util;
 
-namespace Raven.Database.Server.RavenFS.Storage
+namespace Raven.Database.Server.RavenFS.Storage.Esent
 {
-	public class StorageActionsAccessor : IDisposable
-	{
+    public class StorageActionsAccessor : IStorageActionsAccessor
+    {
 		private readonly JET_DBID database;
 		private readonly Session session;
 		private readonly TableColumnsCache tableColumnsCache;
@@ -722,7 +724,7 @@ namespace Raven.Database.Server.RavenFS.Storage
 			}
 		}
 
-		internal bool ConfigExists(string name)
+		public bool ConfigExists(string name)
 		{
 			Api.JetSetCurrentIndex(session, Config, "by_name");
 			Api.MakeKey(session, Config, name, Encoding.Unicode, MakeKeyGrbit.NewKey);

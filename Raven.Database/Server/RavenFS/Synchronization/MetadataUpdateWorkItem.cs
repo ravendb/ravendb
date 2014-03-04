@@ -9,6 +9,7 @@ using Raven.Client.Connection;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Multipart;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -21,7 +22,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		public MetadataUpdateWorkItem(string fileName, string sourceServerUrl, NameValueCollection destinationMetadata,
-									  TransactionalStorage storage)
+									  ITransactionalStorage storage)
 			: base(fileName, sourceServerUrl, storage)
 		{
 			this.destinationMetadata = destinationMetadata;

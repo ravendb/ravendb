@@ -1,0 +1,198 @@
+﻿// -----------------------------------------------------------------------
+//  <copyright file="TableStorage.cs" company="Hibernating Rhinos LTD">
+//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+//  </copyright>
+// -----------------------------------------------------------------------
+
+using Raven.Abstractions.Util.Streams;
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+
+using Voron;
+using Voron.Debugging;
+using Voron.Impl;
+
+namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
+{
+    public class TableStorage : IDisposable
+	{
+		private readonly IPersistenceSource persistenceSource;
+
+	    private readonly IBufferPool bufferPool;
+
+	    private readonly StorageEnvironment env;
+
+		public TableStorage(IPersistenceSource persistenceSource, IBufferPool bufferPool)
+		{
+			if (persistenceSource == null)
+				throw new ArgumentNullException("persistenceSource");
+
+			this.persistenceSource = persistenceSource;
+		    this.bufferPool = bufferPool;
+
+		    Debug.Assert(persistenceSource.Options != null);
+			env = new StorageEnvironment(persistenceSource.Options);
+
+			Initialize();
+			CreateSchema();
+		}		
+
+		internal Dictionary<string, object> GenerateReportOnStorage()
+		{
+			var reportData = new Dictionary<string, object>
+	        {
+	            {"MaxNodeSize", persistenceSource.Options.DataPager.MaxNodeSize},
+	            {"NumberOfAllocatedPages", persistenceSource.Options.DataPager.NumberOfAllocatedPages},
+	           // {"PageMaxSpace", persistenceSource.Options.DataPager.PageMaxSpace},
+	            {"PageMinSpace", persistenceSource.Options.DataPager.PageMinSpace},
+	           // {"PageSize", persistenceSource.Options.DataPager.PageSize},
+                {"Files", GetEntriesCount(Files)},
+	        };
+
+			return reportData;
+		}
+
+		public SnapshotReader CreateSnapshot()
+		{
+			return env.CreateSnapshot();
+		}
+
+        public Table Files { get; private set; }
+
+        public Table Signatures { get; private set; }
+
+        public Table Config { get; private set; }
+
+        public Table Usage { get; private set; }
+
+        public Table Pages { get; private set; }
+
+        public Table Details { get; private set; }
+
+		public StorageEnvironment Environment
+		{
+			get
+			{
+				return env;
+			}
+		}
+
+		public void Write(WriteBatch writeBatch)
+		{
+		    try
+		    {
+                env.Writer.Write(writeBatch);
+		    }
+		    catch (AggregateException ae)
+		    {
+		        if (ae.InnerException is OperationCanceledException == false) // this can happen during storage disposal
+		            throw;
+		    }
+		}
+
+		public long GetEntriesCount(TableBase table)
+		{
+			using (var tx = env.NewTransaction(TransactionFlags.Read))
+			{
+				return tx.State.GetTree(tx,table.TableName).State.EntriesCount;
+			}
+		}
+
+		public void RenderAndShow(TableBase table, int showEntries = 25)
+		{
+			if (Debugger.IsAttached == false)
+				return;
+
+			using (var tx = env.NewTransaction(TransactionFlags.Read))
+			{
+				RenderAndShow(tx, table, showEntries);
+			}
+		}
+
+		public void RenderAndShow(Transaction tx, TableBase table, int showEntries = 25)
+		{
+			if (Debugger.IsAttached == false)
+				return;
+
+			var tree = tx.State.GetTree(tx, table.TableName);
+
+			var path = Path.Combine(System.Environment.CurrentDirectory, "test-tree.dot");
+			var rootPageNumber = tree.State.RootPageNumber;
+			TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(rootPageNumber), showEntries);
+
+			var output = Path.Combine(System.Environment.CurrentDirectory, "output.svg");
+			var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.32\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
+			p.WaitForExit();
+			Process.Start(output);
+		}
+
+		public void Dispose()
+		{
+			if (persistenceSource != null)
+				persistenceSource.Dispose();
+
+			if (env != null)
+				env.Dispose();
+		}
+
+		//create all relevant storage trees in one place
+		private void CreateSchema()
+		{
+			using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				CreateFilesSchema(tx);
+				CreatSignaturesSchema(tx);
+                CreateConfigSchema(tx);
+                CreateUsageSchema(tx);
+                CreatePagesSchema(tx);
+                CreateDetailsSchema(tx);
+
+				tx.Commit();
+			}
+		}
+
+        private void CreatePagesSchema(Transaction tx)
+        {
+            env.CreateTree(tx, Tables.Pages.TableName);
+        }
+
+        private void CreateUsageSchema(Transaction tx)
+        {
+            env.CreateTree(tx, Tables.Usage.TableName);
+        }
+
+        private void CreateConfigSchema(Transaction tx)
+        {
+            env.CreateTree(tx, Tables.Config.TableName);
+        }
+
+        private void CreatSignaturesSchema(Transaction tx)
+        {
+            env.CreateTree(tx, Tables.Signatures.TableName);
+        }
+
+        private void CreateFilesSchema(Transaction tx)
+        {
+            env.CreateTree(tx, Tables.Files.TableName);
+        }
+
+        private void CreateDetailsSchema(Transaction tx)
+		{
+			env.CreateTree(tx, Tables.Details.TableName);
+		}
+
+		private void Initialize()
+		{
+			Files = new Table(Tables.Files.TableName, bufferPool);
+			Signatures = new Table(Tables.Signatures.TableName, bufferPool);
+            Config = new Table(Tables.Config.TableName, bufferPool);
+            Usage = new Table(Tables.Usage.TableName, bufferPool);
+            Pages = new Table(Tables.Pages.TableName, bufferPool);
+            Details = new Table(Tables.Details.TableName, bufferPool);
+		}
+
+	}
+}

@@ -1,14 +1,15 @@
 ﻿using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.Server.RavenFS.Storage.Esent;
 
 namespace Raven.Database.Server.RavenFS.Infrastructure
 {
 	public class SequenceActions
 	{
 		private const string SequencesKeyPrefix = "Raven/Sequences/";
-		private readonly TransactionalStorage storage;
+		private readonly ITransactionalStorage storage;
 
-		public SequenceActions(TransactionalStorage storage)
+		public SequenceActions(ITransactionalStorage storage)
 		{
 			this.storage = storage;
 		}

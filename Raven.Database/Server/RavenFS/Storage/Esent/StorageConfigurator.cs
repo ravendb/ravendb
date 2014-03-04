@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.IO;
+
 using Microsoft.Isam.Esent.Interop;
+
 using NLog;
+
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 
-namespace Raven.Database.Server.RavenFS.Storage
+namespace Raven.Database.Server.RavenFS.Storage.Esent
 {
 	public class StorageConfigurator
 	{

@@ -13,6 +13,7 @@ using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Notifications;
 using Raven.Database.Server.RavenFS.Search;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Util;
 
@@ -27,11 +28,11 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 		private readonly INotificationPublisher notificationPublisher;
 		private readonly ConcurrentDictionary<string, Task> renameFileTasks = new ConcurrentDictionary<string, Task>();
 		private readonly IndexStorage search;
-		private readonly TransactionalStorage storage;
+		private readonly ITransactionalStorage storage;
 		private readonly IObservable<long> timer = Observable.Interval(TimeSpan.FromMinutes(15));
 		private readonly ConcurrentDictionary<string, FileHeader> uploadingFiles = new ConcurrentDictionary<string, FileHeader>();
 
-		public StorageOperationsTask(TransactionalStorage storage, IndexStorage search, INotificationPublisher notificationPublisher)
+		public StorageOperationsTask(ITransactionalStorage storage, IndexStorage search, INotificationPublisher notificationPublisher)
 		{
 			this.storage = storage;
 			this.search = search;

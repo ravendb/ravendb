@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Search;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.Server.RavenFS.Storage.Esent;
 
 namespace Raven.Database.Server.RavenFS.Util
 {
@@ -22,7 +23,7 @@ namespace Raven.Database.Server.RavenFS.Util
 		protected int InnerBufferOffset = 0;
 		private int writtingPagePosition;
 
-		protected StorageStream(TransactionalStorage transactionalStorage, string fileName,
+		protected StorageStream(ITransactionalStorage transactionalStorage, string fileName,
 								StorageStreamAccess storageStreamAccess,
 								NameValueCollection metadata, IndexStorage indexStorage, StorageOperationsTask operations)
 		{
@@ -55,7 +56,7 @@ namespace Raven.Database.Server.RavenFS.Util
 			}
 		}
 
-		public TransactionalStorage TransactionalStorage { get; private set; }
+		public ITransactionalStorage TransactionalStorage { get; private set; }
 		public StorageStreamAccess StorageStreamAccess { get; private set; }
 		public string Name { get; private set; }
 
@@ -92,12 +93,12 @@ namespace Raven.Database.Server.RavenFS.Util
 			set { Seek(value, SeekOrigin.Begin); }
 		}
 
-		public static StorageStream Reading(TransactionalStorage transactionalStorage, string fileName)
+		public static StorageStream Reading(ITransactionalStorage transactionalStorage, string fileName)
 		{
 			return new StorageStream(transactionalStorage, fileName, StorageStreamAccess.Read, null, null, null);
 		}
 
-		public static StorageStream CreatingNewAndWritting(TransactionalStorage transactionalStorage,
+		public static StorageStream CreatingNewAndWritting(ITransactionalStorage transactionalStorage,
 														   IndexStorage indexStorage, StorageOperationsTask operations,
 														   string fileName, NameValueCollection metadata)
 		{

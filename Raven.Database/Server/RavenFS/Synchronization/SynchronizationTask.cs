@@ -13,6 +13,7 @@ using Raven.Database.Config;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Notifications;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
 
@@ -25,7 +26,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
 		private readonly NotificationPublisher publisher;
-		private readonly TransactionalStorage storage;
+		private readonly ITransactionalStorage storage;
 		private readonly SynchronizationQueue synchronizationQueue;
 		private readonly SynchronizationStrategy synchronizationStrategy;
 		private readonly InMemoryRavenConfiguration systemConfiguration;
@@ -33,7 +34,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		private readonly IObservable<long> timer = Observable.Interval(TimeSpan.FromMinutes(10));
 		private int failedAttemptsToGetDestinationsConfig;
 
-		public SynchronizationTask(TransactionalStorage storage, SigGenerator sigGenerator, NotificationPublisher publisher,
+		public SynchronizationTask(ITransactionalStorage storage, SigGenerator sigGenerator, NotificationPublisher publisher,
 								   InMemoryRavenConfiguration systemConfiguration)
 		{
 			this.storage = storage;

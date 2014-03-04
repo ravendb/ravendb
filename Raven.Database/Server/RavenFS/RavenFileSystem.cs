@@ -7,6 +7,7 @@ using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Notifications;
 using Raven.Database.Server.RavenFS.Search;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
@@ -24,7 +25,7 @@ namespace Raven.Database.Server.RavenFS
 		private readonly NotificationPublisher notificationPublisher;
 		private readonly IndexStorage search;
 		private readonly SigGenerator sigGenerator;
-		private readonly TransactionalStorage storage;
+		private readonly ITransactionalStorage storage;
 		private readonly StorageOperationsTask storageOperationsTask;
 		private readonly SynchronizationTask synchronizationTask;
 		private readonly InMemoryRavenConfiguration systemConfiguration;
@@ -57,7 +58,7 @@ namespace Raven.Database.Server.RavenFS
 			AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
 		}
 
-		public TransactionalStorage Storage
+		public ITransactionalStorage Storage
 		{
 			get { return storage; }
 		}

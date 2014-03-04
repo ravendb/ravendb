@@ -10,15 +10,17 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
+
 using Microsoft.Isam.Esent.Interop;
+
 using Raven.Abstractions.Exceptions;
 using Raven.Database.Extensions;
 
-namespace Raven.Database.Server.RavenFS.Storage
+namespace Raven.Database.Server.RavenFS.Storage.Esent
 {
-	public class TransactionalStorage : CriticalFinalizerObject, IDisposable
-	{
-		private readonly ThreadLocal<StorageActionsAccessor> current = new ThreadLocal<StorageActionsAccessor>();
+    public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage
+    {
+		private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
 		private readonly string database;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private readonly string path;
@@ -207,7 +209,7 @@ namespace Raven.Database.Server.RavenFS.Storage
 		}
 
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
-		public void Batch(Action<StorageActionsAccessor> action)
+		public void Batch(Action<Storage.IStorageActionsAccessor> action)
 		{
 			if (Id == Guid.Empty)
 				throw new InvalidOperationException("Cannot use Storage before Initialize was called");
@@ -246,7 +248,7 @@ namespace Raven.Database.Server.RavenFS.Storage
 		}
 
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
-		private void ExecuteBatch(Action<StorageActionsAccessor> action)
+		private void ExecuteBatch(Action<IStorageActionsAccessor> action)
 		{
 			if (current.Value != null)
 			{

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Multipart;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
@@ -21,7 +22,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		private DataInfo fileDataInfo;
 		private SynchronizationMultipartRequest multipartRequest;
 
-		public ContentUpdateWorkItem(string file, string sourceServerUrl, TransactionalStorage storage,
+		public ContentUpdateWorkItem(string file, string sourceServerUrl, ITransactionalStorage storage,
 									 SigGenerator sigGenerator)
 			: base(file, sourceServerUrl, storage)
 		{
