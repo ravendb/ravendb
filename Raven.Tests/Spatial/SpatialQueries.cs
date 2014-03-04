@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Raven.Tests.Spatial
 {
-	public class SpatialQueries
+	public class SpatialQueries : RavenTest
 	{
 		public class SpatialQueriesInMemoryTestIdx : AbstractIndexCreationTask<Listing>
 		{
@@ -31,7 +31,7 @@ namespace Raven.Tests.Spatial
 		[Fact]
 		public void CanRunSpatialQueriesInMemory()
 		{
-			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
+			using (var documentStore = NewDocumentStore(runInMemory: true))
 			{
 				new SpatialQueriesInMemoryTestIdx().Execute(documentStore);
 			}
@@ -59,7 +59,7 @@ namespace Raven.Tests.Spatial
 			// This item is about 3900 miles from areaOne
 			var newYork = new DummyGeoDoc(40.7137578228, -74.0126901936);
 
-			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
+			using (var documentStore = NewDocumentStore(runInMemory: true))
 			using (var session = documentStore.OpenSession())
 			{
 
@@ -110,7 +110,7 @@ namespace Raven.Tests.Spatial
             // The gym is about 7.32 miles (11.79 kilometers) from my house.
             var gym = new DummyGeoDoc(44.682861, -93.25);
 
-            using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
+            using (var documentStore = NewDocumentStore(runInMemory: true))
             using (var session = documentStore.OpenSession())
             {
                 session.Store(myHouse);

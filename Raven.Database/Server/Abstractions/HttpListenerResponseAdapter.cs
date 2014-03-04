@@ -14,6 +14,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Abstractions.Util.Streams;
 using Raven.Database.Impl;
 using Raven.Database.Util.Streams;
 

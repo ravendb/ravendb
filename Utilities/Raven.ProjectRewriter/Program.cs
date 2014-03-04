@@ -41,7 +41,6 @@ namespace Raven.ProjectRewriter
 //				{"Raven.Client.MvcIntegration", "{C15B86DA-033A-48FE-ACFE-65D5E34A1D18}"},
 //				{"Raven.Bundles.Authorization", "{9BB8DA55-DC8F-49F0-9FF8-0496D736C65F}"},
 //				{"Raven.Bundles.CascadeDelete", "{9C057FC4-C118-4AF9-8F6F-4F9AD35DED60}"},
-//				{"Raven.Bundles.IndexReplication", "{2E969670-3F50-4C78-88D3-709BC71B7D82}"},
 //				{"Raven.Bundles.UniqueConstraints", "{2B7E14D7-770F-43DE-A1D1-EC2B01F68A55}"},
 //				{"Raven.Web", "{6BB5ECF3-48FE-4FF7-B522-ABBAC1E259D4}"},
 //				{"Raven.Smuggler", "{C3B90695-3077-43C8-97DC-F6914981CA59}"},
@@ -88,10 +87,6 @@ namespace Raven.ProjectRewriter
 //					   "Raven.Database");
 //
 //			Generate45("Bundles/Raven.Bundles.CascadeDelete",
-//					   "Raven.Abstractions",
-//					   "Raven.Database");
-//
-//			Generate45("Bundles/Raven.Bundles.IndexReplication",
 //					   "Raven.Abstractions",
 //					   "Raven.Database");
 //

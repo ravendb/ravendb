@@ -10,7 +10,7 @@ namespace Raven.Tests.Issues
     using Raven.Smuggler.Imports;
 	using Xunit;
 
-	public class RavenDB_1733
+	public class RavenDB_1733 : NoDisposalNeeded
 	{
 		private const string emptyTransform = @"function(doc) {
                         return doc;

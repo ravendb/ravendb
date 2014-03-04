@@ -1,0 +1,4 @@
+﻿class createSampleData {
+}
+
+export = createSampleData; 

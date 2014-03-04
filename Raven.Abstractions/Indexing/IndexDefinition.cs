@@ -22,15 +22,18 @@ namespace Raven.Abstractions.Indexing
 		public IndexDefinition()
 		{
 			Maps = new HashSet<string>();
+
 			Indexes = new Dictionary<string, FieldIndexing>();
 			Stores = new Dictionary<string, FieldStorage>();
 			Analyzers = new Dictionary<string, string>();
 			SortOptions = new Dictionary<string, SortOptions>();
-			Fields = new List<string>();
 			Suggestions = new Dictionary<string, SuggestionOptions>();
 			TermVectors = new Dictionary<string, FieldTermVector>();
 			SpatialIndexes = new Dictionary<string, SpatialOptions>();
-		}
+
+
+            Fields = new List<string>();
+        }
 
 		/// <summary>
 		/// Get or set the id of this index

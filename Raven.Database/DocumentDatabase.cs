@@ -29,7 +29,6 @@ using Raven.Database.Prefetching;
 using Raven.Database.Queries;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
-using Raven.Database.Server.Responders.Debugging;
 using Raven.Database.Util;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
@@ -61,9 +60,6 @@ namespace Raven.Database
     public class DocumentDatabase : IDisposable
     {
         private readonly InMemoryRavenConfiguration configuration;
-
-        [ImportMany]
-        public OrderedPartCollection<AbstractRequestResponder> RequestResponders { get; set; }
 
         [ImportMany]
         public OrderedPartCollection<IStartupTask> StartupTasks { get; set; }
@@ -224,7 +220,7 @@ namespace Raven.Database
                                 "We do not allow to run on a storage engine other then Voron, while we are in the early pre-release phase of RavenDB 3.0. You are currently running on {0}",
                                 storageEngineTypeName));
 
-                    Trace.WriteLine("Forcing database to run on Voron - pre release behavior only, mind");
+                    Trace.WriteLine("Forcing database to run on Voron - pre release behavior only, mind " + Path.GetFileName(Path.GetDirectoryName(configuration.DataDirectory)));
                     storageEngineTypeName = InMemoryRavenConfiguration.VoronTypeName;
 
                 }
@@ -1303,7 +1299,7 @@ namespace Raven.Database
 
             PutNewIndexIntoStorage(name, definition);
 
-            WorkContext.ClearErrorsFor(name);
+            workContext.ClearErrorsFor(name);
 
             TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
             {
@@ -1348,13 +1344,12 @@ namespace Raven.Database
                 TryApplyPrecomputedBatchForNewIndex(index, definition);
             }
 
+            workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
+			WorkContext.NotifyAboutWork();
             // The act of adding it here make it visible to other threads
             // we have to do it in this way so first we prepare all the elements of the 
             // index, then we add it to the storage in a way that make it public
             IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
-
-            WorkContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
-            WorkContext.NotifyAboutWork();
         }
 
         private void TryApplyPrecomputedBatchForNewIndex(Index index, IndexDefinition definition)
@@ -1412,10 +1407,12 @@ namespace Raven.Database
                 var lastIndexedEtagByRavenDocumentsByEntityName = stats.LastIndexedEtag;
                 var lastModifiedByRavenDocumentsByEntityName = stats.LastIndexedTimestamp;
 
+	            var cts = new CancellationTokenSource();
+				using(var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, WorkContext.CancellationToken))
                 using (var op = new DatabaseQueryOperation(this, documentsByEntityNameIndex, new IndexQuery
                 {
                     Query = query
-                }, actions, WorkContext.CancellationToken)
+                }, actions, linked.Token)
                 {
                     ShouldSkipDuplicateChecking = true
                 })
@@ -1431,6 +1428,15 @@ namespace Raven.Database
                         // to index in a single batch. The idea here is that we need to keep the amount
                         // of memory we use to a manageable level even when introducing a new index to a BIG 
                         // database
+	                    try
+	                    {
+							cts.Cancel();
+							// we have to run just a little bit of the query to properly setup the disposal
+		                    op.Execute(o => { });
+	                    }
+	                    catch (OperationCanceledException)
+	                    {
+	                    }
                         return;
                     }
 
@@ -1681,6 +1687,9 @@ namespace Raven.Database
             public void Dispose()
             {
                 database.RemoveFromCurrentlyRunningQueryList(indexName, queryStat);
+				var resultsAsDisposable = results as IDisposable;
+				if(resultsAsDisposable != null)
+					resultsAsDisposable.Dispose();
             }
         }
 
@@ -2435,18 +2444,18 @@ namespace Raven.Database
         public BatchResult[] Batch(IList<ICommandData> commands)
         {
             using (TransactionalStorage.WriteLock())
-            {
+            {				
                 var shouldRetryIfGotConcurrencyError =
-                commands.All(x => (x is PatchCommandData || x is ScriptedPatchCommandData));
+                commands.All(x => ((x is PatchCommandData || IsScriptedPatchCommandDataWithoutEtagProperty(x)) && (x.Etag == null)));
                 if (shouldRetryIfGotConcurrencyError)
                 {
                     var sp = Stopwatch.StartNew();
-                    var result = BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(commands);
+					var result = BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(commands);
                     log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
                     return result;
                 }
 
-                BatchResult[] results = null;
+				BatchResult[] results = null;
                 TransactionalStorage.Batch(actions =>
                 {
                     results = ProcessBatch(commands);
@@ -2455,6 +2464,18 @@ namespace Raven.Database
                 return results;
             }
         }
+
+	    private bool IsScriptedPatchCommandDataWithoutEtagProperty(ICommandData commandData)
+	    {
+		    var scriptedPatchCommandData = commandData as ScriptedPatchCommandData;
+
+		    const string scriptEtagKey = "'@etag':";
+		    const string etagKey = "etag";		    
+
+		    return scriptedPatchCommandData != null &&
+				   scriptedPatchCommandData.Patch.Script.Replace(" ",String.Empty).Contains(scriptEtagKey) == false &&
+				   scriptedPatchCommandData.Patch.Values.ContainsKey(etagKey) == false;
+	    }
 
         private BatchResult[] BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(IList<ICommandData> commands)
         {

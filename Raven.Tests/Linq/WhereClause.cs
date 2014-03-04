@@ -20,7 +20,6 @@ namespace Raven.Tests.Linq
 		private readonly IDocumentStore documentStore;
 		private readonly IDocumentSession documentSession;
 
-
 		public WhereClause()
 		{
 			documentStore = new EmbeddableDocumentStore

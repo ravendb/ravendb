@@ -271,6 +271,7 @@
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
     <Compile Include="Bugs\EntityWithStack.cs" />
+    <Compile Include="Issues\ActualValueInJsonReaderException.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
     <Compile Include="Bundles\Authorization\AuthorizationTest.cs" />
     <Compile Include="Bundles\Authorization\Bugs\Bowes.cs" />
@@ -293,9 +294,6 @@
     <Compile Include="Bundles\CascadeDelete\CascadeDelete.cs" />
     <Compile Include="Bundles\Company.cs" />
     <Compile Include="Bundles\Expiration\WithCascade.cs" />
-    <Compile Include="Bundles\IndexReplication\Bugs\Micro.cs" />
-    <Compile Include="Bundles\IndexReplication\FactIfSqlServerIsAvailable.cs" />
-    <Compile Include="Bundles\IndexReplication\ReplicateToSql.cs" />
     <Compile Include="Bundles\Replication\ReplicationDestinationDisabled.cs" />
     <Compile Include="Bundles\Replication\ReplicationWithOAuth.cs" />
     <Compile Include="Bundles\UniqueConstraints\Bugs\CaseInsensitive.cs" />
@@ -315,12 +313,15 @@
     <Compile Include="Bundles\UniqueConstraints\ExtensionLoadTests.cs" />
     <Compile Include="Bundles\UniqueConstraints\UniqueConstraintsTest.cs" />
     <Compile Include="Bundles\UniqueConstraints\UpdateTests.cs" />
+    <Compile Include="EmptyDisposable.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client.cs" />
     <Compile Include="Issues\RavenDB_1538.cs" />
     <Compile Include="Issues\RavenDB_1297 .cs" />
     <Compile Include="Issues\RavenDB_1285.cs" />
+    <Compile Include="Issues\RavenDB_1461.cs" />
+    <Compile Include="Issues\RavenDB_1395.cs" />
     <Compile Include="Issues\RavenDB_1540.cs" />
     <Compile Include="Issues\RavenDB_1302.cs" />
     <Compile Include="Issues\RavenDB_1289.cs" />
@@ -361,16 +362,12 @@
     <Compile Include="Issues\RavenDB_1561.cs" />
     <Compile Include="Issues\RavenDB_1560.cs" />
     <Compile Include="Issues\RavenDB_1595.cs" />
-    <Compile Include="Issues\RavenDB_1603.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="Issues\RavenDB_1565.cs" />
     <Compile Include="Issues\RavenDB_1594.cs" />
     <Compile Include="Issues\RavenDB_1609.cs" />
     <Compile Include="Issues\RavenDB_1610.cs" />
     <Compile Include="Issues\RavenDB_1650.cs" />
     <Compile Include="Issues\RavenDB_1666.cs" />
-    <Compile Include="Issues\RavenDB_1701.cs" />
     <Compile Include="Issues\RavenDB_1716.cs" />
     <Compile Include="Issues\RavenDB_1717.cs" />
     <Compile Include="Issues\RavenDB_1735.cs" />
@@ -383,6 +380,8 @@
     <Compile Include="Issues\RavenDB_1562.cs" />
     <Compile Include="Issues\RavenDB_1598_MappingComplexProperties.cs" />
     <Compile Include="Issues\RavenDB_1600.cs" />
+    <Compile Include="Issues\RavenDB_1601.cs" />
+    <Compile Include="Issues\RavenDB_1603.cs" />
     <Compile Include="Issues\RavenDB_1733.cs" />
     <Compile Include="Issues\RDBQA_11.cs" />
     <Compile Include="Issues\RDBQA_7.cs" />
@@ -1070,6 +1069,7 @@
     <Compile Include="NestedIndexing\Item.cs" />
     <Compile Include="NestedIndexing\WithMapReduce.cs" />
     <Compile Include="NonIncrementalBackupRestoreTest.cs" />
+    <Compile Include="NoNonDisposableTests.cs" />
     <Compile Include="Notifications\ReplicationConflicts.cs" />
     <Compile Include="Notifications\ReplicationConflicts_Embedded.cs" />
     <Compile Include="Patching\BigDoc.cs" />
@@ -1680,10 +1680,6 @@
       <Project>{d9ccc62f-0b4e-4b37-be7e-203d34b4ec4f}</Project>
       <Name>Raven.Bundles.CascadeDelete</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Bundles\Raven.Bundles.IndexReplication\Raven.Bundles.IndexReplication.csproj">
-      <Project>{2728bba7-5142-445e-baa5-142a25e0666d}</Project>
-      <Name>Raven.Bundles.IndexReplication</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Bundles\Raven.Bundles.UniqueConstraints\Raven.Bundles.UniqueConstraints.csproj">
       <Project>{4c026f8a-fb36-4a30-82e9-324d207f6b48}</Project>
       <Name>Raven.Bundles.UniqueConstraints</Name>
@@ -1731,7 +1727,7 @@
     </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
       <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
-      <Name>Voron %28Voron\Voron%29</Name>
+      <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

@@ -106,6 +106,7 @@ namespace Raven.Tests.Issues
             RegisterRouteForOnlySysDb<SynchronizationController>(a => a.ApplyConflict(string.Empty, 0, string.Empty, string.Empty));
             RegisterRouteForOnlySysDb<SynchronizationController>(a => a.LastSynchronization(Guid.Empty));
             RegisterRouteForOnlySysDb<SynchronizationController>(a => a.IncrementLastETag(Guid.Empty, string.Empty, Guid.Empty));
+            RegisterRouteForOnlySysDb<SynchronizationController>(a => a.Status(null));
 
             const string nonSystemDbPrefix = "databases/{databaseName}/";
 

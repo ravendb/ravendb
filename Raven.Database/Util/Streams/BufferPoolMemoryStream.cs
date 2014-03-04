@@ -8,6 +8,8 @@ using System;
 using System.Diagnostics;
 using System.IO;
 
+using Raven.Abstractions.Util.Streams;
+
 namespace Raven.Database.Util.Streams
 {
     public class BufferPoolMemoryStream : Stream

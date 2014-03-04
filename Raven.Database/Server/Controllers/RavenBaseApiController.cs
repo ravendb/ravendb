@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -18,8 +20,10 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.WebApi;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -457,6 +461,10 @@ namespace Raven.Database.Server.Controllers
 			var resourceAssembly = typeof(IHttpContext).Assembly;
 			var resourceNames = resourceAssembly.GetManifestResourceNames();
 			var lowercasedResourceName = resourceNames.FirstOrDefault(s => string.Equals(s, resourceName, StringComparison.OrdinalIgnoreCase));
+		    if (lowercasedResourceName == null)
+		    {
+		        return GetEmptyMessage(HttpStatusCode.NotFound);
+		    }
 			using (var resource = resourceAssembly.GetManifestResourceStream(lowercasedResourceName))
 			{
 				if (resource == null)
@@ -514,5 +522,39 @@ namespace Raven.Database.Server.Controllers
 			return new JsonContent(data)
 				.WithRequest(InnerRequest);
 		}
+
+        public string GetRequestUrl()
+        {
+            var rawUrl = InnerRequest.RequestUri.PathAndQuery;
+            return UrlExtension.GetRequestUrlFromRawUrl(rawUrl, SystemConfiguration);
+        }
+
+	    public abstract InMemoryRavenConfiguration SystemConfiguration { get; }
+
+
+	    protected void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp)
+        {
+            AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion, msg);
+            AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
+        }
+
+	    public abstract bool SetupRequestToProperDatabase(RequestManager requestManager);
+
+        public abstract string TenantName { get; }
+
+        public StringBuilder CustomRequestTraceInfo { get; private set; }
+
+        public void AddRequestTraceInfo(string info)
+        {
+            if (string.IsNullOrEmpty(info))
+                return;
+
+            if (CustomRequestTraceInfo == null)
+                CustomRequestTraceInfo = new StringBuilder(info);
+            else
+                CustomRequestTraceInfo.Append(info);
+        }
+
+	    public abstract void MarkRequestDuration(long duration);
 	}
 }

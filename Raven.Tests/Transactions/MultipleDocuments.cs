@@ -32,6 +32,9 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void PutTwoDocumentsAndThenCommit()
 		{
+		    if (db.TransactionalStorage.SupportsDtc == false)
+		        return;
+
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
@@ -46,6 +49,8 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void CommittingWillOnlyCommitSingleTransaction()
 		{
+            if (db.TransactionalStorage.SupportsDtc == false)
+                return;
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
             db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) });
@@ -60,6 +65,8 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void PutTwoDocumentsAndThenCommitReversedOrder()
 		{
+            if (db.TransactionalStorage.SupportsDtc == false)
+                return;
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
@@ -74,6 +81,8 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void WhileUpdatingSeveralDocumentsCannotAccessAnyOfThem()
 		{
+            if (db.TransactionalStorage.SupportsDtc == false)
+                return;
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			Assert.True(db.Get("ayende1", null).Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));

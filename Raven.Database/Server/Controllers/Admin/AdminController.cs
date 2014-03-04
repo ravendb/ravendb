@@ -14,8 +14,6 @@ using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using System.Net.Http;
-using Raven.Database.Server.Responders;
-using Raven.Database.Server.Tenancy;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -213,7 +211,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		public HttpResponseMessage Compact()
 		{
 			EnsureSystemDatabase();
-				
+
 			var db = InnerRequest.RequestUri.ParseQueryString()["database"];
 			if (string.IsNullOrWhiteSpace(db))
 				return GetMessageWithString("Compact request requires a valid database parameter", HttpStatusCode.BadRequest);
@@ -222,7 +220,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (configuration == null)
 				return GetMessageWithString("No database named: " + db, HttpStatusCode.NotFound);
 
-			DatabasesLandlord.LockDatabase(db, () => DatabasesLandlord.SystemDatabase.TransactionalStorage.Compact(configuration));
+			DatabasesLandlord.Lock(db, () => DatabasesLandlord.SystemDatabase.TransactionalStorage.Compact(configuration));
 
 			return GetEmptyMessage();
 		}
@@ -292,7 +290,7 @@ namespace Raven.Database.Server.Controllers.Admin
                     let indexStorageSize = documentDatabase.GetIndexStorageSizeOnDisk()
                     let transactionalStorageSize = documentDatabase.GetTransactionalStorageSizeOnDisk()
                     let totalDatabaseSize = indexStorageSize + transactionalStorageSize.AllocatedSizeInBytes
-                    let lastUsed = DatabasesLandlord.DatabaseLastRecentlyUsed.GetOrDefault(documentDatabase.Name ?? Constants.SystemDatabase)
+                    let lastUsed = DatabasesLandlord.LastRecentlyUsed.GetOrDefault(documentDatabase.Name ?? Constants.SystemDatabase)
                     select new LoadedDatabaseStatistics
                     {
                         Name = documentDatabase.Name,
@@ -302,13 +300,13 @@ namespace Raven.Database.Server.Controllers.Admin
 								documentDatabase.WorkContext.LastWorkTime
 							}.Max(),
                         TransactionalStorageAllocatedSize = transactionalStorageSize.AllocatedSizeInBytes,
-                        TransactionalStorageAllocatedSizeHumaneSize = DatabaseSize.Humane(transactionalStorageSize.AllocatedSizeInBytes),
+                        TransactionalStorageAllocatedSizeHumaneSize = SizeHelper.Humane(transactionalStorageSize.AllocatedSizeInBytes),
                         TransactionalStorageUsedSize = transactionalStorageSize.UsedSizeInBytes,
-                        TransactionalStorageUsedSizeHumaneSize = DatabaseSize.Humane(transactionalStorageSize.UsedSizeInBytes),
+                        TransactionalStorageUsedSizeHumaneSize = SizeHelper.Humane(transactionalStorageSize.UsedSizeInBytes),
                         IndexStorageSize = indexStorageSize,
-                        IndexStorageHumaneSize = DatabaseSize.Humane(indexStorageSize),
+                        IndexStorageHumaneSize = SizeHelper.Humane(indexStorageSize),
                         TotalDatabaseSize = totalDatabaseSize,
-                        TotalDatabaseHumaneSize = DatabaseSize.Humane(totalDatabaseSize),
+                        TotalDatabaseHumaneSize = SizeHelper.Humane(totalDatabaseSize),
                         CountOfDocuments = documentDatabase.Statistics.CountOfDocuments,
                         CountOfAttachments = documentDatabase.Statistics.CountOfAttachments,
 

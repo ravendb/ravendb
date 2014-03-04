@@ -7,6 +7,7 @@ namespace Raven.Tests.Bundles.ScriptedIndexResults
 {
 	public class Animal
 	{
+        public string Id { get; set; }
 		public string Name { get; set; }
 		public string Type { get; set; }
 	}

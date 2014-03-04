@@ -8,6 +8,7 @@ using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Security;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
@@ -84,7 +85,7 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(new
 			{
 				DatabaseSize = totalSizeOnDisk,
-				DatabaseSizeHumane = Humane(totalSizeOnDisk)
+                DatabaseSizeHumane = SizeHelper.Humane(totalSizeOnDisk)
 			});
 		}
 
@@ -99,33 +100,16 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(new
 			{
                 TransactionalStorageAllocatedSize = transactionalStorageSize.AllocatedSizeInBytes,
-                TransactionalStorageAllocatedSizeHumaneSize = Humane(transactionalStorageSize.AllocatedSizeInBytes),
+                TransactionalStorageAllocatedSizeHumaneSize = SizeHelper.Humane(transactionalStorageSize.AllocatedSizeInBytes),
                 TransactionalStorageUsedSize = transactionalStorageSize.UsedSizeInBytes,
-                TransactionalStorageUsedSizeHumaneSize = Humane(transactionalStorageSize.UsedSizeInBytes),
+                TransactionalStorageUsedSizeHumaneSize = SizeHelper.Humane(transactionalStorageSize.UsedSizeInBytes),
 				IndexStorageSize = indexStorageSize,
-				IndexStorageSizeHumane = Humane(indexStorageSize),
+                IndexStorageSizeHumane = SizeHelper.Humane(indexStorageSize),
 				TotalDatabaseSize = totalDatabaseSize,
-				TotalDatabaseSizeHumane = Humane(totalDatabaseSize),
+				TotalDatabaseSizeHumane = SizeHelper.Humane(totalDatabaseSize),
 			});
 		}
 
-		public static string Humane(long? size)
-		{
-			if (size == null)
-				return null;
-
-			var absSize = Math.Abs(size.Value);
-			const double GB = 1024 * 1024 * 1024;
-			const double MB = 1024 * 1024;
-			const double KB = 1024;
-
-			if (absSize > GB) // GB
-				return string.Format("{0:#,#.##;;0} GBytes", size / GB);
-			if (absSize > MB)
-				return string.Format("{0:#,#.##;;0} MBytes", size / MB);
-			if (absSize > KB)
-				return string.Format("{0:#,#.##;;0} KBytes", size / KB);
-			return string.Format("{0:#,#;;0} Bytes", size);
-		}
+		
 	}
 }

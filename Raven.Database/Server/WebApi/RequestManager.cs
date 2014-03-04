@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
@@ -13,9 +12,7 @@ using System.Web;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
 using Raven.Database.Impl;
-using Raven.Database.Impl.Clustering;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
@@ -39,7 +36,7 @@ namespace Raven.Database.Server.WebApi
 			new ConcurrentDictionary<string, ConcurrentQueue<LogHttpRequestStatsParams>>();
 
 		private DateTime lastWriteRequest;
-	    private CancellationTokenSource cancellationTokenSource;
+	    private readonly CancellationTokenSource cancellationTokenSource;
 	    private long concurrentRequests;
 		private int physicalRequestsCount;
 		private bool initialized;
@@ -52,7 +49,13 @@ namespace Raven.Database.Server.WebApi
 
 		public event EventHandler<BeforeRequestWebApiEventArgs> BeforeRequest;
 
-		public RequestManager(DatabasesLandlord landlord)
+	    public virtual void OnBeforeRequest(BeforeRequestWebApiEventArgs e)
+	    {
+	        var handler = BeforeRequest;
+	        if (handler != null) handler(this, e);
+	    }
+
+	    public RequestManager(DatabasesLandlord landlord)
 		{
             BeforeRequest+=OnBeforeRequest;
 		    cancellationTokenSource = new CancellationTokenSource();
@@ -73,9 +76,11 @@ namespace Raven.Database.Server.WebApi
 	    private void OnBeforeRequest(object sender, BeforeRequestWebApiEventArgs args)
 	    {
 	        var documentDatabase = args.Database;
-
-            documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.Mark();
-            documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.Mark();
+	        if (documentDatabase != null)
+	        {
+                documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.Mark();
+                documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.Mark();
+	        }
 	    }
 
 	    public void Init()
@@ -104,7 +109,7 @@ namespace Raven.Database.Server.WebApi
 		    });
 		}
 
-	    public async Task<HttpResponseMessage> HandleActualRequest(RavenDbApiController controller,
+        public async Task<HttpResponseMessage> HandleActualRequest(RavenBaseApiController controller,
 		                                                           Func<Task<HttpResponseMessage>> action,
 		                                                           Func<HttpException, HttpResponseMessage> onHttpException)
 	    {
@@ -120,7 +125,7 @@ namespace Raven.Database.Server.WebApi
 	                lastWriteRequest = SystemTime.UtcNow;
 	            }
 
-	            if (SetupRequestToProperDatabase(controller))
+                if (controller.SetupRequestToProperDatabase(this))
 	            {
 	                response = await action();
 	            }
@@ -146,7 +151,7 @@ namespace Raven.Database.Server.WebApi
 	    }
 
 	    // Cross-Origin Resource Sharing (CORS) is documented here: http://www.w3.org/TR/cors/
-		public void AddAccessControlHeaders(RavenDbApiController controller, HttpResponseMessage msg)
+        public void AddAccessControlHeaders(RavenBaseApiController controller, HttpResponseMessage msg)
 		{
 			if (string.IsNullOrEmpty(landlord.SystemConfiguration.AccessControlAllowOrigin))
 				return;
@@ -174,92 +179,6 @@ namespace Raven.Database.Server.WebApi
 			{
 				controller.AddHeader("Access-Control-Request-Headers", landlord.SystemConfiguration.AccessControlRequestHeaders, msg);
 			}
-		}
-
-		private bool SetupRequestToProperDatabase(RavenDbApiController controller)
-		{
-			var onBeforeRequest = BeforeRequest;
-			var tenantId = controller.DatabaseName;
-
-			if (string.IsNullOrWhiteSpace(tenantId) || tenantId == "<system>")
-			{
-				landlord.DatabaseLastRecentlyUsed.AddOrUpdate("System", SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
-				if (onBeforeRequest != null)
-				{
-					var args = new BeforeRequestWebApiEventArgs
-					{
-						Controller = controller,
-						IgnoreRequest = false,
-						TenantId = "System",
-						Database = landlord.SystemDatabase
-					};
-					onBeforeRequest(this, args);
-					if (args.IgnoreRequest)
-						return false;
-				}
-				return true;
-			}
-
-			Task<DocumentDatabase> resourceStoreTask;
-			bool hasDb;
-			try
-			{
-				hasDb = landlord.TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
-			}
-			catch (Exception e)
-			{
-				OutputDatabaseOpenFailure(tenantId, e);
-				return false;
-			}
-			if (hasDb)
-			{
-				try
-				{
-					if (resourceStoreTask.Wait(TimeSpan.FromSeconds(30)) == false)
-					{
-						var msg = "The database " + tenantId + " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, database loading continues.";
-						Logger.Warn(msg);
-						throw new HttpException(503, msg);
-					}
-					if (onBeforeRequest != null)
-					{
-						var args = new BeforeRequestWebApiEventArgs()
-						{
-							Controller = controller,
-							IgnoreRequest = false,
-							TenantId = tenantId,
-							Database = resourceStoreTask.Result
-						};
-						onBeforeRequest(this, args);
-						if (args.IgnoreRequest)
-							return false;
-					}
-				}
-				catch (Exception e)
-				{
-					OutputDatabaseOpenFailure(tenantId, e);
-					return false;
-				}
-
-				landlord.DatabaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
-
-				//TODO: check
-				//if (string.IsNullOrEmpty(systemDatabase.Configuration.VirtualDirectory) == false && systemDatabase.Configuration.VirtualDirectory != "/")
-				//{
-				//	ctx.AdjustUrl(systemDatabase.Configuration.VirtualDirectory + match.Value);
-				//}
-				//else
-				//{
-				//	ctx.AdjustUrl(match.Value);
-				//}
-			}
-			else
-			{
-				var msg = "Could not find a database named: " + tenantId;
-				Logger.Warn(msg);
-				throw new HttpException(503, msg);
-			}
-			return true;
 		}
 
         public void SetThreadLocalState(HttpHeaders innerHeaders, string databaseName)
@@ -296,12 +215,6 @@ namespace Raven.Database.Server.WebApi
 			}
 		}
 
-		private static void OutputDatabaseOpenFailure(string tenantId, Exception e)
-		{
-			var msg = "Could open database named: " + tenantId;
-			Logger.WarnException(msg, e);
-			throw new HttpException(503, msg, e);
-		}
 
 		private static bool IsWriteRequest(HttpRequestMessage request)
 		{
@@ -332,7 +245,7 @@ namespace Raven.Database.Server.WebApi
 			Interlocked.Decrement(ref physicalRequestsCount);
 		}
 
-		private void FinalizeRequestProcessing(RavenDbApiController controller, HttpResponseMessage response, Stopwatch sw)
+        private void FinalizeRequestProcessing(RavenBaseApiController controller, HttpResponseMessage response, Stopwatch sw)
 		{
 			LogHttpRequestStatsParams logHttpRequestStatsParam = null;
 		    try
@@ -356,11 +269,11 @@ namespace Raven.Database.Server.WebApi
 
 			sw.Stop();
 
-		    controller.Database.WorkContext.MetricsCounters.RequestDuationMetric.Update(sw.ElapsedMilliseconds);
+		    controller.MarkRequestDuration(sw.ElapsedMilliseconds);
 
-			LogHttpRequestStats(logHttpRequestStatsParam, controller.DatabaseName);
+			LogHttpRequestStats(logHttpRequestStatsParam, controller.TenantName);
 
-			TraceRequest(logHttpRequestStatsParam, controller.DatabaseName);
+			TraceRequest(logHttpRequestStatsParam, controller.TenantName);
 
 		}
 
@@ -453,7 +366,7 @@ namespace Raven.Database.Server.WebApi
 				}
 			}
 
-			var databasesToCleanup = landlord.DatabaseLastRecentlyUsed
+			var databasesToCleanup = landlord.LastRecentlyUsed
 				.Where(x => (SystemTime.UtcNow - x.Value) > maxTimeDatabaseCanBeIdle)
 				.Select(x => x.Key)
 				.ToArray();
@@ -462,7 +375,7 @@ namespace Raven.Database.Server.WebApi
 			{
 				// intentionally inside the loop, so we get better concurrency overall
 				// since shutting down a database can take a while
-				landlord.CleanupDatabase(db, skipIfActive: true);
+				landlord.Cleanup(db, skipIfActive: true);
 			}
 		}
 	}

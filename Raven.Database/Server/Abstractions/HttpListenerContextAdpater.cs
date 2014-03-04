@@ -10,8 +10,8 @@ using System.Net;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util.Streams;
 using Raven.Database.Config;
-using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Server.Abstractions
 {

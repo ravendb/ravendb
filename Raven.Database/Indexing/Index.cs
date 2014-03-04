@@ -34,7 +34,6 @@ using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
-using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Database.Util;
@@ -135,7 +134,7 @@ namespace Raven.Database.Indexing
 					return "false";
 				try
 				{
-					return "true (" + DatabaseSize.Humane(ramDirectory.SizeInBytes()) + ")";
+                    return "true (" + SizeHelper.Humane(ramDirectory.SizeInBytes()) + ")";
 				}
 				catch (AlreadyClosedException)
 				{
@@ -328,6 +327,37 @@ namespace Raven.Database.Indexing
 			}
 			return documentFromFields;
 		}
+
+        protected void InvokeOnIndexEntryDeletedOnAllBatchers(List<AbstractIndexUpdateTriggerBatcher> batchers, Term term)
+        {
+            if (!batchers.Any(batcher => batcher.RequiresDocumentOnIndexEntryDeleted)) return;
+            // find all documents
+            var key = term.Text;
+
+            IndexSearcher searcher = null;
+            using (GetSearcher(out searcher))
+            {
+                var collector = new GatherAllCollector();
+                searcher.Search(new TermQuery(term), collector);
+                var topDocs = collector.ToTopDocs();
+                
+                foreach (var scoreDoc in topDocs.ScoreDocs)
+                {
+                    var document = searcher.Doc(scoreDoc.Doc);
+                    batchers.ApplyAndIgnoreAllErrors(
+                        exception =>
+                        {
+                            logIndexing.WarnException(
+                                string.Format(
+                                    "Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
+                                    indexId, key),
+                                exception);
+                            context.AddError(indexId, key, exception.Message, "OnIndexEntryDeleted Trigger");
+                        },
+                        trigger => trigger.OnIndexEntryDeleted(key, document));
+                }
+            }
+        }
 
 		private static KeyValuePair<string, RavenJToken> CreateProperty(Field fld, Document document)
 		{
