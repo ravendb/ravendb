@@ -13,12 +13,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 
         private readonly string tempPath;
 
-		public MemoryMapPersistenceSource(NameValueCollection settings)
+		public MemoryMapPersistenceSource(string path, NameValueCollection settings)
 		{
             if (settings == null)
                 throw new ArgumentNullException("settings");
 
-            directoryPath = AppDomain.CurrentDomain.BaseDirectory; // TODO
+            directoryPath = !string.IsNullOrEmpty(path) ? path : AppDomain.CurrentDomain.BaseDirectory;
 			var filePathFolder = new DirectoryInfo(directoryPath);
 		    if (filePathFolder.Exists == false)
 		        filePathFolder.Create();

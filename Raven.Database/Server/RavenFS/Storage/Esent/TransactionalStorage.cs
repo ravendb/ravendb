@@ -209,7 +209,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 		}
 
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
-		public void Batch(Action<Storage.IStorageActionsAccessor> action)
+		public void Batch(Action<IStorageActionsAccessor> action)
 		{
 			if (Id == Guid.Empty)
 				throw new InvalidOperationException("Cannot use Storage before Initialize was called");

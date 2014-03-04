@@ -8,12 +8,33 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util.Streams;
+using Raven.Database.Server.RavenFS.Storage.Voron.Impl;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc;
+
+using Voron.Impl;
 
 namespace Raven.Database.Server.RavenFS.Storage.Voron
 {
     public class StorageActionsAccessor : IStorageActionsAccessor
     {
+        private readonly TableStorage tableStorage;
+
+        private readonly Reference<WriteBatch> writeBatchRef;
+
+        private readonly SnapshotReader snapshot;
+
+        private readonly BufferPool bufferPool;
+
+        public StorageActionsAccessor(TableStorage tableStorage, Reference<WriteBatch> writeBatchRef, SnapshotReader snapshot, BufferPool bufferPool)
+        {
+            this.tableStorage = tableStorage;
+            this.writeBatchRef = writeBatchRef;
+            this.snapshot = snapshot;
+            this.bufferPool = bufferPool;
+        }
+
         public void Dispose()
         {
             throw new NotImplementedException();
