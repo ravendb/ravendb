@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.Synchronization
 {
-	public class ConcurrentJsonDocumentSortedListTests
+	public class ConcurrentJsonDocumentSortedListTests : NoDisposalNeeded
 	{
 		[Fact]
 		public void ConcurrentJsonDocumentSortedListShouldSortByEtag()

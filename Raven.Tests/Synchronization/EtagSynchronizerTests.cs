@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Raven.Tests.Synchronization
 {
-	public class EtagSynchronizerTests
+	public class EtagSynchronizerTests : NoDisposalNeeded
 	{
 		private readonly ITransactionalStorage storage;
 

@@ -155,7 +155,7 @@ namespace Raven.Database.Server.Tenancy
 
         protected override DateTime LastWork(RavenFileSystem resource)
         {
-            return DateTime.MinValue;
+            return resource.SynchronizationTask.LastSuccessfulSynchronizationTime;
         }
 
         public async Task<RavenFileSystem> GetFileSystemInternal(string name)

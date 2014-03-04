@@ -19,7 +19,6 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Queries;
-using Raven.Database.Server.Responders;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
 using Raven.Json.Linq;

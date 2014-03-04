@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class InMemoryOnly
+	public class InMemoryOnly : RavenTest
 	{
 		[TimeBombedFact(2014, 3, 15, "Waiting for RavenDB-1611 issue to be fixed")]
 		public void InMemoryDoesNotCreateDataDir()
@@ -19,16 +19,7 @@ namespace Raven.Tests.Bugs
 			IOExtensions.DeleteDirectory("Data");
 
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
-			using (var store = new EmbeddableDocumentStore
-			{
-				RunInMemory = true,
-				UseEmbeddedHttpServer = true,
-				Configuration = 
-				{
-					Port = 8079,
-					RunInMemory = true
-				}
-			}.Initialize())
+			using (NewDocumentStore(runInMemory: true, port: 8079))
 			{
 				Assert.False(Directory.Exists("Data"));
 			}

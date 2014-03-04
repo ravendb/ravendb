@@ -39,7 +39,7 @@ class shell {
         
         this.appUrls = appUrl.forCurrentDatabase();
 
-        new dynamicHeightBindingHandler().install();
+        dynamicHeightBindingHandler.install();
 	}
 
     activate() {
@@ -49,7 +49,7 @@ class shell {
             { route: 'documents',           title: 'Documents',     moduleId: 'viewmodels/documents',       nav: true,  hash: this.appUrls.documents },
 		    { route: 'indexes*details',     title: 'Indexes',       moduleId: 'viewmodels/indexesShell',    nav: true,  hash: this.appUrls.indexes },	
             { route: 'query(/:indexName)',	title: 'Query',			moduleId: 'viewmodels/queryShell',		nav: true,  hash: this.appUrls.query(null) },
-			{ route: 'tasks',			    title: 'Tasks',			moduleId: 'viewmodels/tasks',			nav: true,  hash: this.appUrls.tasks, },
+			{ route: 'tasks*details',	    title: 'Tasks',			moduleId: 'viewmodels/tasks',			nav: true,  hash: this.appUrls.tasks, },
 			{ route: 'settings*details',    title: 'Settings',		moduleId: 'viewmodels/settings',		nav: true,  hash: this.appUrls.settings },
             { route: 'status*details',	    title: 'Status',		moduleId: 'viewmodels/status',			nav: true,	hash: this.appUrls.status },
 			{ route: 'edit',			    title: 'Edit Document', moduleId: 'viewmodels/editDocument',	nav: false }

@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Document
 {
-	public class DocumentStoreServerGranularTests
+	public class DocumentStoreServerGranularTests : NoDisposalNeeded
 	{
 		[Fact]
 		public void Can_read_credentials_from_connection_string()
