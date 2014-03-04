@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq.Expressions;
@@ -98,10 +99,30 @@ namespace Raven.Abstractions.Extensions
 			propertyPathExpressionVisitor.Visit(expression);
 
 			var builder = new StringBuilder();
-			foreach (var result in propertyPathExpressionVisitor.Results)
+
+		    var stackLength = propertyPathExpressionVisitor.Results.Count;
+
+		    for (var i = 0; i < stackLength; i++)
+		    {
+		        var curValue = propertyPathExpressionVisitor.Results.Pop();
+
+		        if (curValue.Length == 1 && curValue[0] == propertySeparator && i != stackLength - 1)
+		        {
+		            var nextVal = propertyPathExpressionVisitor.Results.Peek();
+
+                    if (nextVal.Length == 1 && nextVal[0] == collectionSeparator)
+		            {
+		                continue;
+		            }
+		        }
+
+		        builder.Append(curValue);
+		        
+		    }
+			/*foreach (var result in propertyPathExpressionVisitor.Results)
 			{
 				builder.Append(result);
-			}
+			}*/
 			return builder.ToString().Trim(propertySeparator, collectionSeparator);
 		}
 
@@ -119,9 +140,18 @@ namespace Raven.Abstractions.Extensions
 
 			protected override Expression VisitMember(MemberExpression node)
 			{
-				Results.Push(propertySeparator);
-				Results.Push(node.Member.Name);
-				return base.VisitMember(node);
+
+			    if (node.Member.Name == "Value" || node.Member.Name == "Values")
+			    {
+			        return base.VisitMember(node);
+			    }
+			    else
+			    {
+                    Results.Push(propertySeparator);
+			        Results.Push(node.Member.Name);
+			        return base.VisitMember(node);
+			    }
+
 			}
 
 			protected override Expression VisitMethodCall(MethodCallExpression node)
