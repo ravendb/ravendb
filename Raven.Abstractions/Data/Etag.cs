@@ -4,11 +4,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Linq;
-#if NETFX_CORE
-using Raven.Abstractions.Util;
-#else
 using System.Security.Cryptography;
-#endif
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Data
