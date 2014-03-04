@@ -40,7 +40,7 @@ namespace Raven.Client.Util
 		{
 			get
 			{
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 				if (failedToGetAvailablePhysicalMemory)
 					return -1;
 

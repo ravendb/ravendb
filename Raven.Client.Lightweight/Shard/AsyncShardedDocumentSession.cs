@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -348,13 +347,9 @@ namespace Raven.Client.Shard
 																			RavenQueryStatistics ravenQueryStatistics,
 																			RavenQueryHighlightings highlightings)
 		{
-#if !SILVERLIGHT
 			return new ShardedRavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, isMapReduce, shardStrategy,
 				 null,
 				 shardDbCommands.Values.ToList());
-#else
-			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, isMapReduce);
-#endif
 		}
 
 		protected override IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce)
@@ -555,4 +550,3 @@ namespace Raven.Client.Shard
 		}
 	}
 }
-#endif

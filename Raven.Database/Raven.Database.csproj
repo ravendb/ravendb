@@ -1162,11 +1162,6 @@
       <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
       <Name>Raven.Client.Lightweight</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Studio\Raven.Studio.csproj">
-      <Project>{6828A6A5-B925-4716-8D08-2B26353C54C2}</Project>
-      <Name>Raven.Studio</Name>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
       <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
       <Name>Voron</Name>

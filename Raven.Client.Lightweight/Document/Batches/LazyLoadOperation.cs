@@ -40,13 +40,11 @@ namespace Raven.Client.Document.Batches
 
 		public bool RequiresRetry { get; set; }
 
-#if !SILVERLIGHT
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
 			var response = responses.OrderBy(x => x.Status).First(); // this way, 200 response is higher than 404
 			HandleResponse(response);
 		}
-#endif
 
 		public void HandleResponse(GetResponse response)
 		{
@@ -78,14 +76,12 @@ namespace Raven.Client.Document.Batches
 			return loadOperation.EnterLoadContext();
 		}
 
-#if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
 			return commands.Get(key);
 		}
-#endif
 
-		public void HandleEmbeddedResponse(object result)
+        public void HandleEmbeddedResponse(object result)
 		{
 			var multiLoadResult = result as MultiLoadResult;
 			if (multiLoadResult != null)

@@ -180,7 +180,7 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 
 		/// <summary>
 		/// Executes the index creation against the specified document store.
@@ -346,7 +346,6 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 
-#if !SILVERLIGHT
 		/// <summary>
 		/// Allows to use lambdas recursively
 		/// </summary>
@@ -354,7 +353,6 @@ namespace Raven.Client.Indexes
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
-#endif
 
 		/// <summary>
 		/// Loads the specifed document during the indexing process
@@ -462,7 +460,7 @@ namespace Raven.Client.Indexes
 			return new OperationMetadata(url, replicationDestination.Username, replicationDestination.Password, replicationDestination.Domain, replicationDestination.ApiKey);
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		internal void UpdateIndexInReplication(IDatabaseCommands databaseCommands, DocumentConvention documentConvention,
 			Action<ServerClient, OperationMetadata> action)
 		{

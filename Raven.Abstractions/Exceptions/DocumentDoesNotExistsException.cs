@@ -11,7 +11,7 @@ namespace Raven.Abstractions.Exceptions
 	/// <summary>
 	/// This exception is raised when a patch is made against a non existing document
 	/// </summary>
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 	[Serializable]
 #endif
 
@@ -41,7 +41,7 @@ namespace Raven.Abstractions.Exceptions
 		{
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentDoesNotExistsException"/> class.

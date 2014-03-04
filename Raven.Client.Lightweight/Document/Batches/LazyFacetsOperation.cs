@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-#if !SILVERLIGHT
 using Raven.Client.Connection;
 using Raven.Client.Shard;
-#endif
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -73,7 +71,6 @@ namespace Raven.Client.Document.Batches
 			Result = result.JsonDeserialization<FacetResults>();
 		}
 
-#if !SILVERLIGHT
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
 			var result = new FacetResults();
@@ -106,13 +103,11 @@ namespace Raven.Client.Document.Batches
 
 			Result = result;
 		}
-#endif
 
 		public IDisposable EnterContext()
 		{
 			return null;
 		}
-#if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
 			return commands.GetFacets( index, query, facetSetupDoc, start, pageSize );
@@ -122,6 +117,5 @@ namespace Raven.Client.Document.Batches
 		{
 			Result = result;
 		}
-#endif
 	}
 }

@@ -349,7 +349,6 @@ namespace Raven.Smuggler
 
         private static async Task<ServerSupportedFeatures> DetectServerSupportedFeatures(DocumentStore store)
         {
-#if !SILVERLIGHT
             var buildNumber = await store.AsyncDatabaseCommands.GetBuildNumberAsync();
             if (buildNumber == null || string.IsNullOrEmpty(buildNumber.ProductVersion))
             {
@@ -376,7 +375,6 @@ namespace Raven.Smuggler
                     IsDocsStreamingSupported = false,
                 };
             }
-#endif
 
             return new ServerSupportedFeatures
             {

@@ -10,9 +10,7 @@ using Raven.Client.RavenFS.Connections;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-#if !SILVERLIGHT
 using TaskEx = System.Threading.Tasks.Task;
-#endif
 
 namespace Raven.Client.RavenFS.Changes
 {
@@ -25,7 +23,7 @@ namespace Raven.Client.RavenFS.Changes
 		private int reconnectAttemptsRemaining;
 		private IDisposable connection;
 		private HttpJsonRequestFactory jsonRequestFactory =
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
  new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
 #else
 			  new HttpJsonRequestFactory();

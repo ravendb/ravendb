@@ -30,7 +30,7 @@ namespace Raven.Client.RavenFS
 		private readonly FileConvention convention;
 		private int readStripingBase;
 		private HttpJsonRequestFactory jsonRequestFactory =
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
  new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
 #else
 			  new HttpJsonRequestFactory();
@@ -41,14 +41,6 @@ namespace Raven.Client.RavenFS
 
 		private readonly ConcurrentDictionary<Guid, CancellationTokenSource> uploadCancellationTokens =
 			new ConcurrentDictionary<Guid, CancellationTokenSource>();
-
-#if SILVERLIGHT
-		static RavenFileSystemClient()
-		{
-			WebRequest.RegisterPrefix("http://", WebRequestCreator.ClientHttp);
-			WebRequest.RegisterPrefix("https://", WebRequestCreator.ClientHttp);
-		}
-#endif
 
 		/// <summary>
 		/// Notify when the failover status changed
@@ -341,13 +333,6 @@ namespace Raven.Client.RavenFS
 		{
 			return ExecuteWithReplication("GET", async operationUrl =>
 			{
-#if SILVERLIGHT
-            if (from != null || to != null)
-            {
-                throw new NotSupportedException("Silverlight doesn't support partial requests");
-            }
-#endif
-
 				var collection = new NameValueCollection();
 				if (destination.CanWrite == false)
 					throw new ArgumentException("Stream does not support writing");
@@ -356,7 +341,6 @@ namespace Raven.Client.RavenFS
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl + path + filename,
 						"GET", new OperationCredentials("", new CredentialCache()), convention));
 
-#if !SILVERLIGHT
 				if (from != null)
 				{
 					if (to != null)
@@ -369,7 +353,6 @@ namespace Raven.Client.RavenFS
 					destination.Position = destination.Length;
 					request.AddRange(destination.Position);
 				}
-#endif
 
 				try
 				{
@@ -688,7 +671,7 @@ namespace Raven.Client.RavenFS
 			private readonly FileConvention convention;
 			private readonly JsonSerializer jsonSerializer;
 			private HttpJsonRequestFactory jsonRequestFactory =
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
  new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
 #else
 			  new HttpJsonRequestFactory();
@@ -859,7 +842,7 @@ namespace Raven.Client.RavenFS
 			private readonly FileConvention convention;
 
 			private HttpJsonRequestFactory jsonRequestFactory =
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
  new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
 #else
 			  new HttpJsonRequestFactory();
@@ -1244,7 +1227,7 @@ namespace Raven.Client.RavenFS
 			private readonly RavenFileSystemClient ravenFileSystemClient;
 			private readonly FileConvention convention;
 			private HttpJsonRequestFactory jsonRequestFactory =
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
  new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
 #else
 			  new HttpJsonRequestFactory();

@@ -8,7 +8,6 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Batches
 {
-#if !SILVERLIGHT
 	public class LazyTransformerLoadOperation<T> : ILazyOperation
 	{
 		private readonly string[] ids;
@@ -42,13 +41,11 @@ namespace Raven.Client.Document.Batches
 
 		public bool RequiresRetry { get; set; }
 
-#if !SILVERLIGHT
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
 			var response = responses.OrderBy(x => x.Status).First(); // this way, 200 response is higher than 404
 			HandleResponse(response);
 		}
-#endif
 
 		public void HandleResponse(GetResponse response)
 		{
@@ -86,5 +83,4 @@ namespace Raven.Client.Document.Batches
 			Result = singleResult ? (object) complete[0] : complete;
 		}
 	}
-#endif
 }
