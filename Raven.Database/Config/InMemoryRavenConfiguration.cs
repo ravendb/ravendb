@@ -811,7 +811,7 @@ namespace Raven.Database.Config
 		public TimeSpan MaxIndexingRunLatency { get; set; }
 
 		internal bool IsTenantDatabase { get; set; }
-		
+
 		/// <summary>
 		/// If True, cluster discovery will be disabled. Default is False
 		/// </summary>
@@ -821,7 +821,7 @@ namespace Raven.Database.Config
 		/// The server name
 		/// </summary>
 		public string ServerName { get; set; }
-		
+
 		/// <summary>
 		/// The maximum number of steps (instructions) to give a script before timing out.
 		/// Default: 10,000
@@ -850,7 +850,7 @@ namespace Raven.Database.Config
         /// the facet cache when finishing an indexing batch
         /// </summary>
 	    public TimeSpan PrewarmFacetsOnIndexingMaxAge { get; set; }
-	    
+
         /// <summary>
         /// The time we should wait for pre-warming the facet cache from existing query after an indexing batch
         /// in a syncronous manner (after that, the pre warm still runs, but it will do so in a background thread).
