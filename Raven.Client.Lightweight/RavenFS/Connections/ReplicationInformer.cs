@@ -472,24 +472,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 		private FailureCounter GetHolder(string operationUrl)
 		{
-#if !SILVERLIGHT
 			return failureCounts.GetOrAdd(operationUrl, new FailureCounter());
-#else
-			// need to compensate for 3.5 not having concurrent dic.
-
-			FailureCounter value;
-			if (failureCounts.TryGetValue(operationUrl, out value) == false)
-			{
-				lock (replicationLock)
-				{
-					if (failureCounts.TryGetValue(operationUrl, out value) == false)
-					{
-						failureCounts[operationUrl] = value = new FailureCounter();
-					}
-				}
-			}
-			return value;
-#endif
 		}
 
 		/// <summary>
@@ -628,7 +611,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			{
 				switch (webException.Status)
 				{
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 					case WebExceptionStatus.Timeout:
 						timeout = true;
 						return true;

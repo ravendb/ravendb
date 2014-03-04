@@ -47,7 +47,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		public RavenJToken WaitForCompletion()
 		{
 			return WaitForCompletionAsync().Result;

@@ -43,7 +43,6 @@ namespace Raven.Client
 		/// <param name="queryInputs"></param>
 		void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
 
-#if !SILVERLIGHT
 		/// <summary>
 		/// Gets the query result
 		/// Execute the query the first time that this is called.
@@ -51,7 +50,6 @@ namespace Raven.Client
 		/// <value>The query result.</value>
 		QueryResult QueryResult { get; }
 		bool IsDistinct { get; }
-#endif
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy

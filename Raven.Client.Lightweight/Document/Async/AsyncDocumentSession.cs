@@ -233,11 +233,7 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce)
 		{
-			return new AsyncDocumentQuery<T>(this,
-#if !SILVERLIGHT
- null,
-#endif
- AsyncDatabaseCommands, index, new string[0], new string[0], theListeners.QueryListeners, isMapReduce);
+			return new AsyncDocumentQuery<T>(this,null,AsyncDatabaseCommands, index, new string[0], new string[0], theListeners.QueryListeners, isMapReduce);
 		}
 
 		/// <summary>
@@ -250,11 +246,7 @@ namespace Raven.Client.Document.Async
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
-			return new AsyncDocumentQuery<T>(this,
-#if !SILVERLIGHT
- null,
-#endif
- AsyncDatabaseCommands, indexName, new string[0], new string[0], theListeners.QueryListeners, false);
+			return new AsyncDocumentQuery<T>(this, null, AsyncDatabaseCommands, indexName, new string[0], new string[0], theListeners.QueryListeners, false);
 		}
 
 		/// <summary>
@@ -595,21 +587,12 @@ namespace Raven.Client.Document.Async
 			var ravenQueryStatistics = new RavenQueryStatistics();
 			var highlightings = new RavenQueryHighlightings();
 			return new RavenQueryInspector<T>(
-				new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings,
-#if !SILVERLIGHT
- null,
-#endif
- AsyncDatabaseCommands, isMapReduce),
+				new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, AsyncDatabaseCommands, isMapReduce),
 				ravenQueryStatistics,
 				highlightings,
 				indexName,
 				null,
-				this,
-#if !SILVERLIGHT
- null,
-#endif
- AsyncDatabaseCommands,
-				isMapReduce);
+				this, null, AsyncDatabaseCommands, isMapReduce);
 		}
 
 		/// <summary>

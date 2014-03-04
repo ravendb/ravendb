@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +10,7 @@ using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Client.Document;
-#if NETFX_CORE || SILVERLIGHT
+#if NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
 using Raven.Client.WinRT.MissingFromWinRT;
 #else
@@ -200,4 +199,3 @@ namespace Raven.Client.Shard
 		}
 	}
 }
-#endif

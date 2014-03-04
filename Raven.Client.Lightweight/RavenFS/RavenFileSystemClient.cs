@@ -340,7 +340,6 @@ namespace Raven.Client.RavenFS
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl + path + filename,
 						"GET", new OperationCredentials("", new CredentialCache()), convention));
 
-#if !SILVERLIGHT
 				if (from != null)
 				{
 					if (to != null)
@@ -353,7 +352,6 @@ namespace Raven.Client.RavenFS
 					destination.Position = destination.Length;
 					request.AddRange(destination.Position);
 				}
-#endif
 
 				try
 				{
@@ -664,7 +662,7 @@ namespace Raven.Client.RavenFS
 			private readonly FileConvention convention;
 			private readonly JsonSerializer jsonSerializer;
 			private HttpJsonRequestFactory jsonRequestFactory =
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
  new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
 #else
 			  new HttpJsonRequestFactory();
@@ -808,7 +806,7 @@ namespace Raven.Client.RavenFS
 			private readonly FileConvention convention;
 
 			private HttpJsonRequestFactory jsonRequestFactory =
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
  new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
 #else
 			  new HttpJsonRequestFactory();
@@ -1188,7 +1186,7 @@ namespace Raven.Client.RavenFS
 			private readonly RavenFileSystemClient ravenFileSystemClient;
 			private readonly FileConvention convention;
 			private HttpJsonRequestFactory jsonRequestFactory =
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
  new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
 #else
 			  new HttpJsonRequestFactory();

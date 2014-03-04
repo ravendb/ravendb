@@ -1472,7 +1472,7 @@ namespace Raven.Client.Connection.Async
 
 	    private void AddTransactionInformation(RavenJObject metadata)
 		{
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 			if (convention.EnlistInDistributedTransactions == false)
 				return;
 

@@ -62,12 +62,10 @@ namespace Raven.Client.Document
 		/// Whatever to negate the next operation
 		/// </summary>
 		protected bool negate;
-#if !SILVERLIGHT
 		/// <summary>
 		/// The database commands to use
 		/// </summary>
 		protected readonly IDatabaseCommands theDatabaseCommands;
-#endif
 		
 		/// <summary>
 		/// Async database commands to use
@@ -220,7 +218,6 @@ namespace Raven.Client.Document
 			get { return indexName; }
 		}
 
-#if !SILVERLIGHT
 		/// <summary>
 		///   Grant access to the database commands
 		/// </summary>
@@ -228,7 +225,6 @@ namespace Raven.Client.Document
 		{
 			get { return theDatabaseCommands; }
 		}
-#endif
 
 		/// <summary>
 		///   Grant access to the async database commands
@@ -246,7 +242,6 @@ namespace Raven.Client.Document
 			get { return conventions; }
 		}
 
-#if !SILVERLIGHT
 		/// <summary>
 		///   Gets the session associated with this document query
 		/// </summary>
@@ -254,7 +249,6 @@ namespace Raven.Client.Document
 		{
 			get { return (IDocumentSession)theSession; }
 		}
-#endif
 
 		InMemoryDocumentSessionOperations IRavenQueryInspector.Session
 		{
@@ -280,7 +274,6 @@ namespace Raven.Client.Document
 			}
 		}
 
-#if !SILVERLIGHT
 		/// <summary>
 		///   Initializes a new instance of the <see cref = "DocumentQuery{T}" /> class.
 		/// </summary>
@@ -294,15 +287,12 @@ namespace Raven.Client.Document
 			: this(theSession, databaseCommands, null, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
 		{
 		}
-#endif
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AbstractDocumentQuery{T, TSelf}"/> class.
 		/// </summary>
 		public AbstractDocumentQuery(InMemoryDocumentSessionOperations theSession,
-#if !SILVERLIGHT
 									 IDatabaseCommands databaseCommands,
-#endif
 									 IAsyncDatabaseCommands asyncDatabaseCommands,
 									 string indexName,
 									 string [] fieldsToFetch,
@@ -310,9 +300,7 @@ namespace Raven.Client.Document
 									 IDocumentQueryListener[] queryListeners, 
 									 bool isMapReduce)
 		{
-#if !SILVERLIGHT
 			this.theDatabaseCommands = databaseCommands;
-#endif
 			this.projectionFields = projectionFields;
 			this.fieldsToFetch = fieldsToFetch;
 			this.queryListeners = queryListeners;
@@ -325,14 +313,12 @@ namespace Raven.Client.Document
 			conventions = theSession == null ? new DocumentConvention() : theSession.Conventions;
 			linqPathProvider = new LinqPathProvider(conventions);
 
-#if !SILVERLIGHT
 		    var timeoutAsString = Environment.GetEnvironmentVariable(Constants.RavenDefaultQueryTimeout);
 		    int defaultTimeout;
 		    if (!string.IsNullOrEmpty(timeoutAsString) && int.TryParse(timeoutAsString, out defaultTimeout))
 		    {
 		        _defaultTimeout = defaultTimeout;
 		    }
-#endif
 
 			if(conventions.DefaultQueryingConsistency == ConsistencyOptions.AlwaysWaitForNonStaleResultsAsOfLastWrite)
 			{
@@ -352,9 +338,7 @@ namespace Raven.Client.Document
 		/// <param name = "other">The other.</param>
 		protected AbstractDocumentQuery(AbstractDocumentQuery<T, TSelf> other)
 		{
-#if !SILVERLIGHT
 			theDatabaseCommands = other.theDatabaseCommands;
-#endif
 			theAsyncDatabaseCommands = other.theAsyncDatabaseCommands;
 			indexName = other.indexName;
 			linqPathProvider = other.linqPathProvider;
@@ -604,7 +588,6 @@ namespace Raven.Client.Document
 			var indexQuery = GenerateIndexQuery(query);
 			return indexQuery;
 		}
-#if !SILVERLIGHT
 		public FacetResults GetFacets(string facetSetupDoc, int facetStart, int? facetPageSize)
 		{
 			var q = GetIndexQuery(false);
@@ -616,7 +599,6 @@ namespace Raven.Client.Document
 			var q = GetIndexQuery(false);
 			return DatabaseCommands.GetFacets(indexName, q, facets, facetStart, facetPageSize);
 		}
-#endif
 
 		public Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize)
 		{
@@ -630,7 +612,7 @@ namespace Raven.Client.Document
 			return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facets, facetStart, facetPageSize);
 		}
 
-#if !SILVERLIGHT  && !NETFX_CORE
+#if !NETFX_CORE
 		/// <summary>
 		///   Gets the query result
 		///   Execute the query the first time that this is called.
@@ -701,7 +683,7 @@ namespace Raven.Client.Document
         }
 #endif
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
@@ -907,7 +889,7 @@ namespace Raven.Client.Document
 			highlighterPostTags = postTags;
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		/// <summary>
 		///   Gets the enumerator.
 		/// </summary>
@@ -1037,7 +1019,6 @@ If you really want to do in memory filtering on the data returned from the query
 			start = count;
 		}
 
-#if !SILVERLIGHT
         public T First()
         {
             return ExecuteQueryOperation(1).First();
@@ -1067,7 +1048,6 @@ If you really want to do in memory filtering on the data returned from the query
 
             return queryOperation.Complete<T>();
         }
-#endif
 
 	    /// <summary>
 		///   Filter the results from the index using the specified where clause.
@@ -1862,7 +1842,7 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)",
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 			RegexOptions.Compiled
 #else
  RegexOptions.None

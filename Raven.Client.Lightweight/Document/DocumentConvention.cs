@@ -50,7 +50,7 @@ namespace Raven.Client.Document
 
 		private Dictionary<Type, Func<IEnumerable<object>, IEnumerable>> compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>();
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		private readonly IList<Tuple<Type, Func<string, IDatabaseCommands, object, string>>> listOfRegisteredIdConventions =
 			new List<Tuple<Type, Func<string, IDatabaseCommands, object, string>>>();
 #endif
@@ -79,11 +79,7 @@ namespace Raven.Client.Document
 			FindIdentityProperty = q => q.Name == "Id";
 			FindClrType = (id, doc, metadata) => metadata.Value<string>(Abstractions.Data.Constants.RavenClrType);
 
-#if !SILVERLIGHT
 			FindClrTypeName = entityType => ReflectionUtil.GetFullNameWithoutVersionInformation(entityType);
-#else
-			FindClrTypeName = entityType => entityType.AssemblyQualifiedName;
-#endif
 			TransformTypeTagNameToDocumentKeyPrefix = DefaultTransformTypeTagNameToDocumentKeyPrefix;
 			FindFullDocumentKeyFromNonStringIdentifier = DefaultFindFullDocumentKeyFromNonStringIdentifier;
 			FindIdentityPropertyNameFromEntityName = entityName => "Id";
@@ -264,7 +260,7 @@ namespace Raven.Client.Document
 			return FindTypeTagName(type) ?? DefaultTypeTagName(type);
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		/// <summary>
 		/// Generates the document key.
 		/// </summary>
@@ -297,7 +293,7 @@ namespace Raven.Client.Document
 				return typeToRegisteredIdConvention.Item2(dbName, databaseCommands, entity);
 			}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 			if (listOfRegisteredIdConventions.Any(x => x.Item1.IsAssignableFrom(type)))
 			{
 				throw new InvalidOperationException("Id convention for asynchronous operation was not found for entity " + type.FullName + ", but convention for synchronous operation exists.");
@@ -351,13 +347,12 @@ namespace Raven.Client.Document
 		/// Get or sets the function to get the identity property name from the entity name
 		/// </summary>
 		public Func<string, string> FindIdentityPropertyNameFromEntityName { get; set; }
-#if !SILVERLIGHT
-		/// <summary>
+
+        /// <summary>
 		/// Gets or sets the document key generator.
 		/// </summary>
 		/// <value>The document key generator.</value>
 		public Func<string, IDatabaseCommands, object, string> DocumentKeyGenerator { get; set; }
-#endif
 
 		/// <summary>
 		/// Gets or sets the document key generator.
@@ -388,7 +383,7 @@ namespace Raven.Client.Document
 		public bool ShouldSaveChangesForceAggressiveCacheCheck { get; set; }
 
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		/// <summary>
 		/// Register an id convention for a single type (and all of its derived types.
 		/// Note that you can still fall back to the DocumentKeyGenerator if you want.

@@ -31,9 +31,7 @@ namespace Raven.Client.Linq
 		private readonly RavenQueryStatistics queryStats;
 		private readonly RavenQueryHighlightings highlightings;
 		private readonly string indexName;
-#if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
-#endif
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private InMemoryDocumentSessionOperations session;
 		private readonly bool isMapReduce;
@@ -48,9 +46,7 @@ namespace Raven.Client.Linq
 			string indexName,
 			Expression expression,
 			InMemoryDocumentSessionOperations session
-#if !SILVERLIGHT
 			, IDatabaseCommands databaseCommands
-#endif
 			, IAsyncDatabaseCommands asyncDatabaseCommands,
 			bool isMapReduce
 			)
@@ -64,9 +60,7 @@ namespace Raven.Client.Linq
 			this.highlightings = highlightings;
 			this.indexName = indexName;
 			this.session = session;
-#if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
-#endif
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 			this.isMapReduce = isMapReduce;
 			this.provider.AfterQueryExecuted(this.AfterQueryExecuted);
@@ -179,7 +173,6 @@ namespace Raven.Client.Linq
 			return asyncLuceneQuery.GetIndexQuery(true);
 		}
 
-#if !SILVERLIGHT
 		public virtual FacetResults GetFacets(string facetSetupDoc, int start, int? pageSize)
 		{
 			return databaseCommands.GetFacets(indexName, GetIndexQuery(false), facetSetupDoc, start, pageSize);
@@ -189,7 +182,6 @@ namespace Raven.Client.Linq
 		{
 			return databaseCommands.GetFacets(indexName, GetIndexQuery(false), facets, start, pageSize);
 		}
-#endif
 
 		public virtual Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize)
 		{
@@ -236,7 +228,6 @@ namespace Raven.Client.Linq
 			}
 		}
 
-#if !SILVERLIGHT
 		/// <summary>
 		/// Grant access to the database commands
 		/// </summary>
@@ -249,9 +240,6 @@ namespace Raven.Client.Linq
 				return databaseCommands;
 			}
 		}
-
-		
-#endif
 
 		/// <summary>
 		/// Grant access to the async database commands

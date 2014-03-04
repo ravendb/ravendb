@@ -1,4 +1,4 @@
-﻿#if !SILVERLIGHT && !NETFX_CORE
+﻿#if !NETFX_CORE
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -28,14 +28,10 @@ namespace Raven.Client.Document
 		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
 		/// </summary>
 		public DocumentQuery(InMemoryDocumentSessionOperations session
-#if !SILVERLIGHT
 			, IDatabaseCommands databaseCommands
-#endif 
 			, IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool isMapReduce)
 			: base(session
-#if !SILVERLIGHT
 			, databaseCommands
-#endif
 			, asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
 		{
 		}
@@ -115,9 +111,7 @@ namespace Raven.Client.Document
 		public virtual IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
 		{
 			var documentQuery = new DocumentQuery<TProjection>(theSession,
-#if !SILVERLIGHT
 															   theDatabaseCommands,
-#endif
 															   theAsyncDatabaseCommands,
 															   indexName, 
 															   fields,

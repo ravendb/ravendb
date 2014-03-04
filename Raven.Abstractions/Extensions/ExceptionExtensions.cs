@@ -64,7 +64,7 @@ namespace Raven.Abstractions.Extensions
 			return string.Empty;
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		public static string TryReadResponseIfWebException(this Exception ex)
 		{
 			var webException = ex as WebException;
@@ -115,7 +115,7 @@ namespace Raven.Abstractions.Extensions
 			return JsonConvert.DeserializeObject<T>(response);
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
         public static T TryReadErrorResponseObject<T>(this Exception ex, T protoTypeObject = null) where T : class
         {
             var response = TryReadResponseIfWebException(ex);

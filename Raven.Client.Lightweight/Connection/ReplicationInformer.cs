@@ -92,11 +92,7 @@ namespace Raven.Client.Connection
 			this.conventions = conventions;
 		}
 
-#if !SILVERLIGHT
 		private readonly System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter>();
-#else
-		private readonly Dictionary<string, FailureCounter> failureCounts = new Dictionary<string, FailureCounter>();
-#endif
 
 		private Task refreshReplicationInformationTask;
 
@@ -249,25 +245,7 @@ namespace Raven.Client.Connection
 
 		protected FailureCounter GetHolder(string operationUrl)
 		{
-#if !SILVERLIGHT
 			return failureCounts.GetOrAdd(operationUrl, new FailureCounter());
-#else
-			// need to compensate for 3.5 not having concurrent dic.
-
-			FailureCounter value;
-			if (failureCounts.TryGetValue(operationUrl, out value) == false)
-			{
-				lock (replicationLock)
-				{
-					if (failureCounts.TryGetValue(operationUrl, out value) == false)
-					{
-						failureCounts[operationUrl] = value = new FailureCounter();
-					}
-				}
-			}
-			return value;
-#endif
-
 		}
 
 		/// <summary>
@@ -801,7 +779,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 			{
 				switch (webException.Status)
 				{
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 					case WebExceptionStatus.Timeout:
 						timeout = true;
 						return true;

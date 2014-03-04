@@ -1,5 +1,4 @@
-﻿#if !SILVERLIGHT
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenGC.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -52,4 +51,3 @@ namespace Raven.Abstractions.Util
 		});
 	}
 }
-#endif

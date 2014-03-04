@@ -28,11 +28,7 @@ namespace Raven.Abstractions.Connection
 			if (disableRequestCompression == false)
 				stream = new GZipStream(stream, CompressionMode.Compress, true);
 
-			using (var streamWriter = new StreamWriter(stream, Encoding.UTF8, 4096
-#if !SILVERLIGHT
-				, true
-#endif
-				))
+			using (var streamWriter = new StreamWriter(stream, Encoding.UTF8, 4096, true))
 			{
 				await streamWriter.WriteAsync(data);
 				await streamWriter.FlushAsync();

@@ -189,7 +189,7 @@ namespace Raven.Client.Document
 		}
 
 		private static Regex arrayEndRegex = new Regex(@"\[\], [\w\.-]+$",
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
  RegexOptions.Compiled
 #else
 													   RegexOptions.None	

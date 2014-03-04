@@ -77,7 +77,7 @@ namespace Raven.Client
 		/// Gets the shared operations headers.
 		/// </summary>
 		/// <value>The shared operations headers.</value>
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		NameValueCollection SharedOperationsHeaders { get; }
 #else
 		IDictionary<string,string> SharedOperationsHeaders { get; }
@@ -118,7 +118,7 @@ namespace Raven.Client
 		/// <returns></returns>
 		IAsyncDocumentSession OpenAsyncSession(string database);
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		/// <summary>
 		/// Opens the session.
 		/// </summary>
@@ -177,7 +177,7 @@ namespace Raven.Client
 		///</summary>
 		Etag GetLastWrittenEtag();
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
 #endif
 	}

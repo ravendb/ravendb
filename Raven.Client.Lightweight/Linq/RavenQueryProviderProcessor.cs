@@ -1619,7 +1619,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				{
 					return finalQuery.Any();
 				}
-#if !SILVERLIGHT
 				case SpecialQueryType.Count:
 				case SpecialQueryType.LongCount:
 				{
@@ -1631,16 +1630,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 						return (long) qr.TotalResults;
 					return qr.TotalResults;
 				}
-#else
-				case SpecialQueryType.Count:
-					{
-						throw new NotImplementedException("not done yet");
-					}
-				case SpecialQueryType.LongCount:
-					{
-						throw new NotImplementedException("not done yet");
-					}
-#endif
 				default:
 				{
 					return finalQuery;

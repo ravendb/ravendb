@@ -84,7 +84,7 @@ namespace Raven.Abstractions.OAuth
         }
 
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
         // TODO: Delete this, and use the async one.
         public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource, string apiKey)
         {
@@ -171,7 +171,7 @@ namespace Raven.Abstractions.OAuth
             {
                 tries++;
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
                 var handler = new WebRequestHandler();
 #else
 			    var handler = new HttpClientHandler();
