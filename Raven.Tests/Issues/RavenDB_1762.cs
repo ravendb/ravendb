@@ -6,10 +6,13 @@
 using System;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
+using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Database.Config;
+using Raven.Json.Linq;
 using Raven.Tests.Bundles.Replication;
 using Raven.Tests.Linq;
 using Xunit;
@@ -21,14 +24,17 @@ namespace Raven.Tests.Issues
         [InheritedExport(typeof(AbstractDocumentReplicationConflictResolver))]
         public class DeleteOnConflict : AbstractDocumentReplicationConflictResolver
         {
-            public static DeleteOnConflict Instance;
+            public static bool Enabled { get; set; }
 
-            public DeleteOnConflict()
+            public void Enable()
             {
-                Instance = this;
+                Enabled = true;
             }
 
-            public bool Enabled { get; set; }
+            public void Disable()
+            {
+                Enabled = false;
+            }
 
             public override bool TryResolve(string id, Raven.Json.Linq.RavenJObject metadata, Raven.Json.Linq.RavenJObject document, Raven.Abstractions.Data.JsonDocument existingDoc, Func<string, Raven.Abstractions.Data.JsonDocument> getDocument)
             {
@@ -40,16 +46,56 @@ namespace Raven.Tests.Issues
             }
         }
 
+        [InheritedExport(typeof(AbstractDocumentReplicationConflictResolver))]
+        public class PutOnConflict : AbstractDocumentReplicationConflictResolver
+        {
+            public static bool Enabled { get; set; }
+
+            public void Enable()
+            {
+                Enabled = true;
+            }
+
+            public void Disable()
+            {
+                Enabled = false;
+            }
+
+            private static void ReplaceValues(RavenJObject target, RavenJObject source)
+            {
+                string[] targetKeys = target.Keys.ToArray();
+
+                foreach (string key in targetKeys)
+                    target.Remove(key);
+
+                foreach (string key in source.Keys)
+                    target.Add(key, source[key]);
+            }
+
+            public override bool TryResolve(string id, Raven.Json.Linq.RavenJObject metadata, Raven.Json.Linq.RavenJObject document, Raven.Abstractions.Data.JsonDocument existingDoc, Func<string, Raven.Abstractions.Data.JsonDocument> getDocument)
+            {
+                if (Enabled)
+                {
+                    if (metadata.ContainsKey(Constants.RavenDeleteMarker))
+                    {
+                        ReplaceValues(document, existingDoc.DataAsJson);
+                        ReplaceValues(document, existingDoc.Metadata);
+                    }
+                }
+
+                return Enabled;
+            }
+        }
+
         protected override void ConfigureServer(RavenConfiguration serverConfiguration)
         {
-            serverConfiguration.Catalog.Catalogs.Add(new TypeCatalog(typeof(DeleteOnConflict)));
+            serverConfiguration.Catalog.Catalogs.Add(new TypeCatalog(typeof(DeleteOnConflict), typeof(PutOnConflict)));
         }
 
         const string docId = "users/1";
 
-        private void CanResolveConflict(Action<DeleteOnConflict> alterResolver, Action<IDocumentStore, IDocumentStore> testCallback)
+        private void CanResolveConflict<T>(T resolver, Action<T> alterResolver, Action<IDocumentStore, IDocumentStore> testCallback)
         {
-
             var store1 = CreateStore();
             var store2 = CreateStore();
 
@@ -67,8 +113,9 @@ namespace Raven.Tests.Issues
 
             WaitForReplication(store2, docId);
 
+            DeleteOnConflict.Enabled = false;
+            PutOnConflict.Enabled = false;
             // get reference to custom conflict resolver
-            var resolver = DeleteOnConflict.Instance;
             Assert.NotNull(resolver);
             if (alterResolver != null)
             {
@@ -81,7 +128,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanResolveConflictBetweenPutAndDelete_IncomingDelete()
         {
-            CanResolveConflict(resolver => resolver.Enabled = true , delegate(IDocumentStore store1, IDocumentStore store2)
+            CanResolveConflict(new DeleteOnConflict(), resolver => resolver.Enable() , delegate(IDocumentStore store1, IDocumentStore store2)
             {
                 using (var s = store2.OpenSession())
                 {
@@ -105,9 +152,9 @@ namespace Raven.Tests.Issues
         }
 
         [Fact]
-        public void CanResolveConflictBetweenPutAndDelete_IncomingPut()
+        public void CanResolveConflictBetweenPutAndDelete_IncomingPut_DeleteWins()
         {
-            CanResolveConflict(resolver => resolver.Enabled = true, delegate(IDocumentStore store1, IDocumentStore store2)
+            CanResolveConflict(new DeleteOnConflict(), resolver => resolver.Enable(), delegate(IDocumentStore store1, IDocumentStore store2)
             {
 
                 using (var s = store2.OpenSession())
@@ -126,6 +173,38 @@ namespace Raven.Tests.Issues
 
                 WaitForReplication(store2, (session) => session.Load<User>(docId) == null);
                 Assert.Null(store2.DatabaseCommands.Get(docId));
+            }
+            );
+        }
+
+        [Fact]
+        public void CanResolveConflictBetweenPutAndDelete_IncomingPut_PutWins()
+        {
+            CanResolveConflict(new PutOnConflict(), resolver => resolver.Enable(), delegate(IDocumentStore store1, IDocumentStore store2)
+            {
+
+                using (var s = store2.OpenSession())
+                {
+                    var user = s.Load<User>(docId);
+                    s.Delete(user);
+                    s.SaveChanges();
+                }
+                using (var s = store1.OpenSession())
+                {
+                    var user = s.Load<User>(docId);
+                    user.Active = true;
+                    s.Store(user);
+                    s.SaveChanges();
+                }
+
+                WaitForReplication(store2, (session) => session.Load<User>(docId) != null);
+
+                using (var s = store2.OpenSession())
+                {
+                    var user = s.Load<User>(docId);
+                    Assert.NotNull(user);
+                    Assert.True(user.Active);
+                }
             }
             );
         }
@@ -133,7 +212,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanResolveConflictBetweenPutAndDelete_IncomingDelete_Resolver_disabled()
         {
-            CanResolveConflict(resolver => resolver.Enabled = false, delegate(IDocumentStore store1, IDocumentStore store2)
+            CanResolveConflict(new DeleteOnConflict(), resolver => resolver.Disable(), delegate(IDocumentStore store1, IDocumentStore store2)
             {
                 using (var s = store2.OpenSession())
                 {
@@ -159,7 +238,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanResolveConflictBetweenPutAndDelete_IncomingPut_Resolver_disabled()
         {
-            CanResolveConflict(resolver => resolver.Enabled = false, delegate(IDocumentStore store1, IDocumentStore store2)
+            CanResolveConflict(new DeleteOnConflict(), resolver => resolver.Disable(), delegate(IDocumentStore store1, IDocumentStore store2)
             {
 
                 using (var s = store2.OpenSession())
