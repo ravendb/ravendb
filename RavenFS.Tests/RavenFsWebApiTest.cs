@@ -14,7 +14,7 @@ namespace RavenFS.Tests
 
         public RavenFsWebApiTest()
         {
-            var ravenFsClient = NewClient(0, fileSystemName: WebApiTestName);
+            var ravenFsClient = NewClient(fileSystemName: WebApiTestName);
 
             WebClient = new WebClient()
             {
@@ -27,11 +27,6 @@ namespace RavenFS.Tests
         protected HttpWebRequest CreateWebRequest(string url)
         {
             return (HttpWebRequest)WebRequest.Create(WebClient.BaseAddress + url);
-        }
-
-        protected override RavenFileSystemClient NewClient(int index = 0, bool fiddler = false, string fileSystemName = null)
-        {
-            return base.NewClient(index, fiddler, WebApiTestName);
         }
 
         public override void Dispose()
