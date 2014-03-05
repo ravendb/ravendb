@@ -32,7 +32,6 @@ namespace Raven.Client.Extensions
 
 	public static class TaskExtensions2
 	{
-#if !SILVERLIGHT
 		/// <summary>
 		/// Waits on a task and if it throws, it unwrapped the inner exception from the AggregateException
 		/// await keyword uses same mechanism.
@@ -65,7 +64,6 @@ namespace Raven.Client.Extensions
 			}
 			return result;
 		}
-#endif
 
 		public static Task<object> WithNullResult(this Task task)
 		{

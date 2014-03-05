@@ -19,7 +19,6 @@ namespace Raven.Client.RavenFS
 		{
 		}
 
-#if !SILVERLIGHT
 		protected SynchronizationException(
 			SerializationInfo info,
 			StreamingContext context)
@@ -27,6 +26,5 @@ namespace Raven.Client.RavenFS
 		{
 
 		}
-#endif
 	}
 }

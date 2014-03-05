@@ -4,7 +4,7 @@ using Xunit;
 
 namespace RavenFS.Tests.Bugs
 {
-	public class UpdatingMetadata : WebApiTest
+    public class UpdatingMetadata : RavenFsTestBase
 	{
 		[Fact]
 		public void CanUpdateMetadata()

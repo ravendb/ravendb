@@ -1,4 +1,3 @@
-#if !SILVERLIGHT
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 
@@ -58,4 +57,3 @@ namespace Raven.Database.Util
 		}
 	}
 }
-#endif

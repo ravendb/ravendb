@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 using System.Transactions;
 #endif
 using System.Text;
@@ -68,7 +68,6 @@ namespace Raven.Client.Document
             get { return externalState ?? (externalState = new Dictionary<string, object>()); }
         }
 
-#if !SILVERLIGHT
         private bool hasEnlisted;
         [ThreadStatic]
         private static Dictionary<string, HashSet<string>> _registeredStoresInTransaction;
@@ -77,7 +76,6 @@ namespace Raven.Client.Document
         {
             get { return (_registeredStoresInTransaction ?? (_registeredStoresInTransaction = new Dictionary<string, HashSet<string>>())); }
         }
-#endif
 
         /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
@@ -937,7 +935,7 @@ more responsive application.
         /// </summary>
         protected void UpdateBatchResults(IList<BatchResult> batchResults, SaveChangesData saveChangesData)
         {
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
             if (documentStore.HasJsonRequestFactory && Conventions.ShouldSaveChangesForceAggressiveCacheCheck && batchResults.Count != 0)
             {
                 documentStore.JsonRequestFactory.ExpireItemsFromCache(DatabaseName ?? Constants.SystemDatabase);
@@ -992,7 +990,7 @@ more responsive application.
             };
             deferedCommands.Clear();
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
             if (documentStore.EnlistInDistributedTransactions)
                 TryEnlistInAmbientTransaction();
 #endif
@@ -1059,7 +1057,7 @@ more responsive application.
             deletedEntities.Clear();
         }
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
         protected virtual void TryEnlistInAmbientTransaction()
         {
 
@@ -1205,7 +1203,6 @@ more responsive application.
         /// <param name="txId">The tx id.</param>
         public abstract void Rollback(string txId);
 
-#if !SILVERLIGHT
         /// <summary>
         /// Clears the enlistment.
         /// </summary>
@@ -1213,7 +1210,7 @@ more responsive application.
         {
             hasEnlisted = false;
         }
-#endif
+
         /// <summary>
         /// Metadata held about an entity by the session
         /// </summary>

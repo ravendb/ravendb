@@ -22,7 +22,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Document;
@@ -92,11 +92,7 @@ namespace Raven.Client.Connection
 			this.conventions = conventions;
 		}
 
-#if !SILVERLIGHT
 		private readonly System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter>();
-#else
-		private readonly Dictionary<string, FailureCounter> failureCounts = new Dictionary<string, FailureCounter>();
-#endif
 
 		private Task refreshReplicationInformationTask;
 
@@ -104,7 +100,7 @@ namespace Raven.Client.Connection
 		/// Updates the replication information if needed.
 		/// </summary>
 		/// <param name="serverClient">The server client.</param>
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 		public Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient)
 #else
 		public Task UpdateReplicationInformationIfNeeded(ServerClient serverClient)
@@ -249,25 +245,7 @@ namespace Raven.Client.Connection
 
 		protected FailureCounter GetHolder(string operationUrl)
 		{
-#if !SILVERLIGHT
 			return failureCounts.GetOrAdd(operationUrl, new FailureCounter());
-#else
-			// need to compensate for 3.5 not having concurrent dic.
-
-			FailureCounter value;
-			if (failureCounts.TryGetValue(operationUrl, out value) == false)
-			{
-				lock (replicationLock)
-				{
-					if (failureCounts.TryGetValue(operationUrl, out value) == false)
-					{
-						failureCounts[operationUrl] = value = new FailureCounter();
-					}
-				}
-			}
-			return value;
-#endif
-
 		}
 
 		/// <summary>
@@ -311,7 +289,7 @@ namespace Raven.Client.Connection
 		/// Refreshes the replication information.
 		/// Expert use only.
 		/// </summary>
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 		public Task RefreshReplicationInformation(AsyncServerClient commands)
 		{
 			lock (this)
@@ -801,7 +779,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 			{
 				switch (webException.Status)
 				{
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 					case WebExceptionStatus.Timeout:
 						timeout = true;
 						return true;

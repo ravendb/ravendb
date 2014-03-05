@@ -9,9 +9,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTrademark("")]
 [assembly: ComVisible(false)]
 
-#if SILVERLIGHT
-[assembly: AssemblyTitle("RavenDB (for Silverlight 5)")]
-#elif NETFX_CORE
+#if NETFX_CORE
 [assembly: AssemblyTitle("RavenDB (for WinRT)")]
 #else
 [assembly: AssemblyTitle("RavenDB (for .NET 4.5)")]
@@ -23,13 +21,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProduct("RavenDB")]
 [assembly: AssemblyDescription("RavenDB is a second generation LINQ enabled document database for .NET")]
 
-#if SILVERLIGHT
-[assembly: CLSCompliant(false)]
-#else
 [assembly: CLSCompliant(true)]
-#endif
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 [assembly: SuppressIldasm()]
 #endif
 

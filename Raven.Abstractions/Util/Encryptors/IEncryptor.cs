@@ -72,13 +72,11 @@ namespace Raven.Abstractions.Util.Encryptors
 
 		void FromXmlString(string xml);
 
-#if !SILVERLIGHT
 		AsymmetricAlgorithm Algorithm { get; }
 
 		void ImportParameters(RSAParameters parameters);
 
 		RSAParameters ExportParameters(bool includePrivateParameters);
-#endif
 	}
 
 }

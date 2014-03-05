@@ -6,11 +6,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 
-#if !SILVERLIGHT
 using System.IO.Compression;
-#else
-using Ionic.Zlib;
-#endif
 
 using System.Linq;
 using System.Net;
@@ -81,7 +77,6 @@ namespace Raven.Abstractions.Smuggler
                 LastAttachmentsDeleteEtag = options.StartAttachmentsDeletionEtag
             };
 
-#if !SILVERLIGHT
 			if (options.Incremental)
 			{
                 if (Directory.Exists(result.FilePath) == false)
@@ -112,10 +107,7 @@ namespace Raven.Abstractions.Smuggler
 					}
 				}
 			}
-#else
-			if(options.Incremental)
-				throw new NotSupportedException("Incremental exports are not supported in SL.");
-#endif
+
 			SmugglerExportException lastException = null;
 
 			bool ownedStream = exportOptions.ToStream == null;
@@ -139,9 +131,6 @@ namespace Raven.Abstractions.Smuggler
 			try
 			{
 				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,
-#if SILVERLIGHT
-                    CompressionLevel.BestCompression,
-#endif
 				                                       leaveOpen: true))
 				using (var streamWriter = new StreamWriter(gZipStream))
 				{
@@ -212,10 +201,8 @@ namespace Raven.Abstractions.Smuggler
 					streamWriter.Flush();
 				}
 
-#if !SILVERLIGHT
 				if (options.Incremental)
 					WriteLastEtagsToFile(result, result.FilePath);
-#endif
                 if (options.ExportDeletions)
                 {
                     PurgeTombstones(result);
@@ -441,9 +428,6 @@ namespace Raven.Abstractions.Smuggler
 				return;
 			}
 
-#if SILVERLIGHT
-		    throw new NotSupportedException("Silverlight doesn't support importing an incremental dump files.");
-#else
 			var files = Directory.GetFiles(Path.GetFullPath(importOptions.FromFile))
 				.Where(file => ".ravendb-incremental-dump".Equals(Path.GetExtension(file), StringComparison.CurrentCultureIgnoreCase))
 				.OrderBy(File.GetLastWriteTimeUtc)
@@ -470,7 +454,6 @@ namespace Raven.Abstractions.Smuggler
 			{
                 await ImportData(importOptions, options, fileStream);
 			}
-#endif
 		}
 
 		protected class AttachmentExportInfo
@@ -511,11 +494,7 @@ namespace Raven.Abstractions.Smuggler
 			}
 			catch (Exception e)
 			{
-			    if (e is InvalidDataException == false 
-#if SILVERLIGHT
-                    && e is ZlibException == false
-#endif
-                    )
+			    if (e is InvalidDataException == false)
 			        throw;
 
 				stream.Seek(0, SeekOrigin.Begin);
@@ -865,7 +844,6 @@ namespace Raven.Abstractions.Smuggler
 
 		private async Task DetectServerSupportedFeatures()
 		{
-#if !SILVERLIGHT
 			var serverVersion = await GetVersion();
 			if (string.IsNullOrEmpty(serverVersion))
 			{
@@ -887,7 +865,6 @@ namespace Raven.Abstractions.Smuggler
 				ShowProgress("Running in legacy mode, importing/exporting transformers is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
 				return;
 			}
-#endif
 
 			IsTransformersSupported = true;
 			IsDocsStreamingSupported = true;

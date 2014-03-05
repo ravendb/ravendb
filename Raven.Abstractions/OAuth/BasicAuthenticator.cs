@@ -7,11 +7,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 
-#if SILVERLIGHT
-using Raven.Client.Connection;
-using Raven.Client.Silverlight.Connection;
-using System.Net.Browser;
-#elif NETFX_CORE
+#if NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #endif
 
@@ -32,10 +28,8 @@ namespace Raven.Abstractions.OAuth
             httpClient.DefaultRequestHeaders.TryAddWithoutValidation("grant_type", "client_credentials");
             httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") { CharSet = "UTF-8" });
 
-#if !SILVERLIGHT
             httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("deflate"));
             httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
-#endif
 
             if (string.IsNullOrEmpty(apiKey) == false)
                 httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Api-Key", apiKey);
@@ -43,11 +37,7 @@ namespace Raven.Abstractions.OAuth
             if (oauthSource.StartsWith("https", StringComparison.OrdinalIgnoreCase) == false && enableBasicAuthenticationOverUnsecuredHttp == false)
                 throw new InvalidOperationException(BasicOAuthOverHttpError);
 
-            var requestUri = oauthSource
-#if SILVERLIGHT
-				.NoCache()
-#endif
-;
+            var requestUri = oauthSource;
             var response = await httpClient.GetAsync(requestUri)
                                            .ConvertSecurityExceptionToServerNotFound()
                                            .AddUrlIfFaulting(new Uri(requestUri));
@@ -60,7 +50,7 @@ namespace Raven.Abstractions.OAuth
             }
         }
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
         private HttpWebRequest PrepareOAuthRequest(string oauthSource, string apiKey)
         {
             var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);

@@ -1,9 +1,0 @@
-<?xml version="1.0"?><doc><assembly><name>ActiproSoftware.Themes.Office.Silverlight</name></assembly><members><member name="T:ActiproSoftware.Windows.Themes.OfficeThemeCatalog"><summary>
-            A theme catalog that describes the theme group name implementations and
-            available themed resource dictionaries within this assembly.
-            </summary></member><member name="P:ActiproSoftware.Windows.Themes.OfficeThemeCatalog.DictionaryReferences"><summary>
-            Gets the collection of <see cref="T:ActiproSoftware.Windows.Themes.ThemedResourceDictionaryReference" /> objects for the assembly.
-            </summary><value>The collection of <see cref="T:ActiproSoftware.Windows.Themes.ThemedResourceDictionaryReference" /> objects for the assembly.</value></member><member name="P:ActiproSoftware.Windows.Themes.OfficeThemeCatalog.GroupImplementations"><summary>
-            Gets the collection of group names (e.g. Ribbon, NavigationBar, etc.) that indicates the groups of controls
-            that are implemented in the assembly via procedural code.
-            </summary><value>The collection of group names.</value></member></members></doc>
