@@ -182,6 +182,17 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
+        private FileSystemsLandlord fileSystemsLandlord;
+        public FileSystemsLandlord FileSystemsLandlord
+        {
+            get
+            {
+                if (Configuration == null)
+                    return fileSystemsLandlord;
+                return (FileSystemsLandlord)Configuration.Properties[typeof(FileSystemsLandlord)];
+            }
+        }
+
 	    public override InMemoryRavenConfiguration SystemConfiguration
 	    {
 	        get { return DatabasesLandlord.SystemConfiguration; }

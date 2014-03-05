@@ -10,7 +10,7 @@ using Xunit;
 
 namespace RavenFS.Tests
 {
-	public class Notifications : WebApiTest
+    public class Notifications : RavenFsTestBase
     {
 	    private readonly RavenFileSystemClient client;
 

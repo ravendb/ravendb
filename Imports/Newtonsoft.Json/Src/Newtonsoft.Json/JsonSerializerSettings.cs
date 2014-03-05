@@ -52,7 +52,7 @@ namespace Raven.Imports.Newtonsoft.Json
     internal const DateFormatHandling DefaultDateFormatHandling = DateFormatHandling.IsoDateFormat;
     internal const DateTimeZoneHandling DefaultDateTimeZoneHandling = DateTimeZoneHandling.RoundtripKind;
     internal const DateParseHandling DefaultDateParseHandling = DateParseHandling.DateTime;
-    internal const FloatParseHandling DefaultFloatParseHandling = FloatParseHandling.Decimal;
+    internal const FloatParseHandling DefaultFloatParseHandling = FloatParseHandling.Double;
     internal const FloatFormatHandling DefaultFloatFormatHandling = FloatFormatHandling.String;
     internal const StringEscapeHandling DefaultStringEscapeHandling = StringEscapeHandling.Default;
     internal const FormatterAssemblyStyle DefaultFormatterAssemblyStyle = FormatterAssemblyStyle.Simple;

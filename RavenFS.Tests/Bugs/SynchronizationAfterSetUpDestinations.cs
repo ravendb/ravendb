@@ -8,7 +8,7 @@ using Xunit;
 
 namespace RavenFS.Tests.Bugs
 {
-	public class SynchronizationAfterSetUpDestinations : MultiHostTestBase
+    public class SynchronizationAfterSetUpDestinations : RavenFsTestBase
 	{
 		[Fact]
 		public async Task Should_transfer_entire_file_even_if_rename_operation_was_performed()

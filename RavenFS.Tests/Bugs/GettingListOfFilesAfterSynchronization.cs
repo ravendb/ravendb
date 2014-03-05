@@ -4,7 +4,7 @@ using Xunit;
 
 namespace RavenFS.Tests.Bugs
 {
-	public class GettingListOfFilesAfterSynchronization : MultiHostTestBase
+    public class GettingListOfFilesAfterSynchronization : RavenFsTestBase
 	{
 		[Fact]
 		public async Task Should_work()
@@ -21,7 +21,7 @@ namespace RavenFS.Tests.Bugs
 
 			const string fileName = "abc.txt";
 			await sourceClient.UploadAsync(fileName, ms);
-			await sourceClient.Synchronization.StartAsync(fileName, destinationClient.ServerUrl);
+			await sourceClient.Synchronization.StartAsync(fileName, destinationClient);
 
 			var destinationFiles = await destinationClient.GetFilesAsync("/");
 			Assert.True(destinationFiles.FileCount == 1, "count not one");

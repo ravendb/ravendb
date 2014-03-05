@@ -1,5 +1,4 @@
-﻿#if !SILVERLIGHT
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -105,4 +104,3 @@ namespace Raven.Database.Server.RavenFS.Extensions
 		}
 	}
 }
-#endif

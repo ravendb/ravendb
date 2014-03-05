@@ -32,7 +32,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			get { return SynchronizationType.MetadataUpdate; }
 		}
 
-		public override async Task<SynchronizationReport> PerformAsync(string destination)
+        public override async Task<SynchronizationReport> PerformAsync(SynchronizationDestination destination)
 		{
 			AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
 
@@ -43,7 +43,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 			var request =
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-						destination + "/ravenfs/synchronization/updatemetadata?fileName=" + Uri.EscapeDataString(FileName),
+						destination.FileSystemUrl + "/synchronization/updatemetadata?fileName=" + Uri.EscapeDataString(FileName),
 						"POST", new OperationCredentials("", new CredentialCache()), Convention));
 
 			request.AddHeaders(FileMetadata);

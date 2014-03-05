@@ -8,7 +8,7 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Connection
 {
-#if !NETFX_CORE && !SILVERLIGHT
+#if !NETFX_CORE
     [Serializable]
 #endif
     public class ErrorResponseException : Exception
@@ -79,7 +79,7 @@ namespace Raven.Abstractions.Connection
 	        }
 	    }
 
-#if !NETFX_CORE && !SILVERLIGHT
+#if !NETFX_CORE
         protected ErrorResponseException(
             System.Runtime.Serialization.SerializationInfo info,
             System.Runtime.Serialization.StreamingContext context)

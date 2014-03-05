@@ -86,14 +86,7 @@ namespace Raven.Abstractions.Connection
 #endif
 		}
 
-#if SILVERLIGHT
-		private static byte[] AddEncryptedKeyAndIv(byte[] exponent, byte[] modulus, byte[] key, byte[] iv)
-		{
-			// http://msdn.microsoft.com/en-us/library/cc265159(v=vs.95).aspx
-			// http://msdn.microsoft.com/en-us/library/system.security.cryptography.rsacryptoserviceprovider(v=vs.95).aspx
-			return null;
-		}
-#elif NETFX_CORE
+#if NETFX_CORE
 		
 #else
 		private static byte[] AddEncryptedKeyAndIv(byte[] exponent, byte[] modulus, byte[] key, byte[] iv)

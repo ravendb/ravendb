@@ -16,14 +16,12 @@ using System.Threading.Tasks;
 using Raven.Client.Indexes;
 using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json.Linq;
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 #else
 #endif
-#if SILVERLIGHT
-using Raven.Client.Silverlight.Connection;
-#elif NETFX_CORE
+#if NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #endif
 using Raven.Abstractions;
@@ -1474,7 +1472,7 @@ namespace Raven.Client.Connection.Async
 
 	    private void AddTransactionInformation(RavenJObject metadata)
 		{
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 			if (convention.EnlistInDistributedTransactions == false)
 				return;
 

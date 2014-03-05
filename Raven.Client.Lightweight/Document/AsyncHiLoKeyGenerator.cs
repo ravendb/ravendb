@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-#if !SILVERLIGHT
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
@@ -207,4 +206,3 @@ namespace Raven.Client.Document
 		}
 	}
 }
-#endif

@@ -14,9 +14,7 @@ namespace Raven.Client.Connection
 
 		public static IsolatedStorageFile GetIsolatedStorageFileForReplicationInformation()
 		{
-#if SILVERLIGHT
-			return IsolatedStorageFile.GetUserStoreForSite();
-#elif MONO
+#if MONO
 			return IsolatedStorageFile.GetUserStoreForApplication();
 #else
 			return IsolatedStorageFile.GetMachineStoreForDomain();

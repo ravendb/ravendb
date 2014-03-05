@@ -62,7 +62,7 @@ namespace Raven.Abstractions.Data
 	{
 		public static ConnectionStringParser<TConnectionString> FromConnectionStringName(string connectionStringName)
 		{
-#if !MONODROID && !SILVERLIGHT
+#if !MONODROID
 			var connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionStringName];
 			if (connectionStringSettings == null)
 				throw new ArgumentException(string.Format("Could not find connection string name: '{0}'", connectionStringName));
@@ -80,15 +80,11 @@ namespace Raven.Abstractions.Data
 		}
 
 		private static readonly Regex connectionStringRegex = new Regex(@"(\w+) \s* = \s* (.*)",
-#if !SILVERLIGHT
 		                                                                RegexOptions.Compiled |
-#endif
 		                                                                RegexOptions.IgnorePatternWhitespace);
 
 		private static readonly Regex connectionStringArgumentsSplitterRegex = new Regex(@"; (?=\s* \w+ \s* =)",
-#if !SILVERLIGHT
 		                                                                                 RegexOptions.Compiled |
-#endif
 		                                                                                 RegexOptions.IgnorePatternWhitespace);
 
 		private readonly string connectionString;
@@ -123,7 +119,7 @@ namespace Raven.Abstractions.Data
 					bool result;
 					if (bool.TryParse(value, out result) == false)
 					{
-#if !MONODROID && !SILVERLIGHT
+#if !MONODROID
 						throw new ConfigurationErrorsException(string.Format("Could not understand memory setting: '{0}'", value));
 #else
 						throw new Exception(string.Format("Could not understand memory setting: '{0}'", value));

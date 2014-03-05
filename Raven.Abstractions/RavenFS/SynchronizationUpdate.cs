@@ -6,6 +6,7 @@ namespace Raven.Client.RavenFS
 	{
 		public string FileName { get; set; }
 		public string DestinationServer { get; set; }
+        public string DestinationFileSystem { get; set; }
 		public Guid SourceServerId { get; set; }
 		public string SourceServerUrl { get; set; }
 		public SynchronizationType Type { get; set; }

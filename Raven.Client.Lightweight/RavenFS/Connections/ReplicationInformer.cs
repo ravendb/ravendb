@@ -13,6 +13,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Client.RavenFS.Connections
 {
@@ -27,7 +28,7 @@ namespace Raven.Client.RavenFS.Connections
 		protected readonly FileConvention Conventions;
 		protected DateTime LastReplicationUpdate = DateTime.MinValue;
 		private readonly object replicationLock = new object();
-		private List<string> replicationDestinations = new List<string>();
+        private List<SynchronizationDestination> replicationDestinations = new List<SynchronizationDestination>();
 		private static readonly List<string> Empty = new List<string>();
 		protected static int readStripingBase;
 
@@ -36,7 +37,7 @@ namespace Raven.Client.RavenFS.Connections
 		/// </summary>
 		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged = delegate { };
 
-		public List<string> ReplicationDestinations
+        public List<SynchronizationDestination> ReplicationDestinations
 		{
 			get { return replicationDestinations; }
 		}
@@ -49,7 +50,7 @@ namespace Raven.Client.RavenFS.Connections
 		{
 			get
 			{
-				return Conventions.FailoverBehavior == FailoverBehavior.FailImmediately ? Empty : replicationDestinations.ToList();
+				return Conventions.FailoverBehavior == FailoverBehavior.FailImmediately ? Empty : replicationDestinations.Select(x => x.FileSystemUrl).ToList();
 			}
 		}
 
@@ -61,11 +62,7 @@ namespace Raven.Client.RavenFS.Connections
 			this.Conventions = conventions;
 		}
 
-#if !SILVERLIGHT
 		private readonly System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter>();
-#else
-		private readonly Dictionary<string, FailureCounter> failureCounts = new Dictionary<string, FailureCounter>();
-#endif
 
 		private Task refreshReplicationInformationTask;
 
@@ -73,7 +70,7 @@ namespace Raven.Client.RavenFS.Connections
 		/// Updates the replication information if needed.
 		/// </summary>
 		/// <param name="serverClient">The server client.</param>
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 		public Task UpdateReplicationInformationIfNeeded(RavenFileSystemClient serverClient)
 #else
 		public Task UpdateReplicationInformationIfNeeded(RavenFileSystemClient serverClient)
@@ -476,24 +473,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 		private FailureCounter GetHolder(string operationUrl)
 		{
-#if !SILVERLIGHT
 			return failureCounts.GetOrAdd(operationUrl, new FailureCounter());
-#else
-			// need to compensate for 3.5 not having concurrent dic.
-
-			FailureCounter value;
-			if (failureCounts.TryGetValue(operationUrl, out value) == false)
-			{
-				lock (replicationLock)
-				{
-					if (failureCounts.TryGetValue(operationUrl, out value) == false)
-					{
-						failureCounts[operationUrl] = value = new FailureCounter();
-					}
-				}
-			}
-			return value;
-#endif
 		}
 
 		/// <summary>
@@ -531,7 +511,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 		/// </summary>
 		public async Task RefreshReplicationInformationAsync(RavenFileSystemClient serverClient)
 		{
-			var serverHash = ServerHash.GetServerHash(serverClient.ServerUrl);
+			var serverHash = ServerHash.GetServerHash(serverClient.ServerUrl + "/ravenfs/" + serverClient.FileSystemName);
 
 			try
 			{
@@ -542,8 +522,14 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 				}
 				else
 				{
-					var urls = result.GetValues("url");
-					replicationDestinations = urls == null ? new List<string>() : urls.ToList();
+				    var destinationStrings = result.GetValues("destination");
+
+                    if(destinationStrings == null)
+                        replicationDestinations = new List<SynchronizationDestination>();
+                    else
+                    {
+                        replicationDestinations = destinationStrings.Select(JsonConvert.DeserializeObject<SynchronizationDestination>).ToList();
+                    }
 				}
 			}
 			catch (Exception e)
@@ -560,14 +546,14 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			LastReplicationUpdate = SystemTime.UtcNow;
 		}
 
-		private void UpdateReplicationInformationFromDocument(IEnumerable<string> destinations)
+		private void UpdateReplicationInformationFromDocument(IEnumerable<SynchronizationDestination> destinations)
 		{
 			foreach (var destination in destinations)
 			{
 				FailureCounter value;
-				if (failureCounts.TryGetValue(destination, out value))
+				if (failureCounts.TryGetValue(destination.FileSystemUrl, out value))
 					continue;
-				failureCounts[destination] = new FailureCounter();
+				failureCounts[destination.FileSystemUrl] = new FailureCounter();
 			}
 		}
 
@@ -632,7 +618,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			{
 				switch (webException.Status)
 				{
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 					case WebExceptionStatus.Timeout:
 						timeout = true;
 						return true;

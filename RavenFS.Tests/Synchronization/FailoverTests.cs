@@ -1,12 +1,11 @@
-﻿using System.Collections.Specialized;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Client.RavenFS;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 
 namespace RavenFS.Tests.Synchronization
 {
-	public class FailoverTests : MultiHostTestBase
+	public class FailoverTests : RavenFsTestBase
 	{
 		[Fact]
 		public async Task ShouldFailOver()
@@ -17,12 +16,13 @@ namespace RavenFS.Tests.Synchronization
 
 			await sourceClient.UploadAsync("test1.bin", source1Content);
 
-			await sourceClient.Config.SetConfig(SynchronizationConstants.RavenSynchronizationDestinations, new NameValueCollection
-				{
-					{
-						"url", destinationClient.ServerUrl
-					}
-				});
+		    var destination = new SynchronizationDestination()
+		    {
+		        FileSystem = destinationClient.FileSystemName,
+		        ServerUrl = destinationClient.ServerUrl
+		    };
+
+		    await sourceClient.Config.SetDestinationsConfig(destination);
 
 			await sourceClient.ReplicationInformer.RefreshReplicationInformationAsync(sourceClient);
 			await sourceClient.Synchronization.SynchronizeDestinationsAsync();

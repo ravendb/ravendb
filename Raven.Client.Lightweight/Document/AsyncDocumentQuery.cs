@@ -24,16 +24,9 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
 		/// </summary>
-		public AsyncDocumentQuery(InMemoryDocumentSessionOperations session,
-#if !SILVERLIGHT
-			IDatabaseCommands databaseCommands,
-#endif
+		public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, IDatabaseCommands databaseCommands,
 			IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool  isMapReduce)
-			: base(session, 
-#if !SILVERLIGHT
-			databaseCommands, 
-#endif
-			asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
+			: base(session, databaseCommands, asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
 		{
 		}
 
@@ -697,9 +690,7 @@ namespace Raven.Client.Document
 		public virtual IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
 		{
 			var asyncDocumentQuery = new AsyncDocumentQuery<TProjection>(theSession,
-#if !SILVERLIGHT
 																		 theDatabaseCommands,
-#endif
 																		 theAsyncDatabaseCommands,
 																		 indexName, fields, projections, queryListeners,
 																		 isMapReduce)

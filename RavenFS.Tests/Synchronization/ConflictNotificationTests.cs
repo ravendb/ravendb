@@ -10,7 +10,7 @@ using Xunit;
 
 namespace RavenFS.Tests.Synchronization
 {
-	public class ConflictNotificationTests : MultiHostTestBase
+    public class ConflictNotificationTests : RavenFsTestBase
 	{
 		private readonly RavenFileSystemClient destinationClient;
 		private readonly RavenFileSystemClient sourceClient;
@@ -21,7 +21,7 @@ namespace RavenFS.Tests.Synchronization
 			sourceClient = NewClient(1);
 		}
 
-		[Fact]
+        [Fact]
 		public async Task NotificationIsReceivedWhenConflictIsDetected()
 		{
 			var sourceContent = new RandomlyModifiedStream(new RandomStream(1), 0.01);
@@ -48,7 +48,7 @@ namespace RavenFS.Tests.Synchronization
 				                 .ToTask();
 			await destinationClient.Notifications.WhenSubscriptionsActive();
 
-			await sourceClient.Synchronization.StartAsync("abc.txt", destinationClient.ServerUrl);
+			await sourceClient.Synchronization.StartAsync("abc.txt", destinationClient);
 
 			var conflictDetected = await notificationTask;
 

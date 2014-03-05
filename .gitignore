@@ -38,7 +38,6 @@ StyleCop.Cache
 *.dotCover
 RavenDB*.nupkg
 *.orig
-/Raven.Database/Server/WebUI/Raven.Studio.xap
 *.ncrunchsolution
 Raven.Web/Tenants/
 Raven.Web/NLog.config

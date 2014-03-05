@@ -20,7 +20,7 @@ namespace Raven.Abstractions.MissingFromBCL
 		{
 			return type;
 		}
-#if NETFX_CORE || SILVERLIGHT
+#if NETFX_CORE
 		public static Type GetTypeInfo(this Type type)
 		{
 			return type;

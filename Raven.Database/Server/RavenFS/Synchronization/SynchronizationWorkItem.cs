@@ -61,7 +61,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 		public abstract SynchronizationType SynchronizationType { get; }
 
-		public abstract Task<SynchronizationReport> PerformAsync(string destination);
+        public abstract Task<SynchronizationReport> PerformAsync(SynchronizationDestination destination);
 
 		public virtual void Cancel()
 		{
@@ -89,13 +89,13 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			return null;
 		}
 
-		protected async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, string destination,
+        protected async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, SynchronizationDestination destination,
 																					string localServerUrl, ILog log)
 		{
 			log.Debug("File '{0}' is in conflict with destination version from {1}. Applying conflict on destination", FileName,
-					  destination);
+					  destination.FileSystemUrl);
 
-			var destinationRavenFileSystemClient = new RavenFileSystemClient(destination);
+			var destinationRavenFileSystemClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem);
 			try
 			{
 				var version = conflict.RemoteHistory.Last().Version;

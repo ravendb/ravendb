@@ -57,7 +57,6 @@ namespace Voron.Tests
             return BitConverter.ToInt32(buffer, 0);
         }
 
-#if !SILVERLIGHT
         public static string ReadString(this Stream stream)
         {
             return ReadString(stream, Encoding.UTF8);
@@ -83,7 +82,6 @@ namespace Voron.Tests
 
             return encoding.GetString(buffer);
         }
-#endif
 
         public static void Write(this Stream stream, string value)
         {

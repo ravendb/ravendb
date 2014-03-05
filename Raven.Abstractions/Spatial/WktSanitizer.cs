@@ -17,7 +17,7 @@ namespace Raven.Abstractions.Spatial
 		{
 			RegexOptions options;
 
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 			options = RegexOptions.IgnorePatternWhitespace;
 #else
 			options = RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled;
