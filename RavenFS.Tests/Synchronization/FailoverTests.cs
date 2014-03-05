@@ -24,7 +24,7 @@ namespace RavenFS.Tests.Synchronization
 
 		    await sourceClient.Config.SetDestinationsConfig(destination);
 
-			await sourceClient.ReplicationInformer.RefreshReplicationInformationAsync(sourceClient);
+			sourceClient.ReplicationInformer.RefreshReplicationInformation(sourceClient);
 			await sourceClient.Synchronization.SynchronizeDestinationsAsync();
 			
 			var destinationFiles = await destinationClient.GetFilesAsync("/");

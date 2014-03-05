@@ -52,7 +52,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 		public string ServerUrl
 		{
-			get { return systemConfiguration.ServerUrl; }
+			get { return systemConfiguration.ServerUrl; } // TODO arek - we also need to add /ravenfs/FILE_SYSYTEM_NAME_HERE
 		}
 
 		public SynchronizationQueue Queue
