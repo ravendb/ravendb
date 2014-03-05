@@ -50,7 +50,7 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public abstract TransformerDefinition CreateTransformerDefinition();
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 
 		public void Execute(IDocumentStore store)
 		{

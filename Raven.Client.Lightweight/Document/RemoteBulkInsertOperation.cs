@@ -25,13 +25,7 @@ using Raven.Imports.Newtonsoft.Json;
 #endif
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
-#if !SILVERLIGHT
 using System.IO.Compression;
-#else
-using Raven.Client.Connection.Async;
-using Raven.Client.Silverlight.Connection;
-using Ionic.Zlib;
-#endif
 
 namespace Raven.Client.Document
 {

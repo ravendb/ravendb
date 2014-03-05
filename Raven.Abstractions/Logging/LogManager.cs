@@ -21,10 +21,7 @@ namespace Raven.Abstractions.Logging
 #endif
 		public static ILog GetCurrentClassLogger()
 		{
-#if SILVERLIGHT
-			var stackFrame = new StackTrace().GetFrame(1);
-			return GetLogger(stackFrame.GetMethod().DeclaringType);
-#elif NETFX_CORE
+#if NETFX_CORE
 			// WinRT exceptions doesn't have an informative stack traces.
 			// This is an ugly hack to have something instead of a name class.
 			return GetLogger("Raven.WinRT-" + System.Threading.Interlocked.Increment(ref counter));

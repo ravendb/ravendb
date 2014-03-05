@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -56,9 +56,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public ShardedDocumentQuery(InMemoryDocumentSessionOperations session, Func<ShardRequestData, IList<Tuple<string, IDatabaseCommands>>> getShardsToOperateOn, ShardStrategy shardStrategy, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool isMapReduce)
 			: base(session
-#if !SILVERLIGHT
 			, null
-#endif
 			, null
 			, indexName, 
 			fieldsToFetch,
@@ -209,7 +207,6 @@ namespace Raven.Client.Document
 			}
 		}
 
-#if !SILVERLIGHT
 		/// <summary>
 		///   Grant access to the database commands
 		/// </summary>
@@ -217,7 +214,6 @@ namespace Raven.Client.Document
 		{
 			get { throw new NotSupportedException("Sharded has more than one DatabaseCommands to operate on."); }
 		}
-#endif
 
 		/// <summary>
 		///   Grant access to the async database commands
@@ -227,7 +223,6 @@ namespace Raven.Client.Document
 			get { throw new NotSupportedException("Sharded has more than one DatabaseCommands to operate on."); }
 		}
 
-#if !SILVERLIGHT
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
@@ -267,7 +262,6 @@ namespace Raven.Client.Document
 			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
 			return lazyQueryOperation;
 		}
-#endif
 
 		protected override Task<QueryOperation> ExecuteActualQueryAsync()
 		{

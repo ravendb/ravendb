@@ -79,6 +79,11 @@ namespace Raven.Server
 				return options.DatabaseLandlord.GetDatabaseInternal(databaseName);
 			}
 
+            public Task<RavenFileSystem> GetRavenFileSystemInternal(string fileSystemName)
+            {
+                return options.FileSystemLandlord.GetFileSystemInternal(fileSystemName);
+            }
+
 			public RequestManager RequestManager { get { return options.RequestManager; } }
 		}
 	}
@@ -90,6 +95,7 @@ namespace Raven.Server
 		int NumberOfRequests { get; }
 		void ResetNumberOfRequests();
 		Task<DocumentDatabase> GetDatabaseInternal(string databaseName);
+	    Task<RavenFileSystem> GetRavenFileSystemInternal(string fileSystemName);
 
 		RequestManager RequestManager { get; }
 	}

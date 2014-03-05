@@ -6,9 +6,6 @@
 using System;
 using Raven.Abstractions.Data;
 using Raven.Client.Extensions;
-#if SILVERLIGHT
-using Raven.Client.Silverlight.Connection;
-#endif
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection

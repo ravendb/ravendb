@@ -1,11 +1,9 @@
 ﻿using System;
-using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
 using Raven.Client.RavenFS;
-using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Synchronization.Multipart;
 using Raven.Imports.Newtonsoft.Json;
@@ -28,13 +26,13 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			get { return SynchronizationType.Rename; }
 		}
 
-		public override async Task<SynchronizationReport> PerformAsync(string destination)
+        public override async Task<SynchronizationReport> PerformAsync(SynchronizationDestination destination)
 		{
 			FileAndPages fileAndPages = null;
 			Storage.Batch(accessor => fileAndPages = accessor.GetFile(FileName, 0, 0));
 			var request =
 				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-					destination + "/ravenfs/synchronization/rename?filename=" + Uri.EscapeDataString(FileName) + "&rename=" +
+					destination.FileSystemUrl + "/synchronization/rename?filename=" + Uri.EscapeDataString(FileName) + "&rename=" +
 								  Uri.EscapeDataString(rename),
 					"PATCH", new OperationCredentials("", new CredentialCache()), Convention));
 

@@ -5,7 +5,7 @@ using Xunit;
 
 namespace RavenFS.Tests
 {
-    public class Search : WebApiTest
+    public class Search : RavenFsTestBase
     {
         [Fact]
         public void CanSearchForFilesBySize()

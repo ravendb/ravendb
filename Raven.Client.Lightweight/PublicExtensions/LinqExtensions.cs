@@ -74,7 +74,7 @@ namespace Raven.Client
 			return new DynamicAggregationQuery<T>(queryable, path, displayName);
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		/// <summary>
 		/// Query the facets results for this query using the specified facet document with the given start and pageSize
 		/// </summary>
@@ -180,7 +180,7 @@ namespace Raven.Client
         }
 #endif
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		/// <summary>
 		/// Lazily Query the facets results for this query using the specified facet document with the given start and pageSize
 		/// </summary>
@@ -344,7 +344,7 @@ namespace Raven.Client
 		}
 #endif
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 
 		/// <summary>
 		/// Suggest alternative values for the queried term

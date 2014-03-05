@@ -43,11 +43,11 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			Cts.Cancel();
 		}
 
-		public override async Task<SynchronizationReport> PerformAsync(string destination)
+        public override async Task<SynchronizationReport> PerformAsync(SynchronizationDestination destination)
 		{
 			AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
 
-			var destinationRavenFileSystemClient = new RavenFileSystemClient(destination);
+			var destinationRavenFileSystemClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem);
 
 			var destinationMetadata = await destinationRavenFileSystemClient.GetMetadataForAsync(FileName);
 
@@ -108,7 +108,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			}
 		}
 
-		private async Task<SynchronizationReport> SynchronizeTo(string destinationServerUrl,
+        private async Task<SynchronizationReport> SynchronizeTo(SynchronizationDestination destination,
 																ISignatureRepository localSignatureRepository,
 																ISignatureRepository remoteSignatureRepository,
 																SignatureManifest sourceSignatureManifest,
@@ -125,11 +125,11 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 					needList = needListGenerator.CreateNeedsList(seedSignatureInfo, sourceSignatureInfo, Cts.Token);
 				}
 
-				return await PushByUsingMultipartRequest(destinationServerUrl, localFile, needList);
+				return await PushByUsingMultipartRequest(destination, localFile, needList);
 			}
 		}
 
-		public async Task<SynchronizationReport> UploadToAsync(string destinationServerUrl)
+        public async Task<SynchronizationReport> UploadToAsync(SynchronizationDestination destination)
 		{
 			using (var sourceFileStream = StorageStream.Reading(Storage, FileName))
 			{
@@ -145,23 +145,23 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 							                     }
 					                     };
 
-				return await PushByUsingMultipartRequest(destinationServerUrl, sourceFileStream, onlySourceNeed);
+				return await PushByUsingMultipartRequest(destination, sourceFileStream, onlySourceNeed);
 			}
 		}
 
-		private Task<SynchronizationReport> PushByUsingMultipartRequest(string destinationServerUrl, Stream sourceFileStream,
+        private Task<SynchronizationReport> PushByUsingMultipartRequest(SynchronizationDestination destination, Stream sourceFileStream,
 																		IList<RdcNeed> needList)
 		{
 			Cts.Token.ThrowIfCancellationRequested();
 
-			multipartRequest = new SynchronizationMultipartRequest(destinationServerUrl, ServerInfo, FileName, FileMetadata,
+			multipartRequest = new SynchronizationMultipartRequest(destination, ServerInfo, FileName, FileMetadata,
 																   sourceFileStream, needList);
 
 			var bytesToTransferCount = needList.Where(x => x.BlockType == RdcNeedType.Source).Sum(x => (double)x.BlockLength);
 
 			log.Debug(
 				"Synchronizing a file '{0}' (ETag {1}) to {2} by using multipart request. Need list length is {3}. Number of bytes that needs to be transfered is {4}",
-				FileName, FileETag, destinationServerUrl, needList.Count, bytesToTransferCount);
+				FileName, FileETag, destination, needList.Count, bytesToTransferCount);
 
 			return multipartRequest.PushChangesAsync(Cts.Token);
 		}

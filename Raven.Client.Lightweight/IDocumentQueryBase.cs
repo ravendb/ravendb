@@ -97,7 +97,6 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		TSelf Skip(int count);
 
-#if !SILVERLIGHT
         /// <summary>
         ///   Returns first element or default value for type if sequence is empty.
         /// </summary>
@@ -121,7 +120,6 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <returns></returns>
         T Single();
-#endif
 
 		/// <summary>
 		///   Filter the results from the index using the specified where clause.

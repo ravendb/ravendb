@@ -4,7 +4,7 @@ using Xunit;
 
 namespace RavenFS.Tests
 {
-	public class CompleteUsage : WebApiTest
+    public class CompleteUsage : RavenFsTestBase
 	{
 		[Fact]
 		public void HowToUseTheClient()
