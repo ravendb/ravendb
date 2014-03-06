@@ -76,6 +76,7 @@
                                         <td>Name</td>
                                         <td>Admin</td>
                                         <td>Read Only</td>
+                                        <td></td>
                                     </tr>
                                 </thead>
                                 <tbody data-bind="foreach: databases">
@@ -83,6 +84,7 @@
                                         <td data-bind="text: tenantId"></td>
                                         <td data-bind="text: admin"></td>
                                         <td data-bind="text: readOnly"></td>
+                                        <td data-bind="click: $parent.removeApiKeyDatabase.bind($parent, $data)">Delete</td>
                                     </tr>
                                 </tbody>
                             </table>
