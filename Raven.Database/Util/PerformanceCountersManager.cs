@@ -262,6 +262,8 @@ namespace Raven.Database.Util
                     return false;
                 }
             }
+
+            return true;
         }
     }
 }
