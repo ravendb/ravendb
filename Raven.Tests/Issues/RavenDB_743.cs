@@ -6,6 +6,7 @@
 using System.Linq;
 using Raven.Client.Indexes;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
@@ -68,10 +69,11 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[Fact]
-		public void MixedCaseReduce()
+		[Theory]
+        [PropertyData("Storages")]
+        public void MixedCaseReduce(string requestedStorage)
 		{
-			using (var store = NewDocumentStore(requestedStorage: "esent"))
+			using (var store = NewDocumentStore(requestedStorage: requestedStorage))
 			{
 				using (var session = store.OpenSession())
 				{
@@ -96,10 +98,11 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		[Fact]
-		public void MixedCaseReduce_Complex()
+        [Theory]
+        [PropertyData("Storages")]
+		public void MixedCaseReduce_Complex(string requestedStorage)
 		{
-			using (var store = NewDocumentStore(requestedStorage: "esent"))
+			using (var store = NewDocumentStore(requestedStorage: requestedStorage))
 			{
 				using (var session = store.OpenSession())
 				{
