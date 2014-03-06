@@ -101,6 +101,8 @@ namespace Voron.Impl.Paging
 
 		public override void AllocateMorePages(Transaction tx, long newLength)
 		{
+			ThrowObjectDisposedIfNeeded();
+
 			var newLengthAfterAdjustment = NearestSizeToAllocationGranularity(newLength);
 
 			if (newLengthAfterAdjustment < _totalAllocationSize)
@@ -238,11 +240,15 @@ namespace Voron.Impl.Paging
 
 		public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
 		{
+			ThrowObjectDisposedIfNeeded();
+
 			return (pagerState ?? PagerState).MapBase + (pageNumber*PageSize);
 		}
 
 		public override void Sync()
 		{
+			ThrowObjectDisposedIfNeeded();
+
 			if (PagerState.AllocationInfos.Any(allocationInfo => 
 				MemoryMapNativeMethods.FlushViewOfFile(allocationInfo.BaseAddress, new IntPtr(allocationInfo.Size)) == false))
 					throw new Win32Exception();
@@ -267,6 +273,8 @@ namespace Voron.Impl.Paging
 
 		public override int WriteDirect(Page start, long pagePosition, int pagesToWrite)
 		{
+			ThrowObjectDisposedIfNeeded();
+
 			int toCopy = pagesToWrite*PageSize;
 			NativeMethods.memcpy(PagerState.MapBase + pagePosition*PageSize, start.Base, toCopy);
 
