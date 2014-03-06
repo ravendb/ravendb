@@ -7,24 +7,24 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 {
     public class Table : TableBase
 	{
-		private readonly ConcurrentDictionary<string, Database.Storage.Voron.Impl.Index> tableIndexes;
+		private readonly ConcurrentDictionary<string, Index> tableIndexes;
 
 		public Table(string tableName, IBufferPool bufferPool, params string[] indexNames)
 			: base(tableName, bufferPool)
 		{
-			tableIndexes = new ConcurrentDictionary<string, Database.Storage.Voron.Impl.Index>();
+			tableIndexes = new ConcurrentDictionary<string, Index>();
 
 			foreach (var indexName in indexNames)
 				GetIndex(indexName);
 		}
 
-		public Database.Storage.Voron.Impl.Index GetIndex(string indexName)
+		public Index GetIndex(string indexName)
 		{
 			if (string.IsNullOrEmpty(indexName))
 				throw new ArgumentNullException(indexName);
 
 			var indexKey = GetIndexKey(indexName);
-			return tableIndexes.GetOrAdd(indexKey, indexTreeName => new Database.Storage.Voron.Impl.Index(indexTreeName, BufferPool));
+			return tableIndexes.GetOrAdd(indexKey, indexTreeName => new Index(indexTreeName, BufferPool));
 		}
 
 		public string GetIndexKey(string indexName)

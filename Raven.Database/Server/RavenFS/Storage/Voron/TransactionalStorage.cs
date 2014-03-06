@@ -158,7 +158,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                 var writeBatchRef = new Reference<WriteBatch>();
                 try
                 {
-                    writeBatchRef.Value = new WriteBatch();
+                    writeBatchRef.Value = new WriteBatch { DisposeAfterWrite = false };
                     using (var storageActionsAccessor = new StorageActionsAccessor(tableStorage, writeBatchRef, snapshot, bufferPool))
                     {
                         current.Value = storageActionsAccessor;

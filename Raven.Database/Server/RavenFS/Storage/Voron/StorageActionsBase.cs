@@ -3,24 +3,26 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Text;
 
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
+using Raven.Database.Server.RavenFS.Storage.Voron.Impl;
+using Raven.Database.Server.RavenFS.Util;
+
+using System;
+
 using Raven.Database.Util.Streams;
+using Raven.Json.Linq;
 
-namespace Raven.Database.Storage.Voron.StorageActions
+using Voron;
+using Voron.Impl;
+
+namespace Raven.Database.Server.RavenFS.Storage.Voron
 {
-	using System;
-
-	using Raven.Abstractions.Extensions;
-	using Raven.Database.Storage.Voron.Impl;
-	using Raven.Json.Linq;
-
-	using global::Voron;
-	using global::Voron.Impl;
-
-	public abstract class StorageActionsBase
+    public abstract class StorageActionsBase
 	{
 	    private readonly IBufferPool bufferPool;
 
@@ -31,6 +33,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		    this.bufferPool = bufferPool;
 			Snapshot = snapshot;
 		}
+
+        protected string ConvertToKey(HashKey hashKey)
+        {
+            return CreateKey(Encoding.UTF8.GetString(hashKey.Strong), hashKey.Weak);
+        }
 
 		protected string CreateKey(params object[] values)
 		{
@@ -71,6 +78,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
         protected BufferPoolMemoryStream CreateStream()
         {
             return new BufferPoolMemoryStream(bufferPool);
+        }
+
+        protected static string HashKey(string key)
+        {
+            return Encoding.UTF8.GetString(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(key)));
         }
 	}
 }

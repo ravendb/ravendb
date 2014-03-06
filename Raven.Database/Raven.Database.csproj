@@ -407,6 +407,7 @@
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\Tables.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\TableStorage.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\StorageActionsAccessor.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\StorageActionsBase.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\TransactionalStorage.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\ConflictArtifactManager.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\ConflictDetector.cs" />
