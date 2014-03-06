@@ -110,6 +110,8 @@ namespace Voron.Impl.Paging
 
 		public override void Dispose()
 		{
+		    if (Disposed)
+		        return;
 			base.Dispose();
 		    for (ulong i = 0; i < _rangesCount; i++)
 		    {
