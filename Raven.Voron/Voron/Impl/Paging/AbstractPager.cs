@@ -144,14 +144,8 @@ namespace Voron.Impl.Paging
 
         public virtual void Dispose()
         {
-	        Dispose(shouldThrowAlreadyDisposedIfNeeded: true);
-        }
-
-// ReSharper disable once UnusedParameter.Local
-	    private void Dispose(bool shouldThrowAlreadyDisposedIfNeeded)
-	    {
-			if (Disposed && shouldThrowAlreadyDisposedIfNeeded)
-			    throw new ObjectDisposedException("The pager is already disposed");
+            if (Disposed)
+                return;
 
 		    if (PagerState != null)
 		    {
@@ -167,7 +161,7 @@ namespace Voron.Impl.Paging
 
 	    ~AbstractPager()
 		{
-			Dispose(shouldThrowAlreadyDisposedIfNeeded: false);
+			Dispose();
 		}
 
         public abstract void AllocateMorePages(Transaction tx, long newLength);
