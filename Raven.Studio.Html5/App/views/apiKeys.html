@@ -84,7 +84,11 @@
                                         <td data-bind="text: tenantId"></td>
                                         <td data-bind="text: admin"></td>
                                         <td data-bind="text: readOnly"></td>
-                                        <td data-bind="click: $parent.removeApiKeyDatabase.bind($parent, $data)">Delete</td>
+                                        <td>
+                                            <button type="button" style="display:inline-block; font-size: 14px;" class="close" data-bind="click: $parent.removeApiKeyDatabase.bind($parent, $data)" title="Remove this database">
+                                                <span class="glyphicon glyphicon-remove remove"></span>
+                                            </button>
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
