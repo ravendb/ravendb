@@ -73,14 +73,6 @@ namespace Raven.Database.Server.Security.OAuth
 			}
 		}
 
-		public static AccessToken Create(byte[] key, string userId, string[] databases)
-		{
-			var authorizedDatabases = (databases ?? new string[0]).Select(tenantId => new DatabaseAccess { TenantId = tenantId, ReadOnly = false }).ToList();
-
-			return Create(key, new AccessTokenBody { UserId = userId, AuthorizedDatabases = authorizedDatabases });
-		}
-
-
 		public static AccessToken Create(byte[] key, AccessTokenBody tokenBody)
 		{
 			tokenBody.Issued = (SystemTime.UtcNow - DateTime.MinValue).TotalMilliseconds;
