@@ -81,9 +81,15 @@
                                 </thead>
                                 <tbody data-bind="foreach: databases, templateOptions: { first: foos()[0]}">
                                     <tr>
-                                        <td data-bind="text: tenantId"></td>
-                                        <td data-bind="text: admin"></td>
-                                        <td data-bind="text: readOnly"></td>
+                                        <td>
+                                            <input type="text" data-bind="value: tenantId">
+                                        </td>
+                                        <td>
+                                            <input type="checkbox" data-bind="value: admin">
+                                        </td>
+                                        <td>
+                                            <input type="checkbox" data-bind="value: readOnly">
+                                        </td>
                                         <td>
                                             <button type="button" style="display:inline-block; font-size: 14px;" class="close" data-bind="click: $parent.removeApiKeyDatabase.bind($parent, $data)" title="Remove this database">
                                                 <span class="glyphicon glyphicon-remove remove"></span>
