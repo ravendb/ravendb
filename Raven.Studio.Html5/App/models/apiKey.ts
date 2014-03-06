@@ -73,6 +73,11 @@ class apiKey {
         this.secret(randomSecret);
     }
 
+    addEmptyApiKeyDatabase() {
+      var newItem: apiKeyDatabaseDto = { TenantId: '', Admin: false, ReadOnly: false };
+      this.databases.push(new apiKeyDatabase(newItem));
+    }
+
     removeApiKeyDatabase(database) {
       this.databases.remove(database);
     }
