@@ -53,7 +53,7 @@ namespace Raven.Tests.MailingList
 						  .AddOrder("N1_Range", true, typeof(double))
 						  .ToList();
 					Assert.Equal(50, result.Count); //FAIL(:
-					Assert.Equal(49.50, result.First().Attributes.First(x => x.Name == "N1").Value);
+					Assert.Equal(49.50m, result.First().Attributes.First(x => x.Name == "N1").Value);
 
 				}
 			}
