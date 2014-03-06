@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Voron.Trees;
@@ -11,7 +12,6 @@ namespace Voron.Impl.Paging
     public unsafe abstract class AbstractPager : IVirtualPager
     {
         protected int MinIncreaseSize { get { return 16 * PageSize; } }
-
         private long _increaseSize;
         private DateTime _lastIncrease;
 
@@ -19,20 +19,19 @@ namespace Voron.Impl.Paging
         {
 	        get
 	        {
-				Debug.Assert(Disposed == false);
-
-				return _pagerState;
+		        ThrowObjectDisposedIfNeeded();
+		        return _pagerState;
 	        }
-            set
+	        set
             {
-				Debug.Assert(Disposed == false);
+				ThrowObjectDisposedIfNeeded();
 				
                 _source = GetSourceName();
                 _pagerState = value;
             }
         }
 
-        private string _source;
+	    private string _source;
         protected AbstractPager()
         {
             _increaseSize = MinIncreaseSize;
@@ -58,7 +57,7 @@ namespace Voron.Impl.Paging
 
         public Page Read(long pageNumber, PagerState pagerState = null)
         {
-			Debug.Assert(Disposed == false);
+			ThrowObjectDisposedIfNeeded();
 			
             if (pageNumber + 1 > NumberOfAllocatedPages)
             {
@@ -73,7 +72,7 @@ namespace Voron.Impl.Paging
 
         public virtual Page GetWritable(long pageNumber)
         {
-			Debug.Assert(Disposed == false);
+			ThrowObjectDisposedIfNeeded();
 			
             if (pageNumber + 1 > NumberOfAllocatedPages)
             {
@@ -90,7 +89,7 @@ namespace Voron.Impl.Paging
 
         public virtual PagerState TransactionBegan()
         {
-			Debug.Assert(Disposed == false);
+			ThrowObjectDisposedIfNeeded();
 
             var state = PagerState;
             state.AddRef();
@@ -99,14 +98,14 @@ namespace Voron.Impl.Paging
 
         public bool WillRequireExtension(long requestedPageNumber, int numberOfPages)
         {
-			Debug.Assert(Disposed == false);
+			ThrowObjectDisposedIfNeeded();
 			
             return requestedPageNumber + numberOfPages > NumberOfAllocatedPages;
         }
 
         public void EnsureContinuous(Transaction tx, long requestedPageNumber, int numberOfPages)
         {
-			Debug.Assert(Disposed == false);
+			ThrowObjectDisposedIfNeeded();
 
             if (requestedPageNumber + numberOfPages <= NumberOfAllocatedPages)
                 return;
@@ -126,15 +125,15 @@ namespace Voron.Impl.Paging
 
         public bool ShouldGoToOverflowPage(int len)
         {
-			Debug.Assert(Disposed == false);
+			ThrowObjectDisposedIfNeeded();
 			
             return len + Constants.PageHeaderSize > MaxNodeSize;
         }
 
         public int GetNumberOfOverflowPages(int overflowSize)
         {
-			Debug.Assert(Disposed == false);
-			
+			ThrowObjectDisposedIfNeeded();
+
             overflowSize += Constants.PageHeaderSize;
             return (overflowSize / PageSize) + (overflowSize % PageSize == 0 ? 0 : 1);
         }
@@ -145,21 +144,30 @@ namespace Voron.Impl.Paging
 
         public virtual void Dispose()
         {
-            if (PagerState != null)
-            {
-                PagerState.Release();
-                PagerState = null;
-            }
-
-            Task.WaitAll(_tasks.ToArray());
-
-            Disposed = true;
-			GC.SuppressFinalize(this);
+	        Dispose(shouldThrowAlreadyDisposedIfNeeded: true);
         }
 
-		~AbstractPager()
+// ReSharper disable once UnusedParameter.Local
+	    private void Dispose(bool shouldThrowAlreadyDisposedIfNeeded)
+	    {
+			if (Disposed && shouldThrowAlreadyDisposedIfNeeded)
+			    throw new ObjectDisposedException("The pager is already disposed");
+
+		    if (PagerState != null)
+		    {
+			    PagerState.Release();
+			    PagerState = null;
+		    }
+
+		    Task.WaitAll(_tasks.ToArray());
+
+		    Disposed = true;
+		    GC.SuppressFinalize(this);
+	    }
+
+	    ~AbstractPager()
 		{
-			Dispose();
+			Dispose(shouldThrowAlreadyDisposedIfNeeded: false);
 		}
 
         public abstract void AllocateMorePages(Transaction tx, long newLength);
@@ -204,5 +212,13 @@ namespace Voron.Impl.Paging
         {
             _tasks.Add(run);
         }
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		protected void ThrowObjectDisposedIfNeeded()
+		{
+			if (Disposed)
+				throw new ObjectDisposedException("The pager is already disposed");
+		}
+
     }
 }
