@@ -177,27 +177,37 @@ namespace Raven.Database.Util
 
         private bool IsValidCategory(string instanceName)
         {
-            if (PerformanceCounterExistsSlow() == false)
-                return false;
+            if (corruptedCounters)
+                throw new OperationCanceledException();
 
-            foreach (var counter in CounterProperties)
+            // Fire this off on an separate thread
+            bool result = false;
+            var thread = new Thread(() =>
             {
-                if (PerformanceCounterCategory.CounterExists(counter.Name, CategoryName) == false)
-                {
-                    PerformanceCounterCategory.Delete(CategoryName);
-                    return false;
-                }
-
                 try
                 {
-                    new PerformanceCounter(CategoryName, counter.Name, instanceName, readOnly: true).Close();
+                    result = PerformanceCounterExistsAndHasAllCounters(instanceName);
                 }
-                catch (InvalidOperationException)
+                catch (Exception e)
                 {
-                    PerformanceCounterCategory.Delete(CategoryName);
-                    return false;
+                    log.Warn("Could not use performance counters", e);
+                    result = false;
                 }
+            });
+            thread.Start();
+
+            if (!thread.Join(PerformanceCounterWaitTimeout))
+            {
+                corruptedCounters = true;
+                log.Warn("We could not check if the performance counter category '{0}' exist or not, because it took more then the allowed timeout. We will not use the performace counter feature.", CategoryName);
+                thread.Abort();
+                // If it timed out then throw
+                throw new OperationCanceledException();
             }
+            if (result == false)
+                return false;
+
+            
             return true;
         }
 
@@ -230,42 +240,28 @@ namespace Raven.Database.Util
             UnloadCounters();
         }
 
-        private static bool PerformanceCounterExistsSlow()
+        private static bool PerformanceCounterExistsAndHasAllCounters(string instanceName)
         {
-            if (corruptedCounters)
-                throw new OperationCanceledException();
-
-            // Fire this off on an separate thread
-            bool result = false;
-            var thread = new Thread(() =>
+            if (PerformanceCounterCategory.Exists(CategoryName) == false)
+                return false;
+            foreach (var counter in CounterProperties)
             {
+                if (PerformanceCounterCategory.CounterExists(counter.Name, CategoryName) == false)
+                {
+                    PerformanceCounterCategory.Delete(CategoryName);
+                    return false;
+                }
+
                 try
                 {
-                    result = PerformanceCounterExists();
+                    new PerformanceCounter(CategoryName, counter.Name, instanceName, readOnly: true).Close();
                 }
-                catch (Exception e)
+                catch (InvalidOperationException)
                 {
-                    log.Warn("Could not use performance counters", e);
-                    result = false;
+                    PerformanceCounterCategory.Delete(CategoryName);
+                    return false;
                 }
-            });
-            thread.Start();
-
-            if (!thread.Join(PerformanceCounterWaitTimeout))
-            {
-                corruptedCounters = true;
-                log.Warn("We could not check if the performance counter category '{0}' exist or not, because it took more then 2 minutes. We will not use the performace counter feature.", CategoryName);
-                thread.Abort();
-                // If it timed out then throw
-                throw new OperationCanceledException();
             }
-
-            return result;
-        }
-
-        private static bool PerformanceCounterExists()
-        {
-            return PerformanceCounterCategory.Exists(CategoryName);
         }
     }
 }
