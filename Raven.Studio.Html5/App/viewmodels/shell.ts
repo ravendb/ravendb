@@ -68,6 +68,16 @@ class shell {
 			e.preventDefault();
 			this.newDocument();
         });
+
+        var dataset: Twitter.Typeahead.Dataset = {
+            name: "test",
+            local: ["hello","world"]
+        };
+        $("#goToDocInput").typeahead(dataset);
+    }
+
+    handleQuery(query: any, cb: any) {
+        debugger;
     }
 
     showNavigationProgress(isNavigating: boolean) {
