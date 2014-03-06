@@ -95,7 +95,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			log.Debug("File '{0}' is in conflict with destination version from {1}. Applying conflict on destination", FileName,
 					  destination.FileSystemUrl);
 
-			var destinationRavenFileSystemClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem);
+			var destinationRavenFileSystemClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem, apiKey: destination.ApiKey);
 			try
 			{
 				var version = conflict.RemoteHistory.Last().Version;

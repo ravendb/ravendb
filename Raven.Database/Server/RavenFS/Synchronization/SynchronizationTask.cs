@@ -87,7 +87,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 		public async Task<SynchronizationReport> SynchronizeFileToAsync(string fileName, SynchronizationDestination destination)
 		{
-			var destinationClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem);
+			var destinationClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem, apiKey: destination.ApiKey);
 			NameValueCollection destinationMetadata;
 
 			try
@@ -129,7 +129,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		{
 			try
 			{
-				var destinationClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem);
+				var destinationClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem, apiKey: destination.ApiKey);
 
 				var lastETag = await destinationClient.Synchronization.GetLastSynchronizationFromAsync(storage.Id);
 

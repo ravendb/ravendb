@@ -17,6 +17,7 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.RavenFS.Changes;
 using Raven.Client.RavenFS.Connections;
+using Raven.Client.RavenFS.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -58,6 +59,16 @@ namespace Raven.Client.RavenFS
 		{
 			get { return replicationInformer; }
 		}
+
+	    public HttpJsonRequestFactory JsonRequestFactory
+	    {
+            get { return jsonRequestFactory; }
+	    }
+
+	    public OperationCredentials PrimaryCredentials
+	    {
+            get { return credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication; }
+	    }
 
         public RavenFileSystemClient(string serverUrl, string fileSystemName, ICredentials credentials = null, string apiKey = null)
 		{
@@ -1010,15 +1021,14 @@ namespace Raven.Client.RavenFS
 
             public Task<SynchronizationReport> StartAsync(string fileName, RavenFileSystemClient destination)
             {
-                return StartAsync(fileName, destination.ServerUrl, destination.FileSystemName);
+                return StartAsync(fileName, destination.ToSynchronizationDestination());
             }
 
-			public Task<SynchronizationReport> StartAsync(string fileName, string destinationServerUrl, string destinationFileSystem)
+			public Task<SynchronizationReport> StartAsync(string fileName, SynchronizationDestination destination)
 			{
-				return ravenFileSystemClient.ExecuteWithReplication("GET", async operation =>
+				return ravenFileSystemClient.ExecuteWithReplication("POST", async operation =>
 				{
-                    var requestUriString = String.Format("{0}/synchronization/start/{1}?destinationServerUrl={2}&destinationFileSystem={3}", operation.Url,
-                                                         Uri.EscapeDataString(fileName), Uri.EscapeDataString(destinationServerUrl), destinationFileSystem);
+                    var requestUriString = String.Format("{0}/synchronization/start/{1}", operation.Url, Uri.EscapeDataString(fileName));
 
 					var request =
                         ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
@@ -1026,6 +1036,7 @@ namespace Raven.Client.RavenFS
 
 					try
 					{
+                        await request.WriteAsync(JsonConvert.SerializeObject(destination));
 						var response = await request.ReadResponseJsonAsync();
 						return new JsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
 					}

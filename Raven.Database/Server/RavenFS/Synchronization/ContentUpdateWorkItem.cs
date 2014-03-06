@@ -47,17 +47,17 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		{
 			AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
 
-			var destinationRavenFileSystemClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem);
+			var destinationClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem, apiKey: destination.ApiKey);
 
-			var destinationMetadata = await destinationRavenFileSystemClient.GetMetadataForAsync(FileName);
+			var destinationMetadata = await destinationClient.GetMetadataForAsync(FileName);
 
 			if (destinationMetadata == null)
 			{
 				// if file doesn't exist on destination server - upload it there
-				return await UploadToAsync(destination);
+                return await UploadToAsync(destinationClient);
 			}
 
-			var destinationServerRdcStats = await destinationRavenFileSystemClient.Synchronization.GetRdcStatsAsync();
+			var destinationServerRdcStats = await destinationClient.Synchronization.GetRdcStatsAsync();
 			if (!IsRemoteRdcCompatible(destinationServerRdcStats))
 				throw new SynchronizationException("Incompatible RDC version detected on destination server");
 
@@ -70,7 +70,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			using (var remoteSignatureCache = new VolatileSignatureRepository(FileName))
 			{
 				var localRdcManager = new LocalRdcManager(localSignatureRepository, Storage, sigGenerator);
-				var destinationRdcManager = new RemoteRdcManager(destinationRavenFileSystemClient, localSignatureRepository,
+				var destinationRdcManager = new RemoteRdcManager(destinationClient, localSignatureRepository,
 																 remoteSignatureCache);
 
 				log.Debug("Starting to retrieve signatures of a local file '{0}'.", FileName);
@@ -90,12 +90,12 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 					{
 						return
 							await
-							SynchronizeTo(destination, localSignatureRepository, remoteSignatureCache, localSignatureManifest,
+                            SynchronizeTo(destinationClient, localSignatureRepository, remoteSignatureCache, localSignatureManifest,
 										  destinationSignatureManifest);
 					}
 				}
 
-				return await UploadToAsync(destination);
+                return await UploadToAsync(destinationClient);
 			}
 		}
 
@@ -108,7 +108,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			}
 		}
 
-        private async Task<SynchronizationReport> SynchronizeTo(SynchronizationDestination destination,
+        private async Task<SynchronizationReport> SynchronizeTo(RavenFileSystemClient destination,
 																ISignatureRepository localSignatureRepository,
 																ISignatureRepository remoteSignatureRepository,
 																SignatureManifest sourceSignatureManifest,
@@ -129,7 +129,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			}
 		}
 
-        public async Task<SynchronizationReport> UploadToAsync(SynchronizationDestination destination)
+        public async Task<SynchronizationReport> UploadToAsync(RavenFileSystemClient destination)
 		{
 			using (var sourceFileStream = StorageStream.Reading(Storage, FileName))
 			{
@@ -149,7 +149,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			}
 		}
 
-        private Task<SynchronizationReport> PushByUsingMultipartRequest(SynchronizationDestination destination, Stream sourceFileStream,
+        private Task<SynchronizationReport> PushByUsingMultipartRequest(RavenFileSystemClient destination, Stream sourceFileStream,
 																		IList<RdcNeed> needList)
 		{
 			Cts.Token.ThrowIfCancellationRequested();

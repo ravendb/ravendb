@@ -26,9 +26,18 @@ namespace Raven.Client.RavenFS
             get { return string.Format("{0}/ravenfs/{1}", ServerUrl, FileSystem); }
         }
 
+        public string Username { get; set; }
+
+        public string Password { get; set; }
+
+        public string Domain { get; set; }
+
+        public string ApiKey { get; set; }
+
         protected bool Equals(SynchronizationDestination other)
         {
-            return string.Equals(serverUrl, other.serverUrl) && string.Equals(FileSystem, other.FileSystem);
+            return string.Equals(serverUrl, other.serverUrl) && string.Equals(ApiKey, other.ApiKey) && string.Equals(Domain, other.Domain) && 
+                string.Equals(Password, other.Password) && string.Equals(Username, other.Username) && string.Equals(FileSystem, other.FileSystem);
         }
 
         public override bool Equals(object obj)
@@ -36,14 +45,20 @@ namespace Raven.Client.RavenFS
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((SynchronizationDestination) obj);
+            return Equals((SynchronizationDestination)obj);
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                return ((serverUrl != null ? serverUrl.GetHashCode() : 0)*397) ^ (FileSystem != null ? FileSystem.GetHashCode() : 0);
+                var hashCode = (serverUrl != null ? serverUrl.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (ApiKey != null ? ApiKey.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Domain != null ? Domain.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Password != null ? Password.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Username != null ? Username.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (FileSystem != null ? FileSystem.GetHashCode() : 0);
+                return hashCode;
             }
         }
     }
