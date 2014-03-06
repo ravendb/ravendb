@@ -57,7 +57,7 @@ namespace RavenFS.Tests
             return ravenDbServer;
         }
 
-        protected virtual RavenFileSystemClient NewClient(int index = 0, bool fiddler = false, [CallerMemberName] string fileSystemName = null)
+        protected RavenFileSystemClient NewClient(int index = 0, bool fiddler = false, [CallerMemberName] string fileSystemName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
