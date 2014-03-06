@@ -8,17 +8,22 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Client.RavenFS;
+using Raven.Client.RavenFS.Extensions;
+using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.RavenFS;
+using Raven.Database.Server.Security;
 using Raven.Server;
+using Xunit;
 
 namespace RavenFS.Tests
 {
@@ -34,10 +39,10 @@ namespace RavenFS.Tests
                                                     bool runInMemory = true,
                                                     string requestedStorage = null,
                                                     bool enableAuthentication = false,
-                                                    string serverName = null)
+                                                    string fileSystemName = null)
         {
             var storageType = GetDefaultStorageType(requestedStorage);
-            var directory = dataDirectory ?? NewDataPath(serverName);
+            var directory = dataDirectory ?? NewDataPath(fileSystemName + "_" + port);
 
             var ravenConfiguration = new RavenConfiguration()
             {
@@ -51,27 +56,33 @@ namespace RavenFS.Tests
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
 			};
 
+            if (enableAuthentication)
+            {
+                Authentication.EnableOnce();
+            }
+
             var ravenDbServer = new RavenDbServer(ravenConfiguration);
             servers.Add(ravenDbServer);
+
+            if (enableAuthentication)
+            {
+                EnableAuthentication(ravenDbServer.SystemDatabase);
+            }
+
+            ConfigureServer(ravenDbServer, fileSystemName);
 
             return ravenDbServer;
         }
 
-        protected RavenFileSystemClient NewClient(int index = 0, bool fiddler = false, [CallerMemberName] string fileSystemName = null)
+        protected virtual RavenFileSystemClient NewClient(int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = "", [CallerMemberName] string fileSystemName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
-            var server = CreateRavenDbServer(Ports[index], serverName: string.Format("{0}_{1}", fileSystemName, Ports[index]));
+            var server = CreateRavenDbServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication);
 
-            var client = new RavenFileSystemClient(GetServerUrl(fiddler, server.SystemDatabase.ServerUrl), fileSystemName);
+            var client = new RavenFileSystemClient(GetServerUrl(fiddler, server.SystemDatabase.ServerUrl), fileSystemName, apiKey: apiKey);
 
-            client.Admin.CreateFileSystem(new DatabaseDocument()
-            {
-                Settings = new Dictionary<string, string>()
-		            {
-		                {"Raven/FileSystem/DataDir", Path.Combine(server.SystemDatabase.Configuration.DataDirectory, "RavenFS_files")}
-		            }
-            }).Wait();
+            client.EnsureFileSystemExistsAsync().Wait();
 
             ravenFileSystemClients.Add(client);
 
@@ -99,6 +110,11 @@ namespace RavenFS.Tests
             }
 
             return serverUrl;
+        }
+
+        protected virtual void ConfigureServer(RavenDbServer server, string fileSystemName)
+        {
+
         }
 
         protected string NewDataPath(string prefix = null)
@@ -144,6 +160,28 @@ namespace RavenFS.Tests
             {
                 return reader.ReadToEnd();
             }
+        }
+
+        public static void EnableAuthentication(DocumentDatabase database)
+        {
+            var license = GetLicenseByReflection(database);
+            license.Error = false;
+            license.Status = "Commercial";
+
+            // rerun this startup task
+            database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
+        }
+
+        public static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
+        {
+            var field = database.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(field);
+            var validateLicense = field.GetValue(database);
+
+            var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
+            Assert.NotNull(currentLicenseProp);
+
+            return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
         }
 
         public virtual void Dispose()

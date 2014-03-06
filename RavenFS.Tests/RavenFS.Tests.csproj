@@ -76,6 +76,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Auth\ClientOAuthAuthentication.cs" />
+    <Compile Include="Auth\ClientWithoutAuthenticationSetup.cs" />
     <Compile Include="BigFileHandling.cs" />
     <Compile Include="Bugs\CaseSensitiveFileDeletion.cs" />
     <Compile Include="Bugs\ReadingFileIfFileWithGreaterNameExists.cs" />

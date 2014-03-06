@@ -428,7 +428,7 @@ namespace RavenFS.Tests
 			{
 				await client.RenameAsync("file1.bin", "file2.bin");
 			}
-			catch (AggregateException e)
+			catch (InvalidOperationException e)
 			{
 				ex = e.GetBaseException();
 			}
@@ -456,9 +456,8 @@ namespace RavenFS.Tests
 			{
 				await client.DownloadAsync("not_existing_file", new MemoryStream());
 			}
-			catch (AggregateException ex)
+            catch (FileNotFoundException ex)
 			{
-				Assert.IsType<FileNotFoundException>(ex.GetBaseException());
 				throwsCount++;
 			}
 
@@ -466,9 +465,8 @@ namespace RavenFS.Tests
 			{
 				await client.RenameAsync("not_existing_file", "abc");
 			}
-			catch (AggregateException ex)
+            catch (FileNotFoundException ex)
 			{
-				Assert.IsType<FileNotFoundException>(ex.GetBaseException());
 				throwsCount++;
 			}
 
@@ -476,9 +474,8 @@ namespace RavenFS.Tests
 			{
 				await client.DeleteAsync("not_existing_file");
 			}
-			catch (AggregateException ex)
+            catch (FileNotFoundException ex)
 			{
-				Assert.IsType<FileNotFoundException>(ex.GetBaseException());
 				throwsCount++;
 			}
 
@@ -487,9 +484,8 @@ namespace RavenFS.Tests
 				await client.UpdateMetadataAsync("not_existing_file", new NameValueCollection());
 				throwsCount++;
 			}
-			catch (AggregateException ex)
+            catch (FileNotFoundException ex)
 			{
-				Assert.IsType<FileNotFoundException>(ex.GetBaseException());
 				throwsCount++;
 			}
 

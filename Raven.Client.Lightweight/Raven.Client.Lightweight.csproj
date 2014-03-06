@@ -118,6 +118,7 @@
     <Compile Include="RavenFS\Connections\FileConvention.cs" />
     <Compile Include="RavenFS\Connections\RavenFileSystemReplicationInformer.cs" />
     <Compile Include="RavenFS\ExceptionExtensions.cs" />
+    <Compile Include="RavenFS\Extensions\FileSystemTenancyExtensions.cs" />
     <Compile Include="RavenFS\ListenableStream.cs" />
     <Compile Include="RavenFS\ListPage.cs" />
     <Compile Include="RavenFS\NameValueCollectionJsonConverter.cs" />
