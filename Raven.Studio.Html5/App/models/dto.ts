@@ -86,13 +86,7 @@ interface apiKeyDto {
     Name: string;
     Secret: string;
     Enabled: boolean;
-    Databases: Array<apiKeyDatabaseDto>;
-}
-
-interface apiKeyDatabaseDto {
-    TenantId: string;
-    Admin: boolean;
-    ReadOnly: boolean;
+    Databases: Array<databaseAccessDto>;
 }
 
 interface buildVersionDto {

@@ -50,13 +50,17 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Databases</label>
                             <div class="col-sm-9">
-                                <table class="table table-striped table-hover">
+                                <table class="table table-striped table-hover database-table">
                                     <thead>
                                         <tr class="database-header-row">
                                             <td>Name</td>
                                             <td class="narrow-column">Admin</td>
                                             <td class="narrow-column">Read Only</td>
-                                            <td class="narrowest-column"><button type="button" style="display:inline-block;" class="close" title="Add" data-bind="click: addDatabase">+</button></td>
+                                            <td class="narrowest-column">
+                                                <button type="button" style="display:inline-block; font-size: 14px;" class="close" title="Add new database" data-bind="click: addDatabase">
+                                                    <span class="glyphicon glyphicon-plus"></span>
+                                                </button>
+                                            </td>
                                         </tr>
                                     </thead>
                                     <tbody data-bind="foreach: databases">
@@ -68,7 +72,11 @@
                                             </td>
                                             <td class="text-center"><input type="checkbox" data-bind="checked: admin"/></td>
                                             <td class="text-center"><input type="checkbox" data-bind="checked: readOnly"/></td>
-                                            <td><button type="button" style="display:inline-block;" class="close" title="Remove" data-bind="click: $parent.removeDatabase.bind($parent)">×</button></td>
+                                            <td>
+                                                <button type="button" style="display:inline-block; font-size: 14px;" class="close" title="Remove this database" data-bind="click: $parent.removeDatabase.bind($parent)">
+                                                    <span class="glyphicon glyphicon-remove"></span>
+                                                </button>
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
