@@ -1,4 +1,4 @@
-﻿html,
+html,
 body {
   height: 100%;
 }
@@ -101,10 +101,34 @@ body {
   margin-top: 10px;
 }
 .settings-container .api-key-card,
-.settings-container .replication-destination-card {
+.settings-container .replication-destination-card,
+.settings-container .win-auth-card {
   display: inline-block;
   width: 500px;
   margin-right: 20px;
+}
+.settings-container .win-auth-tabs {
+  padding: 15px;
+}
+.settings-container .win-auth-tabs .win-auth-panels-container {
+  margin-top: 15px;
+}
+.settings-container .win-auth-tabs .table {
+  margin-bottom: 0px;
+}
+.settings-container .win-auth-tabs .table td {
+  padding: 3px;
+}
+.settings-container .win-auth-tabs .database-header-row .narrow-column {
+  width: 75px;
+}
+.settings-container .win-auth-tabs .database-header-row .narrowest-column {
+  width: 1px;
+}
+.settings-container .win-auth-tabs .database-row .form-control {
+  border-radius: 3px;
+  height: 26px;
+  font-size: 12px;
 }
 .collection-style-0 {
   background-color: #00c700;
@@ -382,4 +406,3 @@ footer ul {
   font-size: 14px;
   float: left;
 }
-/*# sourceMappingURL=app.css.map */

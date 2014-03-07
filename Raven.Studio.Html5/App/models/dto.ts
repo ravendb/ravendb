@@ -288,6 +288,23 @@ interface replicationConfigDto {
     AttachmentConflictResolution: string;
 }
 
+interface databaseAccessDto {
+    Admin: boolean;
+    TenantId: string;
+    ReadOnly: boolean;
+}
+
+interface windowsAuthDataDto {
+    Name: string;
+    Enabled: boolean;
+    Databases: databaseAccessDto[];
+}
+
+interface windowsAuthDto {
+    RequiredGroups: windowsAuthDataDto[];
+    RequiredUsers: windowsAuthDataDto[];
+}
+
 interface transformerDto {
     name: string;
     definition: {
