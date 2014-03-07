@@ -87,6 +87,7 @@
     <TypeScriptCompile Include="App\viewmodels\logs.ts" />
     <TypeScriptCompile Include="App\viewmodels\query.ts" />
     <TypeScriptCompile Include="App\viewmodels\queryShell.ts" />
+    <TypeScriptCompile Include="App\viewmodels\recentErrors.ts" />
     <TypeScriptCompile Include="App\viewmodels\replicationStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
@@ -113,6 +114,7 @@
     <Content Include="App\views\createSampleData.html" />
     <Content Include="App\views\csvImport.html" />
     <Content Include="App\views\deleteDocumentsMatchingQueryConfirm.html" />
+    <Content Include="App\views\recentErrors.html" />
     <Content Include="App\views\exportDatabase.html" />
     <Content Include="App\views\importDatabase.html" />
     <Content Include="App\views\replications.html" />
@@ -1071,6 +1073,7 @@
     <TypeScriptCompile Include="Scripts\typings\moment\moment.amd.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\moment\moment.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\nprogress\nprogress.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\requirejs\require.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\typeahead\typeahead.d.ts" />
   </ItemGroup>
   <ItemGroup>

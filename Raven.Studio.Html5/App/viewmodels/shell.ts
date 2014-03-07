@@ -31,6 +31,7 @@ class shell {
     licenseStatus = ko.observable<licenseStatusDto>();
     windowHeightObservable: KnockoutObservable<number>;
     appUrls: computedAppUrls;
+    recordedErrors = ko.observableArray<alertArgs>();
 
     constructor() {
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
@@ -129,8 +130,12 @@ class shell {
 		});
 	}
 
-	showAlert(alert: alertArgs) {
-		var currentAlert = this.currentAlert();
+    showAlert(alert: alertArgs) {
+        if (alert.type === alertType.danger || alert.type === alertType.warning) {
+            this.recordedErrors.unshift(alert);
+        }
+
+        var currentAlert = this.currentAlert();
 		if (currentAlert) {
 			// Maintain a 1000ms time between alerts; otherwise successive alerts can fly by too quickly.
 			this.queuedAlerts.push(alert);
@@ -147,10 +152,16 @@ class shell {
 		}
 	}
 
-	closeAlertAndShowNext(alertToClose: alertArgs) {
-		$('#' + alertToClose.id).alert('close');
-		var nextAlert = this.queuedAlerts.pop();
-		setTimeout(() => this.currentAlert(nextAlert), 1000); // Give the alert a chance to fade out before we push in the new alert.
+    closeAlertAndShowNext(alertToClose: alertArgs) {
+        var alertElement = $('#' + alertToClose.id);
+        // If the mouse is over the alert, keep it around.
+        if (alertElement.is(":hover")) {
+            setTimeout(() => this.closeAlertAndShowNext(alertToClose), 1000);
+        } else {
+            alertElement.alert('close');
+            var nextAlert = this.queuedAlerts.pop();
+            setTimeout(() => this.currentAlert(nextAlert), 1000); // Give the alert a chance to fade out before we push in the new alert.
+        }
 	}
 
 	newDocument() {
@@ -193,6 +204,13 @@ class shell {
         new getLicenseStatusCommand()
             .execute()
             .done((result: licenseStatusDto) => this.licenseStatus(result));
+    }
+
+    showErrorsDialog() {
+        require(["viewmodels/recentErrors"], ErrorDetails => {
+            var dialog = new ErrorDetails(this.recordedErrors);
+            app.showDialog(dialog);
+        });
     }
 }
 

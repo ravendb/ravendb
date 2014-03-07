@@ -93,9 +93,11 @@ body {
 .indexes-container {
   margin-top: 10px;
 }
-.indexes-container .index-group {
-  /*width: 50%;*/
-  /*overflow: visible;*/
+.indexes-container .index .index-actions-container {
+  display: none;
+}
+.indexes-container .index:hover .index-actions-container {
+  display: inline-block;
 }
 .settings-container {
   margin-top: 10px;
@@ -266,10 +268,9 @@ body {
 .studio-alerts {
   position: fixed;
   top: 60px;
-  left: 45%;
-  right: 45%;
+  left: 40%;
   z-index: 2000;
-  width: 300px;
+  width: 400px;
 }
 #editDocumentContainer:focus {
   outline: 0;
@@ -382,4 +383,15 @@ footer ul {
   font-size: 14px;
   float: left;
 }
-/*# sourceMappingURL=app.css.map */
+#recentErrorsDialog {
+  height: 500px;
+  width: 600px;
+}
+#recentErrorsDialog .modal-body {
+  height: 350px;
+  overflow-y: auto;
+}
+#recentErrorsDialog .error-details,
+#recentErrorsDialog .http-status {
+  width: 100%;
+}
