@@ -9,10 +9,15 @@ class saveWindowsAuthCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        this.reportInfo("Saving Windows Authentication settings.");
-        return this.saveSetup()
-            .done(() => this.reportSuccess("Saved Windows Authentication settings."))
-            .fail((response: JQueryXHR) => this.reportError("Failed to save Windows Authentication settings.", response.responseText));
+        if (this.dto.RequiredUsers.concat(this.dto.RequiredGroups).every(element => (element.Name.indexOf("\\") !== -1))) {
+            this.reportInfo("Saving Windows Authentication settings.");
+            return this.saveSetup()
+                .done(() => this.reportSuccess("Saved Windows Authentication settings."))
+                .fail((response: JQueryXHR) => this.reportError("Failed to save Windows Authentication settings.", response.responseText));
+        } else {
+            this.reportWarning("Windows Authentication not saved! All names must have \"\\\" in them.");
+            return null;
+        }
     }
 
     private saveSetup(): JQueryPromise<any> {
