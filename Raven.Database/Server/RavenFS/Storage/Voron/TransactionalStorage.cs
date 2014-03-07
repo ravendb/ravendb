@@ -36,6 +36,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         private TableStorage tableStorage;
 
+        private IdGenerator idGenerator;
+
         public TransactionalStorage(string path, NameValueCollection settings)
         {
             this.path = path;
@@ -105,6 +107,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                 }
             }
 
+            idGenerator = new IdGenerator(tableStorage);
+
             return persistenceSource.CreatedNew;
         }
 
@@ -159,7 +163,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                 try
                 {
                     writeBatchRef.Value = new WriteBatch { DisposeAfterWrite = false };
-                    using (var storageActionsAccessor = new StorageActionsAccessor(tableStorage, writeBatchRef, snapshot, bufferPool))
+                    using (var storageActionsAccessor = new StorageActionsAccessor(tableStorage, writeBatchRef, snapshot, idGenerator, bufferPool))
                     {
                         current.Value = storageActionsAccessor;
 

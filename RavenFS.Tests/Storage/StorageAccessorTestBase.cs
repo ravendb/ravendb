@@ -43,9 +43,9 @@ namespace RavenFS.Tests.Storage
             return newDataDir;
         }
 
-        protected ITransactionalStorage NewTransactionalStorage(string requestedStorage, bool runInMemory = true)
+        protected ITransactionalStorage NewTransactionalStorage(string requestedStorage, bool runInMemory = true, string path = null)
         {
-            var path = NewDataPath();
+            path = path ?? NewDataPath();
 
             var settings = new NameValueCollection
                            {

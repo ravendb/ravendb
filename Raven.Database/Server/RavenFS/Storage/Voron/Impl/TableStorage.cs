@@ -18,31 +18,31 @@ using Voron.Impl;
 namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 {
     public class TableStorage : IDisposable
-	{
-		private readonly IPersistenceSource persistenceSource;
+    {
+        private readonly IPersistenceSource persistenceSource;
 
-	    private readonly IBufferPool bufferPool;
+        private readonly IBufferPool bufferPool;
 
-	    private readonly StorageEnvironment env;
+        private readonly StorageEnvironment env;
 
-		public TableStorage(IPersistenceSource persistenceSource, IBufferPool bufferPool)
-		{
-			if (persistenceSource == null)
-				throw new ArgumentNullException("persistenceSource");
+        public TableStorage(IPersistenceSource persistenceSource, IBufferPool bufferPool)
+        {
+            if (persistenceSource == null)
+                throw new ArgumentNullException("persistenceSource");
 
-			this.persistenceSource = persistenceSource;
-		    this.bufferPool = bufferPool;
+            this.persistenceSource = persistenceSource;
+            this.bufferPool = bufferPool;
 
-		    Debug.Assert(persistenceSource.Options != null);
-			env = new StorageEnvironment(persistenceSource.Options);
+            Debug.Assert(persistenceSource.Options != null);
+            env = new StorageEnvironment(persistenceSource.Options);
 
-			Initialize();
-			CreateSchema();
-		}		
+            Initialize();
+            CreateSchema();
+        }
 
-		internal Dictionary<string, object> GenerateReportOnStorage()
-		{
-			var reportData = new Dictionary<string, object>
+        internal Dictionary<string, object> GenerateReportOnStorage()
+        {
+            var reportData = new Dictionary<string, object>
 	        {
 	            {"MaxNodeSize", persistenceSource.Options.DataPager.MaxNodeSize},
 	            {"NumberOfAllocatedPages", persistenceSource.Options.DataPager.NumberOfAllocatedPages},
@@ -52,13 +52,13 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
                 {"Files", GetEntriesCount(Files)},
 	        };
 
-			return reportData;
-		}
+            return reportData;
+        }
 
-		public SnapshotReader CreateSnapshot()
-		{
-			return env.CreateSnapshot();
-		}
+        public SnapshotReader CreateSnapshot()
+        {
+            return env.CreateSnapshot();
+        }
 
         public Table Files { get; private set; }
 
@@ -74,88 +74,88 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 
         public Table Details { get; private set; }
 
-		public StorageEnvironment Environment
-		{
-			get
-			{
-				return env;
-			}
-		}
+        public StorageEnvironment Environment
+        {
+            get
+            {
+                return env;
+            }
+        }
 
         public void Write(WriteBatch writeBatch)
-		{
-		    try
-		    {
+        {
+            try
+            {
                 env.Writer.Write(writeBatch);
-		    }
-		    catch (AggregateException ae)
-		    {
-		        if (ae.InnerException is OperationCanceledException == false) // this can happen during storage disposal
-		            throw;
-		    }
-		}
+            }
+            catch (AggregateException ae)
+            {
+                if (ae.InnerException is OperationCanceledException == false) // this can happen during storage disposal
+                    throw;
+            }
+        }
 
-		public long GetEntriesCount(TableBase table)
-		{
-			using (var tx = env.NewTransaction(TransactionFlags.Read))
-			{
-				return tx.State.GetTree(tx,table.TableName).State.EntriesCount;
-			}
-		}
+        public long GetEntriesCount(TableBase table)
+        {
+            using (var tx = env.NewTransaction(TransactionFlags.Read))
+            {
+                return tx.State.GetTree(tx, table.TableName).State.EntriesCount;
+            }
+        }
 
-		public void RenderAndShow(TableBase table, int showEntries = 25)
-		{
-			if (Debugger.IsAttached == false)
-				return;
+        public void RenderAndShow(TableBase table, int showEntries = 25)
+        {
+            if (Debugger.IsAttached == false)
+                return;
 
-			using (var tx = env.NewTransaction(TransactionFlags.Read))
-			{
-				RenderAndShow(tx, table, showEntries);
-			}
-		}
+            using (var tx = env.NewTransaction(TransactionFlags.Read))
+            {
+                RenderAndShow(tx, table, showEntries);
+            }
+        }
 
-		public void RenderAndShow(Transaction tx, TableBase table, int showEntries = 25)
-		{
-			if (Debugger.IsAttached == false)
-				return;
+        public void RenderAndShow(Transaction tx, TableBase table, int showEntries = 25)
+        {
+            if (Debugger.IsAttached == false)
+                return;
 
-			var tree = tx.State.GetTree(tx, table.TableName);
+            var tree = tx.State.GetTree(tx, table.TableName);
 
-			var path = Path.Combine(System.Environment.CurrentDirectory, "test-tree.dot");
-			var rootPageNumber = tree.State.RootPageNumber;
-			TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(rootPageNumber), showEntries);
+            var path = Path.Combine(System.Environment.CurrentDirectory, "test-tree.dot");
+            var rootPageNumber = tree.State.RootPageNumber;
+            TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(rootPageNumber), showEntries);
 
-			var output = Path.Combine(System.Environment.CurrentDirectory, "output.svg");
-			var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.32\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
-			p.WaitForExit();
-			Process.Start(output);
-		}
+            var output = Path.Combine(System.Environment.CurrentDirectory, "output.svg");
+            var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.32\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
+            p.WaitForExit();
+            Process.Start(output);
+        }
 
-		public void Dispose()
-		{
-			if (persistenceSource != null)
-				persistenceSource.Dispose();
+        public void Dispose()
+        {
+            if (persistenceSource != null)
+                persistenceSource.Dispose();
 
-			if (env != null)
-				env.Dispose();
-		}
+            if (env != null)
+                env.Dispose();
+        }
 
-		//create all relevant storage trees in one place
-		private void CreateSchema()
-		{
-			using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				CreateFilesSchema(tx);
+        //create all relevant storage trees in one place
+        private void CreateSchema()
+        {
+            using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                CreateFilesSchema(tx);
                 CreateFileTombstonesSchema(tx);
-				CreatSignaturesSchema(tx);
+                CreatSignaturesSchema(tx);
                 CreateConfigSchema(tx);
                 CreateUsageSchema(tx);
                 CreatePagesSchema(tx);
                 CreateDetailsSchema(tx);
 
-				tx.Commit();
-			}
-		}
+                tx.Commit();
+            }
+        }
 
         private void CreateFileTombstonesSchema(Transaction tx)
         {
@@ -165,6 +165,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
         private void CreatePagesSchema(Transaction tx)
         {
             env.CreateTree(tx, Tables.Pages.TableName);
+            env.CreateTree(tx, Pages.GetIndexKey(Tables.Pages.Indices.Data));
+            env.CreateTree(tx, Pages.GetIndexKey(Tables.Pages.Indices.ByKey));
         }
 
         private void CreateUsageSchema(Transaction tx)
@@ -188,20 +190,20 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
         }
 
         private void CreateDetailsSchema(Transaction tx)
-		{
-			env.CreateTree(tx, Tables.Details.TableName);
-		}
+        {
+            env.CreateTree(tx, Tables.Details.TableName);
+        }
 
-		private void Initialize()
-		{
-			Files = new Table(Tables.Files.TableName, bufferPool);
+        private void Initialize()
+        {
+            Files = new Table(Tables.Files.TableName, bufferPool);
             FileTombstones = new Table(Tables.FileTombstones.TableName, bufferPool);
-			Signatures = new Table(Tables.Signatures.TableName, bufferPool);
+            Signatures = new Table(Tables.Signatures.TableName, bufferPool);
             Config = new Table(Tables.Config.TableName, bufferPool);
             Usage = new Table(Tables.Usage.TableName, bufferPool);
-            Pages = new Table(Tables.Pages.TableName, bufferPool);
+            Pages = new Table(Tables.Pages.TableName, bufferPool, Tables.Pages.Indices.Data, Tables.Pages.Indices.ByKey);
             Details = new Table(Tables.Details.TableName, bufferPool);
-		}
+        }
 
-	}
+    }
 }

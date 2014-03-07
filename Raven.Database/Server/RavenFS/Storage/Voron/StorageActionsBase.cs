@@ -28,10 +28,13 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
 		protected SnapshotReader Snapshot { get; private set; }
 
-		protected StorageActionsBase(SnapshotReader snapshot, IBufferPool bufferPool)
+        protected IdGenerator IdGenerator { get; private set; }
+
+        protected StorageActionsBase(SnapshotReader snapshot, IdGenerator idGenerator, IBufferPool bufferPool)
 		{
 		    this.bufferPool = bufferPool;
 			Snapshot = snapshot;
+		    IdGenerator = idGenerator;
 		}
 
         protected string ConvertToKey(HashKey hashKey)

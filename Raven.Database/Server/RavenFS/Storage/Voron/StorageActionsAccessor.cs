@@ -30,8 +30,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         private readonly Reference<WriteBatch> writeBatch;
 
-        public StorageActionsAccessor(TableStorage storage, Reference<WriteBatch> writeBatch, SnapshotReader snapshot, BufferPool bufferPool)
-            : base(snapshot, bufferPool)
+        public StorageActionsAccessor(TableStorage storage, Reference<WriteBatch> writeBatch, SnapshotReader snapshot, IdGenerator generator, BufferPool bufferPool)
+            : base(snapshot, generator, bufferPool)
         {
             this.storage = storage;
             this.writeBatch = writeBatch;
@@ -60,6 +60,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             var key = ConvertToKey(hashKey);
 
             var pageByKey = storage.Pages.GetIndex(Tables.Pages.Indices.ByKey);
+            var pageData = storage.Pages.GetIndex(Tables.Pages.Indices.Data);
 
             var result = pageByKey.Read(Snapshot, key, writeBatch.Value);
             if (result != null)
@@ -79,19 +80,19 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                 return page.Value<int>("id");
             }
 
-            var newId = -1; // TODO
-            var newKey = CreateKey(newId);
+            var newId = IdGenerator.GetNextIdForTable(storage.Pages);
+            var newKey = CreateKey(newId.ToString("D9"));
 
             var newPage = new RavenJObject
                    {
                        {"id", newId},
                        {"page_strong_hash", hashKey.Strong},
                        {"page_weak_hash", hashKey.Weak},
-                       {"data", buffer},
                        {"usage_count", 0}
                    };
 
             storage.Pages.Add(writeBatch.Value, newKey, newPage, 0);
+            pageData.Add(writeBatch.Value, newKey, buffer, 0);
             pageByKey.Add(writeBatch.Value, key, newKey);
 
             return newId;
@@ -119,7 +120,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             var file = new RavenJObject
                        {
                            { "name", filename }, 
-                           { "total_size", totalSize ?? 0 }, 
+                           { "total_size", totalSize }, 
                            { "uploaded_size", 0 }, 
                            { "etag", etag.ToString() }, 
                            { "metadata", ToQueryString(innerMetadata) }
@@ -130,20 +131,51 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public void AssociatePage(string filename, int pageId, int pagePositionInFile, int pageSize)
         {
-            throw new NotImplementedException();
+            var fileNameHash = HashKey(filename);
+            var key = CreateKey(filename, fileNameHash);
+            ushort version;
+
+            var file = LoadFileByKey(key, out version);
+            var totalSize = file.Value<long?>("total_size");
+            var uploadedSize = file.Value<int>("uploaded_size");
+
+            if (totalSize != null && totalSize >= 0 && uploadedSize + pageSize > totalSize)
+                throw new InvalidDataException("Try to upload more data than the file was allocated for (" + totalSize +
+                                               ") and new size would be: " + (uploadedSize + pageSize));
+
+            file["uploaded_size"] = uploadedSize + pageSize;
+
+            if (totalSize != null && totalSize < 0)
+                file["total_size"] = totalSize - pageSize;
+
+            storage.Files.Add(writeBatch.Value, key, file, version);
+
+            var id = IdGenerator.GetNextIdForTable(storage.Usage);
+            var usageKey = CreateKey(id.ToString("D9"));
+
+            var usage = new RavenJObject
+                        {
+                            { "id", id },
+                            { "name", filename }, 
+                            { "file_pos", pagePositionInFile }, 
+                            { "page_id", pageId }, 
+                            { "page_size", pageSize }
+                        };
+
+            storage.Usage.Add(writeBatch.Value, usageKey, usage, 0);
         }
 
         public int ReadPage(int pageId, byte[] buffer)
         {
-            var key = CreateKey(pageId);
+            var key = CreateKey(pageId.ToString("D9"));
+            var pageData = storage.Pages.GetIndex(Tables.Pages.Indices.Data);
 
-            ushort version;
-            var page = LoadJson(storage.Pages, key, writeBatch.Value, out version);
-            if (page == null)
+            var result = pageData.Read(Snapshot, key, writeBatch.Value);
+            if (result == null)
                 return -1;
 
-            buffer = page.Value<byte[]>("data");
-            return buffer.Length;
+            result.Reader.Read(buffer, 0, buffer.Length);
+            return result.Reader.Length;
         }
 
         public FileHeader ReadFile(string filename)
@@ -219,8 +251,11 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
                 do
                 {
+                    ushort version;
+
                     var id = iterator.CurrentKey.ToString();
-                    yield return LoadFileByKey(id);
+                    var file = LoadFileByKey(id, out version);
+                    yield return ConvertToFile(file);
 
                     count++;
                 }
@@ -242,8 +277,11 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
                 do
                 {
+                    ushort version;
+
                     var id = iterator.CurrentKey.ToString();
-                    yield return LoadFileByKey(id);
+                    var file = LoadFileByKey(id, out version);
+                    yield return ConvertToFile(file);
 
                     count++;
                 }
@@ -297,7 +335,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             if (file == null)
                 throw new FileNotFoundException(filename);
 
-            var totalSize = file.Value<int>("total_size");
+            var totalSize = file.Value<long?>("total_size") ?? 0;
             file["upload_size"] = totalSize;
 
             storage.Files.Add(writeBatch.Value, key, file, version);
@@ -378,7 +416,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
         {
             using (var iterator = storage.Config.Iterate(Snapshot, writeBatch.Value))
             {
-                if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start)) 
+                if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start))
                     yield break;
 
                 var count = 0;
@@ -538,15 +576,14 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
         }
 
 
-        private FileHeader LoadFileByKey(string key)
+        private RavenJObject LoadFileByKey(string key, out ushort version)
         {
-            ushort version;
             var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
 
             if (file == null)
                 throw new FileNotFoundException("Could not find file: " + key);
 
-            return ConvertToFile(file);
+            return file;
         }
 
         private static FileHeader ConvertToFile(RavenJObject file)
@@ -554,7 +591,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             return new FileHeader
                    {
                        Name = file.Value<string>("name"),
-                       TotalSize = file.Value<long>("total_size"),
+                       TotalSize = file.Value<long?>("total_size"),
                        UploadedSize = file.Value<long>("uploaded_size"),
                        Metadata = RetrieveMetadata(file)
                    };

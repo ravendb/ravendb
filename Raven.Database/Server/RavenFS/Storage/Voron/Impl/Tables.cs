@@ -23,6 +23,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 		    public class Indices
 		    {
                 public const string ByKey = "by_key";
+
+		        public const string Data = "data";
 		    }
 		}
 
