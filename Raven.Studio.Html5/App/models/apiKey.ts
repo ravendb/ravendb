@@ -73,6 +73,15 @@ class apiKey {
         this.secret(randomSecret);
     }
 
+    addEmptyApiKeyDatabase() {
+      var newItem: apiKeyDatabaseDto = { TenantId: '', Admin: false, ReadOnly: false };
+      this.databases.push(new apiKeyDatabase(newItem));
+    }
+
+    removeApiKeyDatabase(database) {
+      this.databases.remove(database);
+    }
+
     private static randomString(length: number, chars: string) {
         var result = '';
         for (var i = length; i > 0; --i) result += chars[Math.round(Math.random() * (chars.length - 1))];

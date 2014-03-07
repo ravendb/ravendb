@@ -4,12 +4,14 @@ import database = require("models/database");
 
 class saveDocumentCommand extends commandBase {
 
-    constructor(private id: string, private document: document, private db: database) {
+    constructor(private id: string, private document: document, private db: database, private reportSaveProgress = true) {
         super();
     }
 
     execute(): JQueryPromise<{ Key: string; ETag: string }> {
-        this.reportInfo("Saving " + this.id + "...");
+        if (this.reportSaveProgress) {
+            this.reportInfo("Saving " + this.id + "...");
+        }
 
         var customHeaders = {
             'Raven-Client-Version': commandBase.ravenClientVersion,
@@ -24,8 +26,10 @@ class saveDocumentCommand extends commandBase {
         var url = "/docs/" + this.id;
         var saveTask = this.put(url, args, this.db, jQueryOptions);
 
-        saveTask.done(() => this.reportSuccess("Saved " + this.id));
-        saveTask.fail((response) => this.reportError("Failed to save " + this.id, JSON.stringify(response)));
+        if (this.reportSaveProgress) {
+            saveTask.done(() => this.reportSuccess("Saved " + this.id));
+            saveTask.fail((response) => this.reportError("Failed to save " + this.id, JSON.stringify(response)));
+        }
         return saveTask;
     }
 }

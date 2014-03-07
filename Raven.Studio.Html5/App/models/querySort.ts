@@ -31,6 +31,22 @@ class querySort {
         return this.fieldName();
     }
 
+    toHumanizedString(): string {
+        if (this.descending()) {
+            return this.fieldName() + " descending";
+        }
+
+        if (this.rangeAscending()) {
+            return this.fieldName() + " range";
+        }
+
+        if (this.rangeDescending()) {
+            return this.fieldName() + " range descending";
+        }
+
+        return this.fieldName();
+    }
+
     static fromQuerySortString(querySortText: string) {
         var sortDirection = 0;
         var sortField = "";
