@@ -3,8 +3,6 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Voron;
-
 namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 {
 	public class Tables
@@ -48,6 +46,13 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 		public class Signatures
 		{
             public const string TableName = "signatures";
+
+		    public class Indices
+		    {
+                public static string ByName = "by_name";
+
+		        public static string Data = "data";
+		    }
 		}
 
         public class Files

@@ -182,6 +182,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
         private void CreatSignaturesSchema(Transaction tx)
         {
             env.CreateTree(tx, Tables.Signatures.TableName);
+            env.CreateTree(tx, Signatures.GetIndexKey(Tables.Signatures.Indices.Data));
+            env.CreateTree(tx, Signatures.GetIndexKey(Tables.Signatures.Indices.ByName));
         }
 
         private void CreateFilesSchema(Transaction tx)
@@ -198,7 +200,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
         {
             Files = new Table(Tables.Files.TableName, bufferPool);
             FileTombstones = new Table(Tables.FileTombstones.TableName, bufferPool);
-            Signatures = new Table(Tables.Signatures.TableName, bufferPool);
+            Signatures = new Table(Tables.Signatures.TableName, bufferPool, Tables.Signatures.Indices.ByName);
             Config = new Table(Tables.Config.TableName, bufferPool);
             Usage = new Table(Tables.Usage.TableName, bufferPool);
             Pages = new Table(Tables.Pages.TableName, bufferPool, Tables.Pages.Indices.Data, Tables.Pages.Indices.ByKey);

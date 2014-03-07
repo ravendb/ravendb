@@ -81,7 +81,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             }
 
             var newId = IdGenerator.GetNextIdForTable(storage.Pages);
-            var newKey = CreateKey(newId.ToString("D9"));
+            var newIdAsString = newId.ToString("D9");
+            var newKey = CreateKey(newIdAsString);
 
             var newPage = new RavenJObject
                    {
@@ -151,7 +152,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             storage.Files.Add(writeBatch.Value, key, file, version);
 
             var id = IdGenerator.GetNextIdForTable(storage.Usage);
-            var usageKey = CreateKey(id.ToString("D9"));
+            var idAsString = id.ToString("D9");
+            var usageKey = CreateKey(idAsString);
 
             var usage = new RavenJObject
                         {
@@ -167,7 +169,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public int ReadPage(int pageId, byte[] buffer)
         {
-            var key = CreateKey(pageId.ToString("D9"));
+            var pageIdAsString = pageId.ToString("D9");
+            var key = CreateKey(pageIdAsString);
             var pageData = storage.Pages.GetIndex(Tables.Pages.Indices.Data);
 
             var result = pageData.Read(Snapshot, key, writeBatch.Value);
@@ -389,7 +392,23 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public IEnumerable<SignatureLevels> GetSignatures(string name)
         {
-            throw new NotImplementedException();
+            var key = CreateKey(name);
+
+            var signaturesByName = storage.Signatures.GetIndex(Tables.Signatures.Indices.ByName);
+
+            using (var iterator = signaturesByName.MultiRead(Snapshot, key))
+            {
+                if (!iterator.Seek(Slice.BeforeAllKeys))
+                    yield break;
+
+                do
+                {
+                    var id = iterator.CurrentKey.ToString();
+                    var signature = LoadSignatureByKey(id);
+                    yield return ConvertToSignature(signature);
+                }
+                while (iterator.MoveNext());
+            }
         }
 
         public void ClearSignatures(string name)
@@ -409,7 +428,28 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public void AddSignature(string name, int level, Action<Stream> action)
         {
-            throw new NotImplementedException();
+            var signatureData = storage.Signatures.GetIndex(Tables.Signatures.Indices.Data);
+            var signaturesByName = storage.Signatures.GetIndex(Tables.Signatures.Indices.ByName);
+
+            var id = IdGenerator.GetNextIdForTable(storage.Signatures);
+            var idAsString = id.ToString("D9");
+
+            var signature = new RavenJObject
+                            {
+                                { "id", id }, 
+                                { "name", name }, 
+                                { "level", level }, 
+                                { "created_at", DateTime.UtcNow }
+                            };
+
+            var stream = CreateStream();
+
+            action(stream);
+            stream.Position = 0;
+
+            storage.Signatures.Add(writeBatch.Value, idAsString, signature, 0);
+            signatureData.Add(writeBatch.Value, idAsString, stream, 0);
+            signaturesByName.MultiAdd(writeBatch.Value, CreateKey(name), idAsString);
         }
 
         public IEnumerable<string> GetConfigNames(int start, int pageSize)
@@ -584,6 +624,26 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                 throw new FileNotFoundException("Could not find file: " + key);
 
             return file;
+        }
+        private RavenJObject LoadSignatureByKey(string key)
+        {
+            ushort version;
+            var signature = LoadJson(storage.Signatures, key, writeBatch.Value, out version);
+
+            if (signature == null)
+                throw new FileNotFoundException("Could not find signature: " + key);
+
+            return signature;
+        }
+
+        private static SignatureLevels ConvertToSignature(RavenJObject signature)
+        {
+            return new SignatureLevels
+            {
+                CreatedAt = signature.Value<DateTime>("created_at"),
+                Id = signature.Value<int>("id"),
+                Level = signature.Value<int>("level")
+            };
         }
 
         private static FileHeader ConvertToFile(RavenJObject file)

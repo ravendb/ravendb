@@ -28,6 +28,9 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
                 var usage = storage.Usage.TableName;
                 tableIds.TryAdd(usage, ReadLastIdFromTable(storage.Usage, snapshot));
+
+                var signatures = storage.Signatures.TableName;
+                tableIds.TryAdd(signatures, ReadLastIdFromTable(storage.Signatures, snapshot));
             }
         }
 
