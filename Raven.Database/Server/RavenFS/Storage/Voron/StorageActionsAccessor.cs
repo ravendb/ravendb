@@ -39,12 +39,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public void Dispose()
         {
-            throw new NotImplementedException();
+            // nothing to do here
         }
 
         public void Commit()
         {
-            throw new NotImplementedException();
+            // nothing to do here
         }
 
         public void PulseTransaction()
@@ -99,11 +99,18 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public void PutFile(string filename, long? totalSize, NameValueCollection metadata, bool tombstone = false)
         {
+            PutFile(tombstone ? storage.FileTombstones : storage.Files, filename, totalSize, metadata);
+        }
+
+        private void PutFile(Table table, string filename, long? totalSize, NameValueCollection metadata)
+        {
             var fileNameHash = HashKey(filename);
             var key = CreateKey(filename, fileNameHash);
 
             if (!metadata.AllKeys.Contains("ETag"))
-					throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
+            {
+                throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
+            }
 
             var innerMetadata = new NameValueCollection(metadata);
             var etag = innerMetadata.Value<Guid>("ETag");
@@ -111,31 +118,14 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
             var file = new RavenJObject
                        {
-                           {"name", filename},
-                           {"total_size", totalSize ?? 0},
-                           {"uploaded_size", 0},
-                           {"etag", etag.ToString()},
-                           {"metadata", ToQueryString(innerMetadata)}
+                           { "name", filename }, 
+                           { "total_size", totalSize ?? 0 }, 
+                           { "uploaded_size", 0 }, 
+                           { "etag", etag.ToString() }, 
+                           { "metadata", ToQueryString(innerMetadata) }
                        };
 
-            storage.Files.Add(writeBatch.Value, key, file, 0);
-
-            if (tombstone)
-                return;
-
-            // TODO this code maybe needs to be removed. Need to check for what we are using 'Details'
-
-            ushort version;
-            var details = LoadJson(storage.Details, Tables.Details.Key, writeBatch.Value, out version);
-
-            if (details == null)
-                throw new InvalidOperationException("Could not find system metadata row");
-
-            var fileCount = details.Value<int>("file_count");
-
-            details["file_count"] = fileCount + 1;
-
-            storage.Details.Add(writeBatch.Value, Tables.Details.Key, details, version);
+            table.Add(writeBatch.Value, key, file, 0);
         }
 
         public void AssociatePage(string filename, int pageId, int pagePositionInFile, int pageSize)
@@ -152,7 +142,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             if (page == null)
                 return -1;
 
-            buffer = page.Value<byte[]>("data"); // TODO split page table?
+            buffer = page.Value<byte[]>("data");
             return buffer.Length;
         }
 
@@ -166,13 +156,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             if (file == null)
                 return null;
 
-            return new FileHeader
-                   {
-                       Name = file.Value<string>("name"),
-                       TotalSize = file.Value<long>("total_size"),
-                       UploadedSize = file.Value<long>("uploaded_size"),
-                       Metadata = RetrieveMetadata(file)
-                   };
+            return ConvertToFile(file);
         }
 
         public FileAndPages GetFile(string filename, int start, int pagesToLoad)
@@ -185,12 +169,13 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             if (file == null)
                 throw new FileNotFoundException("Could not find file: " + filename);
 
+            var f = ConvertToFile(file);
             var fileInformation = new FileAndPages
                                   {
-                                      TotalSize = file.Value<long>("total_size"),
-                                      UploadedSize = file.Value<long>("uploaded_size"),
-                                      Metadata = RetrieveMetadata(file),
-                                      Name = filename,
+                                      TotalSize = f.TotalSize,
+                                      Name = f.Name,
+                                      Metadata = f.Metadata,
+                                      UploadedSize = f.UploadedSize,
                                       Start = start
                                   };
 
@@ -206,8 +191,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                         do
                         {
                             var id = iterator.CurrentKey.ToString();
-                            var pageInformation = LoadJson(storage.Usage, id, writeBatch.Value, version: out version);
-                            
+                            var pageInformation = LoadJson(storage.Usage, id, writeBatch.Value, out version);
+
                             fileInformation.Pages.Add(new PageInformation
                                                       {
                                                           Id = pageInformation.Value<int>("page_id"),
@@ -224,37 +209,108 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public IEnumerable<FileHeader> ReadFiles(int start, int size)
         {
-            throw new NotImplementedException();
+            var filesByName = storage.Files.GetIndex(Tables.Files.Indices.ByName);
+            using (var iterator = filesByName.Iterate(Snapshot, writeBatch.Value))
+            {
+                if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start))
+                    yield break;
+
+                var count = 0;
+
+                do
+                {
+                    var id = iterator.CurrentKey.ToString();
+                    yield return LoadFileByKey(id);
+
+                    count++;
+                }
+                while (iterator.MoveNext() && count < size);
+            }
         }
 
         public IEnumerable<FileHeader> GetFilesAfter(Guid etag, int take)
         {
-            throw new NotImplementedException();
+            var key = CreateKey(etag);
+
+            var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
+            using (var iterator = filesByEtag.Iterate(Snapshot, writeBatch.Value))
+            {
+                if (!iterator.Seek(key))
+                    yield break;
+
+                var count = 0;
+
+                do
+                {
+                    var id = iterator.CurrentKey.ToString();
+                    yield return LoadFileByKey(id);
+
+                    count++;
+                }
+                while (iterator.MoveNext() && count < take);
+            }
         }
 
         public void Delete(string filename)
         {
-            throw new NotImplementedException();
+            var fileNameHash = HashKey(filename);
+            var key = CreateKey(filename, fileNameHash);
+
+            DeleteUsage(key);
+            DeleteFile(key);
         }
 
         public void UpdateFileMetadata(string filename, NameValueCollection metadata)
         {
-            throw new NotImplementedException();
+            var fileNameHash = HashKey(filename);
+            var key = CreateKey(filename, fileNameHash);
+
+            ushort version;
+            var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
+            if (file == null)
+                throw new FileNotFoundException(filename);
+
+            if (!metadata.AllKeys.Contains("ETag"))
+                throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
+
+            var innerMetadata = new NameValueCollection(metadata);
+            var etag = innerMetadata.Value<Guid>("ETag");
+            innerMetadata.Remove("ETag");
+
+            var existingMetadata = RetrieveMetadata(file);
+            if (existingMetadata.AllKeys.Contains("Content-MD5"))
+                innerMetadata["Content-MD5"] = existingMetadata["Content-MD5"];
+
+            file["etag"] = etag.ToString();
+            file["metadata"] = ToQueryString(innerMetadata);
+
+            storage.Files.Add(writeBatch.Value, key, file, version);
         }
 
         public void CompleteFileUpload(string filename)
         {
-            throw new NotImplementedException();
+            var fileNameHash = HashKey(filename);
+            var key = CreateKey(filename, fileNameHash);
+
+            ushort version;
+            var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
+            if (file == null)
+                throw new FileNotFoundException(filename);
+
+            var totalSize = file.Value<int>("total_size");
+            file["upload_size"] = totalSize;
+
+            storage.Files.Add(writeBatch.Value, key, file, version);
         }
 
         public int GetFileCount()
         {
-            throw new NotImplementedException();
+            return Convert.ToInt32(storage.GetEntriesCount(storage.Files));
         }
 
         public void DecrementFileCount()
         {
-            throw new NotImplementedException();
+            // nothing to do here
         }
 
         public void RenameFile(string filename, string rename, bool commitPeriodically = false)
@@ -264,17 +320,33 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public NameValueCollection GetConfig(string name)
         {
-            throw new NotImplementedException();
+            var key = CreateKey(name);
+            ushort version;
+            var config = LoadJson(storage.Config, key, writeBatch.Value, out version);
+            if (config == null)
+                throw new FileNotFoundException("Could not find config: " + name);
+
+            var metadata = config.Value<string>("metadata");
+            return HttpUtility.ParseQueryString(metadata);
         }
 
         public void SetConfig(string name, NameValueCollection metadata)
         {
-            throw new NotImplementedException();
+            var key = CreateKey(name);
+            ushort version;
+            var config = LoadJson(storage.Config, key, writeBatch.Value, out version) ?? new RavenJObject();
+
+            config["metadata"] = ToQueryString(metadata);
+            config["name"] = name;
+
+            storage.Config.Add(writeBatch.Value, key, config, version);
         }
 
         public void DeleteConfig(string name)
         {
-            throw new NotImplementedException();
+            var key = CreateKey(name);
+
+            storage.Config.Delete(writeBatch.Value, key);
         }
 
         public IEnumerable<SignatureLevels> GetSignatures(string name)
@@ -304,22 +376,188 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public IEnumerable<string> GetConfigNames(int start, int pageSize)
         {
-            throw new NotImplementedException();
+            using (var iterator = storage.Config.Iterate(Snapshot, writeBatch.Value))
+            {
+                if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start)) 
+                    yield break;
+
+                var count = 0;
+
+                do
+                {
+                    var config = iterator
+                        .CreateReaderForCurrent()
+                        .AsStream()
+                        .ToJObject();
+
+                    yield return config.Value<string>("name");
+                    count++;
+                }
+                while (iterator.MoveNext() && count < pageSize);
+            }
         }
 
         public bool ConfigExists(string name)
         {
-            throw new NotImplementedException();
+            var key = CreateKey(name);
+
+            return storage.Config.Contains(Snapshot, key, writeBatch.Value);
         }
 
         public IList<NameValueCollection> GetConfigsStartWithPrefix(string prefix, int start, int take)
         {
-            throw new NotImplementedException();
+            var key = CreateKey(prefix);
+            var result = new List<NameValueCollection>();
+
+            using (var iterator = storage.Config.Iterate(Snapshot, writeBatch.Value))
+            {
+                if (!iterator.Seek(key) || !iterator.Skip(start))
+                    return result;
+
+                var count = 0;
+
+                do
+                {
+                    var config = iterator
+                        .CreateReaderForCurrent()
+                        .AsStream()
+                        .ToJObject();
+
+                    var metadata = config.Value<string>("metadata");
+
+                    result.Add(HttpUtility.ParseQueryString(metadata));
+
+                    count++;
+                } while (iterator.MoveNext() && count < take);
+            }
+
+            return result;
         }
 
         public IList<string> GetConfigNamesStartingWithPrefix(string prefix, int start, int take, out int total)
         {
-            throw new NotImplementedException();
+            total = 0;
+            var results = new List<string>();
+
+            var key = CreateKey(prefix);
+
+            using (var iterator = storage.Config.Iterate(Snapshot, writeBatch.Value))
+            {
+                if (!iterator.Seek(key))
+                    return results;
+
+                var skippedCount = 0;
+                for (var i = 0; i < start; i++)
+                {
+                    if (iterator.MoveNext() == false)
+                    {
+                        total = skippedCount;
+                        return results;
+                    }
+
+                    skippedCount++;
+                }
+
+                var count = 0;
+
+                do
+                {
+                    if (count < take)
+                    {
+                        var config = iterator
+                            .CreateReaderForCurrent()
+                            .AsStream()
+                            .ToJObject();
+
+                        results.Add(config.Value<string>("name"));
+                    }
+
+                    count++;
+                } while (iterator.MoveNext());
+
+                total = skippedCount + count;
+            }
+
+            return results;
+        }
+
+        private void DeleteFile(string key)
+        {
+            var version = storage.Files.ReadVersion(Snapshot, key);
+            storage.Files.Delete(writeBatch.Value, key, version);
+        }
+
+        private void DeleteUsage(string key)
+        {
+            var usageByFileName = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileName);
+
+            using (var iterator = usageByFileName.MultiRead(Snapshot, key))
+            {
+                if (!iterator.Seek(Slice.BeforeAllKeys))
+                    return;
+
+                var count = 0;
+
+                do
+                {
+                    var id = iterator.CurrentKey.ToString();
+                    ushort version;
+                    var usage = LoadJson(storage.Usage, id, writeBatch.Value, out version);
+                    var pageId = usage.Value<int>("page_id");
+
+                    DeletePage(pageId);
+
+                    storage.Usage.Delete(writeBatch.Value, id);
+
+                    if (count++ <= 1000)
+                    {
+                        continue;
+                    }
+
+                    PulseTransaction();
+                    count = 0;
+                }
+                while (iterator.MoveNext());
+            }
+        }
+
+        private void DeletePage(int pageId)
+        {
+            var key = CreateKey(pageId);
+
+            ushort version;
+            var page = LoadJson(storage.Pages, key, writeBatch.Value, out version);
+            var usageCount = page.Value<int>("usage_count");
+            if (usageCount <= 1)
+                storage.Pages.Delete(writeBatch.Value, key, version);
+            else
+            {
+                page["usage_count"] = usageCount - 1;
+                storage.Pages.Add(writeBatch.Value, key, page, version);
+            }
+        }
+
+
+        private FileHeader LoadFileByKey(string key)
+        {
+            ushort version;
+            var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
+
+            if (file == null)
+                throw new FileNotFoundException("Could not find file: " + key);
+
+            return ConvertToFile(file);
+        }
+
+        private static FileHeader ConvertToFile(RavenJObject file)
+        {
+            return new FileHeader
+                   {
+                       Name = file.Value<string>("name"),
+                       TotalSize = file.Value<long>("total_size"),
+                       UploadedSize = file.Value<long>("uploaded_size"),
+                       Metadata = RetrieveMetadata(file)
+                   };
         }
 
         private static string ToQueryString(NameValueCollection metadata)
@@ -350,7 +588,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
         {
             var metadataAsString = file.Value<string>("metadata");
             var metadata = HttpUtility.ParseQueryString(metadataAsString);
-            metadata["ETag"] = "\"" + Guid.Parse(file.Value<string>("Etag"))  + "\"";
+            metadata["ETag"] = "\"" + Guid.Parse(file.Value<string>("Etag")) + "\"";
 
             return metadata;
         }

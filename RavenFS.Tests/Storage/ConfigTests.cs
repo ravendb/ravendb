@@ -1,0 +1,333 @@
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ConfigTests.cs" company="Hibernating Rhinos LTD">
+//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+//  </copyright>
+// -----------------------------------------------------------------------
+using System.Collections.Specialized;
+using System.IO;
+using System.Linq;
+
+using Xunit;
+using Xunit.Extensions;
+
+namespace RavenFS.Tests.Storage
+{
+    public class ConfigTests : StorageAccessorTestBase
+    {
+        [Theory]
+        [PropertyData("Storages")]
+        public void ConfigExists(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => Assert.False(accessor.ConfigExists("config1")));
+                storage.Batch(accessor => accessor.SetConfig("config1", new NameValueCollection()));
+
+                storage.Batch(accessor => Assert.True(accessor.ConfigExists("config1")));
+
+                storage.Batch(accessor => accessor.SetConfig("config2", new NameValueCollection()));
+                storage.Batch(accessor => Assert.True(accessor.ConfigExists("config1")));
+                storage.Batch(accessor => Assert.True(accessor.ConfigExists("config2")));
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void SetConfig(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => accessor.SetConfig("config1", new NameValueCollection
+                                                                        {
+                                                                            { "option1", "value1" }
+                                                                        }));
+
+                storage.Batch(accessor => accessor.SetConfig("config2", new NameValueCollection
+                                                                        {
+                                                                            { "option1", "value2" },
+                                                                            { "option2", "value1" }
+                                                                        }));
+
+                storage.Batch(accessor =>
+                {
+                    var config1 = accessor.GetConfig("config1");
+                    var config2 = accessor.GetConfig("config2");
+
+                    Assert.NotNull(config1);
+                    Assert.Equal(1, config1.AllKeys.Length);
+                    Assert.Equal("value1", config1["option1"]);
+
+                    Assert.NotNull(config2);
+                    Assert.Equal(2, config2.AllKeys.Length);
+                    Assert.Equal("value2", config2["option1"]);
+                    Assert.Equal("value1", config2["option2"]);
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void DeleteConfig(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => accessor.DeleteConfig("config1"));
+
+                storage.Batch(accessor => accessor.SetConfig("config1", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfig("config2", new NameValueCollection()));
+
+                storage.Batch(accessor => Assert.True(accessor.ConfigExists("config1")));
+                storage.Batch(accessor => Assert.True(accessor.ConfigExists("config2")));
+
+                storage.Batch(accessor => accessor.DeleteConfig("config2"));
+
+                storage.Batch(accessor => Assert.True(accessor.ConfigExists("config1")));
+                storage.Batch(accessor => Assert.False(accessor.ConfigExists("config2")));
+
+                storage.Batch(accessor => accessor.DeleteConfig("config1"));
+
+                storage.Batch(accessor => Assert.False(accessor.ConfigExists("config1")));
+                storage.Batch(accessor => Assert.False(accessor.ConfigExists("config2")));
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void GetConfig(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.GetConfig("config1")));
+
+                storage.Batch(accessor => accessor.SetConfig("config1", new NameValueCollection
+                                                                        {
+                                                                            { "option1", "value1" }
+                                                                        }));
+
+                storage.Batch(accessor => accessor.SetConfig("config2", new NameValueCollection
+                                                                        {
+                                                                            { "option1", "value2" },
+                                                                            { "option2", "value1" }
+                                                                        }));
+
+                storage.Batch(accessor =>
+                {
+                    var config1 = accessor.GetConfig("config1");
+                    var config2 = accessor.GetConfig("config2");
+
+                    Assert.NotNull(config1);
+                    Assert.Equal(1, config1.AllKeys.Length);
+                    Assert.Equal("value1", config1["option1"]);
+
+                    Assert.NotNull(config2);
+                    Assert.Equal(2, config2.AllKeys.Length);
+                    Assert.Equal("value2", config2["option1"]);
+                    Assert.Equal("value1", config2["option2"]);
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void GetConfigNames(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => Assert.Empty(accessor.GetConfigNames(0, 10).ToList()));
+
+                storage.Batch(accessor => accessor.SetConfig("config1", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfig("config2", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfig("config3", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfig("config4", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfig("config5", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfig("config6", new NameValueCollection()));
+
+                storage.Batch(accessor =>
+                {
+                    var names = accessor
+                        .GetConfigNames(0, 10)
+                        .ToList();
+
+                    Assert.Equal(6, names.Count);
+                    Assert.Contains("config1", names);
+                    Assert.Contains("config2", names);
+                    Assert.Contains("config3", names);
+                    Assert.Contains("config4", names);
+                    Assert.Contains("config5", names);
+                    Assert.Contains("config6", names);
+
+                    names = accessor
+                        .GetConfigNames(0, 1)
+                        .ToList();
+
+                    Assert.Equal(1, names.Count);
+                    Assert.Contains("config1", names);
+
+                    names = accessor
+                        .GetConfigNames(1, 1)
+                        .ToList();
+
+                    Assert.Equal(1, names.Count);
+                    Assert.Contains("config2", names);
+
+                    names = accessor
+                        .GetConfigNames(2, 2)
+                        .ToList();
+
+                    Assert.Equal(2, names.Count);
+                    Assert.Contains("config3", names);
+                    Assert.Contains("config4", names);
+
+                    names = accessor
+                        .GetConfigNames(3, 7)
+                        .ToList();
+
+                    Assert.Equal(3, names.Count);
+                    Assert.Contains("config4", names);
+                    Assert.Contains("config5", names);
+                    Assert.Contains("config6", names);
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void GetConfigNamesStartingWithPrefix(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                int total;
+                storage.Batch(accessor => Assert.Empty(accessor.GetConfigNamesStartingWithPrefix("config", 0, 10, out total).ToList()));
+
+                storage.Batch(accessor => accessor.SetConfig("config1", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfig("config2", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfig("config3", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfig("config4", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfig("config5", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfig("config6", new NameValueCollection()));
+
+                storage.Batch(accessor => accessor.SetConfig("a-config1", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfig("a-config2", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfig("a-config3", new NameValueCollection()));
+
+                storage.Batch(accessor =>
+                {
+                    var names = accessor
+                        .GetConfigNamesStartingWithPrefix("config", 0, 10, out total)
+                        .ToList();
+
+                    Assert.Equal(6, names.Count);
+                    Assert.Equal(6, total);
+                    Assert.Contains("config1", names);
+                    Assert.Contains("config2", names);
+                    Assert.Contains("config3", names);
+                    Assert.Contains("config4", names);
+                    Assert.Contains("config5", names);
+                    Assert.Contains("config6", names);
+
+                    names = accessor
+                        .GetConfigNamesStartingWithPrefix("config", 0, 1, out total)
+                        .ToList();
+
+                    Assert.Equal(1, names.Count);
+                    Assert.Equal(6, total);
+                    Assert.Contains("config1", names);
+
+                    names = accessor
+                        .GetConfigNamesStartingWithPrefix("config", 1, 1, out total)
+                        .ToList();
+
+                    Assert.Equal(1, names.Count);
+                    Assert.Equal(6, total);
+                    Assert.Contains("config2", names);
+
+                    names = accessor
+                        .GetConfigNamesStartingWithPrefix("config", 2, 2, out total)
+                        .ToList();
+
+                    Assert.Equal(2, names.Count);
+                    Assert.Equal(6, total);
+                    Assert.Contains("config3", names);
+                    Assert.Contains("config4", names);
+
+                    names = accessor
+                        .GetConfigNamesStartingWithPrefix("config", 3, 7, out total)
+                        .ToList();
+
+                    Assert.Equal(3, names.Count);
+                    Assert.Equal(6, total);
+                    Assert.Contains("config4", names);
+                    Assert.Contains("config5", names);
+                    Assert.Contains("config6", names);
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void GetConfigsStartWithPrefix(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => Assert.Empty(accessor.GetConfigsStartWithPrefix("config", 0, 10).ToList()));
+
+                storage.Batch(accessor => accessor.SetConfig("config1", new NameValueCollection { { "option1", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfig("config2", new NameValueCollection { { "option2", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfig("config3", new NameValueCollection { { "option3", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfig("config4", new NameValueCollection { { "option4", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfig("config5", new NameValueCollection { { "option5", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfig("config6", new NameValueCollection { { "option6", "value1" } }));
+
+                storage.Batch(accessor => accessor.SetConfig("a-config1", new NameValueCollection { { "option1", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfig("a-config2", new NameValueCollection { { "option2", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfig("a-config3", new NameValueCollection { { "option3", "value1" } }));
+
+                storage.Batch(accessor =>
+                {
+                    var configs = accessor
+                        .GetConfigsStartWithPrefix("config", 0, 10)
+                        .ToList();
+
+                    Assert.Equal(6, configs.Count);
+                    Assert.Equal("value1", configs[0]["option1"]);
+                    Assert.Equal("value1", configs[1]["option2"]);
+                    Assert.Equal("value1", configs[2]["option3"]);
+                    Assert.Equal("value1", configs[3]["option4"]);
+                    Assert.Equal("value1", configs[4]["option5"]);
+                    Assert.Equal("value1", configs[5]["option6"]);
+
+                    configs = accessor
+                        .GetConfigsStartWithPrefix("config", 0, 1)
+                        .ToList();
+
+                    Assert.Equal(1, configs.Count);
+                    Assert.Equal("value1", configs[0]["option1"]);
+
+                    configs = accessor
+                        .GetConfigsStartWithPrefix("config", 1, 1)
+                        .ToList();
+
+                    Assert.Equal(1, configs.Count);
+                    Assert.Equal("value1", configs[0]["option2"]);
+
+                    configs = accessor
+                        .GetConfigsStartWithPrefix("config", 2, 2)
+                        .ToList();
+
+                    Assert.Equal(2, configs.Count);
+                    Assert.Equal("value1", configs[0]["option3"]);
+                    Assert.Equal("value1", configs[1]["option4"]);
+
+                    configs = accessor
+                        .GetConfigsStartWithPrefix("config", 3, 7)
+                        .ToList();
+
+                    Assert.Equal(3, configs.Count);
+                    Assert.Equal("value1", configs[0]["option4"]);
+                    Assert.Equal("value1", configs[1]["option5"]);
+                    Assert.Equal("value1", configs[2]["option6"]);
+                });
+            }
+        }
+    }
+}

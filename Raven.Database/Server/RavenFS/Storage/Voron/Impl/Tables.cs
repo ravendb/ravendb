@@ -13,7 +13,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 		{
 			public const string TableName = "details";
 
-		    public static string Key = "details";
+		    public const string Id = "id";
 		}
 
 		public class Pages
@@ -33,6 +33,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 	        public class Indices
 	        {
                 public const string ByFileNameAndPosition = "by_file_name_and_position";
+
+	            public static string ByFileName = "by_file_name";
 	        }
 	    }
 
@@ -49,6 +51,18 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
         public class Files
 		{
             public const string TableName = "files";
+
+            public class Indices
+            {
+                public const string ByName = "by_name";
+
+                public const string ByEtag = "by_etag";
+            }
 		}
+
+	    public class FileTombstones
+	    {
+            public const string TableName = "file_tombstones";
+	    }
 	}
 }

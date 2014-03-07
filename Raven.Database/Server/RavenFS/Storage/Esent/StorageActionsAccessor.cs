@@ -516,7 +516,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			using (var update = new Update(session, Files, JET_prep.Replace))
 			{
 				var totalSize = GetTotalSize() ?? 0;
-				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["total_size"],
+				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["upload_size"],
 				              BitConverter.GetBytes(Math.Abs(totalSize)));
 
 				update.Save();

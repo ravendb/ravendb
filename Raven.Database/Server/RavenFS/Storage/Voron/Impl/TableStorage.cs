@@ -62,6 +62,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 
         public Table Files { get; private set; }
 
+        public Table FileTombstones { get; private set; }
+
         public Table Signatures { get; private set; }
 
         public Table Config { get; private set; }
@@ -80,7 +82,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 			}
 		}
 
-		public void Write(WriteBatch writeBatch)
+        public void Write(WriteBatch writeBatch)
 		{
 		    try
 		    {
@@ -144,6 +146,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 			using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				CreateFilesSchema(tx);
+                CreateFileTombstonesSchema(tx);
 				CreatSignaturesSchema(tx);
                 CreateConfigSchema(tx);
                 CreateUsageSchema(tx);
@@ -153,6 +156,11 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 				tx.Commit();
 			}
 		}
+
+        private void CreateFileTombstonesSchema(Transaction tx)
+        {
+            env.CreateTree(tx, Tables.FileTombstones.TableName);
+        }
 
         private void CreatePagesSchema(Transaction tx)
         {
@@ -187,6 +195,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 		private void Initialize()
 		{
 			Files = new Table(Tables.Files.TableName, bufferPool);
+            FileTombstones = new Table(Tables.FileTombstones.TableName, bufferPool);
 			Signatures = new Table(Tables.Signatures.TableName, bufferPool);
             Config = new Table(Tables.Config.TableName, bufferPool);
             Usage = new Table(Tables.Usage.TableName, bufferPool);
