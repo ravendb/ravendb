@@ -6,7 +6,7 @@ using Xunit;
 
 namespace RavenFS.Tests
 {
-	public class Folders : WebApiTest
+    public class Folders : RavenFsTestBase
 	{
 		[Fact]
 		public void CanGetListOfFolders()

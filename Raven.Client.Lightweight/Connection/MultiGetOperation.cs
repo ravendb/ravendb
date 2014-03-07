@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Specialized;
-#if SILVERLIGHT
-using Raven.Client.Silverlight.Connection;
-#elif NETFX_CORE
+#if NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #endif
 using System.Linq;

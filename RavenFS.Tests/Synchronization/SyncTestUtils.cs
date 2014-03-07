@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections.Specialized;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Storage;
@@ -14,20 +14,21 @@ namespace RavenFS.Tests.Synchronization
 		                                                                  RavenFileSystemClient destinationClient,
 		                                                                  string fileName)
 		{
-			var shouldBeConflict = sourceClient.Synchronization.StartAsync(fileName, destinationClient.ServerUrl).Result;
+			var shouldBeConflict = sourceClient.Synchronization.StartAsync(fileName, destinationClient).Result;
 
 			Assert.NotNull(shouldBeConflict.Exception);
 
 			destinationClient.Synchronization.ResolveConflictAsync(fileName, ConflictResolutionStrategy.RemoteVersion).Wait();
-			return sourceClient.Synchronization.StartAsync(fileName, destinationClient.ServerUrl).Result;
+			return sourceClient.Synchronization.StartAsync(fileName, destinationClient).Result;
 		}
 
-		public static void TurnOnSynchronization(RavenFileSystemClient source, RavenFileSystemClient destination)
+		public static void TurnOnSynchronization(RavenFileSystemClient source, params RavenFileSystemClient[] destinations)
 		{
-			source.Config.SetConfig(SynchronizationConstants.RavenSynchronizationDestinations, new NameValueCollection
-				                                                                                   {
-					                                                                                   {"url", destination.ServerUrl},
-				                                                                                   }).Wait();
+            source.Config.SetDestinationsConfig(destinations.Select(x => new SynchronizationDestination()
+            {
+                FileSystem = x.FileSystemName,
+                ServerUrl = x.ServerUrl
+            }).ToArray()).Wait();
 		}
 
 		public static void TurnOffSynchronization(RavenFileSystemClient source)

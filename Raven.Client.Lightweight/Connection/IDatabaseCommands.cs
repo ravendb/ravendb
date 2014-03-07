@@ -1,6 +1,5 @@
 using Raven.Abstractions.Connection;
 using Raven.Database.Data;
-#if !SILVERLIGHT
 //-----------------------------------------------------------------------
 // <copyright file="IDatabaseCommands.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -544,4 +543,3 @@ namespace Raven.Client.Connection
 		string GetIndexingStatus();
 	}
 }
-#endif

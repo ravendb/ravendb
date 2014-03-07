@@ -21,12 +21,12 @@ interface documentDto {
 interface documentMetadataDto {
 	'Raven-Entity-Name'?: string;
 	'Raven-Clr-Type'?: string;
-	'Non-Authoritative-Information': boolean;
-	'@id': string;
+	'Non-Authoritative-Information'?: boolean;
+	'@id'?: string;
 	'Temp-Index-Score'?: number;
-	'Last-Modified': string;
-	'Raven-Last-Modified': string;
-	'@etag': string;
+	'Last-Modified'?: string;
+	'Raven-Last-Modified'?: string;
+	'@etag'?: string;
 }
 
 interface databaseStatisticsDto {
@@ -297,13 +297,16 @@ interface transformerDto {
 }
 
 interface storedQueryDto {
-    id: string;
-    isPinned: boolean;
-    queryText: string;
-    sorts: string[];
-    databaseName: string;
-    transformerName: string;
-    showFields: boolean;
-    indexEntries: boolean;
-    useAndOperator: boolean;
+    IsPinned: boolean;
+    IndexName: string;
+    QueryText: string;
+    Sorts: string[];
+    TransformerName: string;
+    ShowFields: boolean;
+    IndexEntries: boolean;
+    UseAndOperator: boolean;
+}
+
+interface storedQueryContainerDto extends documentDto {
+    Queries: storedQueryDto[];
 }

@@ -74,13 +74,7 @@ namespace Raven.Client.Document
 
 		    try
 		    {
-
-#if !SILVERLIGHT
                 await Task.WhenAll(tasks);
-#else
-		        await TaskEx.WhenAll(tasks);
-#endif
-
 		        return tasks.Length;
 		    }
 		    catch (Exception e)
@@ -121,11 +115,7 @@ namespace Raven.Client.Document
 		        if (replicated)
 		            return;
 
-#if !SILVERLIGHT
                 await Task.Delay(100, cancellationToken);
-#else
-                await TaskEx.Delay(100, cancellationToken);
-#endif   
 		    }
 		}
 

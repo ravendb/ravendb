@@ -13,6 +13,9 @@ import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import querySort = require("models/querySort");
 import getTransformersCommand = require("commands/getTransformersCommand");
 import deleteDocumentsMatchingQueryConfirm = require("viewmodels/deleteDocumentsMatchingQueryConfirm");
+import getStoredQueriesCommand = require("commands/getStoredQueriesCommand");
+import saveDocumentCommand = require("commands/saveDocumentCommand");
+import document = require("models/document");
 
 class query extends viewModelBase {
 
@@ -34,6 +37,8 @@ class query extends viewModelBase {
     isDefaultOperatorOr = ko.observable(true);
     showFields = ko.observable(false);
     indexEntries = ko.observable(false);
+    recentQueries = ko.observableArray<storedQueryDto>();
+    recentQueriesDoc = ko.observable<storedQueryContainerDto>();
 
     static containerSelector = "#queryContainer";
 
@@ -49,11 +54,12 @@ class query extends viewModelBase {
         aceEditorBindingHandler.install();        
     }
 
-    activate(indexToSelect?: string) {
-        super.activate(indexToSelect);
+    activate(indexNameOrRecentQueryIndex?: string) {
+        super.activate(indexNameOrRecentQueryIndex);
 
-        this.fetchAllIndexes(indexToSelect);
+        this.fetchAllIndexes(indexNameOrRecentQueryIndex);
         this.fetchAllTransformers();
+        this.fetchRecentQueries(indexNameOrRecentQueryIndex);
     }
 
     attached() {
@@ -76,12 +82,42 @@ class query extends viewModelBase {
         router.navigate(this.editIndexUrl());
     }
 
-    fetchAllIndexes(indexToSelect?: string) {
+    fetchAllIndexes(indexNameOrRecentQueryIndex?: string) {
         new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
             .done((stats: databaseStatisticsDto) => {
                 this.indexNames(stats.Indexes.map(i => i.PublicName));
-                this.setSelectedIndex(indexToSelect || this.indexNames().first());
+                if (!indexNameOrRecentQueryIndex) {
+                    this.setSelectedIndex(this.indexNames.first());
+                } else if (this.indexNames.contains(indexNameOrRecentQueryIndex)) {
+                    this.setSelectedIndex(indexNameOrRecentQueryIndex);
+                }
+            });
+    }
+
+    fetchRecentQueries(indexNameOrRecentQueryIndex?: string) {
+        new getStoredQueriesCommand(this.activeDatabase())
+            .execute()
+            .fail(_ => {
+                var newStoredQueryContainer: storedQueryContainerDto = {
+                    '@metadata': {},
+                    Queries: []
+                }
+                this.recentQueriesDoc(newStoredQueryContainer);
+                this.recentQueries(newStoredQueryContainer.Queries);
+            })
+            .done((doc: document) => {
+                var dto = <storedQueryContainerDto>doc.toDto(true);
+                this.recentQueriesDoc(dto);
+                this.recentQueries(dto.Queries);
+
+                // Select one if we're configured to do so.
+                if (indexNameOrRecentQueryIndex && indexNameOrRecentQueryIndex.indexOf("recentquery-") === 0) {
+                    var recentQueryToSelectIndex = parseInt(indexNameOrRecentQueryIndex.substr("recentquery-".length), 10);
+                    if (!isNaN(recentQueryToSelectIndex) && recentQueryToSelectIndex < dto.Queries.length) {
+                        this.runRecentQuery(dto.Queries[recentQueryToSelectIndex]);
+                    }
+                }
             });
     }
 
@@ -89,6 +125,17 @@ class query extends viewModelBase {
         new getTransformersCommand(this.activeDatabase())
             .execute()
             .done((results: transformerDto[]) => this.allTransformers(results));
+    }
+
+    runRecentQuery(query: storedQueryDto) {
+        this.selectedIndex(query.IndexName);
+        this.queryText(query.QueryText);
+        this.showFields(query.ShowFields);
+        this.indexEntries(query.IndexEntries);
+        this.isDefaultOperatorOr(query.UseAndOperator === false);
+        this.transformer(query.TransformerName);
+        this.sortBys(query.Sorts.map(s => querySort.fromQuerySortString(s)));
+        this.runQuery();
     }
 
     runQuery(): pagedList {
@@ -109,12 +156,70 @@ class query extends viewModelBase {
             };
             var resultsList = new pagedList(resultsFetcher);
             this.queryResults(resultsList);
-            //this.recordQueryRun
+            this.recordQueryRun(selectedIndex, queryText, sorts.map(s => s.toQuerySortString()), transformer, showFields, indexEntries, useAndOperator);
 
             return resultsList;
         }
 
         return null;
+    }
+
+    recordQueryRun(indexName: string, queryText: string, sorts: string[], transformer: string, showFields: boolean, indexEntries: boolean, useAndOperator: boolean) {
+        var newQuery: storedQueryDto = {
+            IndexEntries: indexEntries,
+            IndexName: indexName,
+            IsPinned: false,
+            QueryText: queryText,
+            ShowFields: showFields,
+            Sorts: sorts,
+            TransformerName: transformer || null,
+            UseAndOperator: useAndOperator
+        };
+
+        var existing = this.recentQueries.first(q => query.areSameQueriesIgnoringPinned(q, newQuery));
+        if (existing) {
+            // Move it to the top of the list.
+            this.recentQueries.remove(existing);
+            this.recentQueries.unshift(existing);
+        } else {
+            this.recentQueries.unshift(newQuery);
+        }
+
+        // Limit us to 15 query recent runs.
+        if (this.recentQueries().length > 15) {
+            this.recentQueries.remove(this.recentQueries()[15]);
+        }
+
+        var recentQueriesDoc = this.recentQueriesDoc();
+        if (recentQueriesDoc) {
+            recentQueriesDoc.Queries = this.recentQueries();
+            var preppedDoc = new document(recentQueriesDoc);
+            new saveDocumentCommand(getStoredQueriesCommand.storedQueryDocId, preppedDoc, this.activeDatabase(), false)
+                .execute()
+                .done((result: { Key: string; ETag: string; }) => recentQueriesDoc['@metadata']['@etag'] = result.ETag);
+        }
+    }
+
+    getRecentQuerySortsText(recentQueryIndex: number) {
+        var sorts = this.recentQueries()[recentQueryIndex].Sorts;
+        if (sorts.length === 0) {
+            return "";
+        }
+        return sorts
+            .map(s => querySort.fromQuerySortString(s))
+            .map(s => s.toHumanizedString())
+            .reduce((first, second) => first + ", " + second);
+    }
+
+    static areSameQueriesIgnoringPinned(first: storedQueryDto, second: storedQueryDto) {
+        return first.IndexEntries === second.IndexEntries &&
+            first.IndexName === second.IndexName &&
+            first.QueryText === second.QueryText &&
+            first.ShowFields === second.ShowFields &&
+            first.Sorts.length === second.Sorts.length &&
+            first.Sorts.every((firstSort, index) => firstSort === second.Sorts[index]) &&
+            first.TransformerName === second.TransformerName &&
+            first.UseAndOperator === second.UseAndOperator;
     }
 
     setSelectedIndex(indexName: string) {

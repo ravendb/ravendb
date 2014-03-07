@@ -25,7 +25,7 @@ namespace Raven.Abstractions.OAuth
 				SetAuthorization(e.Client);
 			}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 			if (e.Request != null)
 				SetHeader(e.Request.Headers, "Authorization", CurrentOauthToken);
 #endif
@@ -46,7 +46,7 @@ namespace Raven.Abstractions.OAuth
 			}
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		protected static void SetHeader(WebHeaderCollection headers, string key, string value)
 		{
 			try

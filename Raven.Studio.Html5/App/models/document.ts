@@ -48,6 +48,7 @@ class document {
             '@metadata': {},
             'Name': '...'
         };
+
         return new document(<any>emptyDto);
     }
 

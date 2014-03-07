@@ -291,9 +291,10 @@ namespace Voron
 
             try
             {
-                if (_flushingTask != null)
+	            var flushingTaskCopy = _flushingTask;
+	            if (flushingTaskCopy != null)
                 {
-                    switch (_flushingTask.Status)
+                    switch (flushingTaskCopy.Status)
                     {
                         case TaskStatus.RanToCompletion:
                         case TaskStatus.Canceled:
@@ -301,19 +302,16 @@ namespace Voron
                         default:
                             try
                             {
-                                _flushingTask.Wait();
+                                flushingTaskCopy.Wait();
                             }
                             catch (AggregateException ae)
                             {
-                                if (ae.InnerException == null)
-                                    throw;
                                 if (ae.InnerException is OperationCanceledException == false)
                                     throw;
                             }
                             break;
                     }
                 }
-
             }
             finally
             {
@@ -362,7 +360,8 @@ namespace Voron
 					{
 						if (_endOfDiskSpace.CanContinueWriting)
 						{
-							Debug.Assert(_flushingTask.Status == TaskStatus.Canceled || _flushingTask.Status == TaskStatus.RanToCompletion);
+							var flushingTask = _flushingTask;
+							Debug.Assert(flushingTask != null && (flushingTask.Status == TaskStatus.Canceled || flushingTask.Status == TaskStatus.RanToCompletion));
 							_cancellationTokenSource = new CancellationTokenSource();
 							_flushingTask = FlushWritesToDataFileAsync();
 							_endOfDiskSpace = null;
@@ -523,10 +522,11 @@ namespace Voron
 
         public void AssertFlushingNotFailed()
         {
-            if (_flushingTask == null || _flushingTask.IsFaulted == false)
+	        var flushingTaskCopy = _flushingTask;
+	        if (flushingTaskCopy == null || flushingTaskCopy.IsFaulted == false)
                 return;
 
-            _flushingTask.Wait();// force re-throw of error
+            flushingTaskCopy.Wait();// force re-throw of error
         }
 
 	    public void HandleDataDiskFullException(DiskFullException exception)

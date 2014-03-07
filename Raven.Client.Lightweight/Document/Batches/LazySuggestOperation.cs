@@ -57,7 +57,7 @@ namespace Raven.Client.Document.Batches
 				Suggestions = ((RavenJArray)result["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
 			};
 		}
-#if !SILVERLIGHT
+
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
 			var result = new SuggestionQueryResult
@@ -72,18 +72,16 @@ namespace Raven.Client.Document.Batches
 
 			Result = result;
 		}
-#endif
-		public IDisposable EnterContext()
+
+        public IDisposable EnterContext()
 		{
 			return null;
 		}
 
-#if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
 			return commands.Suggest(index, suggestionQuery);
 		}
-#endif
 
 		public void HandleEmbeddedResponse(object result)
 		{

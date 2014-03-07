@@ -144,69 +144,6 @@ namespace Raven.Abstractions.Extensions
 			return metadata;
 		}
 
-#if SILVERLIGHT
-		public static RavenJObject FilterHeadersAttachment(this NameValueCollection self)
-		{
-			var filterHeaders = self.FilterHeadersToObject();
-			if (self.ContainsKey("Content-Type"))
-				filterHeaders["Content-Type"] = self["Content-Type"].FirstOrDefault();
-			return filterHeaders;
-		}
-
-		/// <summary>
-		/// Filters the headers from unwanted headers
-		/// </summary>
-		/// <returns></returns>public static RavenJObject FilterHeadersToObject(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static RavenJObject FilterHeadersToObject(this NameValueCollection self)
-		{
-			var metadata = new RavenJObject();
-			foreach (var header in self.Headers)
-			{
-				if (prefixesInHeadersToIgnoreClient.Any(prefix => header.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
-					continue;
-				if (headersToIgnoreClient.Contains(header.Key))
-					continue;
-				var values = header.Value;
-				var headerName = CaptureHeaderName(header.Key);
-				if (values.Count == 1)
-					metadata.Add(headerName, GetValue(values[0]));
-				else
-					metadata.Add(headerName, new RavenJArray(values.Select(GetValue)));
-			}
-			return metadata;
-		}
-
-		public static RavenJObject FilterHeadersAttachment(this IDictionary<string, IList<string>> self)
-		{
-			var filterHeaders = self.FilterHeadersToObject();
-			if (self.ContainsKey("Content-Type"))
-				filterHeaders["Content-Type"] = self["Content-Type"].FirstOrDefault();
-			return filterHeaders;
-		}
-
-		/// <summary>
-		/// Filters the headers from unwanted headers
-		/// </summary>
-		/// <returns></returns>public static RavenJObject FilterHeadersToObject(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static RavenJObject FilterHeadersToObject(this IDictionary<string, IList<string>> self)
-		  {
-			  var metadata = new RavenJObject();
-			foreach (var header in self)
-			{
-				if (prefixesInHeadersToIgnoreClient.Any(prefix => header.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
-					continue;
-				if (headersToIgnoreClient.Contains(header.Key))
-					continue;
-				var values = header.Value;
-				var headerName = CaptureHeaderName(header.Key);
-				if (values.Count == 1)
-					metadata.Add(headerName, GetValue(values[0]));
-				else
-					metadata.Add(headerName, new RavenJArray(values.Select(GetValue)));
-			}
-			return metadata;
-		}
-#else
 		public static RavenJObject FilterHeadersAttachment(this NameValueCollection self)
 		{
 			var filterHeaders = self.FilterHeadersToObject();
@@ -248,7 +185,6 @@ namespace Raven.Abstractions.Extensions
 			}
 			return metadata;
 		}
-#endif
 
 		public static RavenJObject FilterHeadersAttachment(this HttpHeaders self)
 		{

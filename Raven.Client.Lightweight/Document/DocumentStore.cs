@@ -24,10 +24,7 @@ using System.Threading.Tasks;
 using Raven.Client.Document.Async;
 using Raven.Client.Util;
 
-#if SILVERLIGHT
-using System.Net.Browser;
-using Raven.Client.Silverlight.Connection;
-#elif NETFX_CORE
+#if NETFX_CORE
 using System.Collections.Concurrent;
 using Raven.Client.WinRT.Connection;
 #else
@@ -52,7 +49,7 @@ namespace Raven.Client.Document
 		private bool aggressiveCachingUsed;
 
 
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 		private readonly Dictionary<string, ReplicationInformer> replicationInformers = new Dictionary<string, ReplicationInformer>(StringComparer.OrdinalIgnoreCase);
 		private readonly object replicationInformersLocker = new object();
 #else
@@ -67,15 +64,13 @@ namespace Raven.Client.Document
 		private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
 
 		private HttpJsonRequestFactory jsonRequestFactory =
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
  new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
 #else
 			  new HttpJsonRequestFactory();
 #endif
 
-#if !SILVERLIGHT
 		private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
-#endif
 
 		/// <summary>
 		/// Whatever this instance has json request factory available
@@ -98,7 +93,7 @@ namespace Raven.Client.Document
 			}
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		/// <summary>
 		/// Gets the database commands.
 		/// </summary>
@@ -146,12 +141,12 @@ namespace Raven.Client.Document
 		public DocumentStore()
 		{
 			Replication = new ReplicationBehavior(this);
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 			Credentials = CredentialCache.DefaultNetworkCredentials;
 #endif
 			ResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 			SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
 			Conventions = new DocumentConvention();
 #else
@@ -161,11 +156,6 @@ namespace Raven.Client.Document
 		}
 
 		private string identifier;
-
-#if !SILVERLIGHT
-#else
-		private ICredentials credentials = new NetworkCredential();
-#endif
 
 		/// <summary>
 		/// Gets or sets the credentials.
@@ -198,7 +188,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public string ApiKey { get; set; }
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		private string connectionStringName;
 
 		/// <summary>
@@ -272,12 +262,10 @@ namespace Raven.Client.Document
 			GC.SuppressFinalize(this);
 #endif
 
-#if !SILVERLIGHT
 			foreach (var observeChangesAndEvictItemsFromCacheForDatabase in observeChangesAndEvictItemsFromCacheForDatabases)
 			{
 				observeChangesAndEvictItemsFromCacheForDatabase.Value.Dispose();
 			}
-#endif
 
 			var tasks = new List<Task>();
 			foreach (var databaseChange in databaseChanges)
@@ -323,7 +311,7 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 
 		/// <summary>
 		/// Opens the session.
@@ -401,7 +389,7 @@ namespace Raven.Client.Document
 
 			AssertValidConfiguration();
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests);
 #else
 			jsonRequestFactory = new HttpJsonRequestFactory();
@@ -412,33 +400,21 @@ namespace Raven.Client.Document
 
 				InitializeInternal();
 
-#if !SILVERLIGHT
 				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
 					var generator = new MultiDatabaseHiLoGenerator(32);
 					Conventions.DocumentKeyGenerator = (dbName, databaseCommands, entity) => generator.GenerateDocumentKey(dbName, databaseCommands, Conventions, entity);
 				}
-#endif
 
 				if (Conventions.AsyncDocumentKeyGenerator == null && asyncDatabaseCommandsGenerator != null)
 				{
-#if !SILVERLIGHT
 					var generator = new AsyncMultiDatabaseHiLoKeyGenerator(32);
 					Conventions.AsyncDocumentKeyGenerator = (dbName, commands, entity) => generator.GenerateDocumentKeyAsync(dbName, commands, Conventions, entity);
-#else
-					Conventions.AsyncDocumentKeyGenerator = (dbName, commands, entity) =>
-					{
-						var typeTagName = Conventions.GetTypeTagName(entity.GetType());
-						if (typeTagName == null)
-							return CompletedTask.With(Guid.NewGuid().ToString());
-						return CompletedTask.With(typeTagName + "/" + Guid.NewGuid());
-					};
-#endif
 				}
 
 				initialized = true;
 
-#if !SILVERLIGHT && !NETFX_CORE && !MONO
+#if !NETFX_CORE && !MONO
 				RecoverPendingTransactions();
 
 				if (string.IsNullOrEmpty(DefaultDatabase) == false && 
@@ -481,7 +457,7 @@ namespace Raven.Client.Document
 			};
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		private void RecoverPendingTransactions()
 		{
 			if (EnlistInDistributedTransactions == false)
@@ -637,7 +613,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected virtual void InitializeInternal()
 		{
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 
 			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
 			var rootServicePoint = ServicePointManager.FindServicePoint(new Uri(rootDatabaseUrl));
@@ -656,20 +632,6 @@ namespace Raven.Client.Document
 				return new ServerClient(new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
 					currentSessionId, GetReplicationInformerForDatabase, null,
 					listeners.ConflictListeners));
-			};
-#endif
-
-#if SILVERLIGHT
-			WebRequest.RegisterPrefix("http://", WebRequestCreator.ClientHttp);
-			WebRequest.RegisterPrefix("https://", WebRequestCreator.ClientHttp);
-			
-			// required to ensure just a single auth dialog
-			var task = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, (Url + "/docs?pageSize=0").NoCache(), "GET", new OperationCredentials(ApiKey, Credentials), Conventions))
-				.ExecuteRequestAsync();
-			
-			jsonRequestFactory.ConfigureRequest += (sender, args) =>
-			{
-				args.JsonRequest.WaitForTask = task;
 			};
 #endif
 
@@ -694,7 +656,7 @@ namespace Raven.Client.Document
 			}
 			ReplicationInformer result;
 
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 			lock (replicationInformersLocker)
 			{
 				if (!replicationInformers.TryGetValue(key, out result))
@@ -736,12 +698,12 @@ namespace Raven.Client.Document
 		public override IDisposable DisableAggressiveCaching()
 		{
 			AssertInitialized();
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 			var old = jsonRequestFactory.AggressiveCacheDuration;
 			jsonRequestFactory.AggressiveCacheDuration = null;
 			return new DisposableAction(() => jsonRequestFactory.AggressiveCacheDuration = old);
 #else
-			// TODO: with silverlight, we don't currently support aggressive caching
+			// TODO: with netfx core, we don't currently support aggressive caching
 			return new DisposableAction(() => { });
 #endif
 		}
@@ -792,7 +754,7 @@ namespace Raven.Client.Document
 		public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration)
 		{
 			AssertInitialized();
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 			if (cacheDuration.TotalSeconds < 1)
 				throw new ArgumentException("cacheDuration must be longer than a single second");
 
@@ -806,7 +768,7 @@ namespace Raven.Client.Document
 				jsonRequestFactory.AggressiveCacheDuration = old;
 			});
 #else
-			// TODO: with silverlight, we don't currently support aggressive caching
+			// TODO: with netfx core, we don't currently support aggressive caching
 			return new DisposableAction(() => { });
 #endif
 		}
@@ -820,7 +782,7 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public override IDisposable SetRequestsTimeoutFor(TimeSpan timeout) {
 			AssertInitialized();
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 
 			var old = jsonRequestFactory.RequestTimeout;
 			jsonRequestFactory.RequestTimeout = timeout;
@@ -829,7 +791,7 @@ namespace Raven.Client.Document
 				jsonRequestFactory.RequestTimeout = old;
 			});
 #else
-			// TODO: with silverlight, we don't currently support session timeout
+			// TODO: with netfx core, we don't currently support session timeout
 			return new DisposableAction(() => { });
 #endif
 		}
@@ -890,7 +852,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public override event EventHandler AfterDispose;
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		/// <summary>
 		/// Max number of cached requests (default: 2048)
 		/// </summary>
@@ -908,7 +870,7 @@ namespace Raven.Client.Document
 #endif
 
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{
 			return new BulkInsertOperation(database ?? DefaultDatabase, this, listeners, options ?? new BulkInsertOptions(), Changes(database ?? DefaultDatabase));

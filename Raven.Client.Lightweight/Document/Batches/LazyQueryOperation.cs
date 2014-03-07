@@ -55,7 +55,6 @@ namespace Raven.Client.Document.Batches
 		public QueryResult QueryResult { get; set; }
 
 		public bool RequiresRetry { get; set; }
-#if !SILVERLIGHT
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
 			var count = responses.Count(x => x.Status == 404);
@@ -79,8 +78,8 @@ namespace Raven.Client.Document.Batches
 			Result = queryOperation.Complete<T>();
 			QueryResult = queryResult;
 		}
-#endif
-		public void HandleResponse(GetResponse response)
+
+        public void HandleResponse(GetResponse response)
 		{
 			if (response.Status == 404)
 				throw new InvalidOperationException("There is no index named: " + queryOperation.IndexName + Environment.NewLine + response.Result);
@@ -106,12 +105,10 @@ namespace Raven.Client.Document.Batches
 			return queryOperation.EnterQueryContext();
 		}
 
-#if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
 			return commands.Query(queryOperation.IndexName, queryOperation.IndexQuery, includes.ToArray());
 		}
-#endif
 
 		public void HandleEmbeddedResponse(object result)
 		{

@@ -21,11 +21,7 @@ namespace Raven.Abstractions.Extensions
     /// </summary>
     public static class StreamExtensions
     {
-#if !SILVERLIGHT
         private static readonly IBufferPool BufferPool = new BufferPool(1024 * 1024 * 1024, 65 * 1024);
-#else
-        private static readonly IBufferPool BufferPool = new NoBufferPool();
-#endif
 
         public static void CopyTo(this Stream stream, Stream other)
         {
@@ -92,7 +88,6 @@ namespace Raven.Abstractions.Extensions
             }
         }
 
-#if !SILVERLIGHT
         public static string ReadString(this Stream stream)
         {
             return ReadString(stream, Encoding.UTF8);
@@ -125,7 +120,6 @@ namespace Raven.Abstractions.Extensions
 
             return encoding.GetString(buffer);
         }
-#endif
 
         public static void Write(this Stream stream, string value)
         {

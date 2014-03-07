@@ -13,7 +13,7 @@ using Xunit;
 
 namespace RavenFS.Tests
 {
-	public class StorageOperationsTests : WebApiTest
+    public class StorageOperationsTests : RavenFsTestBase
 	{
 		[Fact]
 		public async Task Can_force_storage_cleanup_from_client()

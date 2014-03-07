@@ -27,7 +27,6 @@ namespace Raven.Abstractions.Linq
 		{
 			this.parent = parent;
 		}
-#if !SILVERLIGHT
         public override bool TryConvert(ConvertBinder binder, out object result)
         {
             if (binder.ReturnType.IsArray)
@@ -47,7 +46,6 @@ namespace Raven.Abstractions.Linq
             }
             return base.TryConvert(binder, out result);
         }
-#endif
 
 		public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
 		{

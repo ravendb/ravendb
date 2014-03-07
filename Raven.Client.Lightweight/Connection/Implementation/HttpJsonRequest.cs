@@ -1,5 +1,5 @@
 using Raven.Client.Extensions;
-#if !NETFX_CORE && !SILVERLIGHT
+#if !NETFX_CORE
 //-----------------------------------------------------------------------
 // <copyright file="HttpJsonRequest.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -7,16 +7,14 @@ using Raven.Client.Extensions;
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
 #else
 using System.Collections.Specialized;
 #endif
 using System.Diagnostics;
 using System.IO;
-#if !SILVERLIGHT
 using System.IO.Compression;
-#endif
 #if NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #endif

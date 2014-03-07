@@ -20,7 +20,6 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public static class IndexCreation
 	{
-#if !SILVERLIGHT
 		/// <summary>
 		/// Creates the indexes found in the specified assembly.
 		/// </summary>
@@ -66,7 +65,6 @@ namespace Raven.Client.Indexes
                 task.Execute(documentStore);
             }
 		}
-#endif
 
 		/// <summary>
 		/// Creates the indexes found in the specified assembly.
