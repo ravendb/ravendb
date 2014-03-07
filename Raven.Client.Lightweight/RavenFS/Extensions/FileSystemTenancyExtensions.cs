@@ -3,7 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 
@@ -11,13 +13,14 @@ namespace Raven.Client.RavenFS.Extensions
 {
     public static class FileSystemTenancyExtensions
     {
-         public static Task EnsureFileSystemExistsAsync(this RavenFileSystemClient client)
+         public static async Task EnsureFileSystemExistsAsync(this RavenFileSystemClient client)
          {
-             // TODO arek - need to check if fs already exists, if yes then do nothing
-             //if (fs != null)
-             //    return;
+             var existingSystems = await client.Admin.GetFileSystemNames();
 
-             return client.Admin.CreateFileSystemAsync(new DatabaseDocument
+             if (existingSystems.Any(x => x.Equals(client.FileSystemName, StringComparison.InvariantCultureIgnoreCase)))
+                 return;
+
+             await client.Admin.CreateFileSystemAsync(new DatabaseDocument
              {
                  Id = "Raven/FileSystem/" + client.FileSystemName,
                  Settings =

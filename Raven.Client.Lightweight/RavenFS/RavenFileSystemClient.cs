@@ -1444,6 +1444,25 @@ namespace Raven.Client.RavenFS
                 this.convention = convention;
             }
 
+            public async Task<string[]> GetFileSystemNames()
+            {
+                var requestUriString = string.Format("{0}/ravenfs/admin/FileSystems", ravenFileSystemClient.ServerUrl);
+
+                var request =
+                    ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+                        "GET", ravenFileSystemClient.PrimaryCredentials, convention));
+
+                try
+                {
+                    var response = await request.ReadResponseJsonAsync();
+                    return new JsonSerializer().Deserialize<string[]>(new RavenJTokenReader(response));
+                }
+                catch (Exception e)
+                {
+                    throw e.TryThrowBetterError();
+                }
+            }
+
             public Task CreateFileSystemAsync(DatabaseDocument databaseDocument)
             {
                 var requestUriString = string.Format("{0}/ravenfs/admin/{1}", ravenFileSystemClient.ServerUrl,
@@ -1451,7 +1470,7 @@ namespace Raven.Client.RavenFS
 
                 var request =
                     ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
-                        "PUT", ravenFileSystemClient.credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
+                        "PUT", ravenFileSystemClient.PrimaryCredentials, convention));
 
                 try
                 {
