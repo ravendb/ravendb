@@ -1,4 +1,5 @@
 import commandBase = require("commands/commandBase");
+import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import document = require("models/document");
 import database = require("models/database");
 
@@ -9,14 +10,31 @@ class saveWindowsAuthCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
+        return this.fetchLicenseStatus();
+    }
+
+    private fetchLicenseStatus(): JQueryPromise<any> {
+        return new getLicenseStatusCommand()
+            .execute()
+            .done((result: licenseStatusDto) => this.handleLicenseStatus(result));
+    }
+
+    private handleLicenseStatus(licenseStatus: licenseStatusDto) {
+        if (licenseStatus.IsCommercial || licenseStatus.ValidCommercialLicenseSeen) {
+            this.performWithCommercialLicense();
+        } else {
+            this.reportWarning("Cannot setup Windows Authentication without a valid commercial license.");
+        }
+    }
+
+    private performWithCommercialLicense() {
         if (this.dto.RequiredUsers.concat(this.dto.RequiredGroups).every(element => (element.Name.indexOf("\\") !== -1))) {
             this.reportInfo("Saving Windows Authentication settings.");
-            return this.saveSetup()
+            this.saveSetup()
                 .done(() => this.reportSuccess("Saved Windows Authentication settings."))
                 .fail((response: JQueryXHR) => this.reportError("Failed to save Windows Authentication settings.", response.responseText));
         } else {
             this.reportWarning("Windows Authentication not saved! All names must have \"\\\" in them.");
-            return null;
         }
     }
 
