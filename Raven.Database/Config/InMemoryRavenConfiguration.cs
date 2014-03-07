@@ -62,6 +62,8 @@ namespace Raven.Database.Config
 
 		public string DatabaseName { get; set; }
 
+        public string FileSystemName { get { return DatabaseName; } }
+
 		public void PostInit()
 		{
 			FilterActiveBundles();

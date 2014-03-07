@@ -1269,11 +1269,11 @@ namespace Raven.Client.RavenFS
                 }
             }
 
-            public async Task IncrementLastETagAsync(Guid sourceServerId, string sourceServerUrl, Guid sourceFileETag)
+            public async Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, Guid sourceFileETag)
             {
                 var requestUriString =
-                    String.Format("{0}/synchronization/IncrementLastETag?sourceServerId={1}&sourceServerUrl={2}&sourceFileETag={3}",
-                                    FileSystemUrl, sourceServerId, sourceServerUrl, sourceFileETag);
+                    String.Format("{0}/synchronization/IncrementLastETag?sourceServerId={1}&sourceFileSystemUrl={2}&sourceFileETag={3}",
+                                    FileSystemUrl, sourceServerId, sourceFileSystemUrl, sourceFileETag);
 
                 var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
                         "POST", credentials, convention));

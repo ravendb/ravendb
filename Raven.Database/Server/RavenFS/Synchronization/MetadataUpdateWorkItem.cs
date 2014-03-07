@@ -27,10 +27,10 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		{
 			AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
 
-			var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, ServerInfo.Url);
+			var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, ServerInfo.FileSystemUrl);
 
 			if (conflict != null)
-				return ApplyConflictOnDestinationAsync(conflict, destination, ServerInfo.Url, log);
+				return ApplyConflictOnDestinationAsync(conflict, destination, ServerInfo.FileSystemUrl, log);
 
             return destination.UpdateMetadataAsync(FileName, FileMetadata, ServerInfo);
 		}

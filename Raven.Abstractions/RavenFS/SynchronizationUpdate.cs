@@ -7,7 +7,7 @@ namespace Raven.Client.RavenFS
 		public string FileName { get; set; }
         public string DestinationFileSystemUrl { get; set; }
 		public Guid SourceServerId { get; set; }
-		public string SourceServerUrl { get; set; } // TODO arek: change it to source file system url and assign proper urls
+		public string SourceFileSystemUrl { get; set; }
 		public SynchronizationType Type { get; set; }
 		public SynchronizationAction Action { get; set; }
 		public SynchronizationDirection SynchronizationDirection { get; set; }

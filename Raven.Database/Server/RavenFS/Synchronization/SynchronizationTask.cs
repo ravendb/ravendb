@@ -51,9 +51,9 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
         public DateTime LastSuccessfulSynchronizationTime { get; private set; }
 
-		public string ServerUrl
+		public string FileSystemUrl
 		{
-			get { return systemConfiguration.ServerUrl; } // TODO arek - we also need to add /ravenfs/FILE_SYSYTEM_NAME_HERE
+			get { return string.Format("{0}/ravenfs/{1}", systemConfiguration.ServerUrl.TrimEnd('/'), systemConfiguration.FileSystemName); }
 		}
 
 		public SynchronizationQueue Queue
@@ -110,7 +110,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 			NoSyncReason reason;
 			SynchronizationWorkItem work = synchronizationStrategy.DetermineWork(fileName, localMetadata, destinationMetadata,
-																				 ServerUrl, out reason);
+																				 FileSystemUrl, out reason);
 
 			if (work == null)
 			{
@@ -261,7 +261,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				}
 
 				NoSyncReason reason;
-				var work = synchronizationStrategy.DetermineWork(file, localMetadata, destinationMetadata, ServerUrl, out reason);
+				var work = synchronizationStrategy.DetermineWork(file, localMetadata, destinationMetadata, FileSystemUrl, out reason);
 
 				if (work == null)
 				{
@@ -270,7 +270,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 					if (reason == NoSyncReason.ContainedInDestinationHistory)
 					{
 						var etag = localMetadata.Value<Guid>("ETag");
-						await destination.IncrementLastETagAsync(storage.Id, ServerUrl, etag);
+						await destination.IncrementLastETagAsync(storage.Id, FileSystemUrl, etag);
 						RemoveSyncingConfiguration(file, destination.FileSystemUrl);
 					}
 
@@ -336,7 +336,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				FileName = work.FileName,
                 DestinationFileSystemUrl = destination.FileSystemUrl,
 				SourceServerId = storage.Id,
-				SourceServerUrl = ServerUrl,
+				SourceFileSystemUrl = FileSystemUrl,
 				Type = work.SynchronizationType,
 				Action = SynchronizationAction.Start,
 				SynchronizationDirection = SynchronizationDirection.Outgoing
@@ -396,7 +396,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				FileName = work.FileName,
                 DestinationFileSystemUrl = destination.FileSystemUrl,
 				SourceServerId = storage.Id,
-				SourceServerUrl = ServerUrl,
+				SourceFileSystemUrl = FileSystemUrl,
 				Type = work.SynchronizationType,
 				Action = SynchronizationAction.Finish,
 				SynchronizationDirection = SynchronizationDirection.Outgoing

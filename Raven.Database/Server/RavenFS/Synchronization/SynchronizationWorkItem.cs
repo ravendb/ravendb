@@ -32,7 +32,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			ServerInfo = new ServerInfo
 			{
 				Id = Storage.Id,
-				Url = sourceServerUrl
+				FileSystemUrl = sourceServerUrl
 			};
 
 			conflictDetector = new ConflictDetector();

@@ -235,7 +235,7 @@ namespace RavenFS.Tests.Synchronization
 			request.AddHeaders(conflictedMetadata);
 
 			request.Headers[SyncingMultipartConstants.SourceServerInfo] =
-				new ServerInfo {Id = Guid.Empty, Url = "http://localhost:12345"}.AsJson();
+				new ServerInfo {Id = Guid.Empty, FileSystemUrl = "http://localhost:12345"}.AsJson();
 
 			var response = request.GetResponseAsync().Result;
 
@@ -324,7 +324,7 @@ namespace RavenFS.Tests.Synchronization
 			webRequest.Method = "POST";
 
 			webRequest.Headers.Add(SyncingMultipartConstants.SourceServerInfo,
-			                       new ServerInfo {Id = Guid.Empty, Url = "http://localhost:12345"}.AsJson());
+			                       new ServerInfo {Id = Guid.Empty, FileSystemUrl = "http://localhost:12345"}.AsJson());
 			webRequest.Headers.Add("ETag", "\"" + new Guid() + "\"");
 			webRequest.Headers.Add("MetadataKey", "MetadataValue");
 

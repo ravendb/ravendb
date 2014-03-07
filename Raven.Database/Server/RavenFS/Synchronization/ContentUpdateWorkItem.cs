@@ -59,10 +59,10 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			if (!IsRemoteRdcCompatible(destinationServerRdcStats))
 				throw new SynchronizationException("Incompatible RDC version detected on destination server");
 
-			var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, ServerInfo.Url);
+			var conflict = CheckConflictWithDestination(FileMetadata, destinationMetadata, ServerInfo.FileSystemUrl);
 
 			if (conflict != null)
-				return await ApplyConflictOnDestinationAsync(conflict, destination, ServerInfo.Url, log);
+				return await ApplyConflictOnDestinationAsync(conflict, destination, ServerInfo.FileSystemUrl, log);
 
 			using (var localSignatureRepository = new StorageSignatureRepository(Storage, FileName))
 			using (var remoteSignatureCache = new VolatileSignatureRepository(FileName))
