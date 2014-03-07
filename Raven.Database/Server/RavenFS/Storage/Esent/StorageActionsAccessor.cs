@@ -718,9 +718,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			}
 
 			int count = 0;
-			while (Api.TryMoveNext(session, Config) && ++count < pageSize)
+			while (Api.TryMoveNext(session, Config) && count < pageSize)
 			{
 				yield return Api.RetrieveColumnAsString(session, Config, tableColumnsCache.ConfigColumns["name"]);
+			    count++;
 			}
 		}
 
