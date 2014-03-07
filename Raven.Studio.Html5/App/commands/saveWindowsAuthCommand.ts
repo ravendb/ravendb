@@ -29,13 +29,17 @@ class saveWindowsAuthCommand extends commandBase {
 
     private performWithCommercialLicense() {
         if (this.dto.RequiredUsers.concat(this.dto.RequiredGroups).every(element => (element.Name.indexOf("\\") !== -1))) {
-            this.reportInfo("Saving Windows Authentication settings.");
-            this.saveSetup()
-                .done(() => this.reportSuccess("Saved Windows Authentication settings."))
-                .fail((response: JQueryXHR) => this.reportError("Failed to save Windows Authentication settings.", response.responseText));
+            this.performSave();
         } else {
             this.reportWarning("Windows Authentication not saved! All names must have \"\\\" in them.");
         }
+    }
+
+    private performSave() {
+        this.reportInfo("Saving Windows Authentication settings.");
+        this.saveSetup()
+            .done(() => this.reportSuccess("Saved Windows Authentication settings."))
+            .fail((response: JQueryXHR) => this.reportError("Failed to save Windows Authentication settings.", response.responseText));
     }
 
     private saveSetup(): JQueryPromise<any> {
