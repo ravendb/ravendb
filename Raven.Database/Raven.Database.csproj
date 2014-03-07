@@ -411,7 +411,6 @@
     <Compile Include="Server\RavenFS\Synchronization\Multipart\SeedFilePart.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Multipart\SourceFilePart.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Multipart\SynchronizationMultipartRequest.cs" />
-    <Compile Include="Server\RavenFS\Synchronization\Multipart\SyncingMultipartConstants.cs" />
     <Compile Include="Server\RavenFS\Synchronization\NoSyncReason.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Rdc\IPartialDataAccess.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Rdc\LocalRdcManager.cs" />
@@ -451,7 +450,6 @@
     <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\SimilarityData.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\VolatileSignatureRepository.cs" />
     <Compile Include="Server\RavenFS\Synchronization\RenameWorkItem.cs" />
-    <Compile Include="Server\RavenFS\Synchronization\ServerInfo.cs" />
     <Compile Include="Server\RavenFS\Synchronization\SynchronizationHiLo.cs" />
     <Compile Include="Server\RavenFS\Synchronization\SynchronizationLock.cs" />
     <Compile Include="Server\RavenFS\Synchronization\SynchronizationQueue.cs" />

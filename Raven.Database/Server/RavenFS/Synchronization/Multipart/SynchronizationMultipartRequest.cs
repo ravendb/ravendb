@@ -8,11 +8,10 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.OAuth;
+using Raven.Abstractions.RavenFS;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.RavenFS;
-using Raven.Client.RavenFS.Connections;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -22,7 +21,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 {
 	public class SynchronizationMultipartRequest : IHoldProfilingInformation
 	{
-        private readonly RavenFileSystemClient destination;
+        private readonly RavenFileSystemClient.SynchronizationClient destination;
 		private readonly string fileName;
 		private readonly IList<RdcNeed> needList;
 		private readonly ServerInfo serverInfo;
@@ -31,7 +30,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 		private readonly string syncingBoundary;
 		private HttpJsonRequest request;
 
-        public SynchronizationMultipartRequest(RavenFileSystemClient destination, ServerInfo serverInfo, string fileName,
+        public SynchronizationMultipartRequest(RavenFileSystemClient.SynchronizationClient destination, ServerInfo serverInfo, string fileName,
 											   NameValueCollection sourceMetadata, Stream sourceStream,
 											   IList<RdcNeed> needList)
 		{
@@ -59,7 +58,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 			request =
 				destination.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
 					destination.FileSystemUrl + "/synchronization/MultipartProceed",
-					"POST", destination.PrimaryCredentials, destination.Convention));
+					"POST", destination.Credentials, destination.Convention));
 
 			//request.SendChunked = true;
 			//request.AllowWriteStreamBuffering = false;

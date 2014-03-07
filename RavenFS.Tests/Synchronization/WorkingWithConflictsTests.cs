@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.RavenFS;
 using Raven.Client.RavenFS;
 using Raven.Client.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Extensions;

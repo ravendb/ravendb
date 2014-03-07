@@ -8,8 +8,11 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client.RavenFS;
 using Raven.Json.Linq;
 using Raven.Server;
+using RavenFS.Tests.Synchronization;
+using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 
 namespace RavenFS.Tests.Auth
@@ -41,7 +44,7 @@ namespace RavenFS.Tests.Auth
         }
 
         [Fact]
-        public async Task CanSynchronizeWithOAuth()
+        public async Task CanSynchronizeFileContent()
         {
             var source = NewClient(0);
             var destination = NewClient(1, enableAuthentication: true, apiKey: apiKey);
@@ -53,7 +56,76 @@ namespace RavenFS.Tests.Auth
             var result = await source.Synchronization.StartAsync("ms.bin", destination);
 
             Assert.Null(result.Exception);
-            Assert.Equal(3, result.BytesTransfered);
+            Assert.Equal(SynchronizationType.ContentUpdate, result.Type);
+        }
+
+        [Fact]
+        public async Task CanSynchronizeMetadata()
+        {
+            var content = new MemoryStream(new byte[] { 1, 2, 3, 4 });
+
+            var sourceClient = NewClient(0);
+            var destinationClient = NewClient(1, enableAuthentication: true, apiKey: apiKey);
+
+            await sourceClient.UploadAsync("test.bin", new NameValueCollection {{"difference", "metadata"}}, content);
+            content.Position = 0;
+            await destinationClient.UploadAsync("test.bin", content);
+
+            var report = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
+
+            Assert.Null(report.Exception);
+            Assert.Equal(SynchronizationType.MetadataUpdate, report.Type);
+
+            var destinationMetadata = destinationClient.GetMetadataForAsync("test.bin").Result;
+
+            Assert.Equal("metadata", destinationMetadata["difference"]);
+        }
+
+        [Fact]
+        public async Task CanSynchronizeFileRename()
+        {
+            var content = new MemoryStream(new byte[] { 1, 2, 3, 4 });
+
+            var sourceClient = NewClient(0);
+            var destinationClient = NewClient(1, enableAuthentication: true, apiKey: apiKey);
+
+            await sourceClient.UploadAsync("test.bin", new NameValueCollection(), content);
+            content.Position = 0;
+            await destinationClient.UploadAsync("test.bin", new NameValueCollection(), content);
+
+            await sourceClient.RenameAsync("test.bin", "renamed.bin");
+
+            // we need to indicate old file name, otherwise content update would be performed because renamed file does not exist on dest
+            var report = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
+
+            Assert.Null(report.Exception);
+            Assert.Equal(SynchronizationType.Rename, report.Type);
+
+            var testMetadata = await destinationClient.GetMetadataForAsync("test.bin");
+            var renamedMetadata = await destinationClient.GetMetadataForAsync("renamed.bin");
+
+            Assert.Null(testMetadata);
+            Assert.NotNull(renamedMetadata);
+        }
+
+        [Fact]
+        public async Task CanSynchronizeFileDelete()
+        {
+            var source = NewClient(0);
+            var destination = NewClient(1, enableAuthentication: true, apiKey: apiKey);
+
+            await source.UploadAsync("test.bin", new RandomStream(1));
+
+            var report = await source.Synchronization.StartAsync("test.bin", destination);
+
+            Assert.Null(report.Exception);
+
+            await source.DeleteAsync("test.bin");
+
+            var synchronizationReport = await source.Synchronization.StartAsync("test.bin", destination);
+
+            Assert.Equal(SynchronizationType.Delete, synchronizationReport.Type);
+            Assert.Null(synchronizationReport.Exception);
         }
     }
 }

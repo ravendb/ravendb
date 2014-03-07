@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
-using Raven.Client.Connection;
+using Raven.Abstractions.RavenFS;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.RavenFS;
 using Raven.Client.RavenFS.Connections;
@@ -20,8 +20,6 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		private readonly ConflictDetector conflictDetector;
 		private readonly ConflictResolver conflictResolver;
 		protected readonly CancellationTokenSource Cts = new CancellationTokenSource();
-		protected HttpJsonRequestFactory jsonRequestFactory = new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
-		private const int DefaultNumberOfCachedRequests = 2048;
 		protected FileConvention Convention = new FileConvention();
 		protected SynchronizationWorkItem(string fileName, string sourceServerUrl, TransactionalStorage storage)
 		{
@@ -61,7 +59,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 		public abstract SynchronizationType SynchronizationType { get; }
 
-        public abstract Task<SynchronizationReport> PerformAsync(SynchronizationDestination destination);
+        public abstract Task<SynchronizationReport> PerformAsync(RavenFileSystemClient.SynchronizationClient destination);
 
 		public virtual void Cancel()
 		{
@@ -89,13 +87,12 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			return null;
 		}
 
-        protected async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, SynchronizationDestination destination,
+        protected async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, RavenFileSystemClient.SynchronizationClient destination,
 																					string localServerUrl, ILog log)
 		{
 			log.Debug("File '{0}' is in conflict with destination version from {1}. Applying conflict on destination", FileName,
 					  destination.FileSystemUrl);
 
-			var destinationRavenFileSystemClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem, apiKey: destination.ApiKey);
 			try
 			{
 				var version = conflict.RemoteHistory.Last().Version;
@@ -103,9 +100,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				var history = new List<HistoryItem>(conflict.RemoteHistory);
 				history.RemoveAt(conflict.RemoteHistory.Count - 1);
 
-				await
-					destinationRavenFileSystemClient.Synchronization.ApplyConflictAsync(FileName, version, serverId, history,
-																						localServerUrl);
+				await destination.ApplyConflictAsync(FileName, version, serverId, history, localServerUrl);
 			}
 			catch (Exception ex)
 			{

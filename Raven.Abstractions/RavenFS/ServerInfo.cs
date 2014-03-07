@@ -3,11 +3,11 @@ using System.IO;
 using System.Text;
 using Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Database.Server.RavenFS.Synchronization
+namespace Raven.Abstractions.RavenFS
 {
 	public class ServerInfo
 	{
-		public string Url { get; set; }
+		public string Url { get; set; } // TODO arek - assign urls + file system names
 
 		public Guid Id { get; set; }
 
