@@ -4,7 +4,7 @@ using Xunit;
 
 namespace RavenFS.Tests.Bugs
 {
-	public class Queries : WebApiTest
+    public class Queries : RavenFsTestBase
 	{
 		[Fact]
 		public void CanQueryMultipleFiles()

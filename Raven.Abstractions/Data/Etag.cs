@@ -4,12 +4,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Linq;
-using Raven.Abstractions.Util;
-#if SILVERLIGHT || NETFX_CORE
-using Raven.Abstractions.Util;
-#else
 using System.Security.Cryptography;
-#endif
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Data
@@ -101,7 +97,7 @@ namespace Raven.Abstractions.Data
 		{
 			return BitConverter.GetBytes(restarts).Reverse()
 				.Concat(BitConverter.GetBytes(changes).Reverse());
-		}
+			}
 
 		public byte[] ToByteArray()
 		{
@@ -115,9 +111,9 @@ namespace Raven.Abstractions.Data
 				(stringBuilder, b) => stringBuilder.Append(GenericUtil.ByteToHexAsStringLookup[b]));
 
 			sb.Insert(8, "-")
-			  .Insert(13, "-")
-			  .Insert(18, "-")
-			  .Insert(23, "-");
+					.Insert(13, "-")
+					.Insert(18, "-")
+					.Insert(23, "-");
 
 			var etagAsString = sb.ToString();
 			Debug.Assert(etagAsString.Length == 36); //prevent stupid bugs if something is refactored
@@ -267,7 +263,7 @@ namespace Raven.Abstractions.Data
 		public Etag HashWith(IEnumerable<byte> bytes)
 		{
 			var etagBytes = ToBytes().Concat(bytes).ToArray();
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 			return Parse(MD5Core.GetHash(etagBytes));
 #else
 			using (var md5 = MD5.Create())

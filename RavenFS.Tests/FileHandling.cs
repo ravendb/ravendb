@@ -3,25 +3,25 @@ using Xunit;
 
 namespace RavenFS.Tests
 {
-	public class FileHandling : WebApiTest
+    public class FileHandling : RavenFsWebApiTest
 	{
 		[Fact]
 		public void CanOverwriteFiles()
 		{
-			WebClient.UploadString("/ravenfs/files/abc.txt", "PUT", "abcd");
-			WebClient.UploadString("/ravenfs/files/abc.txt", "PUT", "efcg");
+			WebClient.UploadString(GetFsUrl("/files/abc.txt"), "PUT", "abcd");
+            WebClient.UploadString(GetFsUrl("/files/abc.txt"), "PUT", "efcg");
 
-			var str = WebClient.DownloadString("/ravenfs/files/abc.txt");
+			var str = WebClient.DownloadString(GetFsUrl("/files/abc.txt"));
 			Assert.Equal("efcg", str);
 		}
 
 		[Fact]
 		public void CanDeleteFiles()
 		{
-			WebClient.UploadString("/ravenfs/files/abc.txt", "PUT", "abcd");
-			WebClient.UploadString("/ravenfs/files/abc.txt", "DELETE", "");
+			WebClient.UploadString(GetFsUrl("/files/abc.txt"), "PUT", "abcd");
+			WebClient.UploadString(GetFsUrl("/files/abc.txt"), "DELETE", "");
 
-			var webException = Assert.Throws<WebException>(()=>WebClient.DownloadString("/files/abc.txt"));
+			var webException = Assert.Throws<WebException>(()=>WebClient.DownloadString(GetFsUrl("/files/abc.txt")));
 			Assert.Equal(HttpStatusCode.NotFound, ((HttpWebResponse)webException.Response).StatusCode);
 		}
 	}

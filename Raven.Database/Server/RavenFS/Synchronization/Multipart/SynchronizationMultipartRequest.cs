@@ -21,7 +21,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 {
 	public class SynchronizationMultipartRequest : IHoldProfilingInformation
 	{
-		private readonly string destinationUrl;
+        private readonly SynchronizationDestination destination;
 		private readonly string fileName;
 		private readonly IList<RdcNeed> needList;
 		private readonly ServerInfo serverInfo;
@@ -33,11 +33,11 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 		private const int DefaultNumberOfCachedRequests = 2048;
 		protected FileConvention Convention = new FileConvention();
 
-		public SynchronizationMultipartRequest(string destinationUrl, ServerInfo serverInfo, string fileName,
+        public SynchronizationMultipartRequest(SynchronizationDestination destination, ServerInfo serverInfo, string fileName,
 											   NameValueCollection sourceMetadata, Stream sourceStream,
 											   IList<RdcNeed> needList)
 		{
-			this.destinationUrl = destinationUrl;
+			this.destination = destination;
 			this.serverInfo = serverInfo;
 			this.fileName = fileName;
 			this.sourceMetadata = sourceMetadata;
@@ -59,7 +59,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 
 			request =
 				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-					destinationUrl + "/ravenfs/synchronization/MultipartProceed",
+					destination.FileSystemUrl + "/synchronization/MultipartProceed",
 					"POST", new OperationCredentials("", new CredentialCache()), Convention));
 
 			//request.SendChunked = true;

@@ -42,18 +42,18 @@
                 </ul>
             </div>
             <div class="btn-group">
-                <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-toggle="dropdown" title="Configure advanced query options (Alt+C)" accesskey="C" data-bind="enable: hasSelectedIndex">
+                <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-placement="right" data-toggle="dropdown" title="Configure advanced query options (Alt+C)" accesskey="C" data-bind="enable: hasSelectedIndex">
                     <i class="fa fa-cog"></i> <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
                     <li style="padding-left: 20px;">
                         <div class="btn-group">
-                            <label class="btn btn-default use-bootstrap-tooltip" data-bind="click: setOperatorOr, css: { active: isDefaultOperatorOr }" title="Set the default operator to OR">Or</label>
-                            <label class="btn btn-default use-bootstrap-tooltip" data-bind="click: setOperatorAnd, css: { active: !isDefaultOperatorOr() }" title="Set the default operator to AND">And</label>
+                            <label class="btn btn-default use-bootstrap-tooltip" data-placement="right" data-bind="click: setOperatorOr, css: { active: isDefaultOperatorOr }" title="Set the default operator to OR">Or</label>
+                            <label class="btn btn-default use-bootstrap-tooltip" data-placement="right" data-bind="click: setOperatorAnd, css: { active: !isDefaultOperatorOr() }" title="Set the default operator to AND">And</label>
                         </div>
                     </li>
-                    <li><a href="#"><label class="btn btn-default" data-bind="click: toggleShowFields, css: { active: showFields }">Show Fields</label></a></li>
-                    <li><a href="#"><label class="btn btn-default" data-bind="click: toggleIndexEntries, css: { active: indexEntries }">Index Entries</label></a></li>
+                    <li><a href="#"><label class="btn btn-default use-bootstrap-tooltip" data-placement="right" data-bind="click: toggleShowFields, css: { active: showFields }" title="Show fields from matching index entries instead of matching documents">Show Fields</label></a></li>
+                    <li><a href="#"><label class="btn btn-default use-bootstrap-tooltip" data-placement="right" data-bind="click: toggleIndexEntries, css: { active: indexEntries }" title="Show the raw index entries instead of matching documents">Index Entries</label></a></li>
                 </ul>
             </div>
             <a class="btn btn-default use-bootstrap-tooltip" data-bind="attr: { href: editIndexUrl }, enable: hasSelectedIndex" title="Edit the index (F2)"><i class="fa fa-pencil"></i></a>
@@ -62,9 +62,36 @@
             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                 Recent Queries <span class="caret"></span>
             </button>
-            <ul class="dropdown-menu" role="menu">
-                <li><a href="#">Sort By</a></li>
-                <li><a href="#">Transformer</a></li>
+            <ul class="dropdown-menu" role="menu" data-bind="foreach: recentQueries">
+                <li>
+                    <a href="#" data-bind="click: $root.runRecentQuery.bind($root, $data)">
+                        <span data-bind="text: IndexName"></span>
+                        <span data-bind="visible: QueryText">
+                            <span class="text-muted">|</span>
+                            <span data-bind="text: QueryText"></span>
+                        </span>
+                        <span data-bind="visible: Sorts.length">
+                            <span class="text-muted">| sort by</span>
+                            <span data-bind="text: $root.getRecentQuerySortsText($index())"></span>
+                        </span>
+                        <span data-bind="visible: TransformerName">
+                            <span class="text-muted">| transform by</span>
+                            <span data-bind="text: TransformerName"></span>
+                        </span>
+                        <span data-bind="visible: ShowFields">
+                            <span class="text-muted">|</span>
+                            <span>show fields</span>
+                        </span>
+                        <span data-bind="visible: ShowFields">
+                            <span class="text-muted">|</span>
+                            <span>index entries</span>
+                        </span>
+                        <span data-bind="visible: ShowFields">
+                            <span class="text-muted">|</span>
+                            <span>AND operator</span>
+                        </span>
+                    </a>
+                </li>
             </ul>
         </div>
 

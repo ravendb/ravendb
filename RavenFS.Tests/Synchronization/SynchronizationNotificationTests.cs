@@ -10,7 +10,7 @@ using Xunit;
 
 namespace RavenFS.Tests.Synchronization
 {
-	public class SynchronizationNotificationTests : MultiHostTestBase
+	public class SynchronizationNotificationTests : RavenFsTestBase
 	{
 		private readonly RavenFileSystemClient destination;
 		private readonly RavenFileSystemClient source;
@@ -21,7 +21,7 @@ namespace RavenFS.Tests.Synchronization
 			source = NewClient(1);
 		}
 
-		[Fact]
+        [Fact]
 		public async Task NotificationsAreReceivedOnSourceWhenSynchronizationsAreStartedAndFinished()
 		{
 			await source.Notifications.ConnectionTask;
@@ -37,7 +37,7 @@ namespace RavenFS.Tests.Synchronization
 				       ToTask();
 			await source.Notifications.WhenSubscriptionsActive();
 
-			var report = await source.Synchronization.StartAsync("test.bin", destination.ServerUrl);
+			var report = await source.Synchronization.StartAsync("test.bin", destination);
 
 			Assert.Null(report.Exception);
 
@@ -62,7 +62,7 @@ namespace RavenFS.Tests.Synchronization
 				       ToTask();
 			await source.Notifications.WhenSubscriptionsActive();
 
-			report = await source.Synchronization.StartAsync("test.bin", destination.ServerUrl);
+			report = await source.Synchronization.StartAsync("test.bin", destination);
 
 			Assert.Null(report.Exception);
 
@@ -87,7 +87,7 @@ namespace RavenFS.Tests.Synchronization
 				       ToTask();
 			await source.Notifications.WhenSubscriptionsActive();
 
-			report = await source.Synchronization.StartAsync("test.bin", destination.ServerUrl);
+			report = await source.Synchronization.StartAsync("test.bin", destination);
 
 			Assert.Null(report.Exception);
 
@@ -112,7 +112,7 @@ namespace RavenFS.Tests.Synchronization
 				       ToTask();
 			await source.Notifications.WhenSubscriptionsActive();
 
-			report = await source.Synchronization.StartAsync("rename.bin", destination.ServerUrl);
+			report = await source.Synchronization.StartAsync("rename.bin", destination);
 
 			Assert.Null(report.Exception);
 
@@ -126,7 +126,7 @@ namespace RavenFS.Tests.Synchronization
 			Assert.Equal(SynchronizationType.Delete, synchronizationUpdates[1].Type);
 		}
 
-		[Fact]
+        [Fact]
 		public async Task NotificationsAreReceivedOnDestinationWhenSynchronizationsAreFinished()
 		{
 			await destination.Notifications.ConnectionTask;
@@ -142,7 +142,7 @@ namespace RavenFS.Tests.Synchronization
 				            ToTask();
 			await source.Notifications.WhenSubscriptionsActive();
 
-			var report = await source.Synchronization.StartAsync("test.bin", destination.ServerUrl);
+			var report = await source.Synchronization.StartAsync("test.bin", destination);
 
 			Assert.Null(report.Exception);
 
@@ -163,7 +163,7 @@ namespace RavenFS.Tests.Synchronization
 				            ToTask();
 			await source.Notifications.WhenSubscriptionsActive();
 
-			report = await source.Synchronization.StartAsync("test.bin", destination.ServerUrl);
+			report = await source.Synchronization.StartAsync("test.bin", destination);
 
 			Assert.Null(report.Exception);
 
@@ -184,7 +184,7 @@ namespace RavenFS.Tests.Synchronization
 				            ToTask();
 			await source.Notifications.WhenSubscriptionsActive();
 
-			report = await source.Synchronization.StartAsync("test.bin", destination.ServerUrl);
+			report = await source.Synchronization.StartAsync("test.bin", destination);
 
 			Assert.Null(report.Exception);
 
@@ -205,7 +205,7 @@ namespace RavenFS.Tests.Synchronization
 				            ToTask();
 			await source.Notifications.WhenSubscriptionsActive();
 
-			report = await source.Synchronization.StartAsync("rename.bin", destination.ServerUrl);
+			report = await source.Synchronization.StartAsync("rename.bin", destination);
 
 			Assert.Null(report.Exception);
 

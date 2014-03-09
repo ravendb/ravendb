@@ -1,4 +1,4 @@
-html,
+﻿html,
 body {
   height: 100%;
 }
@@ -377,5 +377,9 @@ footer ul {
   .navbar-fixed-top {
     margin-bottom: 0;
   }
+}
+.add-api-key {
+  font-size: 14px;
+  float: left;
 }
 /*# sourceMappingURL=app.css.map */

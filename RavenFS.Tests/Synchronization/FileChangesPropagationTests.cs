@@ -10,20 +10,16 @@ using Xunit;
 
 namespace RavenFS.Tests.Synchronization
 {
-	public class FileChangesPropagationTests : MultiHostTestBase
+    public class FileChangesPropagationTests : RavenFsTestBase
 	{
-		private const int AddtitionalServerInstancePortNumber = 19083;
-
 		[Fact]
 		public async Task File_rename_should_be_propagated()
 		{
-			StartServerInstance(AddtitionalServerInstancePortNumber);
-
 			var content = new MemoryStream(new byte[] {1, 2, 3});
 
 			var server1 = NewClient(0);
 			var server2 = NewClient(1);
-			var server3 = new RavenFileSystemClient(ServerAddress(AddtitionalServerInstancePortNumber));
+		    var server3 = NewClient(2);
 
 			content.Position = 0;
 			server1.UploadAsync("test.bin", new NameValueCollection {{"test", "value"}}, content).Wait();
@@ -64,8 +60,6 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task File_content_change_should_be_propagated()
 		{
-			StartServerInstance(AddtitionalServerInstancePortNumber);
-
 			var buffer = new byte[1024*1024*2]; // 2 MB
 			new Random().NextBytes(buffer);
 
@@ -74,7 +68,7 @@ namespace RavenFS.Tests.Synchronization
 
 			var server1 = NewClient(0);
 			var server2 = NewClient(1);
-			var server3 = new RavenFileSystemClient(ServerAddress(AddtitionalServerInstancePortNumber));
+            var server3 = NewClient(2);
 
 			content.Position = 0;
 			server1.UploadAsync("test.bin", new NameValueCollection {{"test", "value"}}, content).Wait();
@@ -134,13 +128,11 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task File_delete_should_be_propagated()
 		{
-			StartServerInstance(AddtitionalServerInstancePortNumber);
-
 			var content = new MemoryStream(new byte[] {1, 2, 3});
 
 			var server1 = NewClient(0);
 			var server2 = NewClient(1);
-			var server3 = new RavenFileSystemClient(ServerAddress(AddtitionalServerInstancePortNumber));
+            var server3 = NewClient(2);
 
 			content.Position = 0;
 			server1.UploadAsync("test.bin", new NameValueCollection {{"test", "value"}}, content).Wait();
@@ -178,13 +170,11 @@ namespace RavenFS.Tests.Synchronization
 		[Fact]
 		public async Task Metadata_change_should_be_propagated()
 		{
-			StartServerInstance(AddtitionalServerInstancePortNumber);
-
 			var content = new MemoryStream(new byte[] {1, 2, 3});
 
 			var server1 = NewClient(0);
 			var server2 = NewClient(1);
-			var server3 = new RavenFileSystemClient(ServerAddress(AddtitionalServerInstancePortNumber));
+            var server3 = NewClient(2);
 
 			content.Position = 0;
 			server1.UploadAsync("test.bin", new NameValueCollection {{"test", "value"}}, content).Wait();

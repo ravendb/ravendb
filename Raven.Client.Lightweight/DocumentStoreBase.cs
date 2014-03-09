@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-#if !SILVERLIGHT
 using System.Collections.Specialized;
-#endif
 using System.Collections.ObjectModel;
 using System.Configuration;
 using System.Linq;
@@ -14,9 +12,7 @@ using Raven.Client.Document.DTC;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Client.Document;
-#if SILVERLIGHT
-using Raven.Client.Silverlight.Connection;
-#elif NETFX_CORE
+#if NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #else
 using Raven.Abstractions.Util.Encryptors;
@@ -67,7 +63,7 @@ namespace Raven.Client
 
 		public abstract IDisposable SetRequestsTimeoutFor(TimeSpan timeout);
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		/// <summary>
 		/// Gets the shared operations headers.
 		/// </summary>
@@ -85,7 +81,7 @@ namespace Raven.Client
 		public abstract IAsyncDocumentSession OpenAsyncSession();
 		public abstract IAsyncDocumentSession OpenAsyncSession(string database);
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		public abstract IDocumentSession OpenSession();
 		public abstract IDocumentSession OpenSession(string database);
 		public abstract IDocumentSession OpenSession(OpenSessionOptions sessionOptions);
@@ -180,7 +176,7 @@ namespace Raven.Client
 			return LastEtagHolder.GetLastWrittenEtag();
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		public abstract BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
 #endif
 		protected void EnsureNotClosed()
@@ -328,7 +324,7 @@ namespace Raven.Client
 			return AggressivelyCacheFor(TimeSpan.FromDays(1));
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		protected void InitializeEncryptor()
 		{
 			var setting = ConfigurationManager.AppSettings["Raven/Encryption/FIPS"];

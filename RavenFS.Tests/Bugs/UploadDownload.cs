@@ -3,7 +3,7 @@ using Xunit;
 
 namespace RavenFS.Tests.Bugs
 {
-	public class UploadDownload : WebApiTest
+	public class UploadDownload : RavenFsTestBase
 	{
 		[Fact] 
 		public void ShouldWork()

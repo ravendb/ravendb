@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace RavenFS.Tests
 {
-	public class BigFileHandling : WebApiTest
+    public class BigFileHandling : RavenFsWebApiTest
 	{
 		[Theory]
         [InlineData(1024 * 1024)]		// 1 mb        
@@ -21,16 +21,16 @@ namespace RavenFS.Tests
 			var buffer = new byte[size];
 			new Random().NextBytes(buffer);
 
-			WebClient.UploadData("/ravenfs/files/mb.bin", "PUT", buffer);
+            WebClient.UploadData(GetFsUrl("/files/mb.bin"), "PUT", buffer);
 
-			var downloadString = WebClient.DownloadString("/ravenfs/files/");
+            var downloadString = WebClient.DownloadString(GetFsUrl("/files/"));
 			var files = JsonConvert.DeserializeObject<List<FileHeader>>(downloadString, new NameValueCollectionJsonConverter());
 			Assert.Equal(1, files.Count);
 			Assert.Equal(buffer.Length, files[0].TotalSize);
 			Assert.Equal(buffer.Length, files[0].UploadedSize);
 
 
-			var downloadData = WebClient.DownloadData("/ravenfs/files/mb.bin");
+            var downloadData = WebClient.DownloadData(GetFsUrl("/files/mb.bin"));
 
 			Assert.Equal(buffer.Length, downloadData.Length);
 			Assert.Equal(buffer, downloadData);
@@ -43,15 +43,15 @@ namespace RavenFS.Tests
 			var buffer = new byte[size];
 			new Random().NextBytes(buffer);
 
-			WebClient.UploadData("/ravenfs/files/mb.bin", "PUT", buffer);
+            WebClient.UploadData(GetFsUrl("/files/mb.bin"), "PUT", buffer);
 
-			var files = JsonConvert.DeserializeObject<List<FileHeader>>(WebClient.DownloadString("/ravenfs/files/"),
+            var files = JsonConvert.DeserializeObject<List<FileHeader>>(WebClient.DownloadString(GetFsUrl("/files/")),
 			                                                            new NameValueCollectionJsonConverter());
 			Assert.Equal(1, files.Count);
 			Assert.Equal(buffer.Length, files[0].TotalSize);
 			Assert.Equal(buffer.Length, files[0].UploadedSize);
 
-			var readData = CreateWebRequest("/ravenfs/files/mb.bin")
+            var readData = CreateWebRequest(GetFsUrl("/files/mb.bin"))
 				.WithRange(skip)
 				.MakeRequest()
 				.ReadData();
