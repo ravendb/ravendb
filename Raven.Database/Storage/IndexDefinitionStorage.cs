@@ -13,6 +13,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using Lucene.Net.Analysis.Standard;
+using Lucene.Net.Documents;
 using Microsoft.Isam.Esent.Interop;
 using Mono.CSharp.Linq;
 using Raven.Abstractions.Data;
@@ -316,102 +317,66 @@ namespace Raven.Database.Storage
 
         public IndexMergeResults ProposeIndexMergeSuggestions()
         {
-           
-            var indexMergeResults= CreatePossibleIndexMergeSuggestionsList(); 
-
-            return indexMergeResults;
+            var indexes = ParseIndexesAndGetReadyToMerge();
+            var mergedIndexesData = MergeIndexes(indexes);
+            var mergedResults = CreateMergeIndexDefinition(mergedIndexesData);
+            return mergedResults;
         }
-        public IndexMergeResults CreatePossibleIndexMergeSuggestionsList()
+
+        private List<MergeProposal> MergeIndexes(List<IndexData> indexes)
         {
-            var parser = new CSharpParser();
-            var indexes = new List<QueryData>();
-
-
-            foreach (var kvp in IndexDefinitions)
-            {
-                var index = kvp.Value;
-                if (index.IsMapReduce)
-                    continue;
-
-                if(index.Maps.Count>1)  //no support for multiple maps
-                    continue;
-
-                var map = parser.ParseExpression(index.Map); // TODO: Multiple maps
-
-                var visitor = new Regina_PleaseRenameMeSoonest_Visitor();
-                map.AcceptVisitor(visitor);  
-                var curQuery = new QueryData
-                {
-                    IndexId = index.IndexId,
-                    IndexName = index.Name,
-                    OriginalQuery = index.Map, 
-
-                    HasWhere = visitor.HasWhere,
-                    FromExpression = visitor.FromExpression,
-                    FromIdentifier = visitor.FromIdentifier,
-                    NumberOfFromClauses = visitor.NumberOfFromClauses,
-                    SelectExpressions = visitor.SelectExpressions,
-                };
-                indexes.Add(curQuery);
-            }
-
-            //merge index data
-            var mergedQueries = new List<MergeProposal>();
-            foreach (var queryData in indexes)
+            var mergedIndexesData = new List<MergeProposal>();
+            foreach (var indexData in indexes)
             {
                 var mergeData = new MergeProposal();
 
-                if (queryData.IsAlreadyMerged)
+                if (indexData.IsAlreadyMerged)
                     continue;
 
-                queryData.IsAlreadyMerged = true;
+                indexData.IsAlreadyMerged = true;
 
-                List<string> failComments = new List<string>();
-                if (queryData.NumberOfFromClauses > 1)
+                var failComments = new List<string>();
+                if (indexData.IsMapReduced)
+                {
+                    failComments.Add("Cannot merge indexes containing reduced map");
+                }
+
+                if (indexData.ExistsMorethan1Maps)
+                {
+                    failComments.Add("Cannot merge indexes with more than 1 map");
+                }
+
+                if (indexData.NumberOfFromClauses > 1)
                 {
                     failComments.Add("Cannot merge indexes that have more than 1 from clause");
                 }
-                if (queryData.HasWhere)
+                if (indexData.HasWhere)
                 {
                     failComments.Add("Cannot merge indexes that have a where clause");
                 }
                 if (failComments.Count != 0)
                 {
-                    queryData.Comment = string.Join(Environment.NewLine, failComments);
-                    queryData.IsSuitedForMerge = false;
+                    indexData.Comment = string.Join(Environment.NewLine, failComments);
+                    indexData.IsSuitedForMerge = false;
                     var data = new MergeProposal
                     {
-                        MergedData = queryData
+                        MergedData = indexData
                     };
-                    mergedQueries.Add(data);
+                    mergedIndexesData.Add(data);
                     continue;
                 }
-                
-                mergeData.ProposedForMerge.Add(queryData);
-                foreach (var curQueryData in indexes)
+
+                mergeData.ProposedForMerge.Add(indexData);
+                foreach (var curIndexData in indexes)
                 {
-                    if (curQueryData.IndexId == queryData.IndexId)
+                    if (!AreSuitedForMergeCriterions(indexData, curIndexData))
                         continue;
 
-                    if (curQueryData.NumberOfFromClauses > 1)
-                        continue;
-
-                    if (curQueryData.IsAlreadyMerged)
-                        continue;
-
-                    if (curQueryData.FromExpression != queryData.FromExpression)
-                        continue;
-
-                    if (curQueryData.HasWhere)
-                        continue;
-//TODO: add compare for additional indexdef properties before merge decision
-                    if (CompareSelectExpression(curQueryData, queryData))
+                    if (CompareSelectExpression(curIndexData, indexData))
                     {
-                        curQueryData.IsSuitedForMerge = true;
-                        mergeData.ProposedForMerge.Add(curQueryData);
-
+                        curIndexData.IsSuitedForMerge = true;
+                        mergeData.ProposedForMerge.Add(curIndexData);
                     }
-
                 }
 
                 var newData = new MergeProposal
@@ -419,16 +384,163 @@ namespace Raven.Database.Storage
                     ProposedForMerge = mergeData.ProposedForMerge,
                     MergedData = mergeData.MergedData
                 };
-                mergedQueries.Add(newData);
+                mergedIndexesData.Add(newData);
+            }
+            return mergedIndexesData;
+        }
+
+        private List<IndexData> ParseIndexesAndGetReadyToMerge()
+        {
+            var parser = new CSharpParser();
+            var indexes = new List<IndexData>();
+
+            foreach (var kvp in IndexDefinitions)
+            {
+                var index = kvp.Value;
+                if (index.IsMapReduce)
+                {
+                    var indexData = new IndexData
+                    {
+                        IndexId = index.IndexId,
+                        IndexName = index.Name,
+                        OriginalMap = index.Map,
+                        IsMapReduced = true,
+                     };
 
 
+                    indexes.Add(indexData);
+                    continue;
+                }
+
+                if (index.Maps.Count > 1)  //no support for multiple maps
+                {
+                    var indexData = new IndexData
+                    {
+                        IndexId = index.IndexId,
+                        IndexName = index.Name,
+                        OriginalMap = index.Map,
+                        ExistsMorethan1Maps = true,
+                     };
+                     indexes.Add(indexData);
+                     continue;
+                }
+                   
+
+                var map = parser.ParseExpression(index.Map); // TODO: Multiple maps
+
+                var visitor = new IndexVisitor();
+                map.AcceptVisitor(visitor);
+                var curIndexData = new IndexData
+                {
+                    IndexId = index.IndexId,
+                    IndexName = index.Name,
+                    OriginalMap = index.Map,
+                    HasWhere = visitor.HasWhere,
+                    FromExpression = visitor.FromExpression,
+                    FromIdentifier = visitor.FromIdentifier,
+                    NumberOfFromClauses = visitor.NumberOfFromClauses,
+                    SelectExpressions = visitor.SelectExpressions,
+                };
+
+                curIndexData.FillAdditionalProperies(index);
+
+                indexes.Add(curIndexData);
+            }
+            return indexes;
+        }
+
+        private bool AreSuitedForMergeCriterions( IndexData indexData,IndexData curIndexData)
+        {
+            if (curIndexData.IndexId == indexData.IndexId)
+               return false;
+
+            if (curIndexData.NumberOfFromClauses > 1)
+                return false;
+
+            if (curIndexData.IsAlreadyMerged)
+                return false;
+
+            if (!curIndexData.FromExpression.Equals(indexData.FromExpression))
+                return false;
+
+            if (curIndexData.HasWhere)
+                return false;
+
+            if(indexData.Fields.Count !=curIndexData.Fields.Count)
+                return false;
+
+              if (curIndexData.IsStoreDefined != indexData.IsStoreDefined) 
+                return false;
+
+            if(curIndexData.IsStoreDefined && ( !DataDictionaryCompare(indexData.Stores.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value),
+                       curIndexData.Stores.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value))))
+                return false;
+
+            if (curIndexData.IsAnalyzerDefined != indexData.IsAnalyzerDefined) 
+                return false;
+
+            if (curIndexData.IsAnalyzerDefined && (!DataDictionaryCompare(indexData.Analyzers.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value),
+               curIndexData.Analyzers.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value))))
+                return false;
+
+            if (curIndexData.IsSuggestionDefined != indexData.IsSuggestionDefined)
+                return false;
+            if (curIndexData.IsSuggestionDefined && (!DataDictionaryCompare(indexData.Suggestions.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value),
+                         curIndexData.Suggestions.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value))) )
+                return false;
+
+            if (curIndexData.IsSortOptionDefined != indexData.IsSortOptionDefined)
+                return false;
+            if (curIndexData.IsSortOptionDefined && ( ! DataDictionaryCompare(indexData.SortOptions.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value),
+                                  curIndexData.SortOptions.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value)) ))
+                return false;
+
+            if (curIndexData.IsIndexesDefined != indexData.IsIndexesDefined)
+                return false;
+            if (curIndexData.IsIndexesDefined && (!DataDictionaryCompare(indexData.Indexes.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value),
+                                  curIndexData.Indexes.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value))))
+                return false;
+
+ 
+            if (curIndexData.IsTermVectorDefined != indexData.IsTermVectorDefined)
+                return false;
+            if (curIndexData.IsTermVectorDefined && (!DataDictionaryCompare(indexData.TermVectors.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value),
+                                  curIndexData.TermVectors.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value))))
+                return false;
+
+            if (curIndexData.IsSpatialIndexDefined != indexData.IsSpatialIndexDefined)
+                return false;
+            if (curIndexData.IsSpatialIndexDefined && (!DataDictionaryCompare(indexData.SpatialIndexes.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value),
+                                  curIndexData.SpatialIndexes.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value))))
+                return false;
+
+            return true;
+ 
+        }
+
+        private bool DataDictionaryCompare(IDictionary<string, object> dataDict1, IDictionary<string, object> dataDict2)
+        {
+            if (dataDict1.Count != dataDict2.Count)
+                return false;
+            bool res = true;
+
+
+            foreach (var key in dataDict1.Keys)
+            {
+                if (!dataDict2.ContainsKey(key))
+                    return false;
+
+                if (!dataDict1[key].Equals(dataDict2[key]))
+                {
+                    res = false;
+                    break;
+                }
 
             }
-            var mergedResults = MergeIndexData(mergedQueries);
-            return mergedResults;
-
+            return res;
         }
-        private bool CompareSelectExpression(QueryData expr1, QueryData expr2)
+
+        private bool CompareSelectExpression(IndexData expr1, IndexData expr2)
         {
             Expression ExpressionValue;
             foreach (var pair in expr1.SelectExpressions)
@@ -450,69 +562,83 @@ namespace Raven.Database.Storage
             return true;
         }
 
-        private IndexMergeResults MergeIndexData(List<MergeProposal> indexDataForMerge)
+        private IndexMergeResults CreateMergeIndexDefinition(List<MergeProposal> indexDataForMerge)
         {
             var indexMergeResults = new IndexMergeResults();
-            var queryData = new QueryData();
             foreach (var mergeProposal in indexDataForMerge)
             {
-                var mergeSuggestion = new MergeSuggestions();
                 if (mergeProposal.ProposedForMerge.Count > 1)
-                {
-                    queryData = mergeProposal.ProposedForMerge.First();
-                    mergeSuggestion.MergedIndexName = queryData.IndexName;
-                    var suggestion = new StringBuilder();
-                    suggestion.Append("From " + queryData.FromIdentifier + " In " + queryData.FromExpression);
-                    var selectExpressionDict = new HashSet<string>();
-                    string canMergeIndexName=string.Empty;
-                    foreach (var curProposedData in mergeProposal.ProposedForMerge)
-                    {
-                        foreach (var curExpr in curProposedData.SelectExpressions)
-                        {
-                            var valueStr = curExpr.Value.ToString();
-                            if (curProposedData.FromIdentifier != queryData.FromIdentifier)
-                            {
-                                valueStr = valueStr.Replace(curProposedData.FromIdentifier, queryData.FromIdentifier);
+                    continue;
+                if (mergeProposal.MergedData == null) 
+                    continue;
+                indexMergeResults.Unmergables.Add(mergeProposal.MergedData.IndexName,mergeProposal.MergedData.Comment);
+            }
+            foreach (var mergeProposal in indexDataForMerge)
+            {
+                if (mergeProposal.ProposedForMerge.Count == 0)
+                    continue;
+                
+                var indexData = mergeProposal.ProposedForMerge.First();
 
-                            }
-                            var resultValue = valueStr.Split('=');
-                            selectExpressionDict.Add(resultValue[resultValue.Length - 1].Trim());
-                        }
-                        if (!string.Equals(queryData.IndexName, curProposedData.IndexName))
-                        {
-                            if(!string.IsNullOrEmpty(canMergeIndexName))
-                                 canMergeIndexName = canMergeIndexName + " " + curProposedData.IndexName;
-                            else
-                            {
-                                canMergeIndexName = curProposedData.IndexName;
-                            }   
-                        }
-                    }
-                    var sb = new StringBuilder();
-                    sb.Append("select new { ");
-                    foreach (var value in selectExpressionDict)
-                    {
-                        sb.Append(value);
-                        sb.Append(" ,");
-                    }
-                    suggestion.Append(" " + sb);
-                   
-                    int len = suggestion.ToString().Length;
-                    suggestion.Replace(",", "}", len - 2, 2);
-                    if (!mergeSuggestion.CanMergeWith.ContainsKey(canMergeIndexName))
-                        mergeSuggestion.CanMergeWith.Add(canMergeIndexName,suggestion.ToString());
-                }
-                else
+                var mergeSuggestion = new MergeSuggestions
                 {
-                    if (mergeProposal.MergedData != null)
-                        indexMergeResults.Unmergables.Add(mergeProposal.MergedData.IndexName,
-                            mergeProposal.MergedData.Comment);
+                    CanMerge = { indexData.IndexName}
+                };
+
+                var suggestion = new StringBuilder();
+                suggestion.Append("from " + indexData.FromIdentifier + " in " + indexData.FromExpression);
+                var selectExpression = new HashSet<string>();
+                foreach (var curProposedData in mergeProposal.ProposedForMerge)
+                {
+                    foreach (var curExpr in curProposedData.SelectExpressions)
+                    {
+                        var valueStr = curExpr.Value.ToString();
+                        if (curProposedData.FromIdentifier != indexData.FromIdentifier)
+                        {
+                            valueStr = valueStr.Replace(curProposedData.FromIdentifier, indexData.FromIdentifier);
+                        }
+                        var resultValue = valueStr.Split('=');
+                        selectExpression.Add(resultValue[resultValue.Length - 1].Trim());
+                    }
+                    if (!string.Equals(indexData.IndexName, curProposedData.IndexName))
+                    {
+                        mergeSuggestion.CanMerge.Add(curProposedData.IndexName);
+                    }
                 }
+                var sb = new StringBuilder();
+                sb.Append("select new { ");
+                foreach (var value in selectExpression)
+                {
+                    sb.Append(value);
+                    sb.Append(" ,");
+                }
+                suggestion.Append(" " + sb);
+
+                int len = suggestion.ToString().Length;
+                suggestion.Replace(",", "}", len - 2, 2);
+
+           //     mergeSuggestion.CanMerge.Add(indexData.IndexName);
+                mergeSuggestion.MergedIndex.Map = suggestion.ToString();
+
+                if (indexData.IsStoreDefined)
+                    mergeSuggestion.MergedIndex.Stores = indexData.Stores;
+                if (indexData.IsIndexesDefined)
+                    mergeSuggestion.MergedIndex.Indexes = indexData.Indexes;
+                if (indexData.IsAnalyzerDefined)
+                   mergeSuggestion.MergedIndex.Analyzers= indexData.Analyzers;
+                if (indexData.IsSortOptionDefined)
+                    mergeSuggestion.MergedIndex.SortOptions = indexData.SortOptions;
+                if (indexData.IsSuggestionDefined)
+                    mergeSuggestion.MergedIndex.Suggestions = indexData.Suggestions;
+                if (indexData.IsTermVectorDefined)
+                    mergeSuggestion.MergedIndex.TermVectors = indexData.TermVectors;
+                if (indexData.IsSpatialIndexDefined)
+                    mergeSuggestion.MergedIndex.SpatialIndexes = indexData.SpatialIndexes;
                 if (mergeProposal.ProposedForMerge.Count > 1)
                 {
-                    if (!indexMergeResults.Suggestions.ContainsKey(mergeSuggestion.MergedIndexName))
-                        indexMergeResults.Suggestions.Add(mergeSuggestion.MergedIndexName, mergeSuggestion);
+                    indexMergeResults.Suggestions.Add(mergeSuggestion);
                 }
+
             }
             return indexMergeResults;
         }

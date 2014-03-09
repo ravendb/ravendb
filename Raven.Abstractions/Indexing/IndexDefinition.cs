@@ -22,7 +22,11 @@ namespace Raven.Abstractions.Indexing
 		public IndexDefinition()
 		{
 			Maps = new HashSet<string>();
+<<<<<<< HEAD
            
+=======
+            //In spite dictionary definitions properties Stores,Analyzers,SortOptions,Suggestions,TermVectors,SpatialIndexes contains only 1 value
+>>>>>>> indexing merge suggestion cont
 			Indexes = new Dictionary<string, FieldIndexing>();
 			Stores = new Dictionary<string, FieldStorage>();
 			Analyzers = new Dictionary<string, string>();
@@ -358,4 +362,76 @@ namespace Raven.Abstractions.Indexing
 			return indexDefinition;
 		}
 	}
+<<<<<<< HEAD
 }
+=======
+
+	public enum IndexLockMode
+	{
+		Unlock,
+		LockedIgnore,
+		LockedError
+	}
+
+	public class TransformerDefinition
+	{
+		/// <summary>
+		/// Gets or sets the translator function
+		/// </summary>
+		public string TransformResults { get; set; }
+		public int IndexId { get; set; }
+		public string Name { get; set; }
+
+		public bool Equals(TransformerDefinition other)
+		{
+			return string.Equals(TransformResults, other.TransformResults);
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != GetType()) return false;
+			return Equals((TransformerDefinition) obj);
+		}
+
+		public override int GetHashCode()
+		{
+			return (TransformResults != null ? TransformResults.GetHashCode() : 0);
+		}
+
+		public TransformerDefinition Clone()
+		{
+			return (TransformerDefinition) MemberwiseClone();
+		}
+
+		public override string ToString()
+		{
+			return TransformResults;
+		}
+	}
+
+    public class IndexMergeSuggestion
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string With { get; set; }
+        public List<string> Repl { get; set; }
+    }
+    public class IndexMergeResults
+    {
+        public Dictionary<string, string> Unmergables=new Dictionary<string, string>();// index name, reason
+
+        public List< MergeSuggestions> Suggestions= new List<MergeSuggestions>();
+    }
+
+    public class MergeSuggestions
+    {
+        public List<string> CanMerge = new List<string>();  // index names
+
+          public IndexDefinition MergedIndex = new IndexDefinition();  //propose for new index with all it's properties
+    }
+
+   
+}
+>>>>>>> indexing merge suggestion cont
