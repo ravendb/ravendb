@@ -55,7 +55,6 @@
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
-    <TypeScriptCompile Include="App\models\apiKeyDatabase.ts" />
     <TypeScriptCompile Include="App\models\index.ts" />
     <TypeScriptCompile Include="App\models\indexDefinition.ts" />
     <TypeScriptCompile Include="App\models\indexPriority.ts" />
@@ -104,10 +103,15 @@
     <TypeScriptCompile Include="App\models\replicationDestination.ts" />
     <TypeScriptCompile Include="App\commands\getReplicationsCommand.ts" />
     <TypeScriptCompile Include="App\models\replicationsSetup.ts" />
-    <TypeScriptCompile Include="App\commands\saveReplicationDocument.ts" />
+    <TypeScriptCompile Include="App\commands\saveReplicationDocumentCommand.ts" />
     <TypeScriptCompile Include="App\models\replicationConfig.ts" />
-    <TypeScriptCompile Include="App\commands\saveAutomaticConflictResolutionDocument.ts" />
+    <TypeScriptCompile Include="App\commands\saveAutomaticConflictResolutionDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\getAutomaticConflictResolutionDocumentCommand.ts" />
+    <TypeScriptCompile Include="App\models\databaseAccess.ts" />
+    <TypeScriptCompile Include="App\models\windowsAuthData.ts" />
+    <TypeScriptCompile Include="App\models\windowsAuthSetup.ts" />
+    <TypeScriptCompile Include="App\commands\getWindowsAuthCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveWindowsAuthCommand.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\backupDatabase.html" />
@@ -141,9 +145,6 @@
     <TypeScriptCompile Include="App\widgets\virtualTable\row.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />
     <Content Include="App\views\windowsAuth.html" />
-    <Content Include="Content\app.min.css">
-      <DependentUpon>app.css</DependentUpon>
-    </Content>
     <Content Include="Content\bootstrap-theme.css" />
     <Content Include="Content\bootstrap-theme.min.css" />
     <Content Include="Content\bootstrap.css" />
@@ -1012,9 +1013,6 @@
     <Content Include="fonts\fontawesome-webfont.ttf" />
     <Content Include="fonts\fontawesome-webfont.eot" />
     <Content Include="fonts\FontAwesome.otf" />
-    <Content Include="Content\app.css.map">
-      <DependentUpon>app.css</DependentUpon>
-    </Content>
     <Content Include="Scripts\jquery-2.1.0.min.map" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>

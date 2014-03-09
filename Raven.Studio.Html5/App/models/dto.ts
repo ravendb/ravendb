@@ -86,13 +86,7 @@ interface apiKeyDto {
     Name: string;
     Secret: string;
     Enabled: boolean;
-    Databases: Array<apiKeyDatabaseDto>;
-}
-
-interface apiKeyDatabaseDto {
-    TenantId: string;
-    Admin: boolean;
-    ReadOnly: boolean;
+    Databases: Array<databaseAccessDto>;
 }
 
 interface buildVersionDto {
@@ -286,6 +280,23 @@ interface replicationsDto {
 interface replicationConfigDto {
     DocumentConflictResolution: string;
     AttachmentConflictResolution: string;
+}
+
+interface databaseAccessDto {
+    Admin: boolean;
+    TenantId: string;
+    ReadOnly: boolean;
+}
+
+interface windowsAuthDataDto {
+    Name: string;
+    Enabled: boolean;
+    Databases: databaseAccessDto[];
+}
+
+interface windowsAuthDto {
+    RequiredGroups: windowsAuthDataDto[];
+    RequiredUsers: windowsAuthDataDto[];
 }
 
 interface transformerDto {
