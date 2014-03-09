@@ -22,7 +22,7 @@ namespace Raven.Abstractions.Indexing
 		public IndexDefinition()
 		{
 			Maps = new HashSet<string>();
-
+            //In spite dictionary definitions properties Stores,Analyzers,SortOptions,Suggestions,TermVectors,SpatialIndexes contains only 1 value
 			Indexes = new Dictionary<string, FieldIndexing>();
 			Stores = new Dictionary<string, FieldStorage>();
 			Analyzers = new Dictionary<string, string>();
@@ -415,18 +415,14 @@ namespace Raven.Abstractions.Indexing
     {
         public Dictionary<string, string> Unmergables=new Dictionary<string, string>();// index name, reason
 
-        public Dictionary<string, MergeSuggestions> Suggestions= new Dictionary<string, MergeSuggestions>(); // index name, suggestion
+        public List< MergeSuggestions> Suggestions= new List<MergeSuggestions>();
     }
 
     public class MergeSuggestions
     {
-       // public string[] CanMergeWith;
+        public List<string> CanMerge = new List<string>();  // index names
 
-        [JsonProperty(PropertyName = "CanMerge")]
-        public Dictionary<string, string> CanMergeWith = new Dictionary<string, string>();// index name, suggestion
-     
-        public string MergedIndexName;
-        //??   public IndexDefinition MergedIndex;
+          public IndexDefinition MergedIndex = new IndexDefinition();  //propose for new index with all it's properties
     }
 
    

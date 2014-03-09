@@ -16,35 +16,151 @@ namespace Raven.Database.Indexing
     public class MergeProposal
     {
         
-        public List<QueryData> ProposedForMerge = new List<QueryData>();
-        public QueryData MergedData { get; set; }
+        public List<IndexData> ProposedForMerge = new List<IndexData>();
+        public IndexData MergedData { get; set; }
 
         public string IndexMergeSuggestion { get; set; }
 
 
     }
-    public class QueryData
+    public class IndexData
     {
         public string FromExpression { get; set; }
         public string FromIdentifier { get; set; }
         public int NumberOfFromClauses { get; set; }
 
         public Dictionary<string, Expression> SelectExpressions = new Dictionary<string, Expression>();
-
-        public string OriginalQuery { get; set; }
+        public bool IsMapReduced { get; set; }
+        public bool ExistsMorethan1Maps { get; set; }
+        public string OriginalMap { get; set; }
         public bool HasWhere { get; set; }
-        //  public string Where { get; set; }
         public int IndexId { get; set; }
         public string IndexName { get; set; }
         public bool IsAlreadyMerged { get; set; }
         public bool IsSuitedForMerge { get; set; }
         public string Comment { get; set; }
+        public bool IsIndexesDefined { get; set; }
+        public bool IsStoreDefined { get; set; }
+        public bool IsAnalyzerDefined { get; set; }
+        public bool IsSortOptionDefined { get; set; }
+        public bool IsSuggestionDefined { get; set; }
+        public bool IsTermVectorDefined { get; set; }
+        public bool IsSpatialIndexDefined { get; set; }
 
+        public IDictionary<string, FieldStorage> Stores { get; set; }
+
+          public IDictionary<string, FieldIndexing> Indexes { get; set; }
+
+          public IDictionary<string, SortOptions> SortOptions { get; set; }
+
+          public IDictionary<string, string> Analyzers { get; set; }
+
+          public IList<string> Fields { get; set; }
+
+          public IDictionary<string, SuggestionOptions> Suggestions { get; set; }
+
+          public IDictionary<string, FieldTermVector> TermVectors { get; set; }
+
+          public IDictionary<string, SpatialOptions> SpatialIndexes { get; set; }
+
+     
+
+        public IndexData()
+        {
+            Indexes = new Dictionary<string, FieldIndexing>();
+            Stores = new Dictionary<string, FieldStorage>();
+            Analyzers = new Dictionary<string, string>();
+            SortOptions = new Dictionary<string, SortOptions>();
+            Suggestions = new Dictionary<string, SuggestionOptions>();
+            TermVectors = new Dictionary<string, FieldTermVector>();
+            SpatialIndexes = new Dictionary<string, SpatialOptions>();
+
+
+            Fields = new List<string>();
+
+        }
+        public void FillAdditionalProperies(IndexDefinition index)
+        {
+
+
+                Fields = index.Fields;  
+                if (index.Indexes.Count > 0)
+                {
+                    Indexes = index.Indexes;
+                    IsIndexesDefined = true;
+                }
+                else
+                {
+                    IsIndexesDefined = false;
+                }
+
+                if (index.Stores.Count > 0)
+                {
+                    Stores = index.Stores;
+                    IsStoreDefined = true;
+                }
+                else
+                {
+                    IsStoreDefined = false;
+                }
+                
+                if (index.Analyzers.Count > 0)
+                 {
+                    Analyzers = index.Analyzers;
+                    IsAnalyzerDefined = true;
+                 }
+                else
+                {
+                    IsAnalyzerDefined = false;
+                }
+
+                if (index.SortOptions.Count > 0)
+                {
+                    SortOptions = index.SortOptions;
+                    IsSortOptionDefined = true;
+                }
+                else
+                {
+                    IsSortOptionDefined = false;
+                }
+
+                if (index.Suggestions.Count > 0)
+                {
+                    Suggestions =index.Suggestions;
+                    IsSuggestionDefined = true;
+                }
+                else
+                {
+                    IsSuggestionDefined = false;
+                }
+                if (index.TermVectors.Count > 0)
+                {
+                   TermVectors =index.TermVectors;
+                   IsTermVectorDefined = true;
+                }
+                else
+                {
+                  IsTermVectorDefined = false;
+
+                }
+
+                if (index.SpatialIndexes.Count > 0)
+                {
+                    SpatialIndexes =index.SpatialIndexes;
+                    IsSpatialIndexDefined = true;
+                }
+                else
+                {
+                    IsSpatialIndexDefined = false;
+                }
+ 
+        }
+    
 
     }
-    public class Regina_PleaseRenameMeSoonest_Visitor : DepthFirstAstVisitor
+    public class IndexVisitor : DepthFirstAstVisitor
     {
-        public Regina_PleaseRenameMeSoonest_Visitor()
+        public IndexVisitor()
         {
             NumberOfFromClauses = 0;
             SelectExpressions = new Dictionary<string, Expression>();
@@ -55,6 +171,7 @@ namespace Raven.Database.Indexing
         public string FromIdentifier { get; set; }
         public string FromExpression { get; set; }
         public int NumberOfFromClauses { get; set; }
+     
         public override void VisitQueryFromClause(QueryFromClause queryFromClause)
         {
             base.VisitQueryFromClause(queryFromClause);
