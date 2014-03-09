@@ -305,6 +305,7 @@ interface storedQueryDto {
     ShowFields: boolean;
     IndexEntries: boolean;
     UseAndOperator: boolean;
+    Hash: number;
 }
 
 interface storedQueryContainerDto extends documentDto {

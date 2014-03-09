@@ -131,9 +131,17 @@ html, body {
 .indexes-container {
     margin-top: 10px;
 
-    .index-group {
-        /*width: 50%;*/
-        /*overflow: visible;*/
+    .index {
+
+        .index-actions-container {
+            display: none;
+        }
+
+        &:hover {
+            .index-actions-container {
+                display: inline-block;
+            }
+        }
     }
 }
 
@@ -267,8 +275,7 @@ html, body {
     /*position: absolute;
     right: 0;
     left: 0;*/
-
-    &:focus { 
+    &:focus {
         outline: 0;
     }
 
@@ -343,10 +350,9 @@ html, body {
 .studio-alerts {
     position: fixed;
     top: 60px;
-    left: 45%;
-    right: 45%;
+    left: 40%;
     z-index: 2000;
-    width: 300px;
+    width: 400px;
 }
 
 #editDocumentContainer {
@@ -478,4 +484,18 @@ footer {
 .add-api-key {
     font-size: 14px;
     float: left;
+}
+
+#recentErrorsDialog {
+    height: 500px;
+    width: 600px;
+
+    .modal-body {
+        height: 350px;
+        overflow-y: auto;
+    }
+
+    .error-details, .http-status {
+        width: 100%;
+    }
 }

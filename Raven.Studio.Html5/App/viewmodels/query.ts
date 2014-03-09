@@ -54,12 +54,12 @@ class query extends viewModelBase {
         aceEditorBindingHandler.install();        
     }
 
-    activate(indexNameOrRecentQueryIndex?: string) {
-        super.activate(indexNameOrRecentQueryIndex);
+    activate(indexNameOrRecentQueryHash?: string) {
+        super.activate(indexNameOrRecentQueryHash);
 
-        this.fetchAllIndexes(indexNameOrRecentQueryIndex);
+        this.fetchAllIndexes(indexNameOrRecentQueryHash);
         this.fetchAllTransformers();
-        this.fetchRecentQueries(indexNameOrRecentQueryIndex);
+        this.fetchRecentQueries(indexNameOrRecentQueryHash);
     }
 
     attached() {
@@ -95,7 +95,7 @@ class query extends viewModelBase {
             });
     }
 
-    fetchRecentQueries(indexNameOrRecentQueryIndex?: string) {
+    fetchRecentQueries(recentQueryHashToSelect?: string) {
         new getStoredQueriesCommand(this.activeDatabase())
             .execute()
             .fail(_ => {
@@ -112,10 +112,12 @@ class query extends viewModelBase {
                 this.recentQueries(dto.Queries);
 
                 // Select one if we're configured to do so.
-                if (indexNameOrRecentQueryIndex && indexNameOrRecentQueryIndex.indexOf("recentquery-") === 0) {
-                    var recentQueryToSelectIndex = parseInt(indexNameOrRecentQueryIndex.substr("recentquery-".length), 10);
-                    if (!isNaN(recentQueryToSelectIndex) && recentQueryToSelectIndex < dto.Queries.length) {
-                        this.runRecentQuery(dto.Queries[recentQueryToSelectIndex]);
+                var shouldSelectRecentQuery = recentQueryHashToSelect && recentQueryHashToSelect.indexOf("recentquery-") === 0
+                if (shouldSelectRecentQuery) {
+                    var hash = parseInt(recentQueryHashToSelect.substr("recentquery-".length), 10);
+                    var matchingQuery = this.recentQueries.first(q => q.Hash === hash);
+                    if (matchingQuery) {
+                        this.runRecentQuery(matchingQuery);
                     }
                 }
             });
@@ -173,12 +175,21 @@ class query extends viewModelBase {
             ShowFields: showFields,
             Sorts: sorts,
             TransformerName: transformer || null,
-            UseAndOperator: useAndOperator
+            UseAndOperator: useAndOperator,
+            Hash: (indexName + queryText + sorts.reduce((a, b) => a + b, "") + transformer + showFields + indexEntries + useAndOperator).hashCode()
         };
 
-        var existing = this.recentQueries.first(q => query.areSameQueriesIgnoringPinned(q, newQuery));
+        // Put the query into the URL, so that if the user refreshes the page, he's still got this query loaded.
+        var queryUrl = appUrl.forQuery(this.activeDatabase(), newQuery.Hash);
+        var options: DurandalNavigationOptions = {
+            replace: true,
+            trigger: false
+        };
+        router.navigate(queryUrl, options);
+
+        // Add this query to our recent queries list in the UI, or move it to the top of the list if it's already there.
+        var existing = this.recentQueries.first(q => q.Hash === newQuery.Hash);
         if (existing) {
-            // Move it to the top of the list.
             this.recentQueries.remove(existing);
             this.recentQueries.unshift(existing);
         } else {
@@ -209,17 +220,6 @@ class query extends viewModelBase {
             .map(s => querySort.fromQuerySortString(s))
             .map(s => s.toHumanizedString())
             .reduce((first, second) => first + ", " + second);
-    }
-
-    static areSameQueriesIgnoringPinned(first: storedQueryDto, second: storedQueryDto) {
-        return first.IndexEntries === second.IndexEntries &&
-            first.IndexName === second.IndexName &&
-            first.QueryText === second.QueryText &&
-            first.ShowFields === second.ShowFields &&
-            first.Sorts.length === second.Sorts.length &&
-            first.Sorts.every((firstSort, index) => firstSort === second.Sorts[index]) &&
-            first.TransformerName === second.TransformerName &&
-            first.UseAndOperator === second.UseAndOperator;
     }
 
     setSelectedIndex(indexName: string) {

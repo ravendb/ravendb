@@ -15,6 +15,8 @@
     <IISExpressAnonymousAuthentication />
     <IISExpressWindowsAuthentication />
     <IISExpressUseClassicPipelineMode />
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <ItemGroup>
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
@@ -85,6 +87,7 @@
     <TypeScriptCompile Include="App\viewmodels\logs.ts" />
     <TypeScriptCompile Include="App\viewmodels\query.ts" />
     <TypeScriptCompile Include="App\viewmodels\queryShell.ts" />
+    <TypeScriptCompile Include="App\viewmodels\recentErrors.ts" />
     <TypeScriptCompile Include="App\viewmodels\replicationStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
@@ -111,6 +114,7 @@
     <Content Include="App\views\createSampleData.html" />
     <Content Include="App\views\csvImport.html" />
     <Content Include="App\views\deleteDocumentsMatchingQueryConfirm.html" />
+    <Content Include="App\views\recentErrors.html" />
     <Content Include="App\views\exportDatabase.html" />
     <Content Include="App\views\importDatabase.html" />
     <Content Include="App\views\replications.html" />
@@ -746,6 +750,7 @@
     <Content Include="Scripts\ace\worker\worker_client.js" />
     <Content Include="Scripts\ace\worker\worker_test.js" />
     <Content Include="Scripts\almond-custom.js" />
+    <Content Include="Scripts\bloodhound.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
     <Content Include="Scripts\durandal\activator.js" />
@@ -789,6 +794,9 @@
     <Content Include="Scripts\nprogress.js" />
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
+    <Content Include="Scripts\typeahead.bundle.js" />
+    <Content Include="Scripts\typeahead.bundle.min.js" />
+    <Content Include="Scripts\typeahead.jquery.js" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
     <Content Include="web.config" />
     <Content Include="Scripts\ace\mode\xquery\JSONiqTokenizer.ebnf" />
@@ -1065,6 +1073,8 @@
     <TypeScriptCompile Include="Scripts\typings\moment\moment.amd.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\moment\moment.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\nprogress\nprogress.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\requirejs\require.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\typeahead\typeahead.d.ts" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />
