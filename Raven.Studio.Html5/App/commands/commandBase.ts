@@ -85,7 +85,7 @@ class commandBase {
         // ContentType:
         //
         // Can't use application/json in cross-domain requests, otherwise it 
-        // issues OPTIONS prefligh request first, which doesn't return proper 
+        // issues OPTIONS preflight request first, which doesn't return proper 
         // headers(e.g.Etag header, etc.)
         // 
         // So, for GETs, we issue text/plain requests, which skip the OPTIONS
