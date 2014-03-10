@@ -358,6 +358,19 @@ namespace Raven.Database.Server.Security.Windows
 			return list;
 		}
 
+        public List<string> GetApprovedFileSystems(IPrincipal user)
+        {
+            var winUser = user as PrincipalWithDatabaseAccess;
+            if (winUser == null)
+                return new List<string>();
+
+            var list = new List<string>();
+            list.AddRange(winUser.ReadOnlyFileSystems);
+            list.AddRange(winUser.ReadWriteFileSystems);
+
+            return list;
+        }
+
 		public override void Dispose()
 		{
 			WindowsSettingsChanged -= UpdateSettings;

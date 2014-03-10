@@ -175,6 +175,22 @@ namespace Raven.Database.Server.Security
 			return approved;
 		}
 
+        public List<string> GetApprovedFileSystems(IPrincipal user, RavenDbApiController controller, string[] fileSystems)
+        {
+            var authHeader = controller.GetHeader("Authorization");
+
+            List<string> approved;
+            if (string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
+                approved = oAuthRequestAuthorizer.GetApprovedFileSystems(user);
+            else
+                approved = windowsRequestAuthorizer.GetApprovedFileSystems(user);
+
+            if (approved.Contains("*"))
+                return fileSystems.ToList();
+
+            return approved;
+        }
+
 		public override void Dispose()
 		{
 			windowsRequestAuthorizer.Dispose();

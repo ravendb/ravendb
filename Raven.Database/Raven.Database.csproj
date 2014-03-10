@@ -357,6 +357,7 @@
     <Compile Include="Server\RavenFS\Controllers\StatsController.cs" />
     <Compile Include="Server\RavenFS\Controllers\StorageController.cs" />
     <Compile Include="Server\RavenFS\Controllers\SynchronizationController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\FileSystemsController.cs" />
     <Compile Include="Server\RavenFS\Extensions\ByteExtensions.cs" />
     <Compile Include="Server\RavenFS\Extensions\ConfigurationExtension.cs" />
     <Compile Include="Server\RavenFS\Extensions\EnumExtensions.cs" />
