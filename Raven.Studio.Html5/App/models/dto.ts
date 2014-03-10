@@ -29,6 +29,14 @@ interface documentMetadataDto {
 	'@etag'?: string;
 }
 
+interface bulkDocumentDto {
+    AdditionalData?: Array<any>;
+    Document: any;
+    Key: string;
+    Metadata: documentMetadataDto;
+    Method:string;
+}
+
 interface databaseStatisticsDto {
     ApproximateTaskCount: number;
     CountOfDocuments: number;

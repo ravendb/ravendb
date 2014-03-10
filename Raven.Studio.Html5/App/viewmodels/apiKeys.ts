@@ -1,9 +1,15 @@
 import getApiKeysCommand = require("commands/getApiKeysCommand");
+import saveApiKeyCommand = require("commands/saveApiKeysCommand");
 import apiKey = require("models/apiKey");
+import viewModelBase = require("viewmodels/viewModelBase");
 
-class apiKeys {
+class apiKeys extends viewModelBase{
 
     apiKeys = ko.observableArray<apiKey>();
+
+    constructor() {
+        super();
+    }
 
     activate() {
         new getApiKeysCommand()
@@ -20,7 +26,12 @@ class apiKeys {
     }
 
     saveChanges() {
+        var db = this.activeDatabase();
+        new saveApiKeyCommand(this.apiKeys(), db).execute();
+        
+
     }
+    
 }
 
 export = apiKeys;  

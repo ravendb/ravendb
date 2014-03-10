@@ -47,6 +47,8 @@
     <TypeScriptCompile Include="App\commands\getSystemDocumentsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getUserInfoCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveAlertsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveApiKeysCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveBulkOfDocuments.ts" />
     <TypeScriptCompile Include="App\commands\saveDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexAsPersistentCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexLockModeCommand.ts" />
