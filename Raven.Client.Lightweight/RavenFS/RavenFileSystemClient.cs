@@ -218,7 +218,7 @@ namespace Raven.Client.RavenFS
             }
         }
 
-        public Task<ServerStats> StatsAsync()
+        public Task<FileSystemStats> StatsAsync()
         {
             return ExecuteWithReplication("GET", async operation =>
             {
@@ -231,7 +231,7 @@ namespace Raven.Client.RavenFS
                 {
                     var response = await request.ReadResponseJsonAsync();
 
-                    return new JsonSerializer().Deserialize<ServerStats>(new RavenJTokenReader(response));
+                    return new JsonSerializer().Deserialize<FileSystemStats>(new RavenJTokenReader(response));
                 }
                 catch (Exception e)
                 {
@@ -1444,9 +1444,9 @@ namespace Raven.Client.RavenFS
                 this.convention = convention;
             }
 
-            public async Task<string[]> GetFileSystemNames()
+            public async Task<string[]> GetFileSystemsNames()
             {
-                var requestUriString = string.Format("{0}/ravenfs/admin/FileSystems", ravenFileSystemClient.ServerUrl);
+                var requestUriString = string.Format("{0}/ravenfs/names", ravenFileSystemClient.ServerUrl);
 
                 var request =
                     ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
@@ -1456,6 +1456,25 @@ namespace Raven.Client.RavenFS
                 {
                     var response = await request.ReadResponseJsonAsync();
                     return new JsonSerializer().Deserialize<string[]>(new RavenJTokenReader(response));
+                }
+                catch (Exception e)
+                {
+                    throw e.TryThrowBetterError();
+                }
+            }
+
+            public async Task<List<FileSystemStats>> GetFileSystemsStats()
+            {
+                var requestUriString = string.Format("{0}/ravenfs/stats", ravenFileSystemClient.ServerUrl);
+
+                var request =
+                    ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+                        "GET", ravenFileSystemClient.PrimaryCredentials, convention));
+
+                try
+                {
+                    var response = await request.ReadResponseJsonAsync();
+                    return new JsonSerializer().Deserialize<List<FileSystemStats>>(new RavenJTokenReader(response));
                 }
                 catch (Exception e)
                 {

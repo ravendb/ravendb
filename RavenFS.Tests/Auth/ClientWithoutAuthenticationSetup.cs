@@ -17,9 +17,9 @@ namespace RavenFS.Tests.Auth
         [Fact]
         public async Task WillUseDefaultNetworkCredentialsWhenServerRequiresAuthentication()
         {
-            var server = CreateRavenDbServer(Ports[0], fileSystemName: "ShouldThrowUnauthorized", enableAuthentication: true); // enable authentication
+            var server = CreateRavenDbServer(Ports[0], fileSystemName: "WillUseDefaultCredentials", enableAuthentication: true); // enable authentication
 
-            using (var client = new RavenFileSystemClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "ShouldThrowUnauthorized"))
+            using (var client = new RavenFileSystemClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "WillUseDefaultCredentials"))
             {
                 await client.Admin.CreateFileSystemAsync(new DatabaseDocument()
                 {

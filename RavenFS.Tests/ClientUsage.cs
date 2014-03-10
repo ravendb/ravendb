@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Specialized;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
+using Raven.Client.RavenFS;
+using Raven.Client.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Extensions;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
@@ -354,7 +357,7 @@ namespace RavenFS.Tests
 		}
 
 		[Fact]
-		public void Server_stats_after_file_delete()
+		public void File_system_stats_after_file_delete()
 		{
 			var client = NewClient();
 			client.UploadAsync("toDelete.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5})).Wait();
@@ -365,7 +368,7 @@ namespace RavenFS.Tests
 		}
 
 		[Fact]
-		public void Server_stats_after_rename()
+		public void File_system_stats_after_rename()
 		{
 			var client = NewClient();
 			client.UploadAsync("file.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5})).Wait();
@@ -530,7 +533,26 @@ namespace RavenFS.Tests
 			}
 		}
 
-		private static MemoryStream PrepareTextSourceStream()
+	    [Fact]
+	    public async Task Can_get_stats_for_all_file_systems()
+	    {
+	        var client = NewClient();
+	        var server = GetServer();
+
+	        using (var anotherClient = new RavenFileSystemClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "test"))
+	        {
+	            await anotherClient.EnsureFileSystemExistsAsync();
+
+	            var stats = await anotherClient.Admin.GetFileSystemsStats();
+
+                Assert.NotNull(stats.FirstOrDefault(x => x.Name == client.FileSystemName));
+                Assert.NotNull(stats.FirstOrDefault(x => x.Name == anotherClient.FileSystemName));
+	        }
+
+	    }
+
+
+	    private static MemoryStream PrepareTextSourceStream()
 		{
 			var ms = new MemoryStream();
 			var writer = new StreamWriter(ms);
