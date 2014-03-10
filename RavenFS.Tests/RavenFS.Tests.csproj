@@ -81,7 +81,6 @@
     <Compile Include="Auth\ClientWithoutAuthenticationSetup.cs" />
     <Compile Include="Auth\SynchronizationWithOAuth.cs" />
     <Compile Include="Auth\SynchronizationWithWindowsAuth.cs" />
-    <Compile Include="Auth\ClientWithoutAuthenticationSetup.cs" />
     <Compile Include="BigFileHandling.cs" />
     <Compile Include="Bugs\CaseSensitiveFileDeletion.cs" />
     <Compile Include="Bugs\ReadingFileIfFileWithGreaterNameExists.cs" />
