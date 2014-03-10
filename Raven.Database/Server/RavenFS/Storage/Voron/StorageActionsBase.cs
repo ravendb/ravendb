@@ -7,7 +7,6 @@
 using System.Text;
 
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Server.RavenFS.Storage.Voron.Impl;
 using Raven.Database.Server.RavenFS.Util;
@@ -81,11 +80,6 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
         protected BufferPoolMemoryStream CreateStream()
         {
             return new BufferPoolMemoryStream(bufferPool);
-        }
-
-        protected static string HashKey(string key)
-        {
-            return Encoding.UTF8.GetString(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(key)));
         }
 	}
 }

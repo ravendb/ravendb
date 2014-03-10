@@ -62,8 +62,6 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 
         public Table Files { get; private set; }
 
-        public Table FileTombstones { get; private set; }
-
         public Table Signatures { get; private set; }
 
         public Table Config { get; private set; }
@@ -146,7 +144,6 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
             using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 CreateFilesSchema(tx);
-                CreateFileTombstonesSchema(tx);
                 CreatSignaturesSchema(tx);
                 CreateConfigSchema(tx);
                 CreateUsageSchema(tx);
@@ -155,11 +152,6 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 
                 tx.Commit();
             }
-        }
-
-        private void CreateFileTombstonesSchema(Transaction tx)
-        {
-            env.CreateTree(tx, Tables.FileTombstones.TableName);
         }
 
         private void CreatePagesSchema(Transaction tx)
@@ -172,6 +164,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
         private void CreateUsageSchema(Transaction tx)
         {
             env.CreateTree(tx, Tables.Usage.TableName);
+            env.CreateTree(tx, Usage.GetIndexKey(Tables.Usage.Indices.ByFileName));
         }
 
         private void CreateConfigSchema(Transaction tx)
@@ -189,6 +182,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
         private void CreateFilesSchema(Transaction tx)
         {
             env.CreateTree(tx, Tables.Files.TableName);
+            env.CreateTree(tx, Files.GetIndexKey(Tables.Files.Indices.Count));
+            env.CreateTree(tx, Files.GetIndexKey(Tables.Files.Indices.ByEtag));
         }
 
         private void CreateDetailsSchema(Transaction tx)
@@ -199,7 +194,6 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
         private void Initialize()
         {
             Files = new Table(Tables.Files.TableName, bufferPool);
-            FileTombstones = new Table(Tables.FileTombstones.TableName, bufferPool);
             Signatures = new Table(Tables.Signatures.TableName, bufferPool, Tables.Signatures.Indices.ByName);
             Config = new Table(Tables.Config.TableName, bufferPool);
             Usage = new Table(Tables.Usage.TableName, bufferPool);

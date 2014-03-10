@@ -30,7 +30,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         private readonly Reference<WriteBatch> writeBatch;
 
-        public StorageActionsAccessor(TableStorage storage, Reference<WriteBatch> writeBatch, SnapshotReader snapshot, IdGenerator generator, BufferPool bufferPool)
+        public StorageActionsAccessor(TableStorage storage, Reference<WriteBatch> writeBatch, SnapshotReader snapshot, IdGenerator generator, IBufferPool bufferPool)
             : base(snapshot, generator, bufferPool)
         {
             this.storage = storage;
@@ -101,13 +101,9 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public void PutFile(string filename, long? totalSize, NameValueCollection metadata, bool tombstone = false)
         {
-            PutFile(tombstone ? storage.FileTombstones : storage.Files, filename, totalSize, metadata);
-        }
+            var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
 
-        private void PutFile(Table table, string filename, long? totalSize, NameValueCollection metadata)
-        {
-            var fileNameHash = HashKey(filename);
-            var key = CreateKey(filename, fileNameHash);
+            var key = CreateKey(filename);
 
             if (!metadata.AllKeys.Contains("ETag"))
             {
@@ -127,13 +123,21 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                            { "metadata", ToQueryString(innerMetadata) }
                        };
 
-            table.Add(writeBatch.Value, key, file, 0);
+            storage.Files.Add(writeBatch.Value, key, file, 0);
+            filesByEtag.Add(writeBatch.Value, CreateKey(etag), key, 0);
+
+            if (tombstone)
+                return;
+
+            var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
+            fileCount.Add(writeBatch.Value, key, key, 0);
         }
 
         public void AssociatePage(string filename, int pageId, int pagePositionInFile, int pageSize)
         {
-            var fileNameHash = HashKey(filename);
-            var key = CreateKey(filename, fileNameHash);
+            var usageByFileName = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileName);
+
+            var key = CreateKey(filename);
             ushort version;
 
             var file = LoadFileByKey(key, out version);
@@ -146,8 +150,13 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
             file["uploaded_size"] = uploadedSize + pageSize;
 
-            if (totalSize != null && totalSize < 0)
-                file["total_size"] = totalSize - pageSize;
+            // using chunked encoding, we don't know what the size is
+			// we use negative values here for keeping track of the unknown size
+            if (totalSize == null || totalSize < 0)
+            {
+                var actualSize = totalSize ?? 0;
+                file["total_size"] = actualSize - pageSize;
+            }
 
             storage.Files.Add(writeBatch.Value, key, file, version);
 
@@ -165,6 +174,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                         };
 
             storage.Usage.Add(writeBatch.Value, usageKey, usage, 0);
+            usageByFileName.MultiAdd(writeBatch.Value, CreateKey(filename), usageKey);
         }
 
         public int ReadPage(int pageId, byte[] buffer)
@@ -183,8 +193,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public FileHeader ReadFile(string filename)
         {
-            var fileNameHash = HashKey(filename);
-            var key = CreateKey(filename, fileNameHash);
+            var key = CreateKey(filename);
 
             ushort version;
             var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
@@ -196,8 +205,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public FileAndPages GetFile(string filename, int start, int pagesToLoad)
         {
-            var fileNameHash = HashKey(filename);
-            var key = CreateKey(filename, fileNameHash);
+            var key = CreateKey(filename);
 
             ushort version;
             var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
@@ -216,12 +224,11 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
             if (pagesToLoad > 0)
             {
-                var usageByFileNameAndPosition = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileNameAndPosition);
-                var fileNameAndPositionKey = CreateKey(filename, fileNameHash, start);
+                var usageByFileName = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileName);
 
-                using (var iterator = usageByFileNameAndPosition.MultiRead(Snapshot, fileNameAndPositionKey))
+                using (var iterator = usageByFileName.MultiRead(Snapshot, key))
                 {
-                    if (iterator.Seek(Slice.BeforeAllKeys))
+                    if (iterator.Seek(Slice.BeforeAllKeys) && iterator.Skip(start))
                     {
                         do
                         {
@@ -244,8 +251,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public IEnumerable<FileHeader> ReadFiles(int start, int size)
         {
-            var filesByName = storage.Files.GetIndex(Tables.Files.Indices.ByName);
-            using (var iterator = filesByName.Iterate(Snapshot, writeBatch.Value))
+            using (var iterator = storage.Files.Iterate(Snapshot, writeBatch.Value))
             {
                 if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start))
                     yield break;
@@ -278,24 +284,21 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
                 var count = 0;
 
-                do
+                while (iterator.MoveNext() && count < take)
                 {
                     ushort version;
-
-                    var id = iterator.CurrentKey.ToString();
+                    var id = iterator.CreateReaderForCurrent().ToStringValue();
                     var file = LoadFileByKey(id, out version);
                     yield return ConvertToFile(file);
 
                     count++;
                 }
-                while (iterator.MoveNext() && count < take);
             }
         }
 
         public void Delete(string filename)
         {
-            var fileNameHash = HashKey(filename);
-            var key = CreateKey(filename, fileNameHash);
+            var key = CreateKey(filename);
 
             DeleteUsage(key);
             DeleteFile(key);
@@ -303,8 +306,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public void UpdateFileMetadata(string filename, NameValueCollection metadata)
         {
-            var fileNameHash = HashKey(filename);
-            var key = CreateKey(filename, fileNameHash);
+            var key = CreateKey(filename);
 
             ushort version;
             var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
@@ -330,8 +332,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public void CompleteFileUpload(string filename)
         {
-            var fileNameHash = HashKey(filename);
-            var key = CreateKey(filename, fileNameHash);
+            var key = CreateKey(filename);
 
             ushort version;
             var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
@@ -339,14 +340,15 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                 throw new FileNotFoundException(filename);
 
             var totalSize = file.Value<long?>("total_size") ?? 0;
-            file["upload_size"] = totalSize;
+            file["uploaded_size"] = totalSize;
 
             storage.Files.Add(writeBatch.Value, key, file, version);
         }
 
         public int GetFileCount()
         {
-            return Convert.ToInt32(storage.GetEntriesCount(storage.Files));
+            var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
+            return Convert.ToInt32(storage.GetEntriesCount(fileCount));
         }
 
         public void DecrementFileCount()
@@ -356,7 +358,55 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public void RenameFile(string filename, string rename, bool commitPeriodically = false)
         {
-            throw new NotImplementedException();
+            var key = CreateKey(filename);
+
+            RenameUsage(filename, rename, commitPeriodically);
+
+            ushort version;
+            var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
+            if (file == null)
+                throw new FileNotFoundException("Could not find file: " + filename);
+
+            file["name"] = rename;
+
+            storage.Files.Delete(writeBatch.Value, key, version);
+            storage.Files.Add(writeBatch.Value, CreateKey(rename), file, 0);
+        }
+
+        private void RenameUsage(string fileName, string rename, bool commitPeriodically)
+        {
+            var oldKey = CreateKey(fileName);
+            var newKey = CreateKey(rename);
+
+            var usageByFileName = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileName);
+
+            using (var iterator = usageByFileName.MultiRead(Snapshot, oldKey))
+            {
+                if (!iterator.Seek(Slice.BeforeAllKeys))
+                    return;
+
+                var count = 0;
+
+                do
+                {
+                    var usageId = iterator.CurrentKey.ToString();
+                    ushort version;
+                    var usage = LoadJson(storage.Usage, usageId, writeBatch.Value, out version);
+
+                    usage["name"] = rename;
+
+                    usageByFileName.MultiDelete(writeBatch.Value, oldKey, usageId);
+
+                    usageByFileName.MultiAdd(writeBatch.Value, newKey, usageId);
+
+                    if (commitPeriodically && count++ > 1000)
+                    {
+                        PulseTransaction();
+                        count = 0;
+                    }
+                }
+                while (iterator.MoveNext());
+            }
         }
 
         public NameValueCollection GetConfig(string name)
@@ -602,8 +652,21 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         private void DeleteFile(string key)
         {
-            var version = storage.Files.ReadVersion(Snapshot, key);
+            var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
+            var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
+
+            ushort version;
+            var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
+
+            if (file == null)
+                return;
+
+            var etag = file.Value<Guid>("etag");
+
             storage.Files.Delete(writeBatch.Value, key, version);
+
+            fileCount.Delete(writeBatch.Value, key);
+            filesByEtag.Delete(writeBatch.Value, CreateKey(etag));
         }
 
         private void DeleteUsage(string key)
@@ -726,7 +789,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
         {
             var metadataAsString = file.Value<string>("metadata");
             var metadata = HttpUtility.ParseQueryString(metadataAsString);
-            metadata["ETag"] = "\"" + Guid.Parse(file.Value<string>("Etag")) + "\"";
+            metadata["ETag"] = "\"" + Guid.Parse(file.Value<string>("etag")) + "\"";
 
             return metadata;
         }

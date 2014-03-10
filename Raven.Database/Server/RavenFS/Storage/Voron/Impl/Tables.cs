@@ -32,8 +32,6 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 
 	        public class Indices
 	        {
-                public const string ByFileNameAndPosition = "by_file_name_and_position";
-
 	            public static string ByFileName = "by_file_name";
 	        }
 	    }
@@ -61,9 +59,9 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 
             public class Indices
             {
-                public const string ByName = "by_name";
-
                 public const string ByEtag = "by_etag";
+
+                public const string Count = "count";
             }
 		}
 

@@ -97,6 +97,7 @@
     <Compile Include="MtaFactAttribute.cs" />
     <Compile Include="Notifications.cs" />
     <Compile Include="Storage\ConfigTests.cs" />
+    <Compile Include="Storage\FileTests.cs" />
     <Compile Include="Storage\PageTests.cs" />
     <Compile Include="Storage\SignatureTests.cs" />
     <Compile Include="Storage\StorageAccessorTestBase.cs" />
