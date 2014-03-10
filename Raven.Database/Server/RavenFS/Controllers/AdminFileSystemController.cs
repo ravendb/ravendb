@@ -3,7 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
@@ -27,6 +29,22 @@ namespace Raven.Database.Server.RavenFS.Controllers
             Database.Put(docKey, null, json, new RavenJObject(), null);
 
             return GetEmptyMessage();
+        }
+
+        [HttpGet]
+        [Route("ravenfs/admin/FileSystems")]
+        public HttpResponseMessage FileSystems()
+        {
+            var start = GetStart();
+            var nextPageStart = start; // will trigger rapid pagination
+
+            var fileSystems = Database.GetDocumentsWithIdStartingWith("Raven/FileSystems/", null, null, start, GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
+
+            var fileSystemNames = fileSystems
+                .Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/FileSystems/", string.Empty))
+                .ToArray();
+
+            return GetMessageWithObject(fileSystemNames);
         }
     }
 }

@@ -91,7 +91,7 @@ namespace Raven.Client.RavenFS.Connections
             var destinations = document.DataAsJson.Value<RavenJArray>("destinations").Select(x => JsonConvert.DeserializeObject<SynchronizationDestination>(x.ToString()));
             ReplicationDestinations = destinations.Select(x =>
             {
-                return new OperationMetadata(x.FileSystemUrl, new OperationCredentials("", new CredentialCache())); // TODO arek
+                return new OperationMetadata(x.FileSystemUrl, new OperationCredentials(x.ApiKey, new CredentialCache())); // TODO arek
             })
                 // filter out replication destination that don't have the url setup, we don't know how to reach them
                 // so we might as well ignore them. Probably private replication destination (using connection string names only)

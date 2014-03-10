@@ -271,6 +271,7 @@
     <Compile Include="RavenFS\HistoryItem.cs" />
     <Compile Include="RavenFS\Notification.cs" />
     <Compile Include="RavenFS\RdcStats.cs" />
+    <Compile Include="RavenFS\ServerInfo.cs" />
     <Compile Include="RavenFS\ServerStats.cs" />
     <Compile Include="RavenFS\Signature.cs" />
     <Compile Include="RavenFS\SignatureManifest.cs" />
@@ -281,6 +282,7 @@
     <Compile Include="RavenFS\SynchronizationReport.cs" />
     <Compile Include="RavenFS\SynchronizationType.cs" />
     <Compile Include="RavenFS\SynchronizationUpdate.cs" />
+    <Compile Include="RavenFS\SyncingMultipartConstants.cs" />
     <Compile Include="RavenFS\UploadFailed.cs" />
     <Compile Include="Replication\ReplicatedEtagInfo.cs" />
     <Compile Include="Replication\ReplicationConfig.cs" />

@@ -3,9 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Client.RavenFS;
-
-namespace RavenFS.Tests.Extensions
+namespace Raven.Client.RavenFS.Extensions
 {
     public static class RavenFileSystemClientExtensions
     {
@@ -14,7 +12,8 @@ namespace RavenFS.Tests.Extensions
              return new SynchronizationDestination()
              {
                  FileSystem = self.FileSystemName,
-                 ServerUrl = self.ServerUrl
+                 ServerUrl = self.ServerUrl,
+                 ApiKey = self.ApiKey
              };
          }
     }
