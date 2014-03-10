@@ -1,8 +1,9 @@
 import databaseAccess = require("models/databaseAccess");
 import appUrl = require("common/appUrl");
 import documentMetadata = require("models/documentMetadata");
+import document = require("models/document");
 
-class apiKey {
+class apiKey extends document {
 
     name = ko.observable<string>();
     secret = ko.observable<string>();
@@ -12,8 +13,11 @@ class apiKey {
     enabled = ko.observable<boolean>();
     public metadata: documentMetadata;
     databases = ko.observableArray<databaseAccess>();
+    visible = ko.observable(true);
 
     constructor(dto: apiKeyDto) {
+        super(dto);
+
         this.name(dto.Name);
         this.secret(dto.Secret);
         this.enabled(dto.Enabled);
@@ -51,9 +55,21 @@ class apiKey {
         return new apiKey({
             Databases: [],
             Enabled: false,
-            Name: "[new api key]",
+            Name: "",
             Secret: ""
         });
+    }
+
+    toDto(): apiKeyDto {
+        var meta = this.__metadata.toDto();
+        meta['@id'] = "Raven/ApiKeys/" + this.name();
+        return {
+            '@metadata': meta,
+            Databases: this.databases().map(db => db.toDto()),
+            Enabled: this.enabled(),
+            Name: this.name(),
+            Secret: this.secret()
+        };
     }
 
     enable() {
@@ -85,6 +101,15 @@ class apiKey {
 
     removeApiKeyDatabase(database) {
         this.databases.remove(database);
+    }
+
+    setIdFromName() {
+        this.__metadata.id = "Raven/ApiKeys/" + this.name();
+    }
+
+    isValid(): boolean {
+        var requiredValues = [this.name(), this.secret()];
+        return requiredValues.every(v => v != null && v.length > 0);
     }
 
     private static randomString(length: number, chars: string) {

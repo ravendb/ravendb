@@ -90,7 +90,7 @@ interface indexPerformanceDto {
     DurationMilliseconds: number;
 }
 
-interface apiKeyDto {
+interface apiKeyDto extends documentDto {
     Name: string;
     Secret: string;
     Enabled: boolean;
@@ -329,4 +329,15 @@ interface storedQueryDto {
 
 interface storedQueryContainerDto extends documentDto {
     Queries: storedQueryDto[];
+}
+
+interface bulkDocumentDto {
+    Key: string;
+    Method: string;
+    AdditionalData?: any;
+    Document?: documentDto; // Can be null when Method == "DELETE"
+    Metadata?: documentMetadataDto; // Can be null when Method == "DELETE"
+    Etag?: string; // Often is null on sending to server, non-null when returning from server.
+    PatchResult?: any;
+    Deleted?: any;
 }

@@ -399,6 +399,14 @@ class ctor {
     deleteSelectedDocs() {
         var documents = this.getSelectedDocs();
         var deleteDocsVm = new deleteDocuments(documents, this.focusableGridSelector);
+        deleteDocsVm.deletionTask.done(() => {
+            var deletedDocIndices = documents.map(d => this.items.indexOf(d));
+            deletedDocIndices.forEach(i => this.settings.selectedIndices.remove(i));
+            this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
+            this.items.invalidateCache(); // Causes the cache of items to be discarded.
+            this.onGridScrolled(); // Forces a re-fetch of the rows in view.
+        });
+
         app.showDialog(deleteDocsVm);
     }
 }

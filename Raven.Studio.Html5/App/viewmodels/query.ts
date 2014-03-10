@@ -63,7 +63,6 @@ class query extends viewModelBase {
     }
 
     attached() {
-        this.useBootstrapTooltips();
         this.createKeyboardShortcut("F2", () => this.editSelectedIndex(), query.containerSelector);
         $("#indexQueryLabel").popover({
             html: true,

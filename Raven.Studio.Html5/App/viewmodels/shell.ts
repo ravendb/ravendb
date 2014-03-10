@@ -70,6 +70,13 @@ class shell {
 			this.newDocument();
         });
 
+        $("body").tooltip({
+            delay: { show: 600, hide: 100 },
+            container: 'body',
+            selector: '.use-bootstrap-tooltip',
+            trigger: 'hover'
+        });
+
         var dataset: Twitter.Typeahead.Dataset = {
             name: "test",
             local: ["hello","world"]
@@ -150,19 +157,29 @@ class shell {
 			}
 			setTimeout(() => this.closeAlertAndShowNext(alert), fadeTime);
 		}
-	}
+    }
 
     closeAlertAndShowNext(alertToClose: alertArgs) {
         var alertElement = $('#' + alertToClose.id);
+        if (alertElement.length === 0) {
+            return;
+        }
+
         // If the mouse is over the alert, keep it around.
         if (alertElement.is(":hover")) {
             setTimeout(() => this.closeAlertAndShowNext(alertToClose), 1000);
         } else {
             alertElement.alert('close');
-            var nextAlert = this.queuedAlerts.pop();
-            setTimeout(() => this.currentAlert(nextAlert), 1000); // Give the alert a chance to fade out before we push in the new alert.
         }
-	}
+    }
+
+    onAlertHidden() {
+        this.currentAlert(null);
+        var nextAlert = this.queuedAlerts.pop();
+        if (nextAlert) {
+            this.showAlert(nextAlert);
+        }
+    }
 
 	newDocument() {
 		this.launchDocEditor(null);

@@ -47,8 +47,6 @@ class documents extends viewModelBase {
         (<any>$('.document-collections li')).contextmenu({
             target: '#collections-context-menu'
         });
-
-        this.useBootstrapTooltips();
     }
 
     collectionsLoaded(collections: Array<collection>, db: database) {

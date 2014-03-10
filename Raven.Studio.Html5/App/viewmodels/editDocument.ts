@@ -108,7 +108,6 @@ class editDocument extends viewModelBase {
     attached() {
         this.initializeDocEditor();
         this.setupKeyboardShortcuts();
-        this.useBootstrapTooltips();
     }
 
     deactivate() {

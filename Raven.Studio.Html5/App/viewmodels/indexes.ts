@@ -26,8 +26,6 @@ class indexes extends viewModelBase {
     }
 
     attached() {
-        this.useBootstrapTooltips();
-
         // Alt+Minus and Alt+Plus are already setup. Since laptops don't have a dedicated key for plus, we'll also use the equal sign key (co-opted for plus).
         this.createKeyboardShortcut("Alt+=", () => this.expandAll(), this.containerSelector);
     }

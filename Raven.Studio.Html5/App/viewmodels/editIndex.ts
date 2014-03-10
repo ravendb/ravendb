@@ -65,8 +65,6 @@ class editIndex extends viewModelBase {
         this.addMapHelpPopover();
         this.addReduceHelpPopover();
         this.addTransformHelpPopover();
-
-        this.useBootstrapTooltips();
     }
 
     addMapHelpPopover() {

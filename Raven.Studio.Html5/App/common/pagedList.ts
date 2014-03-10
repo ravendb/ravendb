@@ -90,6 +90,14 @@ class pagedList {
             fetchTask.fail(error => queuedTask.reject(error));
         }
     }
+
+    invalidateCache() {
+        this.items.length = 0;
+    }
+
+    indexOf(item: any) {
+        return this.items.indexOf(item);
+    }
 }
 
 export = pagedList;
