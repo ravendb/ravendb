@@ -18,8 +18,9 @@ namespace Raven.Database.Server.WebApi.Handlers
 		{
 			HttpResponseMessage response;
 			// Handle only if content type is 'application/gzip'
-			if (request.Content.Headers.ContentEncoding == null ||
-				request.Content.Headers.ContentEncoding.Contains("gzip") == false)
+			var contentEncoding = request.Content.Headers.ContentEncoding.FirstOrDefault();
+			if (contentEncoding == null ||
+				contentEncoding.Contains("gzip") == false)
 			{
 				response = await base.SendAsync(request, cancellationToken);
 				return Compress(response);
