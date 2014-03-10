@@ -1,16 +1,6 @@
-﻿using System;
-using System.IO;
-using System.Net;
-using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Client.Connection;
+﻿using System.Threading.Tasks;
 using Raven.Client.RavenFS;
-using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Storage.Esent;
-using Raven.Database.Server.RavenFS.Synchronization.Multipart;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -18,7 +8,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 	{
 		private readonly string rename;
 
-		public RenameWorkItem(string name, string rename, string sourceServerUrl, ITransactionalStorage storage)
+		public RenameWorkItem(string name, string rename, string sourceServerUrl, TransactionalStorage storage)
 			: base(name, sourceServerUrl, storage)
 		{
 			this.rename = rename;
@@ -29,29 +19,12 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			get { return SynchronizationType.Rename; }
 		}
 
-		public override async Task<SynchronizationReport> PerformAsync(string destination)
+        public override Task<SynchronizationReport> PerformAsync(RavenFileSystemClient.SynchronizationClient destination)
 		{
 			FileAndPages fileAndPages = null;
 			Storage.Batch(accessor => fileAndPages = accessor.GetFile(FileName, 0, 0));
-			var request =
-				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-					destination + "/ravenfs/synchronization/rename?filename=" + Uri.EscapeDataString(FileName) + "&rename=" +
-								  Uri.EscapeDataString(rename),
-					"PATCH", new OperationCredentials("", new CredentialCache()), Convention));
 
-			request.AddHeaders(fileAndPages.Metadata);
-
-			request.AddHeader(SyncingMultipartConstants.SourceServerInfo, ServerInfo.AsJson());
-
-			try
-			{
-				var response = await request.ReadResponseJsonAsync();
-				return new JsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
-			}
-			catch (ErrorResponseException exception)
-			{
-				throw exception.BetterWebExceptionError();
-			}
+            return destination.RenameAsync(FileName, rename, fileAndPages.Metadata, ServerInfo);
 		}
 
 		public override bool Equals(object obj)

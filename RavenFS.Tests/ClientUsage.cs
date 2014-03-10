@@ -10,10 +10,10 @@ using Xunit.Extensions;
 
 namespace RavenFS.Tests
 {
-	public class ClientUsage : WebApiTest
+	public class ClientUsage : RavenFsTestBase
 	{
 		[Fact]
-		public void Can_update_just_metadata()
+		public async Task Can_update_just_metadata()
 		{
 			var ms = new MemoryStream();
 			var streamWriter = new StreamWriter(ms);
@@ -22,25 +22,29 @@ namespace RavenFS.Tests
 			streamWriter.Flush();
 			ms.Position = 0;
 			var client = NewClient();
-			client.UploadAsync("abc.txt", new NameValueCollection
-				                              {
-					                              {"test", "1"}
-				                              }, ms).Wait();
+		    await client.UploadAsync("abc.txt", new NameValueCollection
+		    {
+		        {"test", "1"}
+		    }, ms);
 
-			var updateMetadataTask = client.UpdateMetadataAsync("abc.txt", new NameValueCollection
+			await client.UpdateMetadataAsync("abc.txt", new NameValueCollection
 				                                                               {
 					                                                               {"test", "2"}
 				                                                               });
-			updateMetadataTask.Wait();
 
 
-			var metadata = client.GetMetadataForAsync("abc.txt");
-			Assert.Equal("2", metadata.Result["test"]);
-			Assert.Equal(expected, WebClient.DownloadString("/ravenfs/files/abc.txt"));
+			var metadata = await client.GetMetadataForAsync("abc.txt");
+			Assert.Equal("2", metadata["test"]);
+
+		    var readStream = new MemoryStream();
+
+		    await client.DownloadAsync("abc.txt", readStream);
+
+            Assert.Equal(expected, StreamToString(readStream));
 		}
 
 		[Fact]
-		public void Can_get_partial_results()
+		public async Task Can_get_partial_results()
 		{
 			var ms = new MemoryStream();
 			var streamWriter = new StreamWriter(ms);
@@ -52,10 +56,10 @@ namespace RavenFS.Tests
 			streamWriter.Flush();
 			ms.Position = 0;
 			var client = NewClient();
-			client.UploadAsync("numbers.txt", ms).Wait();
+		    await client.UploadAsync("numbers.txt", ms);
 
 			var actual = new MemoryStream();
-			client.DownloadAsync("numbers.txt", actual, 1024*4 + 1).Wait();
+		    await client.DownloadAsync("numbers.txt", actual, 1024*4 + 1);
 			actual.Position = 0;
 			ms.Position = 1024*4 + 1;
 			var expectedString = new StreamReader(ms).ReadToEnd();
@@ -68,7 +72,7 @@ namespace RavenFS.Tests
 		[Theory]
 		[InlineData(1024*1024)] // 1 mb
 		[InlineData(1024*1024*8)] // 8 mb
-		public void Can_upload(int size)
+		public async Task Can_upload(int size)
 		{
 			var ms = new MemoryStream();
 			var streamWriter = new StreamWriter(ms);
@@ -78,14 +82,16 @@ namespace RavenFS.Tests
 			ms.Position = 0;
 
 			var client = NewClient();
-			client.UploadAsync("abc.txt", ms).Wait();
+		    await client.UploadAsync("abc.txt", ms);
 
-			var downloadString = WebClient.DownloadString("ravenfs/files/abc.txt");
-			Assert.Equal(expected, downloadString);
+		    var stream = new MemoryStream();
+
+		    await client.DownloadAsync("abc.txt", stream);
+            Assert.Equal(expected, StreamToString(stream));
 		}
 
 		[Fact]
-		public void Can_upload_metadata_and_head_metadata()
+		public async Task Can_upload_metadata_and_head_metadata()
 		{
 			var ms = new MemoryStream();
 			var streamWriter = new StreamWriter(ms);
@@ -94,14 +100,14 @@ namespace RavenFS.Tests
 			streamWriter.Flush();
 			ms.Position = 0;
 			var client = NewClient();
-			client.UploadAsync("abc.txt", new NameValueCollection
-				                              {
-					                              {"test", "value"},
-					                              {"hello", "there"}
-				                              }, ms).Wait();
+		    await client.UploadAsync("abc.txt", new NameValueCollection
+		    {
+		        {"test", "value"},
+		        {"hello", "there"}
+		    }, ms);
 
 
-			var collection = client.GetMetadataForAsync("abc.txt").Result;
+			var collection = await client.GetMetadataForAsync("abc.txt");
 
 			Assert.Equal("value", collection["test"]);
 			Assert.Equal("there", collection["hello"]);
@@ -109,7 +115,7 @@ namespace RavenFS.Tests
 
 
 		[Fact]
-		public void Can_query_metadata()
+		public async Task Can_query_metadata()
 		{
 			var ms = new MemoryStream();
 			var streamWriter = new StreamWriter(ms);
@@ -118,13 +124,13 @@ namespace RavenFS.Tests
 			streamWriter.Flush();
 			ms.Position = 0;
 			var client = NewClient();
-			client.UploadAsync("abc.txt", new NameValueCollection
-				                              {
-					                              {"Test", "value"},
-				                              }, ms).Wait();
+		    await client.UploadAsync("abc.txt", new NameValueCollection
+		    {
+		        {"Test", "value"},
+		    }, ms);
 
 
-			var collection = client.SearchAsync("Test:value").Result;
+		    var collection = await client.SearchAsync("Test:value");
 
 			Assert.Equal(1, collection.Files.Length);
 			Assert.Equal("abc.txt", collection.Files[0].Name);
@@ -133,7 +139,7 @@ namespace RavenFS.Tests
 
 
 		[Fact]
-		public void Can_download()
+		public async Task Can_download()
 		{
 			var ms = new MemoryStream();
 			var streamWriter = new StreamWriter(ms);
@@ -142,10 +148,10 @@ namespace RavenFS.Tests
 			streamWriter.Flush();
 			ms.Position = 0;
 			var client = NewClient();
-			client.UploadAsync("abc.txt", ms).Wait();
+		    await client.UploadAsync("abc.txt", ms);
 
 			var ms2 = new MemoryStream();
-			client.DownloadAsync("abc.txt", ms2).Wait();
+		    await client.DownloadAsync("abc.txt", ms2);
 
 			ms2.Position = 0;
 
@@ -155,10 +161,10 @@ namespace RavenFS.Tests
 		}
 
 		[Fact]
-		public void Can_check_rdc_stats()
+		public async Task Can_check_rdc_stats()
 		{
 			var client = NewClient();
-			var result = client.Synchronization.GetRdcStatsAsync().Result;
+			var result = await client.Synchronization.GetRdcStatsAsync();
 			Assert.NotNull(result);
 			Assert.True(result.CurrentVersion > 0);
 			Assert.True(result.MinimumCompatibleAppVersion > 0);
@@ -166,52 +172,51 @@ namespace RavenFS.Tests
 		}
 
 		[Fact]
-		public void Can_get_rdc_manifest()
+		public async Task Can_get_rdc_manifest()
 		{
 			var client = NewClient();
 
 			var buffer = new byte[1024*1024];
 			new Random().NextBytes(buffer);
 
-			WebClient.UploadData("ravenfs/files/mb.bin", "PUT", buffer);
+		    await client.UploadAsync("mb.bin", new MemoryStream(buffer));
 
 
-			var result = client.Synchronization.GetRdcManifestAsync("mb.bin").Result;
+			var result = await client.Synchronization.GetRdcManifestAsync("mb.bin");
 			Assert.NotNull(result);
 		}
 
 		[Fact]
-		public void Can_get_rdc_signatures()
+		public async Task Can_get_rdc_signatures()
 		{
 			var client = NewClient();
 
 			var buffer = new byte[1024*1024*2];
 			new Random().NextBytes(buffer);
 
-			WebClient.UploadData("ravenfs/files/mb.bin", "PUT", buffer);
+			await client.UploadAsync("mb.bin", new MemoryStream(buffer));
 
-
-			var result = client.Synchronization.GetRdcManifestAsync("mb.bin").Result;
+			var result = await client.Synchronization.GetRdcManifestAsync("mb.bin");
 
 			Assert.True(result.Signatures.Count > 0);
 
 			foreach (var item in result.Signatures)
 			{
 				var ms = new MemoryStream();
-				client.Synchronization.DownloadSignatureAsync(item.Name, ms).Wait();
+				await client.Synchronization.DownloadSignatureAsync(item.Name, ms);
 				Assert.True(ms.Length == item.Length);
 			}
 		}
 
 		[Fact]
-		public void Can_get_rdc_signature_partialy()
+		public async Task Can_get_rdc_signature_partialy()
 		{
 			var client = NewClient();
 			var buffer = new byte[1024*1024*4];
 			new Random().NextBytes(buffer);
 
-			WebClient.UploadData("ravenfs/files/mb.bin", "PUT", buffer);
-			var signatureManifest = client.Synchronization.GetRdcManifestAsync("mb.bin").Result;
+			await client.UploadAsync("mb.bin", new MemoryStream(buffer));
+			var signatureManifest = await client.Synchronization.GetRdcManifestAsync("mb.bin");
 
 			var ms = new MemoryStream();
 			client.Synchronization.DownloadSignatureAsync(signatureManifest.Signatures[0].Name, ms, 5, 10).Wait();
@@ -423,7 +428,7 @@ namespace RavenFS.Tests
 			{
 				await client.RenameAsync("file1.bin", "file2.bin");
 			}
-			catch (AggregateException e)
+			catch (InvalidOperationException e)
 			{
 				ex = e.GetBaseException();
 			}
@@ -451,9 +456,8 @@ namespace RavenFS.Tests
 			{
 				await client.DownloadAsync("not_existing_file", new MemoryStream());
 			}
-			catch (AggregateException ex)
+            catch (FileNotFoundException ex)
 			{
-				Assert.IsType<FileNotFoundException>(ex.GetBaseException());
 				throwsCount++;
 			}
 
@@ -461,9 +465,8 @@ namespace RavenFS.Tests
 			{
 				await client.RenameAsync("not_existing_file", "abc");
 			}
-			catch (AggregateException ex)
+            catch (FileNotFoundException ex)
 			{
-				Assert.IsType<FileNotFoundException>(ex.GetBaseException());
 				throwsCount++;
 			}
 
@@ -471,9 +474,8 @@ namespace RavenFS.Tests
 			{
 				await client.DeleteAsync("not_existing_file");
 			}
-			catch (AggregateException ex)
+            catch (FileNotFoundException ex)
 			{
-				Assert.IsType<FileNotFoundException>(ex.GetBaseException());
 				throwsCount++;
 			}
 
@@ -482,9 +484,8 @@ namespace RavenFS.Tests
 				await client.UpdateMetadataAsync("not_existing_file", new NameValueCollection());
 				throwsCount++;
 			}
-			catch (AggregateException ex)
+            catch (FileNotFoundException ex)
 			{
-				Assert.IsType<FileNotFoundException>(ex.GetBaseException());
 				throwsCount++;
 			}
 

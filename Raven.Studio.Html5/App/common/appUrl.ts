@@ -5,8 +5,8 @@ import router = require("plugins/router");
 // Helper class with static methods for generating app URLs.
 class appUrl {
 
-    //private static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
-    private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
+    private static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
+    //private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
 
 	// Stores some computed values that update whenever the current database updates.
@@ -143,9 +143,14 @@ class appUrl {
         return "#transformers?" + databasePart;
     }
 
-    static forQuery(db: database, indexToQuery?: string): string {
+    static forQuery(db: database, indexNameOrHashToQuery?: any): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        var indexPart = indexToQuery ? "/" + encodeURIComponent(indexToQuery) : "";
+        var indexToQueryComponent = indexNameOrHashToQuery;
+        if (typeof indexNameOrHashToQuery === "number") {
+            indexToQueryComponent = "recentquery-" + indexNameOrHashToQuery;
+        } 
+
+        var indexPart = indexToQueryComponent ? "/" + encodeURIComponent(indexToQueryComponent) : "";
         return "#query" + indexPart + "?" + databasePart;
     }
 

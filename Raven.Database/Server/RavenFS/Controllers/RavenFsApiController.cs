@@ -131,7 +131,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             }
             else
             {
-                if (values.ContainsKey("fileSystemName"))
+                if (values.ContainsKey("fil"))
                     FileSystemName = values["fileSystemName"] as string;
             }
 		    if (FileSystemName == null)

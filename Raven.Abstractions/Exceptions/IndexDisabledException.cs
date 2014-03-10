@@ -12,7 +12,7 @@ namespace Raven.Abstractions.Exceptions
 	/// <summary>
 	/// This exception is raised when querying an index that was disabled because the error rate exceeded safety margins
     /// </summary>
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
     [Serializable]
 #endif
 
@@ -51,7 +51,7 @@ namespace Raven.Abstractions.Exceptions
 		{
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
         /// <summary>
 	/// Initializes a new instance of the <see cref="IndexDisabledException"/> class.
 	/// </summary>

@@ -8,10 +8,10 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.RavenFS;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.RavenFS;
-using Raven.Client.RavenFS.Connections;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -21,7 +21,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 {
 	public class SynchronizationMultipartRequest : IHoldProfilingInformation
 	{
-		private readonly string destinationUrl;
+        private readonly RavenFileSystemClient.SynchronizationClient destination;
 		private readonly string fileName;
 		private readonly IList<RdcNeed> needList;
 		private readonly ServerInfo serverInfo;
@@ -29,15 +29,12 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 		private readonly Stream sourceStream;
 		private readonly string syncingBoundary;
 		private HttpJsonRequest request;
-		protected HttpJsonRequestFactory jsonRequestFactory = new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
-		private const int DefaultNumberOfCachedRequests = 2048;
-		protected FileConvention Convention = new FileConvention();
 
-		public SynchronizationMultipartRequest(string destinationUrl, ServerInfo serverInfo, string fileName,
+        public SynchronizationMultipartRequest(RavenFileSystemClient.SynchronizationClient destination, ServerInfo serverInfo, string fileName,
 											   NameValueCollection sourceMetadata, Stream sourceStream,
 											   IList<RdcNeed> needList)
 		{
-			this.destinationUrl = destinationUrl;
+			this.destination = destination;
 			this.serverInfo = serverInfo;
 			this.fileName = fileName;
 			this.sourceMetadata = sourceMetadata;
@@ -45,6 +42,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 			this.needList = needList;
 			syncingBoundary = "syncing";
 		}
+
 
 		public async Task<SynchronizationReport> PushChangesAsync(CancellationToken token)
 		{
@@ -58,9 +56,9 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 			}
 
 			request =
-				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-					destinationUrl + "/ravenfs/synchronization/MultipartProceed",
-					"POST", new OperationCredentials("", new CredentialCache()), Convention));
+				destination.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+					destination.FileSystemUrl + "/synchronization/MultipartProceed",
+					"POST", destination.Credentials, destination.Convention));
 
 			//request.SendChunked = true;
 			//request.AllowWriteStreamBuffering = false;
@@ -77,8 +75,8 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 			{
 				await request.WriteAsync(PrepareMultipartContent(token));
 
-				var respose = await request.ReadResponseJsonAsync();
-				return new JsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(respose));
+				var response = await request.ReadResponseJsonAsync();
+				return new JsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
 			}
 			catch (Exception exception)
 			{

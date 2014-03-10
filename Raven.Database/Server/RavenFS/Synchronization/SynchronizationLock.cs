@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Abstractions.RavenFS;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {

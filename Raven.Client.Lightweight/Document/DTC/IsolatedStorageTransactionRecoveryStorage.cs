@@ -1,4 +1,4 @@
-﻿#if !SILVERLIGHT && !NETFX_CORE
+﻿#if !NETFX_CORE
 namespace Raven.Client.Document.DTC
 {
 	public class IsolatedStorageTransactionRecoveryStorage : ITransactionRecoveryStorage

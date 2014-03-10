@@ -10,12 +10,10 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
-#if !Silverlight
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 
-#endif
 
 namespace Raven.Client.Linq
 {
@@ -30,9 +28,7 @@ namespace Raven.Client.Linq
 		private readonly IDocumentQueryGenerator queryGenerator;
 		private readonly RavenQueryStatistics ravenQueryStatistics;
 		private readonly RavenQueryHighlightings highlightings;
-#if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
-#endif
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		
         private readonly bool isMapReduce;
@@ -46,10 +42,8 @@ namespace Raven.Client.Linq
 			string indexName,
 			RavenQueryStatistics ravenQueryStatistics,
 			RavenQueryHighlightings highlightings
-#if !SILVERLIGHT
-, IDatabaseCommands databaseCommands
-#endif
-, IAsyncDatabaseCommands asyncDatabaseCommands,
+            , IDatabaseCommands databaseCommands
+            , IAsyncDatabaseCommands asyncDatabaseCommands,
 			bool isMapReduce
 )
 		{
@@ -60,9 +54,7 @@ namespace Raven.Client.Linq
 			this.indexName = indexName;
 			this.ravenQueryStatistics = ravenQueryStatistics;
 			this.highlightings = highlightings;
-#if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
-#endif
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 			this.isMapReduce = isMapReduce;
 		}
@@ -128,9 +120,7 @@ namespace Raven.Client.Linq
 				return this;
 
 			var ravenQueryProvider = new RavenQueryProvider<S>(queryGenerator, indexName, ravenQueryStatistics, highlightings
-#if !SILVERLIGHT
 				, databaseCommands
-#endif
 				, asyncDatabaseCommands,
 				isMapReduce
 			);
@@ -158,9 +148,7 @@ namespace Raven.Client.Linq
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
 		{
 			return new RavenQueryInspector<S>(this, ravenQueryStatistics, highlightings, indexName, expression, (InMemoryDocumentSessionOperations) queryGenerator
-#if !SILVERLIGHT
 											  , databaseCommands
-#endif
 											  , asyncDatabaseCommands, isMapReduce);
 		}
 
@@ -173,9 +161,7 @@ namespace Raven.Client.Linq
 				var args = new object[]
 				{
 					this, ravenQueryStatistics, highlightings, indexName, expression, queryGenerator
-#if !SILVERLIGHT
 					, databaseCommands
-#endif
 					, asyncDatabaseCommands,
 					isMapReduce
 				};

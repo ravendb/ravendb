@@ -1,0 +1,31 @@
+﻿<div id="recentErrorsDialog" class="messageBox" tabindex="-1">
+    <div class="modal-header">
+        <button type="button" class="close" data-bind="click: close" aria-hidden="true">&times;</button>
+        <h4 class="modal-title">Recent Errors</h4>
+    </div>
+    <div class="modal-body">
+        <div class="panel-group error-details-accordion" data-bind="foreach: errors">
+            <div class="panel panel-danger">
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse" data-bind="attr: { href: '#errorDetailsCollapse' + $index() }">
+                            <strong data-bind="text: title"></strong>
+                            <span data-bind="visible: errorMessage, text: errorMessage"></span>
+                        </a>
+                    </h4>
+                </div>
+                <div class="panel-collapse collapse" data-bind="attr: { id: 'errorDetailsCollapse' + $index() }">
+                    <div class="panel-body">
+                        <pre class="error-details" data-bind="text: $root.getErrorDetails($data)"></pre>
+                        <pre class="http-status" data-bind="visible: httpStatusText, text: httpStatusText"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <a class="pull-left" href="http://issues.hibernatingrhinos.com/issues/RavenDB?#newissue=yes" target="_blank">Report a defect</a>
+        <button type="button" class="btn btn-default" data-bind="click: clear">Clear</button>
+        <button type="button" class="btn btn-primary" data-bind="click: close">Close</button>
+    </div>
+</div>

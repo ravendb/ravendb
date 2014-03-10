@@ -11,7 +11,7 @@ using Xunit;
 
 namespace RavenFS.Tests.Synchronization
 {
-	public class LockFileTests : MultiHostTestBase
+    public class LockFileTests : RavenFsTestBase
 	{
 		private readonly NameValueCollection EmptyData = new NameValueCollection();
 
@@ -23,7 +23,7 @@ namespace RavenFS.Tests.Synchronization
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
-			await sourceClient.Synchronization.StartAsync("test.bin", destinationClient.ServerUrl);
+			await sourceClient.Synchronization.StartAsync("test.bin", destinationClient);
 			var config = await destinationClient.Config.GetConfig(RavenFileNameHelper.SyncLockNameForFile("test.bin"));
 
 			Assert.Null(config);

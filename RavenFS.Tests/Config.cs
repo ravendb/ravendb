@@ -4,7 +4,7 @@ using Xunit;
 
 namespace RavenFS.Tests
 {
-	public class Config : WebApiTest
+	public class Config : RavenFsTestBase
 	{
 		[Fact]
 		public async Task CanGetConfig_NotThere()

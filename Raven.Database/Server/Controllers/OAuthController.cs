@@ -142,7 +142,8 @@ namespace Raven.Database.Server.Controllers
 			return Tuple.Create(apiKeyDefinition.Secret, AccessToken.Create(DatabasesLandlord.SystemConfiguration.OAuthTokenKey, new AccessTokenBody
 			{
 				UserId = apiKeyName,
-				AuthorizedDatabases = apiKeyDefinition.Databases
+				AuthorizedDatabases = apiKeyDefinition.Databases,
+                AuthorizedFileSystems = apiKeyDefinition.FileSystems
 			}));
 		}
 	}

@@ -10,7 +10,7 @@ using Xunit.Extensions;
 
 namespace RavenFS.Tests.Synchronization
 {
-	public class SynchronizationStorageTests : MultiHostTestBase
+    public class SynchronizationStorageTests : RavenFsTestBase
 	{
 		private readonly RavenFileSystemClient destination;
 		private readonly RavenFileSystem destinationRfs;
@@ -46,9 +46,9 @@ namespace RavenFS.Tests.Synchronization
 			                                              sourceRfs.SigGenerator);
 
 			// force to upload entire file, we just want to check which pages will be reused
-			contentUpdate.UploadToAsync(destination.ServerUrl).Wait();
+		    contentUpdate.UploadToAsync(destination.Synchronization).Wait();
 			destination.Synchronization.ResolveConflictAsync("test", ConflictResolutionStrategy.RemoteVersion).Wait();
-			contentUpdate.UploadToAsync(destination.ServerUrl).Wait();
+            contentUpdate.UploadToAsync(destination.Synchronization).Wait();
 
 			FileAndPages fileAndPages = null;
 			destinationRfs.Storage.Batch(accessor => fileAndPages = accessor.GetFile("test", 0, 2*numberOfPages));
@@ -89,9 +89,9 @@ namespace RavenFS.Tests.Synchronization
 
 			sourceContent.Position = 0;
 			// force to upload entire file, we just want to check which pages will be reused
-			contentUpdate.UploadToAsync(destination.ServerUrl).Wait();
+            contentUpdate.UploadToAsync(destination.Synchronization).Wait();
 			destination.Synchronization.ResolveConflictAsync("test", ConflictResolutionStrategy.RemoteVersion).Wait();
-			contentUpdate.UploadToAsync(destination.ServerUrl).Wait();
+            contentUpdate.UploadToAsync(destination.Synchronization).Wait();
 
 			FileAndPages fileAndPages = null;
 			destinationRfs.Storage.Batch(accessor => fileAndPages = accessor.GetFile("test", 0, 256));
@@ -128,9 +128,9 @@ namespace RavenFS.Tests.Synchronization
 
 			sourceContent.Position = 0;
 			// force to upload entire file, we just want to check which pages will be reused
-			contentUpdate.UploadToAsync(destination.ServerUrl).Wait();
+            contentUpdate.UploadToAsync(destination.Synchronization).Wait();
 			destination.Synchronization.ResolveConflictAsync("test", ConflictResolutionStrategy.RemoteVersion).Wait();
-			contentUpdate.UploadToAsync(destination.ServerUrl).Wait();
+            contentUpdate.UploadToAsync(destination.Synchronization).Wait();
 
 			FileAndPages fileAndPages = null;
 			destinationRfs.Storage.Batch(accessor => fileAndPages = accessor.GetFile("test", 0, 256));

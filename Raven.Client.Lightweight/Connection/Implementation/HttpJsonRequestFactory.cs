@@ -1,10 +1,6 @@
-﻿#if !NETFX_CORE && !SILVERLIGHT
+﻿#if !NETFX_CORE
 using System;
-#if SILVERLIGHT || NETFX_CORE
-using Raven.Client.Silverlight.MissingFromSilverlight;
-#else
 using System.Collections.Specialized;
-#endif
 using System.Net;
 using System.Net.Http.Headers;
 using System.Threading;

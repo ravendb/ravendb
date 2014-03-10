@@ -1,22 +1,12 @@
-﻿using System;
-using System.IO;
-using System.Net;
-using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Client.Connection;
+﻿using System.Threading.Tasks;
 using Raven.Client.RavenFS;
-using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Storage.Esent;
-using Raven.Database.Server.RavenFS.Synchronization.Multipart;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
 	public class DeleteWorkItem : SynchronizationWorkItem
 	{
-		public DeleteWorkItem(string fileName, string sourceServerUrl, ITransactionalStorage storage)
+		public DeleteWorkItem(string fileName, string sourceServerUrl, TransactionalStorage storage)
 			: base(fileName, sourceServerUrl, storage)
 		{
 		}
@@ -26,31 +16,12 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			get { return SynchronizationType.Delete; }
 		}
 
-		public override async Task<SynchronizationReport> PerformAsync(string destination)
+        public override Task<SynchronizationReport> PerformAsync(RavenFileSystemClient.SynchronizationClient destination)
 		{
 			FileAndPages fileAndPages = null;
 			Storage.Batch(accessor => fileAndPages = accessor.GetFile(FileName, 0, 0));
-			
-			var request =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-						destination + "/ravenfs/synchronization?fileName=" + Uri.EscapeDataString(FileName),
-						"DELETE", new OperationCredentials("", new CredentialCache()), Convention));
 
-
-			
-			request.AddHeaders(fileAndPages.Metadata);
-
-			request.AddHeader(SyncingMultipartConstants.SourceServerInfo, ServerInfo.AsJson());
-
-			try
-			{
-				var response = await request.ReadResponseJsonAsync();
-				return new JsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
-			}
-			catch (ErrorResponseException exception)
-			{
-				throw exception.BetterWebExceptionError();
-			}
+            return destination.DeleteAsync(FileName, fileAndPages.Metadata, ServerInfo);
 		}
 
 		public override bool Equals(object obj)

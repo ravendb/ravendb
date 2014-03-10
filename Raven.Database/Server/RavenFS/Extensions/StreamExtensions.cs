@@ -1,5 +1,4 @@
-﻿#if !SILVERLIGHT
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.IO;
@@ -40,4 +39,3 @@ namespace Raven.Database.Server.RavenFS.Extensions
 		}
 	}
 }
-#endif

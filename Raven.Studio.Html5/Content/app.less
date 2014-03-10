@@ -131,19 +131,60 @@ html, body {
 .indexes-container {
     margin-top: 10px;
 
-    .index-group {
-        /*width: 50%;*/
-        /*overflow: visible;*/
+    .index {
+
+        .index-actions-container {
+            display: none;
+        }
+
+        &:hover {
+            .index-actions-container {
+                display: inline-block;
+            }
+        }
     }
 }
 
 .settings-container {
     margin-top: 10px;
 
-    .api-key-card, .replication-destination-card {
+    .api-key-card, .replication-destination-card, .win-auth-card {
         display: inline-block;
         width: 500px;
         margin-right: 20px;
+    }
+
+    .win-auth-tabs {
+        padding: 15px;
+
+        .win-auth-panels-container {
+            margin-top: 15px;
+}
+    }
+
+    .database-table {
+        margin-bottom: 0px;
+
+        td {
+            padding: 3px;
+        }
+    }
+
+    .database-header-row {
+        .narrow-column {
+            width: 75px;
+        }
+        .narrowest-column {
+            width: 1px;
+        }
+    }
+
+    .database-row {
+        .form-control {
+            border-radius: 3px;
+            height: 26px;
+            font-size: 12px;
+        }
     }
 }
 
@@ -267,8 +308,7 @@ html, body {
     /*position: absolute;
     right: 0;
     left: 0;*/
-
-    &:focus { 
+    &:focus {
         outline: 0;
     }
 
@@ -343,10 +383,9 @@ html, body {
 .studio-alerts {
     position: fixed;
     top: 60px;
-    left: 45%;
-    right: 45%;
+    left: 40%;
     z-index: 2000;
-    width: 300px;
+    width: 400px;
 }
 
 #editDocumentContainer {
@@ -472,5 +511,19 @@ footer {
 
     .navbar-fixed-top {
         margin-bottom: 0;
+    }
+}
+
+#recentErrorsDialog {
+    height: 500px;
+    width: 600px;
+
+    .modal-body {
+        height: 350px;
+        overflow-y: auto;
+    }
+
+    .error-details, .http-status {
+        width: 100%;
     }
 }

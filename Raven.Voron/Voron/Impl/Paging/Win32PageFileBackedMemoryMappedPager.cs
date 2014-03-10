@@ -53,6 +53,7 @@ namespace Voron.Impl.Paging
 		{
 			long startPage = pageNumber ?? page.PageNumber;
 
+			//note: GetNumberOfOverflowPages and WriteDirect can throw ObjectDisposedException if the pager is already disposed
 			int toWrite = page.IsOverflow ? GetNumberOfOverflowPages(page.OverflowSize) : 1;
 
 			return WriteDirect(page, startPage, toWrite);
@@ -60,6 +61,7 @@ namespace Voron.Impl.Paging
 
 		public override void AllocateMorePages(Transaction tx, long newLength)
 		{
+			ThrowObjectDisposedIfNeeded();
 			var newLengthAfterAdjustment = NearestSizeToAllocationGranularity(newLength);
 
 			if (newLengthAfterAdjustment < _totalAllocationSize)
@@ -106,6 +108,8 @@ namespace Voron.Impl.Paging
 	
 		public override int WriteDirect(Page start, long pagePosition, int pagesToWrite)
 		{
+			ThrowObjectDisposedIfNeeded();
+
 			int toCopy = pagesToWrite * PageSize;
 			NativeMethods.memcpy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
 

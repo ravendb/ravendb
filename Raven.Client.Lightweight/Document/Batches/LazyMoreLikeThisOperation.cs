@@ -9,9 +9,7 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
-#if !SILVERLIGHT
 using Raven.Client.Shard;
-#endif
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Batches
@@ -64,7 +62,6 @@ namespace Raven.Client.Document.Batches
 				Result = multiLoadOperation.Complete<T>();
 		}
 
-#if !SILVERLIGHT
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
 			var list = new List<MultiLoadResult>(
@@ -99,14 +96,12 @@ namespace Raven.Client.Document.Batches
 			if (RequiresRetry == false)
 				Result = multiLoadOperation.Complete<T>();
 		}
-#endif
 
 		public IDisposable EnterContext()
 		{
 			return multiLoadOperation.EnterMultiLoadContext();
 		}
 
-#if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
 			return commands.MoreLikeThis(query);
@@ -116,6 +111,5 @@ namespace Raven.Client.Document.Batches
 		{
 			HandleResponse((MultiLoadResult)result);
 		}
-#endif
 	}
 }

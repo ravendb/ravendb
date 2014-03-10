@@ -184,6 +184,8 @@ namespace Voron.Impl.Paging
 
         public override void Dispose()
         {
+            if (Disposed)
+                return;
             base.Dispose();
       
             _fileStream.Dispose();

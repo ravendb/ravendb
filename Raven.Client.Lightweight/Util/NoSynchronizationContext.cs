@@ -13,13 +13,9 @@ namespace Raven.Client.Util
 	{
 		 public static IDisposable Scope()
 		 {
-#if !SILVERLIGHT
 			 var old = SynchronizationContext.Current;
 			 SynchronizationContext.SetSynchronizationContext(null);
 			 return new DisposableAction(() => SynchronizationContext.SetSynchronizationContext(old));
-#else
-			 return null;
-#endif
 		 }
 	}
 }

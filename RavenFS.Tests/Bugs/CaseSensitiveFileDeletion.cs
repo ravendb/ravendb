@@ -3,7 +3,7 @@ using Xunit;
 
 namespace RavenFS.Tests.Bugs
 {
-    public class CaseSensitiveFileDeletion : WebApiTest
+    public class CaseSensitiveFileDeletion : RavenFsTestBase
     {
         [Fact]
         public void FilesWithUpperCaseNamesAreDeletedProperly()

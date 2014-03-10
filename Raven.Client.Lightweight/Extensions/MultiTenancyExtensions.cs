@@ -18,7 +18,7 @@ namespace Raven.Client.Extensions
     ///</summary>
     public static class MultiTenancyExtensions
     {
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
         ///<summary>
         /// Ensures that the database exists, creating it if needed
         ///</summary>

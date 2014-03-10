@@ -7,6 +7,8 @@ namespace Raven.Client.RavenFS
 	{
 		public string DestinationServer { get; set; }
 
+        public string DestinationFileSystem { get; set; }
+
 		public IEnumerable<SynchronizationReport> Reports { get; set; }
 
 		public Exception Exception { get; set; }

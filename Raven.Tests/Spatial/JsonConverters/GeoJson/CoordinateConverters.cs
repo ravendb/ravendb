@@ -116,14 +116,14 @@ namespace Raven.Tests.Spatial.JsonConverters.GeoJson
             Coordinate c = new Coordinate();
             reader.Read();
             Debug.Assert(reader.TokenType == JsonToken.Float);
-            c.X = (Double)reader.Value;
+            c.X = Convert.ToDouble(reader.Value);
             reader.Read();
             Debug.Assert(reader.TokenType == JsonToken.Float);
-            c.Y = (Double)reader.Value;
+            c.Y = Convert.ToDouble(reader.Value);
             reader.Read();
             if (reader.TokenType == JsonToken.Float)
             {
-                c.Z = (Double)reader.Value;
+                c.Z = Convert.ToDouble(reader.Value);
                 reader.Read();
             }
             Debug.Assert(reader.TokenType == JsonToken.EndArray);

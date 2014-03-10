@@ -21,12 +21,20 @@ interface documentDto {
 interface documentMetadataDto {
 	'Raven-Entity-Name'?: string;
 	'Raven-Clr-Type'?: string;
-	'Non-Authoritative-Information': boolean;
-	'@id': string;
+	'Non-Authoritative-Information'?: boolean;
+	'@id'?: string;
 	'Temp-Index-Score'?: number;
-	'Last-Modified': string;
-	'Raven-Last-Modified': string;
-	'@etag': string;
+	'Last-Modified'?: string;
+	'Raven-Last-Modified'?: string;
+	'@etag'?: string;
+}
+
+interface bulkDocumentDto {
+    AdditionalData?: Array<any>;
+    Document: any;
+    Key: string;
+    Metadata: documentMetadataDto;
+    Method:string;
 }
 
 interface databaseStatisticsDto {
@@ -86,13 +94,7 @@ interface apiKeyDto {
     Name: string;
     Secret: string;
     Enabled: boolean;
-    Databases: Array<apiKeyDatabaseDto>;
-}
-
-interface apiKeyDatabaseDto {
-    TenantId: string;
-    Admin: boolean;
-    ReadOnly: boolean;
+    Databases: Array<databaseAccessDto>;
 }
 
 interface buildVersionDto {
@@ -288,6 +290,23 @@ interface replicationConfigDto {
     AttachmentConflictResolution: string;
 }
 
+interface databaseAccessDto {
+    Admin: boolean;
+    TenantId: string;
+    ReadOnly: boolean;
+}
+
+interface windowsAuthDataDto {
+    Name: string;
+    Enabled: boolean;
+    Databases: databaseAccessDto[];
+}
+
+interface windowsAuthDto {
+    RequiredGroups: windowsAuthDataDto[];
+    RequiredUsers: windowsAuthDataDto[];
+}
+
 interface transformerDto {
     name: string;
     definition: {
@@ -297,13 +316,17 @@ interface transformerDto {
 }
 
 interface storedQueryDto {
-    id: string;
-    isPinned: boolean;
-    queryText: string;
-    sorts: string[];
-    databaseName: string;
-    transformerName: string;
-    showFields: boolean;
-    indexEntries: boolean;
-    useAndOperator: boolean;
+    IsPinned: boolean;
+    IndexName: string;
+    QueryText: string;
+    Sorts: string[];
+    TransformerName: string;
+    ShowFields: boolean;
+    IndexEntries: boolean;
+    UseAndOperator: boolean;
+    Hash: number;
+}
+
+interface storedQueryContainerDto extends documentDto {
+    Queries: storedQueryDto[];
 }

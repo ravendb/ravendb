@@ -55,9 +55,9 @@ class aceEditorBindingHandler {
     }
 
     // Called by Knockout each time the dependent observable value changes.
-    update(element: HTMLElement, valueAccessor: () => { code: string; theme?: string; fontSize?: string; lang?: string; }, allBindings, viewModel, bindingContext: any) {
+    update(element: HTMLElement, valueAccessor: () => { code: () => string; theme?: string; fontSize?: string; lang?: string; }, allBindings, viewModel, bindingContext: any) {
         var bindingValues = valueAccessor();
-        var code = bindingValues.code;
+        var code = ko.unwrap(bindingValues.code);
         var aceEditor: AceAjax.Editor = ko.utils.domData.get(element, "aceEditor");
         var editorCode = aceEditor.getSession().getValue();
         if (code !== editorCode) {
