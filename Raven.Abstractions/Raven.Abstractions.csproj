@@ -272,7 +272,7 @@
     <Compile Include="RavenFS\Notification.cs" />
     <Compile Include="RavenFS\RdcStats.cs" />
     <Compile Include="RavenFS\ServerInfo.cs" />
-    <Compile Include="RavenFS\ServerStats.cs" />
+    <Compile Include="RavenFS\FileSystemStats.cs" />
     <Compile Include="RavenFS\Signature.cs" />
     <Compile Include="RavenFS\SignatureManifest.cs" />
     <Compile Include="RavenFS\SynchronizationConfirmation.cs" />

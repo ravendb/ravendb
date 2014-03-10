@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.RavenFS;
 
 namespace Raven.Client.RavenFS.Shard
 {
@@ -57,14 +58,14 @@ namespace Raven.Client.RavenFS.Shard
 
 		#endregion
 
-		public async Task<ServerStats> StatsAsync()
+		public async Task<FileSystemStats> StatsAsync()
 		{
 			var applyAsync =
 				await
 				ShardStrategy.ShardAccessStrategy.ApplyAsync(ShardClients.Values.ToList(), new ShardRequestData(),
 															 (client, i) => client.StatsAsync());
 
-			return new ServerStats
+			return new FileSystemStats
 			{
 				FileCount = applyAsync.Sum(x => x.FileCount)
 			};

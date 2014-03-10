@@ -1,4 +1,6 @@
 ﻿using System.Web.Http;
+using Raven.Abstractions.RavenFS;
+using Raven.Client.RavenFS;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -14,15 +16,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				count = accessor.GetFileCount();
 			});
 
-			return new Stats
+			return new FileSystemStats
 			{
+                Name = FileSystemName,
 				FileCount = count
 			};
-		}
-
-		public class Stats
-		{
-			public int FileCount;
 		}
 	}
 }

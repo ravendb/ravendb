@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -74,13 +75,14 @@ namespace RavenFS.Tests
             return ravenDbServer;
         }
 
-        protected virtual RavenFileSystemClient NewClient(int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = "", [CallerMemberName] string fileSystemName = null)
+        protected virtual RavenFileSystemClient NewClient(int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
+                                                          ICredentials credentials = null, [CallerMemberName] string fileSystemName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
             var server = CreateRavenDbServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication);
 
-            var client = new RavenFileSystemClient(GetServerUrl(fiddler, server.SystemDatabase.ServerUrl), fileSystemName, apiKey: apiKey);
+            var client = new RavenFileSystemClient(GetServerUrl(fiddler, server.SystemDatabase.ServerUrl), fileSystemName, apiKey: apiKey, credentials: credentials);
 
             client.EnsureFileSystemExistsAsync().Wait();
 

@@ -13,68 +13,6 @@ namespace Raven.Database.Server.Security.OAuth
 {
 	public class OAuthRequestAuthorizer : AbstractRequestAuthorizer
 	{
-		public bool Authorize(IHttpContext ctx, bool hasApiKey, bool ignoreDbAccess)
-		{
-			var httpRequest = ctx.Request;
-
-			var isGetRequest = IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath);
-			var allowUnauthenticatedUsers = // we need to auth even if we don't have to, for bundles that want the user 
-				Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.All ||
-				Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin ||
-					Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
-					isGetRequest;
-
-			var token = GetToken(ctx);
-
-			if (token == null)
-			{
-				if (allowUnauthenticatedUsers)
-					return true;
-
-				WriteAuthorizationChallenge(ctx, hasApiKey ? 412 : 401, "invalid_request", "The access token is required");
-
-				return false;
-			}
-
-			AccessTokenBody tokenBody;
-			if (!AccessToken.TryParseBody(Settings.OAuthTokenKey, token, out tokenBody))
-			{
-				if (allowUnauthenticatedUsers)
-					return true;
-				WriteAuthorizationChallenge(ctx, 401, "invalid_token", "The access token is invalid");
-
-				return false;
-			}
-
-			if (tokenBody.IsExpired())
-			{
-				if (allowUnauthenticatedUsers)
-					return true;
-				WriteAuthorizationChallenge(ctx, 401, "invalid_token", "The access token is expired");
-
-				return false;
-			}
-
-			var writeAccess = isGetRequest == false;
-			if (!tokenBody.IsAuthorized(TenantId, writeAccess))
-			{
-				if (allowUnauthenticatedUsers || ignoreDbAccess)
-					return true;
-
-				WriteAuthorizationChallenge(ctx, 403, "insufficient_scope",
-					writeAccess ?
-					"Not authorized for read/write access for tenant " + TenantId :
-					"Not authorized for tenant " + TenantId);
-
-				return false;
-			}
-
-			ctx.User = new OAuthPrincipal(tokenBody, TenantId);
-			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = tokenBody.UserId;
-			CurrentOperationContext.User.Value = ctx.User;
-			return true;
-		}
-
         public bool TryAuthorize(RavenBaseApiController controller, bool hasApiKey, bool ignoreDbAccess, out HttpResponseMessage msg)
 		{
 			var isGetRequest = IsGetRequest(controller.InnerRequest.Method.Method, controller.InnerRequest.RequestUri.AbsolutePath);
@@ -158,6 +96,14 @@ namespace Raven.Database.Server.Security.OAuth
 				return new List<string>();
 			return oAuthUser.GetApprovedDatabases();
 		}
+
+        public List<string> GetApprovedFileSystems(IPrincipal user)
+        {
+            var oAuthUser = user as OAuthPrincipal;
+            if (oAuthUser == null)
+                return new List<string>();
+            return oAuthUser.GetApprovedDatabases();
+        }
 
 		public override void Dispose()
 		{
@@ -347,6 +293,11 @@ public class OAuthPrincipal : IPrincipal, IIdentity
 	{
 		return tokenBody.AuthorizedDatabases.Select(access => access.TenantId).ToList();
 	}
+
+    public List<string> GetApprovedFileSystems()
+    {
+        return tokenBody.AuthorizedFileSystems.Select(access => access.TenantId).ToList();
+    }
 
 	public AccessTokenBody TokenBody
 	{
