@@ -104,5 +104,133 @@ namespace RavenFS.Tests.Storage
                 });
             }
         }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void ClearSignatures(string requestedStorage)
+        {
+            var text1 = "text1";
+            var text2 = "text2";
+
+            var buffer1 = Encoding.UTF8.GetBytes(text1);
+            var buffer2 = Encoding.UTF8.GetBytes(text2);
+
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => accessor.ClearSignatures("signature1"));
+
+                storage.Batch(accessor => accessor.AddSignature("signature1", 10, stream => stream.Write(buffer1, 0, buffer1.Length)));
+                storage.Batch(accessor => accessor.AddSignature("signature1", 11, stream => stream.Write(buffer1, 0, buffer1.Length)));
+                storage.Batch(accessor => accessor.AddSignature("signature1", 10, stream => stream.Write(buffer1, 0, buffer1.Length)));
+                storage.Batch(accessor => accessor.AddSignature("signature2", 999, stream => stream.Write(buffer2, 0, buffer2.Length)));
+
+                storage.Batch(accessor =>
+                {
+                    var signatures = accessor
+                        .GetSignatures("signature1")
+                        .ToList();
+
+                    Assert.Equal(3, signatures.Count);
+
+                    signatures = accessor
+                        .GetSignatures("signature2")
+                        .ToList();
+
+                    Assert.Equal(1, signatures.Count);
+                });
+
+                storage.Batch(accessor => accessor.ClearSignatures("signature2"));
+
+                storage.Batch(accessor =>
+                {
+                    var signatures = accessor
+                        .GetSignatures("signature1")
+                        .ToList();
+
+                    Assert.Equal(3, signatures.Count);
+
+                    signatures = accessor
+                        .GetSignatures("signature2")
+                        .ToList();
+
+                    Assert.Equal(0, signatures.Count);
+                });
+
+                storage.Batch(accessor => accessor.ClearSignatures("signature1"));
+
+                storage.Batch(accessor =>
+                {
+                    var signatures = accessor
+                        .GetSignatures("signature1")
+                        .ToList();
+
+                    Assert.Equal(0, signatures.Count);
+
+                    signatures = accessor
+                        .GetSignatures("signature2")
+                        .ToList();
+
+                    Assert.Equal(0, signatures.Count);
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void GetSignatureSize(string requestedStorage)
+        {
+            var text1 = "text1";
+            var text2 = "text2text2";
+
+            var buffer1 = Encoding.UTF8.GetBytes(text1);
+            var buffer2 = Encoding.UTF8.GetBytes(text2);
+
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => Assert.Throws<InvalidOperationException>(() => accessor.GetSignatureSize(1, 1)));
+
+                storage.Batch(accessor => accessor.AddSignature("signature1", 10, stream => stream.Write(buffer1, 0, buffer1.Length)));
+                storage.Batch(accessor => accessor.AddSignature("signature2", 999, stream => stream.Write(buffer2, 0, buffer2.Length)));
+
+                storage.Batch(accessor =>
+                {
+                    var size = accessor.GetSignatureSize(1, 10);
+
+                    Assert.Equal(buffer1.Length, size);
+
+                    size = accessor.GetSignatureSize(2, 999);
+
+                    Assert.Equal(buffer2.Length, size);
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void GetSignatureStream(string requestedStorage)
+        {
+            var text1 = "text1";
+            var text2 = "text2text2";
+
+            var buffer1 = Encoding.UTF8.GetBytes(text1);
+            var buffer2 = Encoding.UTF8.GetBytes(text2);
+
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => Assert.Throws<InvalidOperationException>(() => accessor.GetSignatureStream(1, 1, stream => { })));
+
+                storage.Batch(accessor => accessor.AddSignature("signature1", 10, stream => stream.Write(buffer1, 0, buffer1.Length)));
+                storage.Batch(accessor => accessor.AddSignature("signature2", 999, stream => stream.Write(buffer2, 0, buffer2.Length)));
+
+                storage.Batch(accessor => accessor.GetSignatureStream(1, 10, stream =>
+                {
+                    stream.Read(buffer1, 0, buffer1.Length);
+                    Assert.Equal(text1, Encoding.UTF8.GetString(buffer1));
+
+                    stream.Read(buffer2, 0, buffer2.Length);
+                    Assert.Equal(text2, Encoding.UTF8.GetString(buffer2));
+                }));
+            }
+        }
     }
 }

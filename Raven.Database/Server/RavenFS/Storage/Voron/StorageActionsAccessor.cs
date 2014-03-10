@@ -413,17 +413,48 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public void ClearSignatures(string name)
         {
-            throw new NotImplementedException();
+            var key = CreateKey(name);
+            var signaturesByName = storage.Signatures.GetIndex(Tables.Signatures.Indices.ByName);
+
+            using (var iterator = signaturesByName.MultiRead(Snapshot, key))
+            {
+                if (!iterator.Seek(Slice.BeforeAllKeys))
+                    return;
+
+                do
+                {
+                    var id = iterator.CurrentKey.ToString();
+                    RemoveSignature(id, name);
+                }
+                while (iterator.MoveNext());
+            }
         }
 
         public long GetSignatureSize(int id, int level)
         {
-            throw new NotImplementedException();
+            var idAsString = id.ToString("D9");
+            var signatureData = storage.Signatures.GetIndex(Tables.Signatures.Indices.Data);
+
+            var result = signatureData.Read(Snapshot, idAsString, writeBatch.Value);
+            if (result == null)
+                throw new InvalidOperationException("Could not find signature with id " + id + " and level " + level);
+
+            return result.Reader.Length;
         }
 
         public void GetSignatureStream(int id, int level, Action<Stream> action)
         {
-            throw new NotImplementedException();
+            var idAsString = id.ToString("D9");
+            var signatureData = storage.Signatures.GetIndex(Tables.Signatures.Indices.Data);
+
+            var result = signatureData.Read(Snapshot, idAsString, writeBatch.Value);
+            if (result == null)
+                throw new InvalidOperationException("Could not find signature with id " + id + " and level " + level);
+
+            using (var stream = result.Reader.AsStream())
+            {
+                action(stream);
+            }
         }
 
         public void AddSignature(string name, int level, Action<Stream> action)
@@ -557,6 +588,16 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             }
 
             return results;
+        }
+
+        private void RemoveSignature(string id, string name)
+        {
+            var signatureData = storage.Signatures.GetIndex(Tables.Signatures.Indices.Data);
+            var signaturesByName = storage.Signatures.GetIndex(Tables.Signatures.Indices.ByName);
+
+            signaturesByName.MultiDelete(writeBatch.Value, CreateKey(name), id);
+            signatureData.Delete(writeBatch.Value, id);
+            storage.Signatures.Delete(writeBatch.Value, id);
         }
 
         private void DeleteFile(string key)
