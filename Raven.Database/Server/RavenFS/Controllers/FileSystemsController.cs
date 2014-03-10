@@ -43,8 +43,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 };
 
                 Task<RavenFileSystem> fsTask;
-                if (FileSystemsLandlord.TryGetOrCreateResourceStore(fileSystemName, out fsTask))
+                if (FileSystemsLandlord.TryGetFileSystem(fileSystemName, out fsTask)) // we only care about active file systems
                 {
+                    if(fsTask.IsCompleted == false)
+                        continue; // we don't care about in process of starting file systems
+
                     var ravenFileSystem = await fsTask;
                     var fileCount = 0;
 
