@@ -146,19 +146,6 @@ namespace Raven.Database.Server.Security
 			return true;
 		}
 
-		public IPrincipal GetUser(IHttpContext context)
-		{
-			var hasApiKey = "True".Equals(context.Request.Headers["Has-Api-Key"], StringComparison.CurrentCultureIgnoreCase);
-			var authHeader = context.Request.Headers["Authorization"];
-			var hasOAuthTokenInCookie = context.Request.HasCookie("OAuth-Token");
-			if (hasApiKey || hasOAuthTokenInCookie ||
-				string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
-			{
-				return oAuthRequestAuthorizer.GetUser(context, hasApiKey);
-			}
-			return windowsRequestAuthorizer.GetUser(context);
-		}
-
 		public IPrincipal GetUser(RavenDbApiController controller)
 		{
 			var hasApiKey = "True".Equals(controller.GetQueryStringValue("Has-Api-Key"), StringComparison.CurrentCultureIgnoreCase);
@@ -170,21 +157,6 @@ namespace Raven.Database.Server.Security
 				return oAuthRequestAuthorizer.GetUser(controller, hasApiKey);
 			}
 			return windowsRequestAuthorizer.GetUser(controller);
-		}
-
-		public List<string> GetApprovedDatabases(IPrincipal user, IHttpContext context, string[] databases)
-		{
-			var authHeader = context.Request.Headers["Authorization"];
-			List<string> approved;
-			if (string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
-				approved = oAuthRequestAuthorizer.GetApprovedDatabases(user);
-			else
-				approved = windowsRequestAuthorizer.GetApprovedDatabases(user);
-
-			if (approved.Contains("*"))
-				return databases.ToList();
-
-			return approved;
 		}
 
 		public List<string> GetApprovedDatabases(IPrincipal user, RavenDbApiController controller, string[] databases)
