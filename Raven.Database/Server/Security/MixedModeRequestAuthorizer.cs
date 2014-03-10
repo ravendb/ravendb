@@ -67,33 +67,6 @@ namespace Raven.Database.Server.Security
 			base.Initialize();
 		}
 
-		public bool Authorize(IHttpContext context)
-		{
-			var requestUrl = context.GetRequestUrl();
-			if (NeverSecret.IsNeverSecretUrl(requestUrl))
-				return true;
-
-			//CORS pre-flight (ignore creds if using cors).
-			if (!String.IsNullOrEmpty(Settings.AccessControlAllowOrigin) && context.Request.HttpMethod == "OPTIONS")
-			{ return true; }
-
-			var oneTimeToken = context.Request.Headers["Single-Use-Auth-Token"];
-			if (string.IsNullOrEmpty(oneTimeToken) == false)
-			{
-				return AuthorizeSingleUseAuthToken(context, oneTimeToken);
-			}
-
-			var authHeader = context.Request.Headers["Authorization"];
-			var hasApiKey = "True".Equals(context.Request.Headers["Has-Api-Key"], StringComparison.CurrentCultureIgnoreCase);
-			var hasOAuthTokenInCookie = context.Request.HasCookie("OAuth-Token");
-			if (hasApiKey || hasOAuthTokenInCookie ||
-				string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
-			{
-				return oAuthRequestAuthorizer.Authorize(context, hasApiKey, IgnoreDb.Urls.Contains(requestUrl));
-			}
-			return windowsRequestAuthorizer.Authorize(context, IgnoreDb.Urls.Contains(requestUrl));
-		}
-
         public bool TryAuthorize(RavenBaseApiController controller, out HttpResponseMessage msg)
 		{
 			var requestUrl = controller.GetRequestUrl();
@@ -127,45 +100,7 @@ namespace Raven.Database.Server.Security
 			return windowsRequestAuthorizer.TryAuthorize(controller, IgnoreDb.Urls.Contains(requestUrl), out msg);
 		}
 
-		private bool AuthorizeSingleUseAuthToken(IHttpContext context, string token)
-		{
-			OneTimeToken value;
-			if (singleUseAuthTokens.TryRemove(token, out value) == false)
-			{
-				context.SetStatusToForbidden();
-				context.WriteJson(new
-				{
-					Error = "Unknown single use token, maybe it was already used?"
-				});
-				return false;
-			}
-			if (string.Equals(value.DatabaseName, TenantId, StringComparison.InvariantCultureIgnoreCase) == false)
-			{
-				context.SetStatusToForbidden();
-				context.WriteJson(new
-				{
-					Error = "This single use token cannot be used for this database"
-				});
-				return false;
-			}
-			if ((SystemTime.UtcNow - value.GeneratedAt).TotalMinutes > 2.5)
-			{
-				context.SetStatusToForbidden();
-				context.WriteJson(new
-				{
-					Error = "This single use token has expired"
-				});
-				return false;
-			}
 
-			if (value.User != null)
-			{
-				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = value.User.Identity.Name;
-			}
-			CurrentOperationContext.User.Value = value.User;
-			context.User = value.User;
-			return true;
-		}
 
         private bool TryAuthorizeSingleUseAuthToken(RavenBaseApiController controller, string token, out HttpResponseMessage msg)
 		{

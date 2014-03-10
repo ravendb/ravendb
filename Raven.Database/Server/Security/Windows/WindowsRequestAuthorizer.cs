@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Principal;
 using System.Threading;
-using System.Web;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
@@ -12,7 +11,6 @@ using Raven.Database.Server.Abstractions;
 using System.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Server.Controllers;
-using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Server.Security.Windows
 {
@@ -59,65 +57,6 @@ namespace Raven.Database.Server.Security.Windows
 			requiredUsers = required.RequiredUsers != null
 								? required.RequiredUsers.Where(data => data.Enabled).ToList()
 								: new List<WindowsAuthData>();
-		}
-
-		public bool Authorize(IHttpContext ctx, bool ignoreDb)
-		{
-			Action onRejectingRequest;
-			var databaseName = TenantId ?? Constants.SystemDatabase;
-			var userCreated = TryCreateUser(ctx, databaseName, out onRejectingRequest);
-			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && userCreated == false)
-			{
-				onRejectingRequest();
-				return false;
-			}
-
-			PrincipalWithDatabaseAccess user = null;
-			if (userCreated)
-			{
-				user = (PrincipalWithDatabaseAccess)ctx.User;
-				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = ctx.User.Identity.Name;
-				CurrentOperationContext.User.Value = ctx.User;
-
-				// admins always go through
-				if (user.Principal.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode))
-					return true;
-
-				// backup operators can go through
-				if (user.Principal.IsBackupOperator(server.SystemConfiguration.AnonymousUserAccessMode))
-					return true;
-			}
-
-			var httpRequest = ctx.Request;
-			bool isGetRequest = IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath);
-			switch (server.SystemConfiguration.AnonymousUserAccessMode)
-			{
-				case AnonymousUserAccessMode.Admin:
-				case AnonymousUserAccessMode.All:
-					return true; // if we have, doesn't matter if we have / don't have the user
-				case AnonymousUserAccessMode.Get:
-					if (isGetRequest)
-						return true;
-					goto case AnonymousUserAccessMode.None;
-				case AnonymousUserAccessMode.None:
-					if (userCreated)
-					{
-						if (user.AdminDatabases.Contains(databaseName) ||
-							user.AdminDatabases.Contains("*") || ignoreDb)
-							return true;
-						if (user.ReadWriteDatabases.Contains(databaseName) ||
-							user.ReadWriteDatabases.Contains("*"))
-							return true;
-						if (isGetRequest && (user.ReadOnlyDatabases.Contains(databaseName) ||
-							user.ReadOnlyDatabases.Contains("*")))
-							return true;
-					}
-
-					onRejectingRequest();
-					return false;
-				default:
-					throw new ArgumentOutOfRangeException();
-			}
 		}
 
         public bool TryAuthorize(RavenBaseApiController controller, bool ignoreDb, out HttpResponseMessage msg)
