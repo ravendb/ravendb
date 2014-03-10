@@ -289,7 +289,7 @@ class editDocument extends viewModelBase {
     updateUrl(docId: string) {
         var collectionName = this.docsList() ? this.docsList().collectionName : null;
         var currentItemIndex = this.docsList() ? this.docsList().currentItemIndex() : null;
-        var editDocUrl = appUrl.forEditDoc(docId, collectionName, currentItemIndex);
+        var editDocUrl = appUrl.forEditDoc(docId, collectionName, currentItemIndex, this.activeDatabase());
         router.navigate(editDocUrl, false);
     }
 

@@ -18,7 +18,6 @@ class appUrl {
         newIndex: ko.computed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         editIndex: (indexName?: string) => ko.computed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
         query: (indexName?: string) => ko.computed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
-        dynamicQuery: ko.computed(() => appUrl.forDynamicQuery(appUrl.currentDatabase())),
         reporting: ko.computed(() => appUrl.forReporting(appUrl.currentDatabase())),
         tasks: ko.computed(() => appUrl.forTasks(appUrl.currentDatabase())),
         status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
@@ -46,7 +45,7 @@ class appUrl {
 	* @param docIndexInCollection The 0-based index of the doc to edit inside the paged collection, or null if paging will be disabled.
 	* @param database The database to use in the URL. If null, the current database will be used.
 	*/
-    static forEditDoc(id: string, collectionName?: string, docIndexInCollection?: number, db: database = appUrl.getDatabase()): string {
+    static forEditDoc(id: string, collectionName: string, docIndexInCollection: number, db: database): string {
 		var databaseUrlPart = appUrl.getEncodedDbPart(db);
 		var docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
 		var pagedListInfo = collectionName && docIndexInCollection != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + docIndexInCollection : "";
@@ -62,31 +61,31 @@ class appUrl {
 	* Gets the URL for status page.
 	* @param database The database to use in the URL. If null, the current database will be used.
 	*/
-	static forStatus(db: database = appUrl.getDatabase()): string {
+	static forStatus(db: database): string {
 		return "#status?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forSettings(db: database = appUrl.getDatabase()): string {
+    static forSettings(db: database): string {
         return "#settings?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forLogs(db: database = appUrl.getDatabase()): string {
+    static forLogs(db: database): string {
         return "#status/logs?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forAlerts(db: database = appUrl.getDatabase()): string {
+    static forAlerts(db: database): string {
         return "#status/alerts?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forIndexErrors(db: database = appUrl.getDatabase()): string {
+    static forIndexErrors(db: database): string {
         return "#status/indexErrors?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forReplicationStats(db: database = appUrl.getDatabase()): string {
+    static forReplicationStats(db: database): string {
         return "#status/replicationStats?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forUserInfo(db: database = appUrl.getDatabase()): string {
+    static forUserInfo(db: database): string {
         return "#status/userInfo?" + appUrl.getEncodedDbPart(db);
     }
 
@@ -112,7 +111,7 @@ class appUrl {
         return "#settings/replication?" + appUrl.getEncodedDbPart(db);
     }
 
-	static forDocuments(collection?: string, db: database = appUrl.getDatabase()): string {
+	static forDocuments(collection: string, db: database): string {
         var collectionPart = collection ? "collection=" + encodeURIComponent(collection) : "";
         var databasePart = appUrl.getEncodedDbPart(db);
 		return "#documents?" + collectionPart + databasePart;
@@ -123,7 +122,7 @@ class appUrl {
         return "#patch?" + databasePart;
     }
 
-    static forIndexes(db: database = appUrl.getDatabase()): string {
+    static forIndexes(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#indexes?" + databasePart;
     }
@@ -152,11 +151,6 @@ class appUrl {
 
         var indexPart = indexToQueryComponent ? "/" + encodeURIComponent(indexToQueryComponent) : "";
         return "#query" + indexPart + "?" + databasePart;
-    }
-
-    static forDynamicQuery(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
-        return "#dynamicQuery?" + databasePart;
     }
 
     static forReporting(db: database): string {

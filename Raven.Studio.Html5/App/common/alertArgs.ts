@@ -43,6 +43,12 @@ class alertArgs {
                         stackTrace: error.substr(indexOfStackTrace + "\r\n".length),
                         url: detailsObj.Url || ""
                     };
+                } else {
+                    this.parsedErrorInfo = {
+                        message: error,
+                        stackTracke: "",
+                        url: detailsObj.Url
+                    }
                 }
             }
         }
