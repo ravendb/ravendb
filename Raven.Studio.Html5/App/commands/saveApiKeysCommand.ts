@@ -16,7 +16,7 @@ class saveApiKeysCommand extends saveBulkOfDocuments{
             AdditionalData: null,
             Document: apiKey.toDto(),
             Key: apiKey.getKey(),
-            Metadata: apiKey.metadata,
+            Metadata: apiKey.metadata.toDto(),
             Method: "PUT"
         };
     }
