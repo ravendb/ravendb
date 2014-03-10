@@ -271,15 +271,15 @@ namespace RavenFS.Tests.Storage
 
                     Assert.NotNull(file1);
                     Assert.Equal("file1", file1.Name);
-                    Assert.Equal(null, file1.TotalSize);
+                    Assert.Equal(0, file1.TotalSize);
                     Assert.Equal(0, file1.UploadedSize);
 
                     var file2 = accessor.ReadFile("file2");
 
                     Assert.NotNull(file2);
                     Assert.Equal("file2", file2.Name);
-
-                    Assert.Equal(10, file2.UploadedSize);
+                    Assert.Equal(0, file1.TotalSize);
+                    Assert.Equal(0, file2.UploadedSize);
                 });
             }
         }

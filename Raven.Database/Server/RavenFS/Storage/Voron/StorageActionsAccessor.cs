@@ -340,7 +340,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                 throw new FileNotFoundException(filename);
 
             var totalSize = file.Value<long?>("total_size") ?? 0;
-            file["uploaded_size"] = totalSize;
+            file["total_size"] = totalSize;
 
             storage.Files.Add(writeBatch.Value, key, file, version);
         }

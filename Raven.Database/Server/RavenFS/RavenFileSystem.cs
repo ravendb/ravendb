@@ -60,7 +60,7 @@ namespace Raven.Database.Server.RavenFS
 
         private static ITransactionalStorage CreateTransactionalStorage(string path, NameValueCollection settings)
         {
-            var storageType = settings.Value<string>("Raven/FileSystem/StorageType");
+            var storageType = settings["Raven/FileSystem/StorageType"];
             switch (storageType)
             {
                 case "voron":
