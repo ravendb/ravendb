@@ -20,14 +20,15 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection;
 using Raven.Database.Config;
-using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.WebApi;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
+using HttpExtensions = Raven.Database.Extensions.HttpExtensions;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -443,7 +444,7 @@ namespace Raven.Database.Server.Controllers
 
 			var msg = new HttpResponseMessage
 			{
-				Content = new StreamContent(new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+				Content = new CompressedStreamContent(new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), false)
 			};
 
 			WriteETag(fileEtag, msg);
