@@ -136,6 +136,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
         public void AssociatePage(string filename, int pageId, int pagePositionInFile, int pageSize)
         {
             var usageByFileName = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileName);
+            var usageByFileNameAndPosition = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileNameAndPosition);
 
             var key = CreateKey(filename);
             ushort version;
@@ -175,6 +176,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
             storage.Usage.Add(writeBatch.Value, usageKey, usage, 0);
             usageByFileName.MultiAdd(writeBatch.Value, CreateKey(filename), usageKey);
+            usageByFileNameAndPosition.MultiAdd(writeBatch.Value, CreateKey(filename, pagePositionInFile), usageKey);
         }
 
         public int ReadPage(int pageId, byte[] buffer)
@@ -224,11 +226,11 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
             if (pagesToLoad > 0)
             {
-                var usageByFileName = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileName);
+                var usageByFileNameAndPosition = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileNameAndPosition);
 
-                using (var iterator = usageByFileName.MultiRead(Snapshot, key))
+                using (var iterator = usageByFileNameAndPosition.MultiRead(Snapshot, CreateKey(filename, start)))
                 {
-                    if (iterator.Seek(Slice.BeforeAllKeys) && iterator.Skip(start))
+                    if (iterator.Seek(Slice.BeforeAllKeys))
                     {
                         do
                         {
@@ -298,10 +300,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public void Delete(string filename)
         {
-            var key = CreateKey(filename);
-
-            DeleteUsage(key);
-            DeleteFile(key);
+            DeleteUsage(filename);
+            DeleteFile(filename);
         }
 
         public void UpdateFileMetadata(string filename, NameValueCollection metadata)
@@ -379,6 +379,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             var newKey = CreateKey(rename);
 
             var usageByFileName = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileName);
+            var usageByFileNameAndPosition = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileNameAndPosition);
 
             using (var iterator = usageByFileName.MultiRead(Snapshot, oldKey))
             {
@@ -394,10 +395,13 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                     var usage = LoadJson(storage.Usage, usageId, writeBatch.Value, out version);
 
                     usage["name"] = rename;
+                    var position = usage["file_pos"];
 
                     usageByFileName.MultiDelete(writeBatch.Value, oldKey, usageId);
+                    usageByFileNameAndPosition.Delete(writeBatch.Value, CreateKey(fileName, position));
 
                     usageByFileName.MultiAdd(writeBatch.Value, newKey, usageId);
+                    usageByFileNameAndPosition.Add(writeBatch.Value, CreateKey(rename, position), usageId);
 
                     if (commitPeriodically && count++ > 1000)
                     {
@@ -650,8 +654,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             storage.Signatures.Delete(writeBatch.Value, id);
         }
 
-        private void DeleteFile(string key)
+        private void DeleteFile(string fileName)
         {
+            var key = CreateKey(fileName);
+
             var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
             var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
 
@@ -669,9 +675,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             filesByEtag.Delete(writeBatch.Value, CreateKey(etag));
         }
 
-        private void DeleteUsage(string key)
+        private void DeleteUsage(string fileName)
         {
+            var key = CreateKey(fileName);
+
             var usageByFileName = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileName);
+            var usageByFileNameAndPosition = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileNameAndPosition);
 
             using (var iterator = usageByFileName.MultiRead(Snapshot, key))
             {
@@ -686,10 +695,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                     ushort version;
                     var usage = LoadJson(storage.Usage, id, writeBatch.Value, out version);
                     var pageId = usage.Value<int>("page_id");
+                    var position = usage.Value<int>("file_pos");
 
                     DeletePage(pageId);
 
                     storage.Usage.Delete(writeBatch.Value, id);
+                    usageByFileNameAndPosition.Delete(writeBatch.Value, CreateKey(fileName, position));
 
                     if (count++ <= 1000)
                     {

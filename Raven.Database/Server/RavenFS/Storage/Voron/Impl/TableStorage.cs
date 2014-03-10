@@ -165,6 +165,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
         {
             env.CreateTree(tx, Tables.Usage.TableName);
             env.CreateTree(tx, Usage.GetIndexKey(Tables.Usage.Indices.ByFileName));
+            env.CreateTree(tx, Usage.GetIndexKey(Tables.Usage.Indices.ByFileNameAndPosition));
         }
 
         private void CreateConfigSchema(Transaction tx)
