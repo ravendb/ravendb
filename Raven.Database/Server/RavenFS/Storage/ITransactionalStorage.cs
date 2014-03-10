@@ -5,8 +5,6 @@ namespace Raven.Database.Server.RavenFS.Storage
 {
     public interface ITransactionalStorage : IDisposable
     {
-        string Database { get; }
-
         Guid Id { get; }
 
         bool Initialize();

@@ -68,8 +68,6 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             }
         }
 
-        public string Database { get; private set; }
-
         public Guid Id { get; private set; }
 
         public bool Initialize()

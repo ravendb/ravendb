@@ -1,17 +1,17 @@
 ﻿using System;
+using System.Collections.Specialized;
 
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Config;
 using Raven.Database.Server.Connections;
+using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Notifications;
 using Raven.Database.Server.RavenFS.Search;
 using Raven.Database.Server.RavenFS.Storage;
-using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
-using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Server.RavenFS
 {
@@ -35,7 +35,7 @@ namespace Raven.Database.Server.RavenFS
 		{
 			this.systemConfiguration = systemConfiguration;
 
-			storage = new TransactionalStorage(systemConfiguration.FileSystemDataDirectory, systemConfiguration.Settings);
+            storage = CreateTransactionalStorage(systemConfiguration.FileSystemDataDirectory, systemConfiguration.Settings);
 			search = new IndexStorage(systemConfiguration.FileSystemIndexStoragePath, systemConfiguration.Settings);
 			sigGenerator = new SigGenerator();
 			var replicationHiLo = new SynchronizationHiLo(storage);
@@ -58,7 +58,19 @@ namespace Raven.Database.Server.RavenFS
 			AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
 		}
 
-		public ITransactionalStorage Storage
+        private static ITransactionalStorage CreateTransactionalStorage(string path, NameValueCollection settings)
+        {
+            var storageType = settings.Value<string>("Raven/FileSystem/StorageType");
+            switch (storageType)
+            {
+                case "voron":
+                    return new Storage.Voron.TransactionalStorage(path, settings);
+                default:
+                    return new Storage.Esent.TransactionalStorage(path, settings);
+            }
+        }
+
+	    public ITransactionalStorage Storage
 		{
 			get { return storage; }
 		}

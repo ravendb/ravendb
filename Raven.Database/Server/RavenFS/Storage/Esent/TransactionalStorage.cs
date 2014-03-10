@@ -64,11 +64,6 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			get { return instance; }
 		}
 
-		public string Database
-		{
-			get { return database; }
-		}
-
 		public Guid Id { get; private set; }
 
 
