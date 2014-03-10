@@ -29,14 +29,6 @@ interface documentMetadataDto {
 	'@etag'?: string;
 }
 
-interface bulkDocumentDto {
-    AdditionalData?: Array<any>;
-    Document: any;
-    Key: string;
-    Metadata: documentMetadataDto;
-    Method:string;
-}
-
 interface databaseStatisticsDto {
     ApproximateTaskCount: number;
     CountOfDocuments: number;
@@ -334,7 +326,7 @@ interface storedQueryContainerDto extends documentDto {
 interface bulkDocumentDto {
     Key: string;
     Method: string;
-    AdditionalData?: any;
+    AdditionalData?: any[];
     Document?: documentDto; // Can be null when Method == "DELETE"
     Metadata?: documentMetadataDto; // Can be null when Method == "DELETE"
     Etag?: string; // Often is null on sending to server, non-null when returning from server.

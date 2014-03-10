@@ -118,15 +118,6 @@ class apiKey extends document {
         return result;
     }
 
-    toDto(): apiKeyDto{
-        return {
-            Name: this.name(),
-            Secret: this.secret(),
-            Enabled: this.enabled(),
-            Databases: this.databases().map(db=> db.toDto())
-        };
-    }
-
     getKey(): string {
         return "Raven/ApiKeys/" + this.name();
     }
