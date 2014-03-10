@@ -123,8 +123,8 @@ namespace Raven.Database.Server.Security.Windows
         public bool TryAuthorize(RavenBaseApiController controller, bool ignoreDb, out HttpResponseMessage msg)
 		{
 			Func<HttpResponseMessage> onRejectingRequest;
-			var databaseName = controller.TenantName ?? Constants.SystemDatabase;
-			var userCreated = TryCreateUser(controller, databaseName, out onRejectingRequest);
+			var tenantId = controller.TenantName ?? Constants.SystemDatabase;
+			var userCreated = TryCreateUser(controller, tenantId, out onRejectingRequest);
 			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && userCreated == false)
 			{
 				msg = onRejectingRequest();
@@ -170,24 +170,48 @@ namespace Raven.Database.Server.Security.Windows
 				case AnonymousUserAccessMode.None:
 					if (userCreated)
 					{
-						if (user.AdminDatabases.Contains(databaseName) ||
-						    user.AdminDatabases.Contains("*") || ignoreDb)
-						{
-							msg = controller.GetEmptyMessage();
-							return true;
-						}
-						if (user.ReadWriteDatabases.Contains(databaseName) ||
-						    user.ReadWriteDatabases.Contains("*"))
-						{
-							msg = controller.GetEmptyMessage();
-							return true;
-						}
-						if (isGetRequest && (user.ReadOnlyDatabases.Contains(databaseName) ||
-						                     user.ReadOnlyDatabases.Contains("*")))
-						{
-							msg = controller.GetEmptyMessage();
-							return true;
-						}
+					    if (string.IsNullOrEmpty(tenantId) || tenantId.StartsWith("fs/") == false)
+					    {
+					        if (user.AdminDatabases.Contains(tenantId) ||
+					            user.AdminDatabases.Contains("*") || ignoreDb)
+					        {
+					            msg = controller.GetEmptyMessage();
+					            return true;
+					        }
+					        if (user.ReadWriteDatabases.Contains(tenantId) ||
+					            user.ReadWriteDatabases.Contains("*"))
+					        {
+					            msg = controller.GetEmptyMessage();
+					            return true;
+					        }
+					        if (isGetRequest && (user.ReadOnlyDatabases.Contains(tenantId) ||
+					                             user.ReadOnlyDatabases.Contains("*")))
+					        {
+					            msg = controller.GetEmptyMessage();
+					            return true;
+					        }
+					    }
+					    else if(tenantId.StartsWith("fs/"))
+					    {
+					        tenantId = tenantId.Substring(3, tenantId.Length - "fs/".Length);
+
+                            if (user.ReadWriteFileSystems.Contains(tenantId) ||
+                                user.ReadWriteFileSystems.Contains("*"))
+                            {
+                                msg = controller.GetEmptyMessage();
+                                return true;
+                            }
+                            if (isGetRequest && (user.ReadOnlyFileSystems.Contains(tenantId) ||
+                                                 user.ReadOnlyFileSystems.Contains("*")))
+                            {
+                                msg = controller.GetEmptyMessage();
+                                return true;
+                            }
+					    }
+					    else
+					    {
+                            throw new ArgumentOutOfRangeException("tenantId", "We don't know how to authorize unknown tenant id: " + tenantId);
+					    }
 					}
 
 					msg = onRejectingRequest();
@@ -264,12 +288,19 @@ namespace Raven.Database.Server.Security.Windows
 				return false;
 			}
 
-			var dbUsersIaAllowedAccessTo = requiredUsers
+			var dbUsersIsAllowedAccessTo = requiredUsers
 				.Where(data => controller.User.Identity.Name.Equals(data.Name, StringComparison.InvariantCultureIgnoreCase))
 				.SelectMany(source => source.Databases)
 				.Concat(requiredGroups.Where(data => controller.User.IsInRole(data.Name)).SelectMany(x => x.Databases))
 				.ToList();
-			var user = UpdateUserPrincipal(controller, dbUsersIaAllowedAccessTo);
+
+            var fsUsersIsAllowedAccessTo = requiredUsers
+                .Where(data => controller.User.Identity.Name.Equals(data.Name, StringComparison.InvariantCultureIgnoreCase))
+                .SelectMany(source => source.FileSystems)
+                .Concat(requiredGroups.Where(data => controller.User.IsInRole(data.Name)).SelectMany(x => x.FileSystems))
+                .ToList();
+
+            var user = UpdateUserPrincipal(controller, dbUsersIsAllowedAccessTo, fsUsersIsAllowedAccessTo);
 
 			onRejectingRequest = () =>
 			{
@@ -279,6 +310,8 @@ namespace Raven.Database.Server.Security.Windows
 					user.AdminDatabases,
 					user.ReadOnlyDatabases,
 					user.ReadWriteDatabases,
+                    user.ReadOnlyFileSystems,
+                    user.ReadWriteFileSystems,
 					DatabaseName = databaseName
 				});
 
@@ -339,29 +372,38 @@ namespace Raven.Database.Server.Security.Windows
 			return user;
 		}
 
-        private PrincipalWithDatabaseAccess UpdateUserPrincipal(RavenBaseApiController controller, List<DatabaseAccess> databaseAccessLists)
-		{
-			var access = controller.User as PrincipalWithDatabaseAccess;
-			if (access != null)
-				return access;
+        private PrincipalWithDatabaseAccess UpdateUserPrincipal(RavenBaseApiController controller, List<DatabaseAccess> databaseAccessLists,
+                                                                List<FileSystemAccess> fileSystemAccessLists)
+        {
+            var access = controller.User as PrincipalWithDatabaseAccess;
+            if (access != null)
+                return access;
 
-			var user = new PrincipalWithDatabaseAccess((WindowsPrincipal)controller.User);
+            var user = new PrincipalWithDatabaseAccess((WindowsPrincipal)controller.User);
 
-			foreach (var databaseAccess in databaseAccessLists)
-			{
-				if (databaseAccess.Admin)
-					user.AdminDatabases.Add(databaseAccess.TenantId);
-				else if (databaseAccess.ReadOnly)
-					user.ReadOnlyDatabases.Add(databaseAccess.TenantId);
-				else
-					user.ReadWriteDatabases.Add(databaseAccess.TenantId);
-			}
+            foreach (var databaseAccess in databaseAccessLists)
+            {
+                if (databaseAccess.Admin)
+                    user.AdminDatabases.Add(databaseAccess.TenantId);
+                else if (databaseAccess.ReadOnly)
+                    user.ReadOnlyDatabases.Add(databaseAccess.TenantId);
+                else
+                    user.ReadWriteDatabases.Add(databaseAccess.TenantId);
+            }
 
-			controller.User = user;
-			Thread.CurrentPrincipal = user;
+            foreach (var fsAccess in fileSystemAccessLists)
+            {
+                if (fsAccess.ReadOnly)
+                    user.ReadOnlyFileSystems.Add(fsAccess.TenantId);
+                else
+                    user.ReadWriteFileSystems.Add(fsAccess.TenantId);
+            }
 
-			return user;
-		}
+            controller.User = user;
+            Thread.CurrentPrincipal = user;
+
+            return user;
+        }
 
 		public List<string> GetApprovedDatabases(IPrincipal user)
 		{
