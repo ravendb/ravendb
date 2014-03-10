@@ -1,4 +1,4 @@
-﻿namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
+﻿namespace Raven.Abstractions.RavenFS
 {
 	public static class SyncingMultipartConstants
 	{

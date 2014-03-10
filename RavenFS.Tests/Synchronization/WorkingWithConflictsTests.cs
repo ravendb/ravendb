@@ -6,13 +6,14 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.RavenFS;
 using Raven.Client.RavenFS;
+using Raven.Client.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Multipart;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
-using RavenFS.Tests.Extensions;
 using RavenFS.Tests.Synchronization.IO;
 using RavenFS.Tests.Tools;
 using Xunit;
@@ -234,7 +235,7 @@ namespace RavenFS.Tests.Synchronization
 			request.AddHeaders(conflictedMetadata);
 
 			request.Headers[SyncingMultipartConstants.SourceServerInfo] =
-				new ServerInfo {Id = Guid.Empty, Url = "http://localhost:12345"}.AsJson();
+				new ServerInfo {Id = Guid.Empty, FileSystemUrl = "http://localhost:12345"}.AsJson();
 
 			var response = request.GetResponseAsync().Result;
 
@@ -323,7 +324,7 @@ namespace RavenFS.Tests.Synchronization
 			webRequest.Method = "POST";
 
 			webRequest.Headers.Add(SyncingMultipartConstants.SourceServerInfo,
-			                       new ServerInfo {Id = Guid.Empty, Url = "http://localhost:12345"}.AsJson());
+			                       new ServerInfo {Id = Guid.Empty, FileSystemUrl = "http://localhost:12345"}.AsJson());
 			webRequest.Headers.Add("ETag", "\"" + new Guid() + "\"");
 			webRequest.Headers.Add("MetadataKey", "MetadataValue");
 

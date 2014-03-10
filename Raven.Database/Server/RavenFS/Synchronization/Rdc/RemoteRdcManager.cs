@@ -11,10 +11,10 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
 	public class RemoteRdcManager
 	{
 		private readonly ISignatureRepository localSignatureRepository;
-		private readonly RavenFileSystemClient ravenFileSystemClient;
+        private readonly RavenFileSystemClient.SynchronizationClient ravenFileSystemClient;
 		private readonly ISignatureRepository remoteCacheSignatureRepository;
 
-		public RemoteRdcManager(RavenFileSystemClient ravenFileSystemClient, ISignatureRepository localSignatureRepository,
+        public RemoteRdcManager(RavenFileSystemClient.SynchronizationClient ravenFileSystemClient, ISignatureRepository localSignatureRepository,
 								ISignatureRepository remoteCacheSignatureRepository)
 		{
 			this.localSignatureRepository = localSignatureRepository;
@@ -30,7 +30,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
 		/// <returns></returns>
 		public async Task<SignatureManifest> SynchronizeSignaturesAsync(DataInfo dataInfo, CancellationToken token)
 		{
-			var remoteSignatureManifest = await ravenFileSystemClient.Synchronization.GetRdcManifestAsync(dataInfo.Name);
+			var remoteSignatureManifest = await ravenFileSystemClient.GetRdcManifestAsync(dataInfo.Name);
 
 			if (remoteSignatureManifest.Signatures.Count > 0)
 			{
@@ -39,7 +39,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
 				var highestSigName = sigPairs.First().Remote;
 				using (var highestSigContent = remoteCacheSignatureRepository.CreateContent(highestSigName))
 				{
-					await ravenFileSystemClient.Synchronization.DownloadSignatureAsync(highestSigName, highestSigContent);
+					await ravenFileSystemClient.DownloadSignatureAsync(highestSigName, highestSigContent);
 					await SynchronizePairAsync(sigPairs, token);
 				}
 			}

@@ -1,5 +1,6 @@
 import databaseAccess = require("models/databaseAccess");
 import appUrl = require("common/appUrl");
+import documentMetadata = require("models/documentMetadata");
 
 class apiKey {
 
@@ -9,6 +10,7 @@ class apiKey {
     connectionString: KnockoutComputed<string>;
     directLink: KnockoutComputed<string>;
     enabled = ko.observable<boolean>();
+    public metadata: documentMetadata;
     databases = ko.observableArray<databaseAccess>();
 
     constructor(dto: apiKeyDto) {
@@ -16,6 +18,7 @@ class apiKey {
         this.secret(dto.Secret);
         this.enabled(dto.Enabled);
         this.databases(dto.Databases.map(d => new databaseAccess(d)));
+        this.metadata = new documentMetadata(dto['@metadata']);
 
         this.fullApiKey = ko.computed(() => {
             if (!this.name() || !this.secret()) {
@@ -37,6 +40,8 @@ class apiKey {
             if (!this.fullApiKey()) {
                 return "Requires name and secret";
             }
+
+
 
             return appUrl.forServer() + "/raven/studio.html#/home?api-key=" + this.fullApiKey();
         });
@@ -87,6 +92,20 @@ class apiKey {
         for (var i = length; i > 0; --i) result += chars[Math.round(Math.random() * (chars.length - 1))];
         return result;
     }
+
+    toDto(): apiKeyDto{
+        return {
+            Name: this.name(),
+            Secret: this.secret(),
+            Enabled: this.enabled(),
+            Databases: this.databases().map(db=> db.toDto())
+        };
+    }
+
+    getKey(): string {
+        return "Raven/ApiKeys/" + this.name();
+    }
+
 }
 
 export = apiKey;

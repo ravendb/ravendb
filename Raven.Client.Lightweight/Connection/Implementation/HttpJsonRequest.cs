@@ -435,6 +435,11 @@ namespace Raven.Client.Connection
             {
                 await WriteAsync(postedToken);
             }
+
+            if (postedStream != null)
+            {
+                postedStream.Position = 0;
+            }
 		}
 
 		private async Task<RavenJToken> ReadJsonInternalAsync()

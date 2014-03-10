@@ -3,17 +3,17 @@ using System.IO;
 using System.Text;
 using Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Database.Server.RavenFS.Synchronization
+namespace Raven.Abstractions.RavenFS
 {
 	public class ServerInfo
 	{
-		public string Url { get; set; }
+		public string FileSystemUrl { get; set; }
 
 		public Guid Id { get; set; }
 
 		public override string ToString()
 		{
-			return string.Format("{0} [{1}]", Url, Id);
+			return string.Format("{0} [{1}]", FileSystemUrl, Id);
 		}
 
 		public string AsJson()
