@@ -423,11 +423,15 @@ namespace Raven.Database.Server.Controllers
 
 		public HttpResponseMessage WriteEmbeddedFile(string ravenPath, string embeddedPath, string docPath)
 		{
+
 			var filePath = Path.Combine(ravenPath, docPath);
-			var type = GetContentType(docPath);
 			if (File.Exists(filePath))
 				return WriteFile(filePath);
-			return WriteEmbeddedFileOfType(embeddedPath, docPath, type);
+			filePath = Path.Combine("~/../../../../Raven.Studio.Html5", docPath);
+			if (File.Exists(filePath))
+				return WriteFile(filePath);
+			
+			return WriteEmbeddedFileOfType(embeddedPath, docPath);
 		}
 
 		public HttpResponseMessage WriteFile(string filePath)
@@ -439,15 +443,18 @@ namespace Raven.Database.Server.Controllers
 
 			var msg = new HttpResponseMessage
 			{
-				Content = new StreamContent(new FileStream(filePath, FileMode.Open))
+				Content = new StreamContent(new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
 			};
 
 			WriteETag(fileEtag, msg);
 
+			var type = GetContentType(filePath);
+			msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
+
 			return msg;
 		}
 
-		private HttpResponseMessage WriteEmbeddedFileOfType(string embeddedPath, string docPath, string type)
+		private HttpResponseMessage WriteEmbeddedFileOfType(string embeddedPath, string docPath)
 		{
 			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
 			var currentFileEtag = EmbeddedLastChangedDate + docPath;
@@ -476,8 +483,10 @@ namespace Raven.Database.Server.Controllers
 				Content = new ByteArrayContent(bytes),
 			};
 
-			msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
 			WriteETag(etagValue, msg);
+
+			var type = GetContentType(docPath);
+			msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
 
 			return msg;
 		}
