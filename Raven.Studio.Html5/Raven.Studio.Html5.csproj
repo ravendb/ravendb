@@ -20,7 +20,9 @@
   </PropertyGroup>
   <ItemGroup>
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
+    <TypeScriptCompile Include="App\commands\stopIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\createDatabaseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\importDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteCollectionCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocsMatchingQueryCommand.ts" />

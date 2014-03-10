@@ -307,6 +307,7 @@
     <Compile Include="Server\Controllers\AdminBundlesApiController.cs" />
     <Compile Include="Server\Controllers\Admin\AdminController.cs" />
     <Compile Include="Server\Controllers\BundlesApiController.cs" />
+    <Compile Include="Server\Controllers\StudioTasksController.cs" />
     <Compile Include="Server\Controllers\RavenBaseApiController.cs" />
     <Compile Include="Server\Contents\StaticHeadContent.cs" />
     <Compile Include="Server\Controllers\StudioController.cs" />
