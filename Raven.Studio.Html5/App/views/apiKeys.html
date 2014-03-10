@@ -7,12 +7,12 @@
             </form>
             <div class="input-group" style="margin-top: 8px; max-width: 300px;">
                 <span class="input-group-addon"><i class="fa fa-search"></i></span>
-                <input type="text" class="form-control" placeholder="Search for API keys" />
+                <input type="text" class="form-control" data-bind="value: filter" placeholder="Search for API keys" />
             </div>
         </div>
     </nav>
 
-    <div data-bind="foreach: apiKeys">
+    <div data-bind="foreach: filteredApiKeys">
         <div class="panel api-key-card" data-bind="css: { 'panel-info': enabled, 'panel-warning': !enabled() }">
             <div class="panel-heading">
                 <h3 class="panel-title">
@@ -69,11 +69,11 @@
                     </div>
                     <div class="form-group">
                         <label class="col-sm-3 control-label">Databases</label>
-                        
-                            <button type="button" style="display:inline-block; font-size: 14px;" class="close col-sm-1" title="Add new database" data-bind="click: addEmptyApiKeyDatabase">
-                                <span class="glyphicon glyphicon-plus"></span>
-                            </button>
-                        
+
+                        <button type="button" style="display:inline-block; font-size: 14px;" class="close col-sm-1" title="Add new database" data-bind="click: addEmptyApiKeyDatabase">
+                            <span class="glyphicon glyphicon-plus"></span>
+                        </button>
+
                         <div class="col-sm-9">
                             <!--<table class="table table-striped table-hover database-table">-->
                             <table class="single-line-row-table table table-condensed">
@@ -83,7 +83,7 @@
                                         <th style="width: 20%">Admin</th>
                                         <th style="width: 30%">Read Only</th>
                                         <!--<th style="width: 10%">
-                                            
+
                                             </th>-->
                                     </tr>
                                 </thead>

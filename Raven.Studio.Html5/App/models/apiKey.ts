@@ -4,7 +4,7 @@ import documentMetadata = require("models/documentMetadata");
 
 class apiKey {
 
-    name = ko.observable<string>();
+    public name = ko.observable<string>();
     secret = ko.observable<string>();
     fullApiKey: KnockoutComputed<string>;
     connectionString: KnockoutComputed<string>;

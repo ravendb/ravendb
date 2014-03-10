@@ -6,6 +6,21 @@ import viewModelBase = require("viewmodels/viewModelBase");
 class apiKeys extends viewModelBase{
 
     apiKeys = ko.observableArray<apiKey>();
+    filter = ko.observable<String>();
+    filteredApiKeys = ko.computed(()=> {
+        
+
+        if (!this.filter()) {
+            return this.apiKeys();
+        } else {
+            var filter = this.filter().toString();
+            filter = this.filter().toLowerCase();
+            return ko.utils.arrayFilter(this.apiKeys(), item=> {
+                return item.name().toLowerCase().indexOf(filter) !== -1;
+            });
+        }
+    });
+    
 
     constructor() {
         super();
