@@ -1,36 +1,19 @@
-﻿using System;
+﻿extern alias client;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Raven.Bundles.Authorization.Model;
 using Raven.Client;
-using Raven.Client.Authorization;
 using Xunit;
-using Assert = NetTopologySuite.Utilities.Assert;
+using client::Raven.Bundles.Authorization.Model;
+using client::Raven.Client.Authorization;
 
-namespace Raven.Tests.Bundles.Authorization
+namespace Raven.Bundles.Tests.Authorization.Bugs.Wayne
 {
-    public class QueryTransformer : RemoteClientTest
+    public class QueryTransformer : AuthorizationTest
     {
-        private readonly IDocumentStore store;
-
-        public QueryTransformer()
-        {
-            store = NewRemoteDocumentStore();
-        }
-
-        public override void Dispose()
-        {
-            store.Dispose();
-            base.Dispose();
-        }
-
         [Fact]
         public void CanNotGetMessagesForRecipientWhenNotInRole()
         {
             List<WallMessage<AuthorizationUser>> messages;
-            const int expectedResult = 0;
             RavenQueryStatistics stats;
 
             var requester = new AuthorizationUser
@@ -108,7 +91,7 @@ namespace Raven.Tests.Bundles.Authorization
                     .ToList();
             }
 
-            Assert.IsTrue(messages.Count == 0);
+            Assert.True(messages.Count == 0);
         }
     }
 }
