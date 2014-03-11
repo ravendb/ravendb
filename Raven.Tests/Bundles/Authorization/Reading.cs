@@ -148,7 +148,7 @@ No one may perform operation Company/Bid on companies/1
 			{
 				client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(s, UserId, "Company/Bid");
 
-				Assert.Equal(0, s.Advanced.LuceneQuery<Company>()
+                Assert.Equal(0, s.Advanced.DocumentQuery<Company>()
 									.WaitForNonStaleResults()
 				                	.ToList().Count);
 			}

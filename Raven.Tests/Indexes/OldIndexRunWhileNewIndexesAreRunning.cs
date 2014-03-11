@@ -73,7 +73,7 @@ namespace Raven.Tests.Indexes
 					session.Advanced.MaxNumberOfRequestsPerSession = 1000;
 					while (true) // we have to wait until we _start_ indexing
 					{
-						var objects = session.Advanced.LuceneQuery<object>("test").Take(1).ToList();
+                        var objects = session.Advanced.DocumentQuery<object>("test").Take(1).ToList();
 						if (objects.Count > 0)
 							break;
 						Thread.Sleep(10);

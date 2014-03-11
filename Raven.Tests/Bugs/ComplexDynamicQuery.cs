@@ -13,7 +13,7 @@ namespace Raven.Tests.Bugs
 				using(var s = store.OpenSession())
 				{
 					s.Advanced
-						.LuceneQuery<User>()
+                        .DocumentQuery<User>()
 						.Where("Widgets,Sprockets,Name:Sprock01")
 						.ToList();
 				}

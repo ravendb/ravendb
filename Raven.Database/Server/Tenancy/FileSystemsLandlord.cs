@@ -90,7 +90,7 @@ namespace Raven.Database.Server.Tenancy
 
         public bool TryGetFileSystem(string tenantId, out Task<RavenFileSystem> fileSystem)
         {
-            return ResourcesStoresCache.TryGetValue(tenantId, out fileSystem))
+            return ResourcesStoresCache.TryGetValue(tenantId, out fileSystem);
         }
 
 

@@ -48,7 +48,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenSession())
 				{
-					var result = session.Advanced.LuceneQuery<DynamicMultiMapDataSetIndex.Result, DynamicMultiMapDataSetIndex>()
+                    var result = session.Advanced.DocumentQuery<DynamicMultiMapDataSetIndex.Result, DynamicMultiMapDataSetIndex>()
 						  .WaitForNonStaleResults()
 						  .AddOrder("N1_Range", true, typeof(double))
 						  .ToList();

@@ -46,7 +46,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenSession())
 				{
-					var results = session.Advanced.LuceneQuery<SpatialEntity>("SpatialIndex")
+                    var results = session.Advanced.DocumentQuery<SpatialEntity>("SpatialIndex")
 						.Where("Name: UQAM OR Description: UQAM")
 						.WithinRadiusOf(500, 45.50955, -73.569133)
 						.ToList();

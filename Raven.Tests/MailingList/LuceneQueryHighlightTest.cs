@@ -41,7 +41,7 @@ namespace RavenDB.Tests
 				{
 					FieldHighlightings highlightings;
 
-					var goodResult = session.Advanced.LuceneQuery<Question, QuestionIndex>()
+                    var goodResult = session.Advanced.DocumentQuery<Question, QuestionIndex>()
 						.WaitForNonStaleResultsAsOfNow()
 						.Highlight(x => x.QuestionText, 100, 1, out highlightings)
 						.Search(x => x.QuestionText, goodSearchTerm)
@@ -50,7 +50,7 @@ namespace RavenDB.Tests
 
 					Assert.Equal(goodResult.QuestionText, question);
 
-					session.Advanced.LuceneQuery<Question, QuestionIndex>()
+                    session.Advanced.DocumentQuery<Question, QuestionIndex>()
 						.Highlight(x => x.QuestionText, 100, 1, out highlightings)
 						.Search(x => x.QuestionText, badSearchTerm)
 						.OrderByScore()

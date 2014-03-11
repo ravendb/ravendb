@@ -91,7 +91,7 @@ namespace Raven.Client.Document.Async
 		public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
 		{
 			var queryInspector = (IRavenQueryProvider)query.Provider;
-			var indexQuery = queryInspector.ToAsyncLuceneQuery<T>(query.Expression);
+			var indexQuery = queryInspector.ToAsyncDocumentQuery<T>(query.Expression);
             return await StreamAsync(indexQuery, queryHeaderInformation).ConfigureAwait(false);
 		}
 
@@ -221,25 +221,55 @@ namespace Raven.Client.Document.Async
 		/// <typeparam name="T">The result of the query</typeparam>
 		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
 		/// <returns></returns>
+		[Obsolete("Use AsyncDocumentQuery instead")]
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
-			var index = new TIndexCreator();
-
-			return AsyncLuceneQuery<T>(index.IndexName, index.IsMapReduce);
+		    return AsyncDocumentQuery<T, TIndexCreator>();
 		}
+
+        /// <summary>
+        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+        /// <returns></returns>
+        public IAsyncDocumentQuery<T> AsyncDocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            var index = new TIndexCreator();
+
+            return AsyncDocumentQuery<T>(index.IndexName, index.IsMapReduce);
+        }
+
+        /// <summary>
+        /// Query the specified index using Lucene syntax
+        /// </summary>
+        [Obsolete("Use AsyncDocumentQuery instead.")]
+        public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce)
+        {
+            return AsyncDocumentQuery<T>(index, isMapReduce);
+        }
 
 		/// <summary>
 		/// Query the specified index using Lucene syntax
 		/// </summary>
-		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce)
+		public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string index, bool isMapReduce)
 		{
 			return new AsyncDocumentQuery<T>(this,null,AsyncDatabaseCommands, index, new string[0], new string[0], theListeners.QueryListeners, isMapReduce);
 		}
 
+        /// <summary>
+        /// Dynamically query RavenDB using Lucene syntax
+        /// </summary>
+        [Obsolete("Use AsyncDocumentQuery instead.")]
+        public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
+        {
+            return AsyncDocumentQuery<T>();
+        }
+
 		/// <summary>
 		/// Dynamically query RavenDB using Lucene syntax
 		/// </summary>
-		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
+		public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>()
 		{
 			var indexName = "dynamic";
 			if (typeof(T).IsEntityType())
@@ -608,7 +638,7 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		public IAsyncDocumentQuery<T> AsyncQuery<T>(string indexName, bool isMapReduce = false)
 		{
-			return AsyncLuceneQuery<T>(indexName, isMapReduce);
+			return AsyncDocumentQuery<T>(indexName, isMapReduce);
 		}
 
 		protected override string GenerateKey(object entity)

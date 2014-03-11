@@ -632,7 +632,7 @@ PutDocument(
 									select new { doc.Value }"
 												});
 
-				store.OpenSession().Advanced.LuceneQuery<CustomType>("TestIndex")
+                store.OpenSession().Advanced.DocumentQuery<CustomType>("TestIndex")
 				     .WaitForNonStaleResults().ToList();
 
 				store.DatabaseCommands.UpdateByIndex("TestIndex",
@@ -703,7 +703,7 @@ PutDocument(
 									select new { doc.Owner }"
 					});
 
-			store.OpenSession().Advanced.LuceneQuery<CustomType>("TestIndex")
+            store.OpenSession().Advanced.DocumentQuery<CustomType>("TestIndex")
 					.WaitForNonStaleResults().ToList();
 
 			store.DatabaseCommands.UpdateByIndex("TestIndex",

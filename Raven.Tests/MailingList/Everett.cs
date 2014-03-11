@@ -165,7 +165,7 @@ namespace Raven.Tests.MailingList
 
 			using (var session = store.OpenSession())
 			{
-				var result = session.Advanced.LuceneQuery<ClickTransactionDailyDebitReportResult, ClickTransactions_DailyDebitReport>()
+                var result = session.Advanced.DocumentQuery<ClickTransactionDailyDebitReportResult, ClickTransactions_DailyDebitReport>()
 					.WaitForNonStaleResultsAsOfNow()
 					.ToArray()
 					.FirstOrDefault();

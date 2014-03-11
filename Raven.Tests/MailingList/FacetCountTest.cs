@@ -507,7 +507,7 @@ namespace Raven.Tests.MailingList
 
 						RavenQueryStatistics stats;
 
-						var query = session.Advanced.LuceneQuery<WodBase, Wod_Search>()
+                        var query = session.Advanced.DocumentQuery<WodBase, Wod_Search>()
 											 .WaitForNonStaleResults()
 											 .Statistics(out stats)
 											 .SelectFields<WodsProjection>();
