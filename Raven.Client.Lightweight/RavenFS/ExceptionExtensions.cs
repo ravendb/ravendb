@@ -54,7 +54,7 @@ namespace Raven.Client.RavenFS
 			{
 				var readToEnd = reader.ReadToEnd();
 				return new InvalidOperationException(
-					webException + Environment.NewLine + readToEnd);
+					webException + Environment.NewLine + readToEnd, webException);
 			}
 		}
 
