@@ -322,28 +322,33 @@ namespace Raven.Database.Server.Controllers
 				PerformQueryAgainstExistingIndex(index, indexQuery, out indexEtag, msg, token);
 
 			sp.Stop();
-
-			Log.Debug(() =>
-			{
-				var sb = new StringBuilder("\tQuery: ")
-					.Append(indexQuery.Query)
-					.AppendLine();
-				sb.Append("\t").AppendFormat("Time: {0:#,#;;0} ms", sp.ElapsedMilliseconds).AppendLine();
-
-				if (result == null)
-					return sb.ToString();
-
-				sb.Append("\tIndex: ")
-					.AppendLine(result.IndexName);
-				sb.Append("\t").AppendFormat("Results: {0:#,#;;0} returned out of {1:#,#;;0} total.", result.Results.Count, result.TotalResults).AppendLine();
-
-				return sb.ToString();
-			});
+            Log.Debug(() =>
+            {
+                var sb = new StringBuilder();
+                ReportQuery(sb, indexQuery, sp, result);
+                return sb.ToString();
+            });
+			AddRequestTraceInfo(sb => ReportQuery(sb, indexQuery, sp, result));
 
 			return result;
 		}
 
-		private QueryResultWithIncludes PerformQueryAgainstExistingIndex(string index, IndexQuery indexQuery, out Etag indexEtag, HttpResponseMessage msg, CancellationToken token)
+	    private static void ReportQuery(StringBuilder sb, IndexQuery indexQuery, Stopwatch sp, QueryResultWithIncludes result)
+	    {
+	        sb.Append("\tQuery: ")
+	            .Append(indexQuery.Query)
+	            .AppendLine();
+	        sb.Append("\t").AppendFormat("Time: {0:#,#;;0} ms", sp.ElapsedMilliseconds).AppendLine();
+
+	        if (result == null)
+	            return;
+
+	        sb.Append("\tIndex: ")
+	            .AppendLine(result.IndexName);
+	        sb.Append("\t").AppendFormat("Results: {0:#,#;;0} returned out of {1:#,#;;0} total.", result.Results.Count, result.TotalResults).AppendLine();
+	    }
+
+	    private QueryResultWithIncludes PerformQueryAgainstExistingIndex(string index, IndexQuery indexQuery, out Etag indexEtag, HttpResponseMessage msg, CancellationToken token)
 		{
 			indexEtag = Database.GetIndexEtag(index, null, indexQuery.ResultsTransformer);
 			if (MatchEtag(indexEtag))
