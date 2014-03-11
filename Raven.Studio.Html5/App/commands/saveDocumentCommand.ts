@@ -15,10 +15,16 @@ class saveDocumentCommand extends commandBase {
 
         var customHeaders = {
             'Raven-Client-Version': commandBase.ravenClientVersion,
-            'Raven-Entity-Name': this.document.__metadata.ravenEntityName,
-            'Raven-Clr-Type': this.document.__metadata.ravenClrType,
             'If-None-Match': this.document.__metadata.etag
         };
+
+        var metadata = this.document.__metadata.toDto();
+
+        for (var key in metadata) {
+            if (key !== '@etag')
+            customHeaders[key] = metadata[key];
+        }
+        
         var jQueryOptions: JQueryAjaxSettings = {
             headers: <any>customHeaders
         };
