@@ -1,6 +1,6 @@
-﻿using System.Web.Http;
+﻿using System.Linq;
+using System.Web.Http;
 using Raven.Abstractions.RavenFS;
-using Raven.Client.RavenFS;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -19,7 +19,10 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			return new FileSystemStats
 			{
                 Name = FileSystemName,
-				FileCount = count
+				FileCount = count,
+                Metrics = RavenFileSystem.CreateMetrics(),
+                ActiveSyncs = RavenFileSystem.SynchronizationTask.Queue.Active.ToList(),
+                PendingSyncs = RavenFileSystem.SynchronizationTask.Queue.Pending.ToList()
 			};
 		}
 	}

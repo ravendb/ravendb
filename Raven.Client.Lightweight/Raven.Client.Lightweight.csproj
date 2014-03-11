@@ -90,6 +90,8 @@
     <Compile Include="Connection\ConnectionOptions.cs" />
     <Compile Include="Connection\CompressedStreamContent.cs" />
     <Compile Include="Connection\HttpContentExtentions.cs" />
+    <Compile Include="Connection\IDocumentStoreReplicationInformer.cs" />
+    <Compile Include="Connection\IReplicationInformerBase.cs" />
     <Compile Include="Connection\Operation.cs" />
     <Compile Include="Connection\NameValueCollectionExtensions.cs" />
     <Compile Include="Connection\OperationMetadata.cs" />
@@ -116,6 +118,7 @@
     <Compile Include="RavenFS\Changes\ServerNotifications.cs" />
     <Compile Include="RavenFS\Changes\TaskErrorExtensions.cs" />
     <Compile Include="RavenFS\Connections\FileConvention.cs" />
+    <Compile Include="RavenFS\Connections\IFileSystemClientReplicationInformer.cs" />
     <Compile Include="RavenFS\Connections\RavenFileSystemReplicationInformer.cs" />
     <Compile Include="RavenFS\ExceptionExtensions.cs" />
     <Compile Include="RavenFS\Extensions\FileSystemTenancyExtensions.cs" />

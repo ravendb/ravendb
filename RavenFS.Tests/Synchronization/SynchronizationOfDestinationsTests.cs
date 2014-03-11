@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Abstractions.RavenFS;
 using Raven.Client.RavenFS;
 using Raven.Client.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Extensions;

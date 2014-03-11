@@ -758,7 +758,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public Query GetLuceneQuery(string index, IndexQuery query, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
+		public Query GetDocumentQuery(string index, IndexQuery query, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
 		{
             var value = TryIndexByName(index);
             if (value == null)
@@ -767,7 +767,7 @@ namespace Raven.Database.Indexing
 				throw new InvalidOperationException("Index '" + index + "' does not exists");
 			}
 			var fieldsToFetch = new FieldsToFetch(new string[0], false, null);
-			return new Index.IndexQueryOperation(value, query, _ => false, fieldsToFetch, indexQueryTriggers).GetLuceneQuery();
+			return new Index.IndexQueryOperation(value, query, _ => false, fieldsToFetch, indexQueryTriggers).GetDocumentQuery();
 		}
 
         private Index TryIndexByName(string name)

@@ -76,7 +76,7 @@ namespace Raven.Tests.Bugs
 		{
 			using (var session = store.OpenSession())
 			{
-				var orders = session.Advanced.LuceneQuery<Order>()
+                var orders = session.Advanced.DocumentQuery<Order>()
 					.Include(x => x.Customer.Id)
 					.WaitForNonStaleResults()
 					.WhereEquals("Name", "3")
@@ -172,7 +172,7 @@ namespace Raven.Tests.Bugs
 			using (var session = store.OpenSession())
 			{
 				var orders = session
-					.Advanced.LuceneQuery<Order>("Orders/ByName")
+                    .Advanced.DocumentQuery<Order>("Orders/ByName")
 					.WaitForNonStaleResults()
 					.Include("Customer.Id")
 					.Take(2)
@@ -198,7 +198,7 @@ namespace Raven.Tests.Bugs
 			using (var session = store.OpenSession())
 			{
 				var orders = session.Advanced
-					.LuceneQuery<Order>("Orders/ByName")
+                    .DocumentQuery<Order>("Orders/ByName")
 					.WaitForNonStaleResults()
 					.Include(o => o.Customer.Id)
 					.Take(2)

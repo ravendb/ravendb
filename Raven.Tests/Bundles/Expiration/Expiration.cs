@@ -101,7 +101,7 @@ namespace Raven.Tests.Bundles.Expiration
 				session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new RavenJValue(expiry);
 				session.SaveChanges();
 
-				session.Advanced.LuceneQuery<Company>("Raven/DocumentsByExpirationDate")
+                session.Advanced.DocumentQuery<Company>("Raven/DocumentsByExpirationDate")
 					.WaitForNonStaleResults()
 					.ToList();
 			}

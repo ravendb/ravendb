@@ -267,6 +267,7 @@
     <Compile Include="RavenFS\FileInfo.cs" />
     <Compile Include="RavenFS\FilesSortOptions.cs" />
     <Compile Include="RavenFS\FileStatus.cs" />
+    <Compile Include="RavenFS\FileSystemMetrics.cs" />
     <Compile Include="RavenFS\Heartbeat.cs" />
     <Compile Include="RavenFS\HistoryItem.cs" />
     <Compile Include="RavenFS\Notification.cs" />

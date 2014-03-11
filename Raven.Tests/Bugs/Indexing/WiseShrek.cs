@@ -114,7 +114,7 @@ namespace Raven.Tests.Bugs.Indexing
 				session.Advanced.GetMetadataFor(entity)["Raven-Entity-Name"] = "Softs";
 				session.SaveChanges();
 
-				List<Soft> tmps = session.Advanced.LuceneQuery<Soft>("test").
+                List<Soft> tmps = session.Advanced.DocumentQuery<Soft>("test").
 										WaitForNonStaleResults(TimeSpan.FromHours(1))
 										.WhereStartsWith("f_name", "s")
 										.OrderBy(new[] { "-f_License", "f_totaldownload" })

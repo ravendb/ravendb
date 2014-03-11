@@ -669,7 +669,7 @@ namespace Raven.Client.Shard
 
 		protected override IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName, bool isMapReduce = false)
 		{
-			return LuceneQuery<T>(indexName, isMapReduce);
+			return DocumentQuery<T>(indexName, isMapReduce);
 		}
 
 		protected override IAsyncDocumentQuery<T> IDocumentQueryGeneratorAsyncQuery<T>(string indexName, bool isMapReduce = false)
@@ -677,22 +677,40 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("The synchronous sharded document store doesn't support async operations");
 		}
 
+        [Obsolete("Use DocumentQuery instead.")]
 		public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
-		{
-			var indexName = new TIndexCreator().IndexName;
-			return LuceneQuery<T>(indexName);
-		}
+        {
+            return DocumentQuery<T, TIndexCreator>();
+        }
 
+        public IDocumentQuery<T> DocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            var indexName = new TIndexCreator().IndexName;
+            return DocumentQuery<T>(indexName);
+        }
+
+        [Obsolete("Use DocumentQuery instead")]
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false)
 		{
-			return new ShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, null,
-											   theListeners.QueryListeners, isMapReduce);
+			return DocumentQuery<T>(indexName, isMapReduce);
 		}
 
+        public IDocumentQuery<T> DocumentQuery<T>(string indexName, bool isMapReduce = false)
+        {
+            return new ShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, null,
+                                               theListeners.QueryListeners, isMapReduce);
+        }
+
+        [Obsolete("Use DocumentQuery instead.")]
 		public IDocumentQuery<T> LuceneQuery<T>()
-		{
-			return LuceneQuery<T>(GetDynamicIndexName<T>());
-		}
+        {
+            return DocumentQuery<T>();
+        }
+
+        public IDocumentQuery<T> DocumentQuery<T>()
+        {
+            return DocumentQuery<T>(GetDynamicIndexName<T>());
+        }
 
 		#endregion
 

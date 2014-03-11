@@ -26,7 +26,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var s = store.OpenSession())
 				{
-					var objects = s.Advanced.LuceneQuery<object>()
+                    var objects = s.Advanced.DocumentQuery<object>()
 						.WhereEquals("Name", "Ayende")
 						.ToArray();
 

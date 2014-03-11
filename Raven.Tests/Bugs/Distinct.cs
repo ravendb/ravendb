@@ -29,7 +29,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-					var objects = s.Advanced.LuceneQuery<dynamic>("test")
+                    var objects = s.Advanced.DocumentQuery<dynamic>("test")
 						.WaitForNonStaleResults()
 						.SelectFields<dynamic>("Name")
 						.OrderBy("Name")
@@ -134,7 +134,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-					var objects = s.Advanced.LuceneQuery<dynamic>("test")
+                    var objects = s.Advanced.DocumentQuery<dynamic>("test")
 						.WaitForNonStaleResults()
 						.OrderBy("Name")
 						.Skip(1)

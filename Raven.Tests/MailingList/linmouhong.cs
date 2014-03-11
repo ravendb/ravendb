@@ -27,10 +27,10 @@ namespace Raven.Tests.MailingList
 			{
 				using(var session = store.OpenSession())
 				{
-					var s = session.Advanced.LuceneQuery<Item>("test").WhereEquals(x => x.Product.Name, "test").ToString();
+                    var s = session.Advanced.DocumentQuery<Item>("test").WhereEquals(x => x.Product.Name, "test").ToString();
 					
 					Assert.Equal("Product_Name:test", s);
-					s = session.Advanced.LuceneQuery<Item>().WhereEquals(x => x.Product.Name, "test").ToString();
+                    s = session.Advanced.DocumentQuery<Item>().WhereEquals(x => x.Product.Name, "test").ToString();
 
 					Assert.Equal("Product.Name:test", s);
 				}

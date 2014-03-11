@@ -211,7 +211,7 @@ namespace Raven.Tests.Bugs.Queries
 
 				using (var s = store.OpenSession())
 				{
-					var users = s.Advanced.LuceneQuery<UserWithIDictionary>("SimpleIndex")
+                    var users = s.Advanced.DocumentQuery<UserWithIDictionary>("SimpleIndex")
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(5))
 						.WhereEquals("Key", "Color")
 						.AndAlso()

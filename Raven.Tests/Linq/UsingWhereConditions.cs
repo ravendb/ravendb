@@ -147,7 +147,7 @@ namespace Raven.Tests.Linq
 			do
 			{
 				//doesn't matter what the query is here, just want to see if it's stale or not
-				results = session.Advanced.LuceneQuery<CommitInfo>(indexName)                              
+                results = session.Advanced.DocumentQuery<CommitInfo>(indexName)                              
 							  .Where("") 
 							  .QueryResult;   
 

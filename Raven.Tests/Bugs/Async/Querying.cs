@@ -22,7 +22,7 @@ namespace Raven.Tests.Bugs.Async
 
 				using (var s = store.OpenAsyncSession())
 				{
-					var queryResultAsync = await s.Advanced.AsyncLuceneQuery<dynamic>()
+					var queryResultAsync = await s.Advanced.AsyncDocumentQuery<dynamic>()
 						.WhereEquals("Name", "Ayende")
 						.ToListAsync();
 

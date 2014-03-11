@@ -40,7 +40,7 @@ namespace Raven.Tests.Bundles.Encryption
 
 			using (var session = documentStore.OpenSession())
 			{
-				session.Advanced.LuceneQuery<Company>(IndexName)
+                session.Advanced.DocumentQuery<Company>(IndexName)
 					.WaitForNonStaleResults()
 					.SelectFields<Company>("Name")
 					.ToList();
@@ -79,7 +79,7 @@ namespace Raven.Tests.Bundles.Encryption
 
 			using (var session = documentStore.OpenSession())
 			{
-				session.Advanced.LuceneQuery<Company>(IndexName)
+                session.Advanced.DocumentQuery<Company>(IndexName)
 					.WaitForNonStaleResults()
 					.SelectFields<Company>("Name")
 					.ToList();
@@ -89,7 +89,7 @@ namespace Raven.Tests.Bundles.Encryption
 
 			using (var session = documentStore.OpenSession())
 			{
-				session.Advanced.LuceneQuery<Company>(IndexName)
+                session.Advanced.DocumentQuery<Company>(IndexName)
 					.WaitForNonStaleResults()
 					.SelectFields<Company>("Name")
 					.ToList();
@@ -139,7 +139,7 @@ namespace Raven.Tests.Bundles.Encryption
 
 			using (var session = documentStore.OpenSession())
 			{
-				session.Advanced.LuceneQuery<Company>(IndexName)
+                session.Advanced.DocumentQuery<Company>(IndexName)
 					.WaitForNonStaleResults()
 					.SelectFields<CompanyCount>("Name", "Count")
 					.ToList();

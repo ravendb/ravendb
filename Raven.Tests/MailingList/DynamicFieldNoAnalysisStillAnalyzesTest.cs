@@ -44,7 +44,7 @@ namespace Raven.Tests.MailingList
 
                 WaitForIndexing(_store);
 
-                var facets = _session.Advanced.LuceneQuery<Item, ItemsWithDynamicFieldsIndex>()
+                var facets = _session.Advanced.DocumentQuery<Item, ItemsWithDynamicFieldsIndex>()
                                      .ToFacets(new[]
 										   {
 											   new Facet

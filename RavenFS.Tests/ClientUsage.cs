@@ -534,7 +534,7 @@ namespace RavenFS.Tests
 		}
 
 	    [Fact]
-	    public async Task Can_get_stats_for_all_file_systems()
+	    public async Task Can_get_stats_for_all_active_file_systems()
 	    {
 	        var client = NewClient();
 	        var server = GetServer();
@@ -543,14 +543,43 @@ namespace RavenFS.Tests
 	        {
 	            await anotherClient.EnsureFileSystemExistsAsync();
 
+                await client.UploadAsync("test1", new RandomStream(10)); // will make it active
+	            await anotherClient.UploadAsync("test1", new RandomStream(10)); // will make it active
+
+                await client.UploadAsync("test2", new RandomStream(10));
+
 	            var stats = await anotherClient.Admin.GetFileSystemsStats();
 
-                Assert.NotNull(stats.FirstOrDefault(x => x.Name == client.FileSystemName));
-                Assert.NotNull(stats.FirstOrDefault(x => x.Name == anotherClient.FileSystemName));
-	        }
+	            var stats1 = stats.FirstOrDefault(x => x.Name == client.FileSystemName);
+                Assert.NotNull(stats1);
+	            var stats2 = stats.FirstOrDefault(x => x.Name == anotherClient.FileSystemName);
+	            Assert.NotNull(stats2);
 
+                Assert.Equal(2, stats1.Metrics.Requests.Count);
+                Assert.Equal(1, stats2.Metrics.Requests.Count);
+
+                Assert.Equal(0, stats1.ActiveSyncs.Count);
+                Assert.Equal(0, stats1.PendingSyncs.Count);
+
+                Assert.Equal(0, stats2.ActiveSyncs.Count);
+                Assert.Equal(0, stats2.PendingSyncs.Count);
+	        }
 	    }
 
+	    [Fact]
+	    public async Task Will_not_contain_stats_of_inactive_file_systems()
+	    {
+            var client = NewClient(); // will create a file system but it remain inactive until any request will go there
+
+            var stats = (await client.Admin.GetFileSystemsStats()).First();
+
+            Assert.NotNull(stats);
+            Assert.Equal(client.FileSystemName, stats.Name);
+
+            Assert.Null(stats.Metrics);
+            Assert.Null(stats.ActiveSyncs);
+            Assert.Null(stats.PendingSyncs);
+	    }
 
 	    private static MemoryStream PrepareTextSourceStream()
 		{

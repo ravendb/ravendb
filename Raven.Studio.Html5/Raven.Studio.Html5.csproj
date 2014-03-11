@@ -23,6 +23,7 @@
     <TypeScriptCompile Include="App\commands\createSampleDataCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\startIndexingCommand.ts" />
+    <TypeScriptCompile Include="App\commands\backupDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\stopIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\createDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\importDatabaseCommand.ts" />

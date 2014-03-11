@@ -33,7 +33,7 @@ namespace Raven.Tests.Issues
 
                     var product = session
                         .Advanced
-                        .LuceneQuery<Product>()
+                        .DocumentQuery<Product>()
                         .FirstOrDefault();
 
                     Assert.Null(product);
@@ -60,7 +60,7 @@ namespace Raven.Tests.Issues
                     var e = Assert.Throws<InvalidOperationException>(
                         () => session
                             .Advanced
-                            .LuceneQuery<Product>()
+                            .DocumentQuery<Product>()
                             .First());
 
                     Assert.Equal("Sequence contains no elements", e.Message);
@@ -87,7 +87,7 @@ namespace Raven.Tests.Issues
 
                     var product = session
                         .Advanced
-                        .LuceneQuery<Product>()
+                        .DocumentQuery<Product>()
                         .SingleOrDefault();
 
                     Assert.Null(product);
@@ -115,7 +115,7 @@ namespace Raven.Tests.Issues
                     var e = Assert.Throws<InvalidOperationException>(
                         () => session
                             .Advanced
-                            .LuceneQuery<Product>()
+                            .DocumentQuery<Product>()
                             .Single());
 
                     Assert.Equal("Sequence contains no elements", e.Message);
@@ -141,7 +141,7 @@ namespace Raven.Tests.Issues
 
                     var product = session
                         .Advanced
-                        .LuceneQuery<Product>()
+                        .DocumentQuery<Product>()
                         .Take(100)
                         .FirstOrDefault();
 
@@ -169,7 +169,7 @@ namespace Raven.Tests.Issues
                     var e = Assert.Throws<InvalidOperationException>(
                         () => session
                             .Advanced
-                            .LuceneQuery<Product>()
+                            .DocumentQuery<Product>()
                             .Take(100)
                             .First());
 
@@ -197,7 +197,7 @@ namespace Raven.Tests.Issues
 
                     var product = session
                         .Advanced
-                        .LuceneQuery<Product>()
+                        .DocumentQuery<Product>()
                         .Take(100)
                         .SingleOrDefault();
 
@@ -226,7 +226,7 @@ namespace Raven.Tests.Issues
                     var e = Assert.Throws<InvalidOperationException>(
                         () => session
                             .Advanced
-                            .LuceneQuery<Product>()
+                            .DocumentQuery<Product>()
                             .Take(100)
                             .Single());
 
@@ -254,7 +254,7 @@ namespace Raven.Tests.Issues
 
                     var product = session
                         .Advanced
-                        .LuceneQuery<Product>()
+                        .DocumentQuery<Product>()
                         .Take(1)
                         .SingleOrDefault();
 
@@ -283,7 +283,7 @@ namespace Raven.Tests.Issues
                     var e = Assert.Throws<InvalidOperationException>(
                         () => session
                             .Advanced
-                            .LuceneQuery<Product>()
+                            .DocumentQuery<Product>()
                             .Take(1)
                             .Single());
 
@@ -305,7 +305,7 @@ namespace Raven.Tests.Issues
                 {
                     var product = session
                         .Advanced
-                        .LuceneQuery<Product>()
+                        .DocumentQuery<Product>()
                         .FirstOrDefault();
 
                     Assert.Null(product);
@@ -323,7 +323,7 @@ namespace Raven.Tests.Issues
                     var e = Assert.Throws<InvalidOperationException>(
                         () => session
                             .Advanced
-                            .LuceneQuery<Product>()
+                            .DocumentQuery<Product>()
                             .First());
 
                     Assert.Equal("Sequence contains no elements", e.Message);
@@ -340,7 +340,7 @@ namespace Raven.Tests.Issues
                 {
                     var product = session
                         .Advanced
-                        .LuceneQuery<Product>()
+                        .DocumentQuery<Product>()
                         .SingleOrDefault();
 
                     Assert.Null(product);
@@ -358,7 +358,7 @@ namespace Raven.Tests.Issues
                     var e = Assert.Throws<InvalidOperationException>(
                         () => session
                             .Advanced
-                            .LuceneQuery<Product>()
+                            .DocumentQuery<Product>()
                             .Single());
 
                     Assert.Equal("Sequence contains no elements", e.Message);
@@ -377,7 +377,7 @@ namespace Raven.Tests.Issues
                 {
                     var product = session
                         .Advanced
-                        .LuceneQuery<Product>()
+                        .DocumentQuery<Product>()
                         .WaitForNonStaleResultsAsOfNow()
                         .FirstOrDefault();
 
@@ -397,7 +397,7 @@ namespace Raven.Tests.Issues
                 {
                     var product = session
                         .Advanced
-                        .LuceneQuery<Product>()
+                        .DocumentQuery<Product>()
                         .WaitForNonStaleResultsAsOfNow()
                         .First();
 
@@ -417,7 +417,7 @@ namespace Raven.Tests.Issues
                 {
                     var product = session
                         .Advanced
-                        .LuceneQuery<Product>()
+                        .DocumentQuery<Product>()
                         .WaitForNonStaleResultsAsOfNow()
                         .SingleOrDefault();
 
@@ -437,7 +437,7 @@ namespace Raven.Tests.Issues
                 {
                     var product = session
                         .Advanced
-                        .LuceneQuery<Product>()
+                        .DocumentQuery<Product>()
                         .WaitForNonStaleResultsAsOfNow()
                         .Single();
 
@@ -457,7 +457,7 @@ namespace Raven.Tests.Issues
                 {
                     var product = session
                         .Advanced
-                        .LuceneQuery<Product>()
+                        .DocumentQuery<Product>()
                         .WaitForNonStaleResultsAsOfNow()
                         .FirstOrDefault();
 
@@ -477,7 +477,7 @@ namespace Raven.Tests.Issues
                 {
                     var product = session
                         .Advanced
-                        .LuceneQuery<Product>()
+                        .DocumentQuery<Product>()
                         .WaitForNonStaleResultsAsOfNow()
                         .First();
 
@@ -498,7 +498,7 @@ namespace Raven.Tests.Issues
                     var e = Assert.Throws<InvalidOperationException>(
                         () => session
                             .Advanced
-                            .LuceneQuery<Product>()
+                            .DocumentQuery<Product>()
                             .WaitForNonStaleResultsAsOfNow()
                             .SingleOrDefault());
 
@@ -519,7 +519,7 @@ namespace Raven.Tests.Issues
                     var e = Assert.Throws<InvalidOperationException>(
                          () => session
                              .Advanced
-                             .LuceneQuery<Product>()
+                             .DocumentQuery<Product>()
                              .WaitForNonStaleResultsAsOfNow()
                              .Single());
 
