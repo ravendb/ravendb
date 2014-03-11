@@ -12,6 +12,7 @@ class apiKeys extends viewModelBase {
     allDatabases = ko.observableArray<string>();
     areAllApiKeysValid: KnockoutComputed<boolean>;
     searchText = ko.observable<string>();
+    hasFetchedApiKeys = ko.observable(false);
 
     constructor() {
         super();
@@ -30,7 +31,10 @@ class apiKeys extends viewModelBase {
     fetchApiKeys() {
         new getApiKeysCommand()
             .execute()
-            .done(results => this.apiKeys(results));
+            .done(results => {
+                this.apiKeys(results);
+                this.hasFetchedApiKeys(true);
+            });
     }
 
     fetchDatabases() {

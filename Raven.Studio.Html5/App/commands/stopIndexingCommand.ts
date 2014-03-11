@@ -13,7 +13,7 @@ class stopIndexingCommand extends commandBase {
         var url = '/admin/stopIndexing';
         var createTask = this.post(url, null, this.db);
         createTask.done(() => this.reportSuccess("Indexing was disabled"));
-        createTask.fail((response) => this.reportError("Failed to disable indexing", JSON.stringify(response)));
+        createTask.fail((response: JQueryXHR) => this.reportError("Failed to disable indexing", response.responseText, response.statusText));
 
         return createTask;
     }

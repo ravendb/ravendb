@@ -34,7 +34,7 @@ class saveDocumentCommand extends commandBase {
 
         if (this.reportSaveProgress) {
             saveTask.done(() => this.reportSuccess("Saved " + this.id));
-            saveTask.fail((response) => this.reportError("Failed to save " + this.id, JSON.stringify(response)));
+            saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save " + this.id, response.responseText, response.statusText));
         }
         return saveTask;
     }
