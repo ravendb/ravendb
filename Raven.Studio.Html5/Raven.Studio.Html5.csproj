@@ -20,6 +20,7 @@
   </PropertyGroup>
   <ItemGroup>
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
+    <TypeScriptCompile Include="App\commands\createSampleDataCommand.ts" />
     <TypeScriptCompile Include="App\commands\stopIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\createDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\importDatabaseCommand.ts" />
