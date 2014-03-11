@@ -16,8 +16,8 @@ namespace RavenFS.Tests.Shard
 
 		public SimpleSharding()
 		{
-			var client1 = NewClient(0);
-			var client2 = NewClient(1);
+			var client1 = NewClient(0, fileSystemName: "shard1");
+			var client2 = NewClient(1, fileSystemName: "shard2");
 			shardedClient = new ShardedRavenFileSystemClient(new ShardStrategy(new Dictionary<string, RavenFileSystemClient>
 				{
 					{"1", client1},
@@ -234,5 +234,23 @@ namespace RavenFS.Tests.Shard
 			Assert.Equal("false", files[3].Metadata["Active"]);
 			Assert.Equal("false", files[4].Metadata["Active"]);
 		}
+
+        [Fact]
+        public async Task CanTakeStats()
+        {
+            await shardedClient.UploadAsync("111", new NameValueCollection { { "Active", "true" } }, StreamOfLength(100));
+            await shardedClient.UploadAsync("2", new NameValueCollection { { "Active", "false" } }, StreamOfLength(2));
+            await shardedClient.UploadAsync("33", new NameValueCollection { { "Active", "false" } }, StreamOfLength(3));
+            await shardedClient.UploadAsync("4", new NameValueCollection { { "Active", "false" } }, StreamOfLength(4));
+            await shardedClient.UploadAsync("55555", new NameValueCollection { { "Active", "true" } }, StreamOfLength(5));
+
+            var stats = await shardedClient.StatsAsync();
+
+            Assert.NotNull(stats);
+            Assert.Equal("shard1;shard2", stats.Name);
+            Assert.NotNull(stats.Metrics);
+            Assert.Equal(0, stats.ActiveSyncs.Count);
+            Assert.Equal(0, stats.PendingSyncs.Count);
+        }
 	}
 }

@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.RavenFS;
 
 namespace Raven.Client.RavenFS.Shard
@@ -65,10 +65,61 @@ namespace Raven.Client.RavenFS.Shard
 				ShardStrategy.ShardAccessStrategy.ApplyAsync(ShardClients.Values.ToList(), new ShardRequestData(),
 															 (client, i) => client.StatsAsync());
 
-			return new FileSystemStats
-			{
-				FileCount = applyAsync.Sum(x => x.FileCount)
-			};
+		    var activeSyncs = new List<SynchronizationDetails>();
+
+		    foreach (var active in applyAsync.Where(x => x.ActiveSyncs != null).Select(x => x.ActiveSyncs))
+		    {
+		        if(active.Count > 0)
+                    activeSyncs.AddRange(active);
+		    }
+
+            var pendingSyncs = new List<SynchronizationDetails>();
+
+            foreach (var pending in applyAsync.Where(x => x.PendingSyncs != null).Select(x => x.PendingSyncs))
+            {
+                if (pending.Count > 0)
+                    pendingSyncs.AddRange(pending);
+            }
+
+		    var metrics = applyAsync.Where(x => x.Metrics != null).Select(x => x.Metrics).ToList();
+
+		    return new FileSystemStats
+		    {
+		        FileCount = applyAsync.Sum(x => x.FileCount),
+		        Name = string.Join(";", applyAsync.Select(x => x.Name)),
+		        ActiveSyncs = activeSyncs,
+		        PendingSyncs = pendingSyncs,
+		        Metrics = new FileSystemMetrics()
+		        {
+		            FilesWritesPerSecond = metrics.Sum(x => x.FilesWritesPerSecond),
+		            RequestsPerSecond = metrics.Sum(x => x.RequestsPerSecond),
+		            Requests = new MeterData()
+		            {
+		                Count = metrics.Sum(x => x.Requests.Count),
+		                FifteenMinuteRate = metrics.Average(x => x.Requests.FifteenMinuteRate),
+		                FiveMinuteRate = metrics.Average(x => x.Requests.FiveMinuteRate),
+		                MeanRate = metrics.Average(x => x.Requests.MeanRate),
+		                OneMinuteRate = metrics.Average(x => x.Requests.OneMinuteRate),
+		            },
+		            RequestsDuration = new HistogramData()
+		            {
+		                Counter = metrics.Sum(x => x.RequestsDuration.Counter),
+		                Max = metrics.Max(x => x.RequestsDuration.Max),
+		                Mean = metrics.Average(x => x.RequestsDuration.Mean),
+		                Min = metrics.Min(x => x.RequestsDuration.Min),
+		                Stdev = metrics.Average(x => x.RequestsDuration.Stdev),
+		                Percentiles = new Dictionary<string, double>
+		                {
+		                    {"50%", metrics.Average(x => x.RequestsDuration.Percentiles["50%"])},
+		                    {"75%", metrics.Average(x => x.RequestsDuration.Percentiles["75%"])},
+		                    {"95%", metrics.Average(x => x.RequestsDuration.Percentiles["95%"])},
+		                    {"99%", metrics.Average(x => x.RequestsDuration.Percentiles["99%"])},
+		                    {"99.9%", metrics.Average(x => x.RequestsDuration.Percentiles["99.9%"])},
+		                    {"99.99%", metrics.Average(x => x.RequestsDuration.Percentiles["99.99%"])},
+		                }
+		            }
+		        }
+		    };
 		}
 
 		public Task DeleteAsync(string filename)
