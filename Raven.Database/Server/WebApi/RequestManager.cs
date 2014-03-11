@@ -6,9 +6,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using Microsoft.VisualBasic.Logging;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -230,16 +232,8 @@ namespace Raven.Database.Server.WebApi
 
 		public void ResetNumberOfRequests()
 		{
-			//TODO: implement method
 			Interlocked.Exchange(ref reqNum, 0);
 			Interlocked.Exchange(ref physicalRequestsCount, 0);
-			//#if DEBUG
-			//			while (recentRequests.Count > 0)
-			//			{
-			//				string _;
-			//				recentRequests.TryDequeue(out _);
-			//			}
-			//#endif
 		}
 
 		public void IncrementRequestCount()
@@ -257,13 +251,29 @@ namespace Raven.Database.Server.WebApi
 			LogHttpRequestStatsParams logHttpRequestStatsParam = null;
 		    try
 		    {
+		        StringBuilder sb = null;
+		        if (controller.CustomRequestTraceInfo != null)
+		        {
+		            sb = new StringBuilder();
+                    foreach (var action in controller.CustomRequestTraceInfo)
+                    {
+                        action(sb);
+                        sb.AppendLine();
+                    }
+		            while (sb.Length > 0)
+		            {
+		                if (!char.IsWhiteSpace(sb[sb.Length - 1])) 
+                            break;
+		                sb.Length--;
+		            }
+		        }
 		        logHttpRequestStatsParam = new LogHttpRequestStatsParams(
 		            sw,
-		            GetHeaders(controller.InnerHeaders), //TODO: request.Headers,
+		            GetHeaders(controller.InnerHeaders), 
 		            controller.InnerRequest.Method.Method,
 		            response != null ? (int) response.StatusCode : 500,
 		            controller.InnerRequest.RequestUri.PathAndQuery,
-		            controller.CustomRequestTraceInfo != null ? controller.CustomRequestTraceInfo.ToString() : null
+		            sb != null ? sb.ToString() : null
 		            );
 		    }
 		    catch (Exception e)
@@ -342,6 +352,8 @@ namespace Raven.Database.Server.WebApi
 							   logHttpRequestStatsParams.ResponseStatusCode,
 							   logHttpRequestStatsParams.RequestUri,
 							   databaseName);
+		    if (string.IsNullOrWhiteSpace(logHttpRequestStatsParams.CustomInfo) == false)
+		        Logger.Debug(logHttpRequestStatsParams.CustomInfo);
 		}
 
 

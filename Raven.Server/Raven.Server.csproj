@@ -211,9 +211,6 @@
       <SubType>Designer</SubType>
     </EmbeddedResource>
     <Content Include="FodyWeavers.xml" />
-    <Content Include="NLog.config">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <None Include="NLog.xsd">
       <SubType>Designer</SubType>
     </None>
