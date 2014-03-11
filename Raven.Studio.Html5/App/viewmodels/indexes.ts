@@ -12,7 +12,7 @@ import app = require("durandal/app");
 class indexes extends viewModelBase {
 
     indexGroups = ko.observableArray<{ entityName: string; indexes: KnockoutObservableArray<index> }>();
-    dynamicQueryUrl: KnockoutComputed<string>;
+    queryUrl = ko.observable<string>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     containerSelector = "#indexesContainer";
     recentQueries = ko.observableArray<storedQueryDto>()
@@ -22,12 +22,10 @@ class indexes extends viewModelBase {
 
         this.fetchIndexes();
         this.fetchRecentQueries();
-        this.dynamicQueryUrl = appUrl.forCurrentDatabase().dynamicQuery;
+        this.queryUrl(appUrl.forQuery(this.activeDatabase(), null));
     }
 
     attached() {
-        this.useBootstrapTooltips();
-
         // Alt+Minus and Alt+Plus are already setup. Since laptops don't have a dedicated key for plus, we'll also use the equal sign key (co-opted for plus).
         this.createKeyboardShortcut("Alt+=", () => this.expandAll(), this.containerSelector);
     }

@@ -1,26 +1,19 @@
-﻿import saveBulkOfDocuments = require("commands/saveBulkOfDocuments");
-import document = require("models/document");
-import database = require("models/database");
+﻿import executeBulkDocsCommand = require("commands/executeBulkDocsCommand");
 import apiKey = require("models/apiKey");
+import database = require("models/database");
 
-class saveApiKeysCommand extends saveBulkOfDocuments{
+class saveApiKeysCommand extends executeBulkDocsCommand {
     constructor(apiKeys: apiKey[], db: database) {
-        var bulkApiKeysArray = 
-            apiKeys.map(curApiKey=> this.GetBulkDocument(curApiKey));
-
-        super("Api Keys", bulkApiKeysArray, db);
+        super(apiKeys.map(k => k.toBulkDoc("PUT")), db);
     }
 
-    GetBulkDocument(apiKey): bulkDocumentDto {
-        return {
-            AdditionalData: null,
-            Document: apiKey.toDto(),
-            Key: apiKey.getKey(),
-            Metadata: apiKey.metadata.toDto(),
-            Method: "PUT"
-        };
+    execute(): JQueryPromise<bulkDocumentDto[]> {
+        this.reportInfo("Saving API keys...");
+
+        return super.execute()
+            .fail((result: JQueryXHR) => this.reportError("Unable to save API keys.", result.responseText, result.statusText))
+            .done(() => this.reportSuccess("Saved API keys."));
     }
-    
 }
 
 export = saveApiKeysCommand;

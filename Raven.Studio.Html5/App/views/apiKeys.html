@@ -1,23 +1,23 @@
 ﻿<div>
-    <nav class="navbar navbar-default" role="navigation">
-        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-            <form class="navbar-form navbar-left" role="search">
-                <button type="button" class="btn btn-primary" data-bind="click: saveChanges"><i class="fa fa-save"></i> Save Changes</button>
-                <button type="button" class="btn btn-primary" data-bind="click: createNewApiKey"><i class="fa fa-plus"></i> New API Key</button>
-            </form>
-            <div class="input-group" style="margin-top: 8px; max-width: 300px;">
-                <span class="input-group-addon"><i class="fa fa-search"></i></span>
-                <input type="text" class="form-control" data-bind="value: filter" placeholder="Search for API keys" />
-            </div>
+    <div class="btn-toolbar" role="toolbar">
+        <div class="btn-group">
+            <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveChanges, enable: areAllApiKeysValid" title="Save changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
         </div>
-    </nav>
-
+        <div class="btn-group">
+            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: createNewApiKey" title="Create a new API Key (Alt+N)" accesskey="N"><i class="fa fa-plus"></i></button>
+        </div>
+        <div class="input-group" style="max-width: 300px;">
+            <span class="input-group-addon"><i class="fa fa-search"></i></span>
+            <input type="text" class="form-control" placeholder="Search for API keys" data-bind="value: searchText, valueUpdate: 'afterkeydown'" />
+        </div>
+    </div>
+    <br />
     <div data-bind="foreach: filteredApiKeys">
-        <div class="panel api-key-card" data-bind="css: { 'panel-info': enabled, 'panel-warning': !enabled() }">
+        <div class="panel api-key-card" data-bind="visible: visible, css: { 'panel-info': enabled() && isValid(), 'panel-warning': !enabled() && isValid(), 'panel-danger': !isValid() }">
             <div class="panel-heading">
                 <h3 class="panel-title">
-                    <span data-bind="text: name() ? name() : 'untitled'"></span>
-                    <button type="button" style="display:inline-block;" class="close" data-bind="click: $root.removeApiKey.bind($root)" title="Remove this API key">×</button>
+                    <span data-bind="text: name() ? name() : '[new api key]'"></span>
+                    <button type="button" style="display:inline-block;" class="close use-bootstrap-tooltip" data-bind="click: $root.removeApiKey.bind($root)" title="Remove this API key">×</button>
                 </h3>
 
             </div>
@@ -26,7 +26,7 @@
                     <div class="form-group">
                         <label class="col-sm-3 control-label">Name</label>
                         <div class="col-sm-7">
-                            <input type="email" class="form-control" placeholder="API key name" data-bind="value: name, valueUpdate: 'afterkeydown'" />
+                            <input type="email" class="form-control" placeholder="MyApiKey" data-bind="value: name, valueUpdate: 'afterkeydown'" />
                         </div>
                     </div>
                     <div class="form-group">
@@ -69,43 +69,50 @@
                     </div>
                     <div class="form-group">
                         <label class="col-sm-3 control-label">Databases</label>
-
-                        <button type="button" style="display:inline-block; font-size: 14px;" class="close col-sm-1" title="Add new database" data-bind="click: addEmptyApiKeyDatabase">
-                            <span class="glyphicon glyphicon-plus"></span>
-                        </button>
-
                         <div class="col-sm-9">
-                            <!--<table class="table table-striped table-hover database-table">-->
-                            <table class="single-line-row-table table table-condensed">
+                            <table class="table table-striped table-hover" data-bind="visible: databases().length > 0">
                                 <thead>
-                                    <tr class="database-header-row">
-                                        <th style="width: 50%">Name</th>
-                                        <th style="width: 20%">Admin</th>
-                                        <th style="width: 30%">Read Only</th>
-                                        <!--<th style="width: 10%">
-
-                                            </th>-->
+                                    <tr>
+                                        <td width="50%">Name</td>
+                                        <td>Admin</td>
+                                        <td>Read Only</td>
+                                        <td></td>
                                     </tr>
                                 </thead>
-                                <tbody data-bind="foreach: databases, templateOptions: { first: foos()[0]}">
-                                    <tr class="database-row">
+                                <tbody data-bind="foreach: databases">
+                                    <tr>
                                         <td>
-                                            <input type="text" class="form-control" data-bind="value: tenantId">
-                                        </td>
-                                        <td class="text-center">
-                                            <input type="checkbox" data-bind="value: admin">
-                                        </td>
-                                        <td class="text-center">
-                                            <input type="checkbox" data-bind="value: readOnly">
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                    <span data-bind="text: tenantIdOrDefault"></span> <span class="caret"></span>
+                                                </button>
+                                                <ul class="dropdown-menu" role="menu">
+                                                    <!-- ko foreach: $root.allDatabases -->
+                                                    <li><a href="#" data-bind="text: $data, click: $parent.tenantId.bind($data)"></a></li>
+                                                    <!-- /ko -->
+                                                    <li class="divider"></li>
+                                                    <li><a href="#" data-bind="click: tenantId.bind($data, '&lt;system&gt;')">&lt;system&gt;</a></li>
+                                                    <li><a href="#" data-bind="click: tenantId.bind($data, '*')">* (All)</a></li>
+                                                </ul>
+                                            </div>
                                         </td>
                                         <td>
-                                            <button type="button" style="display:inline-block; font-size: 14px;" class="close" data-bind="click: $parent.removeApiKeyDatabase.bind($parent, $data)" title="Remove this database">
-                                                <span class="glyphicon glyphicon-remove"></span>
+                                            <input type="checkbox" data-bind="checked: admin">
+                                        </td>
+                                        <td>
+                                            <input type="checkbox" data-bind="checked: readOnly">
+                                        </td>
+                                        <td>
+                                            <button type="button" class="close use-bootstrap-tooltip" style="display:inline-block; font-size: 14px;" data-bind="click: $parent.removeApiKeyDatabase.bind($parent, $data)" title="Remove this database">
+                                                <span class="glyphicon glyphicon-remove remove"></span>
                                             </button>
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
+                            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: addEmptyApiKeyDatabase" title="Add a database">
+                                <i class="fa fa-plus"></i> Add database
+                            </button>
                         </div>
                     </div>
                 </form>

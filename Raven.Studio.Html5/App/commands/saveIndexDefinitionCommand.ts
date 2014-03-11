@@ -24,7 +24,7 @@ class saveIndexDefinitionCommand extends commandBase {
                 result.reject(response);
             })
             .done(() => {
-                this.reportSuccess("Saved " + this.index.Name);
+                this.reportSuccess("Saved " + this.index.Name + ".");
                 result.resolve();
             });
 

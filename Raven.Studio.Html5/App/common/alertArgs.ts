@@ -6,7 +6,11 @@ class alertArgs {
     private parsedErrorInfo: any;
 
     constructor(public type: alertType, public title: string, public details: string = "", public httpStatusText: string = "") {
-        this.id = "alert_" + new Date().getMilliseconds().toString() + "_" + title.length.toString() + "_" + (details ? details.length.toString() : '0');
+        var hashString = (title + details)
+            .hashCode()
+            .toString();
+
+        this.id = "alert_" + hashString;
     }
 
     get errorMessage(): string {
@@ -39,6 +43,12 @@ class alertArgs {
                         stackTrace: error.substr(indexOfStackTrace + "\r\n".length),
                         url: detailsObj.Url || ""
                     };
+                } else {
+                    this.parsedErrorInfo = {
+                        message: error,
+                        stackTracke: "",
+                        url: detailsObj.Url
+                    }
                 }
             }
         }

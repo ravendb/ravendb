@@ -48,9 +48,6 @@
                             <a tabindex="-1" data-bind="attr: { href: appUrls.query }">Query</a>
                         </li>
                         <li>
-                            <a tabindex="-1" data-bind="attr: { href: appUrls.dynamicQuery }">Dynamic Query</a>
-                        </li>
-                        <li>
                             <a tabindex="-1" data-bind="attr: { href: appUrls.reporting }">Reporting</a>
                         </li>
                     </ul>
@@ -124,7 +121,7 @@
     
     <!--Alerts container-->
     <div class="studio-alerts" data-bind="with: currentAlert">
-        <div class="alert alert-dismissable fade in" data-bind="attr: { id: id }, css: { 'alert-info': type === 0, 'alert-success': type === 1, 'alert-warning': type === 2, 'alert-danger': type === 3 }">
+        <div class="alert alert-dismissable fade in" data-bind="attr: { id: id }, css: { 'alert-info': type === 0, 'alert-success': type === 1, 'alert-warning': type === 2, 'alert-danger': type === 3 }, event: { 'closed.bs.alert': $root.onAlertHidden.bind($root) }">
             <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
             <strong data-bind="text: title"></strong>
             <span data-bind="visible: errorMessage, text: errorMessage"></span>

@@ -28,6 +28,7 @@
     <TypeScriptCompile Include="App\commands\deleteDocsMatchingQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentsCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteIndexCommand.ts" />
+    <TypeScriptCompile Include="App\commands\executeBulkDocsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getAlertsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getAllDocumentsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getApiKeysCommand.ts" />
@@ -789,8 +790,8 @@
     <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery\jquery.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jwerty\jwerty.d.ts" />
-    <Content Include="Scripts\knockout-3.0.0.debug.js" />
-    <Content Include="Scripts\knockout-3.0.0.js" />
+    <Content Include="Scripts\knockout-3.1.0.debug.js" />
+    <Content Include="Scripts\knockout-3.1.0.js" />
     <Content Include="Scripts\knockout-delegatedEvents.js" />
     <Content Include="Scripts\knockout-delegatedEvents.min.js" />
     <Content Include="Scripts\knockout-postbox.js" />
@@ -1069,7 +1070,6 @@
     <Content Include="Scripts\bootstrap-contextmenu-2.1.js" />
     <Content Include="Scripts\durandal\plugins\dialog.js" />
     <Content Include="Content\app.less" />
-    <Content Include="Scripts\jquery.appear-0.3.3.js" />
     <Content Include="Scripts\text.js" />
     <TypeScriptCompile Include="Scripts\typings\durandal\durandal.d.ts" />
     <Content Include="weyland-config.js" />
