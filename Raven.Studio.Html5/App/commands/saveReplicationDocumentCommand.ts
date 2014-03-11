@@ -12,7 +12,7 @@ class saveReplicationDocumentCommand extends commandBase {
         this.reportInfo("Saving Replication settings.");
         return this.saveSetup()
             .done(() => this.reportSuccess("Saved Replication settings."))
-            .fail((response: JQueryXHR) => this.reportError("Failed to save Replication settings.", response.responseText));
+            .fail((response: JQueryXHR) => this.reportError("Failed to save Replication settings.", response.responseText, response.statusText));
     }
 
     private saveSetup(): JQueryPromise<any> {

@@ -12,7 +12,7 @@ class saveAutomaticConflictResolutionDocumentCommand extends commandBase {
         this.reportInfo("Saving automatic conflict resolution settings.");
         return this.saveConfig()
             .done(() => this.reportSuccess("Saved automatic conflict resolution settings."))
-            .fail((response: JQueryXHR) => this.reportError("Failed to save automatic conflict resolution settings.", response.responseText));
+            .fail((response: JQueryXHR) => this.reportError("Failed to save automatic conflict resolution settings.", response.responseText, response.statusText));
     }
 
     private saveConfig(): JQueryPromise<any> {
