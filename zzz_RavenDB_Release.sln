@@ -43,6 +43,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Tryouts", "Bundles\Raven.Bundles.Tryouts\Raven.Bundles.Tryouts.csproj", "{BE11F85B-4E0D-482A-9293-9E7D37FF72FE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database", "Raven.Database\Raven.Database.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D020BECD-AADD-44FC-96C7-BD58354413DF} = {D020BECD-AADD-44FC-96C7-BD58354413DF}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.Helpers", "Raven.Tests.Helpers\Raven.Tests.Helpers.csproj", "{14F2D508-8E06-407B-9451-97E99538E26B}"
 EndProject
