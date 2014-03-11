@@ -1482,10 +1482,10 @@ namespace Raven.Client.RavenFS
                 }
             }
 
-            public Task CreateFileSystemAsync(DatabaseDocument databaseDocument)
+            public Task CreateFileSystemAsync(DatabaseDocument databaseDocument, string newFileSystemName = null)
             {
                 var requestUriString = string.Format("{0}/ravenfs/admin/{1}", ravenFileSystemClient.ServerUrl,
-                                                     ravenFileSystemClient.FileSystemName);
+                                                     newFileSystemName ?? ravenFileSystemClient.FileSystemName);
 
                 var request =
                     ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),

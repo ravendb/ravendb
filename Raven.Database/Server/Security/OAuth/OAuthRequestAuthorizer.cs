@@ -102,7 +102,7 @@ namespace Raven.Database.Server.Security.OAuth
             var oAuthUser = user as OAuthPrincipal;
             if (oAuthUser == null)
                 return new List<string>();
-            return oAuthUser.GetApprovedDatabases();
+            return oAuthUser.GetApprovedFileSystems();
         }
 
 		public override void Dispose()
