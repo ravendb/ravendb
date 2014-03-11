@@ -46,14 +46,16 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 			if (values == null || values.Length == 0)
 				throw new InvalidOperationException("Cannot create an empty key.");
 
-		    if (values.Length == 1)
-		        return values[0].ToString().ToLowerInvariant();
+            if (values.Length == 1)
+                return ConvertValueToString(values[0]);
 
 		    var sb = new StringBuilder();
 			for (var i = 0; i < values.Length; i++)
 			{
 				var value = values[i];
-			    sb.Append(value.ToString().ToLowerInvariant());
+                var valueAsString = ConvertValueToString(value);
+
+                sb.Append(valueAsString);
 			    if (i < values.Length - 1)
 			        sb.Append("/");
 			}
@@ -80,6 +82,17 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
         protected BufferPoolMemoryStream CreateStream()
         {
             return new BufferPoolMemoryStream(bufferPool);
+        }
+
+        private static string ConvertValueToString(object value)
+        {
+            if (value is int)
+                return ((int)value).ToString("D9");
+
+            if (value is long)
+                return ((long)value).ToString("D9");
+
+            return value.ToString().ToLowerInvariant();
         }
 	}
 }

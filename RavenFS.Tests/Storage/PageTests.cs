@@ -97,7 +97,7 @@ namespace RavenFS.Tests.Storage
 
         [Theory]
         [PropertyData("Storages")]
-        public void AssociatePage(string requestedStorage)
+        public void AssociatePage1(string requestedStorage)
         {
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
@@ -108,7 +108,49 @@ namespace RavenFS.Tests.Storage
                                                                               { "ETag", JsonConvert.SerializeObject(Guid.NewGuid()) }
                                                                           }));
 
-                storage.Batch(accessor => accessor.AssociatePage("file1", 10, 10, 10));
+                storage.Batch(accessor => accessor.AssociatePage("file1", 10, 10, 999));
+
+                storage.Batch(accessor =>
+                {
+                    var file1 = accessor.GetFile("file1", 0, 10);
+                    Assert.Equal(1, file1.Pages.Count);
+                    Assert.Equal(10, file1.Pages[0].Id);
+                    Assert.Equal(999, file1.Pages[0].Size);
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void AssociatePage2(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => accessor.PutFile("file1", null, new NameValueCollection
+                                                                          {
+                                                                              { "ETag", JsonConvert.SerializeObject(Guid.NewGuid()) }
+                                                                          }));
+
+                storage.Batch(accessor => accessor.PutFile("file2", null, new NameValueCollection
+                                                                          {
+                                                                              { "ETag", JsonConvert.SerializeObject(Guid.NewGuid()) }
+                                                                          }));
+
+                storage.Batch(accessor => accessor.AssociatePage("file1", 1, 10, 3));
+                storage.Batch(accessor => accessor.AssociatePage("file1", 2, 8, 4));
+                storage.Batch(accessor => accessor.AssociatePage("file1", 3, 11, 6));
+                storage.Batch(accessor => accessor.AssociatePage("file1", 4, 9, 3));
+                storage.Batch(accessor => accessor.AssociatePage("file1", 5, 7, 4));
+                storage.Batch(accessor => accessor.AssociatePage("file2", 6, 11, 5));
+                storage.Batch(accessor => accessor.AssociatePage("file1", 7, 12, 6));
+                storage.Batch(accessor => accessor.AssociatePage("file2", 8, 12, 5));
+
+                storage.Batch(accessor =>
+                {
+                    var file1 = accessor.GetFile("file1", 0, 10);
+
+                    Assert.Equal(6, file1.Pages.Count);
+                });
             }
         }
     }

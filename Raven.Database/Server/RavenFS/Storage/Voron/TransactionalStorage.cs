@@ -146,7 +146,6 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             }
         }
 
-        [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         private void ExecuteBatch(Action<IStorageActionsAccessor> action)
         {
             if (current.Value != null)

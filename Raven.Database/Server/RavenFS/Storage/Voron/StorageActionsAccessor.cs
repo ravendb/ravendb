@@ -75,14 +75,13 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                 var usageCount = page.Value<int>("usage_count");
                 page["usage_count"] = usageCount + 1;
 
-                storage.Pages.Add(writeBatch.Value, key, page, version);
+                storage.Pages.Add(writeBatch.Value, id, page, version);
 
                 return page.Value<int>("id");
             }
 
             var newId = IdGenerator.GetNextIdForTable(storage.Pages);
-            var newIdAsString = newId.ToString("D9");
-            var newKey = CreateKey(newIdAsString);
+            var newKey = CreateKey(newId);
 
             var newPage = new RavenJObject
                    {
@@ -106,9 +105,9 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             var key = CreateKey(filename);
 
             if (!metadata.AllKeys.Contains("ETag"))
-            {
                 throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
-            }
+
+            var version = storage.Files.ReadVersion(Snapshot, key);
 
             var innerMetadata = new NameValueCollection(metadata);
             var etag = innerMetadata.Value<Guid>("ETag");
@@ -123,14 +122,14 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                            { "metadata", ToQueryString(innerMetadata) }
                        };
 
-            storage.Files.Add(writeBatch.Value, key, file, 0);
-            filesByEtag.Add(writeBatch.Value, CreateKey(etag), key, 0);
+            storage.Files.Add(writeBatch.Value, key, file, version);
+            filesByEtag.Add(writeBatch.Value, CreateKey(etag), key);
 
             if (tombstone)
                 return;
 
             var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
-            fileCount.Add(writeBatch.Value, key, key, 0);
+            fileCount.Add(writeBatch.Value, key, key);
         }
 
         public void AssociatePage(string filename, int pageId, int pagePositionInFile, int pageSize)
@@ -152,7 +151,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             file["uploaded_size"] = uploadedSize + pageSize;
 
             // using chunked encoding, we don't know what the size is
-			// we use negative values here for keeping track of the unknown size
+            // we use negative values here for keeping track of the unknown size
             if (totalSize == null || totalSize < 0)
             {
                 var actualSize = totalSize ?? 0;
@@ -162,8 +161,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             storage.Files.Add(writeBatch.Value, key, file, version);
 
             var id = IdGenerator.GetNextIdForTable(storage.Usage);
-            var idAsString = id.ToString("D9");
-            var usageKey = CreateKey(idAsString);
+            var usageKey = CreateKey(id);
 
             var usage = new RavenJObject
                         {
@@ -176,13 +174,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
             storage.Usage.Add(writeBatch.Value, usageKey, usage, 0);
             usageByFileName.MultiAdd(writeBatch.Value, CreateKey(filename), usageKey);
-            usageByFileNameAndPosition.MultiAdd(writeBatch.Value, CreateKey(filename, pagePositionInFile), usageKey);
+            usageByFileNameAndPosition.Add(writeBatch.Value, CreateKey(filename, pagePositionInFile), usageKey, 0);
         }
 
         public int ReadPage(int pageId, byte[] buffer)
         {
-            var pageIdAsString = pageId.ToString("D9");
-            var key = CreateKey(pageIdAsString);
+            var key = CreateKey(pageId);
             var pageData = storage.Pages.GetIndex(Tables.Pages.Indices.Data);
 
             var result = pageData.Read(Snapshot, key, writeBatch.Value);
@@ -228,19 +225,23 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             {
                 var usageByFileNameAndPosition = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileNameAndPosition);
 
-                using (var iterator = usageByFileNameAndPosition.MultiRead(Snapshot, CreateKey(filename, start)))
+                using (var iterator = usageByFileNameAndPosition.Iterate(Snapshot, writeBatch.Value))
                 {
-                    if (iterator.Seek(Slice.BeforeAllKeys))
+                    if (iterator.Seek(CreateKey(filename, start)))
                     {
                         do
                         {
-                            var id = iterator.CurrentKey.ToString();
-                            var pageInformation = LoadJson(storage.Usage, id, writeBatch.Value, out version);
+                            var id = iterator.CreateReaderForCurrent().ToStringValue();
+                            var usage = LoadJson(storage.Usage, id, writeBatch.Value, out version);
+
+                            var name = usage.Value<string>("name");
+                            if (name.Equals(filename, StringComparison.InvariantCultureIgnoreCase) == false)
+                                break;
 
                             fileInformation.Pages.Add(new PageInformation
                                                       {
-                                                          Id = pageInformation.Value<int>("page_id"),
-                                                          Size = pageInformation.Value<int>("page_size")
+                                                          Id = usage.Value<int>("page_id"),
+                                                          Size = usage.Value<int>("page_size")
                                                       });
                         }
                         while (iterator.MoveNext() && fileInformation.Pages.Count < pagesToLoad);
@@ -395,7 +396,9 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                     var usage = LoadJson(storage.Usage, usageId, writeBatch.Value, out version);
 
                     usage["name"] = rename;
-                    var position = usage["file_pos"];
+                    var position = usage.Value<int>("file_pos");
+
+                    storage.Usage.Add(writeBatch.Value, usageId, usage, version);
 
                     usageByFileName.MultiDelete(writeBatch.Value, oldKey, usageId);
                     usageByFileNameAndPosition.Delete(writeBatch.Value, CreateKey(fileName, position));
@@ -486,10 +489,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public long GetSignatureSize(int id, int level)
         {
-            var idAsString = id.ToString("D9");
+            var key = CreateKey(id);
             var signatureData = storage.Signatures.GetIndex(Tables.Signatures.Indices.Data);
 
-            var result = signatureData.Read(Snapshot, idAsString, writeBatch.Value);
+            var result = signatureData.Read(Snapshot, key, writeBatch.Value);
             if (result == null)
                 throw new InvalidOperationException("Could not find signature with id " + id + " and level " + level);
 
@@ -498,10 +501,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public void GetSignatureStream(int id, int level, Action<Stream> action)
         {
-            var idAsString = id.ToString("D9");
+            var key = CreateKey(id);
             var signatureData = storage.Signatures.GetIndex(Tables.Signatures.Indices.Data);
 
-            var result = signatureData.Read(Snapshot, idAsString, writeBatch.Value);
+            var result = signatureData.Read(Snapshot, key, writeBatch.Value);
             if (result == null)
                 throw new InvalidOperationException("Could not find signature with id " + id + " and level " + level);
 
@@ -517,7 +520,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             var signaturesByName = storage.Signatures.GetIndex(Tables.Signatures.Indices.ByName);
 
             var id = IdGenerator.GetNextIdForTable(storage.Signatures);
-            var idAsString = id.ToString("D9");
+            var key = CreateKey(id);
 
             var signature = new RavenJObject
                             {
@@ -532,9 +535,9 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             action(stream);
             stream.Position = 0;
 
-            storage.Signatures.Add(writeBatch.Value, idAsString, signature, 0);
-            signatureData.Add(writeBatch.Value, idAsString, stream, 0);
-            signaturesByName.MultiAdd(writeBatch.Value, CreateKey(name), idAsString);
+            storage.Signatures.Add(writeBatch.Value, key, signature, 0);
+            signatureData.Add(writeBatch.Value, key, stream, 0);
+            signaturesByName.MultiAdd(writeBatch.Value, CreateKey(name), key);
         }
 
         public IEnumerable<string> GetConfigNames(int start, int pageSize)
@@ -587,6 +590,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                         .ToJObject();
 
                     var metadata = config.Value<string>("metadata");
+                    var name = config.Value<string>("name");
+
+                    if (name == null || name.StartsWith(key, StringComparison.InvariantCultureIgnoreCase) == false)
+                        break;
 
                     result.Add(HttpUtility.ParseQueryString(metadata));
 
@@ -700,6 +707,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                     DeletePage(pageId);
 
                     storage.Usage.Delete(writeBatch.Value, id);
+                    usageByFileName.MultiDelete(writeBatch.Value, key, id);
                     usageByFileNameAndPosition.Delete(writeBatch.Value, CreateKey(fileName, position));
 
                     if (count++ <= 1000)
@@ -722,7 +730,23 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             var page = LoadJson(storage.Pages, key, writeBatch.Value, out version);
             var usageCount = page.Value<int>("usage_count");
             if (usageCount <= 1)
+            {
+                var pageData = storage.Pages.GetIndex(Tables.Pages.Indices.Data);
+                var pagesByKey = storage.Pages.GetIndex(Tables.Pages.Indices.ByKey);
+
+                var strongHash = page.Value<byte[]>("page_strong_hash");
+                var weakHash = page.Value<int>("page_weak_hash");
+
+                var hashKey = new HashKey
+                              {
+                                  Strong = strongHash, 
+                                  Weak = weakHash
+                              };
+
                 storage.Pages.Delete(writeBatch.Value, key, version);
+                pageData.Delete(writeBatch.Value, key);
+                pagesByKey.Delete(writeBatch.Value, ConvertToKey(hashKey));
+            }
             else
             {
                 page["usage_count"] = usageCount - 1;
