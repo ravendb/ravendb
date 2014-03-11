@@ -160,11 +160,11 @@ namespace Raven.Client.Linq
 		public override string ToString()
 		{
 			RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
-			var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
+			var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
 			string fields = "";
 			if (ravenQueryProvider.FieldsToFetch.Count > 0)
 				fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";
-			return fields + luceneQuery;
+			return fields + documentQuery;
 		}
 
 		public IndexQuery GetIndexQuery(bool isAsync = true)
@@ -172,11 +172,11 @@ namespace Raven.Client.Linq
 			RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
 			if (isAsync == false)
 			{
-				var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
-				return luceneQuery.GetIndexQuery(false);
+				var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
+				return documentQuery.GetIndexQuery(false);
 			}
-			var asyncLuceneQuery = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
-			return asyncLuceneQuery.GetIndexQuery(true);
+			var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
+			return asyncDocumentQuery.GetIndexQuery(true);
 		}
 
 		public virtual FacetResults GetFacets(string facetSetupDoc, int start, int? pageSize)
@@ -215,8 +215,8 @@ namespace Raven.Client.Linq
 			{
 				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce, 
                     provider.ResultTransformer, provider.QueryInputs);
-				var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
-				return ((IRavenQueryInspector)luceneQuery).IndexQueried;
+				var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
+				return ((IRavenQueryInspector)documentQuery).IndexQueried;
 			}
 		}
 
@@ -229,8 +229,8 @@ namespace Raven.Client.Linq
 			{
 				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce,
                     provider.ResultTransformer, provider.QueryInputs);
-				var luceneQuery = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
-				return ((IRavenQueryInspector)luceneQuery).IndexQueried;
+				var documentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
+				return ((IRavenQueryInspector)documentQuery).IndexQueried;
 			}
 		}
 
@@ -276,12 +276,12 @@ namespace Raven.Client.Linq
             var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce, provider.ResultTransformer, provider.QueryInputs);
 			if (isAsync)
 			{
-				var luceneQueryAsync = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
-				return ((IRavenQueryInspector)luceneQueryAsync).GetLastEqualityTerm(true);
+				var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
+				return ((IRavenQueryInspector)asyncDocumentQuery).GetLastEqualityTerm(true);
 			}
 
-			var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
-			return ((IRavenQueryInspector) luceneQuery).GetLastEqualityTerm();
+			var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
+			return ((IRavenQueryInspector) documentQuery).GetLastEqualityTerm();
 		}
 
 		/// <summary>

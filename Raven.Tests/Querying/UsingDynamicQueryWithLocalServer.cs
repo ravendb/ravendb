@@ -160,7 +160,7 @@ namespace Raven.Tests.Querying
 
 				using (var s = store.OpenSession())
 				{
-					var results = s.Advanced.LuceneQuery<Blog>()
+                    var results = s.Advanced.DocumentQuery<Blog>()
 						.Where("Title.Length:3 AND Category:Rhinos")
 						.WaitForNonStaleResultsAsOfNow().ToArray();
 
@@ -210,7 +210,7 @@ namespace Raven.Tests.Querying
 					FieldHighlightings titleHighlightings;
 					FieldHighlightings categoryHighlightings;
 
-					var results = s.Advanced.LuceneQuery<Blog>()
+                    var results = s.Advanced.DocumentQuery<Blog>()
 						.Highlight("Title", 18, 2, out titleHighlightings)
 						.Highlight("Category", 18, 2, out categoryHighlightings)
 						.SetHighlighterTags("*","*")

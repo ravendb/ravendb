@@ -70,7 +70,7 @@ namespace Raven.Tests.MailingList
 
 				using(var session = store.OpenSession())
 				{
-					Assert.NotEmpty(session.Advanced.LuceneQuery<Course>()
+                    Assert.NotEmpty(session.Advanced.DocumentQuery<Course>()
 						.WaitForNonStaleResults()
 						.WhereEquals("Query", "dotNet")
 						.ToList());

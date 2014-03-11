@@ -30,7 +30,7 @@ namespace Raven.Tests.Bugs
 					var typeName = ReflectionUtil.GetFullNameWithoutVersionInformation(typeof(Foo));
 					var all = session
 						.Advanced
-						.LuceneQuery<Foo>("Raven/DocumentsByEntityName")
+                        .DocumentQuery<Foo>("Raven/DocumentsByEntityName")
 						.Where("Tag:[[" + typeName + "]]")
 						.WaitForNonStaleResultsAsOfNow(TimeSpan.MaxValue)
 						.ToList();

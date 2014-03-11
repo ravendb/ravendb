@@ -48,7 +48,7 @@ namespace Raven.Tests.Faceted
 
                 using (var session = store.OpenSession())
                 {
-                    var facetResults = session.Advanced.LuceneQuery<Foo, Foos>()
+                    var facetResults = session.Advanced.DocumentQuery<Foo, Foos>()
                         .UsingDefaultOperator(QueryOperator.And)
                         .WhereEquals("Facet1", "term1")
                         .WhereEquals("Facet1", "term2")
@@ -57,7 +57,7 @@ namespace Raven.Tests.Faceted
                     Assert.Equal(facetResults.Results["Facet1"].Values.Count, 0);
 
                     RavenQueryStatistics stats;
-                    var query = session.Advanced.LuceneQuery<Foo, Foos>()
+                    var query = session.Advanced.DocumentQuery<Foo, Foos>()
                         .Statistics(out stats)
                         .UsingDefaultOperator(QueryOperator.And)
                         .WhereEquals("Facet1", "term1")

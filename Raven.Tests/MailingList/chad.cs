@@ -70,12 +70,12 @@ namespace Raven.Tests.MailingList
 
 				using(var session = store.OpenSession())
 				{
-					var Without_WithinRadiusOf = session.Advanced.LuceneQuery<Place>("Place/ByLocationAndCategoryId")
+                    var Without_WithinRadiusOf = session.Advanced.DocumentQuery<Place>("Place/ByLocationAndCategoryId")
 						.WhereEquals("Categories_Id", "4bf58dd8d48988d17f941735")
 						.Take(1024)
 						.ToList<Place>();
 
-					var With_WithinRadiusOf = session.Advanced.LuceneQuery<Place>("Place/ByLocationAndCategoryId")
+                    var With_WithinRadiusOf = session.Advanced.DocumentQuery<Place>("Place/ByLocationAndCategoryId")
 							.WhereEquals("Categories_Id","4bf58dd8d48988d17f941735")
 							.WithinRadiusOf(15, 35.74498, 139.348083)
 							.Take(1024).ToList<Place>();

@@ -35,8 +35,8 @@ namespace Raven.Tests.MailingList
 				_session.Store(catalog);
 				_session.SaveChanges();
 
-				var catalogs = _session.Advanced.LuceneQuery<Catalog>().WhereEquals("Type", "Waterfront").Select(c => c.PropertyId);
-				var properties = _session.Advanced.LuceneQuery<Property>();
+                var catalogs = _session.Advanced.DocumentQuery<Catalog>().WhereEquals("Type", "Waterfront").Select(c => c.PropertyId);
+                var properties = _session.Advanced.DocumentQuery<Property>();
 				properties.OpenSubclause();
 				var first = true;
 				foreach (var guid in catalogs)

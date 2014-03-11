@@ -22,7 +22,7 @@ namespace Raven.Tests.Patching
 
 	            using (var session = store.OpenSession())
 	            {
-	                session.Advanced.LuceneQuery<object>("Raven/DocumentsByEntityName").WaitForNonStaleResults().ToList();
+                    session.Advanced.DocumentQuery<object>("Raven/DocumentsByEntityName").WaitForNonStaleResults().ToList();
 
 	                store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName", new IndexQuery {Query = "Tag:Regions"},
 	                    new ScriptedPatchRequest

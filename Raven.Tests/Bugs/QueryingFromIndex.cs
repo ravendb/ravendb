@@ -40,7 +40,7 @@ namespace Raven.Tests.Bugs
 					session.SaveChanges();
 
 					var company =
-						session.Advanced.LuceneQuery<Company>("CompanyByName")
+                        session.Advanced.DocumentQuery<Company>("CompanyByName")
 							.Where("Name:Google")
 							.WaitForNonStaleResults()
 							.FirstOrDefault();

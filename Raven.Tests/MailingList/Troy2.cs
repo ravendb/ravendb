@@ -39,7 +39,7 @@ namespace Raven.Tests.MailingList
 					session.SaveChanges();
 
 					RavenQueryStatistics stats;
-					var query = session.Advanced.LuceneQuery<Tester, TesterSearch>()
+                    var query = session.Advanced.DocumentQuery<Tester, TesterSearch>()
 									   .WaitForNonStaleResults()
 									   .Statistics(out stats)
 									   .UsingDefaultField("Query")
@@ -54,7 +54,7 @@ namespace Raven.Tests.MailingList
 									   .ToList();
 					Assert.Equal(1, stats.TotalResults);
 
-					var selectFieldsQuery = session.Advanced.LuceneQuery<Tester, TesterSearch>()
+                    var selectFieldsQuery = session.Advanced.DocumentQuery<Tester, TesterSearch>()
 								   .WaitForNonStaleResults()
 								   .Statistics(out stats)
 								   .UsingDefaultField("Query")

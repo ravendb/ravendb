@@ -45,7 +45,7 @@ select new {Name = g.Key, CreatedTimeTicks = createdTimeTicks}
 
 				using (var session = store.OpenSession())
 				{
-					session.Advanced.LuceneQuery<object>("test").WaitForNonStaleResults().ToArray<object>();
+                    session.Advanced.DocumentQuery<object>("test").WaitForNonStaleResults().ToArray<object>();
 				}
 
 				Assert.Empty(store.DocumentDatabase.Statistics.Errors);

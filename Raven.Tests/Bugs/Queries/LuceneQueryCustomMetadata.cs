@@ -66,7 +66,7 @@ namespace Raven.Tests.Bugs.Queries
 
 				using (var session = documentStore.OpenSession())
 				{
-					dynamic loaded = session.Advanced.LuceneQuery<dynamic>()
+                    dynamic loaded = session.Advanced.DocumentQuery<dynamic>()
 						.WhereEquals("@metadata.Raven-Entity-Name",
 									 documentStore.Conventions.GetTypeTagName(typeof(ExpandoObject)))
 						.FirstOrDefault();
@@ -98,7 +98,7 @@ namespace Raven.Tests.Bugs.Queries
 				using (var session = documentStore.OpenSession())
 				{
 					dynamic loaded =
-						session.Advanced.LuceneQuery<dynamic>().WhereEquals("@metadata." + PropertyName, true)
+                        session.Advanced.DocumentQuery<dynamic>().WhereEquals("@metadata." + PropertyName, true)
 							.FirstOrDefault();
 
 					Assert.NotNull(loaded);

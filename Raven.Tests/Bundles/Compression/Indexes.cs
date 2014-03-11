@@ -40,7 +40,7 @@ namespace Raven.Tests.Bundles.Compression
 
 			using (var session = documentStore.OpenSession())
 			{
-				session.Advanced.LuceneQuery<Company>(IndexName)
+                session.Advanced.DocumentQuery<Company>(IndexName)
 					.WaitForNonStaleResults()
 					.SelectFields<Company>("Name")
 					.ToList();
@@ -88,7 +88,7 @@ namespace Raven.Tests.Bundles.Compression
 
 			using (var session = documentStore.OpenSession())
 			{
-				session.Advanced.LuceneQuery<Company>(IndexName)
+                session.Advanced.DocumentQuery<Company>(IndexName)
 					.WaitForNonStaleResults()
 					.ToList();
 			}

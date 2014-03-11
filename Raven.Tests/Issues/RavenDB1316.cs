@@ -65,8 +65,8 @@ namespace Raven.Tests.Issues
 
 				using (var session = store.OpenSession())
 				{
-					Assert.NotEmpty(session.Advanced.LuceneQuery<Item, Attachment_Indexing>().WhereEquals("Search", "ayende"));
-					Assert.NotEmpty(session.Advanced.LuceneQuery<Item, Attachment_Indexing>().WhereEquals("Search", "test"));
+                    Assert.NotEmpty(session.Advanced.DocumentQuery<Item, Attachment_Indexing>().WhereEquals("Search", "ayende"));
+                    Assert.NotEmpty(session.Advanced.DocumentQuery<Item, Attachment_Indexing>().WhereEquals("Search", "test"));
 				}
 
 			}

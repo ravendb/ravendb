@@ -66,7 +66,7 @@ namespace Raven.Tests.MailingList
                 using (var session = store.OpenSession())
                 {
                     // - NOT Work
-                    var item = session.Advanced.LuceneQuery<TestItem, TestItemIndex>()
+                    var item = session.Advanced.DocumentQuery<TestItem, TestItemIndex>()
                         .OrderByDescending(x => x.Weight)
                         .First();
 
@@ -76,7 +76,7 @@ namespace Raven.Tests.MailingList
                 using (var session = store.OpenSession())
                 {
                     // - Work: This can retrieve ordered result
-                    var query = session.Advanced.LuceneQuery<TestItem, TestItemIndex>()
+                    var query = session.Advanced.DocumentQuery<TestItem, TestItemIndex>()
                         .AddOrder("Weight", true)
                         .ToList();
 

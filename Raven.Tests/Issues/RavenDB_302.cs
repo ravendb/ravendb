@@ -29,7 +29,7 @@ namespace Raven.Tests.Issues
 				}
 				using(var session = s.OpenSession())
 				{
-					var x = session.Advanced.LuceneQuery<Item>()
+                    var x = session.Advanced.DocumentQuery<Item>()
 						.WaitForNonStaleResults()
 						.UsingDefaultField("Version")
 						.Where("First OR Second")
@@ -75,7 +75,7 @@ namespace Raven.Tests.Issues
 				}
 				using (var session = s.OpenSession())
 				{
-					var x = session.Advanced.LuceneQuery<Node, Index>()
+                    var x = session.Advanced.DocumentQuery<Node, Index>()
 						.WaitForNonStaleResults()
 						.UsingDefaultField("Query")
 						.Where("jonas OR smith")
@@ -113,7 +113,7 @@ namespace Raven.Tests.Issues
 				}
 				using (var session = s.OpenSession())
 				{
-					var x = session.Advanced.LuceneQuery<Node, Index>()
+                    var x = session.Advanced.DocumentQuery<Node, Index>()
 						.WaitForNonStaleResults()
 						.UsingDefaultField("Query")
 						.Where("jonas");
@@ -150,7 +150,7 @@ namespace Raven.Tests.Issues
 				}
 				using (var session = s.OpenSession())
 				{
-					var x = session.Advanced.LuceneQuery<Item>("items_by_ver")
+                    var x = session.Advanced.DocumentQuery<Item>("items_by_ver")
 						.WaitForNonStaleResults()
 						.UsingDefaultField("Version")
 						.Where("First OR Second")

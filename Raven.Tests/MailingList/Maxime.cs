@@ -45,7 +45,7 @@ namespace Raven.Tests.MailingList
 				// places/2: perfect match + boost
 				var terms = "UQAM";
 				RavenQueryStatistics stats;
-				var places = session.Advanced.LuceneQuery<Place, PlacesByTermsAndLocation>()
+                var places = session.Advanced.DocumentQuery<Place, PlacesByTermsAndLocation>()
 					.WaitForNonStaleResults()
 					.Statistics(out stats)
 					.WithinRadiusOf(500, 45.54545, -73.63908)
@@ -56,7 +56,7 @@ namespace Raven.Tests.MailingList
 				Assert.Equal("places/2", places[0].Id);
 				// places/1: perfect match + boost
 				terms = "Université Québec Montréal";
-				places = session.Advanced.LuceneQuery<Place, PlacesByTermsAndLocation>()
+                places = session.Advanced.DocumentQuery<Place, PlacesByTermsAndLocation>()
 					.WaitForNonStaleResults()
 					.Statistics(out stats)
 					.WithinRadiusOf(500, 45.54545, -73.63908)
@@ -101,7 +101,7 @@ namespace Raven.Tests.MailingList
 				// places/1: perfect match + boost
 				const string terms = "Université Québec Montréal";
 				RavenQueryStatistics stats;
-				var places = session.Advanced.LuceneQuery<Place, PlacesByTermsAndLocation>()
+                var places = session.Advanced.DocumentQuery<Place, PlacesByTermsAndLocation>()
 					.WaitForNonStaleResults()
 					.Statistics(out stats)
 					.RelatesToShape(Constants.DefaultSpatialFieldName, "Point(45.54545 -73.63908)", SpatialRelation.Nearby)

@@ -95,7 +95,7 @@ namespace Raven.Tests.Issues
             using (var session = primaryStore.OpenSession(primaryDbName))
             {
                 var deleteExistingDocsQuery = session.Advanced
-                        .LuceneQuery<Doc, DocsIndex>()
+                        .DocumentQuery<Doc, DocsIndex>()
                         .WhereIn("Id", new string[] { docId });
 
                 var deleteExistingDocsIndexQuery = new IndexQuery { Query = deleteExistingDocsQuery.ToString() };

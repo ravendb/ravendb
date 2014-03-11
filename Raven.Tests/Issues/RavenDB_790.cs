@@ -271,7 +271,7 @@ namespace Raven.Tests.Issues
 
 				using (var session = store.OpenSession())
 				{
-					var items = session.Advanced.LuceneQuery<Item>().WaitForNonStaleResults().NoTracking().ToList();
+                    var items = session.Advanced.DocumentQuery<Item>().WaitForNonStaleResults().NoTracking().ToList();
 
 					Assert.Equal(2, items.Count);
 					Assert.Equal(0, ((InMemoryDocumentSessionOperations)session).NumberOfEntitiesInUnitOfWork);
@@ -297,7 +297,7 @@ namespace Raven.Tests.Issues
 
 				using (var session = store.OpenSession())
 				{
-					var items = session.Advanced.LuceneQuery<Item>().WaitForNonStaleResults().NoCaching().ToList();
+                    var items = session.Advanced.DocumentQuery<Item>().WaitForNonStaleResults().NoCaching().ToList();
 
 					Assert.Equal(2, items.Count);
 				}

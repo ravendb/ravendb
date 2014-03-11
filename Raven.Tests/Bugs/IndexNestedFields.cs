@@ -37,7 +37,7 @@ namespace Raven.Tests.Bugs
 		{
 			UsingPrepopulatedDatabase(delegate(IDocumentSession session3)
 			{
-				var results1 = session3.Advanced.LuceneQuery<Outer>("matryoshka").Where("middle_inner_ID:" + ExpectedId).ToArray();
+                var results1 = session3.Advanced.DocumentQuery<Outer>("matryoshka").Where("middle_inner_ID:" + ExpectedId).ToArray();
 
 				Assert.Equal(ExpectedId, results1.Single().middle.inner.ID);
 			});

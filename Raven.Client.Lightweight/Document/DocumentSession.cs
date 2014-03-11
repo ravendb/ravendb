@@ -572,7 +572,7 @@ namespace Raven.Client.Document
         public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation)
         {
             var queryProvider = (IRavenQueryProvider)query.Provider;
-            var docQuery = queryProvider.ToLuceneQuery<T>(query.Expression);
+            var docQuery = queryProvider.ToDocumentQuery<T>(query.Expression);
             return Stream(docQuery, out queryHeaderInformation);
         }
 
@@ -687,10 +687,22 @@ namespace Raven.Client.Document
         /// <typeparam name="T">The result of the query</typeparam>
         /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
         /// <returns></returns>
+        [Obsolete("Use DocumentQuery instead.")]
         public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
         {
+            return DocumentQuery<T, TIndexCreator>();
+        }
+
+        /// <summary>
+        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+        /// <returns></returns>
+        public IDocumentQuery<T> DocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+        {
             var index = new TIndexCreator();
-            return LuceneQuery<T>(index.IndexName, index.IsMapReduce);
+            return DocumentQuery<T>(index.IndexName, index.IsMapReduce);
         }
 
         /// <summary>
@@ -699,7 +711,19 @@ namespace Raven.Client.Document
         /// <typeparam name="T"></typeparam>
         /// <param name="indexName">Name of the index.</param>
         /// <returns></returns>
+        [Obsolete("Use DocumentQuery instead.")]
         public IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false)
+        {
+            return DocumentQuery<T>(indexName, isMapReduce);
+        }
+
+        /// <summary>
+        /// Query the specified index using Lucene syntax
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="indexName">Name of the index.</param>
+        /// <returns></returns>
+        public IDocumentQuery<T> DocumentQuery<T>(string indexName, bool isMapReduce = false)
         {
             return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, theListeners.QueryListeners, isMapReduce);
         }
@@ -750,14 +774,23 @@ namespace Raven.Client.Document
         /// <summary>
         /// Dynamically query RavenDB using Lucene syntax
         /// </summary>
+        [Obsolete("Use DocumentQuery instead.")]
         public IDocumentQuery<T> LuceneQuery<T>()
+        {
+            return DocumentQuery<T>();
+        }
+
+        /// <summary>
+        /// Dynamically query RavenDB using Lucene syntax
+        /// </summary>
+        public IDocumentQuery<T> DocumentQuery<T>()
         {
             string indexName = "dynamic";
             if (typeof(T).IsEntityType())
             {
                 indexName += "/" + Conventions.GetTypeTagName(typeof(T));
             }
-            return Advanced.LuceneQuery<T>(indexName);
+            return Advanced.DocumentQuery<T>(indexName);
         }
 
         /// <summary>
@@ -765,7 +798,7 @@ namespace Raven.Client.Document
         /// </summary>
         IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
         {
-            return Advanced.LuceneQuery<T>(indexName, isMapReduce);
+            return Advanced.DocumentQuery<T>(indexName, isMapReduce);
         }
 
         /// <summary>

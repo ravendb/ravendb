@@ -43,7 +43,7 @@ namespace Raven.Tests.Document
 
 				using (var session = store.OpenSession())
 				{
-					int resultCount = session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().QueryResult.TotalResults;
+                    int resultCount = session.Advanced.DocumentQuery<Company>().WaitForNonStaleResults().QueryResult.TotalResults;
 					Assert.Equal(2, resultCount);
 				}
 			}
