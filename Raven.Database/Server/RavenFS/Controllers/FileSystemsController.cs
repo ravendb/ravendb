@@ -39,7 +39,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             {
                 var fsStats = new FileSystemStats()
                 {
-                    Name = fileSystemName
+                    Name = fileSystemName,
                 };
 
                 Task<RavenFileSystem> fsTask;
@@ -57,6 +57,9 @@ namespace Raven.Database.Server.RavenFS.Controllers
                     });
 
                     fsStats.FileCount = fileCount;
+                    fsStats.Metrics = ravenFileSystem.CreateMetrics();
+                    fsStats.ActiveSyncs = ravenFileSystem.SynchronizationTask.Queue.Active.ToList();
+                    fsStats.PendingSyncs = ravenFileSystem.SynchronizationTask.Queue.Pending.ToList();
                 }
 
                 stats.Add(fsStats);

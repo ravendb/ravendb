@@ -1,6 +1,7 @@
 ﻿using System;
+using Raven.Client.RavenFS;
 
-namespace Raven.Client.RavenFS
+namespace Raven.Abstractions.RavenFS
 {
 	public class SynchronizationDetails
 	{

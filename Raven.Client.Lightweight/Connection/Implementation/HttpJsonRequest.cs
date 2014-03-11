@@ -658,7 +658,7 @@ namespace Raven.Client.Connection
 
 			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
-				Content = new CompressedStreamContent(streamToWrite, factory.DisableRequestCompression).SetContentType(headers)
+				Content = new CompressedStreamContent(streamToWrite, factory.DisableRequestCompression, disposeStream: false).SetContentType(headers)
 			});
 		}
 
