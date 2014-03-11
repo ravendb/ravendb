@@ -21,7 +21,7 @@ class saveDocumentCommand extends commandBase {
         var metadata = this.document.__metadata.toDto();
 
         for (var key in metadata) {
-            if (key !== '@etag')
+            if (key.indexOf('@')!==0)
             customHeaders[key] = metadata[key];
         }
         
