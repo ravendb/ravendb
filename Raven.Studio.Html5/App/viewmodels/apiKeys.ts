@@ -12,20 +12,6 @@ class apiKeys extends viewModelBase {
     allDatabases = ko.observableArray<string>();
     areAllApiKeysValid: KnockoutComputed<boolean>;
     searchText = ko.observable<string>();
- filteredApiKeys = ko.computed(()=> {
-
-        
-
-            return this.apiKeys();
-        } else {
-            var filter = this.filter().toString();
-            filter = this.filter().toLowerCase();
-            return ko.utils.arrayFilter(this.apiKeys(), item=> {
-                return item.name().toLowerCase().indexOf(filter) !== -1;
-            });
-        }
-    });
-    
 
     constructor() {
         super();
