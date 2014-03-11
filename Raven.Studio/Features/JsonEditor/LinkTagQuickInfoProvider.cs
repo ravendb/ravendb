@@ -43,8 +43,8 @@ namespace Raven.Studio.Features.JsonEditor
 
             if (linkTag.NavigationType == LinkTagNavigationType.ExternalUrl)
             {
-                var htmlSnippet = string.Format("{0}<br/>Shift + Click to follow link", linkTag.Url);
-                session.Content = new HtmlContentProvider(htmlSnippet).GetContent();
+				var htmlSnippet = string.Format("{0}{1}Shift + Click to follow link", linkTag.Url, Environment.NewLine);
+                session.Content = new PlainTextContentProvider(htmlSnippet).GetContent();
             }
             else
             {

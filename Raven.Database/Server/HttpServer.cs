@@ -21,6 +21,7 @@ using System.Threading;
 using System.Linq;
 using System.Threading.Tasks;
 using Jint;
+using Lucene.Net.QueryParsers;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Commercial;
@@ -47,7 +48,7 @@ namespace Raven.Database.Server
 	public class HttpServer : IDisposable
 	{
 		private readonly DateTime startUpTime = SystemTime.UtcNow;
-		private DateTime lastWriteRequest;
+		private readonly ConcurrentDictionary<string, DateTime> lastWriteRequest = new ConcurrentDictionary<string, DateTime>();
 		
 		// Important! this value is syncronized with the max sessions number in esent
 		// since we cannot have more reqquests in the system than we have sessions for them
@@ -457,13 +458,11 @@ namespace Raven.Database.Server
 
 		private void IdleOperations(object state)
 		{
-			if ((SystemTime.UtcNow - lastWriteRequest).TotalMinutes < 1)
-				return;// not idle, we just had a write request coming in
-
-			try
-			{
-				SystemDatabase.RunIdleOperations();
-			}
+            try
+            {
+                if (DatabaseHadRecentWritesRequests(SystemDatabase) == false)
+                    SystemDatabase.RunIdleOperations();
+            }
 			catch (Exception e)
 			{
 				logger.ErrorException("Error during idle operation run for system database", e);
@@ -475,7 +474,9 @@ namespace Raven.Database.Server
 				{
 					if (documentDatabase.Value.Status != TaskStatus.RanToCompletion)
 						continue;
-					documentDatabase.Value.Result.RunIdleOperations();
+				    var database = documentDatabase.Value.Result;
+				    if (DatabaseHadRecentWritesRequests(database) == false)
+                        database.RunIdleOperations();
 				}
 				catch (Exception e)
 				{
@@ -501,7 +502,16 @@ namespace Raven.Database.Server
 			}
 		}
 
-		protected void CleanupDatabase(string db, bool skipIfActive)
+	    private bool DatabaseHadRecentWritesRequests(DocumentDatabase db)
+	    {
+	         DateTime lastWrite;
+	        if (lastWriteRequest.TryGetValue(db.Name ?? Constants.SystemDatabase, out lastWrite) == false)
+	            return false;
+	        return (SystemTime.UtcNow - lastWrite).TotalMinutes < 1;
+
+	    }
+
+	    protected void CleanupDatabase(string db, bool skipIfActive)
 		{
 			using (var locker = ResourcesStoresCache.TryWithAllLocks())
 			{
@@ -674,10 +684,6 @@ namespace Raven.Database.Server
 				if (disposed)
 					return;
 
-				if (IsWriteRequest(ctx))
-				{
-					lastWriteRequest = SystemTime.UtcNow;
-				}
 				var sw = Stopwatch.StartNew();
 				bool ravenUiRequest = false;
 				try
@@ -857,7 +863,12 @@ namespace Raven.Database.Server
 			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = "";
 			CurrentOperationContext.User.Value = null;
 			LogContext.DatabaseName.Value = CurrentDatabase.Name;
-			var disposable = LogManager.OpenMappedContext("database", CurrentDatabase.Name ?? Constants.SystemDatabase);
+		    var dbName = CurrentDatabase.Name ?? Constants.SystemDatabase;
+            if (IsWriteRequest(ctx))
+            {
+                lastWriteRequest[dbName] = SystemTime.UtcNow;
+            }
+		    var disposable = LogManager.OpenMappedContext("database", dbName);
 			CurrentOperationContext.RequestDisposables.Value.Add(disposable);
 			if (ctx.RequiresAuthentication &&
 				requestAuthorizer.Authorize(ctx) == false)

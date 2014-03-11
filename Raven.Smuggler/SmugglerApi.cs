@@ -184,16 +184,52 @@ namespace Raven.Smuggler
 			{
 				Url = ConnectionStringOptions.Url,
 				ApiKey = ConnectionStringOptions.ApiKey,
-				Credentials = ConnectionStringOptions.Credentials,
-				DefaultDatabase = ConnectionStringOptions.DefaultDatabase
+				Credentials = ConnectionStringOptions.Credentials
 			};
 
 			s.Initialize();
 
-			return s;
+            ValidateThatServerIsUpAndDatabaseExists(s);
+
+		    s.DefaultDatabase = ConnectionStringOptions.DefaultDatabase;
+
+		    return s;
 		}
 
-		protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int limit)
+	    private void ValidateThatServerIsUpAndDatabaseExists(DocumentStore s)
+	    {
+	        var shouldDispose = false;
+
+	        try
+	        {
+	            var commands = !string.IsNullOrEmpty(ConnectionStringOptions.DefaultDatabase)
+	                               ? s.DatabaseCommands.ForDatabase(ConnectionStringOptions.DefaultDatabase)
+	                               : s.DatabaseCommands;
+
+	            commands.GetStatistics(); // check if database exist
+	        }
+	        catch (WebException e)
+	        {
+	            shouldDispose = true;
+
+	            var httpWebResponse = e.Response as HttpWebResponse;
+	            if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+	                throw new SmugglerException(
+	                    string.Format(
+	                        "Smuggler does not support database creation (database '{0}' on server '{1}' must exist before running Smuggler).",
+	                        ConnectionStringOptions.DefaultDatabase,
+	                        s.Url), e);
+
+	            throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", e.Message), e);
+	        }
+	        finally
+	        {
+	            if (shouldDispose)
+                    s.Dispose();
+	        }
+	    }
+
+	    protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int limit)
 		{
 			if (IsDocsStreamingSupported)
 			{

@@ -5,55 +5,70 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Threading.Tasks;
+using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.Replication;
 using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_1041 : ReplicationBase
+    public class RavenDB_1041 : ReplicationBase
 	{
+	    public RavenDB_1041()
+	    {
+			IOExtensions.DeleteDirectory("Database #0");
+			IOExtensions.DeleteDirectory("Database #1");
+			IOExtensions.DeleteDirectory("Database #2");
+	    }
 		class ReplicatedItem
 		{
 			public string Id { get; set; }
 		}
 
+        private const string DatabaseName = "RavenDB_1041";
+
 		[Fact]
-		public void CanWaitForReplication()
+		public async Task CanWaitForReplication()
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
-			var store3 = CreateStore();
+			var store1 = CreateStore(requestedStorage: "esent");
+			var store2 = CreateStore(requestedStorage: "esent");
+			var store3 = CreateStore(requestedStorage: "esent");
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
+		    store1.DatabaseCommands.EnsureDatabaseExists(DatabaseName);
+            store2.DatabaseCommands.EnsureDatabaseExists(DatabaseName);
+            store3.DatabaseCommands.EnsureDatabaseExists(DatabaseName);
 
-			using (var session = store1.OpenSession())
+			SetupReplication(store1.DatabaseCommands.ForDatabase(DatabaseName), store2.Url.ForDatabase(DatabaseName), store3.Url.ForDatabase(DatabaseName));
+
+			using (var session = store1.OpenSession(DatabaseName))
 			{
 				session.Store(new ReplicatedItem { Id = "Replicated/1" });
 
 				session.SaveChanges();
 			}
 
-			((DocumentStore)store1).Replication.WaitAsync().Wait();
+		    await ((DocumentStore)store1).Replication.WaitAsync(database: DatabaseName);
 
-			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
-			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
+			Assert.NotNull(store2.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
+			Assert.NotNull(store3.DatabaseCommands.ForDatabase(DatabaseName).Get("Replicated/1"));
 		}
 
 		[Fact]
-		public void CanWaitForReplicationOfParticularEtag()
+		public async Task CanWaitForReplicationOfParticularEtag()
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
-			var store3 = CreateStore();
+			var store1 = CreateStore(requestedStorage:"esent");
+			var store2 = CreateStore(requestedStorage: "esent");
+			var store3 = CreateStore(requestedStorage: "esent");
 
 			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
 
 			var putResult = store1.DatabaseCommands.Put("Replicated/1", null, new RavenJObject(), new RavenJObject());
 			var putResult2 = store1.DatabaseCommands.Put("Replicated/2", null, new RavenJObject(), new RavenJObject());
 
-			((DocumentStore)store1).Replication.WaitAsync(putResult.ETag).Wait();
+		    await ((DocumentStore)store1).Replication.WaitAsync(putResult.ETag);
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
@@ -80,7 +95,7 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-			await ((DocumentStore)store1).Replication.WaitAsync();
+		    await ((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(10));
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
@@ -102,42 +117,29 @@ namespace Raven.Tests.Issues
 			}
 
 			((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(20)).Wait();
-
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 		}
 
 		[Fact]
 		public async Task ShouldThrowTimeoutException()
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
+			var store1 = CreateStore(requestedStorage: "esent");
+			var store2 = CreateStore(requestedStorage: "esent");
 
 			SetupReplication(store1.DatabaseCommands, store2.Url, "http://localhost:1234"); // the last one is not running
 
 			using (var session = store1.OpenSession())
 			{
 				session.Store(new ReplicatedItem { Id = "Replicated/1" });
-
 				session.SaveChanges();
 			}
 
-			TimeoutException timeoutException = null;
-
-			try
-			{
-				await ((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2);
-			}
-			catch (TimeoutException ex)
-			{
-				timeoutException = ex;
-			}
-
-			Assert.NotNull(timeoutException);
-			Assert.Contains("was replicated to 1 of 2 servers", timeoutException.Message);
+			var exception = await AssertAsync.Throws<TimeoutException>(async () => await ((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2));
+			Assert.Contains("was replicated to 1 of 2 servers", exception.Message);
 		}
 
 		[Fact]
-		public void ShouldThrowIfCannotReachEnoughDestinationServers()
+		public async Task ShouldThrowIfCannotReachEnoughDestinationServers()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
@@ -151,9 +153,8 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-			var exception = Assert.Throws<AggregateException>(() => ((DocumentStore)store1).Replication.WaitAsync(replicas: 3).Wait());
-
-			Assert.Equal(2, ((AggregateException)exception.InnerExceptions[0]).InnerExceptions.Count);
+			var exception = await AssertAsync.Throws<TimeoutException>(async () => await ((DocumentStore)store1).Replication.WaitAsync(replicas: 3));
+			Assert.Contains("Confirmed that the specified etag", exception.Message);
 		}
 
 		[Fact]
@@ -162,7 +163,7 @@ namespace Raven.Tests.Issues
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, "http://localhost:1234"); // the last one is not running
+            SetupReplication(store1.DatabaseCommands, store2.Url, "http://localhost:1234"); // the last one is not running
 
 			using (var session = store1.OpenSession())
 			{

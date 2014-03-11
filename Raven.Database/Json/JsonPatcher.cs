@@ -36,7 +36,7 @@ namespace Raven.Database.Json
 		{
 			if (patchCmd.Name == null)
 				throw new InvalidOperationException("Patch property must have a name property");
-			foreach (var result in document.SelectTokenWithRavenSyntaxReturningFlatStructure( patchCmd.Name ))
+			foreach (var result in document.SelectTokenWithRavenSyntaxReturningFlatStructure( patchCmd.Name, true))
 			{
 			    var token = result.Item1;
 			    var parent = result.Item2;

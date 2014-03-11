@@ -76,6 +76,8 @@ namespace Raven.Database.Config
 				new BooleanSetting(settings["Raven/CreateAutoIndexesForAdHocQueriesIfNeeded"], true);
 			ResetIndexOnUncleanShutdown =
 				new BooleanSetting(settings["Raven/ResetIndexOnUncleanShutdown"], false);
+			DisableInMemoryIndexing =
+				new BooleanSetting(settings["Raven/DisableInMemoryIndexing"], false);
 			DataDir =
 				new StringSetting(settings["Raven/DataDir"], @"~\Data");
 			IndexStoragePath =
@@ -195,6 +197,8 @@ namespace Raven.Database.Config
 		public BooleanSetting CreateAutoIndexesForAdHocQueriesIfNeeded { get; private set; }
 
 		public BooleanSetting ResetIndexOnUncleanShutdown { get; private set; }
+
+		public BooleanSetting DisableInMemoryIndexing { get; private set; }
 
 		public StringSetting DataDir { get; private set; }
 

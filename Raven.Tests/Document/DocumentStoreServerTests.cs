@@ -513,7 +513,8 @@ namespace Raven.Tests.Document
 		public void When_document_does_not_exist_Then_metadata_should_be_null_Async()
 		{
 			documentStore.AsyncDatabaseCommands.HeadAsync("rhino1")
-						 .ContinueWith(task => Assert.Null(task.Result));
+						 .ContinueWith(task => Assert.Null(task.Result))
+                         .Wait();
 		}
 
 		[Fact]
