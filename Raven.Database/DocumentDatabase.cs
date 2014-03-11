@@ -1333,10 +1333,8 @@ namespace Raven.Database
                 actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);
             });
 
-            const string documentsByEntityNameIndex = "Raven/DocumentsByEntityName";
-
-            if (name.Equals(documentsByEntityNameIndex, StringComparison.InvariantCultureIgnoreCase) == false &&
-                IndexStorage.HasIndex(documentsByEntityNameIndex))
+            if (name.Equals(Constants.DocumentsByEntityNameIndex, StringComparison.InvariantCultureIgnoreCase) == false &&
+				IndexStorage.HasIndex(Constants.DocumentsByEntityNameIndex))
             {
                 // optimization of handling new index creation when the number of document in a database is significantly greater than
                 // number of documents that this index applies to - let us use built-in RavenDocumentsByEntityName to get just appropriate documents

@@ -12,7 +12,7 @@
         </div>
     </div>
     <br />
-    <div data-bind="foreach: apiKeys">
+    <div data-bind="foreach: filteredApiKeys">
         <div class="panel api-key-card" data-bind="visible: visible, css: { 'panel-info': enabled() && isValid(), 'panel-warning': !enabled() && isValid(), 'panel-danger': !isValid() }">
             <div class="panel-heading">
                 <h3 class="panel-title">

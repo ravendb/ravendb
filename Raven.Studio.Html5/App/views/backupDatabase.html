@@ -1,3 +1,20 @@
-﻿<div>
-    TODO: backup database
+﻿<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">Backup Database</h3>
+    </div>
+    <div class="panel-body">
+        Backup your database
+    </div>
+
+    <button data-bind="click: startBackup">
+        <span class="glyphicon glyphicon-stop"></span>
+        <span>startBackup</span>
+    </button>
+
+    <div>
+        <label>
+            <span>Location</span>
+            <input data-bind="value: backupLocation">
+        </label>
+    </div>
 </div>
