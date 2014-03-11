@@ -1152,6 +1152,7 @@
     </None>
     <None Include="packages.config" />
     <None Include="RavenDB.snk" />
+    <EmbeddedResource Include="Server\Assets\EmbeddedData\Northwind.dump" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
