@@ -5,7 +5,7 @@ import document = require("models/document");
 
 class apiKey extends document {
 
-    name = ko.observable<string>();
+    public name = ko.observable<string>();
     secret = ko.observable<string>();
     fullApiKey: KnockoutComputed<string>;
     connectionString: KnockoutComputed<string>;

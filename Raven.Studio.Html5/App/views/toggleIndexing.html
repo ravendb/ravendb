@@ -5,13 +5,18 @@
     <div class="panel-body">
         Enable and disable indexing
     </div>
-    <button data-bind="click: stopIndexing">
+
+    <button data-bind="click: disableIndexing, visible: indexingStatus() != 'Paused'">
         <span class="glyphicon glyphicon-stop"></span>
-        <span>Stop Indexing</span>
+        <span>Disable Indexing</span>
     </button>
     
-    <button>
+    <button data-bind="click: enableIndexing, visible: indexingStatus() != 'Indexing'">
         <span class="glyphicon glyphicon-play"></span>
         <span>Enable Indexing</span>
     </button>
+    
+    <div>
+        Current Status: <span data-bind="text: indexingStatus"></span>
+    </div>
 </div>
