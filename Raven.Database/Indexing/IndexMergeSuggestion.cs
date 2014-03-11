@@ -6,16 +6,17 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Database.Linq.Ast;
 using Raven.Abstractions.Indexing;
+using System.IO;
 
 namespace Raven.Database.Indexing
 {
     class IndexMergeSuggestions
     {
     }
-    
+
     public class MergeProposal
     {
-        
+
         public List<IndexData> ProposedForMerge = new List<IndexData>();
         public IndexData MergedData { get; set; }
 
@@ -25,45 +26,44 @@ namespace Raven.Database.Indexing
     }
     public class IndexData
     {
-        public string FromExpression { get; set; }
+        public Expression FromExpression { get; set; }
         public string FromIdentifier { get; set; }
         public int NumberOfFromClauses { get; set; }
+        public int NumberOfSelectClauses { get; set; }
+
 
         public Dictionary<string, Expression> SelectExpressions = new Dictionary<string, Expression>();
         public bool IsMapReduced { get; set; }
         public bool ExistsMorethan1Maps { get; set; }
         public string OriginalMap { get; set; }
         public bool HasWhere { get; set; }
+        public bool HasLet { get; set; }
+        public bool HasGroup { get; set; }
+        public bool HasOrder { get; set; }
+
         public int IndexId { get; set; }
         public string IndexName { get; set; }
         public bool IsAlreadyMerged { get; set; }
         public bool IsSuitedForMerge { get; set; }
         public string Comment { get; set; }
-        public bool IsIndexesDefined { get; set; }
-        public bool IsStoreDefined { get; set; }
-        public bool IsAnalyzerDefined { get; set; }
-        public bool IsSortOptionDefined { get; set; }
-        public bool IsSuggestionDefined { get; set; }
-        public bool IsTermVectorDefined { get; set; }
-        public bool IsSpatialIndexDefined { get; set; }
 
         public IDictionary<string, FieldStorage> Stores { get; set; }
 
-          public IDictionary<string, FieldIndexing> Indexes { get; set; }
+        public IDictionary<string, FieldIndexing> Indexes { get; set; }
 
-          public IDictionary<string, SortOptions> SortOptions { get; set; }
+        public IDictionary<string, SortOptions> SortOptions { get; set; }
 
-          public IDictionary<string, string> Analyzers { get; set; }
+        public IDictionary<string, string> Analyzers { get; set; }
 
-          public IList<string> Fields { get; set; }
+        public IList<string> Fields { get; set; }
 
-          public IDictionary<string, SuggestionOptions> Suggestions { get; set; }
+        public IDictionary<string, SuggestionOptions> Suggestions { get; set; }
 
-          public IDictionary<string, FieldTermVector> TermVectors { get; set; }
+        public IDictionary<string, FieldTermVector> TermVectors { get; set; }
 
-          public IDictionary<string, SpatialOptions> SpatialIndexes { get; set; }
+        public IDictionary<string, SpatialOptions> SpatialIndexes { get; set; }
 
-     
+
 
         public IndexData()
         {
@@ -83,79 +83,81 @@ namespace Raven.Database.Indexing
         {
 
 
-                Fields = index.Fields;  
-                if (index.Indexes.Count > 0)
-                {
-                    Indexes = index.Indexes;
-                    IsIndexesDefined = true;
-                }
-                else
-                {
-                    IsIndexesDefined = false;
-                }
+            Fields = index.Fields;
+            if (index.Indexes.Count > 0)
+            {
+                Indexes = index.Indexes;
+            }
+           
+            if (index.Stores.Count > 0)
+            {
+                Stores = index.Stores;
+             }
 
-                if (index.Stores.Count > 0)
-                {
-                    Stores = index.Stores;
-                    IsStoreDefined = true;
-                }
-                else
-                {
-                    IsStoreDefined = false;
-                }
-                
-                if (index.Analyzers.Count > 0)
-                 {
-                    Analyzers = index.Analyzers;
-                    IsAnalyzerDefined = true;
-                 }
-                else
-                {
-                    IsAnalyzerDefined = false;
-                }
+            if (index.Analyzers.Count > 0)
+            {
+                Analyzers = index.Analyzers;
+              }
 
-                if (index.SortOptions.Count > 0)
-                {
-                    SortOptions = index.SortOptions;
-                    IsSortOptionDefined = true;
-                }
-                else
-                {
-                    IsSortOptionDefined = false;
-                }
+            if (index.SortOptions.Count > 0)
+            {
+                SortOptions = index.SortOptions;
+             }
 
-                if (index.Suggestions.Count > 0)
-                {
-                    Suggestions =index.Suggestions;
-                    IsSuggestionDefined = true;
-                }
-                else
-                {
-                    IsSuggestionDefined = false;
-                }
-                if (index.TermVectors.Count > 0)
-                {
-                   TermVectors =index.TermVectors;
-                   IsTermVectorDefined = true;
-                }
-                else
-                {
-                  IsTermVectorDefined = false;
+            if (index.Suggestions.Count > 0)
+            {
+                Suggestions = index.Suggestions;
+             }
+            if (index.TermVectors.Count > 0)
+            {
+                TermVectors = index.TermVectors;
 
-                }
+            }
 
-                if (index.SpatialIndexes.Count > 0)
-                {
-                    SpatialIndexes =index.SpatialIndexes;
-                    IsSpatialIndexDefined = true;
-                }
-                else
-                {
-                    IsSpatialIndexDefined = false;
-                }
- 
+            if (index.SpatialIndexes.Count > 0)
+            {
+                SpatialIndexes = index.SpatialIndexes;
+             }
+
         }
-    
+       // public string BuildExpression(ref string fromIdentifier, Expression fromExpression, Dictionary<string, Expression> selectExpr)
+       public  string BuildExpression()
+        {
+            var anonymousTypeCreateExpression = new AnonymousTypeCreateExpression();
+            var crrv = new ChangeRootReferenceVisitor(FromIdentifier);
+            foreach (var curExpr in SelectExpressions)
+            {
+                curExpr.Value.AcceptVisitor(crrv);
+                anonymousTypeCreateExpression.Initializers.Add(
+                      new AssignmentExpression(new IdentifierExpression(curExpr.Key), curExpr.Value.Clone()));
+            }
+            if(FromExpression==null)
+                FromExpression = new IdentifierExpression();
+
+            var queryExpr = new QueryExpression
+            {
+                Clauses =
+                {
+                    new QueryFromClause
+                    {
+                        Identifier = "doc",
+                        Expression = FromExpression.Clone()
+                    },
+                    new QuerySelectClause
+                    {
+                        Expression = anonymousTypeCreateExpression.Clone()
+                    }
+                }
+            };
+           FromIdentifier = "doc";
+
+            var printer = new StringWriter();
+            var printerVisitor = new CSharpOutputVisitor(printer, FormattingOptionsFactory.CreateSharpDevelop());
+            queryExpr.AcceptVisitor(printerVisitor);
+            return printer.GetStringBuilder().ToString();
+
+
+        }
 
     }
     public class IndexVisitor : DepthFirstAstVisitor
@@ -164,32 +166,33 @@ namespace Raven.Database.Indexing
         {
             NumberOfFromClauses = 0;
             SelectExpressions = new Dictionary<string, Expression>();
-            FromExpression = string.Empty;
+           
         }
-        public bool HasWhere { get; set; }
+       
+
         public Dictionary<string, Expression> SelectExpressions { get; set; }
         public string FromIdentifier { get; set; }
-        public string FromExpression { get; set; }
+
+        public Expression FromExpression { get; set; }
         public int NumberOfFromClauses { get; set; }
-     
+        public int NumberOfSelectClauses { get; set; }
+        public bool HasWhere { get; set; }
+        public bool HasLet { get; set; }
+        public bool HasGroup { get; set; }
+        public bool HasOrder { get; set; }
+
+
         public override void VisitQueryFromClause(QueryFromClause queryFromClause)
         {
             base.VisitQueryFromClause(queryFromClause);
-            FromExpression = queryFromClause.Expression.ToString();
+            FromExpression = queryFromClause.Expression.Clone();
             FromIdentifier = queryFromClause.Identifier;
             NumberOfFromClauses++;
 
         }
 
 
-        public override void VisitQuerySelectClause(QuerySelectClause querySelectClause)
-        {
-            var visitor = new CaptureSelectNewFieldNamesVisitor();
-            querySelectClause.AcceptVisitor(visitor, null);
-
-            // TODO: get the values  if visited both merge required
-            SelectExpressions = visitor.SelectExpressions;
-        }
+       
 
         public override void VisitInvocationExpression(InvocationExpression invocationExpression)
         {
@@ -202,7 +205,7 @@ namespace Raven.Database.Indexing
 
             if (memberReferenceExpression == null)
             {
-            
+
                 base.VisitInvocationExpression(invocationExpression);
                 return;
             }
@@ -210,19 +213,71 @@ namespace Raven.Database.Indexing
             if (memberReferenceExpression.MemberName == "Where")
                 HasWhere = true;
 
-			
+
 
 
             // TODO: get the values : if visited both merge required
             SelectExpressions = visitor.SelectExpressions;
         }
+        public override void VisitQuerySelectClause(QuerySelectClause querySelectClause)
+        {
+            var visitor = new CaptureSelectNewFieldNamesVisitor();
+            querySelectClause.AcceptVisitor(visitor, null);
 
+            // TODO: get the values  if visited both merge required
+            SelectExpressions = visitor.SelectExpressions;
+            NumberOfSelectClauses++;
+        }
+       
         public override void VisitQueryWhereClause(QueryWhereClause queryWhereClause)
         {
-            HasWhere = true;
             base.VisitQueryWhereClause(queryWhereClause);
+            HasWhere = true;
         }
+
+        public override void VisitQueryOrderClause(QueryOrderClause queryOrderClause)
+        {
+            base.VisitQueryOrderClause(queryOrderClause);
+            HasOrder = true;
+        }
+        public override void VisitQueryOrdering(QueryOrdering queryOrdering)
+        {
+            base.VisitQueryOrdering(queryOrdering);
+            HasOrder = true;
+        }
+        public override void VisitQueryGroupClause(QueryGroupClause queryGroupClause)
+        {
+            base.VisitQueryGroupClause(queryGroupClause);
+            HasGroup = true;
+        }
+        public override void VisitQueryLetClause(QueryLetClause queryLetClause)
+        {
+            base.VisitQueryLetClause(queryLetClause);
+            HasLet = true;
+        }
+
+       
     }
 
+    public class ChangeRootReferenceVisitor : DepthFirstAstVisitor
+    {
+        private readonly string _fromIdentifier;
+
+        public ChangeRootReferenceVisitor(string fromIdentifier)
+        {
+            _fromIdentifier = fromIdentifier;
+        }
+
+        public override void VisitMemberReferenceExpression(MemberReferenceExpression memberReferenceExpression)
+        {
+            var identifierExpression = memberReferenceExpression.Target as IdentifierExpression;
+            if (identifierExpression != null && identifierExpression.Identifier == _fromIdentifier)
+            {
+                memberReferenceExpression.Target = new IdentifierExpression("doc");
+            }
+
+            base.VisitMemberReferenceExpression(memberReferenceExpression);
+        }
+    }
 
 }
