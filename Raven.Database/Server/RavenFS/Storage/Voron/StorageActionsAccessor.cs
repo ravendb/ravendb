@@ -288,8 +288,12 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
                 var count = 0;
 
-                while (iterator.MoveNext() && count < take)
+                do
                 {
+                    var iteratorKey = iterator.CurrentKey.ToString();
+                    if (iteratorKey.Equals(key))
+                        continue;
+
                     ushort version;
                     var id = iterator.CreateReaderForCurrent().ToStringValue();
                     var file = LoadFileByKey(id, out version);
@@ -297,6 +301,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
                     count++;
                 }
+                while (iterator.MoveNext() && count < take);
             }
         }
 
