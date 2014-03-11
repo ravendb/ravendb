@@ -62,9 +62,9 @@ namespace Raven.Client.Connection.Async
 		private NameValueCollection operationsHeaders = new NameValueCollection();
 		internal readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly Guid? sessionId;
-		private readonly Func<string, ReplicationInformer> replicationInformerGetter;
+		private readonly Func<string, IDocumentStoreReplicationInformer> replicationInformerGetter;
 		private readonly string databaseName;
-		private readonly ReplicationInformer replicationInformer;
+		private readonly IDocumentStoreReplicationInformer replicationInformer;
 		private int requestCount;
 		private int readStripingBase;
 
@@ -73,7 +73,7 @@ namespace Raven.Client.Connection.Async
 			get { return url; }
 		}
 
-		public ReplicationInformer ReplicationInformer
+		public IDocumentStoreReplicationInformer ReplicationInformer
 		{
 			get { return replicationInformer; }
 		}
@@ -91,7 +91,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		public AsyncServerClient(string url, DocumentConvention convention, OperationCredentials credentials,
 								 HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId,
-								 Func<string, ReplicationInformer> replicationInformerGetter, string databaseName,
+								 Func<string, IDocumentStoreReplicationInformer> replicationInformerGetter, string databaseName,
 								 IDocumentConflictListener[] conflictListeners)
 		{
 			profilingInformation = ProfilingInformation.CreateProfilingInformation(sessionId);

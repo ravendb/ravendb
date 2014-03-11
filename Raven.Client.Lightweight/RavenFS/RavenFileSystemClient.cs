@@ -29,7 +29,7 @@ namespace Raven.Client.RavenFS
         private readonly ServerNotifications notifications;
         private OperationCredentials credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
         private IDisposable failedUploadsObserver;
-        private readonly RavenFileSystemReplicationInformer replicationInformer;
+        private readonly IFileSystemClientReplicationInformer replicationInformer;
         private readonly FileConvention convention;
         private int readStripingBase;
         private HttpJsonRequestFactory jsonRequestFactory =
@@ -56,7 +56,7 @@ namespace Raven.Client.RavenFS
         /// <summary>
         /// Allow access to the replication informer used to determine how we replicate requests
         /// </summary>
-        public RavenFileSystemReplicationInformer ReplicationInformer
+        public IFileSystemClientReplicationInformer ReplicationInformer
         {
             get { return replicationInformer; }
         }

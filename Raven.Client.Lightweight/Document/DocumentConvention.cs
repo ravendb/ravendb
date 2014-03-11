@@ -542,7 +542,7 @@ namespace Raven.Client.Document
 		/// This is called to provide replication behavior for the client. You can customize 
 		/// this to inject your own replication / failover logic.
 		/// </summary>
-		public Func<string, ReplicationInformer> ReplicationInformerFactory { get; set; }
+		public Func<string, IDocumentStoreReplicationInformer> ReplicationInformerFactory { get; set; }
 
 		public int IncrementRequestCount()
 		{
