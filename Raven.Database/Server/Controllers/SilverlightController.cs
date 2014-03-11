@@ -43,7 +43,6 @@ namespace Raven.Database.Server.Controllers
 
 		    string matchingPath = null;
 
-#if DEBUG
 			var fileName = id;
 			var paths = GetPaths(fileName, Database.Configuration.WebDir);
 			
@@ -58,7 +57,6 @@ namespace Raven.Database.Server.Controllers
 					return false;
 				}
 			});
-#endif
 
 			return matchingPath != null ? WriteFile(matchingPath) : WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.WebDir, "Raven.Database.Server.WebUI", "Raven.Studio.xap");
 		}

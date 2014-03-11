@@ -92,7 +92,7 @@ namespace Raven.Abstractions.Data
 		protected bool Equals(ApiKeyDefinition other)
 		{
 			var baseEqual =  string.Equals(Id, other.Id) && Enabled.Equals(other.Enabled) && Equals(Databases.Count, other.Databases.Count) &&
-			       string.Equals(Secret, other.Secret) && string.Equals(Name, other.Name);
+			       string.Equals(Secret, other.Secret) && string.Equals(Name, other.Name) && Equals(FileSystems.Count, other.FileSystems.Count);
 
 			if(baseEqual == false)
 				return false;

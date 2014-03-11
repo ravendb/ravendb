@@ -47,5 +47,12 @@ namespace Raven.Client.Connection
 		    length = -1;
 		    return false;
 		}
+
+		protected override void Dispose(bool disposing)
+		{
+			if (data != null)
+				data.Dispose();
+			base.Dispose(disposing);
+		}
 	}
 }

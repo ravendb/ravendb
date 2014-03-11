@@ -134,6 +134,12 @@ namespace Raven.Client.Linq
 	        return (IRavenQueryable<TResult>)this.As<TResult>();
 	    }
 
+        public IRavenQueryable<TResult> TransformWith<TResult>(string transformerName)
+        {
+            provider.TransformWith(transformerName);
+            return (IRavenQueryable<TResult>)this.As<TResult>();
+        }
+
 	    public IRavenQueryable<T> AddQueryInput(string input, RavenJToken foo)
 	    {
 	        provider.AddQueryInput(input, foo);

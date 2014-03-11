@@ -1,4 +1,4 @@
-html,
+﻿html,
 body {
   height: 100%;
 }
@@ -403,3 +403,16 @@ footer ul {
     margin-bottom: 0;
   }
 }
+#recentErrorsDialog {
+  height: 500px;
+  width: 600px;
+}
+#recentErrorsDialog .modal-body {
+  height: 350px;
+  overflow-y: auto;
+}
+#recentErrorsDialog .error-details,
+#recentErrorsDialog .http-status {
+  width: 100%;
+}
+/*# sourceMappingURL=app.css.map */
