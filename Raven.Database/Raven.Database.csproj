@@ -385,6 +385,7 @@
     <Compile Include="Server\RavenFS\Search\RavenQueryParser.cs" />
     <Compile Include="Server\RavenFS\Storage\DeleteFileOperation.cs" />
     <Compile Include="Server\RavenFS\Storage\Esent\EsentExtension.cs" />
+    <Compile Include="Server\RavenFS\Storage\Exceptions\FileExistsException.cs" />
     <Compile Include="Server\RavenFS\Storage\IStorageActionsAccessor.cs" />
     <Compile Include="Server\RavenFS\Storage\ITransactionalStorage.cs" />
     <Compile Include="Server\RavenFS\Storage\FileAndPages.cs" />

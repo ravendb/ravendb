@@ -14,6 +14,7 @@ using System.Web;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Server.RavenFS.Storage.Exceptions;
 using Raven.Database.Server.RavenFS.Storage.Voron.Impl;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc;
 using Raven.Database.Server.RavenFS.Util;
@@ -359,19 +360,23 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public void RenameFile(string filename, string rename, bool commitPeriodically = false)
         {
+            var renameKey = CreateKey(rename);
+            var renameVersion = storage.Files.ReadVersion(Snapshot, renameKey);
+
+            if (renameVersion > 0)
+                throw new FileExistsException(string.Format("Cannot rename '{0} to '{1}'. Rename '{1}' exists.", filename, rename));
+
             var key = CreateKey(filename);
-
-            RenameUsage(filename, rename, commitPeriodically);
-
             ushort version;
             var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
             if (file == null)
                 throw new FileNotFoundException("Could not find file: " + filename);
 
+            RenameUsage(filename, rename, commitPeriodically);
             file["name"] = rename;
 
             storage.Files.Delete(writeBatch.Value, key, version);
-            storage.Files.Add(writeBatch.Value, CreateKey(rename), file, 0);
+            storage.Files.Add(writeBatch.Value, renameKey, file, 0);
         }
 
         private void RenameUsage(string fileName, string rename, bool commitPeriodically)
@@ -739,7 +744,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
                 var hashKey = new HashKey
                               {
-                                  Strong = strongHash, 
+                                  Strong = strongHash,
                                   Weak = weakHash
                               };
 
