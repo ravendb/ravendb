@@ -58,7 +58,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected Func<IDatabaseCommands> databaseCommandsGenerator;
 
-		private readonly ConcurrentDictionary<string, ReplicationInformer> replicationInformers = new ConcurrentDictionary<string, ReplicationInformer>(StringComparer.OrdinalIgnoreCase);
+		private readonly ConcurrentDictionary<string, IDocumentStoreReplicationInformer> replicationInformers = new ConcurrentDictionary<string, IDocumentStoreReplicationInformer>(StringComparer.OrdinalIgnoreCase);
 #endif
 
 		private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
@@ -646,7 +646,7 @@ namespace Raven.Client.Document
 		}
 
 
-		public ReplicationInformer GetReplicationInformerForDatabase(string dbName = null)
+		public IDocumentStoreReplicationInformer GetReplicationInformerForDatabase(string dbName = null)
 		{
 			var key = Url;
 			dbName = dbName ?? DefaultDatabase;
@@ -654,7 +654,7 @@ namespace Raven.Client.Document
 			{
 				key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + dbName;
 			}
-			ReplicationInformer result;
+			IDocumentStoreReplicationInformer result;
 
 #if NETFX_CORE
 			lock (replicationInformersLocker)
@@ -677,7 +677,7 @@ namespace Raven.Client.Document
 			{
 				if (FailoverServers.IsSetForDefaultDatabase && result.FailoverServers == null)
 					result.FailoverServers = FailoverServers.ForDefaultDatabase;
-		}
+		    }
 			else
 			{
 				if (FailoverServers.IsSetForDatabase(dbName) && result.FailoverServers == null)

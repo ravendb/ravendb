@@ -68,7 +68,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Allow access to the replication informer used to determine how we replicate requests
 		/// </summary>
-		public ReplicationInformer ReplicationInformer
+		public IDocumentStoreReplicationInformer ReplicationInformer
 		{
 			get { return asyncServerClient.ReplicationInformer; }
 		}
