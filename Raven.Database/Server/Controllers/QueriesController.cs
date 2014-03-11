@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Amazon.EC2.Model;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Json.Linq;
@@ -32,10 +33,21 @@ namespace Raven.Database.Server.Controllers
 		private async Task<HttpResponseMessage> GetQueriesResponse(bool isGet)
 		{
 			RavenJArray itemsToLoad;
-			if (isGet == false)
-				itemsToLoad = await ReadJsonArrayAsync();
-			else
-				itemsToLoad = new RavenJArray(GetQueryStringValues("id").Cast<object>());
+		    if (isGet == false)
+		    {
+		        itemsToLoad = await ReadJsonArrayAsync();
+                AddRequestTraceInfo(sb =>
+                {
+                    foreach (var item in itemsToLoad)
+                    {
+                        sb.Append("\t").Append(item).AppendLine();
+                    }
+                });
+		    }
+		    else
+		    {
+		        itemsToLoad = new RavenJArray(GetQueryStringValues("id").Cast<object>());
+		    }
 
 			var result = new MultiLoadResult();
 			var loadedIds = new HashSet<string>();
@@ -93,7 +105,7 @@ namespace Raven.Database.Server.Controllers
 			var msg = GetMessageWithObject(result);
 			WriteETag(computedEtag, msg);
 
-			AddRequestTraceInfo(string.Format("Results count: {0}, includes count: {1}", result.Results.Count, result.Includes.Count));
+			AddRequestTraceInfo(sb => sb.Append("Results count: {0}, includes count: {1}", result.Results.Count, result.Includes.Count).AppendLine());
 
 			return msg;
 		}
