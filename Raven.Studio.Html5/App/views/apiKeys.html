@@ -12,7 +12,11 @@
         </div>
     </div>
     <br />
-    <div data-bind="foreach: filteredApiKeys">
+    <div class="alert alert-info" data-bind="visible: hasFetchedApiKeys() && apiKeys().length === 0">
+        <span>You don't have any API keys.</span>
+        <a href="#" class="alert-link" data-bind="click: createNewApiKey">Create one now</a>
+    </div>
+    <div data-bind="foreach: apiKeys">
         <div class="panel api-key-card" data-bind="visible: visible, css: { 'panel-info': enabled() && isValid(), 'panel-warning': !enabled() && isValid(), 'panel-danger': !isValid() }">
             <div class="panel-heading">
                 <h3 class="panel-title">
