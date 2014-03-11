@@ -25,7 +25,7 @@ namespace Raven.Client.Connection
 	/// <summary>
 	/// Replication and failover management on the client side
 	/// </summary>
-	public abstract class ReplicationInformerBase<TClient> : IDisposable
+	public abstract class ReplicationInformerBase<TClient> : IReplicationInformerBase<TClient>
 	{
 		protected readonly ILog log = LogManager.GetCurrentClassLogger();
 

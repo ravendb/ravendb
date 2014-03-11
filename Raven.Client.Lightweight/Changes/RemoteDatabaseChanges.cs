@@ -40,7 +40,7 @@ namespace Raven.Client.Changes
         private readonly OperationCredentials credentials;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly DocumentConvention conventions;
-		private readonly ReplicationInformer replicationInformer;
+		private readonly IDocumentStoreReplicationInformer replicationInformer;
 		private readonly Action onDispose;
         private readonly Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
 		private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.OrdinalIgnoreCase);
@@ -56,7 +56,7 @@ namespace Raven.Client.Changes
 			ICredentials credentials,
 			HttpJsonRequestFactory jsonRequestFactory,
 			DocumentConvention conventions,
-			ReplicationInformer replicationInformer,
+			IDocumentStoreReplicationInformer replicationInformer,
 			Action onDispose,
             Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
 		{
