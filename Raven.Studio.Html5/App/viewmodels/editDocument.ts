@@ -55,8 +55,8 @@ class editDocument extends viewModelBase {
                 var metaPropsToRemove = ["Non-Authoritative-Information", "@id", "Last-Modified", "Raven-Last-Modified", "@etag", "Origin"];
                 metaPropsToRemove.forEach(p => {
                     if (metaDto[p]) {
+                        this.metaPropsToRestoreOnSave.push({ name: p, value: metaDto[p].toString() });
                         delete metaDto[p];
-                        this.metaPropsToRestoreOnSave.push({ name: p, value: metaDto[p] });
                     }
                 });
                 var metaString = this.stringify(metaDto);
