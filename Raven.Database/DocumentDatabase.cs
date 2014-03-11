@@ -3059,7 +3059,7 @@ namespace Raven.Database
                 IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
                 ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
 
-                RequestsDuration = new DatabaseMetrics.HistogramData
+                RequestsDuration = new HistogramData
                 {
                     Counter = metrics.RequestDuationMetric.Count,
                     Max = metrics.RequestDuationMetric.Max,
@@ -3076,7 +3076,7 @@ namespace Raven.Database
                                 {"99.99%", percentiles[5]},
                             }
                 },
-                Requests = new DatabaseMetrics.MeterData
+                Requests = new MeterData
                 {
                     Count = metrics.ConcurrentRequests.Count,
                     FifteenMinuteRate = Math.Round(metrics.ConcurrentRequests.FifteenMinuteRate, 3),

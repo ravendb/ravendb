@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using NLog;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.RavenFS;
 using Raven.Client.RavenFS;
 
 namespace Raven.Database.Server.RavenFS.Synchronization

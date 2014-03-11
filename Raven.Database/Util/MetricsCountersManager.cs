@@ -4,16 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using System.Security;
-using System.Threading;
-using System.Threading.Tasks;
 using metrics;
 using metrics.Core;
-using Raven.Abstractions.Logging;
+
 namespace Raven.Database.Util
 {
     public class MetricsCountersManager : IDisposable
@@ -22,6 +15,7 @@ namespace Raven.Database.Util
 
         public HistogramMetric RequestDuationMetric { get; private set; }
         public PerSecondCounterMetric DocsPerSecond { get; private set; }
+        public PerSecondCounterMetric FilesPerSecond { get; private set; }
 
         public PerSecondCounterMetric IndexedPerSecond { get; private set; }
 
@@ -39,6 +33,7 @@ namespace Raven.Database.Util
             RequestDuationMetric = dbMetrics.Histogram("metrics", "req duration");
 
             DocsPerSecond = dbMetrics.TimedCounter("metrics", "docs/sec", "Docs Per Second Counter");
+            FilesPerSecond = dbMetrics.TimedCounter("metrics", "files/sec", "Files Per Second Counter");
             RequestsPerSecondCounter = dbMetrics.TimedCounter("metrics", "req/sec counter", "Requests Per Second");
             ReducedPerSecond = dbMetrics.TimedCounter("metrics", "reduces/sec", "Reduced Per Second Counter");
             IndexedPerSecond = dbMetrics.TimedCounter("metrics", "indexed/sec", "Index Per Second Counter");

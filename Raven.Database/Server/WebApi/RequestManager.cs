@@ -81,6 +81,13 @@ namespace Raven.Database.Server.WebApi
                 documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.Mark();
                 documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.Mark();
 	        }
+
+	        var fileSystem = args.FileSystem;
+            if (fileSystem != null)
+            {
+                fileSystem.MetricsCounters.ConcurrentRequests.Mark();
+                fileSystem.MetricsCounters.RequestsPerSecondCounter.Mark();
+            }
 	    }
 
 	    public void Init()
