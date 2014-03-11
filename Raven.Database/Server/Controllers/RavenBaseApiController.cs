@@ -484,7 +484,7 @@ namespace Raven.Database.Server.Controllers
 				Content = new ByteArrayContent(bytes),
 			};
 
-			WriteETag(etagValue, msg);
+			WriteETag(currentFileEtag, msg);
 
 			var type = GetContentType(docPath);
 			msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
