@@ -14,7 +14,7 @@ class importDatabaseCommand extends commandBase {
         var url = "/studio-tasks/import";
         var deleteTask = this.del(url, null, this.db);
         deleteTask.done(() => this.reportSuccess("Imported"));
-        deleteTask.fail((response) => this.reportError("Failed to import", JSON.stringify(response)));
+        deleteTask.fail((response: JQueryXHR) => this.reportError("Failed to import", response.responseText, response.statusText));
         return deleteTask;
     }
 }
