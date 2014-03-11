@@ -10,14 +10,16 @@ namespace Raven.Client.Connection
 {
 	public class CompressedStreamContent : HttpContent
 	{
+	    private readonly bool disposeStream;
         private readonly Stream data;
 		private readonly bool disableRequestCompression;
 
-		public CompressedStreamContent(Stream data, bool disableRequestCompression)
+		public CompressedStreamContent(Stream data, bool disableRequestCompression, bool disposeStream = true)
 		{
 		    if (data == null) throw new ArgumentNullException("data");
 		    this.data = data;
 			this.disableRequestCompression = disableRequestCompression;
+		    this.disposeStream = disposeStream;
 
 			if (disableRequestCompression == false)
 			{
@@ -50,7 +52,7 @@ namespace Raven.Client.Connection
 
 		protected override void Dispose(bool disposing)
 		{
-			if (data != null)
+			if (disposeStream && data != null)
 				data.Dispose();
 			base.Dispose(disposing);
 		}
