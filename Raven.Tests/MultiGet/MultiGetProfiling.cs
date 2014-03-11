@@ -260,7 +260,7 @@ namespace Raven.Tests.MultiGet
 				using (var session = store.OpenSession())
 				{
 					id = ((DocumentSession)session).DatabaseCommands.ProfilingInformation.Id;
-					session.Advanced.LuceneQuery<object, RavenDocumentsByEntityName>().WhereEquals("Not", "There").Lazily();
+                    session.Advanced.DocumentQuery<object, RavenDocumentsByEntityName>().WhereEquals("Not", "There").Lazily();
 					Assert.Throws<InvalidOperationException>(() => session.Advanced.Eagerly.ExecuteAllPendingLazyOperations());
 				}
 				var profilingInformation = store.GetProfilingInformationFor(id);

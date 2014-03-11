@@ -32,25 +32,25 @@ namespace Raven.Tests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var result1 = session.Advanced.LuceneQuery<SampleIndexView, SampleSearchIndex>().WhereEquals(p => p.NullableInt, (int?)1).WaitForNonStaleResultsAsOfNow().ToList();
+                    var result1 = session.Advanced.DocumentQuery<SampleIndexView, SampleSearchIndex>().WhereEquals(p => p.NullableInt, (int?)1).WaitForNonStaleResultsAsOfNow().ToList();
                     Assert.Equal(result1.Count, 1);
 
-					var result2 = session.Advanced.LuceneQuery<SampleIndexView, SampleSearchIndex>().WhereGreaterThan(p => p.NullableInt, (int?)0).WaitForNonStaleResultsAsOfNow().ToList();
+                    var result2 = session.Advanced.DocumentQuery<SampleIndexView, SampleSearchIndex>().WhereGreaterThan(p => p.NullableInt, (int?)0).WaitForNonStaleResultsAsOfNow().ToList();
                     Assert.Equal(result2.Count, 1);
 
-					var result3 = session.Advanced.LuceneQuery<SampleIndexView, SampleSearchIndex>().WhereGreaterThanOrEqual(p => p.NullableInt, (int?)1).WaitForNonStaleResultsAsOfNow().ToList();
+                    var result3 = session.Advanced.DocumentQuery<SampleIndexView, SampleSearchIndex>().WhereGreaterThanOrEqual(p => p.NullableInt, (int?)1).WaitForNonStaleResultsAsOfNow().ToList();
                     Assert.Equal(result3.Count, 1);
 
-					var result4 = session.Advanced.LuceneQuery<SampleIndexView, SampleSearchIndex>().WhereBetween(p => p.NullableInt, (int?)0, (int?)2).WaitForNonStaleResultsAsOfNow().ToList();
+                    var result4 = session.Advanced.DocumentQuery<SampleIndexView, SampleSearchIndex>().WhereBetween(p => p.NullableInt, (int?)0, (int?)2).WaitForNonStaleResultsAsOfNow().ToList();
                     Assert.Equal(result4.Count, 1);
 
-					var result5 = session.Advanced.LuceneQuery<SampleIndexView, SampleSearchIndex>().WhereBetweenOrEqual(p => p.NullableInt, (int?)1, (int?)1).WaitForNonStaleResultsAsOfNow().ToList();
+                    var result5 = session.Advanced.DocumentQuery<SampleIndexView, SampleSearchIndex>().WhereBetweenOrEqual(p => p.NullableInt, (int?)1, (int?)1).WaitForNonStaleResultsAsOfNow().ToList();
                     Assert.Equal(result5.Count, 1);
 
-					var result6 = session.Advanced.LuceneQuery<SampleIndexView, SampleSearchIndex>().WhereLessThan(p => p.NullableInt, (int?)2).WaitForNonStaleResultsAsOfNow().ToList();
+                    var result6 = session.Advanced.DocumentQuery<SampleIndexView, SampleSearchIndex>().WhereLessThan(p => p.NullableInt, (int?)2).WaitForNonStaleResultsAsOfNow().ToList();
                     Assert.Equal(result6.Count, 1);
 
-					var result7 = session.Advanced.LuceneQuery<SampleIndexView, SampleSearchIndex>().WhereLessThanOrEqual(p => p.NullableInt, (int?)1).WaitForNonStaleResultsAsOfNow().ToList();
+                    var result7 = session.Advanced.DocumentQuery<SampleIndexView, SampleSearchIndex>().WhereLessThanOrEqual(p => p.NullableInt, (int?)1).WaitForNonStaleResultsAsOfNow().ToList();
                     Assert.Equal(result7.Count, 1);
                 }
             }

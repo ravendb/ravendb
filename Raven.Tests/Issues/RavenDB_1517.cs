@@ -128,7 +128,7 @@ namespace Raven.Tests.Issues
 
 				using (var session = store.OpenSession())
 				{
-					var query = session.Advanced.LuceneQuery<Student, Students_ByEmailDomain>()
+                    var query = session.Advanced.DocumentQuery<Student, Students_ByEmailDomain>()
 								   .WaitForNonStaleResults()
 								   .Where(queryString);
 
@@ -147,7 +147,7 @@ namespace Raven.Tests.Issues
 
 				using (var session = store.OpenSession())
 				{
-					var query = session.Advanced.LuceneQuery<Student, Students_ByEmailDomain>().WaitForNonStaleResults().Where(queryString);
+                    var query = session.Advanced.DocumentQuery<Student, Students_ByEmailDomain>().WaitForNonStaleResults().Where(queryString);
 
 					var value = query.Lazily().Value;
 					Assert.Equal(1, value.Count());

@@ -49,7 +49,7 @@ namespace Raven.Tests.Issues
 				{
 					var searchTerms = "abc";
 
-					var query = session.Advanced.LuceneQuery<TranTest, TranTestIndex>()
+                    var query = session.Advanced.DocumentQuery<TranTest, TranTestIndex>()
 									   .WaitForNonStaleResults()
 									   .Search(x => x.Trans["en"], searchTerms);
 					var results = query.ToList();

@@ -33,7 +33,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenSession())
 				{
-					var students = session.Advanced.LuceneQuery<Student>()
+                    var students = session.Advanced.DocumentQuery<Student>()
 						.WaitForNonStaleResults()
 						.WhereStartsWith("FirstName", "David").Boost(3)
 						.WhereStartsWith("LastName", "David")

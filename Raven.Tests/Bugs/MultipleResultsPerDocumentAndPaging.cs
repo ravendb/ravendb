@@ -54,7 +54,7 @@ select new { Actor = actor, Name = movie.Name }",
 
 				using (var s2 = store.OpenSession())
 				{
-					var movies = s2.Advanced.LuceneQuery<Movie>("Movies/ByActor")
+                    var movies = s2.Advanced.DocumentQuery<Movie>("Movies/ByActor")
 						.WhereEquals("Actor", "Bond")
 						.Take(2)
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(5))

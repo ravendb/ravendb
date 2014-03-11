@@ -77,7 +77,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenSession())
 				{
-					var q = session.Advanced.LuceneQuery<LiveProjection.Shipment, LiveProjection.PurchaseHistoryIndex>()
+                    var q = session.Advanced.DocumentQuery<LiveProjection.Shipment, LiveProjection.PurchaseHistoryIndex>()
 							.WaitForNonStaleResults()
 							.BeforeQueryExecution(x => x.SkipTransformResults = true)
 						   .Single();

@@ -36,7 +36,7 @@ namespace Raven.Tests.MailingList
 				// Act / Assert
 				using (var docSession = store.OpenSession())
 				{
-					var products = docSession.Advanced.LuceneQuery<Product, Product_AvailableForSale>().Where("Name: MyName").ToList();
+                    var products = docSession.Advanced.DocumentQuery<Product, Product_AvailableForSale>().Where("Name: MyName").ToList();
 					WaitForUserToContinueTheTest(store);
 					Assert.Empty(products);
 					//Worth noting that I also tried the regular query syntax and it failed as well.

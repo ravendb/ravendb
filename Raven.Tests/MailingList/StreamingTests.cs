@@ -40,7 +40,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenSession())
 				{
-					var query = session.Advanced.LuceneQuery<UserFull, UserIndex>().SelectFields<UserLightweight>();
+                    var query = session.Advanced.DocumentQuery<UserFull, UserIndex>().SelectFields<UserLightweight>();
 
 					using (var reader = session.Advanced.Stream(query))
 					{
@@ -76,7 +76,7 @@ namespace Raven.Tests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.LuceneQuery<UserFull, UserIndex>().SelectFields<UserLightweight>();
+                    var query = session.Advanced.DocumentQuery<UserFull, UserIndex>().SelectFields<UserLightweight>();
 
                     using (var reader = query.GetEnumerator())
                     {

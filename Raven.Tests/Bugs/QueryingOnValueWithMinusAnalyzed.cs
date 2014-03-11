@@ -26,7 +26,7 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					var list = session.Advanced.LuceneQuery<object>("test")
+                    var list = session.Advanced.DocumentQuery<object>("test")
 						.WaitForNonStaleResults()
 						.WhereEquals("Name", "Bruce-Lee")
 						.ToList<object>();

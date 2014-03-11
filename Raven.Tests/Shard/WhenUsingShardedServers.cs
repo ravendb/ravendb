@@ -165,7 +165,7 @@ namespace Raven.Tests.Shard
 
 
 				//get all, should automagically retrieve from each shard
-				var allCompanies = session.Advanced.LuceneQuery<Company>()
+				var allCompanies = session.Advanced.DocumentQuery<Company>()
 					.WaitForNonStaleResults()
 					.ToArray();
 

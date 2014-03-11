@@ -18,7 +18,7 @@ namespace Raven.Tests.Bugs
 
 				using(var session = store.OpenSession())
 				{
-					var list = session.Advanced.LuceneQuery<dynamic>()
+                    var list = session.Advanced.DocumentQuery<dynamic>()
 						.WhereEquals("Name","Bruce-Lee")
 						.ToList();
 

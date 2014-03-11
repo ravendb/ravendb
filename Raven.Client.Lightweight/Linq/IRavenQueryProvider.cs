@@ -59,12 +59,24 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Convert the Linq query to a Lucene query
 		/// </summary>
+		[Obsolete("Use ToAsyncDocumentQuery instead.")]
 		IAsyncDocumentQuery<T> ToAsyncLuceneQuery<T>(Expression expression);
+
+        /// <summary>
+        /// Convert the Linq query to a Lucene query
+        /// </summary>
+        IAsyncDocumentQuery<T> ToAsyncDocumentQuery<T>(Expression expression);
+
+	    /// <summary>
+	    /// Convert the linq query to a Lucene query
+	    /// </summary>
+        [Obsolete("Use ToDocumentQuery instead.")]
+	    IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression);
 
         /// <summary>
         /// Convert the linq query to a Lucene query
         /// </summary>
-	    IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression);
+	    IDocumentQuery<TResult> ToDocumentQuery<TResult>(Expression expression);
 
 		/// <summary>
 		/// Convert the Linq query to a lazy Lucene query and provide a function to execute when it is being evaluated

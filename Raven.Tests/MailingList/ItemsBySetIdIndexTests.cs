@@ -47,7 +47,7 @@ namespace Raven.Tests.MailingList
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
-                    var query  =session.Advanced.LuceneQuery<ItemsBySetIdIndex.Result, ItemsBySetIdIndex>()
+                    var query = session.Advanced.DocumentQuery<ItemsBySetIdIndex.Result, ItemsBySetIdIndex>()
                                 .WhereEquals("SetId", "stations/radiofm/tests/001")
                                 .AndAlso()
                                 .WhereEquals("SoundCode", "ROCK")

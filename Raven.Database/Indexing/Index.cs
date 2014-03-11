@@ -931,9 +931,9 @@ namespace Raven.Database.Indexing
 					RavenJObject[] termsDocs;
 					using (parent.GetSearcherAndTermsDocs(out indexSearcher, out termsDocs))
 					{
-                        var luceneQuery = GetLuceneQuery();
+                        var documentQuery = GetDocumentQuery();
 
-						TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
+						TopDocs search = ExecuteQuery(indexSearcher, documentQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
 						totalResults.Value = search.TotalHits;
 
 						for (int index = indexQuery.Start; index < search.ScoreDocs.Length; index++)
@@ -962,7 +962,7 @@ namespace Raven.Database.Indexing
 					IndexSearcher indexSearcher;
 					using (parent.GetSearcher(out indexSearcher))
 					{
-						var luceneQuery = GetLuceneQuery();
+						var documentQuery = GetDocumentQuery();
 
 
 						int start = indexQuery.Start;
@@ -991,7 +991,7 @@ namespace Raven.Database.Indexing
 							do
 							{
 								token.ThrowIfCancellationRequested(); 
-								search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
+								search = ExecuteQuery(indexSearcher, documentQuery, start, pageSize, indexQuery);
 
 								if (recorder != null)
 								{
@@ -1003,7 +1003,7 @@ namespace Raven.Database.Indexing
 							indexQuery.TotalSize.Value = search.TotalHits;
 							adjustStart = false;
 
-							SetupHighlighter(luceneQuery);
+							SetupHighlighter(documentQuery);
 
 							for (var i = start; (i - start) < pageSize && i < search.ScoreDocs.Length; i++)
 							{
@@ -1019,7 +1019,7 @@ namespace Raven.Database.Indexing
 
 								AddHighlighterResults(indexSearcher, scoreDoc, indexQueryResult);
 
-								AddQueryExplanation(luceneQuery, indexSearcher, scoreDoc, indexQueryResult);
+								AddQueryExplanation(documentQuery, indexSearcher, scoreDoc, indexQueryResult);
 
 								returnedResults++;
 								yield return indexQueryResult;
@@ -1072,7 +1072,7 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			private void SetupHighlighter(Query luceneQuery)
+			private void SetupHighlighter(Query documentQuery)
 			{
 				if (indexQuery.HighlightedFields != null && indexQuery.HighlightedFields.Length > 0)
 				{
@@ -1088,26 +1088,26 @@ namespace Raven.Database.Indexing
 								? indexQuery.HighlighterPostTags
 								: BaseFragmentsBuilder.COLORED_POST_TAGS));
 
-					fieldQuery = highlighter.GetFieldQuery(luceneQuery);
+					fieldQuery = highlighter.GetFieldQuery(documentQuery);
 				}
 			}
 
-			private void AddQueryExplanation(Query luceneQuery, IndexSearcher indexSearcher, ScoreDoc scoreDoc, IndexQueryResult indexQueryResult)
+			private void AddQueryExplanation(Query documentQuery, IndexSearcher indexSearcher, ScoreDoc scoreDoc, IndexQueryResult indexQueryResult)
 			{
 				if(indexQuery.ExplainScores == false)
 					return;
 
-				var explanation = indexSearcher.Explain(luceneQuery, scoreDoc.Doc);
+				var explanation = indexSearcher.Explain(documentQuery, scoreDoc.Doc);
 
 				indexQueryResult.ScoreExplanation = explanation.ToString();
 			}
 
-			private Query ApplyIndexTriggers(Query luceneQuery)
+			private Query ApplyIndexTriggers(Query documentQuery)
 			{
-				luceneQuery = indexQueryTriggers.Aggregate(luceneQuery,
+				documentQuery = indexQueryTriggers.Aggregate(documentQuery,
 														   (current, indexQueryTrigger) =>
 														   indexQueryTrigger.Value.ProcessQuery(parent.indexId.ToString(), current, indexQuery));
-				return luceneQuery;
+				return documentQuery;
 			}
 
 			public IEnumerable<IndexQueryResult> IntersectionQuery(CancellationToken token)
@@ -1128,10 +1128,10 @@ namespace Raven.Database.Indexing
 						int intersectMatches = 0, skippedResultsInCurrentLoop = 0;
 						int previousBaseQueryMatches = 0, currentBaseQueryMatches = 0;
 
-                        var firstSubLuceneQuery = GetLuceneQuery(subQueries[0], indexQuery);
+                        var firstSubDocumentQuery = GetDocumentQuery(subQueries[0], indexQuery);
 
 						//Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
-						var search = ExecuteQuery(indexSearcher, firstSubLuceneQuery, 0, pageSizeBestGuess, indexQuery);
+						var search = ExecuteQuery(indexSearcher, firstSubDocumentQuery, 0, pageSizeBestGuess, indexQuery);
 						currentBaseQueryMatches = search.ScoreDocs.Length;
 						var intersectionCollector = new IntersectionCollector(indexSearcher, search.ScoreDocs);
 
@@ -1143,7 +1143,7 @@ namespace Raven.Database.Indexing
 								// We get here because out first attempt didn't get enough docs (after INTERSECTION was calculated)
 								pageSizeBestGuess = pageSizeBestGuess * 2;
 
-								search = ExecuteQuery(indexSearcher, firstSubLuceneQuery, 0, pageSizeBestGuess, indexQuery);
+								search = ExecuteQuery(indexSearcher, firstSubDocumentQuery, 0, pageSizeBestGuess, indexQuery);
 								previousBaseQueryMatches = currentBaseQueryMatches;
 								currentBaseQueryMatches = search.ScoreDocs.Length;
 								intersectionCollector = new IntersectionCollector(indexSearcher, search.ScoreDocs);
@@ -1151,7 +1151,7 @@ namespace Raven.Database.Indexing
 
 							for (int i = 1; i < subQueries.Length; i++)
 							{
-								var luceneSubQuery = GetLuceneQuery(subQueries[i], indexQuery);
+								var luceneSubQuery = GetDocumentQuery(subQueries[i], indexQuery);
 								indexSearcher.Search(luceneSubQuery, null, intersectionCollector);
 							}
 
@@ -1228,9 +1228,9 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			public Query GetLuceneQuery()
+			public Query GetDocumentQuery()
 			{
-				var q = GetLuceneQuery(indexQuery.Query, indexQuery);
+				var q = GetDocumentQuery(indexQuery.Query, indexQuery);
 				var spatialIndexQuery = indexQuery as SpatialIndexQuery;
 				if (spatialIndexQuery != null)
 				{
@@ -1244,13 +1244,13 @@ namespace Raven.Database.Indexing
 				return q;
 			}
 
-			private Query GetLuceneQuery(string query, IndexQuery indexQuery)
+			private Query GetDocumentQuery(string query, IndexQuery indexQuery)
 			{
-				Query luceneQuery;
+				Query documentQuery;
 				if (String.IsNullOrEmpty(query))
 				{
 					logQuerying.Debug("Issuing query on index {0} for all documents", parent.indexId);
-					luceneQuery = new MatchAllDocsQuery();
+					documentQuery = new MatchAllDocsQuery();
 				}
 				else
 				{
@@ -1269,14 +1269,14 @@ namespace Raven.Database.Indexing
 							}
 							return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
 						});
-						luceneQuery = QueryBuilder.BuildQuery(query, indexQuery, searchAnalyzer);
+						documentQuery = QueryBuilder.BuildQuery(query, indexQuery, searchAnalyzer);
 					}
 					finally
 					{
 						DisposeAnalyzerAndFriends(toDispose, searchAnalyzer);
 					}
 				}
-				return ApplyIndexTriggers(luceneQuery);
+				return ApplyIndexTriggers(documentQuery);
 			}
 
 			private static void DisposeAnalyzerAndFriends(List<Action> toDispose, RavenPerFieldAnalyzerWrapper analyzer)
@@ -1290,7 +1290,7 @@ namespace Raven.Database.Indexing
 				toDispose.Clear();
 			}
 
-			private TopDocs ExecuteQuery(IndexSearcher indexSearcher, Query luceneQuery, int start, int pageSize,
+			private TopDocs ExecuteQuery(IndexSearcher indexSearcher, Query documentQuery, int start, int pageSize,
 										IndexQuery indexQuery)
 			{
 				var sort = indexQuery.GetSort(parent.indexDefinition, parent.viewGenerator);
@@ -1298,7 +1298,7 @@ namespace Raven.Database.Indexing
 				if (pageSize == Int32.MaxValue && sort == null) // we want all docs, no sorting required
 				{
 					var gatherAllCollector = new GatherAllCollector();
-					indexSearcher.Search(luceneQuery, gatherAllCollector);
+					indexSearcher.Search(documentQuery, gatherAllCollector);
 					return gatherAllCollector.ToTopDocs();
 				}
 			    int absFullPage = Math.Abs(pageSize + start); // need to protect against ridiculously high values of pageSize + start that overflow
@@ -1311,7 +1311,7 @@ namespace Raven.Database.Indexing
 					{
 						//indexSearcher.SetDefaultFieldSortScoring (sort.GetSort().Contains(SortField.FIELD_SCORE), false);
 						indexSearcher.SetDefaultFieldSortScoring(true, false);
-						var ret = indexSearcher.Search(luceneQuery, null, minPageSize, sort);
+						var ret = indexSearcher.Search(documentQuery, null, minPageSize, sort);
 						return ret;
 					}
 					finally
@@ -1319,7 +1319,7 @@ namespace Raven.Database.Indexing
 						indexSearcher.SetDefaultFieldSortScoring(false, false);
 					}
 				}
-				return indexSearcher.Search(luceneQuery, null, minPageSize);
+				return indexSearcher.Search(documentQuery, null, minPageSize);
 			}
 		}
 

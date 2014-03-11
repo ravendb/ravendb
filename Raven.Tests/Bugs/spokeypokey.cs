@@ -165,7 +165,7 @@ namespace Raven.Tests.Bugs
 					              	});
 					session.SaveChanges();
 
-					var item = session.Advanced.LuceneQuery<TestResultItem>("TestItemsIndex")
+                    var item = session.Advanced.DocumentQuery<TestResultItem>("TestItemsIndex")
 						.WaitForNonStaleResultsAsOfNow()
 						.ToList().First();
 

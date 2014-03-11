@@ -466,7 +466,7 @@ namespace Raven.Client
 			if (provider == null)
 				throw new ArgumentException("You can only use Raven Queryable with ToListAsync");
 
-			var documentQuery = provider.ToAsyncLuceneQuery<T>(source.Expression);
+			var documentQuery = provider.ToAsyncDocumentQuery<T>(source.Expression);
 			provider.MoveAfterQueryExecuted(documentQuery);
 			return documentQuery.ToListAsync();
 		}
@@ -500,7 +500,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("AnyAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
                                 .Take(0);
 
             provider.MoveAfterQueryExecuted(query);
@@ -547,7 +547,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("AnyAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
                                 .Take(0);
 
             provider.MoveAfterQueryExecuted(query);
@@ -593,7 +593,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("CountAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
                                 .Take(0);
 
             provider.MoveAfterQueryExecuted(query);
@@ -645,7 +645,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("CountAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
                                 .Take(0);
 
             provider.MoveAfterQueryExecuted(query);
@@ -691,7 +691,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("FirstAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
                                 .Take(1);
 
             provider.MoveAfterQueryExecuted(query);
@@ -741,7 +741,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("FirstAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
                                 .Take(1);
 
             provider.MoveAfterQueryExecuted(query);
@@ -785,7 +785,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("FirstOrDefaultAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
                                 .Take(1);
 
             provider.MoveAfterQueryExecuted(query);
@@ -837,7 +837,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("FirstOrDefaultAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
                                 .Take(1);
 
             provider.MoveAfterQueryExecuted(query);
@@ -882,7 +882,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("SingleAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
                                 .Take(2);
 
             provider.MoveAfterQueryExecuted(query);
@@ -933,7 +933,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("SingleAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
                                 .Take(2);
 
             provider.MoveAfterQueryExecuted(query);
@@ -980,7 +980,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("SingleOrDefaultAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(source.Expression)
                                 .Take(2);
 
             provider.MoveAfterQueryExecuted(query);
@@ -1032,7 +1032,7 @@ namespace Raven.Client
             if (provider == null)
                 throw new InvalidOperationException("SingleOrDefaultAsync only be used with IRavenQueryable");
 
-            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+            var query = provider.ToAsyncDocumentQuery<TSource>(filtered.Expression)
                                 .Take(2);
 
             provider.MoveAfterQueryExecuted(query);

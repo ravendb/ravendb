@@ -191,7 +191,7 @@ namespace Raven.Tests.Document
 
 			using (var session2 = documentStore.OpenSession())
 			{
-				var companyFromRaven = session2.Advanced.LuceneQuery<Company>()
+                var companyFromRaven = session2.Advanced.DocumentQuery<Company>()
 					.WaitForNonStaleResults()
 					.First();
 				Assert.Equal(companyFromRaven.Id, company.Id);
@@ -266,7 +266,7 @@ namespace Raven.Tests.Document
 
 			using (var session2 = documentStore.OpenSession())
 			{
-				var companyFromRaven = session2.Advanced.LuceneQuery<Company>()
+                var companyFromRaven = session2.Advanced.DocumentQuery<Company>()
 					.WaitForNonStaleResults()
 					.First();
 
@@ -552,7 +552,7 @@ namespace Raven.Tests.Document
 														});
 
 				var q = session
-					.Advanced.LuceneQuery<Company>("company_by_name")
+                    .Advanced.DocumentQuery<Company>("company_by_name")
 					.SelectFields<Company>("Name", "Phone")
 					.WaitForNonStaleResults();
 				var single = q.Single();
@@ -577,11 +577,11 @@ namespace Raven.Tests.Document
 														});
 
 				// Wait until the index is built
-				session.Advanced.LuceneQuery<Company>("company_by_name")
+                session.Advanced.DocumentQuery<Company>("company_by_name")
 					.WaitForNonStaleResults()
 					.ToArray();
 
-				var companies = session.Advanced.LuceneQuery<Company>("company_by_name")
+                var companies = session.Advanced.DocumentQuery<Company>("company_by_name")
 					.OrderBy("Phone")
 					.WaitForNonStaleResults()
 					.ToArray();
@@ -666,7 +666,7 @@ namespace Raven.Tests.Document
 
 			using (var session2 = documentStore.OpenSession())
 			{
-				var companyFound = session2.Advanced.LuceneQuery<Company>()
+                var companyFound = session2.Advanced.DocumentQuery<Company>()
 					.WaitForNonStaleResults()
 					.ToArray();
 
@@ -694,7 +694,7 @@ namespace Raven.Tests.Document
 
 				session.SaveChanges();
 
-				LinqIndexesFromClient.User single = session.Advanced.LuceneQuery<LinqIndexesFromClient.User>("UsersByLocation")
+                LinqIndexesFromClient.User single = session.Advanced.DocumentQuery<LinqIndexesFromClient.User>("UsersByLocation")
 					.Where("Name:Yael")
 					.WaitForNonStaleResults()
 					.Single();
@@ -712,7 +712,7 @@ namespace Raven.Tests.Document
 				session.Store(entity);
 				session.SaveChanges();
 
-				session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+                session.Advanced.DocumentQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
 			}
 
 			documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
@@ -722,7 +722,7 @@ namespace Raven.Tests.Document
 
 			using (var session = documentStore.OpenSession())
 			{
-				Assert.Empty(session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray());
+                Assert.Empty(session.Advanced.DocumentQuery<Company>().WaitForNonStaleResults().ToArray());
 			}
 		}
 
@@ -735,7 +735,7 @@ namespace Raven.Tests.Document
 				session.Store(entity);
 				session.SaveChanges();
 
-				session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
+                session.Advanced.DocumentQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
 			}
 
 			documentStore.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName", new IndexQuery

@@ -28,7 +28,7 @@ namespace Raven.Tests.Issues
 
 				using(var session= store.OpenSession())
 				{
-					var objects = session.Advanced.LuceneQuery<dynamic>("Index")
+                    var objects = session.Advanced.DocumentQuery<dynamic>("Index")
 						.WaitForNonStaleResults()
 						.SelectFields<dynamic>(Constants.AllFields)
 						.ToList();

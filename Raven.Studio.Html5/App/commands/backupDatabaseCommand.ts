@@ -18,7 +18,7 @@ class stopIndexingCommand extends commandBase {
           DatabaseDocument: doc
         };
 
-        this.post('/admin/backup', JSON.stringify(args), this.db)
+          this.post('/admin/backup', JSON.stringify(args), this.db, { dataType: 'text' })
           .fail(response=> {
             debugger
             result.reject(response);
@@ -27,7 +27,7 @@ class stopIndexingCommand extends commandBase {
             debugger
             var hasCompleted = false;
             while (!hasCompleted) {
-              this.query("Raven/Backup/Status", null, this.db, { dataType: undefined })
+              this.query("Raven/Backup/Status", null, this.db)
                 .done((backupStatus: backupStatusDto)=> {
                   debugger
                 });

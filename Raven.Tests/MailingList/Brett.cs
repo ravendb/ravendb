@@ -72,7 +72,7 @@ namespace Raven.Tests.MailingList
 
 				using (IDocumentSession session = store.OpenSession())
 				{
-					var query = session.Advanced.LuceneQuery<IListItem>(typeof (ListItemIndex).Name)
+                    var query = session.Advanced.DocumentQuery<IListItem>(typeof(ListItemIndex).Name)
 						.WaitForNonStaleResultsAsOfNow();
 					query.WhereEquals("AccountId", accountId);
 					var results = query.ToList();
