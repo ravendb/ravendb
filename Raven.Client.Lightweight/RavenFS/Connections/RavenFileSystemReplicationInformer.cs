@@ -17,7 +17,7 @@ namespace Raven.Client.RavenFS.Connections
     /// <summary>
     /// Replication and failover management on the client side
     /// </summary>
-    public class RavenFileSystemReplicationInformer : ReplicationInformerBase<RavenFileSystemClient>
+    public class RavenFileSystemReplicationInformer : ReplicationInformerBase<RavenFileSystemClient>, IFileSystemClientReplicationInformer
     {
         public RavenFileSystemReplicationInformer(Convention conventions) : base(conventions)
         {
