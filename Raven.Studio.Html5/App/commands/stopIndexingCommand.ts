@@ -8,12 +8,12 @@ class stopIndexingCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        this.reportInfo("Stop indexing...");
+        this.reportInfo("Disabling Indexing... (will wait for current indexing batch to complete)");
 
         var url = '/admin/stopIndexing';
-        var createTask = this.put(url, null, this.db, { dataType: undefined });
-        createTask.done(() => this.reportSuccess("Indexing was stopped"));
-        createTask.fail((response) => this.reportError("Failed to stop indexing", JSON.stringify(response)));
+        var createTask = this.post(url, null, this.db);
+        createTask.done(() => this.reportSuccess("Indexing was disabled"));
+        createTask.fail((response: JQueryXHR) => this.reportError("Failed to disable indexing", response.responseText, response.statusText));
 
         return createTask;
     }

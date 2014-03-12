@@ -58,7 +58,7 @@ namespace Raven.Tests.MailingList
 
 				// Everything works fine.
 				var sortedResults = session.Advanced
-					.LuceneQuery<Doc>("test")
+                    .DocumentQuery<Doc>("test")
 					.AddOrder("X", true)
 					.WaitForNonStaleResults()
 					.ToList();
@@ -78,7 +78,7 @@ namespace Raven.Tests.MailingList
 				{
 					// Invalid shift value in prefixCoded string (is encoded value really an INT?)
 					var throwsExceptions = session.Advanced
-						.LuceneQuery<Doc>("test")
+                        .DocumentQuery<Doc>("test")
 						.AddOrder("X", true)
 						.WaitForNonStaleResults()
 						.ToList();

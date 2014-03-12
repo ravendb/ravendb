@@ -7,6 +7,8 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
+using Raven.Client.Connection;
 using Raven.Database.Server.Connections;
 
 namespace Raven.Database.Server.WebApi.Handlers
@@ -68,11 +70,16 @@ namespace Raven.Database.Server.WebApi.Handlers
 				response.RequestMessage.Headers.AcceptEncoding != null && 
 				response.RequestMessage.Headers.AcceptEncoding.Count != 0 && 
 				response.Content != null &&
-				response.Content is ChangesPushContent == false)
+				response.Content is ChangesPushContent == false &&
+				response.Content is CompressedContent == false &&
+				response.Content is CompressedStreamContent == false &&
+				response.Content is CompressedStringContent == false)
 			{
 				string encodingType = response.RequestMessage.Headers.AcceptEncoding.First().Value;
 				if (encodingType == "gzip" || encodingType == "deflate")
+				{
 					response.Content = new CompressedContent(response.Content, encodingType);
+				}
 			}
 
 			return response;
@@ -80,8 +87,8 @@ namespace Raven.Database.Server.WebApi.Handlers
 
 		public class CompressedContent : HttpContent
 		{
-			private HttpContent originalContent;
-			private string encodingType;
+			private readonly HttpContent originalContent;
+			private readonly string encodingType;
 
 			public CompressedContent(HttpContent content, string encodingType)
 			{
@@ -139,6 +146,13 @@ namespace Raven.Database.Server.WebApi.Handlers
 						compressedStream.Dispose();
 					}
 				});
+			}
+
+			protected override void Dispose(bool disposing)
+			{
+				if (originalContent != null)
+					originalContent.Dispose();
+				base.Dispose(disposing);
 			}
 		}
 	}

@@ -60,7 +60,7 @@ namespace Raven.Tests.Bugs
 					session.SaveChanges();
 
 					Assert.NotEmpty(
-						session.Advanced.LuceneQuery<dynamic>("test").
+                        session.Advanced.DocumentQuery<dynamic>("test").
 						WaitForNonStaleResults().
 						Where("f_platform:1 AND (f_name:*h* OR f_alias:*h*)")
 						.OrderBy(new[] { "-f_License", "f_totaldownload" })

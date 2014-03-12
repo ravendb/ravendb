@@ -44,7 +44,7 @@ namespace Raven.Tests.MailingList
 				using (var session = store.OpenSession())
 				{
 					RavenQueryStatistics stats = null;
-					var tst = session.Advanced.LuceneQuery<SortOnNullableEntity, SortOnNullableEntity_Search>()
+                    var tst = session.Advanced.DocumentQuery<SortOnNullableEntity, SortOnNullableEntity_Search>()
 						.WaitForNonStaleResults()
 						.Statistics(out stats)
 						.OrderBy(x => x.Num)

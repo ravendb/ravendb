@@ -26,7 +26,7 @@ class createDatabaseCommand extends commandBase {
         var url = "/admin/databases/" + this.databaseName;
         var createTask = this.put(url, JSON.stringify(databaseDoc), null, { dataType: undefined });
         createTask.done(() => this.reportSuccess(this.databaseName + " created"));
-        createTask.fail((response) => this.reportError("Failed to create database", JSON.stringify(response)));
+        createTask.fail((response: JQueryXHR) => this.reportError("Failed to create database", response.responseText, response.statusText));
 
         // Forces creation of standard indexes? Looks like it.
         createTask.done(() => this.query("/databases/" + this.databaseName + "/silverlight/ensureStartup", null, null));

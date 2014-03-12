@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using NLog;
 using Newtonsoft.Json;
 using Raven.Abstractions;
+using Raven.Abstractions.RavenFS;
 using Raven.Abstractions.Util;
 using Raven.Client.RavenFS;
 using Raven.Database.Config;

@@ -125,7 +125,7 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					var result = session.Advanced.LuceneQuery<User>()
+                    var result = session.Advanced.DocumentQuery<User>()
 						.WhereEquals("@metadata." + propertyName1, propertyValue1)
 						.ToList();
 

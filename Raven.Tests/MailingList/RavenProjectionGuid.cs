@@ -31,8 +31,8 @@ namespace Raven.Tests.MailingList
 
 				using (IDocumentSession session = documentStore.OpenSession())
 				{
-					var results = 
-						session.Advanced.LuceneQuery<AccountListItem>("CustomerOrderProjection")
+					var results =
+                        session.Advanced.DocumentQuery<AccountListItem>("CustomerOrderProjection")
 							.WhereEquals("AccountId", accountId)
 							.WaitForNonStaleResults()
 							.ToList();

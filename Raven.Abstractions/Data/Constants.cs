@@ -130,5 +130,7 @@ namespace Raven.Abstractions.Data
 		public const string DefaultRequestEncoding = "UTF-8";
 
 	    public const string AssembliesDirectoryName = "Assemblies";
+
+		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
 	}
 }

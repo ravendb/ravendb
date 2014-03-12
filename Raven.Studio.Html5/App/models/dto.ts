@@ -333,3 +333,28 @@ interface bulkDocumentDto {
     PatchResult?: any;
     Deleted?: any;
 }
+
+interface backupRequestDto {
+  BackupLocation: string;
+  DatabaseDocument: databaseDocumentDto;
+}
+
+interface backupStatusDto {
+  Started: string;
+  Completed?: string;
+  IsRunning: boolean;
+  Messages: backupMessageDto;
+}
+
+interface backupMessageDto {
+  Message: string;
+  Timestamp: string;
+  Severity: string;
+}
+
+interface databaseDocumentDto {
+  Id: string;
+  Settings: {};
+  SecuredSettings: {};
+  Disabled: boolean;
+}

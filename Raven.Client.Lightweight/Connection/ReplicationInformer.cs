@@ -19,8 +19,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
-    public class ReplicationInformer : ReplicationInformerBase<ServerClient>
-    {
+	public class ReplicationInformer : ReplicationInformerBase<ServerClient>, IDocumentStoreReplicationInformer
+	{
         private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
 
         public ReplicationInformer(Convention conventions) : base(conventions)
@@ -30,7 +30,7 @@ namespace Raven.Client.Connection
         /// <summary>
         /// Failover servers set manually in config file or when document store was initialized
         /// </summary>
-        public ReplicationDestination[] FailoverServers { get; internal set; }
+        public ReplicationDestination[] FailoverServers { get; set; }
 
         public override Task UpdateReplicationInformationIfNeeded(ServerClient serverClient)
         {

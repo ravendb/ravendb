@@ -39,7 +39,7 @@ class saveWindowsAuthCommand extends commandBase {
         this.reportInfo("Saving Windows Authentication settings.");
         this.saveSetup()
             .done(() => this.reportSuccess("Saved Windows Authentication settings."))
-            .fail((response: JQueryXHR) => this.reportError("Failed to save Windows Authentication settings.", response.responseText));
+            .fail((response: JQueryXHR) => this.reportError("Failed to save Windows Authentication settings.", response.responseText, response.statusText));
     }
 
     private saveSetup(): JQueryPromise<any> {

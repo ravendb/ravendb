@@ -16,9 +16,7 @@ class indexErrors extends viewModelBase {
         this.updateCurrentNowTime();
     }
 
-    activate(args) {
-        super.activate(args);
-
+    modelPolling() {
         return this.fetchIndexErrors();
     }
 

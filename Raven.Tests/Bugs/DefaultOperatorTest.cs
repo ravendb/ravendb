@@ -77,7 +77,7 @@ namespace Raven.Tests.Bugs
             {
                 using (var s = store.OpenSession())
                 {
-                    var result = s.Advanced.LuceneQuery<Blog, BlogIndex>()
+                    var result = s.Advanced.DocumentQuery<Blog, BlogIndex>()
                             .Search(x => x.Title, "one two").UsingDefaultOperator(Raven.Abstractions.Data.QueryOperator.And)
                             .WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5))
                             .ToList();
@@ -95,7 +95,7 @@ namespace Raven.Tests.Bugs
             {
                 using (var s = store.OpenSession())
                 {
-                    var result = s.Advanced.LuceneQuery<Blog, BlogIndex>()
+                    var result = s.Advanced.DocumentQuery<Blog, BlogIndex>()
                             .Search(x => x.Title, "one two").UsingDefaultOperator(Raven.Abstractions.Data.QueryOperator.And)
                             .SelectFields<Blog>("Title")
                             .WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5))

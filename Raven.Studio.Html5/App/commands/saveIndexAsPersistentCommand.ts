@@ -18,7 +18,7 @@ class saveIndexAsPersistentCommand extends commandBase {
             this.reportSuccess("Persisted " + this.indexToPersist.name);
             this.indexToPersist.isOnRam("false");
         });
-        saveTask.fail(details => this.reportError("Failed to persist " + this.indexToPersist.name, JSON.stringify(details)));
+        saveTask.fail((response: JQueryXHR) => this.reportError("Failed to persist " + this.indexToPersist.name, response.responseText, response.statusText));
 
         return saveTask;
     }

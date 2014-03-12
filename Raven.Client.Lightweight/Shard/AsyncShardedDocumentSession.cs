@@ -359,7 +359,7 @@ namespace Raven.Client.Shard
 
 		protected override IAsyncDocumentQuery<T> IDocumentQueryGeneratorAsyncQuery<T>(string indexName, bool isMapReduce)
 		{
-			return AsyncLuceneQuery<T>(indexName);
+			return AsyncDocumentQuery<T>(indexName);
 		}
 
 		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null)
@@ -413,22 +413,46 @@ namespace Raven.Client.Shard
 		/// <typeparam name="T">The result of the query</typeparam>
 		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
 		/// <returns></returns>
+        [Obsolete("Use AsyncDocumentQuery instead.")]
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
-			var index = new TIndexCreator();
-
-			return AsyncLuceneQuery<T>(index.IndexName, index.IsMapReduce);
+		    return AsyncDocumentQuery<T, TIndexCreator>();
 		}
 
+        /// <summary>
+        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+        /// <returns></returns>
+        public IAsyncDocumentQuery<T> AsyncDocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            var index = new TIndexCreator();
+
+            return AsyncDocumentQuery<T>(index.IndexName, index.IsMapReduce);
+        }
+
+        [Obsolete("Use AsyncDocumentQuery instead.")]
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string indexName, bool isMapReduce = false)
 		{
-			return new AsyncShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, null, theListeners.QueryListeners, isMapReduce);
+		    return AsyncDocumentQuery<T>(indexName, isMapReduce);
 		}
 
+        public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string indexName, bool isMapReduce = false)
+        {
+            return new AsyncShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, null, theListeners.QueryListeners, isMapReduce);
+        }
+
+        [Obsolete("Use AsyncDocumentQuery instead.")]
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
 		{
-			return AsyncLuceneQuery<T>(GetDynamicIndexName<T>());
+		    return AsyncDocumentQuery<T>();
 		}
+
+        public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>()
+        {
+            return AsyncDocumentQuery<T>(GetDynamicIndexName<T>());
+        }
 
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query)
 		{

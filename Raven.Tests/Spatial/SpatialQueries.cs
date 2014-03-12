@@ -78,7 +78,7 @@ namespace Raven.Tests.Spatial
 				documentStore.DatabaseCommands.PutIndex("FindByLatLng", indexDefinition);
 
 				// Wait until the index is built
-				session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
+                session.Advanced.DocumentQuery<DummyGeoDoc>("FindByLatLng")
 					.WaitForNonStaleResults()
 					.ToArray();
 
@@ -86,7 +86,7 @@ namespace Raven.Tests.Spatial
 				const double radius = 5.0;
 
 				// Expected is that 5.0 will return 3 results
-				var nearbyDocs = session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
+                var nearbyDocs = session.Advanced.DocumentQuery<DummyGeoDoc>("FindByLatLng")
                     .WithinRadiusOf(radius, lat, lng)
 					.WaitForNonStaleResults()
 					.ToArray();
@@ -125,7 +125,7 @@ namespace Raven.Tests.Spatial
                 documentStore.DatabaseCommands.PutIndex("FindByLatLng", indexDefinition);
 
                 // Wait until the index is built
-                session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
+                session.Advanced.DocumentQuery<DummyGeoDoc>("FindByLatLng")
                     .WaitForNonStaleResults()
                     .ToArray();
 
@@ -133,7 +133,7 @@ namespace Raven.Tests.Spatial
 
                 // Find within 8 miles.
                 // We should find both my house and the gym.
-                var matchesWithinMiles = session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
+                var matchesWithinMiles = session.Advanced.DocumentQuery<DummyGeoDoc>("FindByLatLng")
                     .WithinRadiusOf(radius, myHouse.Latitude, myHouse.Longitude, SpatialUnits.Miles)
                     .WaitForNonStaleResults()
                     .ToArray();
@@ -142,7 +142,7 @@ namespace Raven.Tests.Spatial
 
                 // Find within 8 kilometers.
                 // We should find only my house, since the gym is ~11 kilometers out.
-                var matchesWithinKilometers = session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
+                var matchesWithinKilometers = session.Advanced.DocumentQuery<DummyGeoDoc>("FindByLatLng")
                     .WithinRadiusOf(radius, myHouse.Latitude, myHouse.Longitude, SpatialUnits.Kilometers)
                     .WaitForNonStaleResults()
                     .ToArray();

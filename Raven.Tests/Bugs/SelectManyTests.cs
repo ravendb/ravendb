@@ -16,7 +16,7 @@ namespace Raven.Tests.Bugs
 				PopulateData(store);
 				using (var session = store.OpenSession())
 				{
-					var query = session.Advanced.LuceneQuery<Product, ProductByCategoryIndex>()
+                    var query = session.Advanced.DocumentQuery<Product, ProductByCategoryIndex>()
 						.WaitForNonStaleResults()
 						.WhereEquals("CatIds", "categories/1")
 						.AndAlso()
@@ -35,7 +35,7 @@ namespace Raven.Tests.Bugs
 				PopulateData(store);
 				using (var session = store.OpenSession())
 				{
-					var query = session.Advanced.LuceneQuery<Product, ProductByCategoryIndex>()
+                    var query = session.Advanced.DocumentQuery<Product, ProductByCategoryIndex>()
 						.WaitForNonStaleResults()
 						.WhereEquals("CatNames", "Cat2")
 						.AndAlso()

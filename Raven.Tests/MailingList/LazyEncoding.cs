@@ -48,7 +48,7 @@ namespace Raven.Tests.MailingList
 				WaitForIndexing(store);
 				using (var session = store.OpenSession())
 				{
-					var x = session.Advanced.LuceneQuery<User,UserIndex>()
+                    var x = session.Advanced.DocumentQuery<User, UserIndex>()
 						.Where("+Name:Oren +Name:Eini")
 						.ToFacets(new Facet[]
 						{
@@ -63,7 +63,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenSession())
 				{
-					var x = session.Advanced.LuceneQuery<User, UserIndex>()
+                    var x = session.Advanced.DocumentQuery<User, UserIndex>()
 						.Where("+Name:Oren +Name:Eini")
 						.ToFacetsLazy(new Facet[]
 						{

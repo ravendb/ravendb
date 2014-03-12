@@ -285,7 +285,7 @@ namespace Raven.Tests.Faceted
 					s.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = facets });
 					s.SaveChanges();
 
-					var facetResults = s.Advanced.LuceneQuery<Camera>("CameraCost")
+                    var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
 						.ToFacets("facets/CameraFacets");
 
 					Assert.Equal(5, facetResults.Results["Manufacturer"].Values.Count());
@@ -339,7 +339,7 @@ namespace Raven.Tests.Faceted
 					s.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = facets });
 					s.SaveChanges();
 
-					var facetResults = s.Advanced.LuceneQuery<Camera>("CameraCost")
+                    var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
 						.WhereGreaterThan(x => x.DateOfListing, new DateTime(2000, 1, 1))
 						.ToFacets("facets/CameraFacets");
 
@@ -381,7 +381,7 @@ namespace Raven.Tests.Faceted
 					s.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = facets });
 					s.SaveChanges();
 
-					var facetResults = s.Advanced.LuceneQuery<Camera>("CameraCost")
+                    var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
 						.WhereGreaterThan(x => x.DateOfListing, new DateTime(2000, 1, 1))
 						.ToFacets("facets/CameraFacets");
 
@@ -424,7 +424,7 @@ namespace Raven.Tests.Faceted
 					s.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = facets });
 					s.SaveChanges();
 
-					var facetResults = s.Advanced.LuceneQuery<Camera>("CameraCost")
+                    var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
 						.ToFacets("facets/CameraFacets");
 
 					var cameraCounts = from d in _data
@@ -473,7 +473,7 @@ namespace Raven.Tests.Faceted
 					s.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = facets });
 					s.SaveChanges();
 
-					var facetResults = s.Advanced.LuceneQuery<Camera>("CameraCost")
+                    var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
 						.ToFacets("facets/CameraFacets");
 
 					var cameraCounts = from d in _data

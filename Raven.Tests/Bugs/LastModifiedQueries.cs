@@ -23,7 +23,7 @@ namespace Raven.Tests.Bugs
 
 					var dateTime = DateTools.DateToString(SystemTime.UtcNow, DateTools.Resolution.MILLISECOND);
 
-					var results = session.Advanced.LuceneQuery<object>(new RavenDocumentsByEntityName().IndexName)
+                    var results = session.Advanced.DocumentQuery<object>(new RavenDocumentsByEntityName().IndexName)
 						.Where("LastModified:[* TO " + dateTime + "]")
 						.WaitForNonStaleResults()
 						.ToArray();
@@ -52,7 +52,7 @@ namespace Raven.Tests.Bugs
 					user = session.Load<User>("users/1");
 					var ravenJObject = session.Advanced.GetMetadataFor(user);
 					var dateTime = ravenJObject.Value<DateTime>("Last-Modified");
-					var results = session.Advanced.LuceneQuery<object>(new RavenDocumentsByEntityName().IndexName)
+                    var results = session.Advanced.DocumentQuery<object>(new RavenDocumentsByEntityName().IndexName)
 						.WhereEquals("LastModified", dateTime)
 						.WaitForNonStaleResults()
 						.ToArray();

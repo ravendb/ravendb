@@ -484,7 +484,7 @@ namespace Raven.Database.Server.Controllers
 				Content = new ByteArrayContent(bytes),
 			};
 
-			WriteETag(etagValue, msg);
+			WriteETag(currentFileEtag, msg);
 
 			var type = GetContentType(docPath);
 			msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
@@ -551,17 +551,17 @@ namespace Raven.Database.Server.Controllers
 
         public abstract string TenantName { get; }
 
-        public StringBuilder CustomRequestTraceInfo { get; private set; }
+        public List<Action<StringBuilder>> CustomRequestTraceInfo { get; private set; }
 
-        public void AddRequestTraceInfo(string info)
+        public void AddRequestTraceInfo(Action<StringBuilder> info)
         {
-            if (string.IsNullOrEmpty(info))
+            if (info == null)
                 return;
 
             if (CustomRequestTraceInfo == null)
-                CustomRequestTraceInfo = new StringBuilder(info);
-            else
-                CustomRequestTraceInfo.Append(info);
+                CustomRequestTraceInfo = new List<Action<StringBuilder>>();
+            
+            CustomRequestTraceInfo.Add(info);
         }
 
 	    public abstract void MarkRequestDuration(long duration);

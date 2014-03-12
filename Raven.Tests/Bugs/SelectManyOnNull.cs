@@ -19,7 +19,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-					s.Advanced.LuceneQuery<User>()
+                    s.Advanced.DocumentQuery<User>()
 						.WhereEquals("Tags,Id", "1")
 						.ToArray();
 				}

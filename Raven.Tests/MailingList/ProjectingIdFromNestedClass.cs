@@ -63,7 +63,7 @@ namespace Raven.Tests.MailingList
 				using (var session = store.OpenSession())
 				{
 					var query = session.Advanced
-									   .LuceneQuery<Document, Documents_TestIndex>()
+                                       .DocumentQuery<Document, Documents_TestIndex>()
 									   .WaitForNonStaleResults()
 									   .SelectFields<Documents_TestIndex.Result>()
 									   .ToList();

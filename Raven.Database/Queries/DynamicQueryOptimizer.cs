@@ -53,11 +53,11 @@ namespace Raven.Database.Queries
 		{
 			if (string.IsNullOrEmpty(indexQuery.Query) && // we optimize for empty queries to use Raven/DocumentsByEntityName
 			    (indexQuery.SortedFields == null || indexQuery.SortedFields.Length == 0) && // and no sorting was requested
-				database.IndexDefinitionStorage.Contains("Raven/DocumentsByEntityName")) // and Raven/DocumentsByEntityName exists
+				database.IndexDefinitionStorage.Contains(Constants.DocumentsByEntityNameIndex)) // and Raven/DocumentsByEntityName exists
 			{
 				if (string.IsNullOrEmpty(entityName) == false)
 					indexQuery.Query = "Tag:" + entityName;
-				return new DynamicQueryOptimizerResult("Raven/DocumentsByEntityName", DynamicQueryMatchType.Complete);
+				return new DynamicQueryOptimizerResult(Constants.DocumentsByEntityNameIndex, DynamicQueryMatchType.Complete);
 			}
 
 			var fieldsQueriedUpon = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery).Select(x => x.Item2).ToArray();

@@ -77,7 +77,7 @@ namespace Raven.Tests.MailingList
 
 				using(var session=store.OpenSession())
 				{
-					var laboratoryTrials = session.Advanced.LuceneQuery<LaboratoryTrial>("Foos/TestIndex")
+                    var laboratoryTrials = session.Advanced.DocumentQuery<LaboratoryTrial>("Foos/TestIndex")
 						.WaitForNonStaleResultsAsOfLastWrite(TimeSpan.FromHours(1))
 						.WhereEquals("Read", "Yes")
 						.ToList();
