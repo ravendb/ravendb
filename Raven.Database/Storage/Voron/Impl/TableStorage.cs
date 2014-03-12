@@ -156,9 +156,6 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public void Dispose()
 		{
-			if (persistenceSource != null)
-				persistenceSource.Dispose();
-
 			if (env != null)
 				env.Dispose();
 		}
