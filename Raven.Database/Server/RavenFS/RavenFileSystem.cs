@@ -84,7 +84,7 @@ namespace Raven.Database.Server.RavenFS
         {
             switch (storageType)
             {
-                case "voron":
+                case InMemoryRavenConfiguration.VoronTypeName:
                     return new Storage.Voron.TransactionalStorage(path, settings);
                 default:
                     return new Storage.Esent.TransactionalStorage(path, settings);
