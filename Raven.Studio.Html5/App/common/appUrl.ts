@@ -150,12 +150,13 @@ class appUrl {
         } 
 
         var indexPart = indexToQueryComponent ? "/" + encodeURIComponent(indexToQueryComponent) : "";
-        return "#query" + indexPart + "?" + databasePart;
+        return "#query/index" + indexPart + "?" + databasePart;
     }
 
-    static forReporting(db: database): string {
+    static forReporting(db: database, indexName?: string): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#query/reporting?" + databasePart;
+        var indexPart = indexName ? "/" + encodeURIComponent(indexName) : "";
+        return "#query/reporting" + indexPart + "?" + databasePart;
     }
 
     static forTasks(db: database): string {

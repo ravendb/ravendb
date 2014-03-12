@@ -103,13 +103,8 @@ class query extends viewModelBase {
         });
     }
 
-    deactivate() {
-        super.deactivate();
-        this.removeKeyboardShortcuts(query.containerSelector);
-    }
-
     editSelectedIndex() {
-        router.navigate(this.editIndexUrl());
+        this.navigate(this.editIndexUrl());
     }
 
     fetchAllIndexes(): JQueryPromise<any> {
@@ -201,11 +196,7 @@ class query extends viewModelBase {
 
         // Put the query into the URL, so that if the user refreshes the page, he's still got this query loaded.
         var queryUrl = appUrl.forQuery(this.activeDatabase(), newQuery.Hash);
-        var options: DurandalNavigationOptions = {
-            replace: true,
-            trigger: false
-        };
-        router.navigate(queryUrl, options);
+        this.updateUrl(queryUrl);
 
         // Add this query to our recent queries list in the UI, or move it to the top of the list if it's already there.
         var existing = this.recentQueries.first(q => q.Hash === newQuery.Hash);
@@ -251,11 +242,7 @@ class query extends viewModelBase {
         // Reflect the new index in the address bar.
         var indexQuery = query.getIndexUrlPartFromIndexName(indexName);
         var url = appUrl.forQuery(this.activeDatabase(), indexQuery);
-        var navOptions: DurandalNavigationOptions = {
-            replace: true,
-            trigger: false
-        };
-        router.navigate(url, navOptions);
+        this.updateUrl(url);
         NProgress.done();
 
         // Fetch the index definition so that we get an updated list of fields to be used as sort by options.
