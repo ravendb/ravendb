@@ -19,8 +19,9 @@ import getDatabasesCommand = require("commands/getDatabasesCommand");
 import getBuildVersionCommand = require("commands/getBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
+import viewModelBase = require("viewmodels/viewModelBase");
 
-class shell {
+class shell extends viewModelBase {
 	private router = router;
 	databases = ko.observableArray<database>();
 	activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase");
@@ -33,17 +34,20 @@ class shell {
     appUrls: computedAppUrls;
     recordedErrors = ko.observableArray<alertArgs>();
 
-    constructor() {
-        ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
-        ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => this.databaseChanged(db));
-        
-        this.appUrls = appUrl.forCurrentDatabase();
+  constructor() {
+    super();
+    
+    ko.postbox.subscribe("Alert", (alert: alertArgs)=> this.showAlert(alert));
+    ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string)=> this.activateDatabaseWithName(databaseName));
 
-        dynamicHeightBindingHandler.install();
-	}
+    this.appUrls = appUrl.forCurrentDatabase();
 
-    activate() {
+    dynamicHeightBindingHandler.install();
+  }
+
+  activate() {
+    super.activate();
+
         NProgress.set(.7);
         router.map([
 			{ route: ['', 'databases'],	    title: 'Databases',		moduleId: 'viewmodels/databases',		nav: false },
@@ -194,15 +198,16 @@ class shell {
         }
     }
 
-    databaseChanged(db: database) {
-        if (db) {
-            new getDatabaseStatsCommand(db)
-                .execute()
-                .done(result => db.statistics(result));
-        }
+  modelPolling() {
+      var db = this.activeDatabase();
+      if (db) {
+        new getDatabaseStatsCommand(db)
+          .execute()
+          .done(result=> db.statistics(result));
+      }
     }
 
-    selectDatabase(db: database) {
+  selectDatabase(db: database) {
         db.activate();
 
         var updatedUrl = appUrl.forCurrentPage(db);

@@ -7,7 +7,7 @@ import database = require("models/database");
 class viewModelBase {
   activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
 
-  activate(args) {
+  activate(args?) {
     var db = appUrl.getDatabase();
     var currentDb = this.activeDatabase();
     if (!currentDb || currentDb.name !== db.name) {
