@@ -19,19 +19,19 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers.Admin
 {
-	[RoutePrefix("")]
-	public class AdminController : BaseAdminController
-	{
-		[HttpPost]
-		[Route("admin/backup")]
-		[Route("databases/{databaseName}/admin/backup")]
-		public async Task<HttpResponseMessage> Backup()
-		{
-			var backupRequest = await ReadJsonObjectAsync<BackupRequest>();
-			var incrementalString = InnerRequest.RequestUri.ParseQueryString()["incremental"];
-			bool incrementalBackup;
-			if (bool.TryParse(incrementalString, out incrementalBackup) == false)
-				incrementalBackup = false;
+    [RoutePrefix("")]
+    public class AdminController : BaseAdminController
+    {
+        [HttpPost]
+        [Route("admin/backup")]
+        [Route("databases/{databaseName}/admin/backup")]
+        public async Task<HttpResponseMessage> Backup()
+        {
+            var backupRequest = await ReadJsonObjectAsync<BackupRequest>();
+            var incrementalString = InnerRequest.RequestUri.ParseQueryString()["incremental"];
+            bool incrementalBackup;
+            if (bool.TryParse(incrementalString, out incrementalBackup) == false)
+                incrementalBackup = false;
 
             if (backupRequest.DatabaseDocument == null && Database.Name != null)
             {
@@ -51,132 +51,145 @@ namespace Raven.Database.Server.Controllers.Admin
                 }
             }
 
-			Database.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
+            Database.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
 
-			return GetEmptyMessage(HttpStatusCode.Created);		
-		}
+            return GetEmptyMessage(HttpStatusCode.Created);
+        }
 
-		protected WindowsBuiltInRole[] AdditionalSupportedRoles
-		{
-			get
-			{
-				return new[] { WindowsBuiltInRole.BackupOperator };
-			}
-		}
+        protected WindowsBuiltInRole[] AdditionalSupportedRoles
+        {
+            get
+            {
+                return new[] { WindowsBuiltInRole.BackupOperator };
+            }
+        }
 
-		[HttpPost]
-		[Route("admin/restore")]
-		[Route("databases/{databaseName}/admin/restore")]
-		public async Task<HttpResponseMessage> Restore()
-		{
-			if (EnsureSystemDatabase() == false)
-				return GetMessageWithString("Restore is only possiable from the system database", HttpStatusCode.BadRequest);
+        [HttpPost]
+        [Route("admin/restore")]
+        [Route("databases/{databaseName}/admin/restore")]
+        public async Task<HttpResponseMessage> Restore()
+        {
+            if (EnsureSystemDatabase() == false)
+                return GetMessageWithString("Restore is only possiable from the system database", HttpStatusCode.BadRequest);
 
             var restoreStatus = new List<string>();
 
-			var restoreRequest = await ReadJsonObjectAsync<RestoreRequest>();
+            var restoreRequest = await ReadJsonObjectAsync<RestoreRequest>();
 
-			DatabaseDocument databaseDocument = null;
+            DatabaseDocument databaseDocument = null;
 
-			var databaseDocumentPath = Path.Combine(restoreRequest.RestoreLocation, "Database.Document");
-			if (File.Exists(databaseDocumentPath))
-			{
-				var databaseDocumentText = File.ReadAllText(databaseDocumentPath);
-				databaseDocument = RavenJObject.Parse(databaseDocumentText).JsonDeserialization<DatabaseDocument>();
-			}
+            var databaseDocumentPath = Path.Combine(restoreRequest.RestoreLocation, "Database.Document");
+            if (File.Exists(databaseDocumentPath))
+            {
+                var databaseDocumentText = File.ReadAllText(databaseDocumentPath);
+                databaseDocument = RavenJObject.Parse(databaseDocumentText).JsonDeserialization<DatabaseDocument>();
+            }
 
-			var databaseName = !string.IsNullOrWhiteSpace(restoreRequest.DatabaseName) ? restoreRequest.DatabaseName
-								   : databaseDocument == null ? null : databaseDocument.Id;
+            var databaseName = !string.IsNullOrWhiteSpace(restoreRequest.DatabaseName) ? restoreRequest.DatabaseName
+                                   : databaseDocument == null ? null : databaseDocument.Id;
 
-			if (string.IsNullOrWhiteSpace(databaseName))
-			{
-				var errorMessage = (databaseDocument == null || String.IsNullOrWhiteSpace(databaseDocument.Id))
-								? "Database.Document file is invalid - database name was not found and not supplied in the request (Id property is missing or null). This is probably a bug - should never happen."
-								: "A database name must be supplied if the restore location does not contain a valid Database.Document file";
+            if (string.IsNullOrWhiteSpace(databaseName))
+            {
+                var errorMessage = (databaseDocument == null || String.IsNullOrWhiteSpace(databaseDocument.Id))
+                                ? "Database.Document file is invalid - database name was not found and not supplied in the request (Id property is missing or null). This is probably a bug - should never happen."
+                                : "A database name must be supplied if the restore location does not contain a valid Database.Document file";
 
                 restoreStatus.Add(errorMessage);
                 DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null, RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
 
-				return GetMessageWithString(errorMessage,HttpStatusCode.BadRequest);
-			}
+                return GetMessageWithString(errorMessage, HttpStatusCode.BadRequest);
+            }
 
-			if (databaseName == Constants.SystemDatabase)
-				return GetMessageWithString("Cannot do an online restore for the <system> database", HttpStatusCode.BadRequest);
+            if (databaseName == Constants.SystemDatabase)
+                return GetMessageWithString("Cannot do an online restore for the <system> database", HttpStatusCode.BadRequest);
 
-			var ravenConfiguration = new RavenConfiguration
-			{
-				DatabaseName = databaseName,
-				IsTenantDatabase = true
-			};
+            var ravenConfiguration = new RavenConfiguration
+            {
+                DatabaseName = databaseName,
+                IsTenantDatabase = true
+            };
 
-			if (databaseDocument != null)
-			{
-				foreach (var setting in databaseDocument.Settings)
-				{
-					ravenConfiguration.Settings[setting.Key] = setting.Value;
-				}
-			}
+            if (databaseDocument != null)
+            {
+                foreach (var setting in databaseDocument.Settings)
+                {
+                    ravenConfiguration.Settings[setting.Key] = setting.Value;
+                }
+            }
 
             if (File.Exists(Path.Combine(restoreRequest.RestoreLocation, Voron.Impl.Constants.DatabaseFilename)))
                 ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
-			else if (Directory.Exists(Path.Combine(restoreRequest.RestoreLocation, "new")))
-				ravenConfiguration.DefaultStorageTypeName = typeof (Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
+            else if (Directory.Exists(Path.Combine(restoreRequest.RestoreLocation, "new")))
+                ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 
-			ravenConfiguration.CustomizeValuesForTenant(databaseName);
-			ravenConfiguration.Initialize();
+            ravenConfiguration.CustomizeValuesForTenant(databaseName);
+            ravenConfiguration.Initialize();
 
-			string documentDataDir;
-			ravenConfiguration.DataDirectory = ResolveTenantDataDirectory(restoreRequest.DatabaseLocation, databaseName, out documentDataDir);
+            string documentDataDir;
+            ravenConfiguration.DataDirectory = ResolveTenantDataDirectory(restoreRequest.DatabaseLocation, databaseName, out documentDataDir);
 
-			DatabasesLandlord.SystemDatabase.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
-			var defrag = "true".Equals(GetQueryStringValue("defrag"), StringComparison.InvariantCultureIgnoreCase);
+            DatabasesLandlord.SystemDatabase.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
+            var defrag = "true".Equals(GetQueryStringValue("defrag"), StringComparison.InvariantCultureIgnoreCase);
 
-			await Task.Factory.StartNew(() =>
-			{
-				DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, null,
-					msg =>
-					{
-						restoreStatus.Add(msg);
-						DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
-							RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
-					}, defrag);
+            var task = Task.Factory.StartNew(() =>
+            {
+                DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, ravenConfiguration.DataDirectory,
+                msg =>
+                {
+                    restoreStatus.Add(msg);
+                    DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+                        RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
+                }, defrag);
 
-				if (databaseDocument == null)
-					return;
+                if (databaseDocument == null)
+                    return;
 
-				databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
-				databaseDocument.Id = databaseName;
-				DatabasesLandlord.Protect(databaseDocument);
-				DatabasesLandlord.SystemDatabase.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument),
-					new RavenJObject(), null);
+                databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
+                databaseDocument.Id = databaseName;
+                DatabasesLandlord.Protect(databaseDocument);
+                DatabasesLandlord.SystemDatabase.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument),
+                    new RavenJObject(), null);
 
-				restoreStatus.Add("The new database was created");
-				DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
-					RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
-			}, TaskCreationOptions.LongRunning);
+                restoreStatus.Add("The new database was created");
+                DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+                    RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
+            }, TaskCreationOptions.LongRunning);
 
-			return GetEmptyMessage();
-		}
+            long id;
+            var status = new RavenJObject();
+            status["Done"] = false;
+            status["Error"] = null;
+            task = task.ContinueWith(t =>
+            {
+                if (t.Exception != null)
+                    status["Error"] = t.Exception.ToString();
+                else
+                    status["Done"] = true;
+            });
+            Database.AddTask(task, status, out id);
 
-		private string ResolveTenantDataDirectory(string databaseLocation, string databaseName, out string documentDataDir)
-		{
-			if (Path.IsPathRooted(databaseLocation))
-			{
-				documentDataDir = databaseLocation;
-				return databaseLocation;
-			}
+            return GetMessageWithObject(new { Id = id });
+        }
 
-			var baseDataPath = Path.GetDirectoryName(DatabasesLandlord.SystemDatabase.Configuration.DataDirectory);
-			if (baseDataPath == null)
-				throw new InvalidOperationException("Could not find root data path");
+        private string ResolveTenantDataDirectory(string databaseLocation, string databaseName, out string documentDataDir)
+        {
+            if (Path.IsPathRooted(databaseLocation))
+            {
+                documentDataDir = databaseLocation;
+                return databaseLocation;
+            }
 
-			if (string.IsNullOrWhiteSpace(databaseLocation))
-			{
-				documentDataDir = Path.Combine("~\\Databases", databaseName);
-				return Path.Combine(baseDataPath, documentDataDir.Substring(2));
-			}
+            var baseDataPath = Path.GetDirectoryName(DatabasesLandlord.SystemDatabase.Configuration.DataDirectory);
+            if (baseDataPath == null)
+                throw new InvalidOperationException("Could not find root data path");
 
-			documentDataDir = databaseLocation;
+            if (string.IsNullOrWhiteSpace(databaseLocation))
+            {
+                documentDataDir = Path.Combine("~\\Databases", databaseName);
+                return Path.Combine(baseDataPath, documentDataDir.Substring(2));
+            }
+
+            documentDataDir = databaseLocation;
 
             if (!documentDataDir.StartsWith("~/") && !documentDataDir.StartsWith(@"~\"))
             {
@@ -187,94 +200,94 @@ namespace Raven.Database.Server.Controllers.Admin
                 documentDataDir = "~\\" + documentDataDir.Substring(2);
             }
 
-			return Path.Combine(baseDataPath, documentDataDir.Substring(2));
-		}
+            return Path.Combine(baseDataPath, documentDataDir.Substring(2));
+        }
 
-		[HttpPost]
-		[Route("admin/changedbid")]
-		[Route("databases/{databaseName}/admin/changedbid")]
-		public HttpResponseMessage ChangeDbId()
-		{
-			Guid old = Database.TransactionalStorage.Id;
-			var newId = Database.TransactionalStorage.ChangeId();
+        [HttpPost]
+        [Route("admin/changedbid")]
+        [Route("databases/{databaseName}/admin/changedbid")]
+        public HttpResponseMessage ChangeDbId()
+        {
+            Guid old = Database.TransactionalStorage.Id;
+            var newId = Database.TransactionalStorage.ChangeId();
 
-			return GetMessageWithObject(new
-			{
-				OldId = old,
-				NewId = newId
-			});
-		}
+            return GetMessageWithObject(new
+            {
+                OldId = old,
+                NewId = newId
+            });
+        }
 
-		[HttpPost]
-		[Route("admin/compact")]
-		[Route("databases/{databaseName}/admin/compact")]
-		public HttpResponseMessage Compact()
-		{
-			EnsureSystemDatabase();
+        [HttpPost]
+        [Route("admin/compact")]
+        [Route("databases/{databaseName}/admin/compact")]
+        public HttpResponseMessage Compact()
+        {
+            EnsureSystemDatabase();
 
-			var db = InnerRequest.RequestUri.ParseQueryString()["database"];
-			if (string.IsNullOrWhiteSpace(db))
-				return GetMessageWithString("Compact request requires a valid database parameter", HttpStatusCode.BadRequest);
+            var db = InnerRequest.RequestUri.ParseQueryString()["database"];
+            if (string.IsNullOrWhiteSpace(db))
+                return GetMessageWithString("Compact request requires a valid database parameter", HttpStatusCode.BadRequest);
 
-			var configuration = DatabasesLandlord.CreateTenantConfiguration(db);
-			if (configuration == null)
-				return GetMessageWithString("No database named: " + db, HttpStatusCode.NotFound);
+            var configuration = DatabasesLandlord.CreateTenantConfiguration(db);
+            if (configuration == null)
+                return GetMessageWithString("No database named: " + db, HttpStatusCode.NotFound);
 
-			DatabasesLandlord.Lock(db, () => DatabasesLandlord.SystemDatabase.TransactionalStorage.Compact(configuration));
+            DatabasesLandlord.Lock(db, () => DatabasesLandlord.SystemDatabase.TransactionalStorage.Compact(configuration));
 
-			return GetEmptyMessage();
-		}
+            return GetEmptyMessage();
+        }
 
-		[HttpGet]
-		[Route("admin/indexingStatus")]
-		[Route("databases/{databaseName}/admin/indexingStatus")]
-		public HttpResponseMessage IndexingStatus()
-		{
-			return GetMessageWithObject(new {IndexingStatus = Database.WorkContext.RunIndexing ? "Indexing" : "Paused"});		
-		}
+        [HttpGet]
+        [Route("admin/indexingStatus")]
+        [Route("databases/{databaseName}/admin/indexingStatus")]
+        public HttpResponseMessage IndexingStatus()
+        {
+            return GetMessageWithObject(new { IndexingStatus = Database.WorkContext.RunIndexing ? "Indexing" : "Paused" });
+        }
 
-		[HttpPost]
-		[Route("admin/optimize")]
-		[Route("databases/{databaseName}/admin/optimize")]
-		public void Optimize()
-		{
-			Database.IndexStorage.MergeAllIndexes();			
-		}
+        [HttpPost]
+        [Route("admin/optimize")]
+        [Route("databases/{databaseName}/admin/optimize")]
+        public void Optimize()
+        {
+            Database.IndexStorage.MergeAllIndexes();
+        }
 
-		[HttpPost]
-		[Route("admin/startIndexing")]
-		[Route("databases/{databaseName}/admin/startIndexing")]
-		public void StartIndexing()
-		{
-			var concurrency = InnerRequest.RequestUri.ParseQueryString()["concurrency"];
+        [HttpPost]
+        [Route("admin/startIndexing")]
+        [Route("databases/{databaseName}/admin/startIndexing")]
+        public void StartIndexing()
+        {
+            var concurrency = InnerRequest.RequestUri.ParseQueryString()["concurrency"];
 
-			if (string.IsNullOrEmpty(concurrency) == false)
-				Database.Configuration.MaxNumberOfParallelIndexTasks = Math.Max(1, int.Parse(concurrency));
+            if (string.IsNullOrEmpty(concurrency) == false)
+                Database.Configuration.MaxNumberOfParallelIndexTasks = Math.Max(1, int.Parse(concurrency));
 
-			Database.SpinIndexingWorkers();
-		}
+            Database.SpinIndexingWorkers();
+        }
 
-		[HttpPost]
-		[Route("admin/stopIndexing")]
-		[Route("databases/{databaseName}/admin/stopIndexing")]
-		public void StopIndexing()
-		{
-			Database.StopIndexingWorkers();			
-		}
+        [HttpPost]
+        [Route("admin/stopIndexing")]
+        [Route("databases/{databaseName}/admin/stopIndexing")]
+        public void StopIndexing()
+        {
+            Database.StopIndexingWorkers();
+        }
 
-		[HttpGet]
-		[Route("admin/stats")]
-		public HttpResponseMessage Stats()
-		{
-			if (Database != DatabasesLandlord.SystemDatabase)
-				return GetMessageWithString("Admin stats can only be had from the root database", HttpStatusCode.NotFound);
+        [HttpGet]
+        [Route("admin/stats")]
+        public HttpResponseMessage Stats()
+        {
+            if (Database != DatabasesLandlord.SystemDatabase)
+                return GetMessageWithString("Admin stats can only be had from the root database", HttpStatusCode.NotFound);
 
-		    var allDbs = new List<DocumentDatabase>();
+            var allDbs = new List<DocumentDatabase>();
             DatabasesLandlord.ForAllDatabases(allDbs.Add);
-		    var currentConfiguration = DatabasesLandlord.SystemConfiguration;
+            var currentConfiguration = DatabasesLandlord.SystemConfiguration;
 
-            
-            var stats =  new AdminStatistics
+
+            var stats = new AdminStatistics
             {
                 ServerName = currentConfiguration.ServerName,
                 TotalNumberOfRequests = RequestManager.NumberOfRequests,
@@ -316,7 +329,7 @@ namespace Raven.Database.Server.Controllers.Admin
             };
 
             return GetMessageWithObject(stats);
-		}
+        }
 
         private decimal ConvertBytesToMBs(long bytes)
         {
@@ -343,16 +356,16 @@ namespace Raven.Database.Server.Controllers.Admin
         });
 
 
-      
 
-		[HttpGet]
-		[Route("admin/detailed-storage-breakdown")]
-		[Route("databases/{databaseName}/admin/detailed-storage-breakdown")]
-		public HttpResponseMessage DetailedStorageBreakdown()
-		{
-			var x = Database.TransactionalStorage.ComputeDetailedStorageInformation();
-			return GetMessageWithObject(x);
-		}
+
+        [HttpGet]
+        [Route("admin/detailed-storage-breakdown")]
+        [Route("databases/{databaseName}/admin/detailed-storage-breakdown")]
+        public HttpResponseMessage DetailedStorageBreakdown()
+        {
+            var x = Database.TransactionalStorage.ComputeDetailedStorageInformation();
+            return GetMessageWithObject(x);
+        }
 
         [HttpPost]
         [HttpGet]
@@ -372,17 +385,17 @@ namespace Raven.Database.Server.Controllers.Admin
 
         [HttpGet]
         [HttpPost]
-		[Route("admin/loh-compaction")]
+        [Route("admin/loh-compaction")]
         public HttpResponseMessage LohCompaction()
-		{
+        {
             if (EnsureSystemDatabase() == false)
                 return GetMessageWithString("Large Object Heap Garbage Collection is only possiable from the system database", HttpStatusCode.BadRequest);
 
 
-		    Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
+            Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
             Action afterCollect = () => DatabasesLandlord.ForAllDatabases(clearCaches);
-		    RavenGC.CollectGarbage(true, afterCollect);
+            RavenGC.CollectGarbage(true, afterCollect);
             return GetMessageWithString("LOH GC Done");
         }
-	}
+    }
 }
