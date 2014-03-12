@@ -1,10 +1,8 @@
-﻿using System;
-
-using Voron;
+﻿using Voron;
 
 namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 {
-    public interface IPersistenceSource : IDisposable
+    public interface IPersistenceSource
 	{
 		StorageEnvironmentOptions Options { get; }
 

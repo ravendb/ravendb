@@ -38,11 +38,5 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
 
 		    Options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath);
 		}
-
-		public void Dispose()
-		{
-			if (Options != null)
-				Options.Dispose();
-		}
 	}
 }
