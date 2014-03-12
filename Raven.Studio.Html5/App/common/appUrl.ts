@@ -155,7 +155,7 @@ class appUrl {
 
     static forReporting(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#reporting?" + databasePart;
+        return "#query/reporting?" + databasePart;
     }
 
     static forTasks(db: database): string {

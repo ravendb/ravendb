@@ -1,9 +1,9 @@
 ﻿<div>
-    <div class="panel panel-primary">
+    <div class="panel panel-default">
         <div class="panel-heading">
-            <div class="pull-left panel-title">Automatic conflict resolution settings</div>
+            <div class="pull-left panel-title">Automatic conflict resolution</div>
             <div class="pull-right">
-                <button type="button" class="btn btn-default btn-xs" data-bind="click: saveAutomaticConflictResolutionSettings"><i class="fa fa-save"></i> Save Changes</button>
+                <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveAutomaticConflictResolutionSettings" title="Save changes"><i class="fa fa-save"></i></button>
             </div>
             <div class="clearfix"></div>
         </div>
@@ -46,25 +46,25 @@
             </form>
         </div>
     </div>
-    <div class="panel panel-primary">
+    <div class="panel panel-default">
         <div class="panel-heading">
             <div class="pull-left panel-title">Replication destinations</div>
             <div class="pull-right">
-                <button type="button" class="btn btn-default btn-xs" data-bind="click: createNewDestination"><i class="fa fa-plus"></i> Add Replication</button>
-                <button type="button" class="btn btn-default btn-xs" data-bind="click: saveChanges"><i class="fa fa-save"></i> Save Changes</button>
+                <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: createNewDestination" title="Add a replication destination (Alt+R)" accesskey="R"><i class="fa fa-plus"></i> Add destination</button>
+                <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveChanges" title="Save replication destinations (Alt+S, R)"><i class="fa fa-save"></i></button>
             </div>
             <div class="clearfix"></div>
         </div>
         <div class="panel-body" data-bind="with: replicationsSetup">
-            <div data-bind="visible: destinations().length === 0">
-                No replication destinations specified.
+            <div class="alert alert-info" data-bind="visible: destinations().length === 0">
+                You've got no replication destinations set up. <a href="#" data-bind="click: $root.createNewDestination.bind($root)" class="alert-link">Add one now</a>.
             </div>
             <div data-bind="foreach: destinations">
-                <div class="panel replication-destination-card" data-bind="css: { 'panel-info': !disabled(), 'panel-warning': disabled }">
+                <div class="panel replication-destination-card" data-bind="css: { 'panel-danger': !isValid(), 'panel-info': isValid() && !disabled(), 'panel-warning': isValid() && disabled() }">
                     <div class="panel-heading">
                         <h3 class="panel-title">
-                            <span>&nbsp;</span>
-                            <button type="button" style="display:inline-block;" class="close" data-bind="click: $root.removeDestination.bind($root)" title="Remove this replication">×</button>
+                            <span data-bind="text: name"></span>
+                            <button type="button" style="display:inline-block;" class="close" data-bind="click: $root.removeDestination.bind($root)" title="Remove this replication destination">×</button>
                         </h3>
                     </div>
                     <div class="panel-body">

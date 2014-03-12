@@ -77,15 +77,12 @@ class shell {
             trigger: 'hover'
         });
 
-        var dataset: Twitter.Typeahead.Dataset = {
-            name: "test",
-            local: ["hello","world"]
-        };
-        $("#goToDocInput").typeahead(dataset);
-    }
-
-    handleQuery(query: any, cb: any) {
-        debugger;
+        // TODO: implement Go to document
+        //var dataset: Twitter.Typeahead.Dataset = {
+        //    name: "test",
+        //    local: ["hello","world"]
+        //};
+        //$("#goToDocInput").typeahead(dataset);
     }
 
     showNavigationProgress(isNavigating: boolean) {

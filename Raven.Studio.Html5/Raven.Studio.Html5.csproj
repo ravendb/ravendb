@@ -97,6 +97,7 @@
     <TypeScriptCompile Include="App\viewmodels\queryShell.ts" />
     <TypeScriptCompile Include="App\viewmodels\recentErrors.ts" />
     <TypeScriptCompile Include="App\viewmodels\replicationStats.ts" />
+    <TypeScriptCompile Include="App\viewmodels\reporting.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
@@ -145,6 +146,7 @@
     <Content Include="App\views\periodicBackup.html" />
     <Content Include="App\views\query.html" />
     <Content Include="App\views\replicationStats.html" />
+    <Content Include="App\views\reporting.html" />
     <Content Include="App\views\settings.html" />
     <Content Include="App\views\toggleIndexing.html" />
     <Content Include="App\views\userInfo.html" />

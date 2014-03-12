@@ -11,6 +11,19 @@ class replicationDestination {
     disabled = ko.observable<boolean>();
     clientVisibleUrl = ko.observable<string>();
 
+    name = ko.computed(() => {
+        if (this.url() && this.database()) {
+            return this.database() + " on " + this.url();
+        } else if (this.url()) {
+            return this.url();
+        } else if (this.database()) {
+            return this.database();
+        }
+
+        return "[empty]";
+    });
+    isValid = ko.computed(() => this.url() != null && this.url().length > 0);
+
     constructor(dto: replicationDestinationDto) {
         this.url(dto.Url);
         this.username(dto.Username);
