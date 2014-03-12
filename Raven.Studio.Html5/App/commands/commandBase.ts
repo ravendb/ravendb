@@ -21,7 +21,7 @@ class commandBase {
     }
 
     reportError(title: string, details?: string, httpStatusText?: string) {
-        this.reportProgress(alertType.danger, title, details);
+        this.reportProgress(alertType.danger, title, details, httpStatusText);
         if (console && console.log && typeof console.log === "function") {
             console.log("Error during command execution", title, details, httpStatusText);
         }
@@ -31,8 +31,8 @@ class commandBase {
         this.reportProgress(alertType.success, title, details);
     }
 
-    reportWarning(title: string, details?: string) {
-        this.reportProgress(alertType.warning, title, details);
+    reportWarning(title: string, details?: string, httpStatusText?: string) {
+        this.reportProgress(alertType.warning, title, details, httpStatusText);
     }
 
     urlEncodeArgs(args: any): string {
@@ -85,7 +85,7 @@ class commandBase {
         // ContentType:
         //
         // Can't use application/json in cross-domain requests, otherwise it 
-        // issues OPTIONS prefligh request first, which doesn't return proper 
+        // issues OPTIONS preflight request first, which doesn't return proper 
         // headers(e.g.Etag header, etc.)
         // 
         // So, for GETs, we issue text/plain requests, which skip the OPTIONS
@@ -112,7 +112,7 @@ class commandBase {
         return $.ajax(defaultOptions);
     }
 
-    private reportProgress(type: alertType, title: string, details?: string) {
+    private reportProgress(type: alertType, title: string, details?: string, httpStatusText?: string) {
         ko.postbox.publish("Alert", new alertArgs(type, title, details));
     }
 }

@@ -82,17 +82,11 @@ interface indexPerformanceDto {
     DurationMilliseconds: number;
 }
 
-interface apiKeyDto {
+interface apiKeyDto extends documentDto {
     Name: string;
     Secret: string;
     Enabled: boolean;
-    Databases: Array<apiKeyDatabaseDto>;
-}
-
-interface apiKeyDatabaseDto {
-    TenantId: string;
-    Admin: boolean;
-    ReadOnly: boolean;
+    Databases: Array<databaseAccessDto>;
 }
 
 interface buildVersionDto {
@@ -288,6 +282,23 @@ interface replicationConfigDto {
     AttachmentConflictResolution: string;
 }
 
+interface databaseAccessDto {
+    Admin: boolean;
+    TenantId: string;
+    ReadOnly: boolean;
+}
+
+interface windowsAuthDataDto {
+    Name: string;
+    Enabled: boolean;
+    Databases: databaseAccessDto[];
+}
+
+interface windowsAuthDto {
+    RequiredGroups: windowsAuthDataDto[];
+    RequiredUsers: windowsAuthDataDto[];
+}
+
 interface transformerDto {
     name: string;
     definition: {
@@ -305,8 +316,20 @@ interface storedQueryDto {
     ShowFields: boolean;
     IndexEntries: boolean;
     UseAndOperator: boolean;
+    Hash: number;
 }
 
 interface storedQueryContainerDto extends documentDto {
     Queries: storedQueryDto[];
+}
+
+interface bulkDocumentDto {
+    Key: string;
+    Method: string;
+    AdditionalData?: any[];
+    Document?: documentDto; // Can be null when Method == "DELETE"
+    Metadata?: documentMetadataDto; // Can be null when Method == "DELETE"
+    Etag?: string; // Often is null on sending to server, non-null when returning from server.
+    PatchResult?: any;
+    Deleted?: any;
 }

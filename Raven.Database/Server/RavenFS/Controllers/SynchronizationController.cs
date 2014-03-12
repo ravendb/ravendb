@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.RavenFS;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Infrastructure;
@@ -40,17 +41,13 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 		[HttpPost]
         [Route("ravenfs/{fileSystemName}/synchronization/start/{*fileName}")]
-		public Task<SynchronizationReport> Start(string fileName, string destinationServerUrl, string destinationFileSystem)
+		public async Task<SynchronizationReport> Start(string fileName)
 		{
-		    var destination = new SynchronizationDestination()
-		    {
-		        ServerUrl = destinationServerUrl,
-		        FileSystem = destinationFileSystem
-		    };
+		    var destination = await ReadJsonObjectAsync<SynchronizationDestination>();
 
 			Log.Debug("Starting to synchronize a file '{0}' to {1}", fileName, destination.FileSystemUrl);
 
-			return SynchronizationTask.SynchronizeFileToAsync(fileName, destination);
+			return await SynchronizationTask.SynchronizeFileToAsync(fileName, destination);
 		}
 
 		[HttpPost]
@@ -216,7 +213,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 											 NameValueCollection sourceMetadata, ServerInfo sourceServer,
 											 out bool isConflictResolved)
 		{
-			var conflict = ConflictDetector.Check(fileName, localMetadata, sourceMetadata, sourceServer.Url);
+			var conflict = ConflictDetector.Check(fileName, localMetadata, sourceMetadata, sourceServer.FileSystemUrl);
 			isConflictResolved = ConflictResolver.IsResolved(localMetadata, conflict);
 
 			if (conflict != null && !isConflictResolved)
@@ -226,12 +223,12 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				Publisher.Publish(new ConflictDetected
 				{
 					FileName = fileName,
-					SourceServerUrl = sourceServer.Url
+					SourceServerUrl = sourceServer.FileSystemUrl
 				});
 
 				Log.Debug(
 					"File '{0}' is in conflict with synchronized version from {1} ({2}). File marked as conflicted, conflict configuration item created",
-					fileName, sourceServer.Url, sourceServer.Id);
+					fileName, sourceServer.FileSystemUrl, sourceServer.Id);
 
 				throw new SynchronizationException(string.Format("File {0} is conflicted", fileName));
 			}
@@ -625,7 +622,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 		[HttpPost]
         [Route("ravenfs/{fileSystemName}/synchronization/IncrementLastETag")]
-		public HttpResponseMessage IncrementLastETag(Guid sourceServerId, string sourceServerUrl, Guid sourceFileETag)
+		public HttpResponseMessage IncrementLastETag(Guid sourceServerId, string sourceFileSystemUrl, Guid sourceFileETag)
 		{
 			try
 			{
@@ -635,7 +632,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 				Storage.Batch(
 					accessor =>
-					SaveSynchronizationSourceInformation(new ServerInfo { Id = sourceServerId, Url = sourceServerUrl }, sourceFileETag,
+					SaveSynchronizationSourceInformation(new ServerInfo { Id = sourceServerId, FileSystemUrl = sourceFileSystemUrl }, sourceFileETag,
 														 accessor));
 			}
 			catch (Exception ex)
@@ -666,7 +663,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			Publisher.Publish(new SynchronizationUpdate
 			{
 				FileName = fileName,
-				SourceServerUrl = sourceServer.Url,
+				SourceFileSystemUrl = sourceServer.FileSystemUrl,
 				SourceServerId = sourceServer.Id,
 				Type = type,
 				Action = action,
@@ -823,7 +820,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			var synchronizationSourceInfo = new SourceSynchronizationInformation
 			{
 				LastSourceFileEtag = lastSourceEtag,
-				SourceServerUrl = sourceServer.Url,
+				SourceServerUrl = sourceServer.FileSystemUrl,
 				DestinationServerId = Storage.Id
 			};
 
@@ -831,7 +828,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			accessor.SetConfig(key, synchronizationSourceInfo.AsConfig());
 
-			Log.Debug("Saved last synchronized file ETag {0} from {1} ({2})", lastSourceEtag, sourceServer.Url, sourceServer.Id);
+			Log.Debug("Saved last synchronized file ETag {0} from {1} ({2})", lastSourceEtag, sourceServer.FileSystemUrl, sourceServer.Id);
 		}
 	}
 }

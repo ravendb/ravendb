@@ -211,6 +211,23 @@ arrayPrototype.distinct = function () {
     return distinctElements;
 }
 
+// String extensions
+interface String {
+    hashCode: () => number;
+}
+
+String.prototype.hashCode = function () {
+    var hash = 0;
+    if (this.length == 0) return hash;
+    for (var i = 0; i < this.length; i++) {
+        var char = this.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash |= 0; // Convert to 32bit integer
+    }
+    return hash;
+};
+
+// TODO: this should really be in its own file, similiar to common/aceEditorBindingHandler
 ko.bindingHandlers['slideVisible'] = {
     init: function (element, valueAccessor) {
         var value = valueAccessor();

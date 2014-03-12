@@ -10,6 +10,16 @@ class queryIndexCommand extends commandBase {
     }
 
     execute(): JQueryPromise<pagedResultSet> {
+        
+
+        var selector = (results: indexQueryResultsDto) => new pagedResultSet(results.Results.map(d => new document(d)), results.TotalResults, results);
+        var queryTask = this.query(this.getUrl(), null, this.db, selector);
+        queryTask.fail((response: JQueryXHR) => this.reportError("Error querying index", response.responseText, response.statusText));
+
+        return queryTask;
+    }
+
+    getUrl() {
         var url = "/indexes/" + this.indexName;
         var resultsTransformerUrlFragment = this.transformerName ? "&resultsTransformer=" + this.transformerName : ""; // This should not be urlEncoded, as it breaks the query.
         var urlArgs = this.urlEncodeArgs({
@@ -23,11 +33,7 @@ class queryIndexCommand extends commandBase {
             operator: this.useAndOperator ? "AND" : undefined
         }) + resultsTransformerUrlFragment;
 
-        var selector = (results: indexQueryResultsDto) => new pagedResultSet(results.Results.map(d => new document(d)), results.TotalResults, results);
-        var queryTask = this.query(url + urlArgs, null, this.db, selector);
-        queryTask.fail((response: JQueryXHR) => this.reportError("Error querying index", response.responseText, response.statusText));
-
-        return queryTask;
+        return url + urlArgs;
     }
 }
 

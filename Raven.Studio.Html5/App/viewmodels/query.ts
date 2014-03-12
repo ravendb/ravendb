@@ -3,6 +3,7 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import getCollectionsCommand = require("commands/getCollectionsCommand");
 import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import pagedList = require("common/pagedList");
@@ -11,6 +12,7 @@ import queryIndexCommand = require("commands/queryIndexCommand");
 import moment = require("moment");
 import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import querySort = require("models/querySort");
+import collection = require("models/collection");
 import getTransformersCommand = require("commands/getTransformersCommand");
 import deleteDocumentsMatchingQueryConfirm = require("viewmodels/deleteDocumentsMatchingQueryConfirm");
 import getStoredQueriesCommand = require("commands/getStoredQueriesCommand");
@@ -39,6 +41,9 @@ class query extends viewModelBase {
     indexEntries = ko.observable(false);
     recentQueries = ko.observableArray<storedQueryDto>();
     recentQueriesDoc = ko.observable<storedQueryContainerDto>();
+    rawJsonUrl = ko.observable<string>();
+    collectionNames = ko.observableArray<string>();
+    selectedIndexLabel: KnockoutComputed<string>;
 
     static containerSelector = "#queryContainer";
 
@@ -49,21 +54,46 @@ class query extends viewModelBase {
         this.termsUrl = ko.computed(() => this.selectedIndex() ? appUrl.forTerms(this.selectedIndex(), this.activeDatabase()) : null);
         this.statsUrl = ko.computed(() => appUrl.forStatus(this.activeDatabase()));
         this.hasSelectedIndex = ko.computed(() => this.selectedIndex() != null);
-        this.selectedIndexEditUrl = ko.computed(() => this.selectedIndex() ? appUrl.forEditIndex(this.selectedIndex(), this.activeDatabase()) : '');
+        this.selectedIndexLabel = ko.computed(() => this.selectedIndex() === "dynamic" ? "All Documents" : this.selectedIndex());
+        this.selectedIndexEditUrl = ko.computed(() => {
+            var index = this.selectedIndex();
+            if (index && index.indexOf("dynamic/") !== 0) {
+                return appUrl.forEditIndex(this.selectedIndex(), this.activeDatabase());
+            }
+
+            return "";
+        });
         
         aceEditorBindingHandler.install();        
     }
 
-    activate(indexNameOrRecentQueryIndex?: string) {
-        super.activate(indexNameOrRecentQueryIndex);
+    activate(indexNameOrRecentQueryHash?: string) {
+        super.activate(indexNameOrRecentQueryHash);
 
-        this.fetchAllIndexes(indexNameOrRecentQueryIndex);
         this.fetchAllTransformers();
-        this.fetchRecentQueries(indexNameOrRecentQueryIndex);
+        $.when(
+            this.fetchAllCollections(),
+            this.fetchAllIndexes(),
+            this.fetchRecentQueries())
+            .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
+    }
+
+    selectInitialQuery(indexNameOrRecentQueryHash: string) {
+        if (!indexNameOrRecentQueryHash && this.indexNames().length > 0) {
+            this.setSelectedIndex(this.indexNames.first());
+        } else if (this.indexNames.contains(indexNameOrRecentQueryHash) || indexNameOrRecentQueryHash.indexOf("dynamic/") === 0 || indexNameOrRecentQueryHash === "dynamic") {
+            this.setSelectedIndex(indexNameOrRecentQueryHash);
+        }
+        else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
+            var hash = parseInt(indexNameOrRecentQueryHash.substr("recentquery-".length), 10);
+            var matchingQuery = this.recentQueries.first(q => q.Hash === hash);
+            if (matchingQuery) {
+                this.runRecentQuery(matchingQuery);
+            }
+        }
     }
 
     attached() {
-        this.useBootstrapTooltips();
         this.createKeyboardShortcut("F2", () => this.editSelectedIndex(), query.containerSelector);
         $("#indexQueryLabel").popover({
             html: true,
@@ -82,21 +112,20 @@ class query extends viewModelBase {
         router.navigate(this.editIndexUrl());
     }
 
-    fetchAllIndexes(indexNameOrRecentQueryIndex?: string) {
-        new getDatabaseStatsCommand(this.activeDatabase())
+    fetchAllIndexes(): JQueryPromise<any> {
+        return new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
-            .done((stats: databaseStatisticsDto) => {
-                this.indexNames(stats.Indexes.map(i => i.PublicName));
-                if (!indexNameOrRecentQueryIndex) {
-                    this.setSelectedIndex(this.indexNames.first());
-                } else if (this.indexNames.contains(indexNameOrRecentQueryIndex)) {
-                    this.setSelectedIndex(indexNameOrRecentQueryIndex);
-                }
-            });
+            .done((results: databaseStatisticsDto) => this.indexNames(results.Indexes.map(i => i.PublicName)));
     }
 
-    fetchRecentQueries(indexNameOrRecentQueryIndex?: string) {
-        new getStoredQueriesCommand(this.activeDatabase())
+    fetchAllCollections(): JQueryPromise<any> {
+        return new getCollectionsCommand(this.activeDatabase())
+            .execute()
+            .done((results: collection[]) => this.collectionNames(results.map(c => c.name)));
+    }
+
+    fetchRecentQueries(): JQueryPromise<any> {
+        return new getStoredQueriesCommand(this.activeDatabase())
             .execute()
             .fail(_ => {
                 var newStoredQueryContainer: storedQueryContainerDto = {
@@ -110,14 +139,6 @@ class query extends viewModelBase {
                 var dto = <storedQueryContainerDto>doc.toDto(true);
                 this.recentQueriesDoc(dto);
                 this.recentQueries(dto.Queries);
-
-                // Select one if we're configured to do so.
-                if (indexNameOrRecentQueryIndex && indexNameOrRecentQueryIndex.indexOf("recentquery-") === 0) {
-                    var recentQueryToSelectIndex = parseInt(indexNameOrRecentQueryIndex.substr("recentquery-".length), 10);
-                    if (!isNaN(recentQueryToSelectIndex) && recentQueryToSelectIndex < dto.Queries.length) {
-                        this.runRecentQuery(dto.Queries[recentQueryToSelectIndex]);
-                    }
-                }
             });
     }
 
@@ -148,6 +169,7 @@ class query extends viewModelBase {
             var showFields = this.showFields();
             var indexEntries = this.indexEntries();
             var useAndOperator = this.isDefaultOperatorOr() === false;
+            this.rawJsonUrl(appUrl.forDatabaseQuery(this.activeDatabase()) + new queryIndexCommand(selectedIndex, database, 0, 1024, queryText, sorts, transformer, showFields, indexEntries, useAndOperator).getUrl());
             var resultsFetcher = (skip: number, take: number) => {
                 var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
                 return command
@@ -173,16 +195,26 @@ class query extends viewModelBase {
             ShowFields: showFields,
             Sorts: sorts,
             TransformerName: transformer || null,
-            UseAndOperator: useAndOperator
+            UseAndOperator: useAndOperator,
+            Hash: (indexName + (queryText || "") + sorts.reduce((a, b) => a + b, "") + (transformer || "") + showFields + indexEntries + useAndOperator).hashCode()
         };
 
-        var existing = this.recentQueries.first(q => query.areSameQueriesIgnoringPinned(q, newQuery));
+        // Put the query into the URL, so that if the user refreshes the page, he's still got this query loaded.
+        var queryUrl = appUrl.forQuery(this.activeDatabase(), newQuery.Hash);
+        var options: DurandalNavigationOptions = {
+            replace: true,
+            trigger: false
+        };
+        router.navigate(queryUrl, options);
+
+        // Add this query to our recent queries list in the UI, or move it to the top of the list if it's already there.
+        var existing = this.recentQueries.first(q => q.Hash === newQuery.Hash);
         if (existing) {
-            // Move it to the top of the list.
             this.recentQueries.remove(existing);
             this.recentQueries.unshift(existing);
         } else {
             this.recentQueries.unshift(newQuery);
+            console.log("zanzibar new", (indexName + (queryText || "") + sorts.reduce((a, b) => a + b, "") + (transformer || "") + showFields + indexEntries + useAndOperator), (indexName + queryText + sorts.reduce((a, b) => a + b, "") + transformer + showFields + indexEntries + useAndOperator).hashCode());
         }
 
         // Limit us to 15 query recent runs.
@@ -211,37 +243,39 @@ class query extends viewModelBase {
             .reduce((first, second) => first + ", " + second);
     }
 
-    static areSameQueriesIgnoringPinned(first: storedQueryDto, second: storedQueryDto) {
-        return first.IndexEntries === second.IndexEntries &&
-            first.IndexName === second.IndexName &&
-            first.QueryText === second.QueryText &&
-            first.ShowFields === second.ShowFields &&
-            first.Sorts.length === second.Sorts.length &&
-            first.Sorts.every((firstSort, index) => firstSort === second.Sorts[index]) &&
-            first.TransformerName === second.TransformerName &&
-            first.UseAndOperator === second.UseAndOperator;
-    }
-
     setSelectedIndex(indexName: string) {
         this.sortBys.removeAll();
         this.selectedIndex(indexName);
         this.runQuery();
 
-        // Fetch the index definition so that we get an updated list of fields.
-        new getIndexDefinitionCommand(indexName, this.activeDatabase())
-            .execute()
-            .done((result: indexDefinitionContainerDto) => {
-                this.indexFields(result.Index.Fields);
-            });
-
         // Reflect the new index in the address bar.
-        var url = appUrl.forQuery(this.activeDatabase(), indexName);
+        var indexQuery = query.getIndexUrlPartFromIndexName(indexName);
+        var url = appUrl.forQuery(this.activeDatabase(), indexQuery);
         var navOptions: DurandalNavigationOptions = {
             replace: true,
             trigger: false
         };
         router.navigate(url, navOptions);
         NProgress.done();
+
+        // Fetch the index definition so that we get an updated list of fields to be used as sort by options.
+        // Fields don't show for All Documents.
+        var isAllDocumentsDynamicQuery = indexName === "All Documents";
+        if (!isAllDocumentsDynamicQuery) {
+            new getIndexDefinitionCommand(indexQuery, this.activeDatabase())
+                .execute()
+                .done((result: indexDefinitionContainerDto) => {
+                    this.indexFields(result.Index.Fields);
+                });
+        }
+    }
+
+    static getIndexUrlPartFromIndexName(indexNameOrCollectionName: string) {
+        if (indexNameOrCollectionName === "All Documents") {
+            return "dynamic";
+        }
+
+        return indexNameOrCollectionName;
     }
 
     addSortBy() {

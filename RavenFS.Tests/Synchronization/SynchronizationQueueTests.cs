@@ -10,7 +10,7 @@ namespace RavenFS.Tests.Synchronization
 {
 	public class SynchronizationQueueTests : StorageTest
 	{
-        private SynchronizationDestination Destination = new SynchronizationDestination() { ServerUrl = "http://dest", FileSystem = "test" };
+        private string Destination = string.Format("{0}/ravenfs/{1}", "http://dest", "test");
 		private const string FileName = "test.txt";
 
 		private static readonly NameValueCollection EmptyETagMetadata = new NameValueCollection

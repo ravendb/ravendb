@@ -76,6 +76,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Auth\ClientOAuthAuthentication.cs" />
+    <Compile Include="Auth\ClientWindowsAuth.cs" />
+    <Compile Include="Auth\ClientWithoutAuthenticationSetup.cs" />
+    <Compile Include="Auth\SynchronizationWithOAuth.cs" />
+    <Compile Include="Auth\SynchronizationWithWindowsAuth.cs" />
     <Compile Include="BigFileHandling.cs" />
     <Compile Include="Bugs\CaseSensitiveFileDeletion.cs" />
     <Compile Include="Bugs\ReadingFileIfFileWithGreaterNameExists.cs" />
@@ -89,7 +94,6 @@
     <Compile Include="ClientUsage.cs" />
     <Compile Include="CompleteUsage.cs" />
     <Compile Include="Config.cs" />
-    <Compile Include="Extensions\RavenFileSystemClientExtensions.cs" />
     <Compile Include="FileHandling.cs" />
     <Compile Include="FileNamingTests.cs" />
     <Compile Include="Folders.cs" />

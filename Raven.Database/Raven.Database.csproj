@@ -308,6 +308,7 @@
     <Compile Include="Server\Controllers\AdminBundlesApiController.cs" />
     <Compile Include="Server\Controllers\Admin\AdminController.cs" />
     <Compile Include="Server\Controllers\BundlesApiController.cs" />
+    <Compile Include="Server\Controllers\StudioTasksController.cs" />
     <Compile Include="Server\Controllers\RavenBaseApiController.cs" />
     <Compile Include="Server\Contents\StaticHeadContent.cs" />
     <Compile Include="Server\Controllers\StudioController.cs" />
@@ -358,6 +359,7 @@
     <Compile Include="Server\RavenFS\Controllers\StatsController.cs" />
     <Compile Include="Server\RavenFS\Controllers\StorageController.cs" />
     <Compile Include="Server\RavenFS\Controllers\SynchronizationController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\FileSystemsController.cs" />
     <Compile Include="Server\RavenFS\Extensions\ByteExtensions.cs" />
     <Compile Include="Server\RavenFS\Extensions\ConfigurationExtension.cs" />
     <Compile Include="Server\RavenFS\Extensions\EnumExtensions.cs" />
@@ -412,7 +414,6 @@
     <Compile Include="Server\RavenFS\Synchronization\Multipart\SeedFilePart.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Multipart\SourceFilePart.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Multipart\SynchronizationMultipartRequest.cs" />
-    <Compile Include="Server\RavenFS\Synchronization\Multipart\SyncingMultipartConstants.cs" />
     <Compile Include="Server\RavenFS\Synchronization\NoSyncReason.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Rdc\IPartialDataAccess.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Rdc\LocalRdcManager.cs" />
@@ -452,7 +453,6 @@
     <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\SimilarityData.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\VolatileSignatureRepository.cs" />
     <Compile Include="Server\RavenFS\Synchronization\RenameWorkItem.cs" />
-    <Compile Include="Server\RavenFS\Synchronization\ServerInfo.cs" />
     <Compile Include="Server\RavenFS\Synchronization\SynchronizationHiLo.cs" />
     <Compile Include="Server\RavenFS\Synchronization\SynchronizationLock.cs" />
     <Compile Include="Server\RavenFS\Synchronization\SynchronizationQueue.cs" />

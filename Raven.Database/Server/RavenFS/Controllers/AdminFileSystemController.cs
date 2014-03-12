@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -26,7 +27,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
             Database.Put(docKey, null, json, new RavenJObject(), null);
 
-            return GetEmptyMessage();
+            return GetEmptyMessage(HttpStatusCode.Created);
         }
     }
 }

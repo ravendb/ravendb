@@ -31,6 +31,7 @@ class shell {
     licenseStatus = ko.observable<licenseStatusDto>();
     windowHeightObservable: KnockoutObservable<number>;
     appUrls: computedAppUrls;
+    recordedErrors = ko.observableArray<alertArgs>();
 
     constructor() {
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
@@ -68,6 +69,23 @@ class shell {
 			e.preventDefault();
 			this.newDocument();
         });
+
+        $("body").tooltip({
+            delay: { show: 600, hide: 100 },
+            container: 'body',
+            selector: '.use-bootstrap-tooltip',
+            trigger: 'hover'
+        });
+
+        var dataset: Twitter.Typeahead.Dataset = {
+            name: "test",
+            local: ["hello","world"]
+        };
+        $("#goToDocInput").typeahead(dataset);
+    }
+
+    handleQuery(query: any, cb: any) {
+        debugger;
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -90,7 +108,7 @@ class shell {
     }
 
     launchDocEditor(docId?: string, docsList?: pagedList) {
-        var editDocUrl = appUrl.forEditDoc(docId, docsList ? docsList.collectionName : null, docsList ? docsList.currentItemIndex() : null);
+        var editDocUrl = appUrl.forEditDoc(docId, docsList ? docsList.collectionName : null, docsList ? docsList.currentItemIndex() : null, this.activeDatabase());
         router.navigate(editDocUrl);
     }
 
@@ -119,8 +137,12 @@ class shell {
 		});
 	}
 
-	showAlert(alert: alertArgs) {
-		var currentAlert = this.currentAlert();
+    showAlert(alert: alertArgs) {
+        if (alert.type === alertType.danger || alert.type === alertType.warning) {
+            this.recordedErrors.unshift(alert);
+        }
+
+        var currentAlert = this.currentAlert();
 		if (currentAlert) {
 			// Maintain a 1000ms time between alerts; otherwise successive alerts can fly by too quickly.
 			this.queuedAlerts.push(alert);
@@ -135,13 +157,29 @@ class shell {
 			}
 			setTimeout(() => this.closeAlertAndShowNext(alert), fadeTime);
 		}
-	}
+    }
 
-	closeAlertAndShowNext(alertToClose: alertArgs) {
-		$('#' + alertToClose.id).alert('close');
-		var nextAlert = this.queuedAlerts.pop();
-		setTimeout(() => this.currentAlert(nextAlert), 1000); // Give the alert a chance to fade out before we push in the new alert.
-	}
+    closeAlertAndShowNext(alertToClose: alertArgs) {
+        var alertElement = $('#' + alertToClose.id);
+        if (alertElement.length === 0) {
+            return;
+        }
+
+        // If the mouse is over the alert, keep it around.
+        if (alertElement.is(":hover")) {
+            setTimeout(() => this.closeAlertAndShowNext(alertToClose), 1000);
+        } else {
+            alertElement.alert('close');
+        }
+    }
+
+    onAlertHidden() {
+        this.currentAlert(null);
+        var nextAlert = this.queuedAlerts.pop();
+        if (nextAlert) {
+            this.showAlert(nextAlert);
+        }
+    }
 
 	newDocument() {
 		this.launchDocEditor(null);
@@ -183,6 +221,13 @@ class shell {
         new getLicenseStatusCommand()
             .execute()
             .done((result: licenseStatusDto) => this.licenseStatus(result));
+    }
+
+    showErrorsDialog() {
+        require(["viewmodels/recentErrors"], ErrorDetails => {
+            var dialog = new ErrorDetails(this.recordedErrors);
+            app.showDialog(dialog);
+        });
     }
 }
 

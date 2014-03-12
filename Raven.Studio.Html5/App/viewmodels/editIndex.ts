@@ -1,3 +1,4 @@
+import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
 import index = require("models/index");
 import indexDefinition = require("models/indexDefinition");
@@ -64,8 +65,6 @@ class editIndex extends viewModelBase {
         this.addMapHelpPopover();
         this.addReduceHelpPopover();
         this.addTransformHelpPopover();
-
-        this.useBootstrapTooltips();
     }
 
     addMapHelpPopover() {
@@ -141,7 +140,10 @@ class editIndex extends viewModelBase {
     deleteIndex() {
         var index = this.editedIndex();
         if (index) {
-            var deleteViewModel = new deleteIndexesConfirm([index.name()], this.activeDatabase());
+            var db = this.activeDatabase();
+            var deleteViewModel = new deleteIndexesConfirm([index.name()], db);
+            deleteViewModel.deleteTask.done(() => router.navigate(appUrl.forIndexes(db)))
+
             dialog.show(deleteViewModel);
         }
     }

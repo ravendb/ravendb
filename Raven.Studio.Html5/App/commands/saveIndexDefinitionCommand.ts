@@ -13,12 +13,29 @@ class saveIndexDefinitionCommand extends commandBase {
         this.reportInfo("Saving " + this.index.Name + "...");
 
         // Saving an index definition requires 2 parts:
-        // 1. POST the index priority to /indexes/set-priority/[indexname]?priority=[priority]
-        // 2. PUT the index definition to /indexes/[index name]?definition=yes
+        // 1. PUT the index definition to / indexes / [index name]? definition = yes
+        // 2. POST the index priority to / indexes / set - priority / [indexname]? priority = [priority]
+        // 
+        // These must be done in sequence because the index definition may be brand new, and thus setting the priority must wait for index creation.
+        var result = $.Deferred();
+        var runSavePriority = () => this.savePriority()
+            .fail((response: JQueryXHR) => {
+                this.reportWarning("Index was saved, but failed to set its priority.", response.responseText, response.statusText);
+                result.reject(response);
+            })
+            .done(() => {
+                this.reportSuccess("Saved " + this.index.Name + ".");
+                result.resolve();
+            });
 
-        return $.when(this.savePriority(), this.saveDefinition())
-            .done(() => this.reportSuccess("Saved " + this.index.Name))
-            .fail((response: JQueryXHR) => this.reportError("Failed to save " + this.index.Name, response.responseText, response.statusText));
+        this.saveDefinition()
+            .fail((response: JQueryXHR) => {
+                this.reportError("Failed to save " + this.index.Name, response.responseText, response.statusText);
+                result.reject(response);
+            })
+            .done(() => runSavePriority());
+
+        return result;
     }
 
     private savePriority(): JQueryPromise<any> {

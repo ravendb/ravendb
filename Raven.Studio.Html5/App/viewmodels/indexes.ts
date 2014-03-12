@@ -5,26 +5,27 @@ import appUrl = require("common/appUrl");
 import saveIndexLockModeCommand = require("commands/saveIndexLockModeCommand");
 import saveIndexAsPersistentCommand = require("commands/saveIndexAsPersistentCommand");
 import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
+import getStoredQueriesCommand = require("commands/getStoredQueriesCommand");
+import querySort = require("models/querySort");
 import app = require("durandal/app");
 
 class indexes extends viewModelBase {
 
     indexGroups = ko.observableArray<{ entityName: string; indexes: KnockoutObservableArray<index> }>();
-    dynamicQueryUrl: KnockoutComputed<string>;
+    queryUrl = ko.observable<string>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     containerSelector = "#indexesContainer";
+    recentQueries = ko.observableArray<storedQueryDto>()
     
     activate(args) {
         super.activate(args);
 
         this.fetchIndexes();
-        this.activeDatabase.subscribe(() => this.onDatabaseChanged());
-        this.dynamicQueryUrl = appUrl.forCurrentDatabase().dynamicQuery;
+        this.fetchRecentQueries();
+        this.queryUrl(appUrl.forQuery(this.activeDatabase(), null));
     }
 
     attached() {
-        this.useBootstrapTooltips();
-
         // Alt+Minus and Alt+Plus are already setup. Since laptops don't have a dedicated key for plus, we'll also use the equal sign key (co-opted for plus).
         this.createKeyboardShortcut("Alt+=", () => this.expandAll(), this.containerSelector);
     }
@@ -39,9 +40,24 @@ class indexes extends viewModelBase {
             .done((stats: databaseStatisticsDto) => this.processDbStats(stats));
     }
 
-    onDatabaseChanged() {
-        this.indexGroups([]);
-        this.fetchIndexes();
+    fetchRecentQueries() {
+        new getStoredQueriesCommand(this.activeDatabase())
+            .execute()
+            .done((doc: storedQueryContainerDto) => this.recentQueries(doc.Queries));
+    }
+
+    getRecentQueryUrl(query: storedQueryDto) {
+        return appUrl.forQuery(this.activeDatabase(), query.Hash);
+    }
+
+    getRecentQuerySortText(query: storedQueryDto) {
+        if (query.Sorts.length === 0) {
+            return "";
+        }
+        return query.Sorts
+            .map(s => querySort.fromQuerySortString(s))
+            .map(s => s.toHumanizedString())
+            .reduce((first, second) => first + ", " + second);
     }
 
     processDbStats(stats: databaseStatisticsDto) {
@@ -94,6 +110,10 @@ class indexes extends viewModelBase {
         this.promptDeleteIndexes(this.getAllIndexes());
     }
 
+    deleteIndex(i: index) {
+        this.promptDeleteIndexes([i]);
+    }
+
     promptDeleteIndexes(indexes: index[]) {
         if (indexes.length > 0) {
             var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
@@ -106,6 +126,9 @@ class indexes extends viewModelBase {
         this.indexGroups().forEach(g => {
             g.indexes.removeAll(indexes);
         });
+
+        // Remove any empty groups.
+        this.indexGroups.remove((item: { entityName: string; indexes: KnockoutObservableArray<index> }) => item.indexes().length === 0);
     }
 
     unlockIndex(i: index) {

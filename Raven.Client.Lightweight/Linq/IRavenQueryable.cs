@@ -37,6 +37,13 @@ namespace Raven.Client.Linq
         /// <returns></returns>
 	    IRavenQueryable<TResult> TransformWith<TTransformer, TResult>() where TTransformer : AbstractTransformerCreationTask, new();
 
+	    /// <summary>
+	    /// Specifies a result transformer name to use on the results
+	    /// </summary>
+	    /// <typeparam name="TResult"></typeparam>
+	    /// <returns></returns>
+	    IRavenQueryable<TResult> TransformWith<TResult>(string transformerName);
+
         /// <summary>
         /// Inputs a key and value to the query (accessible by the transformer)
         /// </summary>
