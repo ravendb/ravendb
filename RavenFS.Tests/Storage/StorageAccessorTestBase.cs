@@ -49,7 +49,7 @@ namespace RavenFS.Tests.Storage
 
             var settings = new NameValueCollection
                            {
-                               {"Raven/FileSystem/RunInMemory", runInMemory.ToString()}
+                               {"Raven/RunInMemory", runInMemory.ToString()}
                            };
 
             ITransactionalStorage storage;

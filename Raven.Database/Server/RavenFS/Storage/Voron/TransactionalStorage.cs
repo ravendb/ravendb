@@ -73,7 +73,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
         public bool Initialize()
         {
             bool runInMemory;
-            bool.TryParse(settings["Raven/FileSystem/RunInMemory"], out runInMemory);
+            bool.TryParse(settings["Raven/RunInMemory"], out runInMemory);
 
             var persistenceSource = runInMemory ? (IPersistenceSource)new MemoryPersistenceSource() : new MemoryMapPersistenceSource(path, settings);
 

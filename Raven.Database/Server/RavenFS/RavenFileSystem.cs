@@ -42,7 +42,7 @@ namespace Raven.Database.Server.RavenFS
 		{
 			this.systemConfiguration = systemConfiguration;
 
-            var storageType = systemConfiguration.Settings["Raven/FileSystem/StorageType"];
+		    var storageType = systemConfiguration.DefaultFileSystemStorageTypeName;
             if (string.Equals(InMemoryRavenConfiguration.VoronTypeName, storageType, StringComparison.OrdinalIgnoreCase) == false)
             {
                 if (Directory.Exists(systemConfiguration.FileSystemDataDirectory) &&
