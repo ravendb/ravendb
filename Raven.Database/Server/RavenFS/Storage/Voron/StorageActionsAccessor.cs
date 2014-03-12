@@ -108,7 +108,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             if (!metadata.AllKeys.Contains("ETag"))
                 throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
 
-            var version = storage.Files.ReadVersion(Snapshot, key);
+            var version = storage.Files.ReadVersion(Snapshot, key, writeBatch.Value);
 
             var innerMetadata = new NameValueCollection(metadata);
             var etag = innerMetadata.Value<Guid>("ETag");
@@ -347,7 +347,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                 throw new FileNotFoundException(filename);
 
             var totalSize = file.Value<long?>("total_size") ?? 0;
-            file["total_size"] = totalSize;
+            file["total_size"] = Math.Abs(totalSize);
 
             storage.Files.Add(writeBatch.Value, key, file, version);
         }
@@ -365,23 +365,23 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public void RenameFile(string filename, string rename, bool commitPeriodically = false)
         {
+            ushort version;
+            ushort? renameVersion;
             var renameKey = CreateKey(rename);
-            var renameVersion = storage.Files.ReadVersion(Snapshot, renameKey);
 
-            if (renameVersion > 0)
-                throw new FileExistsException(string.Format("Cannot rename '{0} to '{1}'. Rename '{1}' exists.", filename, rename));
+            if (storage.Files.Contains(Snapshot, renameKey, writeBatch.Value, out renameVersion))
+                throw new FileExistsException(string.Format("Cannot rename '{0}' to '{1}'. Rename '{1}' exists.", filename, rename));
 
             var key = CreateKey(filename);
-            ushort version;
             var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
             if (file == null)
                 throw new FileNotFoundException("Could not find file: " + filename);
 
             RenameUsage(filename, rename, commitPeriodically);
-            file["name"] = rename;
+            DeleteFile(filename);
 
-            storage.Files.Delete(writeBatch.Value, key, version);
-            storage.Files.Add(writeBatch.Value, renameKey, file, 0);
+            file["name"] = rename;
+            storage.Files.Add(writeBatch.Value, renameKey, file, renameVersion ?? 0);
         }
 
         private void RenameUsage(string fileName, string rename, bool commitPeriodically)

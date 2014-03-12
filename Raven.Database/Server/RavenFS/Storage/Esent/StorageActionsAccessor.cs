@@ -585,7 +585,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 		    catch (Exception e)
 		    {
 		        if (e is EsentKeyDuplicateException)
-                    throw new FileExistsException(string.Format("Cannot rename '{0} to '{1}'. Rename '{1}' exists.", filename, rename), e);
+                    throw new FileExistsException(string.Format("Cannot rename '{0}' to '{1}'. Rename '{1}' exists.", filename, rename), e);
 
 		        throw;
 		    }
