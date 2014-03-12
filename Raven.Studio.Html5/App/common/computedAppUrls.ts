@@ -5,6 +5,8 @@ interface computedAppUrls {
     indexes: KnockoutComputed<string>;
     newIndex: KnockoutComputed<string>;
     editIndex: (indexName?: string) => KnockoutComputed<string>;
+    newTransformer: KnockoutComputed<string>;
+    editTransformer: (transformerName?: string) => KnockoutComputed<string>;
     transformers: KnockoutComputed<string>;
     query: (indexName?: string) => KnockoutComputed<string>;
     reporting: KnockoutComputed<string>;

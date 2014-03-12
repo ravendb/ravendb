@@ -307,6 +307,14 @@ interface transformerDto {
     }
 }
 
+interface savedTransformerDto {
+    "Transformer":
+    {
+        "TransformResults": string;
+        "Name":string;
+    }
+}
+
 interface storedQueryDto {
     IsPinned: boolean;
     IndexName: string;
