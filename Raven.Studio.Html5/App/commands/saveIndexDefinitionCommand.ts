@@ -12,7 +12,7 @@ class saveIndexDefinitionCommand extends commandBase {
     execute(): JQueryPromise<any> {
         this.reportInfo("Saving " + this.index.Name + "...");
 
-        // Saving an index definition requires 2 parts:
+        // Saving an index definition requires 2 steps:
         // 1. PUT the index definition to / indexes / [index name]? definition = yes
         // 2. POST the index priority to / indexes / set - priority / [indexname]? priority = [priority]
         // 
@@ -24,7 +24,7 @@ class saveIndexDefinitionCommand extends commandBase {
                 result.reject(response);
             })
             .done(() => {
-                this.reportSuccess("Saved " + this.index.Name);
+                this.reportSuccess("Saved " + this.index.Name + ".");
                 result.resolve();
             });
 

@@ -49,7 +49,7 @@ select new {
 						Tags = new List<string> { "Database", "NoSql" }
 					});
 					session.SaveChanges();
-					var tagAndCounts = session.Advanced.LuceneQuery<TagCloud.TagAndCount>("TagCloud")
+                    var tagAndCounts = session.Advanced.DocumentQuery<TagCloud.TagAndCount>("TagCloud")
 						.WaitForNonStaleResults()
 						.WithinRadiusOf(100, 38.96939, -77.386938)
 						.WaitForNonStaleResults()

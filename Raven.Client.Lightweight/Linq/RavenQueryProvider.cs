@@ -232,16 +232,25 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Convert the expression to a Lucene query
 		/// </summary>
+        [Obsolete("Use ToAsyncDocumentQuery instead.")]
 		public IAsyncDocumentQuery<TResult> ToAsyncLuceneQuery<TResult>(Expression expression)
 		{
-			var processor = GetQueryProviderProcessor<T>();
-			var luceneQuery = (IAsyncDocumentQuery<TResult>)processor.GetAsyncLuceneQueryFor(expression);
-
-			if (FieldsToRename.Count > 0)
-				luceneQuery.AfterQueryExecuted(processor.RenameResults);
-
-			return luceneQuery;
+		    return ToAsyncDocumentQuery<TResult>(expression);
 		}
+
+        /// <summary>
+        /// Convert the expression to a Lucene query
+        /// </summary>
+        public IAsyncDocumentQuery<TResult> ToAsyncDocumentQuery<TResult>(Expression expression)
+        {
+            var processor = GetQueryProviderProcessor<T>();
+            var documentQuery = (IAsyncDocumentQuery<TResult>)processor.GetAsyncDocumentQueryFor(expression);
+
+            if (FieldsToRename.Count > 0)
+                documentQuery.AfterQueryExecuted(processor.RenameResults);
+
+            return documentQuery;
+        }
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
@@ -250,7 +259,7 @@ namespace Raven.Client.Linq
 		public Lazy<IEnumerable<S>> Lazily<S>(Expression expression, Action<IEnumerable<S>> onEval)
 		{
 			var processor = GetQueryProviderProcessor<S>();
-			var query = processor.GetLuceneQueryFor(expression);
+			var query = processor.GetDocumentQueryFor(expression);
 			if (afterQueryExecuted != null)
 				query.AfterQueryExecuted(afterQueryExecuted);
 
@@ -278,7 +287,7 @@ namespace Raven.Client.Linq
 		public Lazy<int> CountLazily<S>(Expression expression)
 		{
 			var processor = GetQueryProviderProcessor<S>();
-			var query = processor.GetLuceneQueryFor(expression);
+			var query = processor.GetDocumentQueryFor(expression);
 			return query.CountLazily();
 		}
 
@@ -293,12 +302,21 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Convert the expression to a Lucene query
 		/// </summary>
+        [Obsolete("Use ToDocumentQuery instead.")]
 		public IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression)
 		{
-			var processor = GetQueryProviderProcessor<T>();
-			var result = (IDocumentQuery<TResult>)processor.GetLuceneQueryFor(expression);
-			result.SetResultTransformer(ResultTransformer);
-			return result;
+		    return ToDocumentQuery<TResult>(expression);
 		}
+
+        /// <summary>
+        /// Convert the expression to a Lucene query
+        /// </summary>
+        public IDocumentQuery<TResult> ToDocumentQuery<TResult>(Expression expression)
+        {
+            var processor = GetQueryProviderProcessor<T>();
+            var result = (IDocumentQuery<TResult>)processor.GetDocumentQueryFor(expression);
+            result.SetResultTransformer(ResultTransformer);
+            return result;
+        }
 	}
 }

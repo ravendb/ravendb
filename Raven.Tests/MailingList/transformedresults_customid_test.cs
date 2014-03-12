@@ -54,7 +54,7 @@ namespace Raven.Tests.MailingList
 					session.SaveChanges();
 
 					TestResultItem item = session
-					   .Advanced.LuceneQuery<TestResultItem>("TestItemsIndex")
+                       .Advanced.DocumentQuery<TestResultItem>("TestItemsIndex")
 					   .WaitForNonStaleResults()
 					   .ToList().First();
 

@@ -38,7 +38,7 @@ namespace Raven.Tests.Issues
 
 					session.SaveChanges();
 
-					var queryResult = session.Advanced.LuceneQuery<Item>().ExplainScores().WaitForNonStaleResults().QueryResult;
+                    var queryResult = session.Advanced.DocumentQuery<Item>().ExplainScores().WaitForNonStaleResults().QueryResult;
 
                     Assert.False(queryResult.IsStale);
 					Assert.Equal(2, queryResult.ScoreExplanations.Count);

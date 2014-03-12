@@ -53,7 +53,7 @@ namespace Raven.Tests.MailingList
 		{
 			using (var session = store.OpenSession())
 			{
-				var products = session.Advanced.LuceneQuery<Product, Product_AvailableForSale3>()
+                var products = session.Advanced.DocumentQuery<Product, Product_AvailableForSale3>()
 					.SelectFields<Product>()
 					.UsingDefaultField("Any")
 					.Where("MyName1").ToList();
@@ -67,7 +67,7 @@ namespace Raven.Tests.MailingList
 		{
 			using (var session = store.OpenSession())
 			{
-				var products = session.Advanced.LuceneQuery<Product, Product_AvailableForSale3>()
+                var products = session.Advanced.DocumentQuery<Product, Product_AvailableForSale3>()
 					.UsingDefaultField("Any")
 					.Where("MyName1").ToList();
 

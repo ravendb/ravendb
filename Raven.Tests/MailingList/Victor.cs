@@ -57,7 +57,7 @@ namespace Raven.Tests.MailingList
 				}
 				using (var s = store.OpenSession())
 				{
-					var items = s.Advanced.LuceneQuery<Item, WithDynamicIndex>()
+                    var items = s.Advanced.DocumentQuery<Item, WithDynamicIndex>()
 						.WaitForNonStaleResults()
 						.OrderBy("-T1") //System.ArgumentException: The field 'T1' is not indexed, cannot sort on fields that are not indexed
 						.ToList();

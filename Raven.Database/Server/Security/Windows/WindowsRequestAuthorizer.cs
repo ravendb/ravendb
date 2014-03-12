@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Principal;
 using System.Threading;
-using System.Web;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
@@ -12,7 +11,6 @@ using Raven.Database.Server.Abstractions;
 using System.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Server.Controllers;
-using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Server.Security.Windows
 {
@@ -61,70 +59,11 @@ namespace Raven.Database.Server.Security.Windows
 								: new List<WindowsAuthData>();
 		}
 
-		public bool Authorize(IHttpContext ctx, bool ignoreDb)
-		{
-			Action onRejectingRequest;
-			var databaseName = TenantId ?? Constants.SystemDatabase;
-			var userCreated = TryCreateUser(ctx, databaseName, out onRejectingRequest);
-			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && userCreated == false)
-			{
-				onRejectingRequest();
-				return false;
-			}
-
-			PrincipalWithDatabaseAccess user = null;
-			if (userCreated)
-			{
-				user = (PrincipalWithDatabaseAccess)ctx.User;
-				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = ctx.User.Identity.Name;
-				CurrentOperationContext.User.Value = ctx.User;
-
-				// admins always go through
-				if (user.Principal.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode))
-					return true;
-
-				// backup operators can go through
-				if (user.Principal.IsBackupOperator(server.SystemConfiguration.AnonymousUserAccessMode))
-					return true;
-			}
-
-			var httpRequest = ctx.Request;
-			bool isGetRequest = IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath);
-			switch (server.SystemConfiguration.AnonymousUserAccessMode)
-			{
-				case AnonymousUserAccessMode.Admin:
-				case AnonymousUserAccessMode.All:
-					return true; // if we have, doesn't matter if we have / don't have the user
-				case AnonymousUserAccessMode.Get:
-					if (isGetRequest)
-						return true;
-					goto case AnonymousUserAccessMode.None;
-				case AnonymousUserAccessMode.None:
-					if (userCreated)
-					{
-						if (user.AdminDatabases.Contains(databaseName) ||
-							user.AdminDatabases.Contains("*") || ignoreDb)
-							return true;
-						if (user.ReadWriteDatabases.Contains(databaseName) ||
-							user.ReadWriteDatabases.Contains("*"))
-							return true;
-						if (isGetRequest && (user.ReadOnlyDatabases.Contains(databaseName) ||
-							user.ReadOnlyDatabases.Contains("*")))
-							return true;
-					}
-
-					onRejectingRequest();
-					return false;
-				default:
-					throw new ArgumentOutOfRangeException();
-			}
-		}
-
         public bool TryAuthorize(RavenBaseApiController controller, bool ignoreDb, out HttpResponseMessage msg)
 		{
 			Func<HttpResponseMessage> onRejectingRequest;
-			var databaseName = controller.TenantName ?? Constants.SystemDatabase;
-			var userCreated = TryCreateUser(controller, databaseName, out onRejectingRequest);
+			var tenantId = controller.TenantName ?? Constants.SystemDatabase;
+			var userCreated = TryCreateUser(controller, tenantId, out onRejectingRequest);
 			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && userCreated == false)
 			{
 				msg = onRejectingRequest();
@@ -170,24 +109,48 @@ namespace Raven.Database.Server.Security.Windows
 				case AnonymousUserAccessMode.None:
 					if (userCreated)
 					{
-						if (user.AdminDatabases.Contains(databaseName) ||
-						    user.AdminDatabases.Contains("*") || ignoreDb)
-						{
-							msg = controller.GetEmptyMessage();
-							return true;
-						}
-						if (user.ReadWriteDatabases.Contains(databaseName) ||
-						    user.ReadWriteDatabases.Contains("*"))
-						{
-							msg = controller.GetEmptyMessage();
-							return true;
-						}
-						if (isGetRequest && (user.ReadOnlyDatabases.Contains(databaseName) ||
-						                     user.ReadOnlyDatabases.Contains("*")))
-						{
-							msg = controller.GetEmptyMessage();
-							return true;
-						}
+					    if (string.IsNullOrEmpty(tenantId) || tenantId.StartsWith("fs/") == false)
+					    {
+					        if (user.AdminDatabases.Contains(tenantId) ||
+					            user.AdminDatabases.Contains("*") || ignoreDb)
+					        {
+					            msg = controller.GetEmptyMessage();
+					            return true;
+					        }
+					        if (user.ReadWriteDatabases.Contains(tenantId) ||
+					            user.ReadWriteDatabases.Contains("*"))
+					        {
+					            msg = controller.GetEmptyMessage();
+					            return true;
+					        }
+					        if (isGetRequest && (user.ReadOnlyDatabases.Contains(tenantId) ||
+					                             user.ReadOnlyDatabases.Contains("*")))
+					        {
+					            msg = controller.GetEmptyMessage();
+					            return true;
+					        }
+					    }
+					    else if(tenantId.StartsWith("fs/"))
+					    {
+					        tenantId = tenantId.Substring(3, tenantId.Length - "fs/".Length);
+
+                            if (user.ReadWriteFileSystems.Contains(tenantId) ||
+                                user.ReadWriteFileSystems.Contains("*"))
+                            {
+                                msg = controller.GetEmptyMessage();
+                                return true;
+                            }
+                            if (isGetRequest && (user.ReadOnlyFileSystems.Contains(tenantId) ||
+                                                 user.ReadOnlyFileSystems.Contains("*")))
+                            {
+                                msg = controller.GetEmptyMessage();
+                                return true;
+                            }
+					    }
+					    else
+					    {
+                            throw new ArgumentOutOfRangeException("tenantId", "We don't know how to authorize unknown tenant id: " + tenantId);
+					    }
 					}
 
 					msg = onRejectingRequest();
@@ -264,12 +227,19 @@ namespace Raven.Database.Server.Security.Windows
 				return false;
 			}
 
-			var dbUsersIaAllowedAccessTo = requiredUsers
+			var dbUsersIsAllowedAccessTo = requiredUsers
 				.Where(data => controller.User.Identity.Name.Equals(data.Name, StringComparison.InvariantCultureIgnoreCase))
 				.SelectMany(source => source.Databases)
 				.Concat(requiredGroups.Where(data => controller.User.IsInRole(data.Name)).SelectMany(x => x.Databases))
 				.ToList();
-			var user = UpdateUserPrincipal(controller, dbUsersIaAllowedAccessTo);
+
+            var fsUsersIsAllowedAccessTo = requiredUsers
+                .Where(data => controller.User.Identity.Name.Equals(data.Name, StringComparison.InvariantCultureIgnoreCase))
+                .SelectMany(source => source.FileSystems)
+                .Concat(requiredGroups.Where(data => controller.User.IsInRole(data.Name)).SelectMany(x => x.FileSystems))
+                .ToList();
+
+            var user = UpdateUserPrincipal(controller, dbUsersIsAllowedAccessTo, fsUsersIsAllowedAccessTo);
 
 			onRejectingRequest = () =>
 			{
@@ -279,6 +249,8 @@ namespace Raven.Database.Server.Security.Windows
 					user.AdminDatabases,
 					user.ReadOnlyDatabases,
 					user.ReadWriteDatabases,
+                    user.ReadOnlyFileSystems,
+                    user.ReadWriteFileSystems,
 					DatabaseName = databaseName
 				});
 
@@ -339,29 +311,38 @@ namespace Raven.Database.Server.Security.Windows
 			return user;
 		}
 
-        private PrincipalWithDatabaseAccess UpdateUserPrincipal(RavenBaseApiController controller, List<DatabaseAccess> databaseAccessLists)
-		{
-			var access = controller.User as PrincipalWithDatabaseAccess;
-			if (access != null)
-				return access;
+        private PrincipalWithDatabaseAccess UpdateUserPrincipal(RavenBaseApiController controller, List<DatabaseAccess> databaseAccessLists,
+                                                                List<FileSystemAccess> fileSystemAccessLists)
+        {
+            var access = controller.User as PrincipalWithDatabaseAccess;
+            if (access != null)
+                return access;
 
-			var user = new PrincipalWithDatabaseAccess((WindowsPrincipal)controller.User);
+            var user = new PrincipalWithDatabaseAccess((WindowsPrincipal)controller.User);
 
-			foreach (var databaseAccess in databaseAccessLists)
-			{
-				if (databaseAccess.Admin)
-					user.AdminDatabases.Add(databaseAccess.TenantId);
-				else if (databaseAccess.ReadOnly)
-					user.ReadOnlyDatabases.Add(databaseAccess.TenantId);
-				else
-					user.ReadWriteDatabases.Add(databaseAccess.TenantId);
-			}
+            foreach (var databaseAccess in databaseAccessLists)
+            {
+                if (databaseAccess.Admin)
+                    user.AdminDatabases.Add(databaseAccess.TenantId);
+                else if (databaseAccess.ReadOnly)
+                    user.ReadOnlyDatabases.Add(databaseAccess.TenantId);
+                else
+                    user.ReadWriteDatabases.Add(databaseAccess.TenantId);
+            }
 
-			controller.User = user;
-			Thread.CurrentPrincipal = user;
+            foreach (var fsAccess in fileSystemAccessLists)
+            {
+                if (fsAccess.ReadOnly)
+                    user.ReadOnlyFileSystems.Add(fsAccess.TenantId);
+                else
+                    user.ReadWriteFileSystems.Add(fsAccess.TenantId);
+            }
 
-			return user;
-		}
+            controller.User = user;
+            Thread.CurrentPrincipal = user;
+
+            return user;
+        }
 
 		public List<string> GetApprovedDatabases(IPrincipal user)
 		{
@@ -376,6 +357,19 @@ namespace Raven.Database.Server.Security.Windows
 
 			return list;
 		}
+
+        public List<string> GetApprovedFileSystems(IPrincipal user)
+        {
+            var winUser = user as PrincipalWithDatabaseAccess;
+            if (winUser == null)
+                return new List<string>();
+
+            var list = new List<string>();
+            list.AddRange(winUser.ReadOnlyFileSystems);
+            list.AddRange(winUser.ReadWriteFileSystems);
+
+            return list;
+        }
 
 		public override void Dispose()
 		{

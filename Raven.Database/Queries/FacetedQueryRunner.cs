@@ -240,7 +240,7 @@ namespace Raven.Database.Queries
                 {
                     var currentIndexSearcher = currentState.IndexSearcher;
 
-                    var baseQuery = Database.IndexStorage.GetLuceneQuery(Index, IndexQuery, Database.IndexQueryTriggers);
+                    var baseQuery = Database.IndexStorage.GetDocumentQuery(Index, IndexQuery, Database.IndexQueryTriggers);
                     currentIndexSearcher.Search(baseQuery, allCollector);
                     var fields = Facets.Values.Select(x => x.Name)
                             .Concat(Ranges.Select(x => x.Key));

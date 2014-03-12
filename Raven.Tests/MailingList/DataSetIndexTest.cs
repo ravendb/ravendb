@@ -37,7 +37,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenSession())
 				{
-					var query = session.Advanced.LuceneQuery<DataSetIndex.Result, DataSetIndex>()
+                    var query = session.Advanced.DocumentQuery<DataSetIndex.Result, DataSetIndex>()
 								.WaitForNonStaleResults()
 								.AddOrder("Split_N1_Range", true, typeof(double))
 								.SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId");
@@ -64,7 +64,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenSession())
 				{
-					var query = session.Advanced.LuceneQuery<DataSetIndex.Result, DataSetIndex>()
+                    var query = session.Advanced.DocumentQuery<DataSetIndex.Result, DataSetIndex>()
 								.WaitForNonStaleResults()
 								.AddOrder("Split_N1_Range", true, typeof(double))
 								.SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId");
@@ -74,7 +74,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenSession())
 				{
-					var query = session.Advanced.LuceneQuery<DataSetIndex.Result, DataSetIndex>()
+                    var query = session.Advanced.DocumentQuery<DataSetIndex.Result, DataSetIndex>()
 								.WaitForNonStaleResults()
 								.AddOrder("Split_N1_Range", true, typeof(double))
 								.SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId");

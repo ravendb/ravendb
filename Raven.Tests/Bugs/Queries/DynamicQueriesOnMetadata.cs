@@ -24,7 +24,7 @@ namespace Raven.Tests.Bugs.Queries
 
 				using (var s = store.OpenSession())
 				{
-					var glasses = s.Advanced.LuceneQuery<Glass>()
+                    var glasses = s.Advanced.DocumentQuery<Glass>()
 						.WhereEquals("@metadata.Is-Nice", true)
 						.ToArray();
 					Assert.NotEmpty(glasses);

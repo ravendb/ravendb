@@ -1,15 +1,18 @@
 ﻿using System;
+using System.Collections.Generic;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.RavenFS;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Config;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Notifications;
+using Raven.Database.Util;
 using Raven.Database.Server.RavenFS.Search;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Synchronization;
@@ -32,7 +35,8 @@ namespace Raven.Database.Server.RavenFS
 		private readonly StorageOperationsTask storageOperationsTask;
 		private readonly SynchronizationTask synchronizationTask;
 		private readonly InMemoryRavenConfiguration systemConfiguration;
-		private readonly TransportState transportState;
+	    private readonly TransportState transportState;
+	    private readonly MetricsCountersManager metricsCounters;
 
 		public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration, TransportState transportState)
 		{
@@ -70,6 +74,7 @@ namespace Raven.Database.Server.RavenFS
 			conflictResolver = new ConflictResolver();
 			synchronizationTask = new SynchronizationTask(storage, sigGenerator, notificationPublisher, systemConfiguration);
 			storageOperationsTask = new StorageOperationsTask(storage, search, notificationPublisher);
+            metricsCounters = new MetricsCountersManager();
 
 			AppDomain.CurrentDomain.ProcessExit += ShouldDispose;
 			AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
@@ -148,6 +153,11 @@ namespace Raven.Database.Server.RavenFS
 			get { return conflictResolver; }
 		}
 
+	    public MetricsCountersManager MetricsCounters
+	    {
+	        get { return metricsCounters; }
+	    }
+
 		public TransportState TransportState
 		{
 			get { return transportState; }
@@ -162,7 +172,47 @@ namespace Raven.Database.Server.RavenFS
 			search.Dispose();
 			sigGenerator.Dispose();
 			BufferPool.Dispose();
+            metricsCounters.Dispose();
 		}
+
+        public FileSystemMetrics CreateMetrics()
+        {
+            var metrics = metricsCounters;
+
+            var percentiles = metrics.RequestDuationMetric.Percentiles(0.5, 0.75, 0.95, 0.99, 0.999, 0.9999);
+
+            return new FileSystemMetrics
+            {
+                RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
+                FilesWritesPerSecond = Math.Round(metrics.FilesPerSecond.CurrentValue, 3),
+
+                RequestsDuration = new HistogramData
+                {
+                    Counter = metrics.RequestDuationMetric.Count,
+                    Max = metrics.RequestDuationMetric.Max,
+                    Mean = metrics.RequestDuationMetric.Mean,
+                    Min = metrics.RequestDuationMetric.Min,
+                    Stdev = metrics.RequestDuationMetric.StdDev,
+                    Percentiles = new Dictionary<string, double>
+                            {
+                                {"50%", percentiles[0]},
+                                {"75%", percentiles[1]},
+                                {"95%", percentiles[2]},
+                                {"99%", percentiles[3]},
+                                {"99.9%", percentiles[4]},
+                                {"99.99%", percentiles[5]},
+                            }
+                },
+                Requests = new MeterData
+                {
+                    Count = metrics.ConcurrentRequests.Count,
+                    FifteenMinuteRate = Math.Round(metrics.ConcurrentRequests.FifteenMinuteRate, 3),
+                    FiveMinuteRate = Math.Round(metrics.ConcurrentRequests.FiveMinuteRate, 3),
+                    MeanRate = Math.Round(metrics.ConcurrentRequests.MeanRate, 3),
+                    OneMinuteRate = Math.Round(metrics.ConcurrentRequests.OneMinuteRate, 3),
+                }
+            };
+        }
 
 		private void ShouldDispose(object sender, EventArgs eventArgs)
 		{

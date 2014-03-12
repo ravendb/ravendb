@@ -19,13 +19,13 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					var docsByDynamicIndex = session.Advanced.LuceneQuery<TestDoc>().WaitForNonStaleResults().ToList();
+                    var docsByDynamicIndex = session.Advanced.DocumentQuery<TestDoc>().WaitForNonStaleResults().ToList();
 					Assert.Equal(docsCount, docsByDynamicIndex.Count);
 				}
 
 				using (var session = store.OpenSession())
 				{
-					var docsByStaticIndex = session.Advanced.LuceneQuery<TestDoc, Docs_Flagged>().WaitForNonStaleResults().ToList();
+                    var docsByStaticIndex = session.Advanced.DocumentQuery<TestDoc, Docs_Flagged>().WaitForNonStaleResults().ToList();
 					Assert.Equal(docsCount/2, docsByStaticIndex.Count);
 				}
 			}
@@ -41,7 +41,7 @@ namespace Raven.Tests.Bugs
 
 				var session = store.OpenSession();
 
-				var docsByDynamicIndex = session.Advanced.LuceneQuery<TestDoc>().WaitForNonStaleResults().ToList();
+                var docsByDynamicIndex = session.Advanced.DocumentQuery<TestDoc>().WaitForNonStaleResults().ToList();
 				Assert.Equal(docsCount, docsByDynamicIndex.Count);
 			}
 		}

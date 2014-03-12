@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
 
 				using (var session = store.OpenSession())
 				{
-					var r = session.Advanced.LuceneQuery<dynamic>("UserIndex")
+                    var r = session.Advanced.DocumentQuery<dynamic>("UserIndex")
 						.WaitForNonStaleResults()
 						.SelectFields<dynamic>("UN", "UE")
 						.Single();

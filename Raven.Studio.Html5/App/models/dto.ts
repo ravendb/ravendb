@@ -29,14 +29,6 @@ interface documentMetadataDto {
 	'@etag'?: string;
 }
 
-interface bulkDocumentDto {
-    AdditionalData?: Array<any>;
-    Document: any;
-    Key: string;
-    Metadata: documentMetadataDto;
-    Method:string;
-}
-
 interface databaseStatisticsDto {
     ApproximateTaskCount: number;
     CountOfDocuments: number;
@@ -90,7 +82,7 @@ interface indexPerformanceDto {
     DurationMilliseconds: number;
 }
 
-interface apiKeyDto {
+interface apiKeyDto extends documentDto {
     Name: string;
     Secret: string;
     Enabled: boolean;
@@ -329,4 +321,40 @@ interface storedQueryDto {
 
 interface storedQueryContainerDto extends documentDto {
     Queries: storedQueryDto[];
+}
+
+interface bulkDocumentDto {
+    Key: string;
+    Method: string;
+    AdditionalData?: any[];
+    Document?: documentDto; // Can be null when Method == "DELETE"
+    Metadata?: documentMetadataDto; // Can be null when Method == "DELETE"
+    Etag?: string; // Often is null on sending to server, non-null when returning from server.
+    PatchResult?: any;
+    Deleted?: any;
+}
+
+interface backupRequestDto {
+  BackupLocation: string;
+  DatabaseDocument: databaseDocumentDto;
+}
+
+interface backupStatusDto {
+  Started: string;
+  Completed?: string;
+  IsRunning: boolean;
+  Messages: backupMessageDto;
+}
+
+interface backupMessageDto {
+  Message: string;
+  Timestamp: string;
+  Severity: string;
+}
+
+interface databaseDocumentDto {
+  Id: string;
+  Settings: {};
+  SecuredSettings: {};
+  Disabled: boolean;
 }

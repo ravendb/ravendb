@@ -278,6 +278,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			try
 			{
+                RavenFileSystem.MetricsCounters.FilesPerSecond.Mark();
+
 				name = RavenFileNameHelper.RavenPath(name);
 
 				var headers = InnerHeaders.FilterHeaders();

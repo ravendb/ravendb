@@ -417,7 +417,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 	    public override void MarkRequestDuration(long duration)
 	    {
-	        // TODO
+	        RavenFileSystem.MetricsCounters.RequestDuationMetric.Update(duration);
 	    }
 	}
 }

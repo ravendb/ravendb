@@ -35,23 +35,45 @@ namespace Raven.Client
 		                                                                   RavenPagingInformation pagingInformation = null,
 		                                                                   Action<ILoadConfiguration> configure = null)
 			where TTransformer : AbstractTransformerCreationTask, new();
-		/// <summary>
+
+	    /// <summary>
+	    /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+	    /// </summary>
+	    /// <typeparam name="T">The result of the query</typeparam>
+	    /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+	    /// <returns></returns>
+        [Obsolete("Use AsyncDocumentQuery instead")]
+	    IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
+
+            /// <summary>
 		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>
 		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
 		/// <returns></returns>
-		IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
+		IAsyncDocumentQuery<T> AsyncDocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
 
 		/// <summary>
 		/// Query the specified index using Lucene syntax
 		/// </summary>
+        [Obsolete("Use AsyncDocumentQuery instead")]
 		IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce = false);
+
+        /// <summary>
+        /// Query the specified index using Lucene syntax
+        /// </summary>
+        IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string index, bool isMapReduce = false);
 
 		/// <summary>
 		/// Dynamically query RavenDB using Lucene syntax
 		/// </summary>
+        [Obsolete("Use AsyncDocumentQuery instead")]
 		IAsyncDocumentQuery<T> AsyncLuceneQuery<T>();
+
+        /// <summary>
+        /// Dynamically query RavenDB using Lucene syntax
+        /// </summary>
+        IAsyncDocumentQuery<T> AsyncDocumentQuery<T>();
 
 		/// <summary>
 		/// Stores the specified entity with the specified etag.

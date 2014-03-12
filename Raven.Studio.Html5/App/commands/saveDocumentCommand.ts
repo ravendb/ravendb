@@ -15,10 +15,16 @@ class saveDocumentCommand extends commandBase {
 
         var customHeaders = {
             'Raven-Client-Version': commandBase.ravenClientVersion,
-            'Raven-Entity-Name': this.document.__metadata.ravenEntityName,
-            'Raven-Clr-Type': this.document.__metadata.ravenClrType,
             'If-None-Match': this.document.__metadata.etag
         };
+
+        var metadata = this.document.__metadata.toDto();
+
+        for (var key in metadata) {
+            if (key.indexOf('@')!==0)
+            customHeaders[key] = metadata[key];
+        }
+        
         var jQueryOptions: JQueryAjaxSettings = {
             headers: <any>customHeaders
         };
@@ -28,7 +34,7 @@ class saveDocumentCommand extends commandBase {
 
         if (this.reportSaveProgress) {
             saveTask.done(() => this.reportSuccess("Saved " + this.id));
-            saveTask.fail((response) => this.reportError("Failed to save " + this.id, JSON.stringify(response)));
+            saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save " + this.id, response.responseText, response.statusText));
         }
         return saveTask;
     }

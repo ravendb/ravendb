@@ -7,7 +7,6 @@ interface computedAppUrls {
     editIndex: (indexName?: string) => KnockoutComputed<string>;
     transformers: KnockoutComputed<string>;
     query: (indexName?: string) => KnockoutComputed<string>;
-    dynamicQuery: KnockoutComputed<string>;
     reporting: KnockoutComputed<string>;
     tasks: KnockoutComputed<string>;
     status: KnockoutComputed<string>;

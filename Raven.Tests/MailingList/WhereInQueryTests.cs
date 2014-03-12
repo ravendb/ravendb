@@ -54,7 +54,7 @@ namespace Raven.Tests.MailingList
 			{
 				List<TestDocument> results = session
 					.Advanced
-					.LuceneQuery<TestDocument, TestIndex>()
+                    .DocumentQuery<TestDocument, TestIndex>()
 					.WhereEquals("FirstName", "FirstName1")
 					.OrElse()
 					.WhereEquals("LastName", "LastName2")
@@ -72,7 +72,7 @@ namespace Raven.Tests.MailingList
 			{
 				List<TestDocument> results = session
 					.Advanced
-					.LuceneQuery<TestDocument, TestIndex>()
+                    .DocumentQuery<TestDocument, TestIndex>()
 					.WhereIn("FirstName", new[] { "FirstName1" })
 					.OrElse()
 					.WhereIn("LastName", new[] { "LastName2" })

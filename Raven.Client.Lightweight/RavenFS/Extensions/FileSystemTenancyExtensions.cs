@@ -15,7 +15,7 @@ namespace Raven.Client.RavenFS.Extensions
     {
          public static async Task EnsureFileSystemExistsAsync(this RavenFileSystemClient client)
          {
-             var existingSystems = await client.Admin.GetFileSystemNames();
+             var existingSystems = await client.Admin.GetFileSystemsNames();
 
              if (existingSystems.Any(x => x.Equals(client.FileSystemName, StringComparison.InvariantCultureIgnoreCase)))
                  return;

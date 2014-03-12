@@ -38,7 +38,7 @@ namespace Raven.Tests.Spatial
 				WaitForUserToContinueTheTest(store);
 				using (var session = store.OpenSession())
 				{
-					var matchingEvents = session.Advanced.LuceneQuery<EventWithLocation, EventsBySimpleLocation>()
+                    var matchingEvents = session.Advanced.DocumentQuery<EventWithLocation, EventsBySimpleLocation>()
 									.WaitForNonStaleResultsAsOfNow(TimeSpan.FromMinutes(5))
 									.ToList();
 					Assert.Equal(1, matchingEvents.Count);

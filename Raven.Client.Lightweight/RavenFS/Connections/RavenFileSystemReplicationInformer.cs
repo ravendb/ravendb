@@ -1,22 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -25,7 +17,7 @@ namespace Raven.Client.RavenFS.Connections
     /// <summary>
     /// Replication and failover management on the client side
     /// </summary>
-    public class RavenFileSystemReplicationInformer : ReplicationInformerBase<RavenFileSystemClient>
+    public class RavenFileSystemReplicationInformer : ReplicationInformerBase<RavenFileSystemClient>, IFileSystemClientReplicationInformer
     {
         public RavenFileSystemReplicationInformer(Convention conventions) : base(conventions)
         {
@@ -91,7 +83,15 @@ namespace Raven.Client.RavenFS.Connections
             var destinations = document.DataAsJson.Value<RavenJArray>("destinations").Select(x => JsonConvert.DeserializeObject<SynchronizationDestination>(x.ToString()));
             ReplicationDestinations = destinations.Select(x =>
             {
-                return new OperationMetadata(x.FileSystemUrl, new OperationCredentials(x.ApiKey, new CredentialCache())); // TODO arek
+                ICredentials credentials = null;
+                if (string.IsNullOrEmpty(x.Username) == false)
+                {
+                    credentials = string.IsNullOrEmpty(x.Domain)
+                                      ? new NetworkCredential(x.Username, x.Password)
+                                      : new NetworkCredential(x.Username, x.Password, x.Domain);
+                }
+
+                return new OperationMetadata(x.FileSystemUrl, new OperationCredentials(x.ApiKey, credentials));
             })
                 // filter out replication destination that don't have the url setup, we don't know how to reach them
                 // so we might as well ignore them. Probably private replication destination (using connection string names only)

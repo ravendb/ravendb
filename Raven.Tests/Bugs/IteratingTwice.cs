@@ -55,7 +55,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-					var query = s.Advanced.LuceneQuery<User>();
+                    var query = s.Advanced.DocumentQuery<User>();
 
 					for (int i = 0; i < 5; i++)
 					{
@@ -86,7 +86,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = store.OpenAsyncSession())
 				{
-					var query = s.Advanced.AsyncLuceneQuery<User>();
+                    var query = s.Advanced.AsyncDocumentQuery<User>();
 
 					for (int i = 0; i < 5; i++)
 					{

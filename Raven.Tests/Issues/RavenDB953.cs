@@ -34,7 +34,7 @@ namespace Raven.Tests.Issues
 
 					try
 					{
-						s.Advanced.LuceneQuery<dynamic>("test")
+                        s.Advanced.DocumentQuery<dynamic>("test")
 							.WaitForNonStaleResultsAsOfNow()
 							.Where("Id:MyId")
 							.ToList();

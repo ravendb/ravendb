@@ -470,7 +470,7 @@ namespace Raven.Tests.Linq
 					WaitForQueryToComplete(s, "ByLineCost");
 
 					//This is the lucene query we want to mimic
-					var luceneResult = s.Advanced.LuceneQuery<OrderItem>("ByLineCost")
+                    var luceneResult = s.Advanced.DocumentQuery<OrderItem>("ByLineCost")
 							.Where("Cost_Range:{Dx1 TO NULL}")
 							.SelectFields<SomeDataProjection>("Cost")
 							.ToArray();
@@ -569,7 +569,7 @@ namespace Raven.Tests.Linq
 			do
 			{
 				//doesn't matter what the query is here, just want to see if it's stale or not
-				results = session.Advanced.LuceneQuery<User>(indexName)
+                results = session.Advanced.DocumentQuery<User>(indexName)
 							  .Where("")
 							  .QueryResult;
 

@@ -2,11 +2,11 @@ import appUrl = require("common/appUrl");
 import database = require("models/database");
 
 /*
- * Base view model class that provides basic view model services, such as tracking the active database, configuring BootStrap tooltips, and more.
+ * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
 class viewModelBase {
     activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
-
+    
     activate(args) {
         var db = appUrl.getDatabase();
         var currentDb = this.activeDatabase();
@@ -17,13 +17,6 @@ class viewModelBase {
 
     deactivate() {
         this.activeDatabase.unsubscribeFrom("ActivateDatabase");
-    }
-
-    useBootstrapTooltips() {
-        $(".use-bootstrap-tooltip").tooltip({
-            delay: { show: 600, hide: 100 },
-            container: 'body'
-        });
     }
 
     createKeyboardShortcut(keys: string, handler: () => void, elementSelector: string) {

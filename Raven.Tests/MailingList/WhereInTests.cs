@@ -27,7 +27,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = documentStore.OpenSession())
 				{
-					var query = session.Advanced.LuceneQuery<Person, PersonsNotAnalyzed>().WhereIn(p => p.Name, names);
+                    var query = session.Advanced.DocumentQuery<Person, PersonsNotAnalyzed>().WhereIn(p => p.Name, names);
 					Assert.Equal(2, query.ToList().Count());
 				}
 			}
@@ -50,7 +50,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = documentStore.OpenSession())
 				{
-					var query = session.Advanced.LuceneQuery<Person, PersonsAnalyzed>().WhereIn(p => p.Name, names);
+                    var query = session.Advanced.DocumentQuery<Person, PersonsAnalyzed>().WhereIn(p => p.Name, names);
 					Assert.Equal(2, query.ToList().Count());
 				}
 			}
@@ -72,7 +72,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = documentStore.OpenSession())
 				{
-					var query = session.Advanced.LuceneQuery<Person>().WhereIn(p => p.Name, names);
+                    var query = session.Advanced.DocumentQuery<Person>().WhereIn(p => p.Name, names);
 					Assert.Equal(2, query.ToList().Count());
 				}
 			}

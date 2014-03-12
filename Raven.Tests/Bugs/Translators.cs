@@ -176,7 +176,7 @@ select new { Name = user.Name, Partner = partner.Name }"
 
 				using (var s = ds.OpenSession())
 				{
-					var first = s.Advanced.LuceneQuery<RavenJObject>("Users")
+                    var first = s.Advanced.DocumentQuery<RavenJObject>("Users")
 						.WaitForNonStaleResults()
 						.WhereEquals("Name", "Oren", true)
 						.First();

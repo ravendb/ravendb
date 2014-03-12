@@ -14,7 +14,7 @@ class saveBulkOfDocuments extends commandBase {
         this.reportInfo("Performing bulk save of " + this.dataTypes);
 
         saveBulkTask.done(() => this.reportSuccess("Saved all bulk of documents"));
-        saveBulkTask.fail((response) => this.reportError("Failed to save bulk of documents", JSON.stringify(response)));
+        saveBulkTask.fail((response: JQueryXHR) => this.reportError("Failed to save bulk of documents", response.responseText, response.statusText));
 
         return saveBulkTask;
     }

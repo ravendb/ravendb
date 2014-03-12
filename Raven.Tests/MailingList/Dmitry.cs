@@ -63,7 +63,7 @@ namespace Raven.Tests.MailingList
 				using (var session = store.OpenSession())
 				{
 					var content = session.Advanced
-						.LuceneQuery<MusicContent, MusicSearchIndex>()
+                        .DocumentQuery<MusicContent, MusicSearchIndex>()
 						.Where(Query)
 						.Skip(1)
 						.Take(10)

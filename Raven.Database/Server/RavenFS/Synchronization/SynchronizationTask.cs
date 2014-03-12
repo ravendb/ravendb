@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using NLog;
 using Newtonsoft.Json;
 using Raven.Abstractions;
+using Raven.Abstractions.RavenFS;
 using Raven.Abstractions.Util;
 using Raven.Client.RavenFS;
 using Raven.Database.Config;
@@ -89,7 +91,17 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 		public async Task<SynchronizationReport> SynchronizeFileToAsync(string fileName, SynchronizationDestination destination)
 		{
-			var destinationClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem, apiKey: destination.ApiKey).Synchronization;
+            ICredentials credentials = null;
+            if (string.IsNullOrEmpty(destination.Username) == false)
+            {
+                credentials = string.IsNullOrEmpty(destination.Domain)
+                                  ? new NetworkCredential(destination.Username, destination.Password)
+                                  : new NetworkCredential(destination.Username, destination.Password, destination.Domain);
+            }
+
+		    var destinationClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem, 
+                                                              apiKey: destination.ApiKey, credentials: credentials)
+                                                              .Synchronization;
 			NameValueCollection destinationMetadata;
 
 			try
@@ -131,7 +143,17 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		{
 			try
 			{
-				var destinationClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem, apiKey: destination.ApiKey).Synchronization;
+                ICredentials credentials = null;
+                if (string.IsNullOrEmpty(destination.Username) == false)
+                {
+                    credentials = string.IsNullOrEmpty(destination.Domain)
+                                      ? new NetworkCredential(destination.Username, destination.Password)
+                                      : new NetworkCredential(destination.Username, destination.Password, destination.Domain);
+                }
+
+                var destinationClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem,
+                                                                  apiKey: destination.ApiKey, credentials: credentials)
+                                                                  .Synchronization;
 
 				var lastETag = await destinationClient.GetLastSynchronizationFromAsync(storage.Id);
 

@@ -25,7 +25,7 @@ class shell {
 	databases = ko.observableArray<database>();
 	activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase");
 	currentAlert = ko.observable<alertArgs>();
-    queuedAlerts = ko.observableArray<alertArgs>();
+    queuedAlert: alertArgs;
     databasesLoadedTask: JQueryPromise<any>;
     buildVersion = ko.observable<buildVersionDto>();
     licenseStatus = ko.observable<licenseStatusDto>();
@@ -70,6 +70,13 @@ class shell {
 			this.newDocument();
         });
 
+        $("body").tooltip({
+            delay: { show: 600, hide: 100 },
+            container: 'body',
+            selector: '.use-bootstrap-tooltip',
+            trigger: 'hover'
+        });
+
         var dataset: Twitter.Typeahead.Dataset = {
             name: "test",
             local: ["hello","world"]
@@ -101,7 +108,7 @@ class shell {
     }
 
     launchDocEditor(docId?: string, docsList?: pagedList) {
-        var editDocUrl = appUrl.forEditDoc(docId, docsList ? docsList.collectionName : null, docsList ? docsList.currentItemIndex() : null);
+        var editDocUrl = appUrl.forEditDoc(docId, docsList ? docsList.collectionName : null, docsList ? docsList.currentItemIndex() : null, this.activeDatabase());
         router.navigate(editDocUrl);
     }
 
@@ -136,33 +143,41 @@ class shell {
         }
 
         var currentAlert = this.currentAlert();
-		if (currentAlert) {
-			// Maintain a 1000ms time between alerts; otherwise successive alerts can fly by too quickly.
-			this.queuedAlerts.push(alert);
-			if (currentAlert.type !== alertType.danger) {
-				setTimeout(() => this.closeAlertAndShowNext(this.currentAlert()), 1000);
-			}
+        if (currentAlert) {
+            this.queuedAlert = alert;
+            this.closeAlertAndShowNext(currentAlert);
 		} else {
 			this.currentAlert(alert);
-			var fadeTime = 3000;
+			var fadeTime = 2000; // If there are no pending alerts, show it for 2 seconds before fading out.
 			if (alert.type === alertType.danger || alert.type === alertType.warning) {
-				fadeTime = 5000;
+				fadeTime = 4000; // If there are no pending alerts, show the error alert for 4 seconds before fading out.
 			}
 			setTimeout(() => this.closeAlertAndShowNext(alert), fadeTime);
 		}
-	}
+    }
 
     closeAlertAndShowNext(alertToClose: alertArgs) {
         var alertElement = $('#' + alertToClose.id);
+        if (alertElement.length === 0) {
+            return;
+        }
+
         // If the mouse is over the alert, keep it around.
         if (alertElement.is(":hover")) {
             setTimeout(() => this.closeAlertAndShowNext(alertToClose), 1000);
         } else {
             alertElement.alert('close');
-            var nextAlert = this.queuedAlerts.pop();
-            setTimeout(() => this.currentAlert(nextAlert), 1000); // Give the alert a chance to fade out before we push in the new alert.
         }
-	}
+    }
+
+    onAlertHidden() {
+        this.currentAlert(null);
+        var nextAlert = this.queuedAlert;
+        if (nextAlert) {
+            this.queuedAlert = null;
+            this.showAlert(nextAlert);
+        }
+    }
 
 	newDocument() {
 		this.launchDocEditor(null);

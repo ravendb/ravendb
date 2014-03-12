@@ -29,7 +29,7 @@ namespace Raven.Client.RavenFS
         private readonly ServerNotifications notifications;
         private OperationCredentials credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
         private IDisposable failedUploadsObserver;
-        private readonly RavenFileSystemReplicationInformer replicationInformer;
+        private readonly IFileSystemClientReplicationInformer replicationInformer;
         private readonly FileConvention convention;
         private int readStripingBase;
         private HttpJsonRequestFactory jsonRequestFactory =
@@ -56,7 +56,7 @@ namespace Raven.Client.RavenFS
         /// <summary>
         /// Allow access to the replication informer used to determine how we replicate requests
         /// </summary>
-        public RavenFileSystemReplicationInformer ReplicationInformer
+        public IFileSystemClientReplicationInformer ReplicationInformer
         {
             get { return replicationInformer; }
         }
@@ -218,7 +218,7 @@ namespace Raven.Client.RavenFS
             }
         }
 
-        public Task<ServerStats> StatsAsync()
+        public Task<FileSystemStats> StatsAsync()
         {
             return ExecuteWithReplication("GET", async operation =>
             {
@@ -231,7 +231,7 @@ namespace Raven.Client.RavenFS
                 {
                     var response = await request.ReadResponseJsonAsync();
 
-                    return new JsonSerializer().Deserialize<ServerStats>(new RavenJTokenReader(response));
+                    return new JsonSerializer().Deserialize<FileSystemStats>(new RavenJTokenReader(response));
                 }
                 catch (Exception e)
                 {
@@ -1444,9 +1444,9 @@ namespace Raven.Client.RavenFS
                 this.convention = convention;
             }
 
-            public async Task<string[]> GetFileSystemNames()
+            public async Task<string[]> GetFileSystemsNames()
             {
-                var requestUriString = string.Format("{0}/ravenfs/admin/FileSystems", ravenFileSystemClient.ServerUrl);
+                var requestUriString = string.Format("{0}/ravenfs/names", ravenFileSystemClient.ServerUrl);
 
                 var request =
                     ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
@@ -1463,10 +1463,29 @@ namespace Raven.Client.RavenFS
                 }
             }
 
-            public Task CreateFileSystemAsync(DatabaseDocument databaseDocument)
+            public async Task<List<FileSystemStats>> GetFileSystemsStats()
+            {
+                var requestUriString = string.Format("{0}/ravenfs/stats", ravenFileSystemClient.ServerUrl);
+
+                var request =
+                    ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+                        "GET", ravenFileSystemClient.PrimaryCredentials, convention));
+
+                try
+                {
+                    var response = await request.ReadResponseJsonAsync();
+                    return new JsonSerializer().Deserialize<List<FileSystemStats>>(new RavenJTokenReader(response));
+                }
+                catch (Exception e)
+                {
+                    throw e.TryThrowBetterError();
+                }
+            }
+
+            public Task CreateFileSystemAsync(DatabaseDocument databaseDocument, string newFileSystemName = null)
             {
                 var requestUriString = string.Format("{0}/ravenfs/admin/{1}", ravenFileSystemClient.ServerUrl,
-                                                     ravenFileSystemClient.FileSystemName);
+                                                     newFileSystemName ?? ravenFileSystemClient.FileSystemName);
 
                 var request =
                     ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),

@@ -95,7 +95,7 @@ namespace Raven.Tests.MailingList
 				List<TestItem> result = null;
 				using (var session = store.OpenSession())
 				{
-					result = session.Advanced.LuceneQuery<TestItem>("TestItemsIndex")
+                    result = session.Advanced.DocumentQuery<TestItem>("TestItemsIndex")
 						.Statistics(out stats)
 						.WaitForNonStaleResults()
 						.WhereBetweenOrEqual("EventDate", DateTime.Parse("2012-03-01"), DateTime.Parse("2012-06-01"))
@@ -114,7 +114,7 @@ namespace Raven.Tests.MailingList
 				{
 					using (var session = store.OpenSession())
 					{
-						var r = session.Advanced.LuceneQuery<TestItem>("TestItemsIndex")
+                        var r = session.Advanced.DocumentQuery<TestItem>("TestItemsIndex")
 							.Statistics(out stats2)
 							.WhereBetweenOrEqual("EventDate", DateTime.Parse("2012-03-01"), DateTime.Parse("2012-06-01"))
 							.OrderBy("EventDate")

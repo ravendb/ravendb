@@ -43,6 +43,27 @@ class document {
         return <any>dto;
     }
 
+    toBulkDoc(method: string): bulkDocumentDto {
+        var dto = this.toDto();
+        var bulkDoc: bulkDocumentDto = {
+            Document: dto,
+            Key: this.getId(),
+            Method: method,
+            AdditionalData: null
+        };
+
+        var meta = dto["@metadata"];
+        if (meta) {
+            bulkDoc.Metadata = meta;
+
+            if (meta["@etag"]) {
+                bulkDoc.Etag = meta["@etag"];
+            }
+        }
+
+        return bulkDoc;
+    }
+
     public static empty(): document {
         var emptyDto = {
             '@metadata': {},

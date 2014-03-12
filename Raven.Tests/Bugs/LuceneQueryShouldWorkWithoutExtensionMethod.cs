@@ -30,7 +30,7 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					var keywords = session.Advanced.LuceneQuery<Keyword>().WaitForNonStaleResults().ToList();
+                    var keywords = session.Advanced.DocumentQuery<Keyword>().WaitForNonStaleResults().ToList();
 					Assert.Equal(1, keywords.Count);
 				}
 			}

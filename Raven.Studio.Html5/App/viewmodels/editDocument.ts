@@ -55,8 +55,8 @@ class editDocument extends viewModelBase {
                 var metaPropsToRemove = ["Non-Authoritative-Information", "@id", "Last-Modified", "Raven-Last-Modified", "@etag", "Origin"];
                 metaPropsToRemove.forEach(p => {
                     if (metaDto[p]) {
+                        this.metaPropsToRestoreOnSave.push({ name: p, value: metaDto[p].toString() });
                         delete metaDto[p];
-                        this.metaPropsToRestoreOnSave.push({ name: p, value: metaDto[p] });
                     }
                 });
                 var metaString = this.stringify(metaDto);
@@ -108,7 +108,6 @@ class editDocument extends viewModelBase {
     attached() {
         this.initializeDocEditor();
         this.setupKeyboardShortcuts();
-        this.useBootstrapTooltips();
     }
 
     deactivate() {
@@ -290,7 +289,7 @@ class editDocument extends viewModelBase {
     updateUrl(docId: string) {
         var collectionName = this.docsList() ? this.docsList().collectionName : null;
         var currentItemIndex = this.docsList() ? this.docsList().currentItemIndex() : null;
-        var editDocUrl = appUrl.forEditDoc(docId, collectionName, currentItemIndex);
+        var editDocUrl = appUrl.forEditDoc(docId, collectionName, currentItemIndex, this.activeDatabase());
         router.navigate(editDocUrl, false);
     }
 

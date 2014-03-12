@@ -97,7 +97,7 @@ namespace Raven.Tests.MailingList
 					var contractDetails = new[] { 1, 2 };
 
 					var query =
-						session.Advanced.LuceneQuery<Contract, Contract_ToContractListViewModel>().Projection<Contract, ContractDto>()
+                        session.Advanced.DocumentQuery<Contract, Contract_ToContractListViewModel>().Projection<Contract, ContractDto>()
 							   .WhereIn(c => c.DetailsId, contractDetails);
 
 					// returns --> "@in<DetailsId>:(1,2)"
@@ -136,7 +136,7 @@ namespace Raven.Tests.MailingList
 					var contractDetails = new int[] { };
 
 					var query =
-						session.Advanced.LuceneQuery<Contract, Contract_ToContractListViewModel>().Projection<Contract, ContractDto>()
+                        session.Advanced.DocumentQuery<Contract, Contract_ToContractListViewModel>().Projection<Contract, ContractDto>()
 							   .WhereIn(c => c.DetailsId, contractDetails);
 
 					var results = query.ToList();
@@ -201,7 +201,7 @@ namespace Raven.Tests.MailingList
 					Assert.Equal(2, contractA.ContractDetails.Count());
 
 					// Act
-					var queryB = session.Advanced.LuceneQuery<Contract, Contract_ToContractListViewModel>().Projection<Contract, ContractDto>().ToList();
+                    var queryB = session.Advanced.DocumentQuery<Contract, Contract_ToContractListViewModel>().Projection<Contract, ContractDto>().ToList();
 
 					// Assert
 					// This works against the real database, but not using the NewDocumentStore

@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Specialized;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
+using Raven.Client.RavenFS;
+using Raven.Client.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Extensions;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
@@ -354,7 +357,7 @@ namespace RavenFS.Tests
 		}
 
 		[Fact]
-		public void Server_stats_after_file_delete()
+		public void File_system_stats_after_file_delete()
 		{
 			var client = NewClient();
 			client.UploadAsync("toDelete.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5})).Wait();
@@ -365,7 +368,7 @@ namespace RavenFS.Tests
 		}
 
 		[Fact]
-		public void Server_stats_after_rename()
+		public void File_system_stats_after_rename()
 		{
 			var client = NewClient();
 			client.UploadAsync("file.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5})).Wait();
@@ -530,7 +533,55 @@ namespace RavenFS.Tests
 			}
 		}
 
-		private static MemoryStream PrepareTextSourceStream()
+	    [Fact]
+	    public async Task Can_get_stats_for_all_active_file_systems()
+	    {
+	        var client = NewClient();
+	        var server = GetServer();
+
+	        using (var anotherClient = new RavenFileSystemClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "test"))
+	        {
+	            await anotherClient.EnsureFileSystemExistsAsync();
+
+                await client.UploadAsync("test1", new RandomStream(10)); // will make it active
+	            await anotherClient.UploadAsync("test1", new RandomStream(10)); // will make it active
+
+                await client.UploadAsync("test2", new RandomStream(10));
+
+	            var stats = await anotherClient.Admin.GetFileSystemsStats();
+
+	            var stats1 = stats.FirstOrDefault(x => x.Name == client.FileSystemName);
+                Assert.NotNull(stats1);
+	            var stats2 = stats.FirstOrDefault(x => x.Name == anotherClient.FileSystemName);
+	            Assert.NotNull(stats2);
+
+                Assert.Equal(2, stats1.Metrics.Requests.Count);
+                Assert.Equal(1, stats2.Metrics.Requests.Count);
+
+                Assert.Equal(0, stats1.ActiveSyncs.Count);
+                Assert.Equal(0, stats1.PendingSyncs.Count);
+
+                Assert.Equal(0, stats2.ActiveSyncs.Count);
+                Assert.Equal(0, stats2.PendingSyncs.Count);
+	        }
+	    }
+
+	    [Fact]
+	    public async Task Will_not_contain_stats_of_inactive_file_systems()
+	    {
+            var client = NewClient(); // will create a file system but it remain inactive until any request will go there
+
+            var stats = (await client.Admin.GetFileSystemsStats()).First();
+
+            Assert.NotNull(stats);
+            Assert.Equal(client.FileSystemName, stats.Name);
+
+            Assert.Null(stats.Metrics);
+            Assert.Null(stats.ActiveSyncs);
+            Assert.Null(stats.PendingSyncs);
+	    }
+
+	    private static MemoryStream PrepareTextSourceStream()
 		{
 			var ms = new MemoryStream();
 			var writer = new StreamWriter(ms);

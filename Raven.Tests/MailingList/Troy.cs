@@ -41,7 +41,7 @@ namespace Raven.Tests.MailingList
 				// *****************************************************************************************************************************************
 				// We fail to find any Products as expected - Note Phrase is not a match
 				// *****************************************************************************************************************************************
-				var results = session.Advanced.LuceneQuery<Product, Product_Search>()
+                var results = session.Advanced.DocumentQuery<Product, Product_Search>()
 				  .UsingDefaultField("Query")
 				  .Where("\"Gigabit Switch Network\"")
 				  .AndAlso()
@@ -53,7 +53,7 @@ namespace Raven.Tests.MailingList
 				// *****************************************************************************************************************************************
 				// We find 1 Product - Note Phrase is not a match, it matches on the word "Vertical" in the Attributes
 				// *****************************************************************************************************************************************
-				results = session.Advanced.LuceneQuery<Product, Product_Search>()
+                results = session.Advanced.DocumentQuery<Product, Product_Search>()
 				  .UsingDefaultField("Query")
 				  .OpenSubclause()
 				  .Where("\"Gigabit Switch Network\" Vertical")
@@ -67,7 +67,7 @@ namespace Raven.Tests.MailingList
 				// *****************************************************************************************************************************************
 				// We SHOULD find 1 Product - Note Phrase is not a match, it SHOULD match on the word "Vertical" in the Attributes
 				// *****************************************************************************************************************************************
-				results = session.Advanced.LuceneQuery<Product, Product_Search>()
+                results = session.Advanced.DocumentQuery<Product, Product_Search>()
 				  .UsingDefaultField("Query")
 				  .OpenSubclause()
 				  .Where("Vertical \"Gigabit Switch Network\"") // <-- Only difference from above successful test, is putting the single term in front of phrase
@@ -103,7 +103,7 @@ namespace Raven.Tests.MailingList
 				// *****************************************************************************************************************************************
 				// We fail to find any Products as expected - Note Phrase is not a match
 				// *****************************************************************************************************************************************
-				var results = session.Advanced.LuceneQuery<Product, Product_Search>()
+                var results = session.Advanced.DocumentQuery<Product, Product_Search>()
 				  .UsingDefaultField("Query")
 				  .Where("\"Gigabit Switch Network\"")
 				  .AndAlso()
@@ -115,7 +115,7 @@ namespace Raven.Tests.MailingList
 				// *****************************************************************************************************************************************
 				// We find 2 Products - Note Phrase is not a match, it matches on the word "Switch"
 				// *****************************************************************************************************************************************
-				results = session.Advanced.LuceneQuery<Product, Product_Search>()
+                results = session.Advanced.DocumentQuery<Product, Product_Search>()
 				  .UsingDefaultField("Query")
 				  .OpenSubclause()
 				  .Where("\"Gigabit Switch Network\" Switch")
@@ -129,7 +129,7 @@ namespace Raven.Tests.MailingList
 				// *****************************************************************************************************************************************
 				// We find 2 Products - Note Phrase is not a match, it matches on the word "Sound" in the attributes
 				// *****************************************************************************************************************************************
-				results = session.Advanced.LuceneQuery<Product, Product_Search>()
+                results = session.Advanced.DocumentQuery<Product, Product_Search>()
 				  .UsingDefaultField("Query")
 				  .OpenSubclause()
 				  .Where("\"Gigabit Switch Network\" Sound")
@@ -143,7 +143,7 @@ namespace Raven.Tests.MailingList
 				// *****************************************************************************************************************************************
 				// We SHOULD find 3 Products - Note Phrase is not a match, it should match on the words "Switch" in Name or "Sound" in the attributes
 				// *****************************************************************************************************************************************
-				results = session.Advanced.LuceneQuery<Product, Product_Search>()
+                results = session.Advanced.DocumentQuery<Product, Product_Search>()
 				  .UsingDefaultField("Query")
 				  .OpenSubclause()
 				  .Where("\"Gigabit Switch Network\" Switch Sound") // <- This should be "Gigabit Switch Network" OR Switch OR Sound

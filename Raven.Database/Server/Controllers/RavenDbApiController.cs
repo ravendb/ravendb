@@ -31,11 +31,7 @@ namespace Raven.Database.Server.Controllers
 	{
 	    private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
-		public string DatabaseName
-		{
-			get;
-			private set;
-		}
+		public string DatabaseName { get; private set; }
 
 		private string queryFromPostRequest;
 
