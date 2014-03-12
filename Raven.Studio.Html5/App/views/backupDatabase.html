@@ -3,18 +3,23 @@
         <h3 class="panel-title">Backup Database</h3>
     </div>
     <div class="panel-body">
-        Backup your database
-    </div>
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                <div class="glyphicon glyphicon-info-sign"></div>
+                Backup your database
+            </div>
+        </div>
+        
+        <div>
+            <label>
+                <span>Location</span>
+                <input data-bind="value: backupLocation" placeholder="C:\path-to-your-backup-folder">
+            </label>
+        </div>
 
-    <button data-bind="click: startBackup">
-        <span class="glyphicon glyphicon-stop"></span>
-        <span>startBackup</span>
-    </button>
-
-    <div>
-        <label>
-            <span>Location</span>
-            <input data-bind="value: backupLocation">
-        </label>
+        <button class="btn btn-primary" data-bind="click: startBackup">
+            <span class="glyphicon glyphicon-stop"></span>
+            <span>startBackup</span>
+        </button>
     </div>
 </div>

@@ -3,7 +3,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 
 class backupDatabase extends viewModelBase {
 
-  backupLocation = ko.observable<string>("C:\path-to-your-backup-folder");
+  backupLocation = ko.observable<string>("C:\\path-to-your-backup-folder");
 
   constructor() {
     super();
