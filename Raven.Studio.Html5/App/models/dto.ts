@@ -343,7 +343,7 @@ interface backupStatusDto {
   Started: string;
   Completed?: string;
   IsRunning: boolean;
-  Messages: backupMessageDto;
+  Messages: backupMessageDto[];
 }
 
 interface backupMessageDto {

@@ -8,18 +8,23 @@
                 <div class="glyphicon glyphicon-info-sign"></div>
                 Backup your database
             </div>
-        </div>
-        
-        <div>
-            <label>
-                <span>Location</span>
-                <input data-bind="value: backupLocation" placeholder="C:\path-to-your-backup-folder">
-            </label>
+            <div class="panel-body">
+                <label>
+                    <span>Location</span>
+                    <input data-bind="value: backupLocation" placeholder="C:\path-to-your-backup-folder">
+                </label>
+            </div>
         </div>
 
-        <button class="btn btn-primary" data-bind="click: startBackup">
-            <span class="glyphicon glyphicon-stop"></span>
-            <span>startBackup</span>
+        <button class="btn btn-primary" data-bind="click: startBackup, disable: isBusy">
+            <span class="glyphicon glyphicon-floppy-save"></span>
+            <span>Start Backup</span>
         </button>
+        
+        <div class="panel-body">
+            <div data-bind="foreach: backupStatusMessages">
+                <div data-bind="text: '[' + Timestamp+ ']\t' + Severity +':\t'+ Message"></div>
+            </div>
+        </div>
     </div>
 </div>
