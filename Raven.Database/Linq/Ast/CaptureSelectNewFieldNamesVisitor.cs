@@ -48,13 +48,13 @@ namespace Raven.Database.Linq.Ast
             foreach (var expression in objectCreateExpression.Initializers.OfType<NamedArgumentExpression>())
             {
                 FieldNames.Add(expression.Name);
-                SelectExpressions[expression.Name] = expression;
+                SelectExpressions[expression.Name] = expression.Expression;
             }
 
 		    foreach (var expression in objectCreateExpression.Initializers.OfType<NamedExpression>())
 		    {
 		        FieldNames.Add(expression.Name);
-		        SelectExpressions[expression.Name] = expression;
+		        SelectExpressions[expression.Name] = expression.Expression;
 
 		    }
 		    foreach (var expression in objectCreateExpression.Initializers.OfType<MemberReferenceExpression>())

@@ -15,6 +15,7 @@ using System.Threading;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Microsoft.Isam.Esent.Interop;
+using Mono.CSharp;
 using Mono.CSharp.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -27,8 +28,9 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
-using ICSharpCode.NRefactory.CSharp;
 using Raven.Database.Indexing;
+using CSharpParser = ICSharpCode.NRefactory.CSharp.CSharpParser;
+using Expression = ICSharpCode.NRefactory.CSharp.Expression;
 
 namespace Raven.Database.Storage
 {
@@ -338,7 +340,7 @@ namespace Raven.Database.Storage
                 var failComments = new List<string>();
                 if (indexData.IsMapReduced)
                 {
-                    failComments.Add("Cannot merge indexes containing reduced map");
+                    failComments.Add("Cannot merge indexes containing map  reduce ");
                 }
 
                 if (indexData.ExistsMorethan1Maps)
@@ -464,9 +466,7 @@ namespace Raven.Database.Storage
                 };
 
                 curIndexData.FillAdditionalProperies(index);
-               // string fromIdentifier = visitor.FromIdentifier;
                 string res = curIndexData.BuildExpression();
-              //  curIndexData.FromIdentifier = fromIdentifier;
   
                 indexes.Add(curIndexData);
             }
@@ -497,7 +497,13 @@ namespace Raven.Database.Storage
             if (curIndexData.HasLet)
                 return false;
 
-            if (indexData.Fields.Count != curIndexData.Fields.Count)
+            if(!CompareAdditionalIndexProperties(indexData, curIndexData))
+                    return false;
+
+            if ((curIndexData.FromExpression == null) && (indexData.FromExpression != null))
+                return false;
+           
+            if ((curIndexData.FromExpression != null) && (indexData.FromExpression == null))
                 return false;
 
             if ((curIndexData.FromExpression!=null)&&(indexData.FromExpression!=null))
@@ -505,42 +511,242 @@ namespace Raven.Database.Storage
                     return false;
 
      
-            if(DataDictionaryCompare(indexData.Stores,curIndexData.Stores) == false)
-                return false;        
-            if (DataDictionaryCompare(indexData.Analyzers, curIndexData.Analyzers) == false)
-                return false;
-            if (DataDictionaryCompare(indexData.Suggestions, curIndexData.Suggestions) == false)
-                return false;
-            if (DataDictionaryCompare(indexData.SortOptions, curIndexData.SortOptions) == false)
-                return false;
-            if (DataDictionaryCompare(indexData.Indexes, curIndexData.Indexes) == false)
-                return false;
-            if (DataDictionaryCompare(indexData.TermVectors, curIndexData.TermVectors) == false)
-                return false;
-            if (DataDictionaryCompare(indexData.SpatialIndexes, curIndexData.SpatialIndexes) == false)
-                return false;
+            //if(DataDictionaryCompare(indexData.Stores,curIndexData.Stores) == false)
+            //    return false;        
+            //if (DataDictionaryCompare(indexData.Analyzers, curIndexData.Analyzers) == false)
+            //    return false;
+            //if (DataDictionaryCompare(indexData.Suggestions, curIndexData.Suggestions) == false)
+            //    return false;
+            //if (DataDictionaryCompare(indexData.SortOptions, curIndexData.SortOptions) == false)
+            //    return false;
+            //if (DataDictionaryCompare(indexData.Indexes, curIndexData.Indexes) == false)
+            //    return false;
+            //if (DataDictionaryCompare(indexData.TermVectors, curIndexData.TermVectors) == false)
+            //    return false;
+            //if (DataDictionaryCompare(indexData.SpatialIndexes, curIndexData.SpatialIndexes) == false)
+            //    return false;
 
    
             return true;
  
         }
 
-        private bool DataDictionaryCompare<T>(IDictionary<string, T> dataDict1, IDictionary<string, T> dataDict2)
+        private bool CompareAdditionalIndexProperties(IndexData index1Data,IndexData index2Data)
         {
-            if (dataDict1.Count != dataDict2.Count)
+            IEnumerable<string> differentNames12 = index1Data.Fields.Except(index2Data.Fields);
+            IEnumerable<string> differentNames21 = index2Data.Fields.Except(index1Data.Fields);
+            IEnumerable<string> intersectNames = index2Data.Fields.Intersect(index1Data.Fields);
+
+
+            foreach (var name in differentNames12)
+            {
+                if (!index2Data.SelectExpressions.ContainsKey(name))
+                    continue;
+                //if contains and not in fields - defined with default values. ckeck if second one is also default
+                if (!AreIndexPropertiesDefault(index1Data, name))
+                    return false;
+            }
+
+            foreach (var name in differentNames21)
+            {
+                if (!index1Data.SelectExpressions.ContainsKey(name))
+                    continue;
+                //if contains and not in fields - defined with default values.ckeck if second one is also default
+                if (!AreIndexPropertiesDefault(index2Data, name))
+                    return false;
+            }
+
+            
+
+             if(DataDictionaryCompare(index1Data.Stores,index2Data.Stores,intersectNames) == false)
+                return false;
+             if (DataDictionaryCompare(index1Data.Analyzers, index2Data.Analyzers, intersectNames) == false)
+                return false;
+             if (DataDictionaryCompare(index1Data.Suggestions, index2Data.Suggestions, intersectNames) == false)
+                return false;
+             if (DataDictionaryCompare(index1Data.SortOptions, index2Data.SortOptions, intersectNames) == false)
+                return false;
+             if (DataDictionaryCompare(index1Data.Indexes, index2Data.Indexes, intersectNames) == false)
+                return false;
+             if (DataDictionaryCompare(index1Data.TermVectors, index2Data.TermVectors, intersectNames) == false)
+                return false;
+             if (DataDictionaryCompare(index1Data.SpatialIndexes, index2Data.SpatialIndexes, intersectNames) == false)
                 return false;
 
+           
+
+            return true;
+        }
+
+        private bool AreIndexPropertiesDefault(IndexData indexData, string name)
+        {
+            
+            FieldStorage valueStorage;
+            if (indexData.Stores.TryGetValue(name, out valueStorage))
+            {
+                if(valueStorage != FieldStorage.No)
+                    return false;
+            }
+
+            SortOptions valueSortOptions;
+            if (indexData.SortOptions.TryGetValue(name, out valueSortOptions))
+            {
+                if (valueSortOptions != SortOptions.None)
+                    return false;
+            }
+            FieldTermVector valueTermVectors;
+            if (indexData.TermVectors.TryGetValue(name, out valueTermVectors))
+            {
+                if (valueTermVectors != FieldTermVector.No)
+                    return false;
+            }
+            FieldIndexing valueIndexing;
+            if (indexData.Indexes.TryGetValue(name, out valueIndexing))
+            {
+                if (valueIndexing != FieldIndexing.Default)
+                    return false;
+            }
+            string valueAnalyzer;
+            if (indexData.Analyzers.TryGetValue(name, out valueAnalyzer))
+            {
+                if (!valueAnalyzer.Equals(string.Empty))
+                    return false;
+            }
+            SuggestionOptions valueSuggestionOptions;
+            var defaultSuggestionOptions=new SuggestionOptions();
+            defaultSuggestionOptions.Distance = StringDistanceTypes.None;
+            if (indexData.Suggestions.TryGetValue(name, out valueSuggestionOptions))
+            {
+                if (!valueSuggestionOptions.Equals(defaultSuggestionOptions))
+                    return false;
+            }
+          
+
+
+            return true;
+        }
+
+        bool IsDefaultValue(FieldStorage val)
+        {
+            return val == FieldStorage.No;
+        }
+        bool IsDefaultValue(SortOptions val)
+        {
+            return val == SortOptions.None;
+        }
+        bool IsDefaultValue(FieldTermVector val)
+        {
+            return val == FieldTermVector.No;
+        }
+        bool IsDefaultValue(FieldIndexing val)
+        {
+            return val == FieldIndexing.Default;
+        }
+        bool IsDefaultValue(string val)
+        {
+            return val.Equals(string.Empty);
+        }
+        bool IsDefaultValue(SuggestionOptions val)
+        {
+            var defaultSuggestionOptions = new SuggestionOptions();
+            defaultSuggestionOptions.Distance = StringDistanceTypes.None;
+ 
+            return val.Equals(defaultSuggestionOptions);
+        }
+         bool IsDefaultValue<T>(T val)
+        {
+             var type = typeof(T);
+             var valAsString = val as string;
+             if (valAsString !=null)
+                 return IsDefaultValue(valAsString);
+                         
+            var valAsSuggestion = val as SuggestionOptions;
+            if ( valAsSuggestion!=null)
+                 return IsDefaultValue(valAsSuggestion);
+
+             if (type.IsEnum)
+             {
+                 if (type.FullName.Equals(typeof (SortOptions).FullName))
+                 {
+                     var valAsSortOption = (SortOptions) Convert.ChangeType(val, typeof (SortOptions));
+                     return IsDefaultValue(valAsSortOption);
+                 }
+                 if (type.FullName.Equals(typeof (FieldStorage).FullName))
+                 {
+                     var valAsStorage = (FieldStorage) Convert.ChangeType(val, typeof (FieldStorage));
+                     return IsDefaultValue(valAsStorage);
+                 }
+                 if (type.FullName.Equals(typeof (FieldTermVector).FullName))
+                 {
+                     var valAsTermVector = (FieldTermVector) Convert.ChangeType(val, typeof (FieldTermVector));
+                     return IsDefaultValue(valAsTermVector);
+                 }
+
+                 if (type.FullName.Equals(typeof (FieldIndexing).FullName))
+                 {
+                     var valAsIndexing = (FieldIndexing) Convert.ChangeType(val, typeof (FieldIndexing));
+                     return IsDefaultValue(valAsIndexing);
+                 }
+             }
+             return true;
+        }
+        private bool DataDictionaryCompare<T>(IDictionary<string, T> dataDict1, IDictionary<string, T> dataDict2)
+        {
+   
             foreach (var kvp in dataDict1)
             {
                 T v2;
                 if (!dataDict2.TryGetValue(kvp.Key, out v2))
-                    return false;
-
+                    continue;
                 if (Equals(kvp.Value, v2) == false)
                     return false;
-
             }
             return true;
+        }
+        private bool DataDictionaryCompare<T>(IDictionary<string, T> dataDict1, IDictionary<string, T> dataDict2,IEnumerable<string> names )
+        {
+            bool found1, found2;
+            foreach (var kvp in names)
+            {
+                T v1,v2;
+                found1 = dataDict1.TryGetValue(kvp, out v1);
+                found2 = dataDict2.TryGetValue(kvp, out v2);
+
+                    
+                if (found1 && found2 && Equals(v1, v2) == false)
+                    return false;
+
+                //exists only in 1 - check if contains default value
+                if (found1 && !found2)
+                {
+                    if (! IsDefaultValue(v1))
+                        return false;
+                }
+                if (found2 && !found1)
+                {
+                   if (! IsDefaultValue(v2))
+                      return false;
+                }
+  
+           }
+
+          
+            return true;
+        }
+        private IDictionary<string, T>  DataDictionaryMerge<T>(IDictionary<string, T> dataDict1, IDictionary<string, T> dataDict2)
+         {
+            var resultDictionary = new Dictionary<string, T>();
+    
+            foreach (var curExpr in dataDict1.Keys.Where(curExpr => !resultDictionary.ContainsKey(curExpr)))
+            {
+                resultDictionary.Add(curExpr, dataDict1[curExpr]); 
+            }
+            foreach (var curExpr in dataDict2.Keys.Where(curExpr => !resultDictionary.ContainsKey(curExpr)))
+            {
+                resultDictionary.Add(curExpr, dataDict2[curExpr]);  
+            }
+           
+            return resultDictionary;
         }
 
         private bool CompareSelectExpression(IndexData expr1, IndexData expr2)
@@ -597,16 +803,6 @@ namespace Raven.Database.Storage
                    
                 foreach (var curProposedData in mergeProposal.ProposedForMerge)
                 {
-                    //foreach (var curExpr in curProposedData.SelectExpressions)
-                    //{
-                    //    var valueStr = curExpr.Value.ToString();
-                    //    if (curProposedData.FromIdentifier != indexData.FromIdentifier)
-                    //    {
-                    //        valueStr = valueStr.Replace(curProposedData.FromIdentifier, indexData.FromIdentifier);
-                    //    }
-                    //    var resultValue = valueStr.Split('=');
-                    //    selectExpression.Add(resultValue[resultValue.Length - 1].Trim());
-                    //}
                       foreach (var curExpr in curProposedData.SelectExpressions.Where(curExpr => !selectExpressionDict.ContainsKey(curExpr.Key)))
                         {
                             selectExpressionDict.Add(curExpr.Key,curExpr.Value);  //!!!
@@ -617,38 +813,26 @@ namespace Raven.Database.Storage
                         }
                 }
               //  string fromIdent = indexData.FromIdentifier;
+                indexData.SelectExpressions = selectExpressionDict;
                 string resSuggestion = indexData.BuildExpression();
  
-           //     var sb = new StringBuilder();
-           //     sb.Append("select new { ");
-           //     foreach (var value in selectExpression)
-           //     {
-           //         sb.Append(value);
-           //         sb.Append(" ,");
-           //     }
-           //     suggestion.Append(" " + sb);
-
-           //     int len = suggestion.ToString().Length;
-           //     suggestion.Replace(",", "}", len - 2, 2);
-
-           ////     mergeSuggestion.CanMerge.Add(indexData.IndexName);
                 mergeSuggestion.MergedIndex.Name = indexData.IndexName;
                 mergeSuggestion.MergedIndex.IndexId = indexData.IndexId;
-                mergeSuggestion.MergedIndex.Map = resSuggestion; //!!suggestion.ToString();
+                mergeSuggestion.MergedIndex.Map = resSuggestion; 
 
-             //   if (indexData.IsStoreDefined)
+           
                     mergeSuggestion.MergedIndex.Stores = indexData.Stores;
-             //   if (indexData.IsIndexesDefined)
+            
                     mergeSuggestion.MergedIndex.Indexes = indexData.Indexes;
-              //  if (indexData.IsAnalyzerDefined)
+              
                    mergeSuggestion.MergedIndex.Analyzers= indexData.Analyzers;
-            //    if (indexData.IsSortOptionDefined)
+      
                     mergeSuggestion.MergedIndex.SortOptions = indexData.SortOptions;
-             //   if (indexData.IsSuggestionDefined)
+            
                     mergeSuggestion.MergedIndex.Suggestions = indexData.Suggestions;
-              //  if (indexData.IsTermVectorDefined)
+             
                     mergeSuggestion.MergedIndex.TermVectors = indexData.TermVectors;
-              //  if (indexData.IsSpatialIndexDefined)
+            
                     mergeSuggestion.MergedIndex.SpatialIndexes = indexData.SpatialIndexes;
                 if (mergeProposal.ProposedForMerge.Count > 1)
                 {
@@ -656,16 +840,50 @@ namespace Raven.Database.Storage
                 }
                 if ((mergeProposal.ProposedForMerge.Count == 1) &&(indexData.IsSuitedForMerge==false))
                 {
-                    indexMergeResults.Other.Add(mergeSuggestion);
+                   
+                    const string comment = "Can't find any entity name for merge";
+                    indexMergeResults.Unmergables.Add(mergeSuggestion.MergedIndex.Name, comment);
+                    //indexMergeResults.Other.Add(mergeSuggestion);
                 }
-
-
             }
+            indexMergeResults = ExcludePartialReaults(indexMergeResults);
             return indexMergeResults;
         }
 
-       
 
+        IndexMergeResults ExcludePartialReaults(IndexMergeResults originalIndexes)
+        {
+            var resultingIndexMerge = new IndexMergeResults();
+     
+            foreach (var suggestion in originalIndexes.Suggestions)
+            {
+                suggestion.CanMerge.Sort();
+            }
+            bool hasMatch = false;
+            foreach (var sug1 in originalIndexes.Suggestions)
+            {
+                foreach (var sug2 in originalIndexes.Suggestions)
+                {
+                    if ((sug1 != sug2) && (sug1.CanMerge.Count <= sug2.CanMerge.Count ))
+                    {
+                        var sugCanMergeSet = new HashSet<string>(sug1.CanMerge);
+
+                        if ((hasMatch = sugCanMergeSet.IsProperSubsetOf(sug2.CanMerge)))
+                        {
+                            break;
+                        }
+
+                    }
+                }
+                if (!hasMatch)
+                {
+                    resultingIndexMerge.Suggestions.Add(sug1);
+                    hasMatch = false;
+                }
+            }
+            resultingIndexMerge.Unmergables = originalIndexes.Unmergables;
+            return resultingIndexMerge;
+        }
       
         public TransformerDefinition GetTransformerDefinition(int id)
         {
