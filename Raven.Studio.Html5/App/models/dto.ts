@@ -307,6 +307,10 @@ interface transformerDto {
     }
 }
 
+interface saveTransformerDto {
+    'Name': string;
+    'TransformResults':string;
+}
 
 interface getTransformerResultDto {
     'Transformer':string;

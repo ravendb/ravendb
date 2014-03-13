@@ -22,6 +22,7 @@
   <ItemGroup>
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\createSampleDataCommand.ts" />
+    <TypeScriptCompile Include="App\commands\deleteTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveTransformerCommand.ts" />
@@ -65,6 +66,7 @@
     <TypeScriptCompile Include="App\commands\saveIndexDefinitionCommand.ts" />
     <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\popoverBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
     <TypeScriptCompile Include="App\models\index.ts" />
@@ -87,6 +89,7 @@
     <TypeScriptCompile Include="App\viewmodels\deleteDocumentsMatchingQueryConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteDocuments.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteIndexesConfirm.ts" />
+    <TypeScriptCompile Include="App\viewmodels\deleteTransformerConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\dialogViewModelBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\editDocument.ts" />
     <TypeScriptCompile Include="App\viewmodels\editIndex.ts" />
@@ -134,6 +137,7 @@
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\backupDatabase.html" />
+    <Content Include="App\views\deleteTransformerConfirm.html" />
     <Content Include="App\views\sqlReplications.html" />
     <Content Include="App\views\createSampleData.html" />
     <Content Include="App\views\csvImport.html" />

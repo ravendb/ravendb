@@ -29,6 +29,11 @@ class transformerShell extends viewModelBase {
             return activeRoute != null ? activeRoute.title : "";
         });
     }
+
+    //todo: implement refresh of all transformers
+    modelPolling() {
+    }
+
 }
 
 export = transformerShell;
