@@ -372,6 +372,17 @@ interface databaseDocumentDto {
   Disabled: boolean;
 }
 
+interface restoreRequestDto {
+  RestoreLocation: string;
+  DatabaseLocation: string;
+  DatabaseName: string;
+}
+
+interface restoreStatusDto {
+  Messages: string[];
+  IsRunning: boolean;
+}
+
 interface sqlReplicationTableDto {
     TableName: string;
     DocumentKeyColumn: string;
