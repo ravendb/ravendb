@@ -3,12 +3,10 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
-using Voron.Util;
 
 namespace Voron.Trees
 {
@@ -375,8 +373,7 @@ namespace Voron.Trees
 
 	    private Page SearchForPage(Transaction tx, Slice key, ref Lazy<Cursor> cursor)
 	    {
-	        Page p;
-	        p = tx.GetReadOnlyPage(State.RootPageNumber);
+	        var p = tx.GetReadOnlyPage(State.RootPageNumber);
 	        var c = new Cursor();
 	        c.Push(p);
 
@@ -719,10 +716,10 @@ namespace Voron.Trees
 			return tree;
 		}
 
-		private static void CheckConcurrency(Slice key, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)
+		private void CheckConcurrency(Slice key, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)
 		{
 			if (expectedVersion.HasValue && nodeVersion != expectedVersion.Value)
-				throw new ConcurrencyException(string.Format("Cannot {0} '{1}'. Version mismatch. Expected: {2}. Actual: {3}.", actionType.ToString().ToLowerInvariant(), key, expectedVersion.Value, nodeVersion));
+				throw new ConcurrencyException(string.Format("Cannot {0} '{1}' to '{4}' tree. Version mismatch. Expected: {2}. Actual: {3}.", actionType.ToString().ToLowerInvariant(), key, expectedVersion.Value, nodeVersion, Name));
 		}
 
 		public bool IsMultiValueTree { get; set; }
@@ -738,7 +735,7 @@ namespace Voron.Trees
 			return new Tree(_cmp, _state.Clone()){ Name = Name };
 		}
 
-		private static bool TryOverwriteDataOrMultiValuePageRefNode(NodeHeader* updatedNode, Slice key, int len,
+		private bool TryOverwriteDataOrMultiValuePageRefNode(NodeHeader* updatedNode, Slice key, int len,
 															NodeFlags requestedNodeType, ushort? version,
 															out byte* pos)
 		{
@@ -774,7 +771,7 @@ namespace Voron.Trees
 			return false;
 		}
 
-		private static bool TryOverwriteOverflowPages(Transaction tx, TreeMutableState treeState, NodeHeader* updatedNode,
+		private bool TryOverwriteOverflowPages(Transaction tx, TreeMutableState treeState, NodeHeader* updatedNode,
 													  Slice key, int len, ushort? version, out byte* pos)
 		{
 			if (updatedNode->Flags == NodeFlags.PageRef &&

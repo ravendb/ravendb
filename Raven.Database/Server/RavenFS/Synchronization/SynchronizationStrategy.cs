@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
 
@@ -13,9 +14,9 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 	public class SynchronizationStrategy
 	{
 		private readonly SigGenerator sigGenerator;
-		private readonly TransactionalStorage storage;
+		private readonly ITransactionalStorage storage;
 
-		public SynchronizationStrategy(TransactionalStorage storage, SigGenerator sigGenerator)
+		public SynchronizationStrategy(ITransactionalStorage storage, SigGenerator sigGenerator)
 		{
 			this.storage = storage;
 			this.sigGenerator = sigGenerator;
