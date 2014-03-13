@@ -371,3 +371,21 @@ interface databaseDocumentDto {
   SecuredSettings: {};
   Disabled: boolean;
 }
+
+interface sqlReplicationTableDto {
+    TableName: string;
+    DocumentKeyColumn: string;
+}
+
+interface sqlReplicationDto {
+    Name: string;
+    Disabled: boolean;
+    ParameterizeDeletesDisabled: boolean;
+    RavenEntityName: string;
+    Script: string;
+    FactoryName: string;
+    ConnectionString: string;
+    ConnectionStringName: string;
+    ConnectionStringSettingName: string;
+    SqlReplicationTables: sqlReplicationTableDto[];
+}
