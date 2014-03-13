@@ -16,8 +16,13 @@ class startRestoreCommand extends commandBase {
       .execute()
       .fail(response=> result.reject(response))
       .done(_=> {
-        this.post('/admin/restore?defrag=' + this.defrag, ko.toJSON(this.restoreRequest), this.db)
-          .fail(response=> result.reject(response))
+        this.post('/admin/restore?defrag=' + this.defrag, ko.toJSON(this.restoreRequest), this.db, { dataType: 'text' })
+          .fail(response=> {
+            var r = JSON.parse(response.responseText);
+            var restoreStatus: restoreStatusDto = { Messages: [r.Error], IsRunning: false };
+            this.updateRestoreStatus(restoreStatus);
+            result.reject(response);
+          })
           .done(response=> {
             this.getRestoreStatus(result);
           });

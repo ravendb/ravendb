@@ -9,7 +9,30 @@
                 Restore a database.
             </div>
             <div class="panel-body">
-                
+                <div>
+                    <label>
+                        <span>Backup Location</span>
+                        <input type="text" data-bind="value: backupLocation" placeholder="C:\path-to-your-backup-folder">
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <span>Database Location</span>
+                        <input type="text" data-bind="value: databaseLocation">
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <span>Database Name</span>
+                        <input type="text" data-bind="value: databaseName">
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <span>Defrag</span>
+                        <input type="checkbox" data-bind="value: defrag">
+                    </label>
+                </div>
             </div>
         </div>
 
@@ -19,8 +42,8 @@
         </button>
         
         <div class="panel-body">
-            <div data-bind="foreach: backupStatusMessages">
-                <div data-bind="text: '[' + Timestamp+ ']\t' + Severity +':\t'+ Message"></div>
+            <div data-bind="foreach: restoreStatusMessages">
+                <div data-bind="text: $data"></div>
             </div>
         </div>
     </div>
