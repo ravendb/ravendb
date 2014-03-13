@@ -134,6 +134,8 @@
     <TypeScriptCompile Include="App\viewmodels\sqlReplications.ts" />
     <TypeScriptCompile Include="App\models\sqlReplicationTable.ts" />
     <TypeScriptCompile Include="App\models\sqlReplication.ts" />
+    <TypeScriptCompile Include="App\commands\getSqlReplicationsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveSqlReplicationsCommand.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\restoreDatabase.html" />
