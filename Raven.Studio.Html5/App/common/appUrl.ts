@@ -17,6 +17,8 @@ class appUrl {
         transformers: ko.computed(() => appUrl.forTransformers(appUrl.currentDatabase())),
         newIndex: ko.computed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         editIndex: (indexName?: string) => ko.computed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
+        newTransformer: ko.computed(() => appUrl.forNewTransformer(appUrl.currentDatabase())),
+        editTransformer: (transformerName?: string) => ko.computed(() => appUrl.forEditTransformer(transformerName, appUrl.currentDatabase())),
         query: (indexName?: string) => ko.computed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         reporting: ko.computed(() => appUrl.forReporting(appUrl.currentDatabase())),
         tasks: ko.computed(() => appUrl.forTasks(appUrl.currentDatabase())),
@@ -30,6 +32,7 @@ class appUrl {
         databaseSettings: ko.computed(() => appUrl.forDatabaseSettings(appUrl.currentDatabase())),
         periodicBackup: ko.computed(() => appUrl.forPeriodicBackup(appUrl.currentDatabase())),
         replications: ko.computed(() => appUrl.forReplications(appUrl.currentDatabase())),
+        sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
 
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null)
 	};
@@ -111,6 +114,10 @@ class appUrl {
         return "#settings/replication?" + appUrl.getEncodedDbPart(db);
     }
 
+    static forSqlReplications(db: database): string {
+        return "#settings/sqlReplication?" + appUrl.getEncodedDbPart(db);
+    }
+
 	static forDocuments(collection: string, db: database): string {
         var collectionPart = collection ? "collection=" + encodeURIComponent(collection) : "";
         var databasePart = appUrl.getEncodedDbPart(db);
@@ -135,6 +142,16 @@ class appUrl {
     static forEditIndex(indexName: string, db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
+    }
+
+    static forNewTransformer(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#transformers/edit?" + databasePart;
+    }
+
+    static forEditTransformer(transformerName: string, db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#transformers/edit/" + encodeURIComponent(transformerName) + "?" + databasePart;
     }
 
     static forTransformers(db: database): string {
