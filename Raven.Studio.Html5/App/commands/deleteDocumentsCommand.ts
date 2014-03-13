@@ -31,4 +31,4 @@ class deleteDocumentsCommand extends executeBulkDocsCommand {
     }
 }
 
-export = deleteDocumentsCommand; 
+export = deleteDocumentsCommand;

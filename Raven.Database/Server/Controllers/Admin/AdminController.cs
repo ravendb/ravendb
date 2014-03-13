@@ -70,9 +70,9 @@ namespace Raven.Database.Server.Controllers.Admin
 		public async Task<HttpResponseMessage> Restore()
 		{
 			if (EnsureSystemDatabase() == false)
-				return GetMessageWithString("Restore is only possiable from the system database", HttpStatusCode.BadRequest);
+				return GetMessageWithString("Restore is only possible from the system database", HttpStatusCode.BadRequest);
 
-            var restoreStatus = new List<string>();
+            var restoreStatus = new RestoreStatus{Messages = new List<string>()};
 
 			var restoreRequest = await ReadJsonObjectAsync<RestoreRequest>();
 
@@ -94,8 +94,8 @@ namespace Raven.Database.Server.Controllers.Admin
 								? "Database.Document file is invalid - database name was not found and not supplied in the request (Id property is missing or null). This is probably a bug - should never happen."
 								: "A database name must be supplied if the restore location does not contain a valid Database.Document file";
 
-                restoreStatus.Add(errorMessage);
-                DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null, RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
+                restoreStatus.Messages.Add(errorMessage);
+				DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null, RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
 
 				return GetMessageWithString(errorMessage,HttpStatusCode.BadRequest);
 			}
@@ -136,9 +136,9 @@ namespace Raven.Database.Server.Controllers.Admin
 				DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, null,
 					msg =>
 					{
-						restoreStatus.Add(msg);
+						restoreStatus.Messages.Add(msg);
 						DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
-							RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
+							RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
 					}, defrag);
 
 				if (databaseDocument == null)
@@ -150,9 +150,9 @@ namespace Raven.Database.Server.Controllers.Admin
 				DatabasesLandlord.SystemDatabase.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument),
 					new RavenJObject(), null);
 
-				restoreStatus.Add("The new database was created");
+				restoreStatus.Messages.Add("The new database was created");
 				DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
-					RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
+					RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
 			}, TaskCreationOptions.LongRunning);
 
 			return GetEmptyMessage();
