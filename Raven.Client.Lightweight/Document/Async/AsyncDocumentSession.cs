@@ -207,7 +207,7 @@ namespace Raven.Client.Document.Async
 
 				Current = new StreamResult<T>
 				{
-					Document = (T)parent.ConvertToEntity<T>(document.Key, document.DataAsJson, document.Metadata),
+					Document = (T)parent.ConvertToEntity(typeof(T),document.Key, document.DataAsJson, document.Metadata),
 					Etag = document.Etag,
 					Key = document.Key,
 					Metadata = document.Metadata
@@ -477,7 +477,7 @@ namespace Raven.Client.Document.Async
 												var array = values.Select(y =>
 												{
 													HandleInternalMetadata(y);
-													return ConvertToEntity<T>(null, y, new RavenJObject());
+													return ConvertToEntity(typeof(T),null, y, new RavenJObject());
 												}).ToArray();
 												var newArray = Array.CreateInstance(typeof(T).GetElementType(), array.Length);
 												Array.Copy(array, newArray, array.Length);
@@ -503,7 +503,7 @@ namespace Raven.Client.Document.Async
 					  .Select(x =>
 					  {
 						  this.HandleInternalMetadata(x);
-						  return this.ConvertToEntity<T>(null, x, new RavenJObject());
+						  return this.ConvertToEntity(typeof(T),null, x, new RavenJObject());
 					  })
 					  .Cast<T>();
 

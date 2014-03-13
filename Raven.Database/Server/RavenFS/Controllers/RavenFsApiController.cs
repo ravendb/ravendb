@@ -29,7 +29,6 @@ using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
-using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -182,7 +181,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			get { return queryString ?? (queryString = HttpUtility.ParseQueryString(Request.RequestUri.Query)); }
 		}
 
-		protected TransactionalStorage Storage
+		protected ITransactionalStorage Storage
 		{
 			get { return RavenFileSystem.Storage; }
 		}
@@ -309,7 +308,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			return response;
 		}
 
-		protected void AssertFileIsNotBeingSynced(string fileName, StorageActionsAccessor accessor,
+		protected void AssertFileIsNotBeingSynced(string fileName, IStorageActionsAccessor accessor,
 		                                          bool wrapByResponseException = false)
 		{
 			if (FileLockManager.TimeoutExceeded(fileName, accessor))

@@ -7,17 +7,18 @@ using System.Text;
 using Newtonsoft.Json;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization;
 
 namespace Raven.Database.Server.RavenFS.Infrastructure
 {
 	public class Historian
 	{
-		private readonly TransactionalStorage storage;
+		private readonly ITransactionalStorage storage;
 		private readonly SynchronizationHiLo synchronizationHiLo;
 		private readonly UuidGenerator uuidGenerator;
 
-		public Historian(TransactionalStorage storage, SynchronizationHiLo synchronizationHiLo, UuidGenerator uuidGenerator)
+		public Historian(ITransactionalStorage storage, SynchronizationHiLo synchronizationHiLo, UuidGenerator uuidGenerator)
 		{
 			this.storage = storage;
 			this.uuidGenerator = uuidGenerator;
