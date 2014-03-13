@@ -213,6 +213,11 @@ class appUrl {
         return "#tasks/backupDatabase?" + databasePart;
     }
 
+    static forRestoreDatabase(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#tasks/restoreDatabase?" + databasePart;
+    }
+
     static forToggleIndexing(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#tasks/toggleIndexing?" + databasePart;
