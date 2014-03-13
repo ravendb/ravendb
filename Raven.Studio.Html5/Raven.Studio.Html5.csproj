@@ -6,7 +6,7 @@
     <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <OutputPath>bin</OutputPath>
-    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
     <TypeScriptToolsVersion>0.9</TypeScriptToolsVersion>
@@ -17,6 +17,7 @@
     <IISExpressUseClassicPipelineMode />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <ItemGroup>
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
@@ -116,9 +117,13 @@
     <TypeScriptCompile Include="App\models\windowsAuthSetup.ts" />
     <TypeScriptCompile Include="App\commands\getWindowsAuthCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveWindowsAuthCommand.ts" />
+    <TypeScriptCompile Include="App\viewmodels\sqlReplications.ts" />
+    <TypeScriptCompile Include="App\models\sqlReplicationTable.ts" />
+    <TypeScriptCompile Include="App\models\sqlReplication.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\backupDatabase.html" />
+    <Content Include="App\views\sqlReplications.html" />
     <Content Include="App\views\createSampleData.html" />
     <Content Include="App\views\csvImport.html" />
     <Content Include="App\views\deleteDocumentsMatchingQueryConfirm.html" />
@@ -1089,6 +1094,14 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="readme.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Web.ApplicationServices" />
+    <Reference Include="System.Web.DynamicData" />
+    <Reference Include="System.Web.Entity" />
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

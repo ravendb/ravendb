@@ -20,13 +20,15 @@ class settings extends viewModelBase {
         var databaseSettingsRoute = { route: 'settings/databaseSettings', moduleId: 'viewmodels/databaseSettings', title: 'Database Settings', nav: true, hash: appUrl.forCurrentDatabase().databaseSettings };
         var periodicBackupRoute = { route: 'settings/periodicBackup', moduleId: 'viewmodels/periodicBackup', title: 'Periodic Backup', nav: true, hash: appUrl.forCurrentDatabase().periodicBackup };
         var replicationsRoute = { route: 'settings/replication', moduleId: 'viewmodels/replications', title: 'Replication', nav: true, hash: appUrl.forCurrentDatabase().replications };
+        var sqlReplicationsRoute = { route: 'settings/sqlReplication', moduleId: 'viewmodels/sqlReplications', title: 'SQL Replication', nav: true, hash: appUrl.forCurrentDatabase().sqlReplications };
         this.router = durandalRouter.createChildRouter()
             .map([
                 apiKeyRoute,
                 windowsAuthRoute,
                 databaseSettingsRoute,
                 periodicBackupRoute,
-                replicationsRoute
+                replicationsRoute,
+                sqlReplicationsRoute
             ])
             .buildNavigationModel();
 
@@ -56,7 +58,7 @@ class settings extends viewModelBase {
     }
 
     routeIsVisible(route: DurandalRouteConfiguration) {
-        var userDatabasePages = ["Periodic Backup", "Database Settings", "Replication"];
+        var userDatabasePages = ["Periodic Backup", "Database Settings", "Replication", "SQL Replication"];
         if (jQuery.inArray(route.title, userDatabasePages) !== -1) {
             // Periodic backup, database settings, and replication are visible only when we're on a user database.
             return this.isOnUserDatabase();
