@@ -2,6 +2,8 @@
 using System.Collections.Specialized;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.Server.RavenFS.Storage.Esent;
+
 using Xunit;
 
 namespace RavenFS.Tests

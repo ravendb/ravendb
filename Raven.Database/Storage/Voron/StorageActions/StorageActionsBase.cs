@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Text;
 
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Util.Streams;
 

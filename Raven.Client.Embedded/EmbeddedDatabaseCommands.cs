@@ -1448,15 +1448,18 @@ namespace Raven.Client.Embedded
 					};
 				}
 
-				var conflictsDoc = RavenJObject.Load(new BsonReader(attachment.Data()));
-				var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+                using (var stream = attachment.Data())
+                {
+                    var conflictsDoc = stream.ToJObject();
+                    var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
-				throw new ConflictException("Conflict detected on " + attachment.Key +
-											", conflict must be resolved before the attachment will be accessible", true)
-				{
-					Etag = attachment.Etag,
-					ConflictedVersionIds = conflictIds
-				};
+                    throw new ConflictException("Conflict detected on " + attachment.Key +
+                                                ", conflict must be resolved before the attachment will be accessible", true)
+                    {
+                        Etag = attachment.Etag,
+                        ConflictedVersionIds = conflictIds
+                    };
+                }
 			}
 		}
 

@@ -460,7 +460,7 @@ namespace Raven.Client.Document
             value.OriginalMetadata = (RavenJObject)jsonDocument.Metadata.CloneToken();
             value.ETag = jsonDocument.Etag;
             value.OriginalValue = jsonDocument.DataAsJson;
-            var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
+            var newEntity = ConvertToEntity(typeof(T),value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
             foreach (var property in entity.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
                 if (!property.CanWrite || !property.CanRead || property.GetIndexParameters().Length != 0)
@@ -653,7 +653,7 @@ namespace Raven.Client.Document
 
                     yield return new StreamResult<T>
                     {
-                        Document = (T)ConvertToEntity<T>(document.Key, document.DataAsJson, document.Metadata),
+                        Document = (T)ConvertToEntity(typeof(T),document.Key, document.DataAsJson, document.Metadata),
                         Etag = document.Etag,
                         Key = document.Key,
                         Metadata = document.Metadata

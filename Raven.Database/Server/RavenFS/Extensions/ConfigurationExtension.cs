@@ -10,7 +10,7 @@ namespace Raven.Database.Server.RavenFS.Extensions
 {
 	public static class ConfigurationExtension
 	{
-		public static T GetConfigurationValue<T>(this StorageActionsAccessor accessor, string key)
+		public static T GetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key)
 		{
 			var value = accessor.GetConfig(key)["value"];
 			var serializer = new JsonSerializer
@@ -20,7 +20,7 @@ namespace Raven.Database.Server.RavenFS.Extensions
 			return serializer.Deserialize<T>(new JsonTextReader(new StringReader(value)));
 		}
 
-		public static bool TryGetConfigurationValue<T>(this StorageActionsAccessor accessor, string key, out T result)
+		public static bool TryGetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key, out T result)
 		{
 			try
 			{
@@ -34,7 +34,7 @@ namespace Raven.Database.Server.RavenFS.Extensions
 			}
 		}
 
-		public static void SetConfigurationValue<T>(this StorageActionsAccessor accessor, string key, T objectToSave)
+		public static void SetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key, T objectToSave)
 		{
 			var sb = new StringBuilder();
 			var jw = new JsonTextWriter(new StringWriter(sb));

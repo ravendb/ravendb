@@ -1,16 +1,18 @@
 ﻿using System;
 using System.IO;
 
+using Raven.Database.Server.RavenFS.Storage.Esent;
+
 namespace Raven.Database.Server.RavenFS.Storage
 {
 	public class SignatureReadOnlyStream : Stream
 	{
-		private readonly TransactionalStorage storage;
+		private readonly ITransactionalStorage storage;
 		private readonly int id;
 		private readonly int level;
 		private long? length;
 
-		public SignatureReadOnlyStream(TransactionalStorage storage, int id, int level)
+		public SignatureReadOnlyStream(ITransactionalStorage storage, int id, int level)
 		{
 			this.storage = storage;
 			this.id = id;

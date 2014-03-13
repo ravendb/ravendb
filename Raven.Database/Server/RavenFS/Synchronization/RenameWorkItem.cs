@@ -8,7 +8,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 	{
 		private readonly string rename;
 
-		public RenameWorkItem(string name, string rename, string sourceServerUrl, TransactionalStorage storage)
+		public RenameWorkItem(string name, string rename, string sourceServerUrl, ITransactionalStorage storage)
 			: base(name, sourceServerUrl, storage)
 		{
 			this.rename = rename;

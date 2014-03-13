@@ -7,10 +7,6 @@ class backupDatabase extends viewModelBase {
   backupStatusMessages = ko.observableArray<backupMessageDto>();
   isBusy = ko.observable<boolean>();
 
-  constructor() {
-    super();
-  }
-
   startBackup() {
     var updateBackupStatus = (newBackupStatus: backupStatusDto)=> {
       this.backupStatusMessages(newBackupStatus.Messages);

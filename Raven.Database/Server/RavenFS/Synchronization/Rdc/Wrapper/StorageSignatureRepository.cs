@@ -12,11 +12,11 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
 	{
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private readonly string _fileName;
-		private readonly TransactionalStorage _storage;
+		private readonly ITransactionalStorage _storage;
 		private readonly string _tempDirectory;
 		private IDictionary<string, FileStream> _createdFiles;
 
-		public StorageSignatureRepository(TransactionalStorage storage, string fileName)
+		public StorageSignatureRepository(ITransactionalStorage storage, string fileName)
 		{
 			_tempDirectory = TempDirectoryTools.Create();
 			_storage = storage;
@@ -135,7 +135,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
 			return result;
 		}
 
-		private static SignatureLevels GetSignatureLevel(string sigName, StorageActionsAccessor accessor)
+		private static SignatureLevels GetSignatureLevel(string sigName, IStorageActionsAccessor accessor)
 		{
 			var fileNameAndLevel = ExtractFileNameAndLevel(sigName);
 			var signatureLevels = accessor.GetSignatures(fileNameAndLevel.FileName);
