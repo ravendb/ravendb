@@ -1,9 +1,10 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
+import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 
-class stopIndexingCommand extends commandBase {
+class backupDatabaseCommand extends commandBase {
 
-  constructor(private db: database, private backupLocation: string) {
+  constructor(private db: database, private backupLocation: string, private updateBackupStatus: (backupStatusDto) => void) {
     super();
   }
 
@@ -17,27 +18,31 @@ class stopIndexingCommand extends commandBase {
           BackupLocation: this.backupLocation,
           DatabaseDocument: doc
         };
-
-          this.post('/admin/backup', JSON.stringify(args), this.db, { dataType: 'text' })
-          .fail(response=> {
-            debugger
-            result.reject(response);
-          })
+        this.post('/admin/backup', JSON.stringify(args), this.db, { dataType: 'text' })
+          .fail(response=> result.reject(response))
           .done(()=> {
-            debugger
-            var hasCompleted = false;
-            while (!hasCompleted) {
-              this.query("Raven/Backup/Status", null, this.db)
-                .done((backupStatus: backupStatusDto)=> {
-                  debugger
-                });
-            }
+            this.getBackupStatus(result);
           });
+
       });
 
     return result;
   }
 
+  private getBackupStatus(result: JQueryDeferred<any>) {
+
+    new getDocumentWithMetadataCommand("Raven/Backup/Status", this.db)
+      .execute()
+      .fail(response=> result.reject(response))
+      .done((backupStatus: backupStatusDto)=> {
+        this.updateBackupStatus(backupStatus);
+        if (backupStatus.IsRunning) {
+          setTimeout(()=> this.getBackupStatus(result), 1000);
+        }
+      });
+
+  }
+
 }
 
-export = stopIndexingCommand;
+export = backupDatabaseCommand;
