@@ -6,14 +6,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 class toggleIndexing extends viewModelBase {
 
   indexingStatus = ko.observable<string>("Started");
-  modelPollingHandle: number;
-
-  constructor() {
-    super();
-
-    this.modelPolling();
-    this.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
-  }
 
   disableIndexing() {
     new stopIndexingCommand(this.activeDatabase())
@@ -31,10 +23,6 @@ class toggleIndexing extends viewModelBase {
     new getIndexingStatusCommand(this.activeDatabase())
       .execute()
       .done(result=> this.indexingStatus(result.IndexingStatus));
-  }
-
-  forceModelPolling() {
-    this.modelPolling();
   }
 
 }

@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -28,7 +29,7 @@ namespace Raven.Database.Smuggler
 
 		private readonly DocumentDatabase database;
 
-        protected async override Task EnsureDatabaseExists()
+		protected async override Task EnsureDatabaseExists()
 		{
 			EnsuredDatabaseExists = true;
 		}
@@ -236,7 +237,9 @@ namespace Raven.Database.Smuggler
             return new CompletedTask();
         }
 
-		protected override Task PutDocument(RavenJObject document)
+		private List<JsonDocument> bulkInsertBatch = new List<JsonDocument>();
+
+		protected override void PutDocument(RavenJObject document, SmugglerOptions options)
 		{
 			if (document != null)
 			{
@@ -244,10 +247,18 @@ namespace Raven.Database.Smuggler
 				var key = metadata.Value<string>("@id");
 				document.Remove("@metadata");
 
-				database.Put(key, null, document, metadata, null);
+				bulkInsertBatch.Add(new JsonDocument
+				{
+					Key = key,
+					Metadata = metadata,
+					DataAsJson = document,
+				});
+				return;
 			}
 
-			return new CompletedTask();
+			var batchToSave = new List<IEnumerable<JsonDocument>> { bulkInsertBatch };
+			bulkInsertBatch = new List<JsonDocument>();
+			database.BulkInsert(new BulkInsertOptions { BatchSize = options.BatchSize, OverwriteExisting = true }, batchToSave, Guid.NewGuid());
 		}
 
 		protected override Task PutTransformer(string transformerName, RavenJToken transformer)

@@ -307,6 +307,11 @@ interface transformerDto {
     }
 }
 
+
+interface getTransformerResultDto {
+    'Transformer':string;
+}
+
 interface savedTransformerDto {
     "Transformer":
     {
@@ -351,7 +356,7 @@ interface backupStatusDto {
   Started: string;
   Completed?: string;
   IsRunning: boolean;
-  Messages: backupMessageDto;
+  Messages: backupMessageDto[];
 }
 
 interface backupMessageDto {
