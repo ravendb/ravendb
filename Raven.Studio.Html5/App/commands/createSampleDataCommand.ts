@@ -1,26 +1,19 @@
 ﻿import commandBase = require("commands/commandBase");
 import database = require("models/database");
 
-class createSampleDataCommand extends commandBase
-{
-    constructor(private db: database) {
-        super();
-    }
-    execute(): JQueryPromise<any> {
+class createSampleDataCommand extends commandBase {
 
-        
-        this.reportInfo("Creating Sample Data, Please wait...");
-        
-        var createSampleDataTask = this.post("/studio-tasks/createSampleData", null, this.db, { dataType: 'text' });
-        createSampleDataTask.fail((response)=> {
-            this.reportError("Failed to create sample data", response.responseText ? response.responseText:JSON.stringify(response));
-        });
-        createSampleDataTask.done(()=> {
-            this.reportSuccess("Sample data creation completed");
-        });
+  constructor(private db: database) {
+    super();
+  }
 
-        return createSampleDataTask;
-    }
+  execute(): JQueryPromise<any> {
+    this.reportInfo("Creating Sample Data, Please wait...");
+
+    return this.post("/studio-tasks/createSampleData", null, this.db, { dataType: 'text' })
+      .fail((response)=> this.reportError("Failed to create sample data", response.responseText))
+      .done(()=> this.reportSuccess("Sample data creation completed"));
+  }
 
 }
 

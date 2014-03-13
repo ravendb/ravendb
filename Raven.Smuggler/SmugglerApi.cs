@@ -138,7 +138,7 @@ namespace Raven.Smuggler
 			}
 		}
 
-		protected override Task PutDocument(RavenJObject document)
+		protected override void PutDocument(RavenJObject document, SmugglerOptions options)
 		{
 			if (document != null)
 			{
@@ -148,8 +148,6 @@ namespace Raven.Smuggler
 
 				operation.Store(document, metadata, id);
 			}
-
-			return new CompletedTask();
 		}
 
 		protected async override Task PutTransformer(string transformerName, RavenJToken transformer)
