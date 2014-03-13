@@ -1,6 +1,4 @@
-﻿'use strict';
-
-interface String {
+﻿interface String {
   codePointAt();
   repeat();
   startsWith(str: string): boolean;
@@ -16,6 +14,6 @@ interface Array<T> {
   values(): ArrayIterator;
 }
 
-class ArrayIterator {
+interface  ArrayIterator {
   
 }
