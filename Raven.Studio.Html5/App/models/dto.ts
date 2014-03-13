@@ -388,7 +388,7 @@ interface sqlReplicationTableDto {
     DocumentKeyColumn: string;
 }
 
-interface sqlReplicationDto {
+interface sqlReplicationDto extends documentDto {
     Name: string;
     Disabled: boolean;
     ParameterizeDeletesDisabled: boolean;

@@ -41,15 +41,21 @@
                             <label class="col-sm-3 control-label">SQL Provider</label>
                             <div class="col-sm-9">
                                 <select class="form-control" 
-                                        data-bind="options: ['System.Data.SqlClient','System.Data.SqlServerCe.4.0','System.Data.OleDb','System.Data.OracleClient','MySql.Data.MySqlClient','System.Data.SqlServerCe.3.5','Npgsql']"></select>
+                                        data-bind="options: ['System.Data.SqlClient','System.Data.SqlServerCe.4.0','System.Data.OleDb','System.Data.OracleClient','MySql.Data.MySqlClient','System.Data.SqlServerCe.3.5','Npgsql'], optionsCaption: '', value: factoryName"></select>
                             </div>
                         </div>
                         <div class="form-group">
                             <div class="col-sm-3">
-                                <select class="form-control" data-bind="options: availableConnectionStringTypes, optionsText: 'label', optionsValue: 'value'"></select>
+                                <select class="form-control" data-bind="options: availableConnectionStringTypes, optionsText: 'label', optionsValue: 'value', value: connectionStringType"></select>
                             </div>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" />
+                                <input type="text" class="form-control" data-bind="value: connectionStringValue"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Source Document Collection</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" data-bind="value: ravenEntityName" />
                             </div>
                         </div>
                         <div class="form-group">
@@ -82,7 +88,7 @@
                             </div>
                         </div>
                         <div class="form-group sql-replication-script-container">
-                            <label class="col-sm-3 control-label script-label" data-placement="auto right" data-original-title="SQL Replication Script" data-trigger="hover">
+                            <label class="col-sm-3 control-label script-label" data-placement="auto right" data-trigger="hover">
                                 <span class="help-cursor">
                                     Script
                                     <i class="fa fa-info-circle text-info"></i>
