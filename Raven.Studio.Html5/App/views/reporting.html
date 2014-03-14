@@ -49,14 +49,12 @@
         <div class="col-md-5">
             <div class="btn-group">
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" accesskey="G">
-                    Select a field <span class="caret"></span>
+                    <span data-bind="text: selectedFieldLabel"></span> <span class="caret"></span>
                 </button>
-                <ul class="dropdown-menu" role="menu">
-                    <li><a href="#">Action</a></li>
-                    <li><a href="#">Another action</a></li>
-                    <li><a href="#">Something else here</a></li>
-                    <li class="divider"></li>
-                    <li><a href="#">Separated link</a></li>
+                <ul class="dropdown-menu" role="menu" data-bind="foreach: availableFields">
+                    <li data-bind="click: $root.setSelectedField.bind($root, $data)">
+                        <a href="#" data-bind="text: $data"></a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -68,17 +66,16 @@
         </label>
         <div class="col-md-5">
             <div class="btn-group">
-                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                    <i class="fa fa-plus"></i> <span class="caret"></span>
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Add a value">
+                    <i class="fa fa-plus"></i> Add a value <span class="caret"></span>
                 </button>
-                <ul class="dropdown-menu" role="menu">
-                    <li><a href="#">Action</a></li>
-                    <li><a href="#">Another action</a></li>
-                    <li><a href="#">Something else here</a></li>
-                    <li class="divider"></li>
-                    <li><a href="#">Separated link</a></li>
+                <ul class="dropdown-menu" role="menu" data-bind="foreach: availableFields">
+                    <li data-bind="click: $root.addValue.bind($root, $data)"></li>
                 </ul>
             </div>
+        </div>
+        <div>
+
         </div>
     </div>
 
