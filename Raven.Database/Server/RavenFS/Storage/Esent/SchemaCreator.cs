@@ -93,7 +93,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			Api.JetAddColumn(session, tableid, "page_strong_hash", new JET_COLUMNDEF
 			{
 				coltyp = JET_coltyp.Binary,
-				cbMax = 32,
+				cbMax = 20,
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
 

@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
@@ -376,8 +377,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			private readonly BufferPool bufferPool;
 			private readonly string filename;
 			private readonly Stream inputStream;
-			private readonly MD5 md5Hasher;
 			private readonly ITransactionalStorage storage;
+			private readonly IHashEncryptor md5Hasher;
 			public int TotalSizeRead;
 			private int pos;
 
@@ -388,7 +389,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				this.storage = storage;
 				this.filename = filename;
 				buffer = bufferPool.TakeBuffer(StorageConstants.MaxPageSize);
-				md5Hasher = new MD5CryptoServiceProvider();
+			    md5Hasher = Encryptor.Current.CreateHash();
 			}
 
 			public string FileHash { get; private set; }
@@ -396,7 +397,6 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			public void Dispose()
 			{
 				bufferPool.ReturnBuffer(buffer);
-				md5Hasher.Dispose();
 			}
 
 			public async Task Execute()
@@ -410,10 +410,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 					if (totalSizeRead == 0) // nothing left to read
 					{
 						storage.Batch(accessor => accessor.CompleteFileUpload(filename));
-						md5Hasher.TransformFinalBlock(new byte[0], 0, 0);
-
-						FileHash = md5Hasher.Hash.ToStringHash();
-
+					    FileHash = IOExtensions.GetMD5Hex(md5Hasher.TransformFinalBlock());
 						return; // task is done
 					}
 
@@ -423,7 +420,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 						accessor.AssociatePage(filename, hashKey, pos, totalSizeRead);
 					}));
 
-					md5Hasher.TransformBlock(buffer, 0, totalSizeRead, null, 0);
+					md5Hasher.TransformBlock(buffer, 0, totalSizeRead);
 
 					pos++;
 				}

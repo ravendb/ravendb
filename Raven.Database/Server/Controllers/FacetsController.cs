@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Queries;
 
 namespace Raven.Database.Server.Controllers
@@ -128,11 +129,8 @@ namespace Raven.Database.Server.Controllers
 
         private Etag GetFacetsEtag(string index, byte[] additionalEtagBytes)
         {
-            using (var md5 = MD5.Create())
-            {
-                var etagBytes = md5.ComputeHash(Database.GetIndexEtag(index, null).ToByteArray().Concat(additionalEtagBytes).ToArray());
-                return Etag.Parse(etagBytes);
-            }
+            var etagBytes = Encryptor.Current.Hash.Compute16(Database.GetIndexEtag(index, null).ToByteArray().Concat(additionalEtagBytes).ToArray());
+            return Etag.Parse(etagBytes);
         }
 
         private int GetFacetStart()

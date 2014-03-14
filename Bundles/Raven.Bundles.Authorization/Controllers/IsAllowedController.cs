@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Bundles.Authorization.Model;
 using Raven.Database.Server.Controllers;
 
@@ -75,32 +76,26 @@ namespace Raven.Bundles.Authorization.Controllers
 
 		private Etag CalculateEtag(IEnumerable<JsonDocumentMetadata> documents, string userId)
 		{
-			Etag etag;
+			var etags = new List<byte>();
 
-			using (var md5 = MD5.Create())
+			etags.AddRange(documents.SelectMany(x => x == null ? Guid.Empty.ToByteArray() : (x.Etag ?? Etag.Empty).ToByteArray()));
+
+			var userDoc = Database.Get(userId, null);
+			if (userDoc == null)
 			{
-				var etags = new List<byte>();
-
-				etags.AddRange(documents.SelectMany(x => x == null ? Guid.Empty.ToByteArray() : (x.Etag ?? Etag.Empty).ToByteArray()));
-
-				var userDoc = Database.Get(userId, null);
-				if (userDoc == null)
-				{
-					etags.AddRange(Guid.Empty.ToByteArray());
-				}
-				else
-				{
-					etags.AddRange((userDoc.Etag ?? Etag.Empty).ToByteArray());
-					var user = userDoc.DataAsJson.JsonDeserialization<AuthorizationUser>();
-					foreach (var roleMetadata in user.Roles.Select(role => Database.GetDocumentMetadata(role, null)))
-					{
-						etags.AddRange(roleMetadata == null ? Guid.Empty.ToByteArray() : (roleMetadata.Etag ?? Etag.Empty).ToByteArray());
-					}
-				}
-
-				etag = Etag.Parse(md5.ComputeHash(etags.ToArray()));
+				etags.AddRange(Guid.Empty.ToByteArray());
 			}
-			return etag;
+			else
+			{
+				etags.AddRange((userDoc.Etag ?? Etag.Empty).ToByteArray());
+				var user = userDoc.DataAsJson.JsonDeserialization<AuthorizationUser>();
+				foreach (var roleMetadata in user.Roles.Select(role => Database.GetDocumentMetadata(role, null)))
+				{
+					etags.AddRange(roleMetadata == null ? Guid.Empty.ToByteArray() : (roleMetadata.Etag ?? Etag.Empty).ToByteArray());
+				}
+			}
+
+			return Etag.Parse(Encryptor.Current.Hash.Compute16(etags.ToArray()));
 		}
 	}
 }
