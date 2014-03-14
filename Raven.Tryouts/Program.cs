@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using NLog;
+using Raven.Abstractions.Util;
 using Raven.Tests.Bugs;
 using Raven.Tests.Bugs.DTC;
 using Raven.Tests.Bundles.Replication;
@@ -25,26 +27,6 @@ namespace Raven.Tryouts
 
 		private static void Main(string[] args)
 		{
-			CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("pl-PL");
-			CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("pl-PL");
-		    var sp = Stopwatch.StartNew();
-			for (int i = 0; i < 3000; i++)
-			{
-				Console.WriteLine("Test loop #" + i + " prev " + sp.ElapsedMilliseconds);
-//                Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				sp.Reset();
-				sp.Start();
-				try
-				{
-					using (var x = new AsyncSetBasedOps())
-						x.AwaitAsyncPatchByIndexShouldWork("voron").Wait();
-				}
-				catch (Exception e)
-				{
-					Console.WriteLine("Error caught: " + e);
-					break;
-				}
-			}
 
 		}
 	}

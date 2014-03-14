@@ -16,7 +16,7 @@ namespace Raven.Tests.Helpers
 				bool fips;
 				bool.TryParse(ConfigurationManager.AppSettings["Raven/Encryption/FIPS"], out fips);
 
-				return fips;
+				return true; //TODO: revert me
 			}
 		}
 	}

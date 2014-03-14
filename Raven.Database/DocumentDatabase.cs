@@ -286,12 +286,13 @@ namespace Raven.Database
         {
             string fipsAsString;
             bool fips;
+            /*
             if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("fips", out fipsAsString) && bool.TryParse(fipsAsString, out fips))
             {
                 if (!fips && configuration.UseFips)
                     throw new InvalidOperationException(
                         "Your license does not allow you to use FIPS compliant encryption on the server.");
-            }
+            }*/
 
             Encryptor.Initialize(configuration.UseFips);
             Cryptography.FIPSCompliant = configuration.UseFips;
