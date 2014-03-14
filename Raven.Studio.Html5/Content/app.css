@@ -99,15 +99,6 @@ body {
 .indexes-container .index:hover .index-actions-container {
   display: inline-block;
 }
-.transformers-container {
-  margin-top: 10px;
-}
-.transformers-container .transformer .transformer-actions-container {
-  display: none;
-}
-.transformers-container .transformer:hover .transformer-actions-container {
-  display: inline-block;
-}
 .settings-container {
   margin-top: 10px;
 }

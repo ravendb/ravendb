@@ -43,10 +43,6 @@ class editTransformer extends  viewModelBase{
         }
     }
 
-    deactivate() {
-        this.removeKeyboardShortcuts(this.containerSelector);
-    }
-
     editExistingTransformer(unescapedTransformerName: string) {
         var indexName = decodeURIComponent(unescapedTransformerName);
         this.fetchTransformerToEdit(indexName)
