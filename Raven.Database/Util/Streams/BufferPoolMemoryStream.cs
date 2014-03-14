@@ -67,7 +67,7 @@ namespace Raven.Database.Util.Streams
         public override void Write(byte[] buffer, int offset, int count)
         {
             EnsureCapacity(_position + count);
-			Debug.Assert(buffer.Length + offset <= _buffer.Length + _position," EnsureCapacity() should grow the underlying buffer to a proper size");
+            Debug.Assert(count <= _buffer.Length - _position, " EnsureCapacity() should grow the underlying buffer to a proper size");
 
             Buffer.BlockCopy(buffer, offset, _buffer, _position, count);
             _position += count;

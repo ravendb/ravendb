@@ -11,6 +11,7 @@ using Raven.Client.RavenFS;
 using Raven.Client.RavenFS.Connections;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
@@ -21,7 +22,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		private readonly ConflictResolver conflictResolver;
 		protected readonly CancellationTokenSource Cts = new CancellationTokenSource();
 		protected FileConvention Convention = new FileConvention();
-		protected SynchronizationWorkItem(string fileName, string sourceServerUrl, TransactionalStorage storage)
+		protected SynchronizationWorkItem(string fileName, string sourceServerUrl, ITransactionalStorage storage)
 		{
 			Storage = storage;
 			FileName = fileName;
@@ -39,7 +40,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			conflictResolver = new ConflictResolver();
 		}
 
-		protected TransactionalStorage Storage { get; private set; }
+		protected ITransactionalStorage Storage { get; private set; }
 
 		public string FileName { get; private set; }
 

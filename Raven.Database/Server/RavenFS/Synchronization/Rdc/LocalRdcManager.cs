@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
 
@@ -19,9 +20,9 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc
 		private readonly SigGenerator _sigGenerator;
 
 		private readonly ISignatureRepository _signatureRepository;
-		private readonly TransactionalStorage _transactionalStorage;
+		private readonly ITransactionalStorage _transactionalStorage;
 
-		public LocalRdcManager(ISignatureRepository signatureRepository, TransactionalStorage transactionalStorage,
+		public LocalRdcManager(ISignatureRepository signatureRepository, ITransactionalStorage transactionalStorage,
 							   SigGenerator sigGenerator)
 		{
 			_signatureRepository = signatureRepository;

@@ -1,4 +1,4 @@
-import windowsAuthSetup = require("models/windowsAuthSetup");
+﻿import windowsAuthSetup = require("models/windowsAuthSetup");
 import windowsAuthData = require("models/windowsAuthData");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getWindowsAuthCommand = require("commands/getWindowsAuthCommand");
@@ -38,4 +38,4 @@ class windowsAuth {
 
 }
 
-export = windowsAuth; 
+export = windowsAuth;

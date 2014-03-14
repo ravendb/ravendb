@@ -2,17 +2,22 @@
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.RavenFS;
+using System.Collections.Specialized;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Config;
 using Raven.Database.Server.Connections;
+using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Notifications;
+using Raven.Database.Util;
 using Raven.Database.Server.RavenFS.Search;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
-using Raven.Database.Util;
 
 namespace Raven.Database.Server.RavenFS
 {
@@ -26,7 +31,7 @@ namespace Raven.Database.Server.RavenFS
 		private readonly NotificationPublisher notificationPublisher;
 		private readonly IndexStorage search;
 		private readonly SigGenerator sigGenerator;
-		private readonly TransactionalStorage storage;
+		private readonly ITransactionalStorage storage;
 		private readonly StorageOperationsTask storageOperationsTask;
 		private readonly SynchronizationTask synchronizationTask;
 		private readonly InMemoryRavenConfiguration systemConfiguration;
@@ -37,7 +42,21 @@ namespace Raven.Database.Server.RavenFS
 		{
 			this.systemConfiguration = systemConfiguration;
 
-			storage = new TransactionalStorage(systemConfiguration.FileSystemDataDirectory, systemConfiguration.Settings);
+		    var storageType = systemConfiguration.DefaultFileSystemStorageTypeName;
+            if (string.Equals(InMemoryRavenConfiguration.VoronTypeName, storageType, StringComparison.OrdinalIgnoreCase) == false)
+            {
+                if (Directory.Exists(systemConfiguration.FileSystemDataDirectory) &&
+                        Directory.EnumerateFileSystemEntries(systemConfiguration.FileSystemDataDirectory).Any())
+                    throw new InvalidOperationException(
+                        string.Format(
+                            "We do not allow to run on a storage engine other then Voron, while we are in the early pre-release phase of RavenDB 3.0. You are currently running on {0}",
+                            storageType));
+
+                Trace.WriteLine("Forcing filesystem to run on Voron - pre release behavior only, mind " + Path.GetFileName(Path.GetDirectoryName(systemConfiguration.FileSystemDataDirectory)));
+                storageType = InMemoryRavenConfiguration.VoronTypeName;
+            }
+
+            storage = CreateTransactionalStorage(storageType, systemConfiguration.FileSystemDataDirectory, systemConfiguration.Settings);
 			search = new IndexStorage(systemConfiguration.FileSystemIndexStoragePath, systemConfiguration.Settings);
 			sigGenerator = new SigGenerator();
 			var replicationHiLo = new SynchronizationHiLo(storage);
@@ -61,7 +80,18 @@ namespace Raven.Database.Server.RavenFS
 			AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
 		}
 
-		public TransactionalStorage Storage
+        private static ITransactionalStorage CreateTransactionalStorage(string storageType, string path, NameValueCollection settings)
+        {
+            switch (storageType)
+            {
+                case InMemoryRavenConfiguration.VoronTypeName:
+                    return new Storage.Voron.TransactionalStorage(path, settings);
+                default:
+                    return new Storage.Esent.TransactionalStorage(path, settings);
+            }
+        }
+
+	    public ITransactionalStorage Storage
 		{
 			get { return storage; }
 		}
@@ -123,15 +153,15 @@ namespace Raven.Database.Server.RavenFS
 			get { return conflictResolver; }
 		}
 
-		public TransportState TransportState
-		{
-			get { return transportState; }
-		}
-
 	    public MetricsCountersManager MetricsCounters
 	    {
 	        get { return metricsCounters; }
 	    }
+
+		public TransportState TransportState
+		{
+			get { return transportState; }
+		}
 
 		public void Dispose()
 		{
@@ -143,11 +173,6 @@ namespace Raven.Database.Server.RavenFS
 			sigGenerator.Dispose();
 			BufferPool.Dispose();
             metricsCounters.Dispose();
-		}
-
-		private void ShouldDispose(object sender, EventArgs eventArgs)
-		{
-			Dispose();
 		}
 
         public FileSystemMetrics CreateMetrics()
@@ -188,6 +213,11 @@ namespace Raven.Database.Server.RavenFS
                 }
             };
         }
+
+		private void ShouldDispose(object sender, EventArgs eventArgs)
+		{
+			Dispose();
+		}
 
 		//[MethodImpl(MethodImplOptions.Synchronized)]
 		//public void Start(InMemoryRavenConfiguration config)

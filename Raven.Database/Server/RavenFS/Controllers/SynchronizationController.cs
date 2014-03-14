@@ -234,7 +234,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			}
 		}
 
-		private void StartupProceed(string fileName, StorageActionsAccessor accessor)
+		private void StartupProceed(string fileName, IStorageActionsAccessor accessor)
 		{
 			// remove previous SyncResult
 			DeleteSynchronizationReport(fileName, accessor);
@@ -731,13 +731,13 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			return report.Exception == null ? FileStatus.Safe : FileStatus.Broken;
 		}
 
-		private void SaveSynchronizationReport(string fileName, StorageActionsAccessor accessor, SynchronizationReport report)
+		private void SaveSynchronizationReport(string fileName, IStorageActionsAccessor accessor, SynchronizationReport report)
 		{
 			var name = RavenFileNameHelper.SyncResultNameForFile(fileName);
 			accessor.SetConfig(name, report.AsConfig());
 		}
 
-		private void DeleteSynchronizationReport(string fileName, StorageActionsAccessor accessor)
+		private void DeleteSynchronizationReport(string fileName, IStorageActionsAccessor accessor)
 		{
 			var name = RavenFileNameHelper.SyncResultNameForFile(fileName);
 			accessor.DeleteConfig(name);
@@ -786,7 +786,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			return result;
 		}
 
-		private SourceSynchronizationInformation GetLastSynchronization(Guid from, StorageActionsAccessor accessor)
+		private SourceSynchronizationInformation GetLastSynchronization(Guid from, IStorageActionsAccessor accessor)
 		{
 			SourceSynchronizationInformation info;
 			try
@@ -808,7 +808,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		private void SaveSynchronizationSourceInformation(ServerInfo sourceServer, Guid lastSourceEtag,
-														  StorageActionsAccessor accessor)
+														  IStorageActionsAccessor accessor)
 		{
 			var lastSynchronizationInformation = GetLastSynchronization(sourceServer.Id, accessor);
 			if (Buffers.Compare(lastSynchronizationInformation.LastSourceFileEtag.ToByteArray(), lastSourceEtag.ToByteArray()) >

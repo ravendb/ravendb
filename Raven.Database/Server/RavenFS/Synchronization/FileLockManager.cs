@@ -15,7 +15,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		private readonly Logger log = LogManager.GetCurrentClassLogger();
 		private TimeSpan configuredTimeout;
 
-		private TimeSpan SynchronizationTimeout(StorageActionsAccessor accessor)
+		private TimeSpan SynchronizationTimeout(IStorageActionsAccessor accessor)
 		{
 			var timeoutConfigExists = accessor.TryGetConfigurationValue(
 				SynchronizationConstants.RavenSynchronizationLockTimeout, out configuredTimeout);
@@ -23,7 +23,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			return timeoutConfigExists ? configuredTimeout : defaultTimeout;
 		}
 
-		public void LockByCreatingSyncConfiguration(string fileName, ServerInfo sourceServer, StorageActionsAccessor accessor)
+		public void LockByCreatingSyncConfiguration(string fileName, ServerInfo sourceServer, IStorageActionsAccessor accessor)
 		{
 			var syncLock = new SynchronizationLock
 			{
@@ -36,13 +36,13 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			log.Debug("File '{0}' was locked", fileName);
 		}
 
-		public void UnlockByDeletingSyncConfiguration(string fileName, StorageActionsAccessor accessor)
+		public void UnlockByDeletingSyncConfiguration(string fileName, IStorageActionsAccessor accessor)
 		{
 			accessor.DeleteConfig(RavenFileNameHelper.SyncLockNameForFile(fileName));
 			log.Debug("File '{0}' was unlocked", fileName);
 		}
 
-		public bool TimeoutExceeded(string fileName, StorageActionsAccessor accessor)
+		public bool TimeoutExceeded(string fileName, IStorageActionsAccessor accessor)
 		{
 			SynchronizationLock syncLock;
 
@@ -59,7 +59,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			return DateTime.UtcNow - syncLock.FileLockedAt > SynchronizationTimeout(accessor);
 		}
 
-		public bool TimeoutExceeded(string fileName, TransactionalStorage storage)
+		public bool TimeoutExceeded(string fileName, ITransactionalStorage storage)
 		{
 			var result = false;
 

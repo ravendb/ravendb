@@ -307,6 +307,23 @@ interface transformerDto {
     }
 }
 
+interface saveTransformerDto {
+    'Name': string;
+    'TransformResults':string;
+}
+
+interface getTransformerResultDto {
+    'Transformer':string;
+}
+
+interface savedTransformerDto {
+    "Transformer":
+    {
+        "TransformResults": string;
+        "Name":string;
+    }
+}
+
 interface storedQueryDto {
     IsPinned: boolean;
     IndexName: string;
@@ -343,7 +360,7 @@ interface backupStatusDto {
   Started: string;
   Completed?: string;
   IsRunning: boolean;
-  Messages: backupMessageDto;
+  Messages: backupMessageDto[];
 }
 
 interface backupMessageDto {
@@ -357,4 +374,33 @@ interface databaseDocumentDto {
   Settings: {};
   SecuredSettings: {};
   Disabled: boolean;
+}
+
+interface restoreRequestDto {
+  RestoreLocation: string;
+  DatabaseLocation: string;
+  DatabaseName: string;
+}
+
+interface restoreStatusDto {
+  Messages: string[];
+  IsRunning: boolean;
+}
+
+interface sqlReplicationTableDto {
+    TableName: string;
+    DocumentKeyColumn: string;
+}
+
+interface sqlReplicationDto extends documentDto {
+    Name: string;
+    Disabled: boolean;
+    ParameterizeDeletesDisabled: boolean;
+    RavenEntityName: string;
+    Script: string;
+    FactoryName: string;
+    ConnectionString: string;
+    ConnectionStringName: string;
+    ConnectionStringSettingName: string;
+    SqlReplicationTables: sqlReplicationTableDto[];
 }

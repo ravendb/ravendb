@@ -49,11 +49,5 @@ namespace Raven.Database.Storage.Voron.Impl
 				IncrementalBackupEnabled = allowIncrementalBackups
 			};
 		}
-
-		public void Dispose()
-		{
-			if (Options != null)
-				Options.Dispose();
-		}
 	}
 }

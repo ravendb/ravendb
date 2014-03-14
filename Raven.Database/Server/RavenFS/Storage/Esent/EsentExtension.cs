@@ -1,7 +1,8 @@
 ﻿using System;
+
 using Microsoft.Isam.Esent.Interop;
 
-namespace Raven.Database.Server.RavenFS.Storage
+namespace Raven.Database.Server.RavenFS.Storage.Esent
 {
 	public static class EsentExtension
 	{

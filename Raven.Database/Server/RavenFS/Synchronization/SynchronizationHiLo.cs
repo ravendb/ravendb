@@ -2,6 +2,7 @@
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.Server.RavenFS.Storage.Esent;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -10,11 +11,11 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		private const long Capacity = 1024 * 16;
 		private readonly object generatorLock = new object();
 
-		private readonly TransactionalStorage storage;
+		private readonly ITransactionalStorage storage;
 		private long currentHi;
 		private long currentLo = Capacity + 1;
 
-		public SynchronizationHiLo(TransactionalStorage storage)
+		public SynchronizationHiLo(ITransactionalStorage storage)
 		{
 			this.storage = storage;
 		}
