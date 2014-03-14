@@ -110,11 +110,6 @@ class editDocument extends viewModelBase {
         this.setupKeyboardShortcuts();
     }
 
-    deactivate() {
-        super.deactivate();
-        this.removeKeyboardShortcuts(editDocument.editDocSelector);
-    }
-
     initializeDocEditor() {
         // Startup the Ace editor with JSON syntax highlighting.
         this.docEditor = ace.edit("docEditor");

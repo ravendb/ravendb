@@ -1,0 +1,95 @@
+﻿
+<ul class="breadcrumb">
+    <li>
+        <h3>
+            <a href="#databases">
+                Databases
+            </a>
+        </h3>
+    </li>
+    <li data-bind="with: activeDatabase">
+        <a data-bind="text: name"></a>
+    </li>
+    <li>
+        <a>Indexes</a>
+    </li>
+    <li>
+        <div class="btn-group">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                <span data-bind="text: selectedIndexLabel"></span>
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" role="menu" data-bind="foreach: indexNames">
+                <li data-bind="click: $root.setSelectedIndex.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
+            </ul>
+        </div>
+    </li>
+    <li class="active">
+        <a>Reporting</a>
+    </li>
+</ul>
+
+<div class="btn-toolbar" role="toolbar">
+    <div class="btn-group">
+        <button class="btn btn-primary use-bootstrap-tooltip" title="Run the report (Alt+R)" accesskey="R" data-bind="enable: hasSelectedIndex, click: runReport">
+            <i class="fa fa-play"></i>
+        </button>
+    </div>
+    <div class="btn-group">
+        <a class="btn btn-default use-bootstrap-tooltip" title="Edit the index (F2)" data-bind="attr: { href: editSelectedIndexUrl }">
+            <i class=" fa fa-pencil"></i>
+        </a>
+    </div>
+</div>
+<br />
+
+<form class="form-horizontal" role="form">
+    <div class="form-group">
+        <label class="col-sm-1 control-label">Group By</label>
+        <div class="col-md-5">
+            <div class="btn-group">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" accesskey="G">
+                    Select a field <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a href="#">Action</a></li>
+                    <li><a href="#">Another action</a></li>
+                    <li><a href="#">Something else here</a></li>
+                    <li class="divider"></li>
+                    <li><a href="#">Separated link</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-1 control-label">
+            Values
+        </label>
+        <div class="col-md-5">
+            <div class="btn-group">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    <i class="fa fa-plus"></i> <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a href="#">Action</a></li>
+                    <li><a href="#">Another action</a></li>
+                    <li><a href="#">Something else here</a></li>
+                    <li class="divider"></li>
+                    <li><a href="#">Separated link</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-1 control-label">
+            Filter
+        </label>
+        <div class="col-md-5">
+            <button class="btn btn-default use-bootstrap-tooltip" title="Add a filter (Alt+F)">
+                <i class="fa fa-plus"></i>
+            </button>
+        </div>
+    </div>
+</form>

@@ -54,7 +54,7 @@ class shell extends viewModelBase {
             { route: 'documents',           title: 'Documents',     moduleId: 'viewmodels/documents',       nav: true,  hash: this.appUrls.documents },
             { route: 'indexes*details', title: 'Indexes', moduleId: 'viewmodels/indexesShell', nav: true, hash: this.appUrls.indexes },	
             { route: 'transformers*details', title: 'Transformers', moduleId: 'viewmodels/transformersShell',    nav: false,  hash: this.appUrls.transformers},	
-            { route: 'query(/:indexName)',	title: 'Query',			moduleId: 'viewmodels/queryShell',		nav: true,  hash: this.appUrls.query(null) },
+            { route: 'query*details',	    title: 'Query',			moduleId: 'viewmodels/queryShell',		nav: true,  hash: this.appUrls.query(null) },
 			{ route: 'tasks*details',	    title: 'Tasks',			moduleId: 'viewmodels/tasks',			nav: true,  hash: this.appUrls.tasks, },
 			{ route: 'settings*details',    title: 'Settings',		moduleId: 'viewmodels/settings',		nav: true,  hash: this.appUrls.settings },
             { route: 'status*details',	    title: 'Status',		moduleId: 'viewmodels/status',			nav: true,	hash: this.appUrls.status },
@@ -82,15 +82,12 @@ class shell extends viewModelBase {
             trigger: 'hover'
         });
 
-        var dataset: Twitter.Typeahead.Dataset = {
-            name: "test",
-            local: ["hello","world"]
-        };
-        $("#goToDocInput").typeahead(dataset);
-    }
-
-    handleQuery(query: any, cb: any) {
-        debugger;
+        // TODO: implement Go to document
+        //var dataset: Twitter.Typeahead.Dataset = {
+        //    name: "test",
+        //    local: ["hello","world"]
+        //};
+        //$("#goToDocInput").typeahead(dataset);
     }
 
     showNavigationProgress(isNavigating: boolean) {

@@ -33,10 +33,6 @@ class indexes extends viewModelBase {
         this.createKeyboardShortcut("Alt+=", () => this.expandAll(), this.containerSelector);
     }
 
-    deactivate() {
-        this.removeKeyboardShortcuts(this.containerSelector);
-    }
-
     fetchIndexes() {
         new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
