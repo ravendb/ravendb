@@ -24,7 +24,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 class shell extends viewModelBase {
     private router = router;
     databases = ko.observableArray<database>();
-    activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase");
     currentAlert = ko.observable<alertArgs>();
     queuedAlert: alertArgs;
     databasesLoadedTask: JQueryPromise<any>;
@@ -63,7 +62,7 @@ class shell extends viewModelBase {
 
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
-
+        
         this.connectToRavenServer();
     }
 
@@ -111,7 +110,7 @@ class shell extends viewModelBase {
 
     launchDocEditor(docId?: string, docsList?: pagedList) {
         var editDocUrl = appUrl.forEditDoc(docId, docsList ? docsList.collectionName : null, docsList ? docsList.currentItemIndex() : null, this.activeDatabase());
-        router.navigate(editDocUrl);
+        this.navigate(editDocUrl);
     }
 
     connectToRavenServer() {
@@ -209,7 +208,7 @@ class shell extends viewModelBase {
         db.activate();
 
         var updatedUrl = appUrl.forCurrentPage(db);
-        router.navigate(updatedUrl);
+        this.navigate(updatedUrl);
     }
 
     fetchBuildVersion() {

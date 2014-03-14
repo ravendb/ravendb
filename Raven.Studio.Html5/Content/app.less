@@ -106,11 +106,24 @@ html, body {
             &.selected {
                 -webkit-box-shadow: 0 0 6px 0 @selectColor;
                 box-shadow: 0 0 6px 0 @selectColor;
-                background-color: fade(@hoverColor, 25%);
+                background-color: @selectColor;
+                
+                a, .text-muted {
+                    color: white;
+                }
             }
 
             &.system-database {
-                background-color: rgba(192, 192, 192, 0.21);
+                @systemDbColor: rgba(192, 192, 192, 0.21);
+                background-color: @systemDbColor;
+
+                &.selected {
+                    background-color: darken(@systemDbColor, 70%);
+
+                    a, .text-muted {
+                        color: darken(@selectColor, 10%);
+                    }
+                }
             }
         }
     }
