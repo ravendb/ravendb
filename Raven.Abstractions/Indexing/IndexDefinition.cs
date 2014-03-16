@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Indexing
 {
@@ -21,7 +22,7 @@ namespace Raven.Abstractions.Indexing
 		public IndexDefinition()
 		{
 			Maps = new HashSet<string>();
-
+           
 			Indexes = new Dictionary<string, FieldIndexing>();
 			Stores = new Dictionary<string, FieldStorage>();
 			Analyzers = new Dictionary<string, string>();
@@ -402,4 +403,27 @@ namespace Raven.Abstractions.Indexing
 			return TransformResults;
 		}
 	}
+
+    public class IndexMergeSuggestion
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string With { get; set; }
+        public List<string> Repl { get; set; }
+    }
+    public class IndexMergeResults
+    {
+        public Dictionary<string, string> Unmergables=new Dictionary<string, string>();// index name, reason
+
+        public List<MergeSuggestions> Suggestions = new List<MergeSuggestions>();
+    }
+
+    public class MergeSuggestions
+    {
+        public List<string> CanMerge = new List<string>();  // index names
+
+          public IndexDefinition MergedIndex = new IndexDefinition();  //propose for new index with all it's properties
+    }
+
+   
 }

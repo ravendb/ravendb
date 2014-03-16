@@ -1117,6 +1117,16 @@ namespace Raven.Client.Connection.Async
             var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 			return convention.CreateSerializer().Deserialize<BuildNumber>(new RavenJTokenReader(result));
 		}
+        public async Task<IndexMergeResults> GetIndexMergeSuggestionsAsync()
+        {
+            var request =
+                jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/debug/suggest-index-merge").NoCache(),
+                                                                                         "GET", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
+            request.AddOperationHeaders(OperationsHeaders);
+
+            var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+            return convention.CreateSerializer().Deserialize<IndexMergeResults>(new RavenJTokenReader(result));
+        }
 
 		public Task StartIndexingAsync()
 		{

@@ -132,7 +132,12 @@ namespace Raven.Database.Server.Controllers.Admin
 			DatabasesLandlord.SystemDatabase.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
 			var defrag = "true".Equals(GetQueryStringValue("defrag"), StringComparison.InvariantCultureIgnoreCase);
 
-			await Task.Factory.StartNew(() =>
+		    var state = new RavenJObject
+		    {
+		        {"Done", false},
+		        {"Error", null}
+		    };
+			var task = Task.Factory.StartNew(() =>
 			{
 				DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, null,
 					msg =>
@@ -154,9 +159,20 @@ namespace Raven.Database.Server.Controllers.Admin
 				restoreStatus.Messages.Add("The new database was created");
 				DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
 					RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
-			}, TaskCreationOptions.LongRunning);
+			}, TaskCreationOptions.LongRunning)
+            .ContinueWith(t =>
+            {
+                if (t.Exception != null)
+                    state["Error"] = t.Exception.ToString();
+                else
+                    state["Done"] = true;
+            });
 
-			return GetEmptyMessage();
+		    long id;
+		    Database.AddTask(task, state, out id);
+
+
+		    return GetMessageWithObject(new {Id = id});
 		}
 
 		private string ResolveTenantDataDirectory(string databaseLocation, string databaseName, out string documentDataDir)
