@@ -184,8 +184,6 @@ namespace Raven.Database.Server.Controllers
 			if (indexDefinition == null)
 				return GetEmptyMessage(HttpStatusCode.NotFound);
 
-			indexDefinition.Fields = Database.GetIndexFields(index);
-
 			return GetMessageWithObject(new
 			{
 				Index = indexDefinition,

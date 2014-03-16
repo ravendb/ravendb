@@ -298,7 +298,15 @@ namespace Raven.Database.Storage
         {
             int id = 0;
             if (indexNameToId.TryGetValue(name, out id))
-                return IndexDefinitions[id];
+            {
+                IndexDefinition indexDefinition = IndexDefinitions[id];
+                if (indexDefinition.Fields.Count == 0)
+                {
+                    AbstractViewGenerator abstractViewGenerator = GetViewGenerator(id);
+                    indexDefinition.Fields = abstractViewGenerator.Fields;
+                }
+                return indexDefinition;
+            }
             return null;
         }
 
@@ -384,12 +392,15 @@ namespace Raven.Database.Storage
                     continue;
                 }
 
+              
                 mergeData.ProposedForMerge.Add(indexData);
                 foreach (var curIndexData in indexes)
                 {
-                    if (!AreSuitedForMergeCriterions(indexData, curIndexData))
+                    //if (!AreSuitedForMergeCriterions(indexData, curIndexData))
+                    //    continue;
+                    if (!AreSuitedForMergeCriterions(mergeData.ProposedForMerge, curIndexData))
                         continue;
-
+               
                     if (CompareSelectExpression(curIndexData, indexData))
                     {
                         curIndexData.IsSuitedForMerge = true;
@@ -472,7 +483,15 @@ namespace Raven.Database.Storage
             }
             return indexes;
         }
-
+        private bool AreSuitedForMergeCriterions( List<IndexData> indexDataList,IndexData curIndexData)
+        {
+            foreach (var indexData in indexDataList)
+            {
+                if (!AreSuitedForMergeCriterions(indexData, curIndexData))
+                    return false;
+            }
+                return true;
+        }
         private bool AreSuitedForMergeCriterions( IndexData indexData,IndexData curIndexData)
         {
             if (curIndexData.IndexId == indexData.IndexId)
@@ -484,8 +503,8 @@ namespace Raven.Database.Storage
             if (curIndexData.NumberOfSelectClauses > 1)
                 return false;
 
-            if (curIndexData.IsAlreadyMerged)
-                return false;
+            //if (curIndexData.IsAlreadyMerged)
+            //    return false;
           
             if (curIndexData.HasWhere)
                 return false;
@@ -497,19 +516,20 @@ namespace Raven.Database.Storage
             if (curIndexData.HasLet)
                 return false;
 
-            if(!CompareAdditionalIndexProperties(indexData, curIndexData))
-                    return false;
-
             if ((curIndexData.FromExpression == null) && (indexData.FromExpression != null))
                 return false;
-           
+
             if ((curIndexData.FromExpression != null) && (indexData.FromExpression == null))
                 return false;
 
-            if ((curIndexData.FromExpression!=null)&&(indexData.FromExpression!=null))
+            if ((curIndexData.FromExpression != null) && (indexData.FromExpression != null))
                 if (!curIndexData.FromExpression.ToString().Equals(indexData.FromExpression.ToString()))
                     return false;
 
+            if(!CompareAdditionalIndexProperties(indexData, curIndexData))
+                    return false;
+
+       
      
             //if(DataDictionaryCompare(indexData.Stores,curIndexData.Stores) == false)
             //    return false;        
@@ -533,44 +553,44 @@ namespace Raven.Database.Storage
 
         private bool CompareAdditionalIndexProperties(IndexData index1Data,IndexData index2Data)
         {
-            IEnumerable<string> differentNames12 = index1Data.Fields.Except(index2Data.Fields);
-            IEnumerable<string> differentNames21 = index2Data.Fields.Except(index1Data.Fields);
-            IEnumerable<string> intersectNames = index2Data.Fields.Intersect(index1Data.Fields);
+            //IEnumerable<string> differentNames12 = index1Data.Fields.Except(index2Data.Fields);
+            //IEnumerable<string> differentNames21 = index2Data.Fields.Except(index1Data.Fields);
+            IEnumerable<string> intersectNames = index2Data.SelectExpressions.Keys.Intersect(index1Data.SelectExpressions.Keys);
 
 
-            foreach (var name in differentNames12)
-            {
-                if (!index2Data.SelectExpressions.ContainsKey(name))
-                    continue;
-                //if contains and not in fields - defined with default values. ckeck if second one is also default
-                if (!AreIndexPropertiesDefault(index1Data, name))
-                    return false;
-            }
+            //foreach (var name in differentNames12)
+            //{
+            //    if (!index2Data.SelectExpressions.ContainsKey(name))
+            //        continue;
+            //    //if contains and not in fields - defined with default values. ckeck if second one is also default
+            //    if (!AreIndexPropertiesDefault(index1Data, name))
+            //        return false;
+            //}
 
-            foreach (var name in differentNames21)
-            {
-                if (!index1Data.SelectExpressions.ContainsKey(name))
-                    continue;
-                //if contains and not in fields - defined with default values.ckeck if second one is also default
-                if (!AreIndexPropertiesDefault(index2Data, name))
-                    return false;
-            }
+            //foreach (var name in differentNames21)
+            //{
+            //    if (!index1Data.SelectExpressions.ContainsKey(name))
+            //        continue;
+            //    //if contains and not in fields - defined with default values.ckeck if second one is also default
+            //    if (!AreIndexPropertiesDefault(index2Data, name))
+            //        return false;
+            //}
 
-            
 
-             if(DataDictionaryCompare(index1Data.Stores,index2Data.Stores,intersectNames) == false)
+
+            if (DataDictionaryCompare(index1Data.Stores, index2Data.Stores, intersectNames) == false)
                 return false;
-             if (DataDictionaryCompare(index1Data.Analyzers, index2Data.Analyzers, intersectNames) == false)
+            if (DataDictionaryCompare(index1Data.Analyzers, index2Data.Analyzers, intersectNames) == false)
                 return false;
-             if (DataDictionaryCompare(index1Data.Suggestions, index2Data.Suggestions, intersectNames) == false)
+            if (DataDictionaryCompare(index1Data.Suggestions, index2Data.Suggestions, intersectNames) == false)
                 return false;
-             if (DataDictionaryCompare(index1Data.SortOptions, index2Data.SortOptions, intersectNames) == false)
+            if (DataDictionaryCompare(index1Data.SortOptions, index2Data.SortOptions, intersectNames) == false)
                 return false;
-             if (DataDictionaryCompare(index1Data.Indexes, index2Data.Indexes, intersectNames) == false)
+            if (DataDictionaryCompare(index1Data.Indexes, index2Data.Indexes, intersectNames) == false)
                 return false;
-             if (DataDictionaryCompare(index1Data.TermVectors, index2Data.TermVectors, intersectNames) == false)
+            if (DataDictionaryCompare(index1Data.TermVectors, index2Data.TermVectors, intersectNames) == false)
                 return false;
-             if (DataDictionaryCompare(index1Data.SpatialIndexes, index2Data.SpatialIndexes, intersectNames) == false)
+            if (DataDictionaryCompare(index1Data.SpatialIndexes, index2Data.SpatialIndexes, intersectNames) == false)
                 return false;
 
            
@@ -690,22 +710,46 @@ namespace Raven.Database.Storage
              }
              return true;
         }
-        private bool DataDictionaryCompare<T>(IDictionary<string, T> dataDict1, IDictionary<string, T> dataDict2)
-        {
+        //private bool DataDictionaryCompare<T>(IDictionary<string, T> dataDict1, IDictionary<string, T> dataDict2)
+        //{
    
-            foreach (var kvp in dataDict1)
-            {
-                T v2;
-                if (!dataDict2.TryGetValue(kvp.Key, out v2))
-                    continue;
-                if (Equals(kvp.Value, v2) == false)
-                    return false;
-            }
-            return true;
-        }
+        //    foreach (var kvp in dataDict1)
+        //    {
+        //        T v2;
+        //        if (!dataDict2.TryGetValue(kvp.Key, out v2))
+        //            continue;
+        //        if (Equals(kvp.Value, v2) == false)
+        //            return false;
+        //    }
+        //    return true;
+        //}
         private bool DataDictionaryCompare<T>(IDictionary<string, T> dataDict1, IDictionary<string, T> dataDict2,IEnumerable<string> names )
         {
+             
+            //IEnumerable<string> differentNames12 = dataDict1.Keys.Except(dataDict2.Keys);
+            //IEnumerable<string> differentNames21 = dataDict2.Keys.Except( dataDict1.Keys);
+            //IEnumerable<string> intersectNames =  dataDict1.Keys.Intersect(dataDict2.Keys);
+
             bool found1, found2;
+
+            //foreach (var name in differentNames12)
+            //{
+            //    if (!index2Data.SelectExpressions.ContainsKey(name))
+            //        continue;
+            //    //if contains and not in fields - defined with default values. ckeck if second one is also default
+            //    if (!AreIndexPropertiesDefault(index1Data, name))
+            //        return false;
+            //}
+
+            //foreach (var name in differentNames21)
+            //{
+            //    if (!index1Data.SelectExpressions.ContainsKey(name))
+            //        continue;
+            //    //if contains and not in fields - defined with default values.ckeck if second one is also default
+            //    if (!AreIndexPropertiesDefault(index2Data, name))
+            //        return false;
+            //}
+
             foreach (var kvp in names)
             {
                 T v1,v2;
@@ -716,25 +760,74 @@ namespace Raven.Database.Storage
                 if (found1 && found2 && Equals(v1, v2) == false)
                     return false;
 
-                //exists only in 1 - check if contains default value
+               // exists only in 1 - check if contains default value
                 if (found1 && !found2)
+                
                 {
                     if (! IsDefaultValue(v1))
                         return false;
                 }
                 if (found2 && !found1)
-                {
-                   if (! IsDefaultValue(v2))
-                      return false;
-                }
-  
+                    {
+                        if (!IsDefaultValue(v2))
+                            return false;
+                    }
+   
            }
+            //foreach (var kvp in differentNames21)
+            //{
+            //    T v1, v2;
+            //  //  found1 = dataDict1.TryGetValue(kvp, out v1);
+            //    found2 = dataDict2.TryGetValue(kvp, out v2);
 
+
+            //  //  if (found1 && found2 && Equals(v1, v2) == false)
+            //  //      return false;
+
+            //    //exists only in 1 - check if contains default value
+            //    //if (found1 && !found2)
+            //    //{
+            //    //    if (!IsDefaultValue(v1))
+            //    //        return false;
+            //    //}
+            //  //  if (found2 && !found1)
+            //    if (found2 )
+            //    {
+            //        if (!IsDefaultValue(v2))
+            //            return false;
+            //    }
+
+            //}
+
+            //foreach (var kvp in intersectNames)
+            //{
+            //    T v1, v2;
+            //    found1 = dataDict1.TryGetValue(kvp, out v1);
+            //    found2 = dataDict2.TryGetValue(kvp, out v2);
+
+
+            //    if (found1 && found2 && Equals(v1, v2) == false)
+            //        return false;
+
+            //    //exists only in 1 - check if contains default value
+            //    if (found1 && !found2)
+            //    {
+            //        if (!IsDefaultValue(v1))
+            //            return false;
+            //    }
+            //    if (found2 && !found1)
+            //    {
+            //        if (!IsDefaultValue(v2))
+            //            return false;
+            //    }
+
+            //}
+ 
           
             return true;
         }
-        private IDictionary<string, T>  DataDictionaryMerge<T>(IDictionary<string, T> dataDict1, IDictionary<string, T> dataDict2)
-         {
+        private IDictionary<string, T>  DataDictionaryMerge<T>(IDictionary<string, T> dataDict1,IDictionary<string, T> dataDict2)
+            {
             var resultDictionary = new Dictionary<string, T>();
     
             foreach (var curExpr in dataDict1.Keys.Where(curExpr => !resultDictionary.ContainsKey(curExpr)))
@@ -748,6 +841,7 @@ namespace Raven.Database.Storage
            
             return resultDictionary;
         }
+        
 
         private bool CompareSelectExpression(IndexData expr1, IndexData expr2)
         {
@@ -762,10 +856,6 @@ namespace Raven.Database.Storage
                     {
                         return false;
 
-                        //var splittedExp1 = pairValueStr.Split('.');  //required to add case where xxx. included and different
-                        //var splittedExp2 = expressionValueStr.Split('.');
-                        //if (splittedExp1[splittedExp1.Length - 1] != splittedExp2[splittedExp2.Length - 1])
-                        //    return false;
                     }
                 }
             }
@@ -792,48 +882,92 @@ namespace Raven.Database.Storage
 
                 var mergeSuggestion = new MergeSuggestions
                 {
-                    CanMerge = { indexData.IndexName}
+                    CanMerge = { indexData.IndexName},                          
+
                 };
+                foreach (var field in indexData.Stores)
+                {
+                    mergeSuggestion.MergedIndex.Stores.Add(field);
+                }
+                foreach (var field in indexData.Indexes)
+                {
+                    mergeSuggestion.MergedIndex.Indexes.Add(field);
+                }
+                foreach (var field in indexData.Analyzers)
+                {
+                    mergeSuggestion.MergedIndex.Analyzers.Add(field);
+                }
+                foreach (var field in indexData.SortOptions)
+                {
+                    mergeSuggestion.MergedIndex.SortOptions.Add(field);
+                }
+                foreach (var field in indexData.Suggestions)
+                {
+                    mergeSuggestion.MergedIndex.Suggestions.Add(field);
+                }
+                foreach (var field in indexData.TermVectors)
+                {
+                    mergeSuggestion.MergedIndex.TermVectors.Add(field);
+                }
+                foreach (var field in indexData.SpatialIndexes)
+                {
+                    mergeSuggestion.MergedIndex.SpatialIndexes.Add(field);
+                }
+              
+
 
              
-                //var suggestion = new StringBuilder();  //!! replace stringbuilder by expression
-                //suggestion.Append("from " + indexData.FromIdentifier + " in " + indexData.FromExpression);
-                //var selectExpression = new HashSet<string>();
-                var selectExpressionDict = new Dictionary<string, Expression>();
+               var selectExpressionDict = new Dictionary<string, Expression>();
                    
                 foreach (var curProposedData in mergeProposal.ProposedForMerge)
                 {
                       foreach (var curExpr in curProposedData.SelectExpressions.Where(curExpr => !selectExpressionDict.ContainsKey(curExpr.Key)))
                         {
-                            selectExpressionDict.Add(curExpr.Key,curExpr.Value);  //!!!
+                            selectExpressionDict.Add(curExpr.Key,curExpr.Value);  
                         }
                         if (!string.Equals(indexData.IndexName, curProposedData.IndexName))
                         {
                             mergeSuggestion.CanMerge.Add(curProposedData.IndexName);
+                            mergeSuggestion.MergedIndex.Stores = DataDictionaryMerge(mergeSuggestion.MergedIndex.Stores, curProposedData.Stores);
+                            mergeSuggestion.MergedIndex.Indexes = DataDictionaryMerge(mergeSuggestion.MergedIndex.Indexes, curProposedData.Indexes);
+                            mergeSuggestion.MergedIndex.Analyzers = DataDictionaryMerge(mergeSuggestion.MergedIndex.Analyzers, curProposedData.Analyzers);
+                            mergeSuggestion.MergedIndex.SortOptions = DataDictionaryMerge(mergeSuggestion.MergedIndex.SortOptions, curProposedData.SortOptions);
+                            mergeSuggestion.MergedIndex.Suggestions = DataDictionaryMerge(mergeSuggestion.MergedIndex.Suggestions, curProposedData.Suggestions);
+                            mergeSuggestion.MergedIndex.TermVectors = DataDictionaryMerge(mergeSuggestion.MergedIndex.TermVectors, curProposedData.TermVectors);
+                            mergeSuggestion.MergedIndex.SpatialIndexes = DataDictionaryMerge(mergeSuggestion.MergedIndex.SpatialIndexes, curProposedData.SpatialIndexes);
+
+
+                            //var exceptFields = curProposedData.Fields.Except(indexData.Fields);
+                            //foreach (string field in exceptFields)
+                            //{
+                            //    mergeSuggestion.MergedIndex.Fields.Add(field);
+                            //}
+   
+                         
                         }
                 }
-              //  string fromIdent = indexData.FromIdentifier;
                 indexData.SelectExpressions = selectExpressionDict;
                 string resSuggestion = indexData.BuildExpression();
  
                 mergeSuggestion.MergedIndex.Name = indexData.IndexName;
                 mergeSuggestion.MergedIndex.IndexId = indexData.IndexId;
-                mergeSuggestion.MergedIndex.Map = resSuggestion; 
+                mergeSuggestion.MergedIndex.Map = resSuggestion;
 
-           
-                    mergeSuggestion.MergedIndex.Stores = indexData.Stores;
+                //IDictionary<string, T>  DataDictionaryMerge<T>(IDictionary<string, T> dataDict1, IDictionary<string, T> dataDict2)
+                //mergeSuggestion.MergedIndex.Fields = indexData.Fields;
+                   // mergeSuggestion.MergedIndex.Stores = indexData.Stores;
             
-                    mergeSuggestion.MergedIndex.Indexes = indexData.Indexes;
+                   // mergeSuggestion.MergedIndex.Indexes = indexData.Indexes;
               
-                   mergeSuggestion.MergedIndex.Analyzers= indexData.Analyzers;
+                   //mergeSuggestion.MergedIndex.Analyzers= indexData.Analyzers;
       
-                    mergeSuggestion.MergedIndex.SortOptions = indexData.SortOptions;
+                   // mergeSuggestion.MergedIndex.SortOptions = indexData.SortOptions;
             
-                    mergeSuggestion.MergedIndex.Suggestions = indexData.Suggestions;
+                   // mergeSuggestion.MergedIndex.Suggestions = indexData.Suggestions;
              
-                    mergeSuggestion.MergedIndex.TermVectors = indexData.TermVectors;
+                   // mergeSuggestion.MergedIndex.TermVectors = indexData.TermVectors;
             
-                    mergeSuggestion.MergedIndex.SpatialIndexes = indexData.SpatialIndexes;
+                   // mergeSuggestion.MergedIndex.SpatialIndexes = indexData.SpatialIndexes;
                 if (mergeProposal.ProposedForMerge.Count > 1)
                 {
                     indexMergeResults.Suggestions.Add(mergeSuggestion);
@@ -846,12 +980,12 @@ namespace Raven.Database.Storage
                     //indexMergeResults.Other.Add(mergeSuggestion);
                 }
             }
-            indexMergeResults = ExcludePartialReaults(indexMergeResults);
+            indexMergeResults = ExcludePartialResults(indexMergeResults);
             return indexMergeResults;
         }
 
 
-        IndexMergeResults ExcludePartialReaults(IndexMergeResults originalIndexes)
+        private IndexMergeResults ExcludePartialResults(IndexMergeResults originalIndexes)
         {
             var resultingIndexMerge = new IndexMergeResults();
      
@@ -859,16 +993,39 @@ namespace Raven.Database.Storage
             {
                 suggestion.CanMerge.Sort();
             }
+            //bool hasMatch = false;
+            //foreach (var sug1 in originalIndexes.Suggestions)
+            //{
+            //    foreach (var sug2 in originalIndexes.Suggestions)
+            //    {
+            //        if ((sug1 != sug2) && (sug1.CanMerge.Count <= sug2.CanMerge.Count ))
+            //        {
+            //            var sugCanMergeSet = new HashSet<string>(sug1.CanMerge);
+
+            //            if ((hasMatch = sugCanMergeSet.IsSubsetOf(sug2.CanMerge)))
+            //            {
+            //                break;
+            //            }
+
+            //        }
+            //    }
+            //    if (!hasMatch)
+            //    {
+            //        resultingIndexMerge.Suggestions.Add(sug1);
+            //        hasMatch = false;
+            //    }
+            //}
             bool hasMatch = false;
-            foreach (var sug1 in originalIndexes.Suggestions)
+            for (var i = 0; i < originalIndexes.Suggestions.Count; i++)
             {
-                foreach (var sug2 in originalIndexes.Suggestions)
+                var sug1 = originalIndexes.Suggestions[i];
+                for (var j = i + 1; j < originalIndexes.Suggestions.Count; j++)
                 {
-                    if ((sug1 != sug2) && (sug1.CanMerge.Count <= sug2.CanMerge.Count ))
+                    var sug2 = originalIndexes.Suggestions[j];
+                    if ((sug1 != sug2) && (sug1.CanMerge.Count <= sug2.CanMerge.Count))
                     {
                         var sugCanMergeSet = new HashSet<string>(sug1.CanMerge);
-
-                        if ((hasMatch = sugCanMergeSet.IsProperSubsetOf(sug2.CanMerge)))
+                        if ((hasMatch = sugCanMergeSet.IsSubsetOf(sug2.CanMerge)))
                         {
                             break;
                         }
@@ -878,8 +1035,9 @@ namespace Raven.Database.Storage
                 if (!hasMatch)
                 {
                     resultingIndexMerge.Suggestions.Add(sug1);
-                    hasMatch = false;
                 }
+                hasMatch = false;
+
             }
             resultingIndexMerge.Unmergables = originalIndexes.Unmergables;
             return resultingIndexMerge;
