@@ -271,6 +271,7 @@
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
     <Compile Include="Bugs\EntityWithStack.cs" />
+    <Compile Include="IndexMerging\SimpleIndexMerging.cs" />
     <Compile Include="Issues\ActualValueInJsonReaderException.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
     <Compile Include="Bundles\Authorization\AuthorizationTest.cs" />

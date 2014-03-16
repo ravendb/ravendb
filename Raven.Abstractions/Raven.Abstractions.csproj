@@ -202,6 +202,11 @@
     <Compile Include="Default.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
+    <Compile Include="Indexing\IndexLockMode.cs" />
+    <Compile Include="Indexing\IndexMergeResults.cs" />
+    <Compile Include="Indexing\IndexMergeSuggestion.cs" />
+    <Compile Include="Indexing\MergeSuggestions.cs" />
+    <Compile Include="Indexing\TransformerDefinition.cs" />
     <Compile Include="Json\JsonInternalsVisibleTo.cs" />
     <Compile Include="Json\JsonTextReaderAsync.cs" />
     <Compile Include="Indexing\FieldTermVector.cs" />
