@@ -111,7 +111,7 @@ namespace Raven.Database.Storage
                         JsonConvert.DeserializeObject<TransformerDefinition>(File.ReadAllText(transformer),
                                                                              Default.Converters);
                     AddAndCompileTransform(indexDefinition);
-                    AddTransform(indexDefinition.IndexId, indexDefinition);
+                    AddTransform(indexDefinition.TransfomerId, indexDefinition);
                 }
                 catch (Exception e)
                 {
@@ -227,7 +227,7 @@ namespace Raven.Database.Storage
             var transformer = new DynamicTransformerCompiler(transformerDefinition, configuration, extensions,
                                                              transformerDefinition.Name, path);
             var generator = transformer.GenerateInstance();
-            transformCache.AddOrUpdate(transformerDefinition.IndexId, generator, (s, viewGenerator) => generator);
+            transformCache.AddOrUpdate(transformerDefinition.TransfomerId, generator, (s, viewGenerator) => generator);
 
             logger.Info("New transformer {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name,
                         transformer.CompiledQueryText,
@@ -392,7 +392,7 @@ namespace Raven.Database.Storage
         {
             var transformer = GetTransformerDefinition(name);
             if (transformer == null) return;
-            RemoveTransformer(transformer.IndexId);
+            RemoveTransformer(transformer.TransfomerId);
         }
 
         public void RemoveIndex(string name)
