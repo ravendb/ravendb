@@ -967,6 +967,15 @@ namespace Raven.Client.Embedded
 		    };
 		}
 
+       /// <summary>
+       /// Get index merge suggestion
+       /// </summary>
+       /// <returns></returns>
+        public IndexMergeResults GetIndexMergeSuggestions()
+       {
+           return database.IndexDefinitionStorage.ProposeIndexMergeSuggestions();
+       }
+
 		/// <summary>
 		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials
 		/// </summary>

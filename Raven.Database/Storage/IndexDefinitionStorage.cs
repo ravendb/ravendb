@@ -772,13 +772,15 @@ namespace Raven.Database.Storage
                 }
                 indexData.SelectExpressions = selectExpressionDict;
                 string resSuggestion = indexData.BuildExpression();
- 
+
                 mergeSuggestion.MergedIndex.Name = indexData.IndexName;
                 mergeSuggestion.MergedIndex.IndexId = indexData.IndexId;
                 mergeSuggestion.MergedIndex.Map = resSuggestion;
 
                 if (mergeProposal.ProposedForMerge.Count > 1)
                 {
+                    mergeSuggestion.MergedIndex.Name = null;
+                    mergeSuggestion.MergedIndex.IndexId = -1;
                     indexMergeResults.Suggestions.Add(mergeSuggestion);
                 }
                 if ((mergeProposal.ProposedForMerge.Count == 1) &&(indexData.IsSuitedForMerge==false))

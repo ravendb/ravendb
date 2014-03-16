@@ -22,7 +22,7 @@ namespace Raven.Abstractions.Indexing
 		public IndexDefinition()
 		{
 			Maps = new HashSet<string>();
-            //In spite dictionary definitions properties Stores,Analyzers,SortOptions,Suggestions,TermVectors,SpatialIndexes contains only 1 value
+           
 			Indexes = new Dictionary<string, FieldIndexing>();
 			Stores = new Dictionary<string, FieldStorage>();
 			Analyzers = new Dictionary<string, string>();
