@@ -55,8 +55,6 @@ namespace Raven.Database.Indexing
 
         public IDictionary<string, string> Analyzers { get; set; }
 
-        public IList<string> Fields { get; set; }
-
         public IDictionary<string, SuggestionOptions> Suggestions { get; set; }
 
         public IDictionary<string, FieldTermVector> TermVectors { get; set; }
@@ -75,15 +73,9 @@ namespace Raven.Database.Indexing
             TermVectors = new Dictionary<string, FieldTermVector>();
             SpatialIndexes = new Dictionary<string, SpatialOptions>();
 
-
-            Fields = new List<string>();
-
         }
         public void FillAdditionalProperies(IndexDefinition index)
         {
-
-
-            Fields = index.Fields;
             if (index.Indexes.Count > 0)
             {
                 Indexes = index.Indexes;
@@ -120,7 +112,6 @@ namespace Raven.Database.Indexing
              }
 
         }
-       // public string BuildExpression(ref string fromIdentifier, Expression fromExpression, Dictionary<string, Expression> selectExpr)
        public  string BuildExpression()
         {
             var anonymousTypeCreateExpression = new AnonymousTypeCreateExpression();
