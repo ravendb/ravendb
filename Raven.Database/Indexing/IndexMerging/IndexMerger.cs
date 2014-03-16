@@ -355,7 +355,7 @@ namespace Raven.Database.Indexing.IndexMerging
                 if ((mergeProposal.ProposedForMerge.Count == 1) && (mergeProposal.ProposedForMerge[0].IsSuitedForMerge == false))
                 {
                     const string comment = "Can't find any other index to merge this with";
-                    indexMergeResults.Unmergables.Add(mergeSuggestion.MergedIndex.Name, comment);
+                    indexMergeResults.Unmergables.Add(mergeProposal.ProposedForMerge[0].IndexName, comment);
                 }
             }
             indexMergeResults = ExcludePartialResults(indexMergeResults);
