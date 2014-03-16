@@ -116,7 +116,7 @@ namespace Raven.Database.Indexing
         {
             var anonymousTypeCreateExpression = new AnonymousTypeCreateExpression();
             var crrv = new ChangeRootReferenceVisitor(FromIdentifier);
-            foreach (var curExpr in SelectExpressions)
+            foreach (var curExpr in SelectExpressions.OrderBy(x=>x.Key))
             {
                 curExpr.Value.AcceptVisitor(crrv);
                 anonymousTypeCreateExpression.Initializers.Add(
