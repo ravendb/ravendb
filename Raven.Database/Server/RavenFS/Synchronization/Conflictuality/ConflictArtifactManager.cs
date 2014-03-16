@@ -11,9 +11,9 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality
 	public class ConflictArtifactManager
 	{
 		private readonly IndexStorage index;
-		private readonly TransactionalStorage storage;
+		private readonly ITransactionalStorage storage;
 
-		public ConflictArtifactManager(TransactionalStorage storage, IndexStorage index)
+		public ConflictArtifactManager(ITransactionalStorage storage, IndexStorage index)
 		{
 			this.storage = storage;
 			this.index = index;
@@ -36,11 +36,11 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality
 				index.Index(fileName, metadata);
 		}
 
-		public void Delete(string fileName, StorageActionsAccessor actionsAccessor = null)
+		public void Delete(string fileName, IStorageActionsAccessor actionsAccessor = null)
 		{
 			NameValueCollection metadata = null;
 
-			Action<StorageActionsAccessor> delete = accessor =>
+			Action<IStorageActionsAccessor> delete = accessor =>
 			{
 				accessor.DeleteConfig(
 					RavenFileNameHelper.ConflictConfigNameForFile(fileName));

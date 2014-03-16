@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Json.Utilities;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Json.Linq
@@ -177,6 +177,10 @@ namespace Raven.Json.Linq
 
 				return default(U);
 			}
+            if (targetType == typeof(byte[]) && value.Value is string)
+            {
+                return (U)(object)System.Convert.FromBase64String((string)value.Value);
+            }
 
 			if (value.Value == null && typeof(U).IsValueType)
 				throw new InvalidOperationException("value.Value == null and conversion target type is not nullable");

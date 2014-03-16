@@ -396,9 +396,7 @@ namespace Raven.Database.Storage
                 mergeData.ProposedForMerge.Add(indexData);
                 foreach (var curIndexData in indexes)
                 {
-                    //if (!AreSuitedForMergeCriterions(indexData, curIndexData))
-                    //    continue;
-                    if (!AreSuitedForMergeCriterions(mergeData.ProposedForMerge, curIndexData))
+                      if (!AreSuitedForMergeCriterions(mergeData.ProposedForMerge, curIndexData))
                         continue;
                
                     if (CompareSelectExpression(curIndexData, indexData))
@@ -491,6 +489,7 @@ namespace Raven.Database.Storage
                     return false;
             }
                 return true;
+            
         }
         private bool AreSuitedForMergeCriterions( IndexData indexData,IndexData curIndexData)
         {
@@ -503,9 +502,6 @@ namespace Raven.Database.Storage
             if (curIndexData.NumberOfSelectClauses > 1)
                 return false;
 
-            //if (curIndexData.IsAlreadyMerged)
-            //    return false;
-          
             if (curIndexData.HasWhere)
                 return false;
 
@@ -529,54 +525,14 @@ namespace Raven.Database.Storage
             if(!CompareAdditionalIndexProperties(indexData, curIndexData))
                     return false;
 
-       
-     
-            //if(DataDictionaryCompare(indexData.Stores,curIndexData.Stores) == false)
-            //    return false;        
-            //if (DataDictionaryCompare(indexData.Analyzers, curIndexData.Analyzers) == false)
-            //    return false;
-            //if (DataDictionaryCompare(indexData.Suggestions, curIndexData.Suggestions) == false)
-            //    return false;
-            //if (DataDictionaryCompare(indexData.SortOptions, curIndexData.SortOptions) == false)
-            //    return false;
-            //if (DataDictionaryCompare(indexData.Indexes, curIndexData.Indexes) == false)
-            //    return false;
-            //if (DataDictionaryCompare(indexData.TermVectors, curIndexData.TermVectors) == false)
-            //    return false;
-            //if (DataDictionaryCompare(indexData.SpatialIndexes, curIndexData.SpatialIndexes) == false)
-            //    return false;
-
-   
+  
             return true;
  
         }
 
         private bool CompareAdditionalIndexProperties(IndexData index1Data,IndexData index2Data)
         {
-            //IEnumerable<string> differentNames12 = index1Data.Fields.Except(index2Data.Fields);
-            //IEnumerable<string> differentNames21 = index2Data.Fields.Except(index1Data.Fields);
-            IEnumerable<string> intersectNames = index2Data.SelectExpressions.Keys.Intersect(index1Data.SelectExpressions.Keys);
-
-
-            //foreach (var name in differentNames12)
-            //{
-            //    if (!index2Data.SelectExpressions.ContainsKey(name))
-            //        continue;
-            //    //if contains and not in fields - defined with default values. ckeck if second one is also default
-            //    if (!AreIndexPropertiesDefault(index1Data, name))
-            //        return false;
-            //}
-
-            //foreach (var name in differentNames21)
-            //{
-            //    if (!index1Data.SelectExpressions.ContainsKey(name))
-            //        continue;
-            //    //if contains and not in fields - defined with default values.ckeck if second one is also default
-            //    if (!AreIndexPropertiesDefault(index2Data, name))
-            //        return false;
-            //}
-
-
+             IEnumerable<string> intersectNames = index2Data.SelectExpressions.Keys.Intersect(index1Data.SelectExpressions.Keys);
 
             if (DataDictionaryCompare(index1Data.Stores, index2Data.Stores, intersectNames) == false)
                 return false;
@@ -598,58 +554,12 @@ namespace Raven.Database.Storage
             return true;
         }
 
-        private bool AreIndexPropertiesDefault(IndexData indexData, string name)
-        {
-            
-            FieldStorage valueStorage;
-            if (indexData.Stores.TryGetValue(name, out valueStorage))
-            {
-                if(valueStorage != FieldStorage.No)
-                    return false;
-            }
-
-            SortOptions valueSortOptions;
-            if (indexData.SortOptions.TryGetValue(name, out valueSortOptions))
-            {
-                if (valueSortOptions != SortOptions.None)
-                    return false;
-            }
-            FieldTermVector valueTermVectors;
-            if (indexData.TermVectors.TryGetValue(name, out valueTermVectors))
-            {
-                if (valueTermVectors != FieldTermVector.No)
-                    return false;
-            }
-            FieldIndexing valueIndexing;
-            if (indexData.Indexes.TryGetValue(name, out valueIndexing))
-            {
-                if (valueIndexing != FieldIndexing.Default)
-                    return false;
-            }
-            string valueAnalyzer;
-            if (indexData.Analyzers.TryGetValue(name, out valueAnalyzer))
-            {
-                if (!valueAnalyzer.Equals(string.Empty))
-                    return false;
-            }
-            SuggestionOptions valueSuggestionOptions;
-            var defaultSuggestionOptions=new SuggestionOptions();
-            defaultSuggestionOptions.Distance = StringDistanceTypes.None;
-            if (indexData.Suggestions.TryGetValue(name, out valueSuggestionOptions))
-            {
-                if (!valueSuggestionOptions.Equals(defaultSuggestionOptions))
-                    return false;
-            }
-          
-
-
-            return true;
-        }
 
         bool IsDefaultValue(FieldStorage val)
         {
             return val == FieldStorage.No;
         }
+
         bool IsDefaultValue(SortOptions val)
         {
             return val == SortOptions.None;
@@ -658,6 +568,7 @@ namespace Raven.Database.Storage
         {
             return val == FieldTermVector.No;
         }
+
         bool IsDefaultValue(FieldIndexing val)
         {
             return val == FieldIndexing.Default;
@@ -710,46 +621,13 @@ namespace Raven.Database.Storage
              }
              return true;
         }
-        //private bool DataDictionaryCompare<T>(IDictionary<string, T> dataDict1, IDictionary<string, T> dataDict2)
-        //{
-   
-        //    foreach (var kvp in dataDict1)
-        //    {
-        //        T v2;
-        //        if (!dataDict2.TryGetValue(kvp.Key, out v2))
-        //            continue;
-        //        if (Equals(kvp.Value, v2) == false)
-        //            return false;
-        //    }
-        //    return true;
-        //}
+       
         private bool DataDictionaryCompare<T>(IDictionary<string, T> dataDict1, IDictionary<string, T> dataDict2,IEnumerable<string> names )
         {
              
-            //IEnumerable<string> differentNames12 = dataDict1.Keys.Except(dataDict2.Keys);
-            //IEnumerable<string> differentNames21 = dataDict2.Keys.Except( dataDict1.Keys);
-            //IEnumerable<string> intersectNames =  dataDict1.Keys.Intersect(dataDict2.Keys);
-
             bool found1, found2;
 
-            //foreach (var name in differentNames12)
-            //{
-            //    if (!index2Data.SelectExpressions.ContainsKey(name))
-            //        continue;
-            //    //if contains and not in fields - defined with default values. ckeck if second one is also default
-            //    if (!AreIndexPropertiesDefault(index1Data, name))
-            //        return false;
-            //}
-
-            //foreach (var name in differentNames21)
-            //{
-            //    if (!index1Data.SelectExpressions.ContainsKey(name))
-            //        continue;
-            //    //if contains and not in fields - defined with default values.ckeck if second one is also default
-            //    if (!AreIndexPropertiesDefault(index2Data, name))
-            //        return false;
-            //}
-
+          
             foreach (var kvp in names)
             {
                 T v1,v2;
@@ -774,55 +652,9 @@ namespace Raven.Database.Storage
                     }
    
            }
-            //foreach (var kvp in differentNames21)
-            //{
-            //    T v1, v2;
-            //  //  found1 = dataDict1.TryGetValue(kvp, out v1);
-            //    found2 = dataDict2.TryGetValue(kvp, out v2);
+        
 
-
-            //  //  if (found1 && found2 && Equals(v1, v2) == false)
-            //  //      return false;
-
-            //    //exists only in 1 - check if contains default value
-            //    //if (found1 && !found2)
-            //    //{
-            //    //    if (!IsDefaultValue(v1))
-            //    //        return false;
-            //    //}
-            //  //  if (found2 && !found1)
-            //    if (found2 )
-            //    {
-            //        if (!IsDefaultValue(v2))
-            //            return false;
-            //    }
-
-            //}
-
-            //foreach (var kvp in intersectNames)
-            //{
-            //    T v1, v2;
-            //    found1 = dataDict1.TryGetValue(kvp, out v1);
-            //    found2 = dataDict2.TryGetValue(kvp, out v2);
-
-
-            //    if (found1 && found2 && Equals(v1, v2) == false)
-            //        return false;
-
-            //    //exists only in 1 - check if contains default value
-            //    if (found1 && !found2)
-            //    {
-            //        if (!IsDefaultValue(v1))
-            //            return false;
-            //    }
-            //    if (found2 && !found1)
-            //    {
-            //        if (!IsDefaultValue(v2))
-            //            return false;
-            //    }
-
-            //}
- 
+         
           
             return true;
         }
@@ -914,9 +746,7 @@ namespace Raven.Database.Storage
                     mergeSuggestion.MergedIndex.SpatialIndexes.Add(field);
                 }
               
-
-
-             
+          
                var selectExpressionDict = new Dictionary<string, Expression>();
                    
                 foreach (var curProposedData in mergeProposal.ProposedForMerge)
@@ -937,12 +767,6 @@ namespace Raven.Database.Storage
                             mergeSuggestion.MergedIndex.SpatialIndexes = DataDictionaryMerge(mergeSuggestion.MergedIndex.SpatialIndexes, curProposedData.SpatialIndexes);
 
 
-                            //var exceptFields = curProposedData.Fields.Except(indexData.Fields);
-                            //foreach (string field in exceptFields)
-                            //{
-                            //    mergeSuggestion.MergedIndex.Fields.Add(field);
-                            //}
-   
                          
                         }
                 }
@@ -953,21 +777,6 @@ namespace Raven.Database.Storage
                 mergeSuggestion.MergedIndex.IndexId = indexData.IndexId;
                 mergeSuggestion.MergedIndex.Map = resSuggestion;
 
-                //IDictionary<string, T>  DataDictionaryMerge<T>(IDictionary<string, T> dataDict1, IDictionary<string, T> dataDict2)
-                //mergeSuggestion.MergedIndex.Fields = indexData.Fields;
-                   // mergeSuggestion.MergedIndex.Stores = indexData.Stores;
-            
-                   // mergeSuggestion.MergedIndex.Indexes = indexData.Indexes;
-              
-                   //mergeSuggestion.MergedIndex.Analyzers= indexData.Analyzers;
-      
-                   // mergeSuggestion.MergedIndex.SortOptions = indexData.SortOptions;
-            
-                   // mergeSuggestion.MergedIndex.Suggestions = indexData.Suggestions;
-             
-                   // mergeSuggestion.MergedIndex.TermVectors = indexData.TermVectors;
-            
-                   // mergeSuggestion.MergedIndex.SpatialIndexes = indexData.SpatialIndexes;
                 if (mergeProposal.ProposedForMerge.Count > 1)
                 {
                     indexMergeResults.Suggestions.Add(mergeSuggestion);
@@ -977,7 +786,6 @@ namespace Raven.Database.Storage
                    
                     const string comment = "Can't find any entity name for merge";
                     indexMergeResults.Unmergables.Add(mergeSuggestion.MergedIndex.Name, comment);
-                    //indexMergeResults.Other.Add(mergeSuggestion);
                 }
             }
             indexMergeResults = ExcludePartialResults(indexMergeResults);
@@ -993,28 +801,7 @@ namespace Raven.Database.Storage
             {
                 suggestion.CanMerge.Sort();
             }
-            //bool hasMatch = false;
-            //foreach (var sug1 in originalIndexes.Suggestions)
-            //{
-            //    foreach (var sug2 in originalIndexes.Suggestions)
-            //    {
-            //        if ((sug1 != sug2) && (sug1.CanMerge.Count <= sug2.CanMerge.Count ))
-            //        {
-            //            var sugCanMergeSet = new HashSet<string>(sug1.CanMerge);
-
-            //            if ((hasMatch = sugCanMergeSet.IsSubsetOf(sug2.CanMerge)))
-            //            {
-            //                break;
-            //            }
-
-            //        }
-            //    }
-            //    if (!hasMatch)
-            //    {
-            //        resultingIndexMerge.Suggestions.Add(sug1);
-            //        hasMatch = false;
-            //    }
-            //}
+           
             bool hasMatch = false;
             for (var i = 0; i < originalIndexes.Suggestions.Count; i++)
             {

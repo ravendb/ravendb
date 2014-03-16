@@ -257,7 +257,7 @@ namespace Raven.Client.Shard
 																var array = values.Select(y =>
 																{
 																	HandleInternalMetadata(y);
-																	return ConvertToEntity<T>(null, y, new RavenJObject());
+																	return ConvertToEntity(typeof(T),null, y, new RavenJObject());
 																}).ToArray();
 																var newArray = Array.CreateInstance(typeof(T).GetElementType(), array.Length);
 																Array.Copy(array, newArray, array.Length);
@@ -288,7 +288,7 @@ namespace Raven.Client.Shard
 										x =>
 										{
 											HandleInternalMetadata(x);
-											return ConvertToEntity<T>(null, x, new RavenJObject());
+											return ConvertToEntity(typeof(T),null, x, new RavenJObject());
 										})
 								.Cast<T>()
 								.ToArray();

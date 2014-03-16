@@ -12,7 +12,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		public MetadataUpdateWorkItem(string fileName, string sourceServerUrl, NameValueCollection destinationMetadata,
-									  TransactionalStorage storage)
+									  ITransactionalStorage storage)
 			: base(fileName, sourceServerUrl, storage)
 		{
 			this.destinationMetadata = destinationMetadata;

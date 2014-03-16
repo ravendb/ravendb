@@ -416,7 +416,6 @@ namespace Raven.Abstractions.Indexing
         public Dictionary<string, string> Unmergables=new Dictionary<string, string>();// index name, reason
 
         public List<MergeSuggestions> Suggestions = new List<MergeSuggestions>();
-      //  public List<MergeSuggestions> Other = new List<MergeSuggestions>();
     }
 
     public class MergeSuggestions

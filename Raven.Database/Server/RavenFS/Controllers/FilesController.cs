@@ -16,6 +16,7 @@ using Raven.Abstractions.Util.Streams;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Util.Streams;
 
@@ -376,11 +377,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			private readonly string filename;
 			private readonly Stream inputStream;
 			private readonly MD5 md5Hasher;
-			private readonly TransactionalStorage storage;
+			private readonly ITransactionalStorage storage;
 			public int TotalSizeRead;
 			private int pos;
 
-			public ReadFileToDatabase(BufferPool bufferPool, TransactionalStorage storage, Stream inputStream, string filename)
+			public ReadFileToDatabase(BufferPool bufferPool, ITransactionalStorage storage, Stream inputStream, string filename)
 			{
 				this.bufferPool = bufferPool;
 				this.inputStream = inputStream;

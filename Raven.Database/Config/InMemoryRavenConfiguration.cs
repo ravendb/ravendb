@@ -159,6 +159,11 @@ namespace Raven.Database.Config
 				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? VoronTypeName;
 			}
 
+            if (string.IsNullOrEmpty(DefaultFileSystemStorageTypeName))
+            {
+                DefaultFileSystemStorageTypeName = Settings["Raven/FileSystem/Storage"] ?? VoronTypeName;
+            }
+
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
 
 			DatbaseOperationTimeout = ravenSettings.DatbaseOperationTimeout.Value;
@@ -637,6 +642,18 @@ namespace Raven.Database.Config
 			set { if (!string.IsNullOrEmpty(value)) defaultStorageTypeName = value; }
 		}
 		private string defaultStorageTypeName;
+
+        /// <summary>
+        /// What storage type to use in RavenFS (see: RavenFS Storage engines)
+        /// Allowed values: esent, voron
+        /// Default: esent
+        /// </summary>
+        public string DefaultFileSystemStorageTypeName
+        {
+            get { return defaultFileSystemStorageTypeName; }
+            set { if (!string.IsNullOrEmpty(value)) defaultFileSystemStorageTypeName = value; }
+        }
+        private string defaultFileSystemStorageTypeName;
 
 		private bool runInMemory;
 
