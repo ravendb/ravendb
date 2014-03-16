@@ -379,7 +379,7 @@ namespace Raven.Abstractions.Indexing
 		/// Gets or sets the translator function
 		/// </summary>
 		public string TransformResults { get; set; }
-		public int IndexId { get; set; }
+		public int TransfomerId { get; set; }
 		public string Name { get; set; }
 
 		public bool Equals(TransformerDefinition other)
