@@ -1803,7 +1803,10 @@ namespace Raven.Database
 
         public void DeleteTransfom(string name)
         {
-            IndexDefinitionStorage.RemoveTransformer(name);
+            using (IndexDefinitionStorage.TryRemoveIndexContext())
+            {
+                IndexDefinitionStorage.RemoveTransformer(name);
+            }
         }
 
         public void DeleteIndex(string name)
