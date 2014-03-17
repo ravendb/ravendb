@@ -27,7 +27,6 @@ class editTransformer extends  viewModelBase{
 
     activate(transformerToEditName: string) {
         super.activate(transformerToEditName);
-        this.createKeyboardShortcut("Alt+S", () => this.saveTransformer(), this.containerSelector);
 
         if (transformerToEditName) {
             this.isEditingExistingTransformer(true);
