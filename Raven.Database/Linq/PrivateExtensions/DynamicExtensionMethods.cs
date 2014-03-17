@@ -22,6 +22,24 @@ namespace Raven.Database.Linq.PrivateExtensions
 			};
 		}
 
+        public static BoostedValue Boost(dynamic o, double value)
+        {
+            return new BoostedValue
+            {
+                Value = o,
+                Boost = (float)value
+            };
+        }
+
+        public static BoostedValue Boost(dynamic o, decimal value)
+        {
+            return new BoostedValue
+            {
+                Value = o,
+                Boost = (float)value
+            };
+        }
+
 		public static object IfEntityIs(dynamic o, string entityName)
 		{
 			if (string.Equals(o[Constants.Metadata][Constants.RavenEntityName], entityName, StringComparison.OrdinalIgnoreCase))
