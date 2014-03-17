@@ -27,6 +27,8 @@ namespace Raven.Database.Impl.Synchronization
 
 		public void UpdateSynchronizationState(Etag lowestEtag)
 		{
+			if (Etag.Empty == lowestEtag) return;
+
 			lock (locker)
 			{
 				if (UpdateSynchronizationStateInternal(lowestEtag))

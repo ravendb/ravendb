@@ -163,7 +163,20 @@ namespace Raven.Database.Bundles.SqlReplication
 					continue;
 				}
 
-				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag);
+				var synchronizationEtag = etagSynchronizer.GetSynchronizationEtag();
+				var calculatedSynchronizationEtag = etagSynchronizer.CalculateSynchronizationEtag(synchronizationEtag, leastReplicatedEtag);
+
+				if (calculatedSynchronizationEtag.CompareTo(leastReplicatedEtag) < 0)
+				{
+					foreach (var lastReplicatedEtag in localReplicationStatus.LastReplicatedEtags)
+					{
+						if (calculatedSynchronizationEtag.CompareTo(lastReplicatedEtag.LastDocEtag) < 0)
+							lastReplicatedEtag.LastDocEtag = calculatedSynchronizationEtag;
+					}
+					SaveNewReplicationStatus(localReplicationStatus, calculatedSynchronizationEtag);
+				}
+
+				var documents = prefetchingBehavior.GetDocumentsBatchFrom(calculatedSynchronizationEtag);
 
 				Etag latestEtag = null, lastBatchEtag = null;
 				if (documents.Count != 0)
@@ -385,7 +398,6 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private Etag GetLeastReplicatedEtag(IEnumerable<SqlReplicationConfig> config, SqlReplicationStatus localReplicationStatus)
 		{
-			var synchronizationEtag = etagSynchronizer.GetSynchronizationEtag();
 			Etag leastReplicatedEtag = null;
 			foreach (var sqlReplicationConfig in config)
 			{
@@ -395,9 +407,8 @@ namespace Raven.Database.Bundles.SqlReplication
 				else if (lastEtag.CompareTo(leastReplicatedEtag) < 0)
 					leastReplicatedEtag = lastEtag;
 			}
-			var calculateSynchronizationEtag = etagSynchronizer.CalculateSynchronizationEtag(synchronizationEtag, leastReplicatedEtag);
 
-			return calculateSynchronizationEtag;
+			return leastReplicatedEtag;
 		}
 
 		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
