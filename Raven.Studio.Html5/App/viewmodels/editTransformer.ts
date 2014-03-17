@@ -27,7 +27,6 @@ class editTransformer extends  viewModelBase{
 
     activate(transformerToEditName: string) {
         super.activate(transformerToEditName);
-        this.createKeyboardShortcut("Alt+S", () => this.saveTransformer(), this.containerSelector);
 
         if (transformerToEditName) {
             this.isEditingExistingTransformer(true);
@@ -45,7 +44,7 @@ class editTransformer extends  viewModelBase{
         $("#transformerResultsLabel").popover({
             html: true,
             trigger: 'hover',
-            content: 'The Transform function allows you to change the shape of individual result documents before the server returns them. It uses C# LINQ query syntax <br/> <br/> Example: <pre> <br/> <span class="code-keyword">from</span> order <span class="code-keyword">in</span> orders <br/> <span class="code-keyword">let</span> region = Database.Load(result.RegionId) <br/> <span class="code-keyword">select new</span> { <br/> result.Date, <br/> result.Amount, <br/> Region = region.Name, <br/> Manager = region.Manager <br/>}</pre><br/>',
+            content: 'The Transform function allows you to change the shape of individual result documents before the server returns them. It uses C# LINQ query syntax <br/> <br/> Example: <pre> <br/> <span class="code-keyword">from</span> order <span class="code-keyword">in</span> orders <br/> <span class="code-keyword">let</span> region = Database.Load(result.RegionId) <br/> <span class="code-keyword">select new</span> { <br/> result.Date, <br/> result.Amount, <br/> Region = region.Name, <br/> Manager = region.Manager <br/>}</pre>',
         });
     }
 
@@ -63,10 +62,7 @@ class editTransformer extends  viewModelBase{
         if (this.isEditingExistingTransformer() && this.editedTransformer().wasNameChanged()) {
             var db = this.activeDatabase();
             var saveTransformerWithNewNameViewModel = new saveTransformerWithNewNameConfirm(this.editedTransformer(), db);
-            saveTransformerWithNewNameViewModel.saveTask.done((trans: transformer) => {
-                debugger
-                this.editedTransformer(trans);
-            });
+            saveTransformerWithNewNameViewModel.saveTask.done((trans: transformer) => this.editedTransformer(trans));
             dialog.show(saveTransformerWithNewNameViewModel);
 
         } else {

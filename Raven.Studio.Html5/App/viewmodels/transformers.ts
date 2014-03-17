@@ -15,9 +15,8 @@ class Transformers extends viewModelBase {
 
     //transformersList = ko.observableArray<transformer>();
     groupedByIds = ko.observable<Boolean>(true);
-
-
     transformersGroups = ko.observableArray<{ entityName: string; transformers: KnockoutObservableArray<transformer> }>();
+    containerSelector ="#transformersContainer";
 
 
     constructor() {
@@ -27,6 +26,10 @@ class Transformers extends viewModelBase {
     activate(args) {
         this.fetchTransformers();
         super.activate(args);
+    }
+
+    attached() {
+        this.createKeyboardShortcut("Alt+N", () => this.navigate(this.newTransformerUrl()), this.containerSelector);
     }
 
     modelPolling() {
