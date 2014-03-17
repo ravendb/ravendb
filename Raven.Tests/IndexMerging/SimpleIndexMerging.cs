@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using System.Text.RegularExpressions;
-using Raven.Database.Linq.PrivateExtensions;
 using Xunit;
 
 namespace Raven.Tests.IndexMerging
@@ -43,6 +42,31 @@ namespace Raven.Tests.IndexMerging
                 expectedIndexMap = Regex.Replace(expectedIndexMap, @"\s+", " ");
                 Assert.Equal(expectedIndexMap,
                     suggestedIndexMap);
+            }
+        }
+
+        [Fact]
+        public void WillSuggestMergeTwoSimpleIndexesForSameCollectionWithDifferentIndexes()
+        {
+            using (var store = NewDocumentStore())
+            {
+                store.DatabaseCommands.PutIndex("test1", new IndexDefinition
+                {
+                    Map = "from o in docs.Orders select new { o.Customer }",
+                    Indexes = {{ "Name", FieldIndexing.Analyzed }}
+                });
+                store.DatabaseCommands.PutIndex("test2", new IndexDefinition
+                {
+                    Map = "from o in docs.Orders select new { o.Email }",
+                    Indexes = { { "Email", FieldIndexing.Analyzed } }
+                });
+
+                var suggestions = store.DatabaseCommands.GetIndexMergeSuggestions();
+                Assert.Equal(1, suggestions.Suggestions.Count);
+
+                var mergeSuggestion = suggestions.Suggestions[0];
+                Assert.Equal(FieldIndexing.Analyzed, mergeSuggestion.MergedIndex.Indexes["Name"]);
+                Assert.Equal(FieldIndexing.Analyzed, mergeSuggestion.MergedIndex.Indexes["Email"]);
             }
         }
 

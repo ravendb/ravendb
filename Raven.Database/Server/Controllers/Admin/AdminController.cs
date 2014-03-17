@@ -14,6 +14,7 @@ using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using System.Net.Http;
+using Raven.Database.Server.RavenFS;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -286,7 +287,9 @@ namespace Raven.Database.Server.Controllers.Admin
 				return GetMessageWithString("Admin stats can only be had from the root database", HttpStatusCode.NotFound);
 
 		    var allDbs = new List<DocumentDatabase>();
+            var allFs = new List<RavenFileSystem>();
             DatabasesLandlord.ForAllDatabases(allDbs.Add);
+            FileSystemsLandlord.ForAllFileSystems(allFs.Add);
 		    var currentConfiguration = DatabasesLandlord.SystemConfiguration;
 
             
@@ -328,7 +331,9 @@ namespace Raven.Database.Server.Controllers.Admin
 
                         DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
                         Metrics = documentDatabase.CreateMetrics()
-                    }
+                    },
+                LoadedFileSystems = from fileSystem in allFs
+                   select fileSystem.GetFileSystemStats()
             };
 
             return GetMessageWithObject(stats);
