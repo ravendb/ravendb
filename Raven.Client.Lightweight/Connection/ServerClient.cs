@@ -488,6 +488,10 @@ namespace Raven.Client.Connection
 		{
 			return asyncServerClient.GetBuildNumberAsync().ResultUnwrap();
 		}
+        public IndexMergeResults GetIndexMergeSuggestions()
+        {
+            return asyncServerClient.GetIndexMergeSuggestionsAsync().ResultUnwrap();
+        }
 
 		public AttachmentInformation[] GetAttachments(Etag startEtag, int pageSize)
 		{

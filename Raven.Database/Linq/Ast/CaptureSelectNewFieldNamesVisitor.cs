@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.ServiceModel.Security.Tokens;
 using ICSharpCode.NRefactory.CSharp;
 
 namespace Raven.Database.Linq.Ast
@@ -14,6 +15,7 @@ namespace Raven.Database.Linq.Ast
 	public class CaptureSelectNewFieldNamesVisitor : DepthFirstAstVisitor<object, object>
 	{
 		public HashSet<string> FieldNames = new HashSet<string>();
+        public Dictionary<string,Expression> SelectExpressions = new Dictionary<string, Expression>();
 		private bool queryProcessed;
 
 		public override object VisitQuerySelectClause(QuerySelectClause querySelectClause, object data)
@@ -27,10 +29,11 @@ namespace Raven.Database.Linq.Ast
 		{
 			queryProcessed = false;
 			FieldNames.Clear();
+            SelectExpressions.Clear();
 		}
 
 
-		private void ProcessQuery(AstNode queryExpressionSelectClause)
+		public void ProcessQuery(AstNode queryExpressionSelectClause)
 		{
 			var objectCreateExpression = QueryParsingUtils.GetAnonymousCreateExpression(queryExpressionSelectClause) as AnonymousTypeCreateExpression;
 			if (objectCreateExpression == null)
@@ -42,25 +45,28 @@ namespace Raven.Database.Linq.Ast
 
 			queryProcessed = true;
 
-			foreach (var expression in objectCreateExpression.Initializers.OfType<NamedArgumentExpression>())
-			{
-				FieldNames.Add(expression.Name);
-			}
+            foreach (var expression in objectCreateExpression.Initializers.OfType<NamedArgumentExpression>())
+            {
+                FieldNames.Add(expression.Name);
+                SelectExpressions[expression.Name] = expression.Expression;
+            }
 
-			foreach (var expression in objectCreateExpression.Initializers.OfType<NamedExpression>())
-			{
-				FieldNames.Add(expression.Name);
-			}
+		    foreach (var expression in objectCreateExpression.Initializers.OfType<NamedExpression>())
+		    {
+		        FieldNames.Add(expression.Name);
+		        SelectExpressions[expression.Name] = expression.Expression;
 
-
-			foreach (var expression in objectCreateExpression.Initializers.OfType<MemberReferenceExpression>())
+		    }
+		    foreach (var expression in objectCreateExpression.Initializers.OfType<MemberReferenceExpression>())
 			{
 				FieldNames.Add(expression.MemberName);
+			    SelectExpressions[expression.MemberName] = expression;
 			}
 
 			foreach (var expression in objectCreateExpression.Initializers.OfType<IdentifierExpression>())
 			{
 				FieldNames.Add(expression.Identifier);
+			    SelectExpressions[expression.Identifier] = expression;
 			}
 		}
 
@@ -74,12 +80,12 @@ namespace Raven.Database.Linq.Ast
 			LambdaExpression lambdaExpression;
 			switch (memberReferenceExpression.MemberName)
 			{
-				case "Select":
-					if (invocationExpression.Arguments.Count != 1)
-						return base.VisitInvocationExpression(invocationExpression, data);
-					lambdaExpression = invocationExpression.Arguments.First().AsLambdaExpression();
-					break;
-				case "SelectMany":
+                case "Select":
+                    if (invocationExpression.Arguments.Count != 1)
+                        return base.VisitInvocationExpression(invocationExpression, data);
+                    lambdaExpression = invocationExpression.Arguments.First().AsLambdaExpression();
+                    break;
+                case "SelectMany":
 					if (invocationExpression.Arguments.Count != 2)
 						return base.VisitInvocationExpression(invocationExpression, data);
 					lambdaExpression = invocationExpression.Arguments.ElementAt(1).AsLambdaExpression();

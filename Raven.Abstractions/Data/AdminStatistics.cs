@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.RavenFS;
 
 namespace Raven.Abstractions.Data
 {
@@ -11,6 +12,7 @@ namespace Raven.Abstractions.Data
         public AdminMemoryStatistics Memory { get; set; }
 
         public IEnumerable<LoadedDatabaseStatistics> LoadedDatabases { get; set; }
+        public IEnumerable<FileSystemStats> LoadedFileSystems { get; set; }
     }
 
     public class AdminMemoryStatistics

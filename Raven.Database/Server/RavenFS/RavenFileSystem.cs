@@ -38,8 +38,11 @@ namespace Raven.Database.Server.RavenFS
 	    private readonly TransportState transportState;
 	    private readonly MetricsCountersManager metricsCounters;
 
-		public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration, TransportState transportState)
+        public string Name { get; private set; }
+
+		public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration, TransportState transportState, string name)
 		{
+		    this.Name = name;
 			this.systemConfiguration = systemConfiguration;
 
 		    var storageType = systemConfiguration.DefaultFileSystemStorageTypeName;
@@ -219,108 +222,17 @@ namespace Raven.Database.Server.RavenFS
 			Dispose();
 		}
 
-		//[MethodImpl(MethodImplOptions.Synchronized)]
-		//public void Start(InMemoryRavenConfiguration config)
-		//{
-		//	config.DependencyResolver = new DelegateDependencyResolver(type =>
-		//	{
-		//		if (type == typeof(RavenFileSystem))
-		//			return this;
-		//		return null;
-		//	}, type =>
-		//	{
-		//		if (type == typeof(RavenFileSystem))
-		//			return new[] { this };
-		//		return Enumerable.Empty<object>();
-		//	});
-
-		//	//TODO: check
-		//	//config.Services.Replace(typeof(IHostBufferPolicySelector), new NoBufferPolicySelector());
-
-		//	config.MessageHandlers.Add(new CachePreventingHandler());
-
-		//	// we don't like XML, let us remove support for it.
-		//	config.Formatters.XmlFormatter.SupportedMediaTypes.Clear();
-
-		//	config.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new IsoDateTimeConverter());
-		//	// the default json parser can't handle NameValueCollection
-		//	config.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new NameValueCollectionJsonConverter());
-
-		//	config.Routes.MapHttpRoute(
-		//		name: "ClientAccessPolicy.xml",
-		//		routeTemplate: "ravenfs/ClientAccessPolicy.xml",
-		//		defaults: new { controller = "static", action = "ClientAccessPolicy" });
-
-		//	config.Routes.MapHttpRoute(
-		//		name: "favicon.ico",
-		//		routeTemplate: "ravenfs/favicon.ico",
-		//		defaults: new { controller = "static", action = "FavIcon" });
-
-		//	config.Routes.MapHttpRoute(
-		//		name: "RavenFS.Studio.xap",
-		//		routeTemplate: "ravenfs/RavenFS.Studio.xap",
-		//		defaults: new { controller = "static", action = "RavenStudioXap" });
-
-		//	config.Routes.MapHttpRoute(
-		//		name: "Id",
-		//		routeTemplate: "ravenfs/id",
-		//		defaults: new { controller = "static", action = "Id" });
-
-		//	config.Routes.MapHttpRoute(
-		//		name: "Empty",
-		//		routeTemplate: "ravenfs/",
-		//		defaults: new { controller = "static", action = "Root" });
-
-
-		//	config.Routes.MapHttpRoute(
-		//		name: "rdc",
-		//		routeTemplate: "ravenfs/rdc/{action}/{*filename}",
-		//		defaults: new { controller = "rdc", filename = RouteParameter.Optional }
-		//		);
-
-		//	config.Routes.MapHttpRoute(
-		//		name: "synchronization",
-		//		routeTemplate: "ravenfs/synchronization/{action}/{*filename}",
-		//		defaults: new { controller = "synchronization", filename = RouteParameter.Optional }
-		//		);
-
-		//	config.Routes.MapHttpRoute(
-		//		name: "folders",
-		//		routeTemplate: "ravenfs/folders/{action}/{*directory}",
-		//		defaults: new { controller = "folders", directory = RouteParameter.Optional }
-		//		);
-
-		//	config.Routes.MapHttpRoute(
-		//		name: "search",
-		//		routeTemplate: "ravenfs/search/{action}",
-		//		defaults: new { controller = "search", action = "get" }
-		//		);
-
-		//	config.Routes.MapHttpRoute(
-		//		name: "logs",
-		//		routeTemplate: "ravenfs/search/{action}/{*type}",
-		//		defaults: new { controller = "logs", action = "get", type = RouteParameter.Optional }
-		//		);
-
-		//	config.Routes.MapHttpRoute(
-		//		name: "storage",
-		//		routeTemplate: "ravenfs/storage/{action}/",
-		//		defaults: new { controller = "storage" }
-		//		);
-
-		//	config.Routes.MapHttpRoute(
-		//		name: "configsearch",
-		//		routeTemplate: "ravenfs/config/search",
-		//		defaults: new { controller = "config", action = "ConfigNamesStartingWith" }
-		//		);
-
-		//	config.Routes.MapHttpRoute(
-		//		name: "Default",
-		//		routeTemplate: "ravenfs/{controller}/{*name}",
-		//		defaults: new { controller = "files", name = RouteParameter.Optional }
-		//		);
-
-		//	StorageOperationsTask.ResumeFileRenamingAsync();
-		//}
+	    public FileSystemStats GetFileSystemStats()
+	    {
+	        var fsStats = new FileSystemStats
+	        {
+	            Name = Name,
+	            Metrics = CreateMetrics(),
+	            ActiveSyncs = SynchronizationTask.Queue.Active.ToList(),
+	            PendingSyncs = SynchronizationTask.Queue.Pending.ToList(),
+	        };
+	        Storage.Batch(accessor => { fsStats.FileCount = accessor.GetFileCount(); });
+            return fsStats;
+	    }
 	}
 }
