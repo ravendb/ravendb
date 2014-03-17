@@ -692,9 +692,9 @@ namespace Raven.Bundles.Replication.Tasks
 									var info = docDb.GetRecentTouchesFor(document.Key);
 									if (info != null)
 									{
-										if (info.PreTouchEtag.CompareTo(result.LastEtag) <= 0)
+										if (info.TouchedEtag.CompareTo(result.LastEtag) > 0)
 										{
-										    log.Debug("Will not replicate document '{0}' to '{1}' because the updates after etag {2} are related document touches", document.Key, destinationId, info.PreTouchEtag);
+                                            log.Debug("Will not replicate document '{0}' to '{1}' because the updates after etag {2} are related document touches", document.Key, destinationId, info.TouchedEtag);
 											return false;
 										}
 									}

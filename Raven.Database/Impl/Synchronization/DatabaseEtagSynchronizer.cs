@@ -40,7 +40,7 @@ namespace Raven.Database.Impl.Synchronization
 
 		public void UpdateSynchronizationState(JsonDocument[] docs)
 		{
-			if (docs == null)
+			if (docs == null || docs.Length == 0)
 				return;
 
 			var lowestEtag = GetLowestEtag(docs);
