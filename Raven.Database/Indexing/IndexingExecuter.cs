@@ -206,7 +206,6 @@ namespace Raven.Database.Indexing
 							  batchForIndex.IndexName);
 				}
 
-				//Barry Hagan: This could potentially cause missing/skipped documents in an index if the current batch had errors
 				transactionalStorage.Batch(actions =>
 					// whatever we succeeded in indexing or not, we have to update this
 					// because otherwise we keep trying to re-index failed documents
