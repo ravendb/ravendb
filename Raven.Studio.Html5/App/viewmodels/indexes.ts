@@ -75,10 +75,20 @@ class indexes extends viewModelBase {
 
     putIndexIntoGroupNamed(i: index, groupName: string) {
         var group = this.indexGroups.first(g => g.entityName === groupName);
+        var indexExists: boolean;
         if (group) {
-            group.indexes.push(i);
+            indexExists = !!group.indexes.first((cur: index) => cur.name == i.name);
+            if (!indexExists) {
+                group.indexes.push(i);
+            }
         } else {
-            this.indexGroups.push({ entityName: groupName, indexes: ko.observableArray([i]) });
+            indexExists = !!this.indexGroups.first((curGroup: { entityName: string; indexes: KnockoutObservableArray<index> }) =>
+                !!curGroup.indexes.first((cur: index) => cur.name == i.name));
+
+            if (!indexExists) {
+
+                this.indexGroups.push({ entityName: groupName, indexes: ko.observableArray([i]) });
+            }
         }
     }
 
