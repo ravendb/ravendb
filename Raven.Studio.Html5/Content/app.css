@@ -236,6 +236,11 @@ body {
   display: inline-block;
   vertical-align: middle;
 }
+
+#editTransformerContainer .transformer {
+  height: 600px;
+}
+
 #editIndex .map {
   height: 120px;
 }
