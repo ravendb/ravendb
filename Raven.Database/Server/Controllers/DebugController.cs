@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -132,6 +133,15 @@ namespace Raven.Database.Server.Controllers
 		{
 			return GetMessageWithObject(Database.WorkContext.CurrentlyRunningQueries);
 		}
+
+        [HttpGet]
+        [Route("debug/suggest-index-merge")]
+        [Route("databases/{databaseName}/debug/suggest-index-merge")]
+        public HttpResponseMessage IndexMerge()
+        {
+            var mergeIndexSuggestions = Database.WorkContext.IndexDefinitionStorage.ProposeIndexMergeSuggestions();
+            return GetMessageWithObject(mergeIndexSuggestions);
+        }
 
 		[HttpGet]
 		[Route("debug/sl0w-d0c-c0unts")]
@@ -287,7 +297,7 @@ namespace Raven.Database.Server.Controllers
 					if (forDatabase)
 						data.CanRunForSpecificDatabase = true;
 
-					var actions = (IEnumerable<ReflectedHttpActionDescriptor>)httpRoute.DataTokens["actions"];
+					var actions = ((IEnumerable)httpRoute.DataTokens["actions"]).OfType<ReflectedHttpActionDescriptor>();
 
 					foreach (var reflectedHttpActionDescriptor in actions)
 					{

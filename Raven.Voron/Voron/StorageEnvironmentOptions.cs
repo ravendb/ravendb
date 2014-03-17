@@ -200,13 +200,18 @@ namespace Voron
 				}
 				using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
 				{
-					var ptr = (byte*)header;
+				    if (fs.Length != sizeof (FileHeader))
+				        return false; // wrong file size
+
+				    var ptr = (byte*)header;
 					int remaining = sizeof(FileHeader);
 					while (remaining > 0)
 					{
 						int read;
 						if (NativeFileMethods.ReadFile(fs.SafeFileHandle, ptr, remaining, out read, null) == false)
 							throw new Win32Exception();
+					    if (read == 0)
+					        return false; // we should be reading _something_ here, if we can't, then it is an error and we assume corruption
 						ptr += read;
 						remaining -= read;
 					}

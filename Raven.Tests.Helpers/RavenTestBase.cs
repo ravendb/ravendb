@@ -441,7 +441,7 @@ namespace Raven.Tests.Helpers
 				if (doc == null)
 					return false;
 
-				var status = doc.DataAsJson["restoreStatus"].Values().Select(token => token.ToString()).ToList();
+				var status = doc.DataAsJson.Deserialize<RestoreStatus>(new DocumentConvention());
 
 				var restoreFinishMessages = new[]
 				{
@@ -449,7 +449,7 @@ namespace Raven.Tests.Helpers
 					"Esent Restore: Restore Complete", 
 					"Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name",
 				};
-				return restoreFinishMessages.Any(status.Last().Contains);
+				return restoreFinishMessages.Any(status.Messages.Contains);
 			}, TimeSpan.FromMinutes(5));
 
 			Assert.True(done);

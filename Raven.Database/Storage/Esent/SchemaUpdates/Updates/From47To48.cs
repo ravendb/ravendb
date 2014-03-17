@@ -94,9 +94,9 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
             for (var i = 0; i < transformDefinitions.Length; i++)
             {
                 var definition = transformDefinitions[i];
-                definition.IndexId = maxIndexId = indexDefinitions.Length + i;
-                nameToIds[definition.Name] = definition.IndexId;
-                var path = Path.Combine(indexDefPath, definition.IndexId + ".transform");
+                definition.TransfomerId = maxIndexId = indexDefinitions.Length + i;
+                nameToIds[definition.Name] = definition.TransfomerId;
+                var path = Path.Combine(indexDefPath, definition.TransfomerId + ".transform");
 
                 // TODO: This can file, rollback
                 File.WriteAllText(path, JsonConvert.SerializeObject(definition, Formatting.Indented, Default.Converters));

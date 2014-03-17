@@ -14,6 +14,7 @@ using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using System.Net.Http;
+using Raven.Database.Server.RavenFS;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -131,7 +132,12 @@ namespace Raven.Database.Server.Controllers.Admin
 			DatabasesLandlord.SystemDatabase.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
 			var defrag = "true".Equals(GetQueryStringValue("defrag"), StringComparison.InvariantCultureIgnoreCase);
 
-			await Task.Factory.StartNew(() =>
+		    var state = new RavenJObject
+		    {
+		        {"Done", false},
+		        {"Error", null}
+		    };
+			var task = Task.Factory.StartNew(() =>
 			{
 				DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, null,
 					msg =>
@@ -153,9 +159,20 @@ namespace Raven.Database.Server.Controllers.Admin
 				restoreStatus.Messages.Add("The new database was created");
 				DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
 					RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
-			}, TaskCreationOptions.LongRunning);
+			}, TaskCreationOptions.LongRunning)
+            .ContinueWith(t =>
+            {
+                if (t.Exception != null)
+                    state["Error"] = t.Exception.ToString();
+                else
+                    state["Done"] = true;
+            });
 
-			return GetEmptyMessage();
+		    long id;
+		    Database.AddTask(task, state, out id);
+
+
+		    return GetMessageWithObject(new {Id = id});
 		}
 
 		private string ResolveTenantDataDirectory(string databaseLocation, string databaseName, out string documentDataDir)
@@ -270,7 +287,9 @@ namespace Raven.Database.Server.Controllers.Admin
 				return GetMessageWithString("Admin stats can only be had from the root database", HttpStatusCode.NotFound);
 
 		    var allDbs = new List<DocumentDatabase>();
+            var allFs = new List<RavenFileSystem>();
             DatabasesLandlord.ForAllDatabases(allDbs.Add);
+            FileSystemsLandlord.ForAllFileSystems(allFs.Add);
 		    var currentConfiguration = DatabasesLandlord.SystemConfiguration;
 
             
@@ -312,7 +331,9 @@ namespace Raven.Database.Server.Controllers.Admin
 
                         DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
                         Metrics = documentDatabase.CreateMetrics()
-                    }
+                    },
+                LoadedFileSystems = from fileSystem in allFs
+                   select fileSystem.GetFileSystemStats()
             };
 
             return GetMessageWithObject(stats);
