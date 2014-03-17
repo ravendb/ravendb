@@ -307,6 +307,10 @@ interface transformerDto {
     }
 }
 
+interface saveTransformerDto {
+    'Name': string;
+    'TransformResults':string;
+}
 
 interface getTransformerResultDto {
     'Transformer':string;
@@ -399,4 +403,16 @@ interface sqlReplicationDto extends documentDto {
     ConnectionStringName: string;
     ConnectionStringSettingName: string;
     SqlReplicationTables: sqlReplicationTableDto[];
+}
+
+interface facetDto {
+    Mode: number;
+    Aggregation: number; // None = 0, Count = 1, Max = 2, Min = 4, Average = 8, Sum = 16
+    AggregationField: string;
+    Name: string;
+    DisplayName: string;
+    Ranges: any[];
+    MaxResults: number;
+    TermSortMode: number;
+    IncludeRemainingTerms: boolean;
 }

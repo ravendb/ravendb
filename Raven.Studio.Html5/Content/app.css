@@ -79,10 +79,21 @@ body {
 .database-page .databases-container .database.selected {
   -webkit-box-shadow: 0 0 6px 0 #428bca;
   box-shadow: 0 0 6px 0 #428bca;
-  background-color: rgba(106, 163, 213, 0.25);
+  background-color: #428bca;
+}
+.database-page .databases-container .database.selected a,
+.database-page .databases-container .database.selected .text-muted {
+  color: white;
 }
 .database-page .databases-container .database.system-database {
   background-color: rgba(192, 192, 192, 0.21);
+}
+.database-page .databases-container .database.system-database.selected {
+  background-color: rgba(14, 14, 14, 0.21);
+}
+.database-page .databases-container .database.system-database.selected a,
+.database-page .databases-container .database.system-database.selected .text-muted {
+  color: #3071a9;
 }
 .document-collections li {
   outline: none;
@@ -225,6 +236,11 @@ body {
   display: inline-block;
   vertical-align: middle;
 }
+
+#editTransformerContainer .transformer {
+  height: 600px;
+}
+
 #editIndex .map {
   height: 120px;
 }

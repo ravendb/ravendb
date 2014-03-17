@@ -22,10 +22,9 @@ import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler
 import viewModelBase = require("viewmodels/viewModelBase");
 
 class shell extends viewModelBase {
-	private router = router;
-	databases = ko.observableArray<database>();
-	activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase");
-	currentAlert = ko.observable<alertArgs>();
+    private router = router;
+    databases = ko.observableArray<database>();
+    currentAlert = ko.observable<alertArgs>();
     queuedAlert: alertArgs;
     databasesLoadedTask: JQueryPromise<any>;
     buildVersion = ko.observable<buildVersionDto>();
@@ -34,45 +33,45 @@ class shell extends viewModelBase {
     appUrls: computedAppUrls;
     recordedErrors = ko.observableArray<alertArgs>();
 
-  constructor() {
-    super();
-    
-    ko.postbox.subscribe("Alert", (alert: alertArgs)=> this.showAlert(alert));
-    ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string)=> this.activateDatabaseWithName(databaseName));
+    constructor() {
+        super();
 
-    this.appUrls = appUrl.forCurrentDatabase();
+        ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
+        ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
 
-    dynamicHeightBindingHandler.install();
-  }
+        this.appUrls = appUrl.forCurrentDatabase();
 
-  activate() {
-    super.activate();
+        dynamicHeightBindingHandler.install();
+    }
+
+    activate(args: any) {
+        super.activate(args);
 
         NProgress.set(.7);
         router.map([
-			{ route: ['', 'databases'],	    title: 'Databases',		moduleId: 'viewmodels/databases',		nav: false },
-            { route: 'documents',           title: 'Documents',     moduleId: 'viewmodels/documents',       nav: true,  hash: this.appUrls.documents },
-            { route: 'indexes*details', title: 'Indexes', moduleId: 'viewmodels/indexesShell', nav: true, hash: this.appUrls.indexes },	
-            { route: 'transformers*details',        title: 'Transformers',  moduleId: 'viewmodels/transformersShell',    nav: false,  hash: this.appUrls.transformers},	
-            { route: 'query(/:indexName)',	title: 'Query',			moduleId: 'viewmodels/queryShell',		nav: true,  hash: this.appUrls.query(null) },
-			{ route: 'tasks*details',	    title: 'Tasks',			moduleId: 'viewmodels/tasks',			nav: true,  hash: this.appUrls.tasks, },
-			{ route: 'settings*details',    title: 'Settings',		moduleId: 'viewmodels/settings',		nav: true,  hash: this.appUrls.settings },
-            { route: 'status*details',	    title: 'Status',		moduleId: 'viewmodels/status',			nav: true,	hash: this.appUrls.status },
-			{ route: 'edit',			    title: 'Edit Document', moduleId: 'viewmodels/editDocument',	nav: false }
+            { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: false },
+            { route: 'documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: this.appUrls.documents },
+            { route: 'indexes*details', title: 'Indexes', moduleId: 'viewmodels/indexesShell', nav: true, hash: this.appUrls.indexes },
+            { route: 'transformers*details', title: 'Transformers', moduleId: 'viewmodels/transformersShell', nav: false, hash: this.appUrls.transformers },
+            { route: 'query*details', title: 'Query', moduleId: 'viewmodels/queryShell', nav: true, hash: this.appUrls.query(null) },
+            { route: 'tasks*details', title: 'Tasks', moduleId: 'viewmodels/tasks', nav: true, hash: this.appUrls.tasks, },
+            { route: 'settings*details', title: 'Settings', moduleId: 'viewmodels/settings', nav: true, hash: this.appUrls.settings },
+            { route: 'status*details', title: 'Status', moduleId: 'viewmodels/status', nav: true, hash: this.appUrls.status },
+            { route: 'edit', title: 'Edit Document', moduleId: 'viewmodels/editDocument', nav: false }
         ]).buildNavigationModel();
 
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
-
+        
         this.connectToRavenServer();
-	}
+    }
 
-	// Called by Durandal when shell.html has been put into the DOM.
+    // Called by Durandal when shell.html has been put into the DOM.
     attached() {
         // The view must be attached to the DOM before we can hook up keyboard shortcuts.
         jwerty.key("ctrl+alt+n", e => {
-			e.preventDefault();
-			this.newDocument();
+            e.preventDefault();
+            this.newDocument();
         });
 
         $("body").tooltip({
@@ -82,15 +81,12 @@ class shell extends viewModelBase {
             trigger: 'hover'
         });
 
-        var dataset: Twitter.Typeahead.Dataset = {
-            name: "test",
-            local: ["hello","world"]
-        };
-        $("#goToDocInput").typeahead(dataset);
-    }
-
-    handleQuery(query: any, cb: any) {
-        debugger;
+        // TODO: implement Go to document
+        //var dataset: Twitter.Typeahead.Dataset = {
+        //    name: "test",
+        //    local: ["hello","world"]
+        //};
+        //$("#goToDocInput").typeahead(dataset);
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -114,33 +110,33 @@ class shell extends viewModelBase {
 
     launchDocEditor(docId?: string, docsList?: pagedList) {
         var editDocUrl = appUrl.forEditDoc(docId, docsList ? docsList.collectionName : null, docsList ? docsList.currentItemIndex() : null, this.activeDatabase());
-        router.navigate(editDocUrl);
+        this.navigate(editDocUrl);
     }
 
-	connectToRavenServer() {
+    connectToRavenServer() {
         this.databasesLoadedTask = new getDatabasesCommand()
-			.execute()
-			.fail(result => this.handleRavenConnectionFailure(result))
-			.done(results => {
-				this.databasesLoaded(results);
+            .execute()
+            .fail(result => this.handleRavenConnectionFailure(result))
+            .done(results => {
+                this.databasesLoaded(results);
                 router.activate();
                 this.fetchBuildVersion();
                 this.fetchLicenseStatus();
             });
-	}
+    }
 
     handleRavenConnectionFailure(result) {
         NProgress.done();
-		sys.log("Unable to connect to Raven.", result);
+        sys.log("Unable to connect to Raven.", result);
         var tryAgain = 'Try again';
-		var messageBoxResultPromise = app.showMessage("Couldn't connect to Raven. Details in the browser console.", ":-(", [tryAgain]);
-		messageBoxResultPromise.done(messageBoxResult => {
+        var messageBoxResultPromise = app.showMessage("Couldn't connect to Raven. Details in the browser console.", ":-(", [tryAgain]);
+        messageBoxResultPromise.done(messageBoxResult => {
             if (messageBoxResult === tryAgain) {
                 NProgress.start();
-				this.connectToRavenServer();
-			}
-		});
-	}
+                this.connectToRavenServer();
+            }
+        });
+    }
 
     showAlert(alert: alertArgs) {
         if (alert.type === alertType.danger || alert.type === alertType.warning) {
@@ -151,14 +147,14 @@ class shell extends viewModelBase {
         if (currentAlert) {
             this.queuedAlert = alert;
             this.closeAlertAndShowNext(currentAlert);
-		} else {
-			this.currentAlert(alert);
-			var fadeTime = 2000; // If there are no pending alerts, show it for 2 seconds before fading out.
-			if (alert.type === alertType.danger || alert.type === alertType.warning) {
-				fadeTime = 4000; // If there are no pending alerts, show the error alert for 4 seconds before fading out.
-			}
-			setTimeout(() => this.closeAlertAndShowNext(alert), fadeTime);
-		}
+        } else {
+            this.currentAlert(alert);
+            var fadeTime = 2000; // If there are no pending alerts, show it for 2 seconds before fading out.
+            if (alert.type === alertType.danger || alert.type === alertType.warning) {
+                fadeTime = 4000; // If there are no pending alerts, show the error alert for 4 seconds before fading out.
+            }
+            setTimeout(() => this.closeAlertAndShowNext(alert), fadeTime);
+        }
     }
 
     closeAlertAndShowNext(alertToClose: alertArgs) {
@@ -184,8 +180,8 @@ class shell extends viewModelBase {
         }
     }
 
-	newDocument() {
-		this.launchDocEditor(null);
+    newDocument() {
+        this.launchDocEditor(null);
     }
 
     activateDatabaseWithName(databaseName: string) {
@@ -199,20 +195,20 @@ class shell extends viewModelBase {
         }
     }
 
-  modelPolling() {
-      var db = this.activeDatabase();
-      if (db) {
-        new getDatabaseStatsCommand(db)
-          .execute()
-          .done(result=> db.statistics(result));
-      }
+    modelPolling() {
+        var db = this.activeDatabase();
+        if (db) {
+            new getDatabaseStatsCommand(db)
+                .execute()
+                .done(result=> db.statistics(result));
+        }
     }
 
-  selectDatabase(db: database) {
+    selectDatabase(db: database) {
         db.activate();
 
         var updatedUrl = appUrl.forCurrentPage(db);
-        router.navigate(updatedUrl);
+        this.navigate(updatedUrl);
     }
 
     fetchBuildVersion() {

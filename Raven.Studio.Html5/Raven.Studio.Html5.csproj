@@ -22,6 +22,7 @@
   <ItemGroup>
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\createSampleDataCommand.ts" />
+    <TypeScriptCompile Include="App\commands\deleteTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
@@ -29,6 +30,7 @@
     <TypeScriptCompile Include="App\commands\startRestoreCommand.ts" />
     <TypeScriptCompile Include="App\commands\startIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\backupDatabaseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\createSampleDataCommand.ts" />
     <TypeScriptCompile Include="App\commands\stopIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\createDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\importDatabaseCommand.ts" />
@@ -67,6 +69,7 @@
     <TypeScriptCompile Include="App\commands\saveIndexDefinitionCommand.ts" />
     <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\popoverBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
     <TypeScriptCompile Include="App\models\index.ts" />
@@ -90,6 +93,7 @@
     <TypeScriptCompile Include="App\viewmodels\deleteDocumentsMatchingQueryConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteDocuments.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteIndexesConfirm.ts" />
+    <TypeScriptCompile Include="App\viewmodels\deleteTransformerConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\dialogViewModelBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\editDocument.ts" />
     <TypeScriptCompile Include="App\viewmodels\editIndex.ts" />
@@ -105,6 +109,8 @@
     <TypeScriptCompile Include="App\viewmodels\queryShell.ts" />
     <TypeScriptCompile Include="App\viewmodels\recentErrors.ts" />
     <TypeScriptCompile Include="App\viewmodels\replicationStats.ts" />
+    <TypeScriptCompile Include="App\viewmodels\reporting.ts" />
+    <TypeScriptCompile Include="App\viewmodels\saveTransformerWithNewNameConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
@@ -140,6 +146,8 @@
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\restoreDatabase.html" />
     <Content Include="App\views\backupDatabase.html" />
+    <Content Include="App\views\deleteTransformerConfirm.html" />
+    <Content Include="App\views\saveTransformerWithNewNameConfirm.html" />
     <Content Include="App\views\sqlReplications.html" />
     <Content Include="App\views\createSampleData.html" />
     <Content Include="App\views\csvImport.html" />
@@ -163,6 +171,7 @@
     <Content Include="App\views\periodicBackup.html" />
     <Content Include="App\views\query.html" />
     <Content Include="App\views\replicationStats.html" />
+    <Content Include="App\views\reporting.html" />
     <Content Include="App\views\settings.html" />
     <Content Include="App\views\toggleIndexing.html" />
     <Content Include="App\views\transformers.html" />
@@ -174,6 +183,9 @@
     <TypeScriptCompile Include="App\widgets\virtualTable\row.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />
     <Content Include="App\views\windowsAuth.html" />
+    <Content Include="Content\app.min.css">
+      <DependentUpon>app.css</DependentUpon>
+    </Content>
     <Content Include="Content\bootstrap-theme.css" />
     <Content Include="Content\bootstrap-theme.min.css" />
     <Content Include="Content\bootstrap.css" />
@@ -1162,4 +1174,11 @@
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
+  </Target>
 </Project>
