@@ -1,3 +1,36 @@
-﻿<div>
-    TODO: CSV import
+﻿<div id="csvImportContainer" class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">Csv Import</h3>
+    </div>
+    <div class="panel-body">
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                <div class="glyphicon glyphicon-info-sign"></div>
+                Import a csv file into a collection. Each column will be treated as a property.
+            </div>
+        </div>
+        
+        <form id="form1" enctype="multipart/form-data" data-bind="submit: uploadFile3">
+            <div class="fileinputs">
+                <input id="uploadedCsv" type="file" class="file" data-bind="change: uploadFile" />
+                <div class="fakefile">
+                    <button class="btn btn-primary" data-bind="click: uploadFile2">
+                        <span class="glyphicon glyphicon-floppy-save"></span>
+                        <span>Csv Import</span>
+                    </button>
+
+
+                </div>
+            </div>
+            <br />
+            <br />
+            <br />
+            <br />
+            <!--<input id="uploadedCsv" type="file" class="btn btn-primary" data-bind="change: uploadFile" class="glyphicon glyphicon-import">-->
+
+
+
+        </form>
+
+</div>
 </div>

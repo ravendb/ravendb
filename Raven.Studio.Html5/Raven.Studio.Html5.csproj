@@ -26,6 +26,7 @@
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\startRestoreCommand.ts" />
     <TypeScriptCompile Include="App\commands\startIndexingCommand.ts" />
