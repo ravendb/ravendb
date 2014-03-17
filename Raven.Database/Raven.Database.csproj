@@ -247,6 +247,11 @@
     <Compile Include="Bundles\PeriodicBackups\Triggers\AncestryPutTrigger.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualDeleteTrigger.cs" />
     <Compile Include="Impl\DTC\DtcNotSupportedTransactionalState.cs" />
+    <Compile Include="Indexing\IndexMerging\ChangeRootReferenceVisitor.cs" />
+    <Compile Include="Indexing\IndexMerging\IndexData.cs" />
+    <Compile Include="Indexing\IndexMerging\IndexMerger.cs" />
+    <Compile Include="Indexing\IndexMerging\IndexVisitor.cs" />
+    <Compile Include="Indexing\IndexMerging\MergeProposal.cs" />
     <Compile Include="Indexing\PrecomputedIndexing.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyDeleteTrigger.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyPutTrigger.cs" />

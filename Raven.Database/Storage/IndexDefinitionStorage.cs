@@ -13,8 +13,13 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using Lucene.Net.Analysis.Standard;
+using Lucene.Net.Documents;
 using Microsoft.Isam.Esent.Interop;
+using Mono.CSharp;
+using Mono.CSharp.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Database.Indexing.IndexMerging;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
@@ -24,6 +29,9 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
+using Raven.Database.Indexing;
+using CSharpParser = ICSharpCode.NRefactory.CSharp.CSharpParser;
+using Expression = ICSharpCode.NRefactory.CSharp.Expression;
 
 namespace Raven.Database.Storage
 {
@@ -32,7 +40,7 @@ namespace Raven.Database.Storage
         private const string IndexDefDir = "IndexDefinitions";
 
         private readonly ReaderWriterLockSlim currentlyIndexingLock = new ReaderWriterLockSlim();
-		public long currentlyIndexing;
+        public long currentlyIndexing;
 
         private readonly ConcurrentDictionary<int, AbstractViewGenerator> indexCache =
             new ConcurrentDictionary<int, AbstractViewGenerator>();
@@ -60,6 +68,7 @@ namespace Raven.Database.Storage
         private readonly InMemoryRavenConfiguration configuration;
         private readonly OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
 
+        private List<IndexMergeSuggestion> IndexMergeSuggestions { get; set; }
         public IndexDefinitionStorage(
             InMemoryRavenConfiguration configuration,
             ITransactionalStorage transactionalStorage,
@@ -67,6 +76,7 @@ namespace Raven.Database.Storage
             IEnumerable<AbstractViewGenerator> compiledGenerators,
             OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)
         {
+            IndexMergeSuggestions = new List<IndexMergeSuggestion>();
             this.configuration = configuration;
             this.extensions = extensions; // this is used later in the ctor, so it must appears first
             this.path = Path.Combine(path, IndexDefDir);
@@ -128,7 +138,7 @@ namespace Raven.Database.Storage
 
         public string[] IndexNames
         {
-            get { return indexDefinitions.Values.OrderBy(x => x.Name).Select(x => x.Name).ToArray(); }
+            get { return IndexDefinitions.Values.OrderBy(x => x.Name).Select(x => x.Name).ToArray(); }
         }
 
         public int[] Indexes
@@ -151,9 +161,13 @@ namespace Raven.Database.Storage
                                            .ToArray();
             }
         }
+        public ConcurrentDictionary<int, IndexDefinition> IndexDefinitions
+        {
+            get { return indexDefinitions; }
+        }
 
 
-      public string CreateAndPersistIndex(IndexDefinition indexDefinition)
+        public string CreateAndPersistIndex(IndexDefinition indexDefinition)
         {
             var transformer = AddAndCompileIndex(indexDefinition);
             if (configuration.RunInMemory == false)
@@ -201,7 +215,7 @@ namespace Raven.Database.Storage
 
         public void UpdateIndexDefinitionWithoutUpdatingCompiledIndex(IndexDefinition definition)
         {
-            indexDefinitions.AddOrUpdate(definition.IndexId, s =>
+            IndexDefinitions.AddOrUpdate(definition.IndexId, s =>
             {
                 throw new InvalidOperationException(
                     "Cannot find index named: " +
@@ -242,7 +256,7 @@ namespace Raven.Database.Storage
 
         public void AddIndex(int id, IndexDefinition definition)
         {
-            indexDefinitions.AddOrUpdate(id, definition, (s1, def) =>
+            IndexDefinitions.AddOrUpdate(id, definition, (s1, def) =>
             {
                 if (def.IsCompiled)
                     throw new InvalidOperationException("Index " + id + " is a compiled index, and cannot be replaced");
@@ -268,7 +282,7 @@ namespace Raven.Database.Storage
             if (indexCache.TryRemove(id, out ignoredViewGenerator))
                 indexNameToId.TryRemove(ignoredViewGenerator.Name, out ignoredId);
             IndexDefinition ignoredIndexDefinition;
-            indexDefinitions.TryRemove(id, out ignoredIndexDefinition);
+            IndexDefinitions.TryRemove(id, out ignoredIndexDefinition);
             newDefinitionsThisSession.TryRemove(id, out ignoredIndexDefinition);
             if (configuration.RunInMemory)
                 return;
@@ -285,23 +299,37 @@ namespace Raven.Database.Storage
         {
             int id = 0;
             if (indexNameToId.TryGetValue(name, out id))
-                return indexDefinitions[id];
+            {
+                IndexDefinition indexDefinition = IndexDefinitions[id];
+                if (indexDefinition.Fields.Count == 0)
+                {
+                    AbstractViewGenerator abstractViewGenerator = GetViewGenerator(id);
+                    indexDefinition.Fields = abstractViewGenerator.Fields;
+                }
+                return indexDefinition;
+            }
             return null;
         }
 
         public IndexDefinition GetIndexDefinition(int id)
         {
             IndexDefinition value;
-            indexDefinitions.TryGetValue(id, out value);
+            IndexDefinitions.TryGetValue(id, out value);
             return value;
         }
 
         public TransformerDefinition GetTransformerDefinition(string name)
         {
-            int id = 0;
+            int id;
             if (transformNameToId.TryGetValue(name, out id))
                 return transformDefinitions[id];
             return null;
+        }
+
+        public IndexMergeResults ProposeIndexMergeSuggestions()
+        {
+            var indexMerger = new IndexMerger(IndexDefinitions.ToDictionary(x=>x.Key,x=>x.Value));
+            return indexMerger.ProposeIndexMergeSuggestions();
         }
 
         public TransformerDefinition GetTransformerDefinition(int id)
@@ -357,7 +385,7 @@ namespace Raven.Database.Storage
             foreach (
                 var a in
                     analyzerNames.Where(
-                        a => typeof (StandardAnalyzer).Assembly.GetType("Lucene.Net.Analysis." + a.Value) != null))
+                        a => typeof(StandardAnalyzer).Assembly.GetType("Lucene.Net.Analysis." + a.Value) != null))
             {
                 indexDefinition.Analyzers[a.Key] = "Lucene.Net.Analysis." + a.Value;
             }
@@ -372,19 +400,19 @@ namespace Raven.Database.Storage
         }
 
 
-	    public bool IsCurrentlyIndexing()
-	    {
-		    return Interlocked.Read(ref currentlyIndexing) != 0;
-	    }
+        public bool IsCurrentlyIndexing()
+        {
+            return Interlocked.Read(ref currentlyIndexing) != 0;
+        }
 
         public IDisposable CurrentlyIndexing()
         {
             currentlyIndexingLock.EnterReadLock();
-	        Interlocked.Increment(ref currentlyIndexing);
+            Interlocked.Increment(ref currentlyIndexing);
             return new DisposableAction(() =>
             {
-	            currentlyIndexingLock.ExitReadLock();
-	            Interlocked.Decrement(ref currentlyIndexing);
+                currentlyIndexingLock.ExitReadLock();
+                Interlocked.Decrement(ref currentlyIndexing);
             });
         }
 
@@ -462,4 +490,5 @@ namespace Raven.Database.Storage
             File.WriteAllText(Path.Combine(path, "transformers.txt"), sb.ToString());
         }
     }
+
 }

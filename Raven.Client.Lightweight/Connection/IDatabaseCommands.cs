@@ -488,6 +488,7 @@ namespace Raven.Client.Connection
 		BuildNumber GetBuildNumber();
 
 	    AttachmentInformation[] GetAttachments(Etag startEtag, int batchSize);
+        IndexMergeResults GetIndexMergeSuggestions();
 	}
 
 	public interface IGlobalAdminDatabaseCommands
