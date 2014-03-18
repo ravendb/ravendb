@@ -24,6 +24,7 @@
     <TypeScriptCompile Include="App\commands\createSampleDataCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getDocementsMetadataByIDPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
