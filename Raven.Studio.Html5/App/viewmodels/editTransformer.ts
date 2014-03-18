@@ -2,7 +2,7 @@
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import transformer = require("models/transformer");
-import saveTransrormerCommand = require("commands/saveTransformerCommand");
+import saveTransformerCommand = require("commands/saveTransformerCommand");
 import getSingleTransformerCommand = require("commands/getSingleTransformerCommand");
 import deleteTransformerCommand = require("commands/deleteTransformerCommand");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
@@ -67,9 +67,10 @@ class editTransformer extends  viewModelBase{
 
         } else {
 
-            new saveTransrormerCommand(this.editedTransformer(), this.activeDatabase())
+            new saveTransformerCommand(this.editedTransformer(), this.activeDatabase())
                 .execute()
-                .done(()=> {
+                .done((trans: transformer) => {
+                    this.editedTransformer(trans);
                     if (!this.isEditingExistingTransformer()) {
                         this.isEditingExistingTransformer(true);
                     }
