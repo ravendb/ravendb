@@ -1,13 +1,16 @@
+import app = require("durandal/app");
 import document = require("models/document");
 import dialog = require("plugins/dialog");
 import createDatabaseCommand = require("commands/createDatabaseCommand");
 import collection = require("models/collection");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import createEncryption = require("viewmodels/createEncryption");
 
 class createDatabase extends dialogViewModelBase {
 
     public creationTask = $.Deferred();
     creationTaskStarted = false;
+
     databaseName = ko.observable('');
     isCompressionBundleEnabled = ko.observable(false);
     isEncryptionBundleEnabled = ko.observable(false);
@@ -40,12 +43,66 @@ class createDatabase extends dialogViewModelBase {
         // We haven't yet implemented bundle configuration, so for now we're just 
         // creating the database.
         var databaseName = this.databaseName();
-        var createDbCommand = new createDatabaseCommand(databaseName, this.getActiveBundles());
+        if (this.isEncryptionBundleEnabled()) {
+
+            var createEncryptionViewModel: createEncryption = new createEncryption();
+            createEncryptionViewModel
+                .creationEncryption
+                .done((keyName: string, encryptionAlgorithm: string, isEncryptedIndexes: string)=> {
+                    var encriptionSettings: string[] = [];
+                    encriptionSettings.push(keyName, encryptionAlgorithm, isEncryptedIndexes);
+
+                    var data = {
+                        'Raven/Encryption/Key': keyName,
+                        'Raven/Encryption/Algorithm': encryptionAlgorithm,
+                        'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
+                    };                    
+
+                    this.createDB(databaseName, data);
+                });
+
+            dialog.close(this);
+            app.showDialog(createEncryptionViewModel);
+        } else {
+            this.createDB(databaseName, null);
+        }
+    }
+
+    private getEncryptionFullName(encrytion: string) {
+        var fullEncryptionName: string = null;
+        switch (encrytion)
+        {
+            case "DES":
+                fullEncryptionName = "System.Security.Cryptography.DESCryptoServiceProvider, mscorlib";
+                break;
+            case "R2C2":
+                fullEncryptionName = "System.Security.Cryptography.RC2CryptoServiceProvider, mscorlib";
+                break;
+            case "Rijndael":
+                fullEncryptionName = "System.Security.Cryptography.RijndaelManaged, mscorlib";
+                break;
+            default: //case "Triple DESC":
+                fullEncryptionName = "System.Security.Cryptography.TripleDESCryptoServiceProvider, mscorlib";
+        }
+        return fullEncryptionName;
+    }
+
+    private createDB(databaseName: string, encryptionSettings: Object) {
+        var createDbCommand;
+        try {
+        createDbCommand = new createDatabaseCommand(databaseName, this.getActiveBundles(), encryptionSettings);
+        } catch (ex) {
+            this.creationTask.reject(ex);
+            return;
+        }
+        debugger;
         var createDbTask = createDbCommand.execute();
         createDbTask.done(() => this.creationTask.resolve(databaseName));
         createDbTask.fail(response => this.creationTask.reject(response));
         this.creationTaskStarted = true;
-        dialog.close(this);
+        if (dialog.isOpen) {
+            dialog.close(this);
+        }
     }
 
     toggleCompressionBundle() {
@@ -121,7 +178,6 @@ class createDatabase extends dialogViewModelBase {
         if (this.isScriptedIndexBundleEnabled()) {
             activeBundles.push("ScriptedIndexResults");
         }
-
         return activeBundles;
     }
 }
