@@ -54,7 +54,7 @@ class createDatabase extends dialogViewModelBase {
 
                     var data = {
                         'Raven/Encryption/Key': keyName,
-                        'Raven/Encryption/Algorithm': encryptionAlgorithm,
+                        'Raven/Encryption/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
                         'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
                     };                    
 
@@ -68,7 +68,7 @@ class createDatabase extends dialogViewModelBase {
         }
     }
 
-    private getEncryptionFullName(encrytion: string) {
+    private getEncryptionAlgorithmFullName(encrytion: string) {
         var fullEncryptionName: string = null;
         switch (encrytion)
         {
