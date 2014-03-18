@@ -32,6 +32,8 @@ class shell extends viewModelBase {
     windowHeightObservable: KnockoutObservable<number>;
     appUrls: computedAppUrls;
     recordedErrors = ko.observableArray<alertArgs>();
+    newIndexUrl = appUrl.forCurrentDatabase().newIndex;
+    newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
 
     constructor() {
         super();
