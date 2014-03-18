@@ -19,7 +19,11 @@ class saveTransformerCommand extends commandBase {
         
 
         this.put(saveTransformerUrl, saveTransformerPutArgs, this.db)
-            .fail(xhr=> doneTask.reject(xhr))
+            .fail((result:JQueryXHR)=> {
+                
+                this.reportError("Unable to save transformer", result.responseText, result.statusText);
+                doneTask.reject(result);
+            })
             .done((result: getTransformerResultDto) => {
                 new getSingleTransformerCommand(result.Transformer, this.db).execute()
                     .fail(xhr=> doneTask.reject(xhr))
