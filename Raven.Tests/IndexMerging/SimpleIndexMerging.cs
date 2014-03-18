@@ -33,20 +33,15 @@ namespace Raven.Tests.IndexMerging
                 var mergeSuggestion = suggestions.Suggestions[0];
                 Assert.Equal(new[] {"test1", "test2"}, mergeSuggestion.CanMerge);
 
-                var suggestedIndexMap = mergeSuggestion.MergedIndex.Map.Replace("\r\n\t", " ");
-                suggestedIndexMap = suggestedIndexMap.Replace("\t", " ").Trim();
-                var expectedIndexMap = "from doc in docs.Orders select new { Customer = doc.Customer, Email = doc.Email }".Replace("\r\n\t", " ");
-                expectedIndexMap = expectedIndexMap.Replace("\t", " ").Trim();
-
-                suggestedIndexMap = Regex.Replace(suggestedIndexMap, @"\s+", " ");
-                expectedIndexMap = Regex.Replace(expectedIndexMap, @"\s+", " ");
-                Assert.Equal(expectedIndexMap,
-                    suggestedIndexMap);
+                var suggestedIndexMap = RemoveSpaces(mergeSuggestion.MergedIndex.Map);
+                var expectedIndexMap = "from doc in docs.Orders select new { Customer = doc.Customer, Email = doc.Email }";
+                expectedIndexMap = RemoveSpaces(expectedIndexMap);
+                    Assert.Equal(expectedIndexMap, suggestedIndexMap);
             }
         }
 
         [Fact]
-        public void WillSuggestMergeTwoSimpleIndexesForSameCollectionWithDifferentIndexes()
+        public void WillSuggestMergeTwoSimpleIndexesForSameCollectionWithAdditionalProperties()
         {
             using (var store = NewDocumentStore())
             {
@@ -65,6 +60,13 @@ namespace Raven.Tests.IndexMerging
                 Assert.Equal(1, suggestions.Suggestions.Count);
 
                 var mergeSuggestion = suggestions.Suggestions[0];
+                Assert.Equal(new[] { "test1", "test2" }, mergeSuggestion.CanMerge);
+
+                var suggestedIndexMap = RemoveSpaces(mergeSuggestion.MergedIndex.Map);
+                var expectedIndexMap = "from doc in docs.Orders select new { Customer = doc.Customer, Email = doc.Email }";
+                expectedIndexMap = RemoveSpaces(expectedIndexMap);
+                Assert.Equal(expectedIndexMap, suggestedIndexMap);
+  
                 Assert.Equal(FieldIndexing.Analyzed, mergeSuggestion.MergedIndex.Indexes["Name"]);
                 Assert.Equal(FieldIndexing.Analyzed, mergeSuggestion.MergedIndex.Indexes["Email"]);
             }
@@ -95,15 +97,9 @@ namespace Raven.Tests.IndexMerging
                 var mergeSuggestion = suggestions.Suggestions[0];
                 Assert.Equal(new[] {"test1", "test2"}, mergeSuggestion.CanMerge);
 
-                var suggestedIndexMap = mergeSuggestion.MergedIndex.Map.Replace("\r\n\t", " ");
-                suggestedIndexMap = suggestedIndexMap.Replace("\t", " ").Trim();
-
-
-                var expectedIndexMap = "from doc in docs.Orders select new { Customer = doc.Customer, Email = doc.Email }".Replace("\r\n\t", " ");
-                expectedIndexMap = expectedIndexMap.Replace("\t", " ").Trim();
-
-                suggestedIndexMap = System.Text.RegularExpressions.Regex.Replace(suggestedIndexMap, @"\s+", " ");
-                expectedIndexMap = System.Text.RegularExpressions.Regex.Replace(expectedIndexMap, @"\s+", " ");
+                var suggestedIndexMap = RemoveSpaces(mergeSuggestion.MergedIndex.Map);
+                var expectedIndexMap = "from doc in docs.Orders select new { Customer = doc.Customer, Email = doc.Email }";
+                expectedIndexMap = RemoveSpaces(expectedIndexMap);
                 Assert.Equal(expectedIndexMap,
                     suggestedIndexMap);
 
@@ -144,6 +140,7 @@ namespace Raven.Tests.IndexMerging
                 store.DatabaseCommands.PutIndex("test3", new IndexDefinition
                 {
                     Map = "from o in docs.Orders select new { o.Email,o.Tel }",
+                    SortOptions = new Dictionary<string, SortOptions> { { "Email", SortOptions.String } }
  
                 });
 
@@ -151,21 +148,13 @@ namespace Raven.Tests.IndexMerging
                 Assert.Equal(1, suggestions.Suggestions.Count);
 
                 var mergeSuggestion = suggestions.Suggestions[0];
-                Assert.Equal(new[] { "test1", "test2" }, mergeSuggestion.CanMerge);
+                Assert.Equal(new[] { "test1", "test2", "test3" }, mergeSuggestion.CanMerge);
 
-                var suggestedIndexMap = mergeSuggestion.MergedIndex.Map.Replace("\r\n\t", " ");
-                suggestedIndexMap = suggestedIndexMap.Replace("\t", " ").Trim();
+                var suggestedIndexMap = RemoveSpaces(mergeSuggestion.MergedIndex.Map);
+                var expectedIndexMap = "from doc in docs.Orders select new {  Address = doc.Address, Customer = doc.Customer, Email = doc.Email, Tel = doc.Tel }";
+                expectedIndexMap = RemoveSpaces(expectedIndexMap);
+                Assert.Equal(expectedIndexMap,  suggestedIndexMap);
 
-
-                var expectedIndexMap = "from doc in docs.Orders select new {  Address = doc.Address, Customer = doc.Customer, Email = doc.Email }".Replace("\r\n\t", " ");
-                expectedIndexMap = expectedIndexMap.Replace("\t", " ").Trim();
-
-                suggestedIndexMap = Regex.Replace(suggestedIndexMap, @"\s+", " ");
-                expectedIndexMap = Regex.Replace(expectedIndexMap, @"\s+", " ");
-                Assert.Equal(expectedIndexMap,
-                    suggestedIndexMap);
-
-                var suggestedStoresDict = mergeSuggestion.MergedIndex.Stores.Keys.ToDictionary(key => key, key => mergeSuggestion.MergedIndex.Stores[key]);
 
                 var suggestedSortDict = mergeSuggestion.MergedIndex.SortOptions.Keys.ToDictionary(key => key, key => mergeSuggestion.MergedIndex.SortOptions[key]);
 
@@ -176,15 +165,87 @@ namespace Raven.Tests.IndexMerging
                 bool result = DataDictionaryCompare(suggestedSortDict, expectedSortDict);
                 Assert.Equal(true, result);
 
-                Assert.Equal(2, suggestions.Unmergables.Count());
+                store.DatabaseCommands.PutIndex("test4", new IndexDefinition
+                {
+                    Map = "from o in docs.Orders select new { o.Email,o.Fax }",
+                    Stores = new Dictionary<string, FieldStorage> { { "Email", FieldStorage.Yes } },
 
-               var unmergebleSuggested =   suggestions.Unmergables;
-               var unmergebleExpected = new Dictionary<string, string> {{"Raven/DocumentsByEntityName", "Cannot merge indexes that have a let clause"},{"test3", "Can't find any entity name for merge"}};
-               result = DataDictionaryCompare(unmergebleSuggested, unmergebleExpected);
-               Assert.Equal(true, result);
+                });
+
+                var newSuggestions = store.DatabaseCommands.GetIndexMergeSuggestions();
+                Assert.Equal(1, newSuggestions.Suggestions.Count);
+
+                var newMergeSuggestion = suggestions.Suggestions[0];
+                Assert.Equal(new[] { "test1", "test2", "test3" }, newMergeSuggestion.CanMerge);
+                var expectedUnmergebleDict = new Dictionary<string, string> {  {"Raven/DocumentsByEntityName", "Cannot merge indexes that are using a let clause"},{ "test4", "Can't find any other index to merge this with" } };
+
+                bool res = DataDictionaryCompare(suggestions.Unmergables, expectedUnmergebleDict);
+                Assert.Equal(true, res);
+
+
             }
         }
 
+        [Fact]
+        public void UnMergeblesTest()
+        {
+            //Important : indexes with group bym orderby don't pass syntax check
+            using (var store = NewDocumentStore())
+            {
+                store.DatabaseCommands.PutIndex("test1", new IndexDefinition
+                {
+                    Map = @"docs.Datas.Where(doc => doc.Info.Contains(""2"")).Select(doc => new {    InfoAndRefernce = doc.Info + ""_"" + ((object) doc.Reference)})",
+
+                });
+             
+               
+              store.DatabaseCommands.PutIndex("test6", new IndexDefinition
+              {
+                 Map = "from article in docs.Articles select new { CategoryName = article.CategoryName }",                                                        
+                 Reduce = "from result in results group result by result.CategoryName into g  select new { CategoryName = g.Key } " 
+
+              });
+                store.DatabaseCommands.PutIndex("test7", new IndexDefinition
+                {
+                    Map = @"from doc in docs let Tag = doc[""metadata""][""Raven-Entity-Name""] select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Modified""] }"
+                
+                });
+                store.DatabaseCommands.PutIndex("test3", new IndexDefinition
+                {
+                    Map = "from o in docs.Orders select new { o.Email,o.Tel }",
+                    SortOptions = new Dictionary<string, SortOptions> { { "Email", SortOptions.String } }
+
+                });
+              var suggestions = store.DatabaseCommands.GetIndexMergeSuggestions();
+              Assert.Equal(5, suggestions.Unmergables.Count);
+
+
+                var unmergebleExpectedDict = new Dictionary<string, string>
+                {
+                    {"Raven/DocumentsByEntityName", "Cannot merge indexes that are using a let clause"},
+                    {"test1", "Cannot merge indexes that have a where clause"},
+                    {"test6", "Cannot merge map/reduce indexes"},
+                    {"test7", "Cannot merge indexes that are using a let clause"},
+                    {"test3", "Can't find any other index to merge this with"}
+
+
+                };
+                bool result = DataDictionaryCompare(suggestions.Unmergables, unmergebleExpectedDict);
+                Assert.Equal(true, result);
+
+
+            }
+        }
+
+        private string RemoveSpaces(string inputString)
+        {
+            var resultStr = inputString.Replace("\r\n\t", " ");
+            resultStr = resultStr.Replace("\t", " ").Trim();
+  
+            resultStr = Regex.Replace(resultStr, @"\s+", " ");
+            return resultStr;
+
+        }
         private bool DataDictionaryCompare<T>(IDictionary<string, T> dataDict1, IDictionary<string, T> dataDict2)
         {
             foreach (var kvp in dataDict1.Keys)
