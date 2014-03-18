@@ -9,28 +9,21 @@
                 Import a csv file into a collection. Each column will be treated as a property.
             </div>
         </div>
-        
-        <form id="form1" enctype="multipart/form-data" data-bind="submit: uploadFile3">
-            <div class="fileinputs">
-                <input id="uploadedCsv" type="file" class="file" data-bind="change: uploadFile" />
-                <div class="fakefile">
-                    <button class="btn btn-primary" data-bind="click: uploadFile2">
-                        <span class="glyphicon glyphicon-floppy-save"></span>
-                        <span>Csv Import</span>
-                    </button>
+        <div id="addfileContainer">
+            <form id="sendFileForm" action="/" enctype="multipart/form-data" >
+                <div class="fileinputs">
+                    <input id="uploadedCsv" type="file" class="file" />
+                    <div class="fakefile">
+                        <button class="btn btn-primary">
+                            <span class="glyphicon glyphicon-floppy-save"></span>
+                            <span>Csv Import</span>
+                        </button>
+                    </div>
 
-
+                    <input id="submit" type="submit" />
                 </div>
-            </div>
-            <br />
-            <br />
-            <br />
-            <br />
-            <!--<input id="uploadedCsv" type="file" class="btn btn-primary" data-bind="change: uploadFile" class="glyphicon glyphicon-import">-->
-
-
-
-        </form>
+            </form>
+        </div>
 
 </div>
 </div>

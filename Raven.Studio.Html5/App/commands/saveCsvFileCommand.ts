@@ -3,7 +3,7 @@ import database = require("models/database");
 
 class saveCsvFileCommand extends commandBase {
 
-    constructor(private file:any, private fileName, private db: database) {
+    constructor(private file, private fileName, private db: database) {
         super();
     }
 
@@ -16,7 +16,7 @@ class saveCsvFileCommand extends commandBase {
             headers: <any>customHeaders,
             dataType: 'text' 
         };
-        var createSampleDataTask = this.post("/studio-tasks/loadCsvFile", null, this.db, jQueryOptions);
+        var createSampleDataTask = this.post("/studio-tasks/loadCsvFile", { file: this.file}, this.db, jQueryOptions);
         return createSampleDataTask;
 }
 }
