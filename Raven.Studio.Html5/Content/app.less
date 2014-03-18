@@ -451,6 +451,30 @@ html, body {
     }
 }
 
+#editTransformerContainer .transformer {
+  height: 600px;
+}
+
+#csvImportContainer .fileinputs {
+    position: relative;
+}
+
+#csvImportContainer .fakefile {
+	position: absolute;
+	top: 0;
+	left: 0;
+	z-index: 1;
+}
+
+#csvImportContainer .file {
+	position: relative;
+	text-align: right;
+	-moz-opacity:0 ;
+	filter:~"alpha(opacity: 0)";
+	opacity: 0;
+	z-index: 2;
+}
+
 #logsContainer, #alertsContainer, #indexErrorsContainer {
 
     table {
