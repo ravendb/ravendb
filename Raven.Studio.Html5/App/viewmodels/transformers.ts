@@ -12,9 +12,7 @@ import app = require("durandal/app");
 class Transformers extends viewModelBase {
 
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
-
-    //transformersList = ko.observableArray<transformer>();
-    groupedByIds = ko.observable<Boolean>(true);
+    
     transformersGroups = ko.observableArray<{ entityName: string; transformers: KnockoutObservableArray<transformer> }>();
     containerSelector ="#transformersContainer";
 
@@ -48,38 +46,19 @@ class Transformers extends viewModelBase {
 
 
     putTransformerIntoGroups(trans: transformer) {
-        if (this.groupedByIds()) {
-            var groupName = trans.name().split("/")[0];
-            var group = this.transformersGroups.first(g=> g.entityName === groupName);
+        
+        var groupName = trans.name().split("/")[0];
+        var group = this.transformersGroups.first(g=> g.entityName === groupName);
 
-            if (group) {
-                var existingTrans = group.transformers.first((cur: transformer)=> cur.name() == trans.name());
+        if (group) {
+            var existingTrans = group.transformers.first((cur: transformer)=> cur.name() == trans.name());
 
-                if (!existingTrans) {
-                    group.transformers.push(trans);
-                }
-            } else {
-                this.transformersGroups.push({ entityName: groupName, transformers: ko.observableArray([trans]) });
+            if (!existingTrans) {
+                group.transformers.push(trans);
             }
         } else {
-            if (this.transformersGroups().length != 1) {
-                this.transformersGroups.removeAll();
-                this.transformersGroups.push({
-                    entityName: 'Transformers', transformers:ko.observableArray([trans])
-                });
-            } else if (this.transformersGroups()[0].entityName == 'Transformers') {
-                this.transformersGroups()[0].transformers.push(trans);
-            } else {
-                this.transformersGroups.removeAll();
-            }
+            this.transformersGroups.push({ entityName: groupName, transformers: ko.observableArray([trans]) });
         }
-    }
-    
-
-    toggleGrouping() {
-        this.transformersGroups.removeAll();
-        this.groupedByIds(!this.groupedByIds());
-        this.fetchTransformers();
     }
 
     collapseAll() {
