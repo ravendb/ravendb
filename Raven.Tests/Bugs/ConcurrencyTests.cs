@@ -12,8 +12,7 @@ namespace Raven.Tests.Bugs
         {
             using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
-                if (store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
-                    return;
+                EnsureDtcIsSupported(store);
 
                 store.Conventions.RegisterIdConvention<Contact>((dbname, commands, contact) => contact.Name);
 
@@ -60,8 +59,7 @@ namespace Raven.Tests.Bugs
         {
             using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
-                if (store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
-                    return;
+                EnsureDtcIsSupported(store);
 
                 store.Conventions.RegisterIdConvention<Contact>((dbname, commands, contact) => contact.Name);
 
@@ -103,8 +101,7 @@ namespace Raven.Tests.Bugs
         {
             using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
-                if (store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
-                    return;
+                EnsureDtcIsSupported(store);
 
                 using (var session = store.OpenSession())
                 {
