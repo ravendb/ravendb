@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30219.0
+VisualStudioVersion = 12.0.30110.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database", "Raven.Database\Raven.Database.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -69,6 +69,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Studio.Html5", "Raven.Studio.Html5\Raven.Studio.Html5.csproj", "{D020BECD-AADD-44FC-96C7-BD58354413DF}"
 EndProject
 Global
+	GlobalSection(CodealikeProperties) = postSolution
+		SolutionGuid = 6944aade-3195-477c-8aed-9ebe2902fc57
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|ARM = Debug|ARM
