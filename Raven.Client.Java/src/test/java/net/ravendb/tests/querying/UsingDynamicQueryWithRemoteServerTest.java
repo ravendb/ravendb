@@ -59,7 +59,7 @@ public class UsingDynamicQueryWithRemoteServerTest extends RemoteClientTest {
             .toList();
 
         @SuppressWarnings("unused")
-        List<Blog> blogs = session.advanced().luceneQuery(Blog.class)
+        List<Blog> blogs = session.advanced().documentQuery(Blog.class)
         .where("Category:Rhinos AND Title.Length:3")
         .toList();
 
@@ -94,7 +94,7 @@ public class UsingDynamicQueryWithRemoteServerTest extends RemoteClientTest {
       }
 
       try (IDocumentSession session = store.openSession()) {
-        List<Blog> results = session.advanced().luceneQuery(Blog.class)
+        List<Blog> results = session.advanced().documentQuery(Blog.class)
             .where("Title.Length:3 AND Category:Rhinos")
             .waitForNonStaleResultsAsOfNow().toList();
 
@@ -257,7 +257,7 @@ public class UsingDynamicQueryWithRemoteServerTest extends RemoteClientTest {
         Reference<FieldHighlightings> titleHighlightings = new Reference<>();
         Reference<FieldHighlightings> categoryHighlightings = new Reference<>();
 
-        List<Blog> results = session.advanced().luceneQuery(Blog.class)
+        List<Blog> results = session.advanced().documentQuery(Blog.class)
             .highlight("Title", 18, 2, titleHighlightings)
             .highlight("Category", 18, 2, categoryHighlightings)
             .setHighlighterTags("*", "*")

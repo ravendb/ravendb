@@ -262,7 +262,7 @@ public class MultiGetProfilingTest extends RemoteClientTest {
       try (IDocumentSession session = store.openSession()) {
         id = ((DocumentSession)session).getDatabaseCommands().getProfilingInformation().getId();
 
-        session.advanced().luceneQuery(Object.class, RavenDocumentsByEntityName.class).whereEquals("Not", "There").lazily();
+        session.advanced().documentQuery(Object.class, RavenDocumentsByEntityName.class).whereEquals("Not", "There").lazily();
         try {
           session.advanced().eagerly().executeAllPendingLazyOperations();
           fail();

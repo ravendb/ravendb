@@ -136,7 +136,7 @@ public class HighlightesTest extends RemoteClientTest {
         Reference<FieldHighlightings> slugHighlighting = new Reference<>();
         Reference<FieldHighlightings> contentHighlighting = new Reference<>();
 
-        List<ISearchable> results = session.advanced().luceneQuery(ISearchable.class, "ContentSearchIndex")
+        List<ISearchable> results = session.advanced().documentQuery(ISearchable.class, "ContentSearchIndex")
           .waitForNonStaleResultsAsOfNow()
           .highlight("Title", 128, 2, titleHighlighting)
           .highlight("Slug", 128, 2, slugHighlighting)

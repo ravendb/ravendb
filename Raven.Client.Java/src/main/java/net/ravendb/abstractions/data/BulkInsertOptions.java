@@ -1,7 +1,7 @@
 package net.ravendb.abstractions.data;
 
 public class BulkInsertOptions {
-  private boolean checkForUpdates;
+  private boolean overwriteExisting;
   private boolean checkReferencesInIndexes;
   private int batchSize;
 
@@ -9,15 +9,18 @@ public class BulkInsertOptions {
     batchSize = 512;
   }
 
-  public boolean isCheckForUpdates() {
-    return checkForUpdates;
+  public boolean isOverwriteExisting() {
+    return overwriteExisting;
   }
-  public void setCheckForUpdates(boolean checkForUpdates) {
-    this.checkForUpdates = checkForUpdates;
+
+  public void setOverwriteExisting(boolean overwriteExisting) {
+    this.overwriteExisting = overwriteExisting;
   }
+
   public boolean isCheckReferencesInIndexes() {
     return checkReferencesInIndexes;
   }
+
   public void setCheckReferencesInIndexes(boolean checkReferencesInIndexes) {
     this.checkReferencesInIndexes = checkReferencesInIndexes;
   }

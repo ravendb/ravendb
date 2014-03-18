@@ -49,7 +49,7 @@ public class TagCloudTest extends RemoteClientTest {
         session.store(post2);
         session.saveChanges();
 
-        List<TagAndCount> tagAndCounts = session.advanced().luceneQuery(TagAndCount.class, "TagCloud").waitForNonStaleResults().toList();
+        List<TagAndCount> tagAndCounts = session.advanced().documentQuery(TagAndCount.class, "TagCloud").waitForNonStaleResults().toList();
 
         Map<String, Long> countMap = new HashMap<>();
         for (TagAndCount tac : tagAndCounts) {
@@ -113,7 +113,7 @@ public class TagCloudTest extends RemoteClientTest {
         session.store(post2);
         session.saveChanges();
 
-        List<TagAndCount> tagAndCounts = session.advanced().luceneQuery(TagAndCount.class, "TagCloud").waitForNonStaleResults().toList();
+        List<TagAndCount> tagAndCounts = session.advanced().documentQuery(TagAndCount.class, "TagCloud").waitForNonStaleResults().toList();
 
         Map<String, Long> countMap = new HashMap<>();
         for (TagAndCount tac : tagAndCounts) {
@@ -136,7 +136,7 @@ public class TagCloudTest extends RemoteClientTest {
         session.store(post4);
         session.saveChanges();
 
-        tagAndCounts = session.advanced().luceneQuery(TagAndCount.class, "TagCloud").waitForNonStaleResults().toList();
+        tagAndCounts = session.advanced().documentQuery(TagAndCount.class, "TagCloud").waitForNonStaleResults().toList();
 
         countMap = new HashMap<>();
         for (TagAndCount tac : tagAndCounts) {
@@ -198,7 +198,7 @@ public class TagCloudTest extends RemoteClientTest {
 
         session.saveChanges();
 
-        List<ActivityAndCharacterCountAmount> tagAndCounts = session.advanced().luceneQuery(ActivityAndCharacterCountAmount.class, "EventsByActivityAndCharacterCountAmount")
+        List<ActivityAndCharacterCountAmount> tagAndCounts = session.advanced().documentQuery(ActivityAndCharacterCountAmount.class, "EventsByActivityAndCharacterCountAmount")
           .waitForNonStaleResults(3600 * 1000).toList();
 
         assertEquals(2, tagAndCounts.size());

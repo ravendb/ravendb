@@ -237,7 +237,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
   protected Action1<QueryResult> afterQueryExecutedCallback;
   protected Etag cutoffEtag;
-  private QueryOperator defaultOperator = QueryOperator.OR;
+  protected QueryOperator defaultOperator = QueryOperator.OR;
 
   private static final Pattern ESPACE_POSTFIX_WILDCARD = Pattern.compile("\\\\\\*($|\\s)");
 
@@ -793,6 +793,40 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     start = count;
     return (IDocumentQuery<T>) this;
   }
+
+  /*TODO
+   *
+   * public T First()
+        {
+            return ExecuteQueryOperation(1).First();
+        }
+
+        public T FirstOrDefault()
+        {
+            return ExecuteQueryOperation(1).FirstOrDefault();
+        }
+
+        public T Single()
+        {
+            return ExecuteQueryOperation(2).Single();
+        }
+
+        public T SingleOrDefault()
+        {
+            return ExecuteQueryOperation(2).SingleOrDefault();
+        }
+
+        private IEnumerable<T> ExecuteQueryOperation(int take)
+        {
+            if (!pageSize.HasValue || pageSize > take)
+                Take(take);
+
+            InitSync();
+
+            return queryOperation.Complete<T>();
+        }(non-Javadoc)
+   * @see net.ravendb.client.document.IAbstractDocumentQuery#where(java.lang.String)
+   */
 
   @Override
   @SuppressWarnings("unchecked")
@@ -1423,6 +1457,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       spatialIndexQuery.setCutoff(cutoff);
       spatialIndexQuery.setCutoffEtag(cutoffEtag);
       spatialIndexQuery.setWaitForNonStaleResultsAsOfNow(theWaitForNonStaleResultsAsOfNow);
+      spatialIndexQuery.setWaitForNonStaleResults(theWaitForNonStaleResults);
       List<SortedField> sortedFields =new ArrayList<>();
       for (String orderByField: orderByFields) {
         sortedFields.add(new SortedField(orderByField));
@@ -1458,6 +1493,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     indexQuery.setCutoff(cutoff);
     indexQuery.setCutoffEtag(cutoffEtag);
     indexQuery.setWaitForNonStaleResultsAsOfNow(theWaitForNonStaleResultsAsOfNow);
+    indexQuery.setWaitForNonStaleResults(theWaitForNonStaleResults);
     List<SortedField> sortedFields =new ArrayList<>();
     for (String orderByField: orderByFields) {
       sortedFields.add(new SortedField(orderByField));

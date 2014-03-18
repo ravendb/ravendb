@@ -24,7 +24,6 @@ public class IndexDefinition {
     stores = new HashMap<>();
     analyzers = new HashMap<>();
     sortOptions = new HashMap<>();
-    fields = new ArrayList<>();
     suggestions = new HashMap<>();
     termVectors = new HashMap<>();
     spatialIndexes = new HashMap<>();
@@ -446,6 +445,12 @@ public class IndexDefinition {
       return "MapReduce";
     return "Map";
   }
+
+  //TODO:
+/// <summary>
+  /// Prevent index from being kept in memory. Default: false
+  /// </summary>
+  //public bool DisableInMemoryIndexing { get; set; }
 
   /**
    * Remove the default values that we don't actually need

@@ -80,6 +80,8 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
   // hold the data required to manage the data for RavenDB's Unit of Work
   protected final Map<Object, DocumentMetadata> entitiesAndMetadata = new IdentityHashMap<>();
 
+  protected final Map<String, JsonDocument> includedDocumentsByKey = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+
   // Translate between a key and its associated entity
   protected final Map<String, Object> entitiesByKey = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
@@ -87,7 +89,9 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
   private final DocumentStoreBase documentStore;
 
   // all the listeners for this session
-  protected final DocumentSessionListeners listeners;
+  protected final DocumentSessionListeners theListeners;
+
+
 
   private int numberOfRequests;
   private Long nonAuthoritativeInformationTimeout;
@@ -98,6 +102,15 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
   private final List<ICommandData> deferedCommands = new ArrayList<>();
   private GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
   public EntityToJson entityToJson;
+
+
+
+
+  public DocumentSessionListeners getListeners() {
+    return theListeners;
+  }
+
+
 
   /**
    * Gets the number of entities held in memory to manage Unit of Work
@@ -151,7 +164,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     this.id = id;
     this.dbName = dbName;
     this.documentStore = documentStore;
-    this.listeners = listeners;
+    this.theListeners = listeners;
     this.useOptimisticConcurrency = false;
     this.allowNonAuthoritativeInformation = true;
     this.nonAuthoritativeInformationTimeout = 15 * 1000L;
@@ -302,7 +315,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
    * @return
    */
   public boolean isLoaded(String id) {
-    return entitiesByKey.containsKey(id);
+    return entitiesByKey.containsKey(id) || includedDocumentsByKey.containsKey(id);
   }
 
   /**
@@ -445,12 +458,12 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
    * @param metadata
    * @return
    */
-  Object convertToEntity(Class<?> entityType, String id, RavenJObject documentFound, RavenJObject metadata) {
+  public Object convertToEntity(Class<?> entityType, String id, RavenJObject documentFound, RavenJObject metadata) {
     try {
       if (RavenJObject.class.equals(entityType)) {
         return documentFound.cloneToken();
       }
-      for (IExtendedDocumentConversionListener extendedDocumentConversionListener: listeners.getExtendedConversionListeners()) {
+      for (IExtendedDocumentConversionListener extendedDocumentConversionListener: theListeners.getExtendedConversionListeners()) {
         extendedDocumentConversionListener.beforeConversionToEntity(id, documentFound, metadata);
       }
 
@@ -483,11 +496,11 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
         }
 
         generateEntityIdOnTheClient.trySetIdentity(entity, id);
-        for (IDocumentConversionListener documentConversionListener: listeners.getConversionListeners()) {
+        for (IDocumentConversionListener documentConversionListener: theListeners.getConversionListeners()) {
           documentConversionListener.documentToEntity(id, entity, documentFound, metadata);
         }
 
-        for (IExtendedDocumentConversionListener extendedDocumentConversionListener: listeners.getExtendedConversionListeners()) {
+        for (IExtendedDocumentConversionListener extendedDocumentConversionListener: theListeners.getExtendedConversionListeners()) {
           extendedDocumentConversionListener.afterConversionToEntity(id, documentFound, metadata, entity);
         }
 
@@ -794,7 +807,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
 
       generateEntityIdOnTheClient.trySetIdentity(entity, batchResult.getKey());
 
-      for (IDocumentStoreListener documentStoreListener : listeners.getStoreListeners()) {
+      for (IDocumentStoreListener documentStoreListener : theListeners.getStoreListeners()) {
         documentStoreListener.afterStore(batchResult.getKey(), entity, batchResult.getMetadata());
       }
     }
@@ -836,7 +849,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
   private void prepareForEntitiesPuts(SaveChangesData result) {
     for (Map.Entry<Object, DocumentMetadata> pair: entitiesAndMetadata.entrySet()) {
       if (entityChanged(pair.getKey(), pair.getValue())) {
-        for (IDocumentStoreListener documentStoreListener :listeners.getStoreListeners()) {
+        for (IDocumentStoreListener documentStoreListener : theListeners.getStoreListeners()) {
 
           if (documentStoreListener.beforeStore(pair.getValue().getKey(), pair.getKey(), pair.getValue().getMetadata(), pair.getValue().getOriginalValue())) {
             entityToJson.getCachedJsonDocs().remove(pair.getKey());
@@ -882,7 +895,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
 
       etag = isUseOptimisticConcurrency() ? etag : null;
       result.getEntities().add(existingEntity);
-      for (IDocumentDeleteListener deleteListener: listeners.getDeleteListeners()) {
+      for (IDocumentDeleteListener deleteListener: theListeners.getDeleteListeners()) {
         deleteListener.beforeDelete(key, existingEntity, metadata != null ? metadata.getMetadata(): null);
       }
       DeleteCommandData delCmd = new DeleteCommandData();
@@ -975,6 +988,19 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
       deferedCommands.add(command);
     }
   }
+  /*TODO
+   * /// <summary>
+        /// Version this entity when it is saved.  Use when Versioning bundle configured to ExcludeUnlessExplicit.
+        /// </summary>
+        /// <param name="entity">The entity.</param>
+        public void ExplicitlyVersion(object entity)
+        {
+            var metadata = GetMetadataFor(entity);
+
+            metadata[Constants.RavenCreateVersion] = true;
+        }
+   */
+
   /**
    * Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
    */
@@ -1019,9 +1045,17 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
       }
     }
   }
+
+
+  //TODO: ProjectionToInstance is missing
+
   @Override
   public int hashCode() {
     return hash;
+  }
+
+  public void trackIncludedDocumnet(JsonDocument include) {
+      includedDocumentsByKey.put(include.getKey(), include);
   }
 
 

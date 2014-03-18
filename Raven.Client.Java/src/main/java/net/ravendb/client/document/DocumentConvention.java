@@ -16,6 +16,7 @@ import net.ravendb.abstractions.extensions.JsonExtensions;
 import net.ravendb.abstractions.indexing.SortOptions;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.client.connection.IDatabaseCommands;
+import net.ravendb.client.connection.IDocumentStoreReplicationInformer;
 import net.ravendb.client.connection.ReplicationInformer;
 import net.ravendb.client.converters.ITypeConverter;
 import net.ravendb.client.converters.Int32Converter;
@@ -191,7 +192,7 @@ public class DocumentConvention extends Convention implements Serializable {
     setMaxNumberOfRequestsPerSession(30);
     setReplicationInformerFactory(new ReplicationInformerFactory() {
       @Override
-      public ReplicationInformer create(String url) {
+      public IDocumentStoreReplicationInformer create(String url) {
         return new ReplicationInformer(DocumentConvention.this);
       }
     });

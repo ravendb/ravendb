@@ -2,16 +2,16 @@ package net.ravendb.abstractions.data;
 
 import java.util.List;
 
-
+//TODO: sync with remote
 public class AdminStatistics {
   private String serverName;
-  private String clusterName;
 
   private int totalNumberOfRequests;
   private long uptime;
   private AdminMemoryStatistics memory;
 
   private List<LoadedDatabaseStatistics> loadedDatabases;
+  //TODO:         public IEnumerable<FileSystemStats> LoadedFileSystems { get; set; }
 
   public String getServerName() {
     return serverName;
@@ -19,14 +19,6 @@ public class AdminStatistics {
 
   public void setServerName(String serverName) {
     this.serverName = serverName;
-  }
-
-  public String getClusterName() {
-    return clusterName;
-  }
-
-  public void setClusterName(String clusterName) {
-    this.clusterName = clusterName;
   }
 
   public int getTotalNumberOfRequests() {

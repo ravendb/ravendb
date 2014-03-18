@@ -187,7 +187,7 @@ public class AdvancedPatchingTest extends RemoteClientTest {
 
       store.getDatabaseCommands().putIndex("TestIndex", indexDefinition);
 
-      store.openSession().advanced().luceneQuery(CustomType.class, "TestIndex")
+      store.openSession().advanced().documentQuery(CustomType.class, "TestIndex")
       .waitForNonStaleResults().toList();
 
       ScriptedPatchRequest patchRequest = new ScriptedPatchRequest();
@@ -246,7 +246,7 @@ public class AdvancedPatchingTest extends RemoteClientTest {
     indexDefinition.setMap("from doc in docs select new { doc.Owner} ");
     store.getDatabaseCommands().putIndex("TestIndex", indexDefinition);
 
-    store.openSession().advanced().luceneQuery(CustomType.class, "TestIndex").waitForNonStaleResults().toList();
+    store.openSession().advanced().documentQuery(CustomType.class, "TestIndex").waitForNonStaleResults().toList();
 
     store.getDatabaseCommands().updateByIndex("TestIndex", new IndexQuery("Owner:Bob"), new ScriptedPatchRequest(sampleScript)).waitForCompletion();
 

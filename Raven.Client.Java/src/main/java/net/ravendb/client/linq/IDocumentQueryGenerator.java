@@ -16,7 +16,7 @@ public interface IDocumentQueryGenerator {
   /**
    * Create a new query for
    */
-  public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz, String indexName, boolean isMapReduce);
+  public <T> IDocumentQuery<T> documentQuery(Class<T> clazz, String indexName, boolean isMapReduce);
 
 
 }

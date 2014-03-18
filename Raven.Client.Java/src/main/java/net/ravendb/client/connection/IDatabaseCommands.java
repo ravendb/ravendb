@@ -111,6 +111,9 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    */
   public List<JsonDocument> startsWith(String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly, String exclude, RavenPagingInformation pagingInformation);
 
+  public List<JsonDocument> startsWith(String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly,
+    String exclude, RavenPagingInformation pagingInformation, String transformer, Map<String, RavenJToken> queryInputs);
+
   /**
    * Retrieves the document for the specified key
    * @param key The key

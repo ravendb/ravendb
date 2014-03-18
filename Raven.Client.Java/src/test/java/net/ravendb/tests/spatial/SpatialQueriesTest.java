@@ -95,7 +95,7 @@ public class SpatialQueriesTest extends RemoteClientTest {
         store.getDatabaseCommands().putIndex("FindByLatLng", indexDefinition);
 
         // wait until the index is built
-        session.advanced().luceneQuery(DummyGeoDoc.class, "FindByLatLng")
+        session.advanced().documentQuery(DummyGeoDoc.class, "FindByLatLng")
         .waitForNonStaleResults()
         .toList();
 
@@ -103,7 +103,7 @@ public class SpatialQueriesTest extends RemoteClientTest {
         double radius = 5.0;
 
         // Expected is that 5.0 will return 3 results
-        List<DummyGeoDoc> nearbyDocs = session.advanced().luceneQuery(DummyGeoDoc.class, "FindByLatLng")
+        List<DummyGeoDoc> nearbyDocs = session.advanced().documentQuery(DummyGeoDoc.class, "FindByLatLng")
           .withinRadiusOf(radius, lat, lng)
           .waitForNonStaleResults()
           .toList();
@@ -132,7 +132,7 @@ public class SpatialQueriesTest extends RemoteClientTest {
 
         store.getDatabaseCommands().putIndex("FindByLatLng", indexDefinition);
         // wait until the index is built
-        session.advanced().luceneQuery(DummyGeoDoc.class, "FindByLatLng")
+        session.advanced().documentQuery(DummyGeoDoc.class, "FindByLatLng")
         .waitForNonStaleResults()
         .toList();
 
@@ -140,7 +140,7 @@ public class SpatialQueriesTest extends RemoteClientTest {
 
         // Find within 8 miles.
         // We should find both my house and the gym.
-        List<DummyGeoDoc> matchesWithinMiles = session.advanced().luceneQuery(DummyGeoDoc.class, "FindByLatLng")
+        List<DummyGeoDoc> matchesWithinMiles = session.advanced().documentQuery(DummyGeoDoc.class, "FindByLatLng")
           .withinRadiusOf(radius, myHouse.getLatitude(), myHouse.getLongitude(), SpatialUnits.MILES)
           .waitForNonStaleResults()
           .toList();
@@ -149,7 +149,7 @@ public class SpatialQueriesTest extends RemoteClientTest {
 
         // Find within 8 kilometers.
         // We should find only my house, since the gym is ~11 kilometers out.
-        List<DummyGeoDoc> matchesWithinKilometers =  session.advanced().luceneQuery(DummyGeoDoc.class, "FindByLatLng")
+        List<DummyGeoDoc> matchesWithinKilometers =  session.advanced().documentQuery(DummyGeoDoc.class, "FindByLatLng")
           .withinRadiusOf(radius, myHouse.getLatitude(), myHouse.getLongitude(), SpatialUnits.KILOMETERS)
           .waitForNonStaleResults()
           .toList();

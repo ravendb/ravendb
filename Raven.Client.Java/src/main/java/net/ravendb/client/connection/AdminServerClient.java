@@ -101,9 +101,9 @@ public class AdminServerClient implements IAdminDatabaseCommands, IGlobalAdminDa
 
 
   @Override
-  public void startBackup(String backupLocation, DatabaseDocument databaseDocument) {
+  public void startBackup(String backupLocation, DatabaseDocument databaseDocument, String databaseName) {
     Reference<RavenJObject> backupSettingsRef = new Reference<>();
-    HttpJsonRequest request = adminRequest.startBackup(backupLocation, databaseDocument, backupSettingsRef);
+    HttpJsonRequest request = adminRequest.startBackup(backupLocation, databaseDocument, databaseName, backupSettingsRef);
 
     request.write(backupSettingsRef.value.toString());
     request.executeRequest();

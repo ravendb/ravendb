@@ -63,7 +63,7 @@ public class SpatialTest2Test extends RemoteClientTest {
         .toList();
 
         // Let's search within a 150km radius
-        List<Entity> results = session.advanced().luceneQuery(Entity.class, EntitiesByLocation.class)
+        List<Entity> results = session.advanced().documentQuery(Entity.class, EntitiesByLocation.class)
           .withinRadiusOf(150000 * 0.000621, 45.831909, -73.810322)
           // This is less than 1km from the entity
           .sortByDistance()
@@ -73,7 +73,7 @@ public class SpatialTest2Test extends RemoteClientTest {
         assertEquals(1, results.size());
 
         // Let's search within a 15km radius
-        results = session.advanced().luceneQuery(Entity.class, EntitiesByLocation.class)
+        results = session.advanced().documentQuery(Entity.class, EntitiesByLocation.class)
           .withinRadiusOf(15000 * 0.000621, 45.831909, -73.810322)
           // This is less than 1km from the entity
           .sortByDistance()
@@ -83,7 +83,7 @@ public class SpatialTest2Test extends RemoteClientTest {
         assertEquals(1, results.size());
 
         // Let's search within a 1.5km radius
-        results = session.advanced().luceneQuery(Entity.class, EntitiesByLocation.class)
+        results = session.advanced().documentQuery(Entity.class, EntitiesByLocation.class)
           .withinRadiusOf(1500 * 0.000621, 45.831909, -73.810322)
           // This is less than 1km from the entity
           .sortByDistance()

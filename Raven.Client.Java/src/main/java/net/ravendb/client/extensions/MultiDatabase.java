@@ -39,6 +39,21 @@ public class MultiDatabase {
     }
   }
 
+  /*TODO
+   * /// <summary>
+        ///  Returns database url (system or non-system) based on system or non-system DB url.
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public static string GetDatabaseUrl(string url, string database)
+        {
+            if (database == Constants.SystemDatabase)
+            {
+                return GetRootDatabaseUrl(url);
+            }
+            return GetRootDatabaseUrl(url) + "/databases/" + database + "/";
+        }
+   */
   public static String getRootDatabaseUrl(String url) {
     int indexOfDatabases = url.indexOf("/databases/");
     if (indexOfDatabases != -1) {
