@@ -236,11 +236,6 @@ body {
   display: inline-block;
   vertical-align: middle;
 }
-
-#editTransformerContainer .transformer {
-  height: 600px;
-}
-
 #editIndex .map {
   height: 120px;
 }
@@ -254,27 +249,6 @@ body {
 #queryContainer .form-horizontal {
   overflow: hidden auto;
 }
-
-#csvImportContainer .fileinputs {
-    position: relative;
-}
-
-#csvImportContainer .fakefile {
-	position: absolute;
-	top: 0px;
-	left: 0px;
-	z-index: 1;
-}
-
-#csvImportContainer .file {
-	position: relative;
-	text-align: right;
-	-moz-opacity:0 ;
-	filter:alpha(opacity: 0);
-	opacity: 0;
-	z-index: 2;
-}
-
 .ko-grid {
   /*position: absolute;
     right: 0;
@@ -369,6 +343,26 @@ body {
   -ms-text-overflow: ellipsis;
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
+}
+#editTransformerContainer .transformer {
+  height: 600px;
+}
+#csvImportContainer .fileinputs {
+  position: relative;
+}
+#csvImportContainer .fakefile {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+#csvImportContainer .file {
+  position: relative;
+  text-align: right;
+  -moz-opacity: 0 ;
+  filter: alpha(opacity: 0);
+  opacity: 0;
+  z-index: 2;
 }
 #logsContainer table,
 #alertsContainer table,
