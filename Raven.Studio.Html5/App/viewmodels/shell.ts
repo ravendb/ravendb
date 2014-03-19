@@ -87,13 +87,8 @@ class shell extends viewModelBase {
             selector: '.use-bootstrap-tooltip',
             trigger: 'hover'
         });
-
-        // TODO: implement Go to document
-        //var dataset: Twitter.Typeahead.Dataset = {
-        //    name: "test",
-        //    local: ["hello","world"]
-        //};
-
+        
+        //TODO: Move this to a knockout binding handler
         $("#goToDocInput").typeahead(
             {
             hint: true,
