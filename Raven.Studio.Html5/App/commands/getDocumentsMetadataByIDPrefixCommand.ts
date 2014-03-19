@@ -3,7 +3,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 
-class getDocementsMetadataByIDPrefixCommand extends commandBase {
+class getDocumentsMetadataByIDPrefixCommand extends commandBase {
 
     constructor(private prefix:string,private resultsAmount: number, private db: database) {
         super();
@@ -30,4 +30,4 @@ class getDocementsMetadataByIDPrefixCommand extends commandBase {
 
 }
 
-export = getDocementsMetadataByIDPrefixCommand;
+export = getDocumentsMetadataByIDPrefixCommand;

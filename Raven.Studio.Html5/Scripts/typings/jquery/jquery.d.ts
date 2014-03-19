@@ -2092,8 +2092,8 @@ interface JQuery {
      * @param handler A function to execute each time the event is triggered.
      */
     bind(eventType: string, eventData: any, handler: (eventObject: JQueryEventObject) => any): JQuery;
-
-    bind(eventType: string, handler: (a:any,b:any,c:any) => any): JQuery;
+    
+    bind(eventType: string, handler: (obj: any, datum: any, name:any) => any): JQuery;
     /**
      * Attach a handler to an event for the elements.
      * 

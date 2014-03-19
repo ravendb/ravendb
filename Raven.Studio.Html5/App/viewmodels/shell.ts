@@ -20,7 +20,7 @@ import getBuildVersionCommand = require("commands/getBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDocementsMetadataByIDPrefixCommand = require("commands/getDocementsMetadataByIDPrefixCommand");
+import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 
 
 class shell extends viewModelBase {
@@ -87,13 +87,8 @@ class shell extends viewModelBase {
             selector: '.use-bootstrap-tooltip',
             trigger: 'hover'
         });
-
-        // TODO: implement Go to document
-        //var dataset: Twitter.Typeahead.Dataset = {
-        //    name: "test",
-        //    local: ["hello","world"]
-        //};
-
+        
+        //TODO: Move this to a knockout binding handler
         $("#goToDocInput").typeahead(
             {
             hint: true,
@@ -105,7 +100,7 @@ class shell extends viewModelBase {
             displayKey: 'value',
             source: (searchTerm, callback)=> {
                 var foundDocuments;
-                new getDocementsMetadataByIDPrefixCommand(searchTerm, 25, that.activeDatabase())
+                new getDocumentsMetadataByIDPrefixCommand(searchTerm, 25, that.activeDatabase())
                     .execute()
                     .done((results: string[])=> {
                         var matches = [];

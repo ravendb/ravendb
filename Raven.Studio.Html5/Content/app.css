@@ -110,6 +110,19 @@ body {
 .indexes-container .index:hover .index-actions-container {
   display: inline-block;
 }
+.indexes-container .index-group .panel-heading {
+  padding-top: 0;
+}
+.indexes-container .index-group .panel-heading .panel-title {
+  padding-top: 15px;
+}
+.indexes-container .index-group .panel-heading .indexGroup-actions-container {
+  display: none;
+  padding-top: 5px;
+}
+.indexes-container .index-group .panel-heading:hover .indexGroup-actions-container {
+  display: inline-block;
+}
 .settings-container {
   margin-top: 10px;
 }
