@@ -20,7 +20,7 @@ import getBuildVersionCommand = require("commands/getBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDocementsMetadataByIDPrefixCommand = require("commands/getDocementsMetadataByIDPrefixCommand");
+import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 
 
 class shell extends viewModelBase {
@@ -100,7 +100,7 @@ class shell extends viewModelBase {
             displayKey: 'value',
             source: (searchTerm, callback)=> {
                 var foundDocuments;
-                new getDocementsMetadataByIDPrefixCommand(searchTerm, 25, that.activeDatabase())
+                new getDocumentsMetadataByIDPrefixCommand(searchTerm, 25, that.activeDatabase())
                     .execute()
                     .done((results: string[])=> {
                         var matches = [];
