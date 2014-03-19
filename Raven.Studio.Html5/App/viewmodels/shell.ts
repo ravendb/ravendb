@@ -20,6 +20,8 @@ import getBuildVersionCommand = require("commands/getBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
+import getDocementsMetadataByIDPrefixCommand = require("commands/getDocementsMetadataByIDPrefixCommand");
+
 
 class shell extends viewModelBase {
     private router = router;
@@ -35,9 +37,11 @@ class shell extends viewModelBase {
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
 
+    DocumentPrefix = ko.observable<String>();
+    
+
     constructor() {
         super();
-
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
 
@@ -70,8 +74,9 @@ class shell extends viewModelBase {
 
     // Called by Durandal when shell.html has been put into the DOM.
     attached() {
+        var that = this;
         // The view must be attached to the DOM before we can hook up keyboard shortcuts.
-        jwerty.key("ctrl+alt+n", e => {
+        jwerty.key("ctrl+alt+n", e=> {
             e.preventDefault();
             this.newDocument();
         });
@@ -88,7 +93,41 @@ class shell extends viewModelBase {
         //    name: "test",
         //    local: ["hello","world"]
         //};
-        //$("#goToDocInput").typeahead(dataset);
+
+        $("#goToDocInput").typeahead(
+            {
+            hint: true,
+            highlight: true,
+            minLength: 1
+        },
+        {
+            name: 'Documents',
+            displayKey: 'value',
+            source: (searchTerm, callback)=> {
+                var foundDocuments;
+                new getDocementsMetadataByIDPrefixCommand(searchTerm, 25, that.activeDatabase())
+                    .execute()
+                    .done((results: string[])=> {
+                        var matches = [];
+                        $.each(results, (i, str)=> {
+                            matches.push({ value: str, editHref: appUrl.forEditDoc(str, null, null, that.activeDatabase()) });
+                        });
+                        callback(matches);
+                    })
+                    .fail(callback(['']));
+
+            },
+            templates: {
+                suggestion: Handlebars.compile(['<p><a><strong>{{value}}</a></strong>'].join())
+            }
+
+
+            });
+
+
+        $('#goToDocInput').bind('typeahead:selected', (obj, datum, name) => {
+            router.navigate(datum.editHref);
+        });
 
     }
 

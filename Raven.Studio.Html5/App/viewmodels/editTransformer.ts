@@ -6,7 +6,6 @@ import saveTransformerCommand = require("commands/saveTransformerCommand");
 import getSingleTransformerCommand = require("commands/getSingleTransformerCommand");
 import deleteTransformerCommand = require("commands/deleteTransformerCommand");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
-import popoverBindingHandler = require("common/popoverBindingHandler");
 import deleteTransformerConfirm = require("viewmodels/deleteTransformerConfirm");
 import saveTransformerWithNewNameConfirm = require("viewmodels/saveTransformerWithNewNameConfirm");
 import dialog = require("plugins/dialog");
