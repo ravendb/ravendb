@@ -2,6 +2,7 @@
 
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
+using Raven.Database.Util;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
@@ -380,6 +381,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams)
 		{
 			var scheduledReductionsByViewAndLevelAndReduceKey = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
+            var deleter = new ScheduledReductionDeleter(getItemsToReduceParams.ItemsToDelete);
 
 			var seenLocally = new HashSet<Tuple<string, int>>();
 			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys.ToArray())
@@ -399,19 +401,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						ushort version;
 						var value = LoadJson(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
 
-						var indexFromDb = value.Value<int>("view");
-						var levelFromDb = value.Value<int>("level");
 						var reduceKeyFromDb = value.Value<string>("reduceKey");
-
-						if (indexFromDb != getItemsToReduceParams.Index || levelFromDb != getItemsToReduceParams.Level)
-							break;
-
-						if (string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
-							break;
 
 						var bucket = value.Value<int>("bucket");
 						var rowKey = Tuple.Create(reduceKeyFromDb, bucket);
-						var thisIsNewScheduledReductionRow = getItemsToReduceParams.ItemsToDelete.Contains(value, RavenJTokenEqualityComparer.Default) == false;
+					    var thisIsNewScheduledReductionRow = deleter.Delete(iterator.CurrentKey, value);
 						var neverSeenThisKeyAndBucket = getItemsToReduceParams.ItemsAlreadySeen.Add(rowKey);
 						if (thisIsNewScheduledReductionRow || neverSeenThisKeyAndBucket)
 						{
@@ -425,9 +419,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
 							}
 						}
 
-						if (thisIsNewScheduledReductionRow)
-							getItemsToReduceParams.ItemsToDelete.Add(value);
-
 						if (getItemsToReduceParams.Take <= 0)
 							yield break;
 					}
@@ -437,7 +428,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				getItemsToReduceParams.ReduceKeys.Remove(reduceKey);
 
 				if (getItemsToReduceParams.Take <= 0)
-					break;
+                    yield break;
 			}
 		}
 
@@ -1001,7 +992,30 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         private static string HashKey(string key)
         {
-            return Encoding.UTF8.GetString(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(key)));
+            return Convert.ToBase64String(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(key)));
         }
 	}
+
+    public class ScheduledReductionDeleter
+    {
+        private readonly ConcurrentSet<object> set;
+
+        private readonly IDictionary<Slice, object> state = new Dictionary<Slice, object>(); 
+
+        public ScheduledReductionDeleter(ConcurrentSet<object> set)
+        {
+            this.set = set;
+        }
+
+        public bool Delete(Slice key, object value)
+        {
+            if (state.ContainsKey(key))
+                return false;
+
+            state.Add(key, null);
+            set.Add(value);
+
+            return true;
+        }
+    }
 }
