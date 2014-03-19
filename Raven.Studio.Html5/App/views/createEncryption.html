@@ -8,12 +8,12 @@
             <div class="row">
                 <div class="col-md-7">
                     <div class="form-group">
-                        <label for="keyName">Select Key:</label>
-                        <input required type="text" class="form-control" id="keyName" placeholder="Key" autofocus data-bind="value: keyName">
+                        <label for="keyName">Select Key: (Base64 Encoding)</label>
+                        <input required type="text" class="form-control" id="key" placeholder="Key" autofocus data-bind="value: key" pattern="^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})([=]{1,2})?$">
                         <label for="encryptionAlgorithm">Encryption Algorithm:</label>
                         <select required data-bind="options: ['DESC', 'R2C2', 'Rijndael', 'Triple DESC'], optionsCaption: 'Choose one...', value: encryptionAlgorithm, valueAllowUnset: false"></select>
                         <label for="encryptedIndexes">Encrypted Indexes:</label>
-                        <input data-bind="value: isEncryptedIndexes" type="checkbox" class="form-control" id="isEncryptedIndexes">
+                        <input data-bind="checked: isEncryptedIndexes" type="checkbox" id="isEncryptedIndexes">
                     </div>
                 </div>
             </div>

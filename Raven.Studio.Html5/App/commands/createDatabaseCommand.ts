@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 
 class createDatabaseCommand extends commandBase {
 
-    constructor(private databaseName: string, private activeBundles: string[], private encriptionSettings: Object) {
+    constructor(private databaseName: string, private activeBundles: string[], private securedSettings: {}) {
         super();
 
         if (!databaseName) {
@@ -20,7 +20,7 @@ class createDatabaseCommand extends commandBase {
                 "Raven/DataDir": "~\\Databases\\" + this.databaseName,
                 "Raven/ActiveBundles": this.activeBundles.join(";")
             },
-            "SecuredSettings": this.encriptionSettings, // TODO: based on the selected bundles, we may need to include additional settings here
+            "SecuredSettings": this.securedSettings, // TODO: based on the selected bundles, we may need to include additional settings here
             "Disabled": false
         };
 

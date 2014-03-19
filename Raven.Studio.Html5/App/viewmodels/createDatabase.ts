@@ -22,6 +22,8 @@ class createDatabase extends dialogViewModelBase {
     isPeriodicBackupBundleEnabled = ko.observable(true); // Old Raven Studio has this enabled by default
     isScriptedIndexBundleEnabled = ko.observable(false);
 
+    private encryptionData = new Object();
+
     constructor() {
         super();
     }
@@ -42,68 +44,27 @@ class createDatabase extends dialogViewModelBase {
         // Next needs to configure bundle settings, if we've selected some bundles.
         // We haven't yet implemented bundle configuration, so for now we're just 
         // creating the database.
+        /*var self = this;
         var databaseName = this.databaseName();
-        if (this.isEncryptionBundleEnabled()) {
 
-            var createEncryptionViewModel: createEncryption = new createEncryption();
-            createEncryptionViewModel
-                .creationEncryption
-                .done((keyName: string, encryptionAlgorithm: string, isEncryptedIndexes: string)=> {
-                    var encriptionSettings: string[] = [];
-                    encriptionSettings.push(keyName, encryptionAlgorithm, isEncryptedIndexes);
+        new createDatabaseCommand(databaseName, self.getActiveBundles(), this.encryptionData)
+            .execute()
+            .fail(response=> {
+                self.creationTask.reject(response);
+            })
+            .done(result=> {
+                self.creationTask.resolve(databaseName);
+                self.creationTaskStarted = true;
+                dialog.close(self);
+            });*/
 
-                    var data = {
-                        'Raven/Encryption/Key': keyName,
-                        'Raven/Encryption/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
-                        'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
-                    };                    
-
-                    this.createDB(databaseName, data);
-                });
-
-            dialog.close(this);
-            app.showDialog(createEncryptionViewModel);
-        } else {
-            this.createDB(databaseName, null);
-        }
-    }
-
-    private getEncryptionAlgorithmFullName(encrytion: string) {
-        var fullEncryptionName: string = null;
-        switch (encrytion)
-        {
-            case "DES":
-                fullEncryptionName = "System.Security.Cryptography.DESCryptoServiceProvider, mscorlib";
-                break;
-            case "R2C2":
-                fullEncryptionName = "System.Security.Cryptography.RC2CryptoServiceProvider, mscorlib";
-                break;
-            case "Rijndael":
-                fullEncryptionName = "System.Security.Cryptography.RijndaelManaged, mscorlib";
-                break;
-            default: //case "Triple DESC":
-                fullEncryptionName = "System.Security.Cryptography.TripleDESCryptoServiceProvider, mscorlib";
-        }
-        return fullEncryptionName;
-    }
-
-    private createDB(databaseName: string, encryptionSettings: Object) {
-        var createDbCommand;
-        try {
-        createDbCommand = new createDatabaseCommand(databaseName, this.getActiveBundles(), encryptionSettings);
-        } catch (ex) {
-            this.creationTask.reject(ex);
-            return;
-        }
-        debugger;
-        var createDbTask = createDbCommand.execute();
-        createDbTask.done(() => this.creationTask.resolve(databaseName));
-        createDbTask.fail(response => this.creationTask.reject(response));
+        var databaseName = this.databaseName();
         this.creationTaskStarted = true;
-        if (dialog.isOpen) {
-            dialog.close(this);
-        }
+        debugger;
+        dialog.close(this, { databaseName: databaseName, bundles: this.getActiveBundles() });
     }
+
+
 
     toggleCompressionBundle() {
         this.isCompressionBundleEnabled.toggle();
@@ -111,6 +72,29 @@ class createDatabase extends dialogViewModelBase {
 
     toggleEncryptionBundle() {
         this.isEncryptionBundleEnabled.toggle();
+        /*if (self.isEncryptionBundleEnabled() == true) {
+            var createEncryptionViewModel: createEncryption = new createEncryption();
+            createEncryptionViewModel
+                .creationEncryption
+                .fail(
+                dialogResult => {
+                    self.isEncryptionBundleEnabled.toggle();
+                    self.encryptionData = null;
+                    $('#encryptionCheckbox').removeClass('active');
+                })
+                .done((keyName: string, encryptionAlgorithm: string, isEncryptedIndexes: string) => {
+                    var encriptionSettings: string[] = [];
+                    encriptionSettings.push(keyName, encryptionAlgorithm, isEncryptedIndexes);
+
+                    self.encryptionData = {
+                        'Raven/Encryption/Key': keyName,
+                        'Raven/Encryption/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
+                        'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
+                    };
+                });
+
+            app.showDialog(createEncryptionViewModel);
+        }*/
     }
 
     toggleExpirationBundle() {
