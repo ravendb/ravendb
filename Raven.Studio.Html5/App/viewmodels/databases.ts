@@ -7,6 +7,8 @@ import getDatabasesCommand = require("commands/getDatabasesCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import deleteDatabaseConfirm = require("viewmodels/deleteDatabaseConfirm");
 import createDatabase = require("viewmodels/createDatabase");
+import createDatabaseCommand = require("commands/createDatabaseCommand");
+import createEncryption = require("viewmodels/createEncryption");
 
 class databases extends viewModelBase {
 
@@ -69,9 +71,76 @@ class databases extends viewModelBase {
             var createDatabaseViewModel: createDatabase = new createDatabase();
             createDatabaseViewModel
                 .creationTask
-                .done((databaseName: string) => this.databases.unshift(new database(databaseName)));
-            app.showDialog(createDatabaseViewModel);
+                .done((databaseName: string) => {
+                    //debugger;
+                    //this.databases.unshift(new database(databaseName));
+                });
+            app.showDialog(createDatabaseViewModel).done((dataArray) => {
+                debugger;
+                var databaseName = dataArray.databaseName;
+                var bundles = dataArray.bundles;
+                var securedSettings = {};
+                var deffered = $.Deferred();
+                debugger; 
+                if (bundles.indexOf("Encryption") != -1) {
+                    var createEncryptionViewModel: createEncryption = new createEncryption();
+                    createEncryptionViewModel
+                        .creationEncryption
+                        .done((keyName: string, encryptionAlgorithm: string, isEncryptedIndexes: string) => {
+                            var encriptionSettings: string[] = [];
+                            encriptionSettings.push(keyName, encryptionAlgorithm, isEncryptedIndexes);
+
+                            securedSettings = {
+                                'Raven/Encryption/Key': keyName,
+                                'Raven/Encryption/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
+                                'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
+                            };
+                        deffered.resolve(securedSettings);
+                    });
+                    app.showDialog(createEncryptionViewModel);
+                } else {
+                    deffered.resolve({});
+                }
+
+                deffered.done(()=> {
+                    this.createDB(databaseName, bundles, securedSettings)
+                        .done(()=> {
+                            this.databases.unshift(new database(databaseName));
+                        });
+                });
+            });;
         });
+    }
+
+    private createDB(databaseName: string, bundles: string[], securedSettings: {}) {
+        var self = this;
+        return new createDatabaseCommand(databaseName, bundles, securedSettings)
+            .execute()
+            .fail(response=> {
+                //self.creationTask.reject(response);
+            })
+            .done(result=> {
+                //self.creationTask.resolve(databaseName);
+                //dialog.close(self);
+            });
+    }
+
+    private getEncryptionAlgorithmFullName(encrytion: string) {
+        var fullEncryptionName: string = null;
+        switch (encrytion) {
+            case "DES":
+                fullEncryptionName = "System.Security.Cryptography.DESCryptoServiceProvider, mscorlib";
+                break;
+            case "R2C2":
+                fullEncryptionName = "System.Security.Cryptography.RC2CryptoServiceProvider, mscorlib";
+                break;
+            case "Rijndael":
+                fullEncryptionName = "System.Security.Cryptography.RijndaelManaged, mscorlib";
+                break;
+            default: //case "Triple DESC":
+                fullEncryptionName = "System.Security.Cryptography.TripleDESCryptoServiceProvider, mscorlib";
+        }
+        return fullEncryptionName;
     }
 
     fetchStats(db: database) {
@@ -94,7 +163,7 @@ class databases extends viewModelBase {
     filterDatabases(filter: string) {
         var filterLower = filter.toLowerCase();
         this.databases().forEach(d=> {
-            var isMatch = !filter || d.name.toLowerCase().indexOf(filterLower) >= 0;
+            var isMatch = !filter || (d.name.toLowerCase().indexOf(filterLower) >= 0);
             d.isVisible(isMatch);
         });
     }
