@@ -1190,6 +1190,14 @@
     <EmbeddedResource Include="Server\Assets\EmbeddedData\Northwind.dump" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Owin.EmbeddedHost\src\Owin.EmbeddedHost\Owin.EmbeddedHost.csproj">
+      <Project>{E5D0CB49-C59A-42C1-BD6C-09DAF8C37578}</Project>
+      <Name>Owin.EmbeddedHost</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Owin.HttpMessageHandler\src\Owin.HttpMessageHandler%28portable-net45+win8%29\Owin.HttpMessageHandler%28portable-net45+win8%29.csproj">
+      <Project>{55A33CA7-FDF8-4326-9CAC-93D4DF2155AC}</Project>
+      <Name>Owin.HttpMessageHandler%28portable-net45+win8%29</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>

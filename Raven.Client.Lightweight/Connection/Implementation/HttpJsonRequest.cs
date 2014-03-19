@@ -46,7 +46,7 @@ namespace Raven.Client.Connection
 		internal readonly string Url;
 		internal readonly string Method;
 
-		private readonly WebRequestHandler handler;
+		private readonly HttpMessageHandler handler;
 		internal volatile HttpClient httpClient;
 
 		private readonly NameValueCollection headers = new NameValueCollection();
@@ -55,12 +55,13 @@ namespace Raven.Client.Connection
 		// avoid the potential for clearing the cache from a cached item
 		internal CachedRequest CachedRequestDetails;
 		private readonly HttpJsonRequestFactory factory;
+        private Action disableAuthentication = () => { };
 		private readonly IHoldProfilingInformation owner;
 		private readonly Convention conventions;
 		private string postedData;
 		private bool isRequestSentToServer;
 
-		private Stopwatch sp = Stopwatch.StartNew();
+		private readonly Stopwatch sp = Stopwatch.StartNew();
 		internal bool ShouldCacheRequest;
 		private Stream postedStream;
 	    private RavenJToken postedToken;
@@ -94,11 +95,26 @@ namespace Raven.Client.Connection
 			owner = requestParams.Owner;
 			conventions = requestParams.Convention;
 
-			handler = new WebRequestHandler
-			{
-				UseDefaultCredentials = _credentials.HasCredentials() == false,
-				Credentials = requestParams.Credentials.Credentials,
-			};
+		    if (factory.httpMessageHandler != null)
+		    {
+		        handler = factory.httpMessageHandler;
+		    }
+		    else
+		    {
+                var webRequestHandler = new WebRequestHandler
+			    {
+				    UseDefaultCredentials = _credentials.HasCredentials() == false,
+				    Credentials = requestParams.Credentials.Credentials,
+			    };
+		        disableAuthentication = () =>
+		        {
+		            webRequestHandler.Credentials = null;
+		            webRequestHandler.UseDefaultCredentials = false;
+		        };
+		        handler = webRequestHandler;
+		    }
+
+			
 			httpClient = new HttpClient(handler);
 
 			if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
@@ -126,8 +142,7 @@ namespace Raven.Client.Connection
 
 		public void DisableAuthentication()
 		{
-			handler.Credentials = null;
-			handler.UseDefaultCredentials = false;
+		    disableAuthentication();
 			disabledAuthRetries = true;
 		}
 
@@ -416,13 +431,14 @@ namespace Raven.Client.Connection
 			await forbiddenResponseAsync;
 		}
 
-		private async Task RecreateHttpClient(Action<HttpClient> configureHttpClient)
+		private Task RecreateHttpClient(Action<HttpClient> configureHttpClient)
 		{
-			var newHttpClient = new HttpClient(new HttpClientHandler
+            throw new NotImplementedException("DH TODO");
+			/*var newHttpClient = new HttpClient(new HttpClientHandler
 			{
 				Credentials = handler.Credentials,
 			});
-			//HttpJsonRequestHelper.CopyHeaders(webRequest, newWebRequest);
+
 			configureHttpClient(newHttpClient);
 			httpClient = newHttpClient;
 			isRequestSentToServer = false;
@@ -439,7 +455,7 @@ namespace Raven.Client.Connection
             if (postedStream != null)
             {
                 postedStream.Position = 0;
-            }
+            }*/
 		}
 
 		private async Task<RavenJToken> ReadJsonInternalAsync()
