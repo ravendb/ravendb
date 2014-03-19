@@ -102,6 +102,9 @@
     <Reference Include="Jint.Raven">
       <HintPath>..\SharedLibs\Jint.Raven.dll</HintPath>
     </Reference>
+    <Reference Include="Kent.Boogaart.HelperTrinity">
+      <HintPath>..\packages\Kent.Boogaart.HelperTrinity.1.4.0.0\lib\net40\Kent.Boogaart.HelperTrinity.dll</HintPath>
+    </Reference>
     <Reference Include="Kent.Boogaart.KBCsv">
       <HintPath>..\packages\Kent.Boogaart.KBCsv.1.4.0.0\lib\net40\Kent.Boogaart.KBCsv.dll</HintPath>
     </Reference>
