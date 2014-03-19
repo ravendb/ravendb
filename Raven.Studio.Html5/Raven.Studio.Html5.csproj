@@ -71,7 +71,6 @@
     <TypeScriptCompile Include="App\commands\saveIndexDefinitionCommand.ts" />
     <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
-    <TypeScriptCompile Include="App\common\popoverBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
     <TypeScriptCompile Include="App\models\index.ts" />
