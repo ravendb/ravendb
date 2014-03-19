@@ -11,7 +11,7 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Storage
 {
-	public class IncrementalBackupRestore : TransactionalStorageTestBase
+	public class IncrementalBackupRestore : RavenTest
 	{
 		private readonly string DataDir;
 		private readonly string BackupDir;

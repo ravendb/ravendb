@@ -14,7 +14,7 @@ using Xunit.Extensions;
 
 namespace Raven.Tests
 {
-	public class IncrementalBackupTest : TransactionalStorageTestBase
+	public class IncrementalBackupTest : RavenTest
 	{
 		private const string BackupDir = @".\BackupDatabase\";
 
