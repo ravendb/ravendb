@@ -23,7 +23,6 @@ class saveTransformerWithNewNameConfirm extends dialogViewModelBase {
     }
 
     saveTransformer() {
-        debugger
         new saveTransformerCommand(this.savedTransformer, this.db).execute().done((trans: transformer) => this.saveTask.resolve(trans));
         dialog.close(this);
     }

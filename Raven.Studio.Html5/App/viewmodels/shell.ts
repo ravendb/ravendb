@@ -32,6 +32,8 @@ class shell extends viewModelBase {
     windowHeightObservable: KnockoutObservable<number>;
     appUrls: computedAppUrls;
     recordedErrors = ko.observableArray<alertArgs>();
+    newIndexUrl = appUrl.forCurrentDatabase().newIndex;
+    newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
 
     constructor() {
         super();
@@ -87,6 +89,7 @@ class shell extends viewModelBase {
         //    local: ["hello","world"]
         //};
         //$("#goToDocInput").typeahead(dataset);
+
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -196,6 +199,21 @@ class shell extends viewModelBase {
     }
 
     modelPolling() {
+        new getDatabasesCommand()
+            .execute()
+            .done(results => {
+                ko.utils.arrayForEach(results, (result:database) => {
+                    var existingDb = this.databases().first(d=> {
+                        return d.name == result.name;
+                    });
+                if (!existingDb ) {
+                    this.databases.unshift(result);
+                    }
+                
+                });
+
+        });
+
         var db = this.activeDatabase();
         if (db) {
             new getDatabaseStatsCommand(db)
