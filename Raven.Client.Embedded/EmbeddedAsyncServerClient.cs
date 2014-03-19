@@ -299,10 +299,14 @@ namespace Raven.Client.Embedded
 			throw new NotSupportedException();
 		}
 
-		public Task<BuildNumber> GetBuildNumberAsync()
-		{
-			return new CompletedTask<BuildNumber>(databaseCommands.GetBuildNumber());			
-		}
+        public Task<BuildNumber> GetBuildNumberAsync()
+        {
+            return new CompletedTask<BuildNumber>(databaseCommands.GetBuildNumber());
+        }
+        public Task<IndexMergeResults> GetIndexMergeSuggestionsAsync()
+        {
+            return new CompletedTask<IndexMergeResults>(databaseCommands.GetIndexMergeSuggestions());
+        }
 
 		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, string databaseName)
 		{

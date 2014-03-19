@@ -1117,6 +1117,16 @@ namespace Raven.Client.Connection.Async
             var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 			return convention.CreateSerializer().Deserialize<BuildNumber>(new RavenJTokenReader(result));
 		}
+        public async Task<IndexMergeResults> GetIndexMergeSuggestionsAsync()
+        {
+            var request =
+                jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/debug/suggest-index-merge").NoCache(),
+                                                                                         "GET", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
+            request.AddOperationHeaders(OperationsHeaders);
+
+            var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+            return convention.CreateSerializer().Deserialize<IndexMergeResults>(new RavenJTokenReader(result));
+        }
 
 		public Task StartIndexingAsync()
 		{
@@ -1629,14 +1639,18 @@ namespace Raven.Client.Connection.Async
 					throw;
 				responseException = e;
 			}
-			var conflictsDoc = RavenJObject.Load(new BsonReader(await responseException.Response.GetResponseStreamWithHttpDecompression()));
-			var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
-			throw new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the attachment will be accessible", true)
-			{
-				ConflictedVersionIds = conflictIds,
-				Etag = responseException.Etag
-			};
+            using (var stream = await responseException.Response.GetResponseStreamWithHttpDecompression())
+            {
+                var conflictsDoc = stream.ToJObject();
+                var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+
+                throw new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the attachment will be accessible", true)
+                {
+                    ConflictedVersionIds = conflictIds,
+                    Etag = responseException.Etag
+                };
+            }
 		}
 
 

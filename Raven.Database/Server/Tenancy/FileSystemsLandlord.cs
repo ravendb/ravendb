@@ -120,12 +120,12 @@ namespace Raven.Database.Server.Tenancy
 
             fileSystem = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
             {
-                var documentDatabase = new RavenFileSystem(config, transportState);
+                var fs = new RavenFileSystem(config, transportState, tenantId);
                 AssertLicenseParameters();
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
                 LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
-                return documentDatabase;
+                return fs;
             }).ContinueWith(task =>
             {
                 if (task.Status == TaskStatus.Faulted) // this observes the task exception
@@ -170,6 +170,16 @@ namespace Raven.Database.Server.Tenancy
             if (TryGetOrCreateResourceStore(name, out db))
                 return await db;
             return null;
+        }
+
+        public void ForAllFileSystems(Action<RavenFileSystem> action)
+        {
+            foreach (var value in ResourcesStoresCache
+                .Select(db => db.Value)
+                .Where(value => value.Status == TaskStatus.RanToCompletion))
+            {
+                action(value.Result);
+            }
         }
     }
 }

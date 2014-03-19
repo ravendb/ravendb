@@ -32,8 +32,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void DeletingDocumentInTransactionInNotVisibleBeforeCommit()
 		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(db);
 			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Documents.Delete("ayende", null, transactionInformation);
@@ -43,8 +42,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void DeletingDocumentInTransactionInNotFoundInSameTransactionBeforeCommit()
 		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(db);
 			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Documents.Delete("ayende", null, transactionInformation);
@@ -55,8 +53,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void DeletingDocumentAndThenAddingDocumentInSameTransactionCanWork()
 		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(db);
 			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Documents.Delete("ayende", null, transactionInformation);
@@ -71,8 +68,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void DeletingDocumentInTransactionInRemovedAfterCommit()
 		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(db);
 			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Documents.Delete("ayende", null, transactionInformation);

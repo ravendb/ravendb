@@ -12,17 +12,20 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Web;
+
 using Microsoft.Isam.Esent.Interop;
+
 using Raven.Abstractions.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Server.RavenFS.Storage.Exceptions;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc;
 using Raven.Database.Server.RavenFS.Util;
 
-namespace Raven.Database.Server.RavenFS.Storage
+namespace Raven.Database.Server.RavenFS.Storage.Esent
 {
-	public class StorageActionsAccessor : IDisposable
-	{
+    public class StorageActionsAccessor : IStorageActionsAccessor
+    {
 		private readonly JET_DBID database;
 		private readonly Session session;
 		private readonly TableColumnsCache tableColumnsCache;
@@ -514,7 +517,7 @@ namespace Raven.Database.Server.RavenFS.Storage
 			using (var update = new Update(session, Files, JET_prep.Replace))
 			{
 				var totalSize = GetTotalSize() ?? 0;
-				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["total_size"],
+                Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["total_size"],
 				              BitConverter.GetBytes(Math.Abs(totalSize)));
 
 				update.Save();
@@ -539,43 +542,53 @@ namespace Raven.Database.Server.RavenFS.Storage
 
 		public void RenameFile(string filename, string rename, bool commitPeriodically = false)
 		{
-			Api.JetSetCurrentIndex(session, Usage, "by_name_and_pos");
-			Api.MakeKey(session, Usage, filename, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, Usage, SeekGrbit.SeekGE))
-			{
-				var count = 0;
-				do
-				{
-					var name = Api.RetrieveColumnAsString(session, Usage, tableColumnsCache.UsageColumns["name"]);
-					if (name != filename)
-						break;
+		    try
+		    {
+                Api.JetSetCurrentIndex(session, Usage, "by_name_and_pos");
+                Api.MakeKey(session, Usage, filename, Encoding.Unicode, MakeKeyGrbit.NewKey);
+                if (Api.TrySeek(session, Usage, SeekGrbit.SeekGE))
+                {
+                    var count = 0;
+                    do
+                    {
+                        var name = Api.RetrieveColumnAsString(session, Usage, tableColumnsCache.UsageColumns["name"]);
+                        if (name != filename)
+                            break;
 
-					using (var update = new Update(session, Usage, JET_prep.Replace))
-					{
-						Api.SetColumn(session, Usage, tableColumnsCache.UsageColumns["name"], rename, Encoding.Unicode);
+                        using (var update = new Update(session, Usage, JET_prep.Replace))
+                        {
+                            Api.SetColumn(session, Usage, tableColumnsCache.UsageColumns["name"], rename, Encoding.Unicode);
 
-						update.Save();
-					}
+                            update.Save();
+                        }
 
-					if (commitPeriodically && count++ > 1000)
-					{
-						PulseTransaction();
-						count = 0;
-					}
-				} while (Api.TryMoveNext(session, Usage));
-			}
+                        if (commitPeriodically && count++ > 1000)
+                        {
+                            PulseTransaction();
+                            count = 0;
+                        }
+                    } while (Api.TryMoveNext(session, Usage));
+                }
 
-			Api.JetSetCurrentIndex(session, Files, "by_name");
-			Api.MakeKey(session, Files, filename, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
-				throw new FileNotFoundException("Could not find file: " + filename);
+                Api.JetSetCurrentIndex(session, Files, "by_name");
+                Api.MakeKey(session, Files, filename, Encoding.Unicode, MakeKeyGrbit.NewKey);
+                if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
+                    throw new FileNotFoundException("Could not find file: " + filename);
 
-			using (var update = new Update(session, Files, JET_prep.Replace))
-			{
-				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], rename, Encoding.Unicode);
+                using (var update = new Update(session, Files, JET_prep.Replace))
+                {
+                    Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], rename, Encoding.Unicode);
 
-				update.Save();
-			}
+                    update.Save();
+                }
+		    }
+		    catch (Exception e)
+		    {
+		        if (e is EsentKeyDuplicateException)
+                    throw new FileExistsException(string.Format("Cannot rename '{0}' to '{1}'. Rename '{1}' exists.", filename, rename), e);
+
+		        throw;
+		    }
 		}
 
 		public NameValueCollection GetConfig(string name)
@@ -716,13 +729,14 @@ namespace Raven.Database.Server.RavenFS.Storage
 			}
 
 			int count = 0;
-			while (Api.TryMoveNext(session, Config) && ++count < pageSize)
+			while (Api.TryMoveNext(session, Config) && count < pageSize)
 			{
 				yield return Api.RetrieveColumnAsString(session, Config, tableColumnsCache.ConfigColumns["name"]);
+			    count++;
 			}
 		}
 
-		internal bool ConfigExists(string name)
+		public bool ConfigExists(string name)
 		{
 			Api.JetSetCurrentIndex(session, Config, "by_name");
 			Api.MakeKey(session, Config, name, Encoding.Unicode, MakeKeyGrbit.NewKey);

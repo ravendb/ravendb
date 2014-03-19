@@ -37,36 +37,21 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
             foreach (var fileSystemName in fileSystemNames)
             {
-                var fsStats = new FileSystemStats()
-                {
-                    Name = fileSystemName,
-                };
-
                 Task<RavenFileSystem> fsTask;
-                if (FileSystemsLandlord.TryGetFileSystem(fileSystemName, out fsTask)) // we only care about active file systems
-                {
-                    if(fsTask.IsCompleted == false)
-                        continue; // we don't care about in process of starting file systems
+                if (!FileSystemsLandlord.TryGetFileSystem(fileSystemName, out fsTask)) // we only care about active file systems
+                    continue;
 
-                    var ravenFileSystem = await fsTask;
-                    var fileCount = 0;
+                if(fsTask.IsCompleted == false)
+                    continue; // we don't care about in process of starting file systems
 
-                    ravenFileSystem.Storage.Batch(accessor =>
-                    {
-                        fileCount = accessor.GetFileCount();
-                    });
-
-                    fsStats.FileCount = fileCount;
-                    fsStats.Metrics = ravenFileSystem.CreateMetrics();
-                    fsStats.ActiveSyncs = ravenFileSystem.SynchronizationTask.Queue.Active.ToList();
-                    fsStats.PendingSyncs = ravenFileSystem.SynchronizationTask.Queue.Pending.ToList();
-                }
-
+                var ravenFileSystem = await fsTask;
+                var fsStats = ravenFileSystem.GetFileSystemStats();
                 stats.Add(fsStats);
             }
 
             return GetMessageWithObject(stats);
         }
+
 
         private string[] GetFileSystemNames()
         {

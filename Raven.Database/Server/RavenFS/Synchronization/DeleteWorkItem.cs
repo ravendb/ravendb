@@ -6,7 +6,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 {
 	public class DeleteWorkItem : SynchronizationWorkItem
 	{
-		public DeleteWorkItem(string fileName, string sourceServerUrl, TransactionalStorage storage)
+		public DeleteWorkItem(string fileName, string sourceServerUrl, ITransactionalStorage storage)
 			: base(fileName, sourceServerUrl, storage)
 		{
 		}

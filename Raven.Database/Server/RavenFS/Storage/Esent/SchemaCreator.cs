@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Text;
+
 using Microsoft.Isam.Esent.Interop;
 
-namespace Raven.Database.Server.RavenFS.Storage
+namespace Raven.Database.Server.RavenFS.Storage.Esent
 {
 	public class SchemaCreator
 	{

@@ -254,6 +254,11 @@
     <Compile Include="Bundles\PeriodicBackups\Triggers\AncestryPutTrigger.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualDeleteTrigger.cs" />
     <Compile Include="Impl\DTC\DtcNotSupportedTransactionalState.cs" />
+    <Compile Include="Indexing\IndexMerging\ChangeRootReferenceVisitor.cs" />
+    <Compile Include="Indexing\IndexMerging\IndexData.cs" />
+    <Compile Include="Indexing\IndexMerging\IndexMerger.cs" />
+    <Compile Include="Indexing\IndexMerging\IndexVisitor.cs" />
+    <Compile Include="Indexing\IndexMerging\MergeProposal.cs" />
     <Compile Include="Indexing\PrecomputedIndexing.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyDeleteTrigger.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyPutTrigger.cs" />
@@ -396,19 +401,34 @@
     <Compile Include="Server\RavenFS\Search\IndexStorage.cs" />
     <Compile Include="Server\RavenFS\Search\RavenQueryParser.cs" />
     <Compile Include="Server\RavenFS\Storage\DeleteFileOperation.cs" />
-    <Compile Include="Server\RavenFS\Storage\EsentExtension.cs" />
+    <Compile Include="Server\RavenFS\Storage\Esent\EsentExtension.cs" />
+    <Compile Include="Server\RavenFS\Storage\Exceptions\FileExistsException.cs" />
+    <Compile Include="Server\RavenFS\Storage\IStorageActionsAccessor.cs" />
+    <Compile Include="Server\RavenFS\Storage\ITransactionalStorage.cs" />
     <Compile Include="Server\RavenFS\Storage\FileAndPages.cs" />
     <Compile Include="Server\RavenFS\Storage\FileHeader.cs" />
     <Compile Include="Server\RavenFS\Storage\PageInformation.cs" />
     <Compile Include="Server\RavenFS\Storage\RenameFileOperation.cs" />
-    <Compile Include="Server\RavenFS\Storage\SchemaCreator.cs" />
+    <Compile Include="Server\RavenFS\Storage\Esent\SchemaCreator.cs" />
     <Compile Include="Server\RavenFS\Storage\SearchResults.cs" />
     <Compile Include="Server\RavenFS\Storage\SignatureReadOnlyStream.cs" />
-    <Compile Include="Server\RavenFS\Storage\StorageActionsAccessor.cs" />
-    <Compile Include="Server\RavenFS\Storage\StorageConfigurator.cs" />
+    <Compile Include="Server\RavenFS\Storage\Esent\StorageActionsAccessor.cs" />
+    <Compile Include="Server\RavenFS\Storage\Esent\StorageConfigurator.cs" />
     <Compile Include="Server\RavenFS\Storage\StorageConstants.cs" />
-    <Compile Include="Server\RavenFS\Storage\TableColumnsCache.cs" />
-    <Compile Include="Server\RavenFS\Storage\TransactionalStorage.cs" />
+    <Compile Include="Server\RavenFS\Storage\Esent\TableColumnsCache.cs" />
+    <Compile Include="Server\RavenFS\Storage\Esent\TransactionalStorage.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\IdGenerator.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Impl\Index.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Impl\IPersistenceSource.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Impl\MemoryMapPersistanceSource.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Impl\MemoryPersistanceSource.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Impl\Table.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Impl\TableBase.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Impl\Tables.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Impl\TableStorage.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\StorageActionsAccessor.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\StorageActionsBase.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\TransactionalStorage.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\ConflictArtifactManager.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\ConflictDetector.cs" />
     <Compile Include="Server\RavenFS\Synchronization\Conflictuality\ConflictResolution.cs" />
@@ -1178,6 +1198,7 @@
       <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
   <Target Name="BeforeBuild">

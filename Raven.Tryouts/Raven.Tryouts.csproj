@@ -187,6 +187,7 @@
     <None Include="app.config" />
     <None Include="NLog.config">
       <SubType>Designer</SubType>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />
   </ItemGroup>
@@ -197,6 +198,10 @@
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41ac479e-1eb2-4d23-aaf2-e4c8df1bc2ba}</Project>
       <Name>Raven.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
+      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
+      <Name>Raven.Database</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
       <Project>{14F2D508-8E06-407B-9451-97E99538E26B}</Project>
