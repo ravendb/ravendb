@@ -4,14 +4,30 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
+using Raven.Database.Data;
+using Raven.Database.Impl;
+using Raven.Database.Util;
+
 namespace Raven.Database.Actions
 {
-    public class TaskActions
+    public class TaskActions : ActionsBase
     {
-        private void ClearCompletedPendingTasks()
+        private long pendingTaskCounter;
+        private readonly ConcurrentDictionary<long, PendingTaskAndState> pendingTasks = new ConcurrentDictionary<long, PendingTaskAndState>();
+
+        public TaskActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
+            : base(database, recentTouches, uuidGenerator, log)
+        {
+        }
+
+        internal void ClearCompletedPendingTasks()
         {
             foreach (var taskAndState in pendingTasks)
             {
@@ -23,7 +39,7 @@ namespace Raven.Database.Actions
                 }
                 if (task.Exception != null)
                 {
-                    log.InfoException("Failed to execute background task " + taskAndState.Key, task.Exception);
+                    Log.InfoException("Failed to execute background task " + taskAndState.Key, task.Exception);
                 }
             }
         }
@@ -40,6 +56,12 @@ namespace Raven.Database.Actions
             });
         }
 
+        public void RemoveTask(long taskId)
+        {
+            PendingTaskAndState value;
+            pendingTasks.TryRemove(taskId, out value);
+        }
+
         public object GetTaskState(long id)
         {
             PendingTaskAndState value;
@@ -54,6 +76,36 @@ namespace Raven.Database.Actions
                 return value.State;
             }
             return null;
+        }
+
+        public void Dispose(ExceptionAggregator exceptionAggregator)
+        {
+            foreach (var pendingTaskAndState in pendingTasks.Select(shouldDispose => shouldDispose.Value))
+            {
+                exceptionAggregator.Execute(() =>
+                {
+                    try
+                    {
+#if DEBUG
+                        pendingTaskAndState.Task.Wait(3000);
+#else
+							pendingTaskAndState.Task.Wait();
+#endif
+                    }
+                    catch (Exception)
+                    {
+                        // we explictly don't care about this during shutdown
+                    }
+                });
+            }
+
+            pendingTasks.Clear();
+        }
+
+        private class PendingTaskAndState
+        {
+            public Task Task;
+            public object State;
         }
     }
 }

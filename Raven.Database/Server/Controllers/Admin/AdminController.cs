@@ -11,6 +11,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
+using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using System.Net.Http;
@@ -41,7 +42,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 }
                 else
                 {
-                    var jsonDocument = DatabasesLandlord.SystemDatabase.Get("Raven/Databases/" + Database.Name, null);
+                    var jsonDocument = DatabasesLandlord.SystemDatabase.Documents.Get("Raven/Databases/" + Database.Name, null);
                     if (jsonDocument != null)
                     {
                         backupRequest.DatabaseDocument = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
@@ -51,7 +52,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 }
             }
 
-			Database.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
+			Database.Maintenance.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
 
 			return GetEmptyMessage(HttpStatusCode.Created);		
 		}
@@ -95,7 +96,7 @@ namespace Raven.Database.Server.Controllers.Admin
 								: "A database name must be supplied if the restore location does not contain a valid Database.Document file";
 
                 restoreStatus.Add(errorMessage);
-                DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null, RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
+                DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null, RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
 
 				return GetMessageWithString(errorMessage,HttpStatusCode.BadRequest);
 			}
@@ -128,7 +129,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			string documentDataDir;
 			ravenConfiguration.DataDirectory = ResolveTenantDataDirectory(restoreRequest.DatabaseLocation, databaseName, out documentDataDir);
 
-			DatabasesLandlord.SystemDatabase.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
+			DatabasesLandlord.SystemDatabase.Documents.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
 			var defrag = "true".Equals(GetQueryStringValue("defrag"), StringComparison.InvariantCultureIgnoreCase);
 
 			await Task.Factory.StartNew(() =>
@@ -137,7 +138,7 @@ namespace Raven.Database.Server.Controllers.Admin
 					msg =>
 					{
 						restoreStatus.Add(msg);
-						DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+						DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
 							RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
 					}, defrag);
 
@@ -147,11 +148,11 @@ namespace Raven.Database.Server.Controllers.Admin
 				databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
 				databaseDocument.Id = databaseName;
 				DatabasesLandlord.Protect(databaseDocument);
-				DatabasesLandlord.SystemDatabase.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument),
+				DatabasesLandlord.SystemDatabase.Documents.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument),
 					new RavenJObject(), null);
 
 				restoreStatus.Add("The new database was created");
-				DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+				DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
 					RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
 			}, TaskCreationOptions.LongRunning);
 

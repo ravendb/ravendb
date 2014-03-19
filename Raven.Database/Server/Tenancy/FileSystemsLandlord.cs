@@ -42,7 +42,7 @@ namespace Raven.Database.Server.Tenancy
             if (initialized)
                 return;
             initialized = true;
-            systemDatabase.OnDocumentChange += (database, notification, doc) =>
+            systemDatabase.Notifications.OnDocumentChange += (database, notification, doc) =>
             {
                 if (notification.Id == null)
                     return;
@@ -70,7 +70,7 @@ namespace Raven.Database.Server.Tenancy
         {
             JsonDocument jsonDocument;
             using (systemDatabase.DisableAllTriggersForCurrentThread())
-                jsonDocument = systemDatabase.Get("Raven/FileSystems/" + tenantId, null);
+                jsonDocument = systemDatabase.Documents.Get("Raven/FileSystems/" + tenantId, null);
             if (jsonDocument == null ||
                 jsonDocument.Metadata == null ||
                 jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists) ||
@@ -148,7 +148,7 @@ namespace Raven.Database.Server.Tenancy
 
                     int nextPageStart = 0;
                     var databases =
-                        systemDatabase.GetDocumentsWithIdStartingWith("Raven/FileSystems/", null, null, 0,
+                        systemDatabase.Documents.GetDocumentsWithIdStartingWith("Raven/FileSystems/", null, null, 0,
                             numberOfAllowedFileSystems, CancellationToken.None, ref nextPageStart).ToList();
                     if (databases.Count >= numberOfAllowedFileSystems)
                         throw new InvalidOperationException(

@@ -8,13 +8,21 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 
 using Raven.Abstractions.Indexing;
-using Raven.Database.Storage;
+using Raven.Abstractions.Logging;
+using Raven.Database.Data;
+using Raven.Database.Impl;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
 {
-    public class TransformerActions
+    public class TransformerActions : ActionsBase
     {
+        public TransformerActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
+            : base(database, recentTouches, uuidGenerator, log)
+        {
+        }
+
         public RavenJArray GetTransformerNames(int start, int pageSize)
         {
             return new RavenJArray(

@@ -59,7 +59,7 @@ namespace Raven.Tests.Security
 
 			if (isApiDatabase)
 			{
-				database.Put(
+				database.Documents.Put(
 					"Raven/ApiKeys/" + apiKey.Split('/')[0],
 					null,
 					RavenJObject.FromObject(
@@ -81,7 +81,7 @@ namespace Raven.Tests.Security
 			}
 			else
 			{
-				database.Put("Raven/Authorization/WindowsSettings", null,
+				database.Documents.Put("Raven/Authorization/WindowsSettings", null,
 												   RavenJObject.FromObject(new WindowsAuthDocument
 												   {
 													   RequiredUsers = new List<WindowsAuthData>

@@ -30,7 +30,7 @@
 
 			using (var server = GetNewServer())
 			{
-				server.SystemDatabase.PutIndex(IndexName, new IndexDefinition
+				server.SystemDatabase.Indexes.PutIndex(IndexName, new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.FirstName, doc.LastName, Query = new[] { doc.FirstName, doc.LastName, doc.MiddleName } }"
 				});

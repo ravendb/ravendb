@@ -28,7 +28,7 @@ namespace Raven.Tests.Indexes
 			store = NewDocumentStore();
 			db = store.DocumentDatabase;
 
-			db.PutIndex("pagesByTitle2",
+			db.Indexes.PutIndex("pagesByTitle2",
 						new IndexDefinition
 						{
 							Map = @"
@@ -56,7 +56,7 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void Can_get_stats_for_indexing()
 		{
-			db.Put("1", Etag.Empty,
+			db.Documents.Put("1", Etag.Empty,
 				   RavenJObject.Parse(
 					@"{
 				type: 'page', 
@@ -72,7 +72,7 @@ namespace Raven.Tests.Indexes
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle2", new IndexQuery
+				docs = db.Queries.Query("pagesByTitle2", new IndexQuery
 				{
 					Query = "f:val",
 					Start = 0,
@@ -90,7 +90,7 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void Can_get_stats_for_indexing_including_errors()
 		{
-			db.Put("1", Etag.Empty,
+			db.Documents.Put("1", Etag.Empty,
 				   RavenJObject.Parse(
 					@"{
 				type: 'page', 
@@ -102,7 +102,7 @@ namespace Raven.Tests.Indexes
 				'@metadata': {'@id': 1}
 			}"),
 				   new RavenJObject(), null);
-			db.Put("2", Etag.Empty,
+			db.Documents.Put("2", Etag.Empty,
 				   RavenJObject.Parse(
 					@"{
 				type: 'page', 
@@ -118,7 +118,7 @@ namespace Raven.Tests.Indexes
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle2", new IndexQuery
+				docs = db.Queries.Query("pagesByTitle2", new IndexQuery
 				{
 					Query = "f:val",
 					Start = 0,
@@ -137,7 +137,7 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void Can_get_details_about_indexing_errors()
 		{
-			db.Put("1", Etag.Empty,
+			db.Documents.Put("1", Etag.Empty,
 				   RavenJObject.Parse(
 					@"{
 				type: 'page', 
@@ -153,7 +153,7 @@ namespace Raven.Tests.Indexes
 			QueryResult docs;
 			do
 			{
-				docs = db.Query("pagesByTitle2", new IndexQuery
+				docs = db.Queries.Query("pagesByTitle2", new IndexQuery
 				{
 					Query = "f:val",
 					Start = 0,

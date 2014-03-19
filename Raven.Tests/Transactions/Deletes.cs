@@ -34,10 +34,10 @@ namespace Raven.Tests.Transactions
 		{
             if (db.TransactionalStorage.SupportsDtc == false)
                 return;
-			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
+			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
-			db.Delete("ayende", null, transactionInformation);
-			Assert.NotNull(db.Get("ayende", null));
+			db.Documents.Delete("ayende", null, transactionInformation);
+			Assert.NotNull(db.Documents.Get("ayende", null));
 		}
 
 		[Fact]
@@ -45,10 +45,10 @@ namespace Raven.Tests.Transactions
 		{
             if (db.TransactionalStorage.SupportsDtc == false)
                 return;
-			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
+			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
-			db.Delete("ayende", null, transactionInformation);
-			Assert.Null(db.Get("ayende", transactionInformation));
+			db.Documents.Delete("ayende", null, transactionInformation);
+			Assert.Null(db.Documents.Get("ayende", transactionInformation));
 	   
 		}
 
@@ -57,14 +57,14 @@ namespace Raven.Tests.Transactions
 		{
             if (db.TransactionalStorage.SupportsDtc == false)
                 return;
-			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
+			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
-			db.Delete("ayende", null, transactionInformation);
-			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+			db.Documents.Delete("ayende", null, transactionInformation);
+			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			db.PrepareTransaction(transactionInformation.Id);
 			db.Commit(transactionInformation.Id);
 
-			Assert.Equal("rahien", db.Get("ayende", null).ToJson()["ayende"].Value<string>());
+			Assert.Equal("rahien", db.Documents.Get("ayende", null).ToJson()["ayende"].Value<string>());
 		
 		}
 
@@ -73,13 +73,13 @@ namespace Raven.Tests.Transactions
 		{
             if (db.TransactionalStorage.SupportsDtc == false)
                 return;
-			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
+			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
-			db.Delete("ayende", null, transactionInformation);
+			db.Documents.Delete("ayende", null, transactionInformation);
 			db.PrepareTransaction(transactionInformation.Id);
 			db.Commit(transactionInformation.Id);
 
-			Assert.Null(db.Get("ayende", null));
+			Assert.Null(db.Documents.Get("ayende", null));
 		
 		}
 	}

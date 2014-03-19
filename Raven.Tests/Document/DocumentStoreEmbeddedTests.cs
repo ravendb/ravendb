@@ -73,7 +73,7 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void CanResetBuiltinIndex()
 		{
-			documentStore.DocumentDatabase.ResetIndex("Raven/DocumentsByEntityName");
+			documentStore.DocumentDatabase.Indexes.ResetIndex("Raven/DocumentsByEntityName");
 		}
 
 		[Fact]

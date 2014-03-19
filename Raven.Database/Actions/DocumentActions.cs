@@ -12,6 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Linq;
+using Raven.Abstractions.Logging;
 using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
@@ -27,16 +28,8 @@ namespace Raven.Database.Actions
 {
     public class DocumentActions : ActionsBase
     {
-        private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches =
-    new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(1024, StringComparer.OrdinalIgnoreCase);
-
-        private static readonly HashSet<string> headersToIgnoreServer = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-		{
-			Constants.RavenLastModified,
-		};
-
-        public DocumentActions(DocumentDatabase database)
-            : base(database)
+        public DocumentActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
+            : base(database, recentTouches, uuidGenerator, log)
         {
         }
 
@@ -141,7 +134,7 @@ namespace Raven.Database.Actions
                     {
                         docCount = 0;
                         var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize);
-                        var documentRetriever = new DocumentRetriever(actions, Database.ReadTriggers, InFlightTransactionalState, queryInputs);
+                        var documentRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, queryInputs);
 
                         foreach (var doc in docs)
                         {
@@ -153,7 +146,7 @@ namespace Raven.Database.Actions
                                 continue;
 
                             DocumentRetriever.EnsureIdInMetadata(doc);
-                            var nonAuthoritativeInformationBehavior = InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
+                            var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
 
                             var document = nonAuthoritativeInformationBehavior != null ? nonAuthoritativeInformationBehavior(doc) : doc;
                             document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
@@ -227,7 +220,7 @@ namespace Raven.Database.Actions
         private static void RemoveReservedProperties(RavenJObject document)
         {
             document.Remove(string.Empty);
-            var toRemove = document.Keys.Where(propertyName => propertyName.StartsWith("@") || headersToIgnoreServer.Contains(propertyName)).ToList();
+            var toRemove = document.Keys.Where(propertyName => propertyName.StartsWith("@") || HeadersToIgnoreServer.Contains(propertyName)).ToList();
             foreach (var propertyName in toRemove)
             {
                 document.Remove(propertyName);
@@ -317,7 +310,7 @@ namespace Raven.Database.Actions
                     {
                         foreach (var key in keys)
                         {
-                            CheckReferenceBecauseOfDocumentUpdate(key, accessor);
+                            Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, accessor);
                         }
                     }
                     accessor.Documents.IncrementDocumentCount(inserts);
@@ -343,7 +336,7 @@ namespace Raven.Database.Actions
         public TouchedDocumentInfo GetRecentTouchesFor(string key)
         {
             TouchedDocumentInfo info;
-            recentTouches.TryGetValue(key, out info);
+            RecentTouches.TryGetValue(key, out info);
             return info;
         }
 
@@ -364,7 +357,7 @@ namespace Raven.Database.Actions
                     var documents = etag == null
                                         ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
                                         : actions.Documents.GetDocumentsAfter(etag, pageSize);
-                    var documentRetriever = new DocumentRetriever(actions, Database.ReadTriggers, InFlightTransactionalState);
+                    var documentRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState);
                     int docCount = 0;
                     foreach (var doc in documents)
                     {
@@ -373,7 +366,7 @@ namespace Raven.Database.Actions
                         if (etag != null)
                             etag = doc.Etag;
                         DocumentRetriever.EnsureIdInMetadata(doc);
-                        var nonAuthoritativeInformationBehavior = InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
+                        var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
                         var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
                         document = documentRetriever
                             .ExecuteReadTriggers(document, null, ReadOperation.Load);
@@ -401,10 +394,10 @@ namespace Raven.Database.Actions
 
             JsonDocument document = null;
             if (transactionInformation == null ||
-                InFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
+                Database.InFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
             {
                 // first we check the dtc state, then the storage, to avoid race conditions
-                var nonAuthoritativeInformationBehavior = InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(transactionInformation, key);
+                var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(transactionInformation, key);
 
                 TransactionalStorage.Batch(actions => { document = actions.Documents.DocumentByKey(key, transactionInformation); });
 
@@ -414,7 +407,7 @@ namespace Raven.Database.Actions
 
             DocumentRetriever.EnsureIdInMetadata(document);
 
-            return new DocumentRetriever(null, Database.ReadTriggers, InFlightTransactionalState)
+            return new DocumentRetriever(null, Database.ReadTriggers, Database.InFlightTransactionalState)
                 .ExecuteReadTriggers(document, transactionInformation, ReadOperation.Load);
         }
 
@@ -425,9 +418,9 @@ namespace Raven.Database.Actions
             key = key.Trim();
             JsonDocumentMetadata document = null;
             if (transactionInformation == null ||
-                InFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
+                Database.InFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
             {
-                var nonAuthoritativeInformationBehavior = InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocumentMetadata>(transactionInformation, key);
+                var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocumentMetadata>(transactionInformation, key);
                 TransactionalStorage.Batch(actions =>
                 {
                     document = actions.Documents.DocumentMetadataByKey(key, transactionInformation);
@@ -437,7 +430,7 @@ namespace Raven.Database.Actions
             }
 
             DocumentRetriever.EnsureIdInMetadata(document);
-            return new DocumentRetriever(null, Database.ReadTriggers, InFlightTransactionalState)
+            return new DocumentRetriever(null, Database.ReadTriggers, Database.InFlightTransactionalState)
                 .ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
         }
 
@@ -462,7 +455,7 @@ namespace Raven.Database.Actions
             TransactionalStorage.Batch(
             actions =>
             {
-                var docRetriever = new DocumentRetriever(actions, Database.ReadTriggers, InFlightTransactionalState, queryInputs);
+                var docRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, queryInputs);
                 using (new CurrentTransformationScope(docRetriever))
                 {
                     var document = Get(key, transactionInformation);
@@ -520,7 +513,7 @@ namespace Raven.Database.Actions
                     AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
                     if (transactionInformation == null)
                     {
-                        if (InFlightTransactionalState.IsModified(key))
+                        if (Database.InFlightTransactionalState.IsModified(key))
                             throw new ConcurrencyException("PUT attempted on : " + key +
                                                            " while it is being locked by another transaction");
 
@@ -529,7 +522,7 @@ namespace Raven.Database.Actions
                         var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
                         newEtag = addDocumentResult.Etag;
 
-                        CheckReferenceBecauseOfDocumentUpdate(key, actions);
+                        Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, actions);
                         metadata[Constants.LastModified] = addDocumentResult.SavedAt;
                         metadata.EnsureSnapshot(
                             "Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
@@ -546,7 +539,7 @@ namespace Raven.Database.Actions
                             SkipDeleteFromIndex = addDocumentResult.Updated == false
                         }, documents =>
                         {
-                            lastCollectionEtags.UpdatePerCollectionEtags(documents);
+                            Database.LastCollectionEtags.UpdatePerCollectionEtags(documents);
                             Database.EtagSynchronizer.UpdateSynchronizationState(documents);
                             Database.Prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents);
                         });
@@ -575,16 +568,16 @@ namespace Raven.Database.Actions
                     else
                     {
                         var doc = actions.Documents.DocumentMetadataByKey(key, null);
-                        newEtag = InFlightTransactionalState.AddDocumentInTransaction(key, etag, document, metadata,
+                        newEtag = Database.InFlightTransactionalState.AddDocumentInTransaction(key, etag, document, metadata,
                                                                                       transactionInformation,
                                                                                       doc == null
                                                                                           ? Etag.Empty
                                                                                           : doc.Etag,
-                                                                                      sequentialUuidGenerator);
+                                                                                      UuidGenerator);
                     }
                 });
 
-                log.Debug("Put document {0} with etag {1}", key, newEtag);
+                Log.Debug("Put document {0} with etag {1}", key, newEtag);
                 return new PutResult
                 {
                     Key = key,
@@ -606,7 +599,7 @@ namespace Raven.Database.Actions
             key = key.Trim();
 
             var deleted = false;
-            log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
+            Log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
             RavenJObject metadataVar = null;
             using (TransactionalStorage.WriteLock())
             {
@@ -624,7 +617,7 @@ namespace Raven.Database.Actions
                             actions.Indexing.RemoveAllDocumentReferencesFrom(key);
                             WorkContext.MarkDeleted(key);
 
-                            CheckReferenceBecauseOfDocumentUpdate(key, actions);
+                            Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, actions);
 
                             foreach (var indexName in IndexDefinitionStorage.IndexNames)
                             {
@@ -674,10 +667,10 @@ namespace Raven.Database.Actions
                     {
                         var doc = actions.Documents.DocumentMetadataByKey(key, null);
 
-                        InFlightTransactionalState.DeleteDocumentInTransaction(transactionInformation, key,
+                        Database.InFlightTransactionalState.DeleteDocumentInTransaction(transactionInformation, key,
                                                                                etag,
                                                                                doc == null ? Etag.Empty : doc.Etag,
-                                                                               sequentialUuidGenerator);
+                                                                               UuidGenerator);
                         deleted = doc != null;
                     }
 

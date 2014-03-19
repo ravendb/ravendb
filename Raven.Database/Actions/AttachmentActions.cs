@@ -4,153 +4,34 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Logging;
 using Raven.Database.Data;
+using Raven.Database.Impl;
+using Raven.Database.Plugins;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
 {
-    public class AttachmentActions
+    public class AttachmentActions : ActionsBase
     {
-        private void AssertAttachmentPutOperationNotVetoed(string key, RavenJObject metadata, Stream data)
+        /// <summary>
+        /// Requires to avoid having serialize writes to the same attachments
+        /// </summary>
+        private readonly ConcurrentDictionary<string, object> putAttachmentSerialLock = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        public AttachmentActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
+            : base(database, recentTouches, uuidGenerator, log)
         {
-            var vetoResult = AttachmentPutTriggers
-                .Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(key, data, metadata) })
-                .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
-            if (vetoResult != null)
-            {
-                throw new OperationVetoedException("PUT vetoed on attachment " + key + " by " + vetoResult.Trigger +
-                                                   " because: " + vetoResult.VetoResult.Reason);
-            }
-        }
-
-        private Attachment ProcessAttachmentReadVetoes(string name, Attachment attachment)
-        {
-            if (attachment == null)
-                return null;
-
-            var foundResult = false;
-            foreach (var attachmentReadTriggerLazy in AttachmentReadTriggers)
-            {
-                if (foundResult)
-                    break;
-                var attachmentReadTrigger = attachmentReadTriggerLazy.Value;
-                var readVetoResult = attachmentReadTrigger.AllowRead(name, attachment.Data(), attachment.Metadata,
-                                                                     ReadOperation.Load);
-                switch (readVetoResult.Veto)
-                {
-                    case ReadVetoResult.ReadAllow.Allow:
-                        break;
-                    case ReadVetoResult.ReadAllow.Deny:
-                        attachment.Data = () => new MemoryStream(new byte[0]);
-                        attachment.Size = 0;
-                        attachment.Metadata = new RavenJObject
-												{
-													{
-														"Raven-Read-Veto",
-														new RavenJObject
-															{
-																{"Reason", readVetoResult.Reason},
-																{"Trigger", attachmentReadTrigger.ToString()}
-															}
-														}
-												};
-                        foundResult = true;
-                        break;
-                    case ReadVetoResult.ReadAllow.Ignore:
-                        attachment = null;
-                        foundResult = true;
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(readVetoResult.Veto.ToString());
-                }
-            }
-            return attachment;
-        }
-
-        private void ExecuteAttachmentReadTriggers(string name, Attachment attachment)
-        {
-            if (attachment == null)
-                return;
-
-            foreach (var attachmentReadTrigger in AttachmentReadTriggers)
-            {
-                attachmentReadTrigger.Value.OnRead(name, attachment);
-            }
-        }
-
-
-        private AttachmentInformation ProcessAttachmentReadVetoes(AttachmentInformation attachment)
-        {
-            if (attachment == null)
-                return null;
-
-            var foundResult = false;
-            foreach (var attachmentReadTriggerLazy in AttachmentReadTriggers)
-            {
-                if (foundResult)
-                    break;
-                var attachmentReadTrigger = attachmentReadTriggerLazy.Value;
-                var readVetoResult = attachmentReadTrigger.AllowRead(attachment.Key, null, attachment.Metadata,
-                                                                     ReadOperation.Load);
-                switch (readVetoResult.Veto)
-                {
-                    case ReadVetoResult.ReadAllow.Allow:
-                        break;
-                    case ReadVetoResult.ReadAllow.Deny:
-                        attachment.Size = 0;
-                        attachment.Metadata = new RavenJObject
-												{
-													{
-														"Raven-Read-Veto",
-														new RavenJObject
-															{
-																{"Reason", readVetoResult.Reason},
-																{"Trigger", attachmentReadTrigger.ToString()}
-															}
-														}
-												};
-                        foundResult = true;
-                        break;
-                    case ReadVetoResult.ReadAllow.Ignore:
-                        attachment = null;
-                        foundResult = true;
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(readVetoResult.Veto.ToString());
-                }
-            }
-            return attachment;
-        }
-
-        private void ExecuteAttachmentReadTriggers(AttachmentInformation information)
-        {
-            if (information == null)
-                return;
-
-            foreach (var attachmentReadTrigger in AttachmentReadTriggers)
-            {
-                attachmentReadTrigger.Value.OnRead(information);
-            }
-        }
-
-
-        private void AssertAttachmentDeleteOperationNotVetoed(string key)
-        {
-            var vetoResult = AttachmentDeleteTriggers
-                .Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowDelete(key) })
-                .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
-            if (vetoResult != null)
-            {
-                throw new OperationVetoedException("DELETE vetoed on attachment " + key + " by " + vetoResult.Trigger +
-                                                   " because: " + vetoResult.VetoResult.Reason);
-            }
         }
 
         public IEnumerable<AttachmentInformation> GetStaticsStartingWith(string idPrefix, int start, int pageSize)
@@ -224,17 +105,17 @@ namespace Raven.Database.Actions
                 {
                     AssertAttachmentPutOperationNotVetoed(name, metadata, data);
 
-                    AttachmentPutTriggers.Apply(trigger => trigger.OnPut(name, data, metadata));
+                    Database.AttachmentPutTriggers.Apply(trigger => trigger.OnPut(name, data, metadata));
 
                     newEtag = actions.Attachments.AddAttachment(name, etag, data, metadata);
 
-                    AttachmentPutTriggers.Apply(trigger => trigger.AfterPut(name, data, metadata, newEtag));
+                    Database.AttachmentPutTriggers.Apply(trigger => trigger.AfterPut(name, data, metadata, newEtag));
 
-                    workContext.ShouldNotifyAboutWork(() => "PUT ATTACHMENT " + name);
+                    WorkContext.ShouldNotifyAboutWork(() => "PUT ATTACHMENT " + name);
                 });
 
                 TransactionalStorage
-                    .ExecuteImmediatelyOrRegisterForSynchronization(() => AttachmentPutTriggers.Apply(trigger => trigger.AfterCommit(name, data, metadata, newEtag)));
+                    .ExecuteImmediatelyOrRegisterForSynchronization(() => Database.AttachmentPutTriggers.Apply(trigger => trigger.AfterCommit(name, data, metadata, newEtag)));
                 return newEtag;
             }
             finally
@@ -253,20 +134,152 @@ namespace Raven.Database.Actions
             {
                 AssertAttachmentDeleteOperationNotVetoed(name);
 
-                AttachmentDeleteTriggers.Apply(x => x.OnDelete(name));
+                Database.AttachmentDeleteTriggers.Apply(x => x.OnDelete(name));
 
                 actions.Attachments.DeleteAttachment(name, etag);
 
-                AttachmentDeleteTriggers.Apply(x => x.AfterDelete(name));
+                Database.AttachmentDeleteTriggers.Apply(x => x.AfterDelete(name));
 
-                workContext.ShouldNotifyAboutWork(() => "DELETE ATTACHMENT " + name);
+                WorkContext.ShouldNotifyAboutWork(() => "DELETE ATTACHMENT " + name);
             });
 
             TransactionalStorage
                 .ExecuteImmediatelyOrRegisterForSynchronization(
-                    () => AttachmentDeleteTriggers.Apply(trigger => trigger.AfterCommit(name)));
+                    () => Database.AttachmentDeleteTriggers.Apply(trigger => trigger.AfterCommit(name)));
 
         }
 
+        private void AssertAttachmentPutOperationNotVetoed(string key, RavenJObject metadata, Stream data)
+        {
+            var vetoResult = Database.AttachmentPutTriggers
+                .Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowPut(key, data, metadata) })
+                .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+            if (vetoResult != null)
+            {
+                throw new OperationVetoedException("PUT vetoed on attachment " + key + " by " + vetoResult.Trigger +
+                                                   " because: " + vetoResult.VetoResult.Reason);
+            }
+        }
+
+        private Attachment ProcessAttachmentReadVetoes(string name, Attachment attachment)
+        {
+            if (attachment == null)
+                return null;
+
+            var foundResult = false;
+            foreach (var attachmentReadTriggerLazy in Database.AttachmentReadTriggers)
+            {
+                if (foundResult)
+                    break;
+                var attachmentReadTrigger = attachmentReadTriggerLazy.Value;
+                var readVetoResult = attachmentReadTrigger.AllowRead(name, attachment.Data(), attachment.Metadata,
+                                                                     ReadOperation.Load);
+                switch (readVetoResult.Veto)
+                {
+                    case ReadVetoResult.ReadAllow.Allow:
+                        break;
+                    case ReadVetoResult.ReadAllow.Deny:
+                        attachment.Data = () => new MemoryStream(new byte[0]);
+                        attachment.Size = 0;
+                        attachment.Metadata = new RavenJObject
+												{
+													{
+														"Raven-Read-Veto",
+														new RavenJObject
+															{
+																{"Reason", readVetoResult.Reason},
+																{"Trigger", attachmentReadTrigger.ToString()}
+															}
+														}
+												};
+                        foundResult = true;
+                        break;
+                    case ReadVetoResult.ReadAllow.Ignore:
+                        attachment = null;
+                        foundResult = true;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(readVetoResult.Veto.ToString());
+                }
+            }
+            return attachment;
+        }
+
+        private void ExecuteAttachmentReadTriggers(string name, Attachment attachment)
+        {
+            if (attachment == null)
+                return;
+
+            foreach (var attachmentReadTrigger in Database.AttachmentReadTriggers)
+            {
+                attachmentReadTrigger.Value.OnRead(name, attachment);
+            }
+        }
+
+        private AttachmentInformation ProcessAttachmentReadVetoes(AttachmentInformation attachment)
+        {
+            if (attachment == null)
+                return null;
+
+            var foundResult = false;
+            foreach (var attachmentReadTriggerLazy in Database.AttachmentReadTriggers)
+            {
+                if (foundResult)
+                    break;
+                var attachmentReadTrigger = attachmentReadTriggerLazy.Value;
+                var readVetoResult = attachmentReadTrigger.AllowRead(attachment.Key, null, attachment.Metadata,
+                                                                     ReadOperation.Load);
+                switch (readVetoResult.Veto)
+                {
+                    case ReadVetoResult.ReadAllow.Allow:
+                        break;
+                    case ReadVetoResult.ReadAllow.Deny:
+                        attachment.Size = 0;
+                        attachment.Metadata = new RavenJObject
+												{
+													{
+														"Raven-Read-Veto",
+														new RavenJObject
+															{
+																{"Reason", readVetoResult.Reason},
+																{"Trigger", attachmentReadTrigger.ToString()}
+															}
+														}
+												};
+                        foundResult = true;
+                        break;
+                    case ReadVetoResult.ReadAllow.Ignore:
+                        attachment = null;
+                        foundResult = true;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(readVetoResult.Veto.ToString());
+                }
+            }
+            return attachment;
+        }
+
+        private void ExecuteAttachmentReadTriggers(AttachmentInformation information)
+        {
+            if (information == null)
+                return;
+
+            foreach (var attachmentReadTrigger in Database.AttachmentReadTriggers)
+            {
+                attachmentReadTrigger.Value.OnRead(information);
+            }
+        }
+
+        private void AssertAttachmentDeleteOperationNotVetoed(string key)
+        {
+            var vetoResult = Database.AttachmentDeleteTriggers
+                .Select(trigger => new { Trigger = trigger, VetoResult = trigger.AllowDelete(key) })
+                .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
+            if (vetoResult != null)
+            {
+                throw new OperationVetoedException("DELETE vetoed on attachment " + key + " by " + vetoResult.Trigger +
+                                                   " because: " + vetoResult.VetoResult.Reason);
+            }
+        }
     }
 }

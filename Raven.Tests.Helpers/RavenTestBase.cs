@@ -348,7 +348,7 @@ namespace Raven.Tests.Helpers
 
         protected PeriodicBackupStatus GetPerodicBackupStatus(DocumentDatabase db)
 	    {
-            return GetPerodicBackupStatus(key => db.Get(key, null));
+            return GetPerodicBackupStatus(key => db.Documents.Get(key, null));
 	    }
 
         protected PeriodicBackupStatus GetPerodicBackupStatus(IDatabaseCommands commands)
@@ -367,7 +367,7 @@ namespace Raven.Tests.Helpers
 
         protected void WaitForPeriodicBackup(DocumentDatabase db, PeriodicBackupStatus previousStatus)
         {
-            WaitForPeriodicBackup(key => db.Get(key, null), previousStatus);
+            WaitForPeriodicBackup(key => db.Documents.Get(key, null), previousStatus);
         }
 
         protected void WaitForPeriodicBackup(IDatabaseCommands commands, PeriodicBackupStatus previousStatus)
@@ -396,7 +396,7 @@ namespace Raven.Tests.Helpers
 
 		protected void WaitForBackup(DocumentDatabase db, bool checkError)
 		{
-			WaitForBackup(key => db.Get(key, null), checkError);
+			WaitForBackup(key => db.Documents.Get(key, null), checkError);
 		}
 
 		protected void WaitForBackup(IDatabaseCommands commands, bool checkError)

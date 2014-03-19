@@ -7,9 +7,9 @@ namespace Raven.Database.Plugins.Builtins
 	{
 		public void SilverlightWasRequested(DocumentDatabase database)
 		{
-			if (database.GetIndexDefinition(Constants.DocumentsByEntityNameIndex) == null)
+			if (database.Indexes.GetIndexDefinition(Constants.DocumentsByEntityNameIndex) == null)
 			{
-				database.PutIndex(Constants.DocumentsByEntityNameIndex, new IndexDefinition
+                database.Indexes.PutIndex(Constants.DocumentsByEntityNameIndex, new IndexDefinition
 				{
 					Map =
 						@"from doc in docs 
