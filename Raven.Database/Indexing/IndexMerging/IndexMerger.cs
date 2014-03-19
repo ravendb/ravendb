@@ -29,7 +29,7 @@ namespace Raven.Database.Indexing.IndexMerging
                 indexData.IsAlreadyMerged = true;
 
                 var mergeData = new MergeProposal();
-                mergedIndexesData.Add(mergeData);
+               
 
                 List<string> failComments = CheckForUnsuitableIndexForMerging(indexData);
                 if (failComments.Count != 0)
@@ -37,6 +37,7 @@ namespace Raven.Database.Indexing.IndexMerging
                     indexData.Comment = string.Join(Environment.NewLine, failComments);
                     indexData.IsSuitedForMerge = false;
                     mergeData.MergedData = indexData;
+                    mergedIndexesData.Add(mergeData);
                     continue;
                 }
 
@@ -52,6 +53,7 @@ namespace Raven.Database.Indexing.IndexMerging
                     current.IsSuitedForMerge = true;
                     mergeData.ProposedForMerge.Add(current);
                 }
+                mergedIndexesData.Add(mergeData);
             }
             return mergedIndexesData;
         }
@@ -316,7 +318,7 @@ namespace Raven.Database.Indexing.IndexMerging
         private IndexMergeResults CreateMergeIndexDefinition(List<MergeProposal> indexDataForMerge)
         {
             var indexMergeResults = new IndexMergeResults();
-            foreach (var mergeProposal in indexDataForMerge.Where(m => m.ProposedForMerge.Count == 1 && m.MergedData != null))
+            foreach (var mergeProposal in indexDataForMerge.Where(m => m.ProposedForMerge.Count == 0 && m.MergedData != null))
             {
                 indexMergeResults.Unmergables.Add(mergeProposal.MergedData.IndexName, mergeProposal.MergedData.Comment);
             }
