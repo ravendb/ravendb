@@ -5,31 +5,40 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Threading.Tasks;
+using Owin;
+using Raven.Client;
+using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.WebApi;
-using Raven.Database.Util;
 
 namespace Raven.Server
 {
 	public class RavenDbServer : IDisposable
 	{
-		private readonly IServerThingsForTests serverThingsForTests;
-		private readonly CompositeDisposable compositeDisposable = new CompositeDisposable();
+	    private readonly InMemoryRavenConfiguration configuration;
+	    private readonly IServerThingsForTests serverThingsForTests;
 		private readonly RavenDBOptions options;
+	    private readonly OwinHttpServer owinHttpServer;
+        private readonly IDocumentStore documentStore;
 
-		public RavenDbServer()
+	    public RavenDbServer()
 			: this(new RavenConfiguration())
 		{}
 
 		public RavenDbServer(InMemoryRavenConfiguration configuration)
 		{
-			var owinHttpServer = new OwinHttpServer(configuration);
+		    this.configuration = configuration;
+		    owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer);
 			options = owinHttpServer.Options;
-			compositeDisposable.Add(owinHttpServer);
 			serverThingsForTests = new ServerThingsForTests(options);
+            documentStore = new DocumentStore
+            {
+                HttpMessageHandler = new OwinHttpMessageHandler(owinHttpServer.Invoke),
+                Url = "http://localhost"
+            }.Initialize();
 		}
 
 		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
@@ -44,9 +53,26 @@ namespace Raven.Server
 			get { return serverThingsForTests; }
 		}
 
-		public void Dispose()
+	    public IDocumentStore DocumentStore
+	    {
+            get { return documentStore; }
+	    }
+
+	    public bool RunInMemory
+	    {
+	        get { return configuration.RunInMemory; }
+            set { configuration.RunInMemory = value; }
+	    }
+
+	    ///<summary>
+        /// Whatever we should also host an HTTP endpoint for the document database
+        ///</summary>
+        public bool UseEmbeddedHttpServer { get; set; }
+
+	    public void Dispose()
 		{
-			compositeDisposable.Dispose();
+			documentStore.Dispose();
+            owinHttpServer.Dispose();
 		}
 
 		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
