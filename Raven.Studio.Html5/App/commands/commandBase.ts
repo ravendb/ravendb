@@ -70,6 +70,10 @@ class commandBase {
         return this.ajax(relativeUrl, args, "PUT", database, options);
     }
 
+    reset(relativeUrl: string, args: any, database?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "RESET", database, options);
+    }
+
     /*
      * Performs a DELETE rest call.
     */
