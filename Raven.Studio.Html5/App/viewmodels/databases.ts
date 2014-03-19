@@ -20,7 +20,7 @@ class databases extends viewModelBase {
         this.searchText.subscribe(s=> this.filterDatabases(s));
     }
 
-    modelPolling() {
+  modelPolling() {
         new getDatabasesCommand()
             .execute()
             .done((results: database[]) => this.databasesLoaded(results));
@@ -40,7 +40,7 @@ class databases extends viewModelBase {
     databasesLoaded(results: Array<database>) {
 
         var modelPayloadHash = results.map(d => d.name).join().hashCode();
-        var databasesHaveChanged = !this.lastModelPayloadHash && this.lastModelPayloadHash !== modelPayloadHash;
+        var databasesHaveChanged = !this.lastModelPayloadHash || this.lastModelPayloadHash !== modelPayloadHash;
         if (databasesHaveChanged) {
             this.lastModelPayloadHash = modelPayloadHash;
 

@@ -21,11 +21,13 @@ class indexes extends viewModelBase {
         super.activate(args);
 
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), null));
+
+        this.fetchIndexes();
+        this.fetchRecentQueries();
     }
 
   modelPolling() {
-    this.fetchIndexes();
-    this.fetchRecentQueries();
+    
   }
 
     attached() {

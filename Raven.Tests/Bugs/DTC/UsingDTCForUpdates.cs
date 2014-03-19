@@ -13,8 +13,7 @@ namespace Raven.Tests.Bugs.DTC
 		{
             using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
 			{
-                if(documentStore.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
-                    return;
+                EnsureDtcIsSupported(documentStore);
 
 				var id1 = Guid.NewGuid();
 				RavenJObject dummy = null;
@@ -45,8 +44,7 @@ namespace Raven.Tests.Bugs.DTC
 		{
             using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
 			{
-                if(documentStore.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
-                    return;
+                EnsureDtcIsSupported(documentStore);
 
 				documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
 

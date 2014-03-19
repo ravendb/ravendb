@@ -17,8 +17,7 @@ namespace Raven.Tests.Bugs
         {
             using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
-                if (store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
-                    return;
+                EnsureDtcIsSupported(store);
 
                 using (var tx = new TransactionScope())
                 {
@@ -49,8 +48,7 @@ namespace Raven.Tests.Bugs
         {
             using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
-                if (store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
-                    return;
+                EnsureDtcIsSupported(store);
 
                 using (var tx = new TransactionScope())
                 using (var session = store.OpenSession())
@@ -71,8 +69,7 @@ namespace Raven.Tests.Bugs
             using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
             {
 
-				if (server.SystemDatabase.TransactionalStorage.SupportsDtc == false)
-					return;
+                EnsureDtcIsSupported(server);
 
                 for (int i = 0; i < 150; i++)
                 {
@@ -115,8 +112,7 @@ namespace Raven.Tests.Bugs
             using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
             {
 
-				if (server.SystemDatabase.TransactionalStorage.SupportsDtc == false)
-					return;
+                EnsureDtcIsSupported(server);
 
                 for (int i = 0; i < 150; i++)
                 {
