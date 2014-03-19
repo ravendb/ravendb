@@ -53,9 +53,26 @@ class reporting extends viewModelBase {
     }
 
     addValue(fieldName: string) {
-        //var facet: facetDto = {
-        //    Aggregation 
-        //};
+        // Example queries:
+        // /databases/TestDb/facets/Orders/ByCompany?&facetStart=0&facetPageSize=256&facets=%5B%7B%22Mode%22%3A0%2C%22Aggregation%22%3A1%2C%22AggregationField%22%3A%22Company%22%2C%22Name%22%3A%22Company%22%2C%22DisplayName%22%3A%22Company-Company%22%2C%22Ranges%22%3A%5B%5D%2C%22MaxResults%22%3Anull%2C%22TermSortMode%22%3A0%2C%22IncludeRemainingTerms%22%3Afalse%7D%5D&noCache=1402558754
+        // /databases/TestDb/facets/Orders/ByCompany?&facetStart=0&facetPageSize=256&facets=[{"Mode":0,"Aggregation":1,"AggregationField":"Company","Name":"Company","DisplayName":"Company-Company","Ranges":[],"MaxResults":null,"TermSortMode":0,"IncludeRemainingTerms":false}]&noCache=1402558754
+        var facet: facetDto = {
+            Aggregation: 0,
+            AggregationField: fieldName,
+            DisplayName: fieldName + "-" + fieldName,
+            IncludeRemainingTerms: false,
+            MaxResults: null,
+            Mode: 0,
+            Name: fieldName,
+            Ranges: [],
+            TermSortMode: 0
+        };
+
+        this.addedValues.push(facet);
+    }
+
+    removeValue(facet: facetDto) {
+        this.addedValues.remove(facet);
     }
 
     runReport() {

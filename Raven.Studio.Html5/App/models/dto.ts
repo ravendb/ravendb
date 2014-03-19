@@ -406,7 +406,7 @@ interface sqlReplicationDto extends documentDto {
 }
 
 interface facetDto {
-    Mode: number;
+    Mode: number; // Default = 0, Ranges = 1
     Aggregation: number; // None = 0, Count = 1, Max = 2, Min = 4, Average = 8, Sum = 16
     AggregationField: string;
     Name: string;

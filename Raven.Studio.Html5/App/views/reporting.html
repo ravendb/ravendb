@@ -48,7 +48,7 @@
         <label class="col-sm-1 control-label">Group By</label>
         <div class="col-md-5">
             <div class="btn-group">
-                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" accesskey="G">
+                <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-toggle="dropdown" accesskey="G" title="Group By (Alt+G)">
                     <span data-bind="text: selectedFieldLabel"></span> <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu" data-bind="foreach: availableFields">
@@ -66,13 +66,36 @@
         </label>
         <div class="col-md-5">
             <div class="btn-group">
-                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Add a value">
+                <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-toggle="dropdown" title="Add a value (Alt+V)" accesskey="V">
                     <i class="fa fa-plus"></i> Add a value <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu" data-bind="foreach: availableFields">
-                    <li data-bind="click: $root.addValue.bind($root, $data)"></li>
+                    <li data-bind="click: $root.addValue.bind($root, $data)">
+                        <a href="#" data-bind="text: $data"></a>
+                    </li>
                 </ul>
             </div>
+            <br />
+            <br />
+            <ul class="list-group col-md-6" data-bind="foreach: addedValues">
+                <li class="list-group-item">
+                    <strong data-bind="text: Name"></strong>
+                    <span class="text-muted"> summarized by </span>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                            Count <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" role="menu">
+                            <li><a href="#">Count</a></li>
+                            <li><a href="#">Min</a></li>
+                            <li><a href="#">Max</a></li>
+                            <li><a href="#">Sum</a></li>
+                            <li><a href="#">Average</a></li>
+                        </ul>
+                    </div>
+                    <button type="button" class="close" data-bind="click: $root.removeValue.bind($root, $data)" aria-hidden="true">&times;</button>
+                </li>
+            </ul>
         </div>
         <div>
 
