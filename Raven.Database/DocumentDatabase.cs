@@ -74,8 +74,6 @@ namespace Raven.Database
 
         private readonly TransportState transportState;
 
-        private readonly ValidateLicense validateLicense;
-
         private readonly WorkContext workContext;
 
         private volatile bool backgroundWorkersSpun;
@@ -86,33 +84,30 @@ namespace Raven.Database
 
         private Task reducingBackgroundTask;
 
+        private readonly DocumentDatabaseInitializer initializer;
+
         public DocumentDatabase(InMemoryRavenConfiguration configuration, TransportState transportState = null)
         {
+            Name = configuration.DatabaseName;
+            Configuration = configuration;
             this.transportState = transportState ?? new TransportState();
-            InitializeEncryption(configuration);
+            ExtensionsState = new AtomicDictionary<object>();
+            var recentTouches = new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(1024, StringComparer.OrdinalIgnoreCase);
 
-            using (LogManager.OpenMappedContext("database", configuration.DatabaseName ?? Constants.SystemDatabase))
+            using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
             {
-                Log.Debug("Start loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
+                Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
 
-                if (configuration.IsTenantDatabase == false)
-                {
-                    validateLicense = new ValidateLicense();
-                    validateLicense.Execute(configuration);
-                }
+                initializer = new DocumentDatabaseInitializer(this, configuration);
 
-                AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
-                AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
+                initializer.InitializeEncryption();
+                initializer.ValidateLicense();
 
-                Name = configuration.DatabaseName;
+                initializer.SubscribeToDomainUnloadOrProcessExit();
+                initializer.ExecuteAlterConfiguration();
+                initializer.SatisfyImportsOnce();
+
                 backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Default;
-
-                ExtensionsState = new AtomicDictionary<object>();
-                Configuration = configuration;
-
-                ExecuteAlterConfiguration();
-
-                configuration.Container.SatisfyImportsOnce(this);
 
                 workContext = new WorkContext
                               {
@@ -120,28 +115,15 @@ namespace Raven.Database
                                   DatabaseName = Name, 
                                   IndexUpdateTriggers = IndexUpdateTriggers, 
                                   ReadTriggers = ReadTriggers, 
-                                  //RaiseIndexChangeNotification = Notifications.RaiseNotifications, 
                                   TaskScheduler = backgroundTaskScheduler, 
                                   Configuration = configuration, 
                                   IndexReaderWarmers = IndexReaderWarmers
                               };
 
-                var storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
-                if (string.Equals(InMemoryRavenConfiguration.VoronTypeName, storageEngineTypeName, StringComparison.OrdinalIgnoreCase) == false)
-                {
-                    if (Directory.Exists(configuration.DataDirectory) && Directory.EnumerateFileSystemEntries(configuration.DataDirectory).Any())
-                        throw new InvalidOperationException(string.Format("We do not allow to run on a storage engine other then Voron, while we are in the early pre-release phase of RavenDB 3.0. You are currently running on {0}", storageEngineTypeName));
-
-                    Trace.WriteLine("Forcing database to run on Voron - pre release behavior only, mind " + Path.GetFileName(Path.GetDirectoryName(configuration.DataDirectory)));
-                    storageEngineTypeName = InMemoryRavenConfiguration.VoronTypeName;
-                }
-
-                TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, workContext.HandleWorkNotifications);
-
                 try
                 {
                     uuidGenerator = new SequentialUuidGenerator();
-                    TransactionalStorage.Initialize(uuidGenerator, DocumentCodecs);
+                    initializer.InitializeTransactionalStorage(uuidGenerator);
                     lastCollectionEtags = new LastCollectionEtags(TransactionalStorage);
                 }
                 catch (Exception)
@@ -152,16 +134,11 @@ namespace Raven.Database
 
                 try
                 {
-                    var recentTouches = new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(1024, StringComparer.OrdinalIgnoreCase);
-
                     TransactionalStorage.Batch(actions => uuidGenerator.EtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
 
                     // Index codecs must be initialized before we try to read an index
                     InitializeIndexCodecTriggers();
-
-                    IndexDefinitionStorage = new IndexDefinitionStorage(configuration, TransactionalStorage, configuration.DataDirectory, configuration.Container.GetExportedValues<AbstractViewGenerator>(), Extensions);
-
-                    IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration, this);
+                    initializer.InitializeIndexStorage();
                     
                     Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
                     Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
@@ -174,8 +151,7 @@ namespace Raven.Database
                     Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
 
                     inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(Documents.Put, Documents.Delete);
-                    workContext.RaiseIndexChangeNotification = Notifications.RaiseNotifications;
-
+                    
                     CompleteWorkContextSetup();
 
                     etagSynchronizer = new DatabaseEtagSynchronizer(TransactionalStorage);
@@ -680,17 +656,16 @@ namespace Raven.Database
 
             exceptionAggregator.Execute(() =>
             {
-                AppDomain.CurrentDomain.DomainUnload -= DomainUnloadOrProcessExit;
-                AppDomain.CurrentDomain.ProcessExit -= DomainUnloadOrProcessExit;
+                initializer.UnsubscribeToDomainUnloadOrProcessExit();
                 disposed = true;
 
                 if (workContext != null)
                     workContext.StopWorkRude();
             });
 
-            if (validateLicense != null)
+            if (initializer != null)
             {
-                exceptionAggregator.Execute(validateLicense.Dispose);
+                exceptionAggregator.Execute(initializer.Dispose);
             }
 
             exceptionAggregator.Execute(() =>
@@ -960,20 +935,6 @@ namespace Raven.Database
             return fileVersionInfo.FileBuildPart;
         }
 
-        private static void InitializeEncryption(InMemoryRavenConfiguration configuration)
-        {
-            string fipsAsString;
-            bool fips;
-            if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("fips", out fipsAsString) && bool.TryParse(fipsAsString, out fips))
-            {
-                if (!fips && configuration.UseFips)
-                    throw new InvalidOperationException("Your license does not allow you to use FIPS compliant encryption on the server.");
-            }
-
-            Encryptor.Initialize(configuration.UseFips);
-            Cryptography.FIPSCompliant = configuration.UseFips;
-        }
-
         private BatchResult[] BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(IList<ICommandData> commands)
         {
             int retries = 128;
@@ -1004,6 +965,7 @@ namespace Raven.Database
 
         private void CompleteWorkContextSetup()
         {
+            workContext.RaiseIndexChangeNotification = Notifications.RaiseNotifications;
             workContext.IndexStorage = IndexStorage;
             workContext.TransactionalStorage = TransactionalStorage;
             workContext.IndexDefinitionStorage = IndexDefinitionStorage;
@@ -1014,18 +976,7 @@ namespace Raven.Database
             return Math.Round(bytes / 1024.0m / 1024.0m, 2);
         }
 
-        private void DomainUnloadOrProcessExit(object sender, EventArgs eventArgs)
-        {
-            Dispose();
-        }
-
-        private void ExecuteAlterConfiguration()
-        {
-            foreach (var alterConfiguration in Configuration.Container.GetExportedValues<IAlterConfiguration>())
-            {
-                alterConfiguration.AlterConfiguration(Configuration);
-            }
-        }
+        
 
         private void ExecuteStartupTasks()
         {
@@ -1107,5 +1058,103 @@ namespace Raven.Database
                 .Concat(IndexUpdateTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
                 .Apply(initialization => initialization.SecondStageInit());
         }
+
+        private class DocumentDatabaseInitializer
+        {
+            private readonly DocumentDatabase database;
+
+            private readonly InMemoryRavenConfiguration configuration;
+
+            private ValidateLicense validateLicense;
+
+            public DocumentDatabaseInitializer(DocumentDatabase database, InMemoryRavenConfiguration configuration)
+            {
+                this.database = database;
+                this.configuration = configuration;
+            }
+
+            public void ValidateLicense()
+            {
+                if (configuration.IsTenantDatabase)
+                    return;
+
+                validateLicense = new ValidateLicense();
+                validateLicense.Execute(configuration);
+            }
+
+            public void Dispose()
+            {
+                if (validateLicense != null)
+                    validateLicense.Dispose();
+            }
+
+            public void SubscribeToDomainUnloadOrProcessExit()
+            {
+                AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
+                AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
+            }
+
+            public void UnsubscribeToDomainUnloadOrProcessExit()
+            {
+                AppDomain.CurrentDomain.DomainUnload -= DomainUnloadOrProcessExit;
+                AppDomain.CurrentDomain.ProcessExit -= DomainUnloadOrProcessExit;
+            }
+
+            public void InitializeEncryption()
+            {
+                string fipsAsString;
+                bool fips;
+                if (Commercial.ValidateLicense.CurrentLicense.Attributes.TryGetValue("fips", out fipsAsString) && bool.TryParse(fipsAsString, out fips))
+                {
+                    if (!fips && configuration.UseFips)
+                        throw new InvalidOperationException("Your license does not allow you to use FIPS compliant encryption on the server.");
+                }
+
+                Encryptor.Initialize(configuration.UseFips);
+                Cryptography.FIPSCompliant = configuration.UseFips;
+            }
+
+            private void DomainUnloadOrProcessExit(object sender, EventArgs eventArgs)
+            {
+                Dispose();
+            }
+
+            public void ExecuteAlterConfiguration()
+            {
+                foreach (var alterConfiguration in configuration.Container.GetExportedValues<IAlterConfiguration>())
+                {
+                    alterConfiguration.AlterConfiguration(configuration);
+                }
+            }
+
+            public void SatisfyImportsOnce()
+            {
+                configuration.Container.SatisfyImportsOnce(database);
+            }
+
+            public void InitializeTransactionalStorage(IUuidGenerator uuidGenerator)
+            {
+                var storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
+                if (string.Equals(InMemoryRavenConfiguration.VoronTypeName, storageEngineTypeName, StringComparison.OrdinalIgnoreCase) == false)
+                {
+                    if (Directory.Exists(configuration.DataDirectory) && Directory.EnumerateFileSystemEntries(configuration.DataDirectory).Any())
+                        throw new InvalidOperationException(string.Format("We do not allow to run on a storage engine other then Voron, while we are in the early pre-release phase of RavenDB 3.0. You are currently running on {0}", storageEngineTypeName));
+
+                    Trace.WriteLine("Forcing database to run on Voron - pre release behavior only, mind " + Path.GetFileName(Path.GetDirectoryName(configuration.DataDirectory)));
+                    storageEngineTypeName = InMemoryRavenConfiguration.VoronTypeName;
+                }
+
+                database.TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, database.WorkContext.HandleWorkNotifications);
+                database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
+            }
+
+            public void InitializeIndexStorage()
+            {
+                database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, configuration.Container.GetExportedValues<AbstractViewGenerator>(), database.Extensions);
+                database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
+            }
+        }
     }
+
+    
 }
