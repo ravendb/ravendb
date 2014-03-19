@@ -266,7 +266,7 @@ namespace Raven.Database.Actions
 
         private void ApplyPrecomputedBatchForNewIndex(Index index, AbstractViewGenerator generator)
         {
-            const string documentsByEntityNameIndex = "Raven/DocumentsByEntityName";
+            const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
 
             PrecomputedIndexingBatch result = null;
 
@@ -280,14 +280,14 @@ namespace Raven.Database.Actions
                 var query = string.Join(" OR ", tags);
                 var stats =
                     actions.Indexing.GetIndexStats(
-                        IndexDefinitionStorage.GetIndexDefinition(documentsByEntityNameIndex).IndexId);
+                        IndexDefinitionStorage.GetIndexDefinition(DocumentsByEntityNameIndex).IndexId);
 
                 var lastIndexedEtagByRavenDocumentsByEntityName = stats.LastIndexedEtag;
                 var lastModifiedByRavenDocumentsByEntityName = stats.LastIndexedTimestamp;
 
                 var cts = new CancellationTokenSource();
                 using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, WorkContext.CancellationToken))
-                using (var op = new QueryActions.DatabaseQueryOperation(Database, documentsByEntityNameIndex, new IndexQuery
+                using (var op = new QueryActions.DatabaseQueryOperation(Database, DocumentsByEntityNameIndex, new IndexQuery
                 {
                     Query = query
                 }, actions, linked.Token)
@@ -328,7 +328,7 @@ namespace Raven.Database.Actions
                         var lastModified = DateTime.Parse(metadata.Value<string>(Constants.LastModified));
                         document.Remove(Constants.Metadata);
 
-                        docsToIndex.Add(new JsonDocument()
+                        docsToIndex.Add(new JsonDocument
                         {
                             DataAsJson = document,
                             Etag = etag,
@@ -340,7 +340,7 @@ namespace Raven.Database.Actions
                     });
                 }
 
-                result = new PrecomputedIndexingBatch()
+                result = new PrecomputedIndexingBatch
                 {
                     LastIndexed = lastIndexedEtagByRavenDocumentsByEntityName,
                     LastModified = lastModifiedByRavenDocumentsByEntityName,

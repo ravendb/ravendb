@@ -10,7 +10,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Data;
 using Raven.Database.Impl;
-using Raven.Database.Impl.DTC;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
 using Raven.Database.Util;
@@ -21,7 +20,7 @@ namespace Raven.Database.Actions
     {
         protected static readonly HashSet<string> HeadersToIgnoreServer = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
-			Constants.RavenLastModified,
+			Constants.RavenLastModified
 		};
 
         protected SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> RecentTouches { get; private set; }

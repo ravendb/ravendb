@@ -89,7 +89,7 @@ namespace Raven.Database.Actions
 #if DEBUG
                         pendingTaskAndState.Task.Wait(3000);
 #else
-							pendingTaskAndState.Task.Wait();
+						pendingTaskAndState.Task.Wait();
 #endif
                     }
                     catch (Exception)
