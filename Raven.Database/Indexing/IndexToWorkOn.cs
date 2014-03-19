@@ -1,3 +1,4 @@
+using System;
 using Raven.Abstractions.Data;
 
 namespace Raven.Database.Indexing
@@ -6,6 +7,7 @@ namespace Raven.Database.Indexing
 	{
 		public string IndexName { get; set; }
 		public Etag LastIndexedEtag { get; set; }
+		public DateTime LastIndexedTimestamp { get; set; }
 
 		public Index Index { get; set; }
 

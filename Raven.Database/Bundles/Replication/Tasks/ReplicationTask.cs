@@ -134,6 +134,8 @@ namespace Raven.Bundles.Replication.Tasks
 
 								var startedTasks = new List<Task>();
 
+								var synchronizationEtag = etagSynchronizer.GetSynchronizationEtag();
+
 								foreach (var dest in destinationForReplication)
 								{
 									var destination = dest;
@@ -147,7 +149,7 @@ namespace Raven.Bundles.Replication.Tasks
 										{
 											try
 											{
-												if (ReplicateTo(destination))
+												if (ReplicateTo(destination, synchronizationEtag))
 													docDb.WorkContext.NotifyAboutWork();
 											}
 											catch (Exception e)
@@ -331,7 +333,7 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		private bool ReplicateTo(ReplicationStrategy destination)
+		private bool ReplicateTo(ReplicationStrategy destination, Etag synchronizationEtag)
 		{
 			try
 			{
@@ -353,7 +355,7 @@ namespace Raven.Bundles.Replication.Tasks
 					}
 
 					bool? replicated = null;
-					switch (ReplicateDocuments(destination, destinationsReplicationInformationForSource))
+					switch (ReplicateDocuments(destination, destinationsReplicationInformationForSource, synchronizationEtag))
 					{
 						case true:
 							replicated = true;
@@ -417,9 +419,9 @@ namespace Raven.Bundles.Replication.Tasks
 			return true;
 		}
 
-		private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource)
+		private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource, Etag synchronizationEtag)
 		{
-			var documentsToReplicate = GetJsonDocuments(destinationsReplicationInformationForSource, destination);
+			var documentsToReplicate = GetJsonDocuments(destinationsReplicationInformationForSource, destination, synchronizationEtag);
 			if (documentsToReplicate.Documents == null || documentsToReplicate.Documents.Length == 0)
 			{
 				if (documentsToReplicate.LastEtag != destinationsReplicationInformationForSource.LastDocumentEtag)
@@ -661,7 +663,7 @@ namespace Raven.Bundles.Replication.Tasks
 			public int CountOfFilteredDocumentsWhichOriginFromDestination { get; set; }
 		}
 
-		private JsonDocumentsToReplicate GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination)
+		private JsonDocumentsToReplicate GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, Etag synchronizationEtag)
 		{
 			var result = new JsonDocumentsToReplicate();
 			try
@@ -670,11 +672,14 @@ namespace Raven.Bundles.Replication.Tasks
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
-					var synchronizationEtag = etagSynchronizer.GetSynchronizationEtag();
-
 					var lastEtag = etagSynchronizer.CalculateSynchronizationEtag(
 						synchronizationEtag,
 						destinationsReplicationInformationForSource.LastDocumentEtag);
+
+					if (lastEtag.CompareTo(destinationsReplicationInformationForSource.LastDocumentEtag) < 0)
+					{
+						SetLastReplicatedEtagForServer(destination, lastDocEtag: lastEtag);
+					}
 
 					int docsSinceLastReplEtag = 0;
 					List<JsonDocument> docsToReplicate;
