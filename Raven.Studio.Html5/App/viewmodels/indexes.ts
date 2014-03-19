@@ -125,6 +125,10 @@ class indexes extends viewModelBase {
         this.promptDeleteIndexes([i]);
     }
 
+    deleteIndexGroup(i: { entityName: string; indexes: KnockoutObservableArray<index> }) {
+        this.promptDeleteIndexes(i.indexes());
+    }
+
     promptDeleteIndexes(indexes: index[]) {
         if (indexes.length > 0) {
             var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
