@@ -2,6 +2,9 @@
 import appUrl = require("common/appUrl");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
+import facet = require("models/facet");
+import queryFacetCommand = require("commands/queryFacetCommand");
+import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class reporting extends viewModelBase {
     selectedIndexName = ko.observable<string>();
@@ -12,13 +15,17 @@ class reporting extends viewModelBase {
     availableFields = ko.observableArray<string>();
     selectedField = ko.observable<string>();
     selectedFieldLabel = ko.computed(() => this.selectedField() ? this.selectedField() : "Select a field");
-    addedValues = ko.observableArray<facetDto>();
+    addedValues = ko.observableArray<facet>();
+    filter = ko.observable<string>();
+    hasFilter = ko.observable(false);
 
     activate(indexToActivateOrNull: string) {
         super.activate(indexToActivateOrNull);
 
         this.fetchIndexes()
             .done(() => this.selectInitialIndex(indexToActivateOrNull));
+
+        aceEditorBindingHandler.install();
     }
 
     fetchIndexes(): JQueryPromise<any> {
@@ -56,26 +63,17 @@ class reporting extends viewModelBase {
         // Example queries:
         // /databases/TestDb/facets/Orders/ByCompany?&facetStart=0&facetPageSize=256&facets=%5B%7B%22Mode%22%3A0%2C%22Aggregation%22%3A1%2C%22AggregationField%22%3A%22Company%22%2C%22Name%22%3A%22Company%22%2C%22DisplayName%22%3A%22Company-Company%22%2C%22Ranges%22%3A%5B%5D%2C%22MaxResults%22%3Anull%2C%22TermSortMode%22%3A0%2C%22IncludeRemainingTerms%22%3Afalse%7D%5D&noCache=1402558754
         // /databases/TestDb/facets/Orders/ByCompany?&facetStart=0&facetPageSize=256&facets=[{"Mode":0,"Aggregation":1,"AggregationField":"Company","Name":"Company","DisplayName":"Company-Company","Ranges":[],"MaxResults":null,"TermSortMode":0,"IncludeRemainingTerms":false}]&noCache=1402558754
-        var facet: facetDto = {
-            Aggregation: 0,
-            AggregationField: fieldName,
-            DisplayName: fieldName + "-" + fieldName,
-            IncludeRemainingTerms: false,
-            MaxResults: null,
-            Mode: 0,
-            Name: fieldName,
-            Ranges: [],
-            TermSortMode: 0
-        };
-
-        this.addedValues.push(facet);
+        var val = facet.fromName(fieldName);
+        this.addedValues.push(val);
     }
 
-    removeValue(facet: facetDto) {
-        this.addedValues.remove(facet);
+    removeValue(val: facet) {
+        this.addedValues.remove(val);
     }
 
     runReport() {
+        var filterQuery = this.filter();
+        //new queryFacetCommand(
     }
 }
 
