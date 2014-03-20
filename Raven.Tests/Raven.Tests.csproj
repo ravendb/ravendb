@@ -168,11 +168,11 @@
     <Reference Include="System.Xml" />
     <Reference Include="xunit, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
+      <HintPath>..\SharedLibs\xunit\xunit.dll</HintPath>
     </Reference>
     <Reference Include="xunit.extensions, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\xunit.extensions.1.9.2\lib\net20\xunit.extensions.dll</HintPath>
+      <HintPath>..\SharedLibs\xunit\xunit.extensions.dll</HintPath>
     </Reference>
     <Reference Include="xunit.runner.msbuild">
       <HintPath>..\packages\xunit.1.9.1\lib\net20\xunit.runner.msbuild.dll</HintPath>
@@ -205,6 +205,7 @@
     <Compile Include="Bugs\ArrayOfMaybeNull.cs" />
     <Compile Include="Bugs\AsyncSetBasedOps.cs" />
     <Compile Include="Bugs\Attachments.cs" />
+    <Compile Include="Bugs\AvoidRaceConditionWhenWeLoadTheDataNotPatched.cs" />
     <Compile Include="Bugs\BackwardCompatibility.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
     <Compile Include="Bugs\CanAggregateOnDecimal.cs" />
@@ -226,6 +227,8 @@
     <Compile Include="Bugs\SyncAsync.cs" />
     <Compile Include="Bugs\TransformationsUnitTest.cs" />
     <Compile Include="Faceted\LazyFacets.cs" />
+    <Compile Include="Issues\WaitForStaleOnAbandonedIndexShouldWork.cs" />
+    <Compile Include="Issues\RavenDB_1761.cs" />
     <Compile Include="Issues\RavenDB1508.cs" />
     <Compile Include="Issues\RavenDB1519.cs" />
     <Compile Include="Issues\RavenDB_1280_ReOpen.cs" />
@@ -249,8 +252,15 @@
     <Compile Include="Issues\RavenDB_1598_MappingComplexProperties.cs" />
     <Compile Include="Issues\RavenDB_1600.cs" />
     <Compile Include="Issues\RavenDB_1603.cs" />
+    <Compile Include="Issues\RavenDB_1733.cs" />
+    <Compile Include="Issues\RavenDB_1754.cs" />
+    <Compile Include="Issues\RDBQA_11.cs" />
+    <Compile Include="Issues\RDBQA_6.cs" />
+    <Compile Include="Issues\RDBQA_7.cs" />
+    <Compile Include="Issues\RDBQA_9.cs" />
     <Compile Include="Issues\ReplicationAlerts.cs" />
     <Compile Include="Issues\RavenDB_1594.cs" />
+    <Compile Include="Issues\RavenDB_1762.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
     <Compile Include="Linq\GroupByAndDocumentId.cs" />
     <Compile Include="Linq\In.cs" />
@@ -875,6 +885,7 @@
     <Compile Include="MailingList\RenamedProperty.cs" />
     <Compile Include="MailingList\ResultTransformerMetaData .cs" />
     <Compile Include="MailingList\Rudolph.cs" />
+    <Compile Include="MailingList\SeanBuchanan.cs" />
     <Compile Include="MailingList\SessionAlreadyHaveSessionContext.cs" />
     <Compile Include="MailingList\ShardedFacets.cs" />
     <Compile Include="MailingList\SmugglerTests.cs" />

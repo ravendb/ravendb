@@ -106,6 +106,7 @@ namespace Raven.Database.Indexing
 			{
 				IndexName = indexesStat.Name,
 				LastIndexedEtag = indexesStat.LastIndexedEtag,
+				LastIndexedTimestamp = indexesStat.LastIndexedTimestamp
 			};
 		}
 
@@ -113,9 +114,15 @@ namespace Raven.Database.Indexing
 		{
 			indexesToWorkOn = context.Configuration.IndexingScheduler.FilterMapIndexes(indexesToWorkOn);
 
-            var lastIndexedGuidForAllIndexes =
+            var lastIndexedEtagForAllIndexes =
                    indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToEtag();
-            var startEtag = CalculateSynchronizationEtag(synchronizationEtag, lastIndexedGuidForAllIndexes);
+            var startEtag = CalculateSynchronizationEtag(synchronizationEtag, lastIndexedEtagForAllIndexes);
+
+			if (startEtag.CompareTo(lastIndexedEtagForAllIndexes) < 0)
+			{
+				transactionalStorage.Batch(actions =>
+					indexesToWorkOn.ForEach(index => actions.Indexing.UpdateLastIndexed(index.IndexName, startEtag, index.LastIndexedTimestamp)));
+			}
 
 			context.CancellationToken.ThrowIfCancellationRequested();
 

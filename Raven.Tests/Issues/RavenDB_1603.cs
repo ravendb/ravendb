@@ -10,9 +10,9 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Client;
@@ -34,9 +34,9 @@ namespace Raven.Tests.Issues
     {
         private readonly int listenPort;
         private readonly int targetPort;
-        private Func<int, byte[], int, int, bool> shouldThrow;
+        private readonly Func<int, byte[], int, int, bool> shouldThrow;
         private readonly CancellationTokenSource cancellationTokenSource;
-        private TcpListener proxySourceListener;
+        private TcpListener server;
 
         public PortForwarder(int listenPort, int targetPort, Func<int, byte[], int, int, bool> shouldThrow)
         {
@@ -48,70 +48,74 @@ namespace Raven.Tests.Issues
 
         public void Stop()
         {
-            proxySourceListener.Stop();
+            server.Stop();
             cancellationTokenSource.Cancel();
         }
 
         public void Forward()
         {
             var localAddr = IPAddress.Parse("127.0.0.1");
-            proxySourceListener = new TcpListener(localAddr, listenPort);
-            proxySourceListener.Start();
+            server = new TcpListener(localAddr, listenPort);
+            server.Start();
 
-			var token = cancellationTokenSource.Token;
-			Task.Run(() =>
+            Task.Run(() =>
             {
-                while (true)
+                while (cancellationTokenSource.IsCancellationRequested == false)
                 {
-					if(cancellationTokenSource.IsCancellationRequested)
-						cancellationTokenSource.Token.ThrowIfCancellationRequested();
-                    var proxySourceClient = proxySourceListener.AcceptTcpClient();
-                    Task.Run(() => RunProxy(proxySourceClient));
-	                Thread.Sleep(1);
+                    var tcpClient = server.AcceptTcpClient();
+                    Task.Run(() =>
+                    {
+                        using (tcpClient)
+                        {
+                            HandleClient(tcpClient);
+                        }
+                    });
                 }
-// ReSharper disable once FunctionNeverReturns
             });
         }
 
-        private void RunProxy(TcpClient proxySourceClient)
+        private async Task CopyStream(Stream source, Stream destination)
         {
-            var proxySourceStream = proxySourceClient.GetStream();
-
-            // now connect to target
-
-            var proxyTargetClient = new TcpClient("127.0.0.1", targetPort);
-            var proxyTargetStream = proxyTargetClient.GetStream();
-
-			var transferDataFromSourceToTargetTask = StartDataTransfer(proxySourceClient, proxySourceStream, proxyTargetStream);
-            var transferResponseFromTargetToSourceTask = StartDataTransfer(proxyTargetClient,proxyTargetStream,proxySourceStream);
-
-            Task.WaitAll(transferDataFromSourceToTargetTask, transferResponseFromTargetToSourceTask);
+            var buffer = new byte[1024];
+            var totalRead = 0;
+            var token = cancellationTokenSource.Token;
+            try
+            {
+                while (true)
+                {
+                    var read = await source.ReadAsync(buffer, 0, 1024, token);
+                    if (read == 0)
+                    {
+                        break;
+                    }
+                    Interlocked.Add(ref totalRead, read);
+                    if (shouldThrow(totalRead, buffer, 0, read))
+                    {
+                        throw new Exception("Connection closed");
+                    }
+                    await destination.WriteAsync(buffer, 0, read, token);
+                    destination.Flush();
+                }
+            }
+            finally
+            {
+                source.Close();
+                destination.Close();
+            }
         }
 
-	    private async Task StartDataTransfer(TcpClient tcpClient, NetworkStream sourceStream, NetworkStream targetStream)
-	    {
-		    var buffer = new byte[4096];
-		    var totalRead = 0;
-		    var token = cancellationTokenSource.Token;
-		    while (true)
-		    {
-			    var read = await sourceStream.ReadAsync(buffer, 0, 4096, token);
-			    if (read == 0)
-			    {
-				    tcpClient.Close();
-					cancellationTokenSource.Cancel(true);
-				    break;
-			    }
-			    totalRead += read;
-			    if (shouldThrow(totalRead, buffer, 0, read))
-			    {
-				    sourceStream.Close();
-				    targetStream.Close();
-			    }
-			    await targetStream.WriteAsync(buffer, 0, read, token);
-			    targetStream.Flush();
-		    }
-	    }
+        private void HandleClient(TcpClient tcpClient)
+        {
+            using (var incomingStream = tcpClient.GetStream())
+            using (var targetClient = new TcpClient("127.0.0.1", targetPort))
+            using (var targetStream = targetClient.GetStream())
+            {
+                var readTask = CopyStream(incomingStream, targetStream);
+                var writeTask = CopyStream(targetStream, incomingStream);
+
+                Task.WaitAll(readTask, writeTask);
+            }
+        }
     }
 
     public class RavenDB_1603 : RavenTest
@@ -788,15 +792,25 @@ namespace Raven.Tests.Issues
             var backupPath = NewDataPath("BackupFolder");
             var server = GetNewServer();
 
-            var alreadyReset = false;
+            
+            var shouldBreak = true;
+            var afterStream = false;
+            var bytesCount = 0;
 
             var forwarder = new PortForwarder(8070, 8079, (totalRead, bytes, offset, count) =>
             {
-                if (alreadyReset == false && totalRead > 10000)
+                var str = Encoding.UTF8.GetString(bytes, offset, count);
+                if (str.StartsWith("GET /streams/docs") && shouldBreak)
                 {
-                    alreadyReset = true;
+                    afterStream = true;
+                    bytesCount = totalRead;
+                }
+                if (shouldBreak && totalRead > bytesCount + 14000 && afterStream)
+                {
+                    shouldBreak = false;
                     return true;
                 }
+              
                 return false;
             });
             forwarder.Forward();

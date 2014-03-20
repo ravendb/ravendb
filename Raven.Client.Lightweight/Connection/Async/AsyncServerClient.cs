@@ -2047,7 +2047,7 @@ namespace Raven.Client.Connection.Async
 
 		public async Task<string> GetSingleAuthToken()
 		{
-			var tokenRequest = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
+			var tokenRequest = CreateRequest("/singleAuthToken".NoCache(), "GET", disableRequestCompression: true);
 
             var response = await tokenRequest.ReadResponseJsonAsync().ConfigureAwait(false);
 			return response.Value<string>("Token");
@@ -2055,7 +2055,7 @@ namespace Raven.Client.Connection.Async
 
 		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
 		{
-			var request = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
+			var request = CreateRequest("/singleAuthToken".NoCache(), "GET", disableRequestCompression: true);
 
 			request.DisableAuthentication();
 			request.webRequest.ContentLength = 0;

@@ -44,7 +44,9 @@ select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""]
 					{
 						{"Tag", FieldTermVector.No},
 						{"LastModified", FieldTermVector.No}
-					}
+					},
+
+				DisableInMemoryIndexing = true
 			};
 		}
 	}

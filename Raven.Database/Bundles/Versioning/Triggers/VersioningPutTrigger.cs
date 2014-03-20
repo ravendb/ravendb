@@ -25,9 +25,9 @@ namespace Raven.Bundles.Versioning.Triggers
 			if (jsonDocument == null)
 				return VetoResult.Allowed;
 
-            if (Database.ChangesToRevisionsAllowed() == false && 
-                jsonDocument.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical" &&
-                Database.IsVersioningActive(metadata))
+			if (Database.ChangesToRevisionsAllowed() == false && 
+				jsonDocument.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical" &&
+				Database.IsVersioningActive(metadata))
 			{
 				return VetoResult.Deny("Modifying a historical revision is not allowed");
 			}
@@ -38,6 +38,13 @@ namespace Raven.Bundles.Versioning.Triggers
 		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			VersioningConfiguration versioningConfiguration;
+
+			if (metadata.ContainsKey(Constants.RavenCreateVersion))
+			{
+				metadata.__ExternalState[Constants.RavenCreateVersion] = metadata[Constants.RavenCreateVersion];
+				metadata.Remove(Constants.RavenCreateVersion);
+			}
+
 			if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)
 				return;
 
@@ -159,7 +166,8 @@ namespace Raven.Bundles.Versioning.Triggers
 				return false;
 
 			versioningConfiguration = Database.GetDocumentVersioningConfiguration(metadata);
-			if (versioningConfiguration == null || versioningConfiguration.Exclude)
+			if (versioningConfiguration == null || versioningConfiguration.Exclude
+				|| (versioningConfiguration.ExcludeUnlessExplicit && !metadata.__ExternalState.ContainsKey(Constants.RavenCreateVersion)))
 				return false;
 			return true;
 		}

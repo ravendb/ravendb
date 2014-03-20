@@ -159,22 +159,40 @@ namespace Raven.Json.Linq
 					return default(U);
 				return (U)(object)value.Value.ToString();
 			}
-			if (targetType == typeof(DateTime) && value.Value is string)
+			if (targetType == typeof(DateTime))
 			{
-				DateTime dateTime;
-				if (DateTime.TryParseExact((string)value.Value, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
-					return (U)(object)dateTime;
-				
-				dateTime = RavenJsonTextReader.ParseDateMicrosoft((string)value.Value);
-				return (U)(object)dateTime;
-			}
-			if (targetType == typeof(DateTimeOffset) && value.Value is string)
-			{
-				DateTimeOffset dateTimeOffset;
-				if (DateTimeOffset.TryParseExact((string)value.Value, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
-					return (U)(object)dateTimeOffset;
+				var s = value.Value as string;
+				if (s != null)
+				{
+					DateTime dateTime;
+					if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+						DateTimeStyles.RoundtripKind, out dateTime))
+						return (U) (object) dateTime;
 
-				return default(U);
+					dateTime = RavenJsonTextReader.ParseDateMicrosoft(s);
+					return (U) (object) dateTime;
+				}
+				if (value.Value is DateTimeOffset)
+				{
+					return (U)(object)((DateTimeOffset) value.Value).UtcDateTime;
+				}
+			}
+			if (targetType == typeof(DateTimeOffset))
+			{
+				var s = value.Value as string;
+				if (s != null)
+				{
+					DateTimeOffset dateTimeOffset;
+					if (DateTimeOffset.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+						DateTimeStyles.RoundtripKind, out dateTimeOffset))
+						return (U) (object) dateTimeOffset;
+
+					return default(U);
+				}
+				if (value.Value is DateTime)
+				{
+					return (U) (object) (new DateTimeOffset((DateTime) value.Value));
+				}
 			}
 			return (U)System.Convert.ChangeType(value.Value, targetType, CultureInfo.InvariantCulture);
 		}

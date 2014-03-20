@@ -1498,8 +1498,8 @@ namespace Raven.Database.Indexing
 		}
 
         protected void UpdateDocumentReferences(IStorageActionsAccessor actions, 
-            ConcurrentQueue<IDictionary<string, HashSet<string>>> allReferencedDocs, 
-            ConcurrentQueue<HashSet<string>> missingReferencedDocs)
+            ConcurrentQueue<IDictionary<string, HashSet<string>>> allReferencedDocs,
+			ConcurrentQueue<IDictionary<string, HashSet<string>>> missingReferencedDocs)
         {
             IDictionary<string, HashSet<string>> result;
             while (allReferencedDocs.TryDequeue(out result))
@@ -1513,22 +1513,21 @@ namespace Raven.Database.Indexing
             var task = new TouchMissingReferenceDocumentTask
             {
                 Index = name, // so we will get IsStale properly
-                Keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                MissingReferences = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
             };
 
             var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(name, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
-            HashSet<string> docs;
+			IDictionary<string, HashSet<string>> docs;
             while (missingReferencedDocs.TryDequeue(out docs))
             {
-                
                 foreach (var doc in docs)
                 {
-                    if (set.TryRemove(doc))
+                    if (set.TryRemove(doc.Key))
                         continue;
-                    task.Keys.Add(doc);
+                    task.MissingReferences.Add(doc);
                 }
             }
-            if (task.Keys.Count == 0)
+            if (task.MissingReferences.Count == 0)
                 return;
             actions.Tasks.AddTask(task, SystemTime.UtcNow);
         }

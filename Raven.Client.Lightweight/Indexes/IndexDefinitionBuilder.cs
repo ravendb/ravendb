@@ -112,6 +112,11 @@ namespace Raven.Client.Indexes
 		/// <value>The spatial options.</value>
 		public IDictionary<string, SpatialOptions> SpatialIndexesStrings { get; set; }
 
+		/// <summary>
+		/// Prevent index from being kept in memory. Default: false
+		/// </summary>
+		public bool DisableInMemoryIndexing { get; set; }
+
 	    /// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
 		/// </summary>
@@ -157,7 +162,8 @@ namespace Raven.Client.Indexes
 				Analyzers = ConvertToStringDictionary(Analyzers),
 				Suggestions = ConvertToStringDictionary(Suggestions),
 				TermVectors =  ConvertToStringDictionary(TermVectors),
-				SpatialIndexes = ConvertToStringDictionary(SpatialIndexes)
+				SpatialIndexes = ConvertToStringDictionary(SpatialIndexes),
+				DisableInMemoryIndexing = DisableInMemoryIndexing,
 			};
 
 			foreach (var indexesString in IndexesStrings)

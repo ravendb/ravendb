@@ -184,7 +184,7 @@ namespace Raven.Database
                 AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
 
                 Name = configuration.DatabaseName;
-                backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Current;
+                backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Default;
 
                 ExtensionsState = new AtomicDictionary<object>();
                 Configuration = configuration;
@@ -943,7 +943,7 @@ namespace Raven.Database
                 .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
             if (vetoResult != null)
             {
-                throw new OperationVetoedException("PUT vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+                throw new OperationVetoedException("PUT vetoed on document " + key + " by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
             }
         }
 
@@ -954,7 +954,8 @@ namespace Raven.Database
                 .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
             if (vetoResult != null)
             {
-                throw new OperationVetoedException("PUT vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+	            throw new OperationVetoedException("PUT vetoed on attachment " + key + " by " + vetoResult.Trigger +
+	                                               " because: " + vetoResult.VetoResult.Reason);
             }
         }
 
@@ -965,7 +966,8 @@ namespace Raven.Database
                 .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
             if (vetoResult != null)
             {
-                throw new OperationVetoedException("DELETE vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+	            throw new OperationVetoedException("DELETE vetoed on attachment " + key + " by " + vetoResult.Trigger +
+	                                               " because: " + vetoResult.VetoResult.Reason);
             }
         }
 
@@ -976,7 +978,8 @@ namespace Raven.Database
                 .FirstOrDefault(x => x.VetoResult.IsAllowed == false);
             if (vetoResult != null)
             {
-                throw new OperationVetoedException("DELETE vetoed by " + vetoResult.Trigger + " because: " + vetoResult.VetoResult.Reason);
+	            throw new OperationVetoedException("DELETE vetoed on document " + key + " by " + vetoResult.Trigger +
+	                                               " because: " + vetoResult.VetoResult.Reason);
             }
         }
 
@@ -2000,9 +2003,12 @@ namespace Raven.Database
                 TransactionalStorage.Batch(actions =>
 				{
 					var doc = actions.Documents.DocumentByKey(docId, transactionInformation);
+					log.Debug(() => string.Format("Preparing to apply patch on ({0}). Document found?: {1}.", docId, doc != null));
+					
 					if (etag != null && doc != null && doc.Etag != etag)
 					{
 						Debug.Assert(doc.Etag != null);
+						log.Debug(() => string.Format("Got concurrent exception while tried to patch the following document ID: {0}", docId));
 						throw new ConcurrencyException("Could not patch document '" + docId + "' because non current etag was used")
 						{
 							ActualETag = doc.Etag,
@@ -2013,6 +2019,7 @@ namespace Raven.Database
 					var jsonDoc = (doc != null ? patcher(doc.ToJson(), doc.SerializedSizeOnDisk) : patcherIfMissing());
 					if (jsonDoc == null)
 					{
+						log.Debug(() => string.Format("Preparing to apply patch on ({0}). DocumentDoesNotExists.", docId));
 						result.PatchResult = PatchResult.DocumentDoesNotExists;
 					}
 					else

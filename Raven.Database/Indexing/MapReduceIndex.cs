@@ -96,7 +96,7 @@ namespace Raven.Database.Indexing
 				.Where(x => x is FilteredDocument == false)
 				.ToList();
 			var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
-            var missingReferencedDocs = new ConcurrentQueue<HashSet<string>>();
+			var missingReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
 
 			if (documentsWrapped.Count > 0)
 				actions.MapReduce.UpdateRemovedMapReduceStats(name, deleted);

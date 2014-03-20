@@ -163,7 +163,20 @@ namespace Raven.Database.Bundles.SqlReplication
 					continue;
 				}
 
-				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag);
+				var synchronizationEtag = etagSynchronizer.GetSynchronizationEtag();
+				var calculatedSynchronizationEtag = etagSynchronizer.CalculateSynchronizationEtag(synchronizationEtag, leastReplicatedEtag);
+
+				if (calculatedSynchronizationEtag.CompareTo(leastReplicatedEtag) < 0)
+				{
+					foreach (var lastReplicatedEtag in localReplicationStatus.LastReplicatedEtags)
+					{
+						if (calculatedSynchronizationEtag.CompareTo(lastReplicatedEtag.LastDocEtag) < 0)
+							lastReplicatedEtag.LastDocEtag = calculatedSynchronizationEtag;
+					}
+					SaveNewReplicationStatus(localReplicationStatus, calculatedSynchronizationEtag);
+				}
+
+				var documents = prefetchingBehavior.GetDocumentsBatchFrom(calculatedSynchronizationEtag);
 
 				Etag latestEtag = null, lastBatchEtag = null;
 				if (documents.Count != 0)
@@ -174,7 +187,9 @@ namespace Raven.Database.Bundles.SqlReplication
 				
 				if (documents.Count != 0)
 					latestEtag = documents[documents.Count - 1].Etag;
-				
+
+				documents.RemoveAll(x => prefetchingBehavior.FilterDocuments(x) == false);
+
 				var deletedDocsByConfig = new Dictionary<SqlReplicationConfig, List<ListItem>>();
 
 				foreach (var relevantConfig in relevantConfigs)
@@ -224,12 +239,27 @@ namespace Raven.Database.Bundles.SqlReplication
 							var deletedDocs = deletedDocsByConfig[replicationConfig];
 							var docsToReplicate = documents
 								.Where(x => lastReplicatedEtag.CompareTo(x.Etag) <= 0) // haven't replicate the etag yet
+                                .Where(document =>
+                                {
+                                    var info = Database.GetRecentTouchesFor(document.Key);
+                                    if (info != null)
+                                    {
+                                        if (info.TouchedEtag.CompareTo(lastReplicatedEtag) > 0)
+                                        {
+                                            log.Debug(
+                                                "Will not replicate document '{0}' to '{1}' because the updates after etag {2} are related document touches",
+                                                document.Key, replicationConfig.Name, info.TouchedEtag);
+                                            return false;
+                                        }
+                                    }
+
+                                })
 								.ToList();
 
 							var currentLatestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicate);
 
 							if (ReplicateDeletionsToDestination(replicationConfig, deletedDocs) &&
-								ReplicateChangesToDesintation(replicationConfig, docsToReplicate))
+								ReplicateChangesToDestination(replicationConfig, docsToReplicate))
 							{
 								if (deletedDocs.Count > 0)
 								{
@@ -383,7 +413,6 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private Etag GetLeastReplicatedEtag(IEnumerable<SqlReplicationConfig> config, SqlReplicationStatus localReplicationStatus)
 		{
-			var synchronizationEtag = etagSynchronizer.GetSynchronizationEtag();
 			Etag leastReplicatedEtag = null;
 			foreach (var sqlReplicationConfig in config)
 			{
@@ -393,12 +422,11 @@ namespace Raven.Database.Bundles.SqlReplication
 				else if (lastEtag.CompareTo(leastReplicatedEtag) < 0)
 					leastReplicatedEtag = lastEtag;
 			}
-			var calculateSynchronizationEtag = etagSynchronizer.CalculateSynchronizationEtag(synchronizationEtag, leastReplicatedEtag);
 
-			return calculateSynchronizationEtag;
+			return leastReplicatedEtag;
 		}
 
-		private bool ReplicateChangesToDesintation(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
+		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)
 		{
 			var scriptResult = ApplyConversionScript(cfg, docs);
 			if (scriptResult.Data.Count == 0)
@@ -473,7 +501,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				{
 					replicationStats.MarkScriptAsInvalid(Database, cfg.Script);
 
-					log.WarnException("Could parse SQL Replication script for " + cfg.Name, e);
+					log.WarnException("Could not parse SQL Replication script for " + cfg.Name, e);
 
 					return result;
 				}

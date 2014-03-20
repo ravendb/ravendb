@@ -53,7 +53,7 @@ namespace Raven.Smuggler
 			            			                       {
 				            			                       Path = "@metadata." + key,
 															   ShouldMatch = true,
-															   Values = val.Split(',').ToList()
+															   Values = FilterSetting.ParseValues(val)
 			            			                       })
 			            			},
 								{
@@ -62,7 +62,7 @@ namespace Raven.Smuggler
 			            			                       {
 				            			                       Path = "@metadata." + key,
 															   ShouldMatch = false,
-															   Values = val.Split(',').ToList()
+															   Values = FilterSetting.ParseValues(val)
 			            			                       })
 			            			},
 			            		{
@@ -71,7 +71,7 @@ namespace Raven.Smuggler
 			            			              {
 													  Path = key,
 													  ShouldMatch = true,
-													  Values = val.Split(',').ToList()
+													  Values = FilterSetting.ParseValues(val)
 			            			              })
 			            			},
 								{
@@ -80,7 +80,7 @@ namespace Raven.Smuggler
 			            			              {
 													  Path = key,
 													  ShouldMatch = false,
-													  Values = val.Split(',').ToList()
+													  Values = FilterSetting.ParseValues(val)
 			            			              })
 			            			},
 			            		{

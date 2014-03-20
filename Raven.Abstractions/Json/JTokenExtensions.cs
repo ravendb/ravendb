@@ -116,11 +116,18 @@ namespace Raven.Abstractions.Json
 			return tuple == null ? null : tuple.Item1;
 		}
 
-		public static IEnumerable<Tuple<RavenJToken, RavenJToken>> SelectTokenWithRavenSyntaxReturningFlatStructure(this RavenJToken self, string path)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="self"></param>
+        /// <param name="path"></param>
+        /// <param name="createSnapshots">Set to true if you want to modify selected objects</param>
+        /// <returns></returns>
+		public static IEnumerable<Tuple<RavenJToken, RavenJToken>> SelectTokenWithRavenSyntaxReturningFlatStructure(this RavenJToken self, string path, bool createSnapshots = false)
 		{
 			var pathParts = path.Split(new[]{','}, StringSplitOptions.RemoveEmptyEntries);
-			var result = self.SelectToken(pathParts[0]);
-			if(pathParts.Length == 1)
+			var result = self.SelectToken(pathParts[0], false, createSnapshots);
+			if (pathParts.Length == 1)
 			{
 				yield return Tuple.Create(result, self);
 				yield break;
