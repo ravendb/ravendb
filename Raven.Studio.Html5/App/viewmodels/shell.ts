@@ -22,7 +22,6 @@ import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 
-
 class shell extends viewModelBase {
     private router = router;
     databases = ko.observableArray<database>();
@@ -36,12 +35,15 @@ class shell extends viewModelBase {
     recordedErrors = ko.observableArray<alertArgs>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
+    isFirstModelPoll: boolean;
+
 
     DocumentPrefix = ko.observable<String>();
     
 
     constructor() {
         super();
+        this.isFirstModelPoll = true;
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
 
@@ -55,7 +57,7 @@ class shell extends viewModelBase {
 
         NProgress.set(.7);
         router.map([
-            { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: false },
+            { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: false, hash: this.appUrls.databasesManagement },
             { route: 'documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: this.appUrls.documents },
             { route: 'indexes*details', title: 'Indexes', moduleId: 'viewmodels/indexesShell', nav: true, hash: this.appUrls.indexes },
             { route: 'transformers*details', title: 'Transformers', moduleId: 'viewmodels/transformersShell', nav: false, hash: this.appUrls.transformers },
@@ -141,8 +143,9 @@ class shell extends viewModelBase {
     databasesLoaded(databases) {
         var systemDatabase = new database("<system>");
         systemDatabase.isSystem = true;
+        systemDatabase.isVisible(false);
         this.databases(databases.concat([systemDatabase]));
-        this.databases()[0].activate();
+        this.databases.first(x=>x.isVisible()).activate();
     }
 
     launchDocEditor(docId?: string, docsList?: pagedList) {
