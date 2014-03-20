@@ -7,6 +7,7 @@ import getDatabasesCommand = require("commands/getDatabasesCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import deleteDatabaseConfirm = require("viewmodels/deleteDatabaseConfirm");
 import createDatabase = require("viewmodels/createDatabase");
+import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
 
 class databases extends viewModelBase {
 
@@ -14,9 +15,11 @@ class databases extends viewModelBase {
     searchText = ko.observable("");
     selectedDatabase = ko.observable<database>();
     lastModelPayloadHash: number;
+    systemDb:database;
 
     constructor() {
         super();
+        this.systemDb = appUrl.getSystemDatabase();
         this.searchText.subscribe(s=> this.filterDatabases(s));
     }
 
@@ -43,11 +46,8 @@ class databases extends viewModelBase {
         var databasesHaveChanged = !this.lastModelPayloadHash || this.lastModelPayloadHash !== modelPayloadHash;
         if (databasesHaveChanged) {
             this.lastModelPayloadHash = modelPayloadHash;
-
-            var systemDatabase = new database("<system>");
-            systemDatabase.isSystem = true;
-
-            this.databases(results.concat(systemDatabase));
+            
+            this.databases(results);
 
             // If we have just a few databases, grab the db stats for all of them.
             // (Otherwise, we'll grab them when we click them.)
@@ -101,10 +101,9 @@ class databases extends viewModelBase {
 
     deleteSelectedDatabase() {
         var db = this.selectedDatabase();
-        var systemDb = this.databases.first(db=> db.isSystem);
-        if (db && systemDb) {
+        if (db ) {
             require(["viewmodels/deleteDatabaseConfirm"], deleteDatabaseConfirm => {
-                var confirmDeleteVm: deleteDatabaseConfirm = new deleteDatabaseConfirm(db, systemDb);
+                var confirmDeleteVm: deleteDatabaseConfirm = new deleteDatabaseConfirm(db, this.systemDb);
                 confirmDeleteVm.deleteTask.done(() => this.onDatabaseDeleted(db));
                 app.showDialog(confirmDeleteVm);
             });
@@ -117,6 +116,17 @@ class databases extends viewModelBase {
             this.selectDatabase(this.databases().first());
         }
     }
+
+    goToSystemDatabase() {
+        var systemDbConfirm = new viewSystemDatabaseConfirm();
+        systemDbConfirm.viewTask.done(()=> {
+            var systemDb = appUrl.getSystemDatabase();
+            systemDb.activate();
+            this.goToDocuments(systemDb);
+        });
+        app.showDialog(systemDbConfirm);
+    }
+
 }
 
 export = databases; 
