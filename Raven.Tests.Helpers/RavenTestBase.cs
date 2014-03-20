@@ -34,6 +34,7 @@ using Raven.Database.Server;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Server.Security;
 using Raven.Database.Storage;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
@@ -300,7 +301,7 @@ namespace Raven.Tests.Helpers
 			else
 				newTransactionalStorage = new Storage.Esent.TransactionalStorage(ravenConfiguration, () => { });
 
-			newTransactionalStorage.Initialize(new DummyUuidGenerator(), documentCodecs ?? new OrderedPartCollection<AbstractDocumentCodec>());
+			newTransactionalStorage.Initialize(new SequentialUuidGenerator { EtagBase = 0 }, documentCodecs ?? new OrderedPartCollection<AbstractDocumentCodec>());
 			return newTransactionalStorage;
 		}
 
