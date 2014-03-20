@@ -143,8 +143,10 @@
     <TypeScriptCompile Include="App\models\sqlReplication.ts" />
     <TypeScriptCompile Include="App\commands\getSqlReplicationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveSqlReplicationsCommand.ts" />
+    <Content Include="App\commands\getNewEncryptionKey.js" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\createEncryptionConfirmation.html" />
     <Content Include="App\views\restoreDatabase.html" />
     <Content Include="App\views\backupDatabase.html" />
     <Content Include="App\views\deleteTransformerConfirm.html" />

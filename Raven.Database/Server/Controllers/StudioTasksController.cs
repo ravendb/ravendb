@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -49,5 +50,18 @@ namespace Raven.Database.Server.Controllers
 
 			return GetEmptyMessage();
 		}
+
+        [HttpGet]
+        [Route("studio-tasks/new-encryption-key")]
+        public HttpResponseMessage GetNewEncryption(string path = null)
+        {
+            RandomNumberGenerator randomNumberGenerator = new RNGCryptoServiceProvider();
+            var byteStruct = new byte[Constants.DefaultGeneratedEncryptionKeyLength];
+            randomNumberGenerator.GetBytes(byteStruct);
+            var result = Convert.ToBase64String(byteStruct);
+
+            HttpResponseMessage response = Request.CreateResponse(HttpStatusCode.OK, result);
+            return response;
+        }
 	}
 }
