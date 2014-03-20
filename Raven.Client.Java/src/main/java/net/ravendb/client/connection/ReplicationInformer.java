@@ -93,8 +93,7 @@ public class ReplicationInformer extends ReplicationInformerBase<ServerClient> i
 
       JsonDocument document;
       try {
-        //TODO: add credentials
-        document = commands.directGet(new OperationMetadata(commands.getUrl()), RAVEN_REPLICATION_DESTINATIONS);
+        document = commands.directGet(new OperationMetadata(commands.getUrl(), commands.getPrimaryCredentials()), RAVEN_REPLICATION_DESTINATIONS);
         failureCounts.put(commands.getUrl(), new FailureCounter()); // we just hit the master, so we can reset its failure count
       } catch (Exception e) {
         log.error("Could not contact master for new replication information", e);

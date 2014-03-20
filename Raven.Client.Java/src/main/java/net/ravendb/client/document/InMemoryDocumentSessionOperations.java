@@ -988,18 +988,14 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
       deferedCommands.add(command);
     }
   }
-  /*TODO
-   * /// <summary>
-        /// Version this entity when it is saved.  Use when Versioning bundle configured to ExcludeUnlessExplicit.
-        /// </summary>
-        /// <param name="entity">The entity.</param>
-        public void ExplicitlyVersion(object entity)
-        {
-            var metadata = GetMetadataFor(entity);
 
-            metadata[Constants.RavenCreateVersion] = true;
-        }
+  /**
+   *  Version this entity when it is saved.  Use when Versioning bundle configured to ExcludeUnlessExplicit.
    */
+  public void explicitlyVersion(Object entity) {
+    RavenJObject metadata = getMetadataFor(entity);
+    metadata.add(Constants.RAVEN_CREATE_VERSION, true);
+  }
 
   /**
    * Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.

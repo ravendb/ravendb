@@ -163,8 +163,8 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     }
 
     if (includedDocumentsByKey.containsKey(id)) {
-      includedDocumentsByKey.remove(id);
       JsonDocument value = includedDocumentsByKey.get(id);
+      includedDocumentsByKey.remove(id);
       return (T) trackEntity(clazz, value);
     }
 

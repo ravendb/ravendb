@@ -248,8 +248,7 @@ public class IndexDefinitionBuilder {
       indexDefinition.getSortOptions().put(sortOptions.getKey(), sortOptions.getValue());
     }
 
-    //TODO: indexDefinition.setDisableInMemory(disableInMemoryIndexing);
-
+    indexDefinition.setDisableInMemoryIndexing(disableInMemoryIndexing);
     indexDefinition.setMaxIndexOutputsPerDocument(maxIndexOutputsPerDocument);
 
     if (map != null) {

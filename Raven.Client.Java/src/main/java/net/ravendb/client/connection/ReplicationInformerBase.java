@@ -27,6 +27,9 @@ import net.ravendb.client.document.Convention;
 import net.ravendb.client.document.FailoverBehavior;
 
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.exception.ExceptionUtils;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 
 
 public abstract class ReplicationInformerBase<T> implements IReplicationInformerBase<T> {
@@ -298,20 +301,17 @@ public abstract class ReplicationInformerBase<T> implements IReplicationInformer
       wasTimeout.value = Boolean.FALSE;
       return true;
     } catch (Exception e) {
-      //if (tryWithPrimaryCredentials && operationMetadata.getCredentials().hasCredentials() )
-      /* TODO
-       * var webException = e as WebException;
-                if (tryWithPrimaryCredentials && operationMetadata.Credentials.HasCredentials() && webException != null)
-                {
-                    IncrementFailureCount(operationMetadata.Url);
+      if (tryWithPrimaryCredentials && operationMetadata.getCredentials().getApiKey() != null) {
+        incrementFailureCount(operationMetadata.getUrl());
 
-                    var response = webException.Response as HttpWebResponse;
-                    if (response != null && response.StatusCode == HttpStatusCode.Unauthorized)
-                    {
-                        return TryOperation(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, out result, out wasTimeout);
-                    }
-                }
-       */
+        Throwable rootCause = ExceptionUtils.getRootCause(e);
+        if (rootCause instanceof HttpOperationException) {
+          HttpOperationException webException = (HttpOperationException) rootCause;
+          if (webException.getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
+            return tryOperation(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, result, wasTimeout);
+          }
+        }
+      }
       if (avoidThrowing == false) {
         throw e;
       }

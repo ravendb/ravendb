@@ -1,22 +1,34 @@
 package net.ravendb.abstractions.data;
 
 import java.util.Date;
+import java.util.List;
 
 
 public class LoadedDatabaseStatistics {
   private String name;
   private Date lastActivity;
-  private long transactionalStorageSize;
-  private String transactionalStorageSizeHumaneSize;
+
+  private long transactionalStorageAllocatedSize;
+  private String transactionalStorageAllocatedSizeHumaneSize;
+  private long transactionalStorageUsedSize;
+  private String transactionalStorageUsedSizeHumaneSize;
+
   private long indexStorageSize;
   private String indexStorageHumaneSize;
   private long totalDatabaseSize;
   private String totalDatabaseHumaneSize;
   private long countOfDocuments;
   private long countOfAttachments;
-  private double requestsPerSecond;
-  private int concurrentRequests;
   private double databaseTransactionVersionSizeInMB;
+  private List<DatabaseMetrics> metrics;
+
+  public List<DatabaseMetrics> getMetrics() {
+    return metrics;
+  }
+
+  public void setMetrics(List<DatabaseMetrics> metrics) {
+    this.metrics = metrics;
+  }
 
   public String getName() {
     return name;
@@ -34,28 +46,12 @@ public class LoadedDatabaseStatistics {
     this.lastActivity = lastActivity;
   }
 
-  public long getTransactionalStorageSize() {
-    return transactionalStorageSize;
-  }
-
-  public void setTransactionalStorageSize(long transactionalStorageSize) {
-    this.transactionalStorageSize = transactionalStorageSize;
-  }
-
-  public String getTransactionalStorageSizeHumaneSize() {
-    return transactionalStorageSizeHumaneSize;
-  }
-
   public long getCountOfAttachments() {
     return countOfAttachments;
   }
 
   public void setCountOfAttachments(long countOfAttachments) {
     this.countOfAttachments = countOfAttachments;
-  }
-
-  public void setTransactionalStorageSizeHumaneSize(String transactionalStorageSizeHumaneSize) {
-    this.transactionalStorageSizeHumaneSize = transactionalStorageSizeHumaneSize;
   }
 
   public long getIndexStorageSize() {
@@ -98,22 +94,6 @@ public class LoadedDatabaseStatistics {
     this.countOfDocuments = countOfDocuments;
   }
 
-  public double getRequestsPerSecond() {
-    return requestsPerSecond;
-  }
-
-  public void setRequestsPerSecond(double requestsPerSecond) {
-    this.requestsPerSecond = requestsPerSecond;
-  }
-
-  public int getConcurrentRequests() {
-    return concurrentRequests;
-  }
-
-  public void setConcurrentRequests(int concurrentRequests) {
-    this.concurrentRequests = concurrentRequests;
-  }
-
   public double getDatabaseTransactionVersionSizeInMB() {
     return databaseTransactionVersionSizeInMB;
   }
@@ -122,5 +102,44 @@ public class LoadedDatabaseStatistics {
     this.databaseTransactionVersionSizeInMB = databaseTransactionVersionSizeInMB;
   }
 
+
+  public long getTransactionalStorageAllocatedSize() {
+    return transactionalStorageAllocatedSize;
+  }
+
+
+  public void setTransactionalStorageAllocatedSize(long transactionalStorageAllocatedSize) {
+    this.transactionalStorageAllocatedSize = transactionalStorageAllocatedSize;
+  }
+
+
+  public String getTransactionalStorageAllocatedSizeHumaneSize() {
+    return transactionalStorageAllocatedSizeHumaneSize;
+  }
+
+
+  public void setTransactionalStorageAllocatedSizeHumaneSize(String transactionalStorageAllocatedSizeHumaneSize) {
+    this.transactionalStorageAllocatedSizeHumaneSize = transactionalStorageAllocatedSizeHumaneSize;
+  }
+
+
+  public long getTransactionalStorageUsedSize() {
+    return transactionalStorageUsedSize;
+  }
+
+
+  public void setTransactionalStorageUsedSize(long transactionalStorageUsedSize) {
+    this.transactionalStorageUsedSize = transactionalStorageUsedSize;
+  }
+
+
+  public String getTransactionalStorageUsedSizeHumaneSize() {
+    return transactionalStorageUsedSizeHumaneSize;
+  }
+
+
+  public void setTransactionalStorageUsedSizeHumaneSize(String transactionalStorageUsedSizeHumaneSize) {
+    this.transactionalStorageUsedSizeHumaneSize = transactionalStorageUsedSizeHumaneSize;
+  }
 
 }

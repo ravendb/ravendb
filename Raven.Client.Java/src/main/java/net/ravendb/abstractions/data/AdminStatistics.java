@@ -2,16 +2,21 @@ package net.ravendb.abstractions.data;
 
 import java.util.List;
 
-//TODO: sync with remote
 public class AdminStatistics {
   private String serverName;
-
   private int totalNumberOfRequests;
   private long uptime;
   private AdminMemoryStatistics memory;
-
   private List<LoadedDatabaseStatistics> loadedDatabases;
-  //TODO:         public IEnumerable<FileSystemStats> LoadedFileSystems { get; set; }
+  private List<FileSystemStats> loadedFileSystems;
+
+  public List<FileSystemStats> getLoadedFileSystems() {
+    return loadedFileSystems;
+  }
+
+  public void setLoadedFileSystems(List<FileSystemStats> loadedFileSystems) {
+    this.loadedFileSystems = loadedFileSystems;
+  }
 
   public String getServerName() {
     return serverName;

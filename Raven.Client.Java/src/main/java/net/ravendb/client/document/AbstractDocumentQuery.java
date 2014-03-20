@@ -2,7 +2,6 @@ package net.ravendb.client.document;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.net.IDN;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -65,6 +64,7 @@ import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 
 
+import com.google.common.base.Defaults;
 import com.mysema.query.types.Expression;
 import com.mysema.query.types.Path;
 
@@ -313,7 +313,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     }
   }
 
-  private void updateStatsAndHighlightings(QueryResult queryResult) {
+  protected void updateStatsAndHighlightings(QueryResult queryResult) {
     this.queryStats.updateQueryStats(queryResult);
     this.highlightings.update(queryResult);
   }
@@ -794,39 +794,46 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return (IDocumentQuery<T>) this;
   }
 
-  /*TODO
-   *
-   * public T First()
-        {
-            return ExecuteQueryOperation(1).First();
-        }
+  public T first() {
+    return executeQueryOperation(1).get(0);
+  }
 
-        public T FirstOrDefault()
-        {
-            return ExecuteQueryOperation(1).FirstOrDefault();
-        }
+  public T firstOrDefault() {
+    List<T> result = executeQueryOperation(1);
+    if (result.isEmpty()) {
+      return Defaults.defaultValue(clazz);
+    }
+    return result.get(0);
+  }
 
-        public T Single()
-        {
-            return ExecuteQueryOperation(2).Single();
-        }
+  public T single() {
+    List<T> result = executeQueryOperation(2);
+    if (result.size() != 1) {
+      throw new IllegalStateException("Expected single result, got: " + result.size());
+    }
+    return result.get(0);
+  }
 
-        public T SingleOrDefault()
-        {
-            return ExecuteQueryOperation(2).SingleOrDefault();
-        }
+  public T singleOrDefault() {
+    List<T> result = executeQueryOperation(2);
+    if (result.size() > 1) {
+      throw new IllegalStateException("Expected single result, got: " + result.size());
+    }
+    if (result.isEmpty()) {
+      return Defaults.defaultValue(clazz);
+    }
+    return result.get(0);
+  }
 
-        private IEnumerable<T> ExecuteQueryOperation(int take)
-        {
-            if (!pageSize.HasValue || pageSize > take)
-                Take(take);
+  private List<T> executeQueryOperation(int take) {
+    if (pageSize == null || pageSize > take) {
+          take(take);
+    }
 
-            InitSync();
+    initSync();
 
-            return queryOperation.Complete<T>();
-        }(non-Javadoc)
-   * @see net.ravendb.client.document.IAbstractDocumentQuery#where(java.lang.String)
-   */
+    return queryOperation.complete(clazz);
+  }
 
   @Override
   @SuppressWarnings("unchecked")

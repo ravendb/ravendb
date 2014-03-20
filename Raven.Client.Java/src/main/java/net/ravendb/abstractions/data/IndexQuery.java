@@ -335,7 +335,7 @@ public class IndexQuery {
 
   public String getMinimalQueryString() {
     StringBuilder sb = new StringBuilder();
-    appendMinimalQueryString(sb);
+    appendMinimalQueryString(sb, true);
     return sb.toString();
   }
 

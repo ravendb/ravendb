@@ -11,6 +11,8 @@ import java.util.Set;
 import net.ravendb.abstractions.data.StringDistanceTypes;
 
 import org.apache.commons.lang.StringUtils;
+import org.codehaus.jackson.annotate.JsonIgnore;
+import org.codehaus.jackson.annotate.JsonProperty;
 
 
 public class IndexDefinition {
@@ -27,6 +29,8 @@ public class IndexDefinition {
     suggestions = new HashMap<>();
     termVectors = new HashMap<>();
     spatialIndexes = new HashMap<>();
+
+    fields = new ArrayList<>();
   }
 
 
@@ -52,6 +56,7 @@ public class IndexDefinition {
   private Map<String, FieldTermVector> termVectors;
   private Map<String, SpatialOptions> spatialIndexes;
   private Integer cachedHashCode;
+  private boolean disableInMemoryIndexing;
 
   /**
    * Index specific setting that limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to
@@ -67,6 +72,16 @@ public class IndexDefinition {
     this.maxIndexOutputsPerDocument = maxIndexOutputsPerDocument;
   }
 
+
+  public boolean isDisableInMemoryIndexing() {
+    return disableInMemoryIndexing;
+  }
+
+
+
+  public void setDisableInMemoryIndexing(boolean disableInMemoryIndexing) {
+    this.disableInMemoryIndexing = disableInMemoryIndexing;
+  }
 
 
   public int getIndexId() {
@@ -306,6 +321,7 @@ public class IndexDefinition {
    * Gets a value indicating whether this instance is map reduce index definition
    * @return <c>true</c> if this instance is map reduce; otherwise, <c>false</c>.
    */
+  @JsonProperty("IsMapReduce")
   public boolean isMapReduce() {
     return StringUtils.isNotEmpty(reduce);
   }
@@ -313,6 +329,7 @@ public class IndexDefinition {
   /**
    * @return the isCompiled
    */
+  @JsonProperty("IsCompiled")
   public boolean isCompiled() {
     return isCompiled;
   }
@@ -425,6 +442,7 @@ public class IndexDefinition {
    *  we want to avoid calculating the cost of doing this over and over again on each
    *  query.
    */
+  @JsonIgnore
   public int getIndexHash()
   {
     if (cachedHashCode != null)
@@ -445,12 +463,6 @@ public class IndexDefinition {
       return "MapReduce";
     return "Map";
   }
-
-  //TODO:
-/// <summary>
-  /// Prevent index from being kept in memory. Default: false
-  /// </summary>
-  //public bool DisableInMemoryIndexing { get; set; }
 
   /**
    * Remove the default values that we don't actually need
@@ -475,7 +487,7 @@ public class IndexDefinition {
     filterValues(termVectors, FieldTermVector.NO);
   }
 
-  private <T> void filterValues(Map<String, T> map, T valueToRemove) {
+  private static <T> void filterValues(Map<String, T> map, T valueToRemove) {
     Set<String> keysToRemove = new HashSet<>();
     for (Entry<String, T> entry: map.entrySet()) {
       if (entry.getValue().equals(valueToRemove)) {
@@ -483,7 +495,7 @@ public class IndexDefinition {
       }
     }
     for (String key: keysToRemove) {
-     map.remove(key);
+      map.remove(key);
     }
 
   }

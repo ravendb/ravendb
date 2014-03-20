@@ -142,7 +142,7 @@ public class AbstractIndexCreationTask extends AbstractCommonApiForIndexesAndTra
     builder.setSpatialIndexes(spatialIndexes);
     builder.setSpatialIndexesStrings(spatialIndexesStrings);
     builder.setMaxIndexOutputsPerDocument(maxIndexOutputsPerDocument);
-    //TODO:                 DisableInMemoryIndexing = DisableInMemoryIndexing,
+    builder.setDisableInMemoryIndexing(disableInMemoryIndexing);
     return builder.toIndexDefinition(conventions);
 
   }

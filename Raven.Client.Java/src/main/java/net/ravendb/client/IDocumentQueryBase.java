@@ -65,33 +65,30 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    */
   public TSelf skip(int count);
 
-
-
-  /* TODO:
-   *  /// <summary>
-        ///   Returns first element or default value for type if sequence is empty.
-        /// </summary>
-        /// <returns></returns>
-        T FirstOrDefault();
-
-        /// <summary>
-        ///   Returns first element or throws if sequence is empty.
-        /// </summary>
-        /// <returns></returns>
-        T First();
-
-        /// <summary>
-        ///   Returns first element or default value for given type if sequence is empty. Throws if sequence contains more than one element.
-        /// </summary>
-        /// <returns></returns>
-        T SingleOrDefault();
-
-        /// <summary>
-        ///   Returns first element or throws if sequence is empty or contains more than one element.
-        /// </summary>
-        /// <returns></returns>
-        T Single();
+  /**
+   * Returns first element or default value for type if sequence is empty.
+   * @return
    */
+  public T firstOrDefault();
+
+  /**
+   * Returns first element or throws if sequence is empty.
+   * @return
+   */
+  public T first();
+
+  /**
+   * Returns first element or default value for given type if sequence is empty. Throws if sequence contains more than one element.
+   * @return
+   */
+  public T singleOrDefault();
+
+  /**
+   * Returns first element or throws if sequence is empty or contains more than one element.
+   * @return
+   */
+  public T single();
+
   /**
    * Filter the results from the index using the specified where clause.
    * @param whereClause The where clause.
