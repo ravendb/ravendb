@@ -127,7 +127,7 @@ namespace Raven.Database.Server.Controllers
 
                     msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
                     msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
-                    msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStable ? "true" : "false");
+                    msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStale ? "true" : "false");
                     msg.Headers.Add("Raven-Index", queryOp.Header.Index);
                     msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
                     msg.Headers.Add(
