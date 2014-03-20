@@ -1,26 +1,31 @@
 ﻿<section class="database-page">
-    <ul class="breadcrumb">
-        <li>
-            <h3>
-                <a href="#databases">
-                    Databases
-                </a>
-            </h3>
-        </li>
-    </ul>
-
-    <div class="btn-toolbar">
-        <button type="button" class="btn btn-primary" data-bind="click: newDatabase" accesskey="n" title="Create a new database. (Alt+N)"><i class="fa fa-plus"></i> New Database</button>
-        <form class="form-inline" style="display: inline-block; vertical-align: middle;">
-            <input type="text" accesskey="s" class="form-control col-md-8" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" title="Search for a database (Alt+S)">
-        </form>
-        <button type="button" class="btn btn-danger" data-bind="click: deleteSelectedDatabase, visible: selectedDatabase() != null" title="Delete selected database"><i class="fa fa-trash-o"></i></button>
-    </div>
-
-    <div class="databases-container" data-bind="foreach: databases">
-        <div class="database" data-bind="visible: isVisible, click: function () { $root.selectDatabase($data); return true; }, css: { selected: isSelected, 'system-database': isSystem }">
-            <h4><a data-bind="text: name, attr: { href: $root.getDocumentsUrl($data) }"></a></h4>
-            <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: docCount() + ' documents'"></span>
+    <div style="position: relative">
+        <ul class="breadcrumb">
+                <li>
+                    <h3>
+                        <a href="#databases">
+                            Databases
+                        </a>
+                    </h3>
+                </li>
+        </ul>
+        <button class="btn btn-default systemButton" data-bind="click: goToSystemDatabase">
+            <span>System Database</span>
+            <i class="glyphicon glyphicon-tower"></i>
+        </button>
+        <div class="btn-toolbar">
+            <button type="button" class="btn btn-primary" data-bind="click: newDatabase" accesskey="n" title="Create a new database. (Alt+N)"><i class="fa fa-plus"></i> New Database</button>
+            <form class="form-inline" style="display: inline-block; vertical-align: middle;">
+                <input type="text" accesskey="s" class="form-control col-md-8" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" title="Search for a database (Alt+S)">
+            </form>
+            <button type="button" class="btn btn-danger" data-bind="click: deleteSelectedDatabase, visible: selectedDatabase() != null" title="Delete selected database"><i class="fa fa-trash-o"></i></button>
+        </div>
+        <br />
+        <div class="databases-container" data-bind="foreach: databases">
+            <div class="database" data-bind="visible: isVisible, click: function () { $root.selectDatabase($data); return true; }, css: { selected: isSelected}">
+                <h4><a data-bind="text: name, attr: { href: $root.getDocumentsUrl($data) }"></a></h4>
+                <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: docCount() + ' documents'"></span>
+            </div>
         </div>
     </div>
 </section>

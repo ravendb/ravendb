@@ -89,7 +89,6 @@
                 </li>
             </ul>
             <form class="navbar-form pull-left">
-                <!--data-bind="typeahead: { source: GetTopDocumentResults, minLength: 2 }, value: DocumentPrefix"-->
                 <input id="goToDocInput" type="text" class="form-control col-md-8" placeholder="Go to document" >
             </form>
             <ul class="nav navbar-nav pull-right">
@@ -99,7 +98,7 @@
                 <li class="dropdown">
                     <a class="dropdown-toggle" data-bind="with: activeDatabase" data-toggle="dropdown" href="#" style="padding-left: 5px;">
                         <span data-bind="text: name"></span> 
-						<b class="caret"></b>
+                        <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu" data-bind="foreach: databases">
                         <li>

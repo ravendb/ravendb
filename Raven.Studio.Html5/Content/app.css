@@ -95,6 +95,13 @@ body {
 .database-page .databases-container .database.system-database.selected .text-muted {
   color: #3071a9;
 }
+.database-page .systemButton {
+  color: grey;
+  margin-top: 50px;
+  position: absolute;
+  top: -40px;
+  right: 25px;
+}
 .document-collections li {
   outline: none;
 }
