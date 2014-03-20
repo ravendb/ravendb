@@ -9,6 +9,7 @@ import deleteDatabaseConfirm = require("viewmodels/deleteDatabaseConfirm");
 import createDatabase = require("viewmodels/createDatabase");
 import createDatabaseCommand = require("commands/createDatabaseCommand");
 import createEncryption = require("viewmodels/createEncryption");
+import createEncryptionConfirmation = require("viewmodels/createEncryptionConfirmation");
 
 class databases extends viewModelBase {
 
@@ -71,44 +72,41 @@ class databases extends viewModelBase {
             var createDatabaseViewModel: createDatabase = new createDatabase();
             createDatabaseViewModel
                 .creationTask
-                .done((databaseName: string) => {
-                    //debugger;
-                    //this.databases.unshift(new database(databaseName));
-                });
-            app.showDialog(createDatabaseViewModel).done((dataArray) => {
-                debugger;
-                var databaseName = dataArray.databaseName;
-                var bundles = dataArray.bundles;
-                var securedSettings = {};
-                var deffered = $.Deferred();
-                debugger; 
-                if (bundles.indexOf("Encryption") != -1) {
-                    var createEncryptionViewModel: createEncryption = new createEncryption();
-                    createEncryptionViewModel
-                        .creationEncryption
-                        .done((keyName: string, encryptionAlgorithm: string, isEncryptedIndexes: string) => {
-                            var encriptionSettings: string[] = [];
-                            encriptionSettings.push(keyName, encryptionAlgorithm, isEncryptedIndexes);
+                .done((databaseName: string, bundles: string[]) => {
+                    var securedSettings = {};
+                    var deffered = $.Deferred();
+                    var savedKey;
 
-                            securedSettings = {
-                                'Raven/Encryption/Key': keyName,
-                                'Raven/Encryption/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
-                                'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
-                            };
-                        deffered.resolve(securedSettings);
-                    });
-                    app.showDialog(createEncryptionViewModel);
-                } else {
-                    deffered.resolve({});
-                }
+                    if (bundles.indexOf("Encryption") != -1) {
+                        var createEncryptionViewModel: createEncryption = new createEncryption();
+                        createEncryptionViewModel
+                            .creationEncryption
+                            .done((key: string, encryptionAlgorithm: string, isEncryptedIndexes: string) => {
+                                savedKey = key;
+                                securedSettings = {
+                                    'Raven/Encryption/Key': key,
+                                    'Raven/Encryption/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
+                                    'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
+                                };
+                                deffered.resolve(securedSettings);
+                            });
+                        app.showDialog(createEncryptionViewModel);
+                    } else {
+                        deffered.resolve({});
+                    }
 
-                deffered.done(()=> {
-                    this.createDB(databaseName, bundles, securedSettings)
-                        .done(()=> {
-                            this.databases.unshift(new database(databaseName));
+                    deffered.done(() => {
+                        this.createDB(databaseName, bundles, securedSettings)
+                            .done(() => {
+                                this.databases.unshift(new database(databaseName));
+                                if (!jQuery.isEmptyObject(securedSettings)) {
+                                    var createEncryptionConfirmationViewModel: createEncryptionConfirmation = new createEncryptionConfirmation(savedKey);
+                                    app.showDialog(createEncryptionConfirmationViewModel);
+                                }
                         });
+                    });
                 });
-            });;
+            app.showDialog(createDatabaseViewModel);
         });
     }
 

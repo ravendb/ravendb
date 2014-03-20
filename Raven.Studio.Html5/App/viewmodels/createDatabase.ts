@@ -44,24 +44,11 @@ class createDatabase extends dialogViewModelBase {
         // Next needs to configure bundle settings, if we've selected some bundles.
         // We haven't yet implemented bundle configuration, so for now we're just 
         // creating the database.
-        /*var self = this;
-        var databaseName = this.databaseName();
-
-        new createDatabaseCommand(databaseName, self.getActiveBundles(), this.encryptionData)
-            .execute()
-            .fail(response=> {
-                self.creationTask.reject(response);
-            })
-            .done(result=> {
-                self.creationTask.resolve(databaseName);
-                self.creationTaskStarted = true;
-                dialog.close(self);
-            });*/
-
         var databaseName = this.databaseName();
         this.creationTaskStarted = true;
-        debugger;
-        dialog.close(this, { databaseName: databaseName, bundles: this.getActiveBundles() });
+        this.creationTask.resolve(databaseName, this.getActiveBundles());
+        dialog.close(this);
+        //dialog.close(this, { databaseName: databaseName, bundles: this.getActiveBundles() });
     }
 
 
@@ -72,29 +59,6 @@ class createDatabase extends dialogViewModelBase {
 
     toggleEncryptionBundle() {
         this.isEncryptionBundleEnabled.toggle();
-        /*if (self.isEncryptionBundleEnabled() == true) {
-            var createEncryptionViewModel: createEncryption = new createEncryption();
-            createEncryptionViewModel
-                .creationEncryption
-                .fail(
-                dialogResult => {
-                    self.isEncryptionBundleEnabled.toggle();
-                    self.encryptionData = null;
-                    $('#encryptionCheckbox').removeClass('active');
-                })
-                .done((keyName: string, encryptionAlgorithm: string, isEncryptedIndexes: string) => {
-                    var encriptionSettings: string[] = [];
-                    encriptionSettings.push(keyName, encryptionAlgorithm, isEncryptedIndexes);
-
-                    self.encryptionData = {
-                        'Raven/Encryption/Key': keyName,
-                        'Raven/Encryption/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
-                        'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
-                    };
-                });
-
-            app.showDialog(createEncryptionViewModel);
-        }*/
     }
 
     toggleExpirationBundle() {
