@@ -123,6 +123,12 @@ body {
 .indexes-container .index-group .panel-heading:hover .indexGroup-actions-container {
   display: inline-block;
 }
+#logsContainer .logRecord .logName .logName-actions-container {
+  display: none;
+}
+#logsContainer .logRecord:hover .logName-actions-container {
+  display: inline-block;
+}
 .settings-container {
   margin-top: 10px;
 }
