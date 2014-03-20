@@ -282,7 +282,7 @@ namespace Raven.Database.Json
 		private static void EnsurePreviousValueMatchCurrentValue(PatchRequest patchCmd, RavenJToken property)
 		{
 			var prevVal = patchCmd.PrevVal;
-			if (prevVal == null)
+            if (prevVal == null || prevVal.Type == JTokenType.Null)
 				return;
 			switch (prevVal.Type)
 			{
