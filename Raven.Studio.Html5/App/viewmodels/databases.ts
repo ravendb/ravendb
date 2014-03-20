@@ -69,7 +69,7 @@ class databases extends viewModelBase {
 
     newDatabase() {
         require(["viewmodels/createDatabase"], createDatabase => {
-            var createDatabaseViewModel: createDatabase = new createDatabase();
+            var createDatabaseViewModel: createDatabase = new createDatabase(this.databases);
             createDatabaseViewModel
                 .creationTask
                 .done((databaseName: string, bundles: string[]) => {
@@ -78,7 +78,7 @@ class databases extends viewModelBase {
                     var savedKey;
 
                     if (bundles.indexOf("Encryption") != -1) {
-                        var createEncryptionViewModel: createEncryption = new createEncryption();
+                        var createEncryptionViewModel: createEncryption = new createEncryption(databaseName);
                         createEncryptionViewModel
                             .creationEncryption
                             .done((key: string, encryptionAlgorithm: string, isEncryptedIndexes: string) => {

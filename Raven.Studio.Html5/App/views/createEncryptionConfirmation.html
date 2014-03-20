@@ -9,14 +9,12 @@
                 <div class="form-group">
                     <label>This is your encryption key. Save it in a safe place.</label>
                     <label>If you will lose this key you could lose access to your data!</label>
-
                     <input readonly type="text" class="form-control" id="key" placeholder="Key" autofocus data-bind="value: key, click: clickKey">
                 </div>
             </div>
         </div>
     </div>
     <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-bind="click: copyToClipboard">Copy to Clipboard</button>
         <button type="button" class="btn btn-primary" data-bind="click: ok">OK</button>
     </div>
 </div>

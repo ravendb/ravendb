@@ -8,17 +8,9 @@ class createEncryptionConfirmation extends dialogViewModelBase {
 
     key = ko.observable();
 
-    private copystr;
-
     constructor(savedKey) {
         super();
         this.key(savedKey);
-        var isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-        if (isMac) {
-            this.copystr = "Command";
-        } else {
-            this.copystr = "Ctrl";
-        }
     }
 
     cancel() {
@@ -32,12 +24,6 @@ class createEncryptionConfirmation extends dialogViewModelBase {
     clickKey() {
         $('#key').select();
     }
-
-    copyToClipboard() {
-
-        window.prompt("Copy to clipboard: " + this.copystr + "+C, Enter", this.key().toString());
-    }
-
 }
 
 export = createEncryptionConfirmation;
