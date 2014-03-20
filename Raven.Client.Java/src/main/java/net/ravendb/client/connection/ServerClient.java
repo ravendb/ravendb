@@ -215,17 +215,17 @@ public class ServerClient implements IDatabaseCommands {
 
 
   @Override
-  public Collection<TransformerDefinition> getTransformers(final int start, final int pageSize) {
-    return executeWithReplication(HttpMethods.GET, new Function1<OperationMetadata, Collection<TransformerDefinition>>() {
+  public List<TransformerDefinition> getTransformers(final int start, final int pageSize) {
+    return executeWithReplication(HttpMethods.GET, new Function1<OperationMetadata, List<TransformerDefinition>>() {
 
       @Override
-      public Collection<TransformerDefinition> apply(OperationMetadata operationMetadata) {
+      public List<TransformerDefinition> apply(OperationMetadata operationMetadata) {
         return directGetTransformers(operationMetadata, start, pageSize);
       }
     });
   }
 
-  protected Collection<TransformerDefinition> directGetTransformers(OperationMetadata operationMetadata, int start, int pageSize) {
+  protected List<TransformerDefinition> directGetTransformers(OperationMetadata operationMetadata, int start, int pageSize) {
     String url2 = RavenUrlExtensions.noCache(operationMetadata.getUrl() + "/transformers?start=" + start + "&pageSize=" + pageSize);
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, HttpMethods.GET, new RavenJObject(), operationMetadata.getCredentials(), convention));
     request.addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
@@ -492,7 +492,7 @@ public class ServerClient implements IDatabaseCommands {
     RavenJObject metadata = new RavenJObject();
     String actualUrl = operationMetadata.getUrl() + "/docs?id=" + UrlUtils.escapeDataString(key);
     if (StringUtils.isNotEmpty(transform)) {
-      actualUrl += "?=" + UrlUtils.escapeDataString(transform);
+      actualUrl += "&transformer=" + UrlUtils.escapeDataString(transform);
     }
 
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
@@ -991,7 +991,7 @@ public class ServerClient implements IDatabaseCommands {
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
     try {
-      RavenJObject json = (RavenJObject)webRequest.readResponseJson();
+      RavenJArray json = (RavenJArray)webRequest.readResponseJson();
       return JsonExtensions.createDefaultJsonSerializer().readValue(json.toString(), AttachmentInformation[].class);
     } catch (Exception e) {
       throw new ServerClientException(e);

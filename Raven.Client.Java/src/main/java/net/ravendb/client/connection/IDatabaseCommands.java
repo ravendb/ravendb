@@ -740,7 +740,7 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @param pageSize
    * @return
    */
-  public Collection<TransformerDefinition> getTransformers(int start, int pageSize);
+  public List<TransformerDefinition> getTransformers(int start, int pageSize);
 
   /**
    *  Gets the transformer definition for the specified name
