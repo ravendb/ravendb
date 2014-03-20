@@ -8,6 +8,7 @@ import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import getStoredQueriesCommand = require("commands/getStoredQueriesCommand");
 import querySort = require("models/querySort");
 import app = require("durandal/app");
+import resetIndexConfirm = require("viewmodels/resetIndexConfirm");
 
 class indexes extends viewModelBase {
 
@@ -125,6 +126,10 @@ class indexes extends viewModelBase {
         this.promptDeleteIndexes([i]);
     }
 
+    deleteIndexGroup(i: { entityName: string; indexes: KnockoutObservableArray<index> }) {
+        this.promptDeleteIndexes(i.indexes());
+    }
+
     promptDeleteIndexes(indexes: index[]) {
         if (indexes.length > 0) {
             var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
@@ -132,6 +137,12 @@ class indexes extends viewModelBase {
             deleteIndexesVm.deleteTask.done(() => this.removeIndexesFromAllGroups(indexes));
         }
     }
+
+    resetIndex(indexToReset: index) {
+        var resetIndexVm = new resetIndexConfirm(indexToReset.name, this.activeDatabase());
+        app.showDialog(resetIndexVm);
+    }
+    
 
     removeIndexesFromAllGroups(indexes: index[]) {
         this.indexGroups().forEach(g => {

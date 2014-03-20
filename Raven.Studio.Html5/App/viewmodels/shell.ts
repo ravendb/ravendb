@@ -20,6 +20,8 @@ import getBuildVersionCommand = require("commands/getBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
+import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
+
 
 class shell extends viewModelBase {
     private router = router;
@@ -32,10 +34,14 @@ class shell extends viewModelBase {
     windowHeightObservable: KnockoutObservable<number>;
     appUrls: computedAppUrls;
     recordedErrors = ko.observableArray<alertArgs>();
+    newIndexUrl = appUrl.forCurrentDatabase().newIndex;
+    newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
+
+    DocumentPrefix = ko.observable<String>();
+    
 
     constructor() {
         super();
-
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
 
@@ -68,8 +74,9 @@ class shell extends viewModelBase {
 
     // Called by Durandal when shell.html has been put into the DOM.
     attached() {
+        var that = this;
         // The view must be attached to the DOM before we can hook up keyboard shortcuts.
-        jwerty.key("ctrl+alt+n", e => {
+        jwerty.key("ctrl+alt+n", e=> {
             e.preventDefault();
             this.newDocument();
         });
@@ -80,13 +87,43 @@ class shell extends viewModelBase {
             selector: '.use-bootstrap-tooltip',
             trigger: 'hover'
         });
+        
+        //TODO: Move this to a knockout binding handler
+        $("#goToDocInput").typeahead(
+            {
+            hint: true,
+            highlight: true,
+            minLength: 1
+        },
+        {
+            name: 'Documents',
+            displayKey: 'value',
+            source: (searchTerm, callback)=> {
+                var foundDocuments;
+                new getDocumentsMetadataByIDPrefixCommand(searchTerm, 25, that.activeDatabase())
+                    .execute()
+                    .done((results: string[])=> {
+                        var matches = [];
+                        $.each(results, (i, str)=> {
+                            matches.push({ value: str, editHref: appUrl.forEditDoc(str, null, null, that.activeDatabase()) });
+                        });
+                        callback(matches);
+                    })
+                    .fail(callback(['']));
 
-        // TODO: implement Go to document
-        //var dataset: Twitter.Typeahead.Dataset = {
-        //    name: "test",
-        //    local: ["hello","world"]
-        //};
-        //$("#goToDocInput").typeahead(dataset);
+            },
+            templates: {
+                suggestion: Handlebars.compile(['<p><a><strong>{{value}}</a></strong>'].join())
+            }
+
+
+            });
+
+
+        $('#goToDocInput').bind('typeahead:selected', (obj, datum, name) => {
+            router.navigate(datum.editHref);
+        });
+
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -196,6 +233,21 @@ class shell extends viewModelBase {
     }
 
     modelPolling() {
+        new getDatabasesCommand()
+            .execute()
+            .done(results => {
+                ko.utils.arrayForEach(results, (result:database) => {
+                    var existingDb = this.databases().first(d=> {
+                        return d.name == result.name;
+                    });
+                if (!existingDb ) {
+                    this.databases.unshift(result);
+                    }
+                
+                });
+
+        });
+
         var db = this.activeDatabase();
         if (db) {
             new getDatabaseStatsCommand(db)

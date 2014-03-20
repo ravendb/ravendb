@@ -347,6 +347,10 @@ namespace Raven.Client.Linq
 
 		private bool IsMemberAccessForQuerySource(Expression node)
 		{
+		    while (node.NodeType == ExpressionType.Convert || node.NodeType == ExpressionType.ConvertChecked )
+		    {
+		        node = ((UnaryExpression) node).Operand;
+		    }
 			if (node.NodeType == ExpressionType.Parameter)
 				return true;
 			if (node.NodeType != ExpressionType.MemberAccess)
@@ -628,13 +632,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 		private void VisitGreaterThanOrEqual(BinaryExpression expression)
 		{
-			if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
-			{
+		    if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
+           {
 				VisitLessThanOrEqual(Expression.LessThanOrEqual(expression.Right, expression.Left));
 				return;
 			}
 
 			var memberInfo = GetMember(expression.Left);
+
 			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
 			documentQuery.WhereGreaterThanOrEqual(
@@ -659,12 +664,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 		private void VisitLessThanOrEqual(BinaryExpression expression)
 		{
-			if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
-			{
+		    if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
+	       {
 				VisitGreaterThanOrEqual(Expression.GreaterThanOrEqual(expression.Right, expression.Left));
 				return;
 			}
 			var memberInfo = GetMember(expression.Left);
+            
+
 			var value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo));
 
 			documentQuery.WhereLessThanOrEqual(

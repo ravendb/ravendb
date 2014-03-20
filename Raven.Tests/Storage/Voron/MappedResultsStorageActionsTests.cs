@@ -354,7 +354,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal("reduceKey1", result.ReduceKey);
 					Assert.True(result.Size > 0);
 					Assert.Null(result.Source);
-					Assert.True((DateTime.UtcNow - result.Timestamp).TotalMilliseconds < 100);
+                    Assert.Equal(UtcNow, result.Timestamp);
 					Assert.Equal("data1", result.Data["data"]);
 				});
 
@@ -373,7 +373,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal("reduceKey1", result1.ReduceKey);
 					Assert.True(result1.Size > 0);
 					Assert.Null(result1.Source);
-					Assert.True((DateTime.UtcNow - result1.Timestamp).TotalMilliseconds < 100);
+                    Assert.Equal(UtcNow, result1.Timestamp);
 					Assert.Equal("data1", result1.Data["data"]);
 
 					var result2 = results[1];
@@ -381,7 +381,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal("reduceKey1", result2.ReduceKey);
 					Assert.True(result2.Size > 0);
 					Assert.Null(result2.Source);
-					Assert.True((DateTime.UtcNow - result2.Timestamp).TotalMilliseconds < 100);
+                    Assert.Equal(UtcNow, result2.Timestamp);
 					Assert.Equal("data2", result2.Data["data"]);
 				});
 			}
@@ -1127,7 +1127,7 @@ namespace Raven.Tests.Storage.Voron
 
 					Assert.Equal(1, r1.Level);
 					Assert.Equal("reduceKey1", r1.Key);
-					Assert.True((SystemTime.UtcNow - r1.Timestamp).TotalMilliseconds < 100);
+                    Assert.Equal(UtcNow, r1.Timestamp);
 				});
 			}
 		}
@@ -1347,7 +1347,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal("reduceKey1", r1.ReduceKey);
 					Assert.True(r1.Size > 0);
 					Assert.Equal("2", r1.Source);
-					Assert.True((DateTime.UtcNow - r1.Timestamp).TotalMilliseconds < 100);
+                    Assert.Equal(UtcNow, r1.Timestamp);
 					Assert.Equal("data1", r1.Data["data"]);
 				});
 			}
@@ -1605,7 +1605,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal("reduceKey1", result.ReduceKey);
 					Assert.True(result.Size > 0);
 					Assert.Null(result.Source);
-					Assert.True((DateTime.UtcNow - result.Timestamp).TotalMilliseconds < 100);
+                    Assert.Equal(UtcNow, result.Timestamp);
 					Assert.Equal("data1", result.Data["data"]);
 
 					results = accessor.MapReduce

@@ -102,6 +102,10 @@
     <Reference Include="Jint.Raven">
       <HintPath>..\SharedLibs\Jint.Raven.dll</HintPath>
     </Reference>
+    <Reference Include="Kent.Boogaart.KBCsv">
+      <HintPath>..\packages\Kent.Boogaart.KBCsv.1.4.0.0\lib\sl40\Kent.Boogaart.KBCsv.dll</HintPath>
+      <HintPath>..\packages\Kent.Boogaart.KBCsv.1.4.0.0\lib\net40\Kent.Boogaart.KBCsv.dll</HintPath>
+    </Reference>
     <Reference Include="Lucene.Net, Version=2.3.2.1, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>

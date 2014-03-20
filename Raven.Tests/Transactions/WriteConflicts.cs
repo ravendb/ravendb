@@ -33,8 +33,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void WhileDocumentIsBeingUpdatedInTransactionCannotUpdateOutsideTransaction()
 		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(db);
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
@@ -45,8 +44,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void WhileDocumentIsBeingUpdatedInTransactionCannotUpdateInsideAnotherTransaction()
 		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(db);
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
@@ -62,8 +60,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void WhileCreatingDocumentInTransactionTryingToWriteInAnotherTransactionFail()
 		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(db);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			Assert.Throws<ConcurrencyException>(
@@ -77,8 +74,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void WhileCreatingDocumentInTransactionTryingToWriteOutsideTransactionFail()
 		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(db);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			Assert.Throws<ConcurrencyException>(

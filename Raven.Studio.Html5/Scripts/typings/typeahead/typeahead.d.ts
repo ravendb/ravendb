@@ -14,6 +14,8 @@ interface JQuery {
       */
     typeahead(dataset: Twitter.Typeahead.Dataset): JQuery;
 
+    typeahead(options: Twitter.Typeahead.Options, dataset: Twitter.Typeahead.Dataset): JQuery;
+
     /**
       * Turns an input[type="text"] element into a typeahead.
       *
@@ -53,7 +55,14 @@ interface JQuery {
 }
 
 declare module Twitter.Typeahead {
-    /**
+
+    interface Options {
+        hint: boolean;
+        highlight: boolean;
+        minLength: number;
+    }
+
+/**
       * A dataset is an object that defines a set of data that hydrates 
       * suggestions. Typeaheads can be backed by multiple datasets.
       * Given a query, a typeahead instance will inspect its backing 

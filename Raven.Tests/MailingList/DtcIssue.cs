@@ -31,8 +31,7 @@ namespace Raven.Tests.MailingList
 			using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
             {
 
-                if(documentStore.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
-                    return;
+                EnsureDtcIsSupported(documentStore);
 
 				using (var session = documentStore.OpenSession())
 				{

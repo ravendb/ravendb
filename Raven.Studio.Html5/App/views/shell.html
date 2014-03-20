@@ -80,16 +80,17 @@
                             </a>
                         </li>
                         <li>
-                            <a href="#"><i class="fa fa-bolt"></i> Index</a>
+                            <a data-bind="attr: { href: newIndexUrl }"><i class=" fa fa-bolt"></i> Index</a>
                         </li>
                         <li>
-                            <a href="#"><i class="fa fa-search"></i> Transformer</a>
+                            <a data-bind="attr: { href: newTransformerUrl }"><i class="fa fa-search"></i> Transformer</a>
                         </li>
                     </ul>
                 </li>
             </ul>
             <form class="navbar-form pull-left">
-                <input id="goToDocInput" type="text" class="form-control col-md-8" placeholder="Go to document">
+                <!--data-bind="typeahead: { source: GetTopDocumentResults, minLength: 2 }, value: DocumentPrefix"-->
+                <input id="goToDocInput" type="text" class="form-control col-md-8" placeholder="Go to document" >
             </form>
             <ul class="nav navbar-nav pull-right">
                 <li>

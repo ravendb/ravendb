@@ -24,8 +24,12 @@
     <TypeScriptCompile Include="App\commands\createSampleDataCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
+    <TypeScriptCompile Include="App\commands\queryFacetCommand.ts" />
+    <TypeScriptCompile Include="App\commands\resetIndexCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\startRestoreCommand.ts" />
     <TypeScriptCompile Include="App\commands\startIndexingCommand.ts" />
@@ -69,9 +73,9 @@
     <TypeScriptCompile Include="App\commands\saveIndexDefinitionCommand.ts" />
     <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
-    <TypeScriptCompile Include="App\common\popoverBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
+    <TypeScriptCompile Include="App\models\facet.ts" />
     <TypeScriptCompile Include="App\models\index.ts" />
     <TypeScriptCompile Include="App\models\indexDefinition.ts" />
     <TypeScriptCompile Include="App\models\indexPriority.ts" />
@@ -82,6 +86,7 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
+    <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\backupDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyDocuments.ts" />
@@ -147,6 +152,7 @@
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
+    <Content Include="App\views\resetIndexConfirm.html" />
     <Content Include="App\views\restoreDatabase.html" />
     <Content Include="App\views\backupDatabase.html" />
     <Content Include="App\views\deleteTransformerConfirm.html" />
@@ -821,12 +827,23 @@
     <Content Include="Content\app.css.map">
       <DependentUpon>app.css</DependentUpon>
     </Content>
+    <Content Include="App_Readme\Handlebarsjs_README.md" />
+    <Content Include="App_Readme\Handlebarsjs_LICENSE" />
     <None Include="Scripts\jquery-2.1.0.intellisense.js" />
+    <Content Include="Scripts\handlebars.amd.js" />
+    <Content Include="Scripts\handlebars.amd.min.js" />
+    <Content Include="Scripts\handlebars.js" />
+    <Content Include="Scripts\handlebars.min.js" />
+    <Content Include="Scripts\handlebars.runtime.amd.js" />
+    <Content Include="Scripts\handlebars.runtime.amd.min.js" />
+    <Content Include="Scripts\handlebars.runtime.js" />
+    <Content Include="Scripts\handlebars.runtime.min.js" />
     <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-2.1.0.min.js" />
     <Content Include="Scripts\jwerty-0.3.js" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.amd.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\handlebars\handlebars.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery\jquery.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jwerty\jwerty.d.ts" />
     <Content Include="Scripts\knockout-3.1.0.debug.js" />

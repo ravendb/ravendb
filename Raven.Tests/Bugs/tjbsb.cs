@@ -32,8 +32,7 @@ namespace Raven.Tests.Bugs
 		{
             using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
-                if(store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
-                    return;
+                EnsureDtcIsSupported(store);
 
 				using (var scope = new TransactionScope())
 				using (var session = store.OpenSession())
@@ -58,8 +57,7 @@ namespace Raven.Tests.Bugs
 		{
             using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
-                if(store.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
-                    return;
+                EnsureDtcIsSupported(store);
 
 				using (new TransactionScope())
 				{
