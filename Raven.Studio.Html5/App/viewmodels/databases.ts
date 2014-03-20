@@ -8,6 +8,9 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import deleteDatabaseConfirm = require("viewmodels/deleteDatabaseConfirm");
 import createDatabase = require("viewmodels/createDatabase");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
+import createDatabaseCommand = require("commands/createDatabaseCommand");
+import createEncryption = require("viewmodels/createEncryption");
+import createEncryptionConfirmation = require("viewmodels/createEncryptionConfirmation");
 
 class databases extends viewModelBase {
 
@@ -66,12 +69,76 @@ class databases extends viewModelBase {
 
     newDatabase() {
         require(["viewmodels/createDatabase"], createDatabase => {
-            var createDatabaseViewModel: createDatabase = new createDatabase();
+            var createDatabaseViewModel: createDatabase = new createDatabase(this.databases);
             createDatabaseViewModel
                 .creationTask
-                .done((databaseName: string) => this.databases.unshift(new database(databaseName)));
+                .done((databaseName: string, bundles: string[]) => {
+                    var securedSettings = {};
+                    var deffered = $.Deferred();
+                    var savedKey;
+
+                    if (bundles.indexOf("Encryption") != -1) {
+                        var createEncryptionViewModel: createEncryption = new createEncryption(databaseName);
+                        createEncryptionViewModel
+                            .creationEncryption
+                            .done((key: string, encryptionAlgorithm: string, isEncryptedIndexes: string) => {
+                                savedKey = key;
+                                securedSettings = {
+                                    'Raven/Encryption/Key': key,
+                                    'Raven/Encryption/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
+                                    'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
+                                };
+                                deffered.resolve(securedSettings);
+                            });
+                        app.showDialog(createEncryptionViewModel);
+                    } else {
+                        deffered.resolve({});
+                    }
+
+                    deffered.done(() => {
+                        this.createDB(databaseName, bundles, securedSettings)
+                            .done(() => {
+                                this.databases.unshift(new database(databaseName));
+                                if (!jQuery.isEmptyObject(securedSettings)) {
+                                    var createEncryptionConfirmationViewModel: createEncryptionConfirmation = new createEncryptionConfirmation(savedKey);
+                                    app.showDialog(createEncryptionConfirmationViewModel);
+                                }
+                        });
+                    });
+                });
             app.showDialog(createDatabaseViewModel);
         });
+    }
+
+    private createDB(databaseName: string, bundles: string[], securedSettings: {}) {
+        var self = this;
+        return new createDatabaseCommand(databaseName, bundles, securedSettings)
+            .execute()
+            .fail(response=> {
+                //self.creationTask.reject(response);
+            })
+            .done(result=> {
+                //self.creationTask.resolve(databaseName);
+                //dialog.close(self);
+            });
+    }
+
+    private getEncryptionAlgorithmFullName(encrytion: string) {
+        var fullEncryptionName: string = null;
+        switch (encrytion) {
+            case "DES":
+                fullEncryptionName = "System.Security.Cryptography.DESCryptoServiceProvider, mscorlib";
+                break;
+            case "R2C2":
+                fullEncryptionName = "System.Security.Cryptography.RC2CryptoServiceProvider, mscorlib";
+                break;
+            case "Rijndael":
+                fullEncryptionName = "System.Security.Cryptography.RijndaelManaged, mscorlib";
+                break;
+            default: //case "Triple DESC":
+                fullEncryptionName = "System.Security.Cryptography.TripleDESCryptoServiceProvider, mscorlib";
+        }
+        return fullEncryptionName;
     }
 
     fetchStats(db: database) {
@@ -94,7 +161,7 @@ class databases extends viewModelBase {
     filterDatabases(filter: string) {
         var filterLower = filter.toLowerCase();
         this.databases().forEach(d=> {
-            var isMatch = !filter || d.name.toLowerCase().indexOf(filterLower) >= 0;
+            var isMatch = !filter || (d.name.toLowerCase().indexOf(filterLower) >= 0);
             d.isVisible(isMatch);
         });
     }
