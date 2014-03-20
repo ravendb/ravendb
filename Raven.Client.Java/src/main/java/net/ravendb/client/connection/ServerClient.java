@@ -61,6 +61,7 @@ import net.ravendb.abstractions.exceptions.TransformCompilationException;
 import net.ravendb.abstractions.extensions.JsonExtensions;
 import net.ravendb.abstractions.extensions.MetadataExtensions;
 import net.ravendb.abstractions.indexing.IndexDefinition;
+import net.ravendb.abstractions.indexing.IndexMergeResults;
 import net.ravendb.abstractions.indexing.NumberUtil;
 import net.ravendb.abstractions.indexing.TransformerDefinition;
 import net.ravendb.abstractions.json.linq.JTokenType;
@@ -106,7 +107,7 @@ public class ServerClient implements IDatabaseCommands {
   private OperationCredentials credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
   final DocumentConvention convention;
   protected Map<String, String> operationsHeaders;
-  private final HttpJsonRequestFactory jsonRequestFactory;
+  protected final HttpJsonRequestFactory jsonRequestFactory;
   private final UUID sessionId;
   private final Function1<String, IDocumentStoreReplicationInformer> replicationInformerGetter;
   private final IDocumentStoreReplicationInformer replicationInformer;
@@ -126,9 +127,20 @@ public class ServerClient implements IDatabaseCommands {
     replicationInformer.removeFailoverStatusChanged(event);
   }
 
-  //TODO:       public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, string databaseName)
+  @Override
+  public IndexMergeResults getIndexMergeSuggestions() {
+    String url2 = RavenUrlExtensions.noCache(url + "/debug/suggest-index-merge");
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2,
+      HttpMethods.GET, new RavenJObject(), credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
+    request.addOperationHeaders(operationsHeaders);
 
-  //TODO:         public async Task<IndexMergeResults> GetIndexMergeSuggestionsAsync()
+    try {
+      RavenJToken result = request.readResponseJson();
+      return convention.createSerializer().readValue(result.toString(), IndexMergeResults.class);
+    } catch (IOException e) {
+      throw new ServerClientException("unable to get merge suggestions", e);
+    }
+  }
 
 
   public ServerClient(String url, DocumentConvention convention, OperationCredentials operationCredentials,
@@ -594,7 +606,7 @@ public class ServerClient implements IDatabaseCommands {
     return conflictException;
   }
 
-  private void ensureIsNotNullOrEmpty(String key, String argName) {
+  private static void ensureIsNotNullOrEmpty(String key, String argName) {
     if (key == null || "".equals(key)) {
       throw new IllegalArgumentException("Key cannot be null or empty " + argName);
     }
@@ -639,7 +651,7 @@ public class ServerClient implements IDatabaseCommands {
   }
 
   @SuppressWarnings("null")
-  private List<JsonDocument> directStartsWith(OperationMetadata operationMetadata, String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly, String exclude, RavenPagingInformation pagingInformation, String transformer, Map<String, RavenJToken> queryInputs) throws ServerClientException {
+  protected List<JsonDocument> directStartsWith(OperationMetadata operationMetadata, String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly, String exclude, RavenPagingInformation pagingInformation, String transformer, Map<String, RavenJToken> queryInputs) throws ServerClientException {
     RavenJObject metadata = new RavenJObject();
 
     int actualStart = start;
