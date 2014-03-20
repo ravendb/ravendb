@@ -95,6 +95,7 @@ class query extends viewModelBase {
 
     attached() {
         this.createKeyboardShortcut("F2", () => this.editSelectedIndex(), query.containerSelector);
+        this.createKeyboardShortcut("ctrl+enter", () => this.runQuery(), query.containerSelector);
         $("#indexQueryLabel").popover({
             html: true,
             trigger: 'hover',
