@@ -169,13 +169,13 @@ namespace Raven.Database.Smuggler
 
 		protected override Task<RavenJArray> GetTransformers(int start)
 		{
-			return new CompletedTask<RavenJArray>(database.GetTransformers(start, SmugglerOptions.BatchSize));
+			return new CompletedTask<RavenJArray>(database.Transformers.GetTransformers(start, SmugglerOptions.BatchSize));
 		}
 
 		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int limit)
 		{
 			const int dummy = 0;
-			var enumerator = database.GetDocuments(dummy, Math.Min(SmugglerOptions.BatchSize, limit), lastEtag, CancellationToken.None)
+			var enumerator = database.Documents.GetDocuments(dummy, Math.Min(SmugglerOptions.BatchSize, limit), lastEtag, CancellationToken.None)
 				.ToList()
 				.Cast<RavenJObject>()
 				.GetEnumerator();
@@ -185,7 +185,7 @@ namespace Raven.Database.Smuggler
 
 		protected override Task<RavenJArray> GetIndexes(int totalCount)
 		{
-			return new CompletedTask<RavenJArray>(database.GetIndexes(totalCount, 128));
+			return new CompletedTask<RavenJArray>(database.Indexes.GetIndexes(totalCount, 128));
 		}
 
 		protected override Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
@@ -197,7 +197,7 @@ namespace Raven.Database.Smuggler
 				// worse, if we are using http compression, this value is known to be wrong
 				// instead, we rely on the actual size of the data provided for us
 				attachmentExportInfo.Metadata.Remove("Content-Length");
-				database.PutStatic(attachmentExportInfo.Key, null, attachmentExportInfo.Data,
+				database.Attachments.PutStatic(attachmentExportInfo.Key, null, attachmentExportInfo.Data,
 									attachmentExportInfo.Metadata);
 			}
 
@@ -206,7 +206,7 @@ namespace Raven.Database.Smuggler
 
 	    protected override Task DeleteAttachment(string key)
 	    {
-            database.DeleteStatic(key, null);
+            database.Attachments.DeleteStatic(key, null);
             return new CompletedTask();
 	    }
 
@@ -232,7 +232,7 @@ namespace Raven.Database.Smuggler
         {
             if (key != null)
             {
-                database.Delete(key, null, null);
+                database.Documents.Delete(key, null, null);
             }
             return new CompletedTask();
         }
@@ -258,7 +258,7 @@ namespace Raven.Database.Smuggler
 
 			var batchToSave = new List<IEnumerable<JsonDocument>> { bulkInsertBatch };
 			bulkInsertBatch = new List<JsonDocument>();
-			database.BulkInsert(new BulkInsertOptions { BatchSize = options.BatchSize, OverwriteExisting = true }, batchToSave, Guid.NewGuid());
+			database.Documents.BulkInsert(new BulkInsertOptions { BatchSize = options.BatchSize, OverwriteExisting = true }, batchToSave, Guid.NewGuid());
 		}
 
 		protected override Task PutTransformer(string transformerName, RavenJToken transformer)
@@ -267,7 +267,7 @@ namespace Raven.Database.Smuggler
 			{
 				var transformerDefinition =
 					JsonConvert.DeserializeObject<TransformerDefinition>(transformer.Value<RavenJObject>("definition").ToString());
-				database.PutTransform(transformerName, transformerDefinition);
+				database.Transformers.PutTransform(transformerName, transformerDefinition);
 			}
 
 			return new CompletedTask();
@@ -282,7 +282,7 @@ namespace Raven.Database.Smuggler
 		{
 			if (index != null)
 			{
-				database.PutIndex(indexName, index.Value<RavenJObject>("definition").JsonDeserialization<IndexDefinition>());
+				database.Indexes.PutIndex(indexName, index.Value<RavenJObject>("definition").JsonDeserialization<IndexDefinition>());
 			}
 
 			return new CompletedTask();
@@ -309,11 +309,11 @@ namespace Raven.Database.Smuggler
 		private RavenJArray GetAttachments(int start, Etag etag, int maxRecords)
 		{
 			var array = new RavenJArray();
-            var attachmentInfos = database.GetAttachments(start, maxRecords, etag, null, 1024 * 1024 * 10);
+            var attachmentInfos = database.Attachments.GetAttachments(start, maxRecords, etag, null, 1024 * 1024 * 10);
 
 			foreach (var attachmentInfo in attachmentInfos)
 			{
-				var attachment = database.GetStatic(attachmentInfo.Key);
+                var attachment = database.Attachments.GetStatic(attachmentInfo.Key);
 				if (attachment == null)
 					return null;
 				var data = attachment.Data;

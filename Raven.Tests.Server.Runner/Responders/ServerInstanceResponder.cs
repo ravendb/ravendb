@@ -130,7 +130,7 @@ namespace Raven.Tests.Server.Runner.Responders
 
             if (serverConfiguration.HasApiKey)
             {
-                server.SystemDatabase.Put("Raven/ApiKeys/" + serverConfiguration.ApiKeyName, null, RavenJObject.FromObject(new ApiKeyDefinition
+                server.SystemDatabase.Documents.Put("Raven/ApiKeys/" + serverConfiguration.ApiKeyName, null, RavenJObject.FromObject(new ApiKeyDefinition
                 {
                     Name = serverConfiguration.ApiKeyName,
                     Secret = serverConfiguration.ApiKeySecret,

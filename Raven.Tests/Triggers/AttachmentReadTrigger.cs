@@ -37,9 +37,9 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanFilterAttachment()
 		{
-			db.PutStatic("ayendE", null, new MemoryStream(new byte[] { 1, 2 }), new RavenJObject());
+			db.Attachments.PutStatic("ayendE", null, new MemoryStream(new byte[] { 1, 2 }), new RavenJObject());
 
-			var attachment = db.GetStatic("ayendE");
+			var attachment = db.Attachments.GetStatic("ayendE");
 
 			Assert.Equal("You don't get to read this attachment",
 						 attachment.Metadata.Value<RavenJObject>("Raven-Read-Veto").Value<string>("Reason"));
@@ -48,9 +48,9 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanHideAttachment()
 		{
-			db.PutStatic("AYENDE", null, new MemoryStream(new byte[] { 1, 2 }), new RavenJObject());
+			db.Attachments.PutStatic("AYENDE", null, new MemoryStream(new byte[] { 1, 2 }), new RavenJObject());
 
-			var attachment = db.GetStatic("AYENDE");
+			var attachment = db.Attachments.GetStatic("AYENDE");
 
 			Assert.Null(attachment);
 		}
@@ -58,10 +58,10 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanModifyAttachment()
 		{
-			db.PutStatic("ayende", null, new MemoryStream(new byte[] { 1, 2 }), new RavenJObject());
+			db.Attachments.PutStatic("ayende", null, new MemoryStream(new byte[] { 1, 2 }), new RavenJObject());
 
 
-			var attachment = db.GetStatic("ayende");
+			var attachment = db.Attachments.GetStatic("ayende");
 
 			Assert.Equal(attachment.Data().Length, 4);
 		}

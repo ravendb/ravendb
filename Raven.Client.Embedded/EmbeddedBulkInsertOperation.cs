@@ -42,7 +42,7 @@ namespace Raven.Client.Embedded
 
 			doBulkInsert = Task.Factory.StartNew(() =>
 			{
-				database.BulkInsert(options, YieldDocuments(cancellationToken), OperationId);
+				database.Documents.BulkInsert(options, YieldDocuments(cancellationToken), OperationId);
 			});
 
 			SubscribeToBulkInsertNotifications(changes);

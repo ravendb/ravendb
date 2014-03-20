@@ -198,8 +198,8 @@ namespace Raven.Database.Indexing
                 {
                     try
                     {
-                        documentDatabase.DeleteIndex(indexName);
-                        documentDatabase.PutNewIndexIntoStorage(indexName, indexDefinition);
+                        documentDatabase.Indexes.DeleteIndex(indexName);
+                        documentDatabase.Indexes.PutNewIndexIntoStorage(indexName, indexDefinition);
                     }
                     catch (Exception e)
                     {
@@ -804,7 +804,7 @@ namespace Raven.Database.Indexing
 						// we explciitly ignore write conflicts here, it is okay if we got set twice (two concurrent queries, or setting while indexing).
 					}
 					documentDatabase.WorkContext.ShouldNotifyAboutWork(() => "Idle index queried");
-					documentDatabase.RaiseNotifications(new IndexChangeNotification()
+					documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification()
 					{
                         Name = value.PublicName,
 						Type = IndexChangeTypes.IndexPromotedFromIdle
@@ -1050,7 +1050,7 @@ namespace Raven.Database.Indexing
 								{
                                     accessor.Indexing.SetIndexPriority(thisItem.Index.indexId, IndexingPriority.Idle);
 									thisItem.Index.Priority = IndexingPriority.Idle;
-									documentDatabase.RaiseNotifications(new IndexChangeNotification()
+									documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification()
 									{
 										Name = thisItem.Name,
 										Type = IndexChangeTypes.IndexDemotedToIdle
@@ -1101,7 +1101,7 @@ namespace Raven.Database.Indexing
 
 			thisItem.Index.Priority = IndexingPriority.Abandoned;
 
-			documentDatabase.RaiseNotifications(new IndexChangeNotification()
+			documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification()
 			{
 				Name = thisItem.Name,
 				Type = IndexChangeTypes.IndexDemotedToIdle
@@ -1120,7 +1120,7 @@ namespace Raven.Database.Indexing
 
 			thisItem.Index.Priority = IndexingPriority.Idle;
 
-			documentDatabase.RaiseNotifications(new IndexChangeNotification()
+			documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification()
 			{
 				Name = thisItem.Name,
 				Type = IndexChangeTypes.IndexDemotedToIdle

@@ -439,7 +439,7 @@ namespace Raven.Tests.Issues
                 }
             }
 
-            VerifyDump(backupPath, store => Assert.Equal(0, store.DocumentDatabase.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
+            VerifyDump(backupPath, store => Assert.Equal(0, store.DocumentDatabase.Documents.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
 
             IOExtensions.DeleteDirectory(backupPath);
         }
@@ -455,7 +455,7 @@ namespace Raven.Tests.Issues
                 await dumper.ExportData(new SmugglerExportOptions { ToFile = backupPath }, new SmugglerOptions { Incremental = true });
             }
 
-            VerifyDump(backupPath, store => Assert.Equal(0, store.DocumentDatabase.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
+            VerifyDump(backupPath, store => Assert.Equal(0, store.DocumentDatabase.Documents.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
 
             IOExtensions.DeleteDirectory(backupPath);
         }

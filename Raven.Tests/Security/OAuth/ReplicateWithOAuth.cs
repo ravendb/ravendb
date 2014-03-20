@@ -23,7 +23,7 @@ namespace Raven.Tests.Security.OAuth
 
 		protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)
 		{
-			database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+			database.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 			{
 				Name = "test",
 				Secret = "ThisIsMySecret",

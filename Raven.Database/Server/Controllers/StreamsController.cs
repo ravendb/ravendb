@@ -15,6 +15,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
+using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
@@ -72,7 +73,7 @@ namespace Raven.Database.Server.Controllers
                     using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
                     {
                         if (string.IsNullOrEmpty(startsWith))
-                            Database.GetDocuments(start, pageSize, etag, cts.Token, doc =>
+                            Database.Documents.GetDocuments(start, pageSize, etag, cts.Token, doc =>
                             {
                                 timeout.Delay();
                                 doc.WriteTo(writer);
@@ -81,7 +82,7 @@ namespace Raven.Database.Server.Controllers
                         {
                             var nextPageStartInternal = nextPageStart;
 
-                            Database.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, cts.Token, ref nextPageStartInternal, doc =>
+                            Database.Documents.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, cts.Token, ref nextPageStartInternal, doc =>
                             {
                                 timeout.Delay();
                                 doc.WriteTo(writer);
@@ -120,7 +121,7 @@ namespace Raven.Database.Server.Controllers
 
                 try
                 {
-                    var queryOp = new DocumentDatabase.DatabaseQueryOperation(Database, index, query, accessor, cts.Token);
+                    var queryOp = new QueryActions.DatabaseQueryOperation(Database, index, query, accessor, cts.Token);
                     queryOp.Init();
 				msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor,
 					mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" });
@@ -165,11 +166,11 @@ namespace Raven.Database.Server.Controllers
 		public class StreamQueryContent : HttpContent
 		{
 			private readonly HttpRequestMessage req;
-			private readonly DocumentDatabase.DatabaseQueryOperation queryOp;
+			private readonly QueryActions.DatabaseQueryOperation queryOp;
 			private readonly IStorageActionsAccessor accessor;
 			private readonly Action<string> outputContentTypeSetter;
 
-			public StreamQueryContent(HttpRequestMessage req, DocumentDatabase.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor,Action<string> contentTypeSetter)
+			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor,Action<string> contentTypeSetter)
 			{
 				this.req = req;
 				this.queryOp = queryOp;

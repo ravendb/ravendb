@@ -126,7 +126,7 @@ namespace Raven.Database.Indexing
 					throw new InvalidOperationException(
 						"Cannot use attachment for indexing if the database parameter is null. This is probably a RavenDB bug");
 
-				var attachment = database.GetStatic(attachmentFoIndexing.Key);
+				var attachment = database.Attachments.GetStatic(attachmentFoIndexing.Key);
 				if (attachment == null)
 				{
 					yield break;

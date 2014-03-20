@@ -38,7 +38,7 @@ namespace Raven.Tests.Storage
 					{"Raven/Voron/AllowIncrementalBackups", "true"}
 	            }
 	        });
-	        db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
+	        db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 	    }
 
 	    public override void Dispose()
@@ -54,13 +54,13 @@ namespace Raven.Tests.Storage
             InitializeDocumentDatabase(storageName);
 			IOExtensions.DeleteDirectory(BackupDir);
 
-			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
+			db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
 
-			db.StartBackup(BackupDir, false, new DatabaseDocument());
+			db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
 			WaitForBackup(db, true);
 
-			db.Put("itamar", null, RavenJObject.Parse("{'email':'itamar@ayende.com'}"), new RavenJObject(), null);
-			db.StartBackup(BackupDir, true, new DatabaseDocument());
+			db.Documents.Put("itamar", null, RavenJObject.Parse("{'email':'itamar@ayende.com'}"), new RavenJObject(), null);
+			db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
 			WaitForBackup(db, true);
 
 			db.Dispose();
@@ -82,14 +82,14 @@ namespace Raven.Tests.Storage
 
 			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
 
-		    var fetchedData = db.Get("ayende", null);
+		    var fetchedData = db.Documents.Get("ayende", null);
             Assert.NotNull(fetchedData);
 
 		    var jObject = fetchedData.ToJson();
             Assert.NotNull(jObject);
             Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
 
-            fetchedData = db.Get("itamar", null);
+            fetchedData = db.Documents.Get("itamar", null);
             Assert.NotNull(fetchedData);
             
             jObject = fetchedData.ToJson();
@@ -104,21 +104,21 @@ namespace Raven.Tests.Storage
             InitializeDocumentDatabase(storageName);
             IOExtensions.DeleteDirectory(BackupDir);
 
-            db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
+            db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
 
-            db.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
             WaitForBackup(db, true);
 
             Thread.Sleep(TimeSpan.FromSeconds(1));
 
-            db.Put("itamar", null, RavenJObject.Parse("{'email':'itamar@ayende.com'}"), new RavenJObject(), null);
-            db.StartBackup(BackupDir, true, new DatabaseDocument());
+            db.Documents.Put("itamar", null, RavenJObject.Parse("{'email':'itamar@ayende.com'}"), new RavenJObject(), null);
+            db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
             WaitForBackup(db, true);
 
             Thread.Sleep(TimeSpan.FromSeconds(1));
 
-            db.Put("michael", null, RavenJObject.Parse("{'email':'michael.yarichuk@ayende.com'}"), new RavenJObject(), null);
-            db.StartBackup(BackupDir, true, new DatabaseDocument());
+            db.Documents.Put("michael", null, RavenJObject.Parse("{'email':'michael.yarichuk@ayende.com'}"), new RavenJObject(), null);
+            db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
             WaitForBackup(db, true);
 
             db.Dispose();
@@ -140,21 +140,21 @@ namespace Raven.Tests.Storage
 
             db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
 
-            var fetchedData = db.Get("ayende", null);
+            var fetchedData = db.Documents.Get("ayende", null);
             Assert.NotNull(fetchedData);
 
             var jObject = fetchedData.ToJson();
             Assert.NotNull(jObject);
             Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
 
-            fetchedData = db.Get("itamar", null);
+            fetchedData = db.Documents.Get("itamar", null);
             Assert.NotNull(fetchedData);
 
             jObject = fetchedData.ToJson();
             Assert.NotNull(jObject);
             Assert.Equal("itamar@ayende.com", jObject.Value<string>("email"));
 
-            fetchedData = db.Get("michael", null);
+            fetchedData = db.Documents.Get("michael", null);
             Assert.NotNull(fetchedData);
 
             jObject = fetchedData.ToJson();
@@ -175,11 +175,11 @@ namespace Raven.Tests.Storage
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 			});
 
-			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
+			db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		
-			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
+			db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
 
-			Assert.Throws<InvalidOperationException>(() => db.StartBackup(BackupDir, true, new DatabaseDocument()));
+			Assert.Throws<InvalidOperationException>(() => db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument()));
 		}
 	}
 }

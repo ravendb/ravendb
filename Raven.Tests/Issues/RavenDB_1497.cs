@@ -76,7 +76,7 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-				store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument());
+				store.DocumentDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
 				WaitForBackup(store.DocumentDatabase, true);
 
 				Thread.Sleep(1000); // incremental tag has seconds precision
@@ -89,7 +89,7 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(store);
 
-				store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument());
+				store.DocumentDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
 				WaitForBackup(store.DocumentDatabase, true);
 
 				Thread.Sleep(1000); // incremental tag has seconds precision
@@ -98,7 +98,7 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(store);
 
-				store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument());
+				store.DocumentDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
 				WaitForBackup(store.DocumentDatabase, true);
 
 				var output = new StringBuilder();
@@ -128,7 +128,7 @@ namespace Raven.Tests.Issues
 
 					Assert.Equal(3, indexStats.Length); // Users/* and Raven/DocumentsByEntityName 
 
-					QueryResult docs = db.Query("Users/ByName", new IndexQuery
+					QueryResult docs = db.Queries.Query("Users/ByName", new IndexQuery
 					{
 						Query = "Name:*",
 						Start = 0,
@@ -137,7 +137,7 @@ namespace Raven.Tests.Issues
 
 					Assert.Equal(2, docs.Results.Count);
 
-					docs = db.Query("Users/ByNameAndCountry", new IndexQuery
+					docs = db.Queries.Query("Users/ByNameAndCountry", new IndexQuery
 					{
 						Query = "Name:*",
 						Start = 0,

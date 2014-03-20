@@ -26,7 +26,7 @@ namespace Raven.Bundles.Replication.Triggers
 			{
 				metadata.Remove(Constants.RavenReplicationConflict);// you can't put conflicts
 
-				var oldVersion = Database.GetStatic(key);
+				var oldVersion = Database.Attachments.GetStatic(key);
 				if (oldVersion == null)
 					return;
 				if (oldVersion.Metadata[Constants.RavenReplicationConflict] == null)
@@ -45,10 +45,10 @@ namespace Raven.Bundles.Replication.Triggers
 				foreach (var prop in conflicts)
 				{
 					var id = prop.Value<string>();
-					Attachment attachment = Database.GetStatic(id);
+					Attachment attachment = Database.Attachments.GetStatic(id);
 					if(attachment == null)
 						continue;
-					Database.DeleteStatic(id, null);
+					Database.Attachments.DeleteStatic(id, null);
 
 					// add the conflict history to the mix, so we make sure that we mark that we resolved the conflict
 					var conflictHistory = new RavenJArray(ReplicationData.GetHistory(attachment.Metadata));

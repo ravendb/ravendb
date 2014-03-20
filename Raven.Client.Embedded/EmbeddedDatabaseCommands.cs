@@ -18,6 +18,7 @@ using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Client.Exceptions;
 using Raven.Client.Listeners;
+using Raven.Database.Actions;
 using Raven.Database.Data;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -149,7 +150,7 @@ namespace Raven.Client.Embedded
 				nextPageStart = actualStart;
 			}
 
-			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, actualStart,
+			var documentsWithIdStartingWith = database.Documents.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, actualStart,
 			                                                                          pageSize, CancellationToken.None,
 			                                                                          ref nextPageStart, transformer, queryInputs);
 
@@ -182,7 +183,7 @@ namespace Raven.Client.Embedded
 		public JsonDocument Get(string key)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var jsonDocument = database.Get(key, TransactionInformation);
+			var jsonDocument = database.Documents.Get(key, TransactionInformation);
 
 			if (AssertNonConflictedDocumentAndCheckIfNeedToReload(jsonDocument))
 			{
@@ -212,7 +213,7 @@ namespace Raven.Client.Embedded
 	    /// <returns></returns>
 	    public JsonDocument Get(string key, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
 	    {
-            return database.GetWithTransformer(key, transformer, TransactionInformation, queryInputs);
+            return database.Documents.GetWithTransformer(key, transformer, TransactionInformation, queryInputs);
 	    }
 
 	    /// <summary>
@@ -226,7 +227,7 @@ namespace Raven.Client.Embedded
 		public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.Put(key, etag, document, metadata, TransactionInformation);
+			return database.Documents.Put(key, etag, document, metadata, TransactionInformation);
 		}
 
 		/// <summary>
@@ -237,7 +238,7 @@ namespace Raven.Client.Embedded
 		public void Delete(string key, Etag etag)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			database.Delete(key, etag, TransactionInformation);
+			database.Documents.Delete(key, etag, TransactionInformation);
 		}
 
 		/// <summary>
@@ -255,7 +256,7 @@ namespace Raven.Client.Embedded
 			// worse, if we are using http compression, this value is known to be wrong
 			// instead, we rely on the actual size of the data provided for us
 			metadata.Remove("Content-Length");
-			database.PutStatic(key, etag, data, metadata);
+			database.Attachments.PutStatic(key, etag, data, metadata);
 		}
 
 		/// <summary>
@@ -272,7 +273,7 @@ namespace Raven.Client.Embedded
 			// worse, if we are using http compression, this value is known to be wrong
 			// instead, we rely on the actual size of the data provided for us
 			metadata.Remove("Content-Length");
-			database.PutStatic(key, etag, null, metadata);
+			database.Attachments.PutStatic(key, etag, null, metadata);
 		}
 
 		/// <summary>
@@ -283,7 +284,7 @@ namespace Raven.Client.Embedded
 		public Attachment GetAttachment(string key)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			Attachment attachment = database.GetStatic(key);
+			Attachment attachment = database.Attachments.GetStatic(key);
 			if (attachment == null)
 				return null;
 
@@ -308,7 +309,7 @@ namespace Raven.Client.Embedded
         public AttachmentInformation[] GetAttachments(Etag startEtag, int pageSize)
         {
             CurrentOperationContext.Headers.Value = OperationsHeaders;
-            return database.GetAttachments(0, pageSize, startEtag, null, long.MaxValue);
+            return database.Attachments.GetAttachments(0, pageSize, startEtag, null, long.MaxValue);
         }
 
 		/// <summary>
@@ -319,7 +320,7 @@ namespace Raven.Client.Embedded
 			pageSize = Math.Min(pageSize, database.Configuration.MaxPageSize);
 
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.GetStaticsStartingWith(idPrefix, start, pageSize)
+			return database.Attachments.GetStaticsStartingWith(idPrefix, start, pageSize)
 			               .Select(x => new Attachment
 			                            {
 				                            Etag = x.Etag,
@@ -341,7 +342,7 @@ namespace Raven.Client.Embedded
 		public Attachment HeadAttachment(string key)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			Attachment attachment = database.GetStatic(key);
+			Attachment attachment = database.Attachments.GetStatic(key);
 			if (attachment == null)
 				return null;
 			attachment.Data = () =>
@@ -362,7 +363,7 @@ namespace Raven.Client.Embedded
 		public void DeleteAttachment(string key, Etag etag)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			database.DeleteStatic(key, etag);
+			database.Attachments.DeleteStatic(key, etag);
 		}
 
 		/// <summary>
@@ -384,7 +385,7 @@ namespace Raven.Client.Embedded
 		{
 			pageSize = Math.Min(pageSize, database.Configuration.MaxPageSize);
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.GetIndexNames(start, pageSize)
+			return database.Indexes.GetIndexNames(start, pageSize)
 			               .Select(x => x.Value<string>()).ToArray();
 		}
 
@@ -397,6 +398,7 @@ namespace Raven.Client.Embedded
 		{
 			//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
 			return database
+                .Indexes
 				.GetIndexes(start, pageSize)
 				.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter()))
 				.ToArray();
@@ -409,7 +411,7 @@ namespace Raven.Client.Embedded
 		/// <param name="pageSize">Size of the page.</param>
 		public TransformerDefinition[] GetTransformers(int start, int pageSize)
 		{
-			return database.GetTransformers(start, pageSize)
+			return database.Transformers.GetTransformers(start, pageSize)
 				.Select(x =>JsonConvert.DeserializeObject<TransformerDefinition>(((RavenJObject) x)["definition"].ToString(),new JsonToJsonConverter()))
 				.ToArray();
 
@@ -422,7 +424,7 @@ namespace Raven.Client.Embedded
 		public TransformerDefinition GetTransformer(string name)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.GetTransformerDefinition(name);
+			return database.Transformers.GetTransformerDefinition(name);
 		}
 
 		/// <summary>
@@ -432,7 +434,7 @@ namespace Raven.Client.Embedded
 		public void DeleteTransformer(string name)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			database.DeleteTransfom(name);
+			database.Transformers.DeleteTransform(name);
 		}
 
 
@@ -443,7 +445,7 @@ namespace Raven.Client.Embedded
 		public void ResetIndex(string name)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			database.ResetIndex(name);
+			database.Indexes.ResetIndex(name);
 		}
 
 		/// <summary>
@@ -453,7 +455,7 @@ namespace Raven.Client.Embedded
 		public IndexDefinition GetIndex(string name)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.GetIndexDefinition(name);
+			return database.Indexes.GetIndexDefinition(name);
 		}
 
 		/// <summary>
@@ -473,7 +475,7 @@ namespace Raven.Client.Embedded
 		public string PutTransformer(string name, TransformerDefinition indexDef)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.PutTransform(name, indexDef);
+			return database.Transformers.PutTransform(name, indexDef);
 		}
 
 		/// <summary>
@@ -487,7 +489,7 @@ namespace Raven.Client.Embedded
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			if (overwrite == false && database.IndexStorage.HasIndex(name))
 				throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
-			return database.PutIndex(name, definition.Clone());
+			return database.Indexes.PutIndex(name, definition.Clone());
 		}
 
 		/// <summary>
@@ -544,7 +546,7 @@ namespace Raven.Client.Embedded
 			}
 			else
 			{
-				queryResult = database.Query(index, query.Clone(),CancellationToken.None);
+				queryResult = database.Queries.Query(index, query.Clone(),CancellationToken.None);
 			}
 			
 			var loadedIds = new HashSet<string>(
@@ -628,7 +630,7 @@ namespace Raven.Client.Embedded
 						{
 							database.TransactionalStorage.Batch(accessor =>
 							{
-								using (var op = new DocumentDatabase.DatabaseQueryOperation(database, index, query, accessor, CancellationToken.None))
+								using (var op = new QueryActions.DatabaseQueryOperation(database, index, query, accessor, CancellationToken.None))
 								{
 									op.Init();
 									localQueryHeaderInfo = op.Header;
@@ -706,7 +708,7 @@ namespace Raven.Client.Embedded
 				    {
 				        if (string.IsNullOrEmpty(startsWith))
 				        {
-				            database.GetDocuments(start, pageSize, fromEtag,
+				            database.Documents.GetDocuments(start, pageSize, fromEtag,
 				                CancellationToken.None,
 				                addItem);
 				        }
@@ -723,7 +725,7 @@ namespace Raven.Client.Embedded
 				            }
 
 
-				            database.GetDocumentsWithIdStartingWith(
+				            database.Documents.GetDocumentsWithIdStartingWith(
 				                startsWith,
 				                matches,
 				                exclude,
@@ -815,7 +817,7 @@ namespace Raven.Client.Embedded
 		public void DeleteIndex(string name)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			database.DeleteIndex(name);
+			database.Indexes.DeleteIndex(name);
 		}
 
 	    /// <summary>
@@ -839,8 +841,8 @@ namespace Raven.Client.Embedded
 					                      .Select(id =>
 					                      {
 					                          if (string.IsNullOrEmpty(transformer))
-					                              return database.Get(id, TransactionInformation);
-                                              return database.GetWithTransformer(id, transformer, TransactionInformation,  queryInputs);
+					                              return database.Documents.Get(id, TransactionInformation);
+                                              return database.Documents.GetWithTransformer(id, transformer, TransactionInformation,  queryInputs);
 					                      })
 					                      .ToArray()
 					                      .Select(x => x == null ? null : x.ToJson())
@@ -877,6 +879,7 @@ namespace Raven.Client.Embedded
 			// As this is embedded we don't care for the metadata only value
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			return database
+                .Documents
 				.GetDocuments(start, pageSize, null, CancellationToken.None)
 				.Cast<RavenJObject>()
 				.ToJsonDocuments()
@@ -897,6 +900,7 @@ namespace Raven.Client.Embedded
             // As this is embedded we don't care for the metadata only value
             CurrentOperationContext.Headers.Value = OperationsHeaders;
             return database
+                .Documents
                 .GetDocuments(0, pageSize, fromEtag, CancellationToken.None)
                 .Cast<RavenJObject>()
                 .ToJsonDocuments()
@@ -1383,7 +1387,7 @@ namespace Raven.Client.Embedded
 		public JsonDocumentMetadata Head(string key)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var metadata = database.GetDocumentMetadata(key, TransactionInformation);
+			var metadata = database.Documents.GetDocumentMetadata(key, TransactionInformation);
 
 			AssertNonConflictedDocumentForHead(metadata);
 

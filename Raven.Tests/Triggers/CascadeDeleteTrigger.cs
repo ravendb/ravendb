@@ -18,13 +18,13 @@ namespace Raven.Tests.Triggers
 
 		public override void OnDelete(string key, TransactionInformation transactionInformation)
 		{
-			var document = Database.Get(key, null);
+			var document = Database.Documents.Get(key, null);
 			if (document == null)
 				return;
 			var value = document.Metadata.Value<string>("Cascade-Delete");
 			if(value != null)
 			{
-				Database.Delete(value, null, null);
+				Database.Documents.Delete(value, null, null);
 			}
 		}
 

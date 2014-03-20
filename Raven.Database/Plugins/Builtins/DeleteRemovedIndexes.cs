@@ -22,7 +22,7 @@ namespace Raven.Database.Plugins.Builtins
 			{
 			    foreach (var result in actions.Lists.Read("Raven/Indexes/PendingDeletion", Etag.Empty, null, 100))
 			    {
-			        database.StartDeletingIndexDataAsync(result.Data.Value<int>("IndexId"));
+			        database.Indexes.StartDeletingIndexDataAsync(result.Data.Value<int>("IndexId"));
 			    }
 			           
                 List<int> indexIds = actions.Indexing.GetIndexesStats().Select(x => x.Id).ToList();

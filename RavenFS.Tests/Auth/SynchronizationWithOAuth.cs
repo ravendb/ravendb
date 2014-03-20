@@ -25,7 +25,7 @@ namespace RavenFS.Tests.Auth
         {
             if (server.SystemDatabase.Configuration.Port == Ports[1]) // setup only for destination
             {
-                server.SystemDatabase.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+                server.SystemDatabase.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
                 {
                     Name = "test",
                     Secret = "ThisIsMySecret",

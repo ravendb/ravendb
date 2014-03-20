@@ -45,7 +45,7 @@ namespace Raven.Tests.Bugs
 				using (Database.DisableAllTriggersForCurrentThread())
 				{
 					var revisionCopy = new RavenJObject(document);
-					Database.Put("CopyOfDoc", null, revisionCopy, new RavenJObject(metadata), transactionInformation);
+					Database.Documents.Put("CopyOfDoc", null, revisionCopy, new RavenJObject(metadata), transactionInformation);
 				}
 			}
 		}
