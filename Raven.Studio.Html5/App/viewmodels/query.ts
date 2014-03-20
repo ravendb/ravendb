@@ -75,7 +75,8 @@ class query extends viewModelBase {
             this.fetchAllCollections(),
             this.fetchAllIndexes(),
             this.fetchRecentQueries())
-            .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
+            .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash))
+        .fail((x)=>alert(x));
     }
 
     selectInitialQuery(indexNameOrRecentQueryHash: string) {
@@ -121,13 +122,14 @@ class query extends viewModelBase {
     }
 
     fetchRecentQueries(): JQueryPromise<any> {
-        return new getStoredQueriesCommand(this.activeDatabase())
-            .execute()
+        var result = $.Deferred();
+        var storedQueriesCommand = new getStoredQueriesCommand(this.activeDatabase());
+        storedQueriesCommand.execute()
             .fail(_ => {
                 var newStoredQueryContainer: storedQueryContainerDto = {
                     '@metadata': {},
                     Queries: []
-                }
+                };
                 this.recentQueriesDoc(newStoredQueryContainer);
                 this.recentQueries(newStoredQueryContainer.Queries);
             })
@@ -135,7 +137,10 @@ class query extends viewModelBase {
                 var dto = <storedQueryContainerDto>doc.toDto(true);
                 this.recentQueriesDoc(dto);
                 this.recentQueries(dto.Queries);
-            });
+            })
+            .always(() => result.resolve());
+
+        return result;
     }
 
     fetchAllTransformers() {
