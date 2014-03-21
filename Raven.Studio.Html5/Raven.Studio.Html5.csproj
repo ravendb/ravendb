@@ -86,6 +86,7 @@
     <TypeScriptCompile Include="App\models\transformer.ts" />
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
+    <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
@@ -149,8 +150,10 @@
     <TypeScriptCompile Include="App\models\sqlReplication.ts" />
     <TypeScriptCompile Include="App\commands\getSqlReplicationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveSqlReplicationsCommand.ts" />
+    <Content Include="App\commands\getNewEncryptionKey.js" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\createEncryptionConfirmation.html" />
     <Content Include="App\views\resetIndexConfirm.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
     <Content Include="App\views\restoreDatabase.html" />
