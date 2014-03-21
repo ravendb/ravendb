@@ -20,8 +20,7 @@ namespace Raven.Tests.Bugs
 		{
 			using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
 			{
-                if(documentStore.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
-                    return;
+                EnsureDtcIsSupported(documentStore);
 
 				using (var s = documentStore.OpenSession())
 				{
@@ -52,8 +51,7 @@ namespace Raven.Tests.Bugs
 		{
             using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
 			{
-                if (documentStore.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
-                    return;
+                EnsureDtcIsSupported(documentStore);
 
 				documentStore.DatabaseCommands.PutIndex("test",
 														new IndexDefinition

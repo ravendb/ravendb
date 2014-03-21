@@ -12,8 +12,7 @@ namespace Raven.Tests.Bugs.DTC
 		{
             using (var server = GetNewServer(requestedStorage: "esent"))
 			{
-                if(server.SystemDatabase.TransactionalStorage.SupportsDtc == false)
-                    return;
+                EnsureDtcIsSupported(server);
 			    
 				using(var store = new DocumentStore{ Url = "http://localhost:8079"}.Initialize())
 				{

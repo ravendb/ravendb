@@ -1,0 +1,29 @@
+﻿<div class="messageBox" tabindex="-1">
+    <form data-bind="submit: save">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">&times;</button>
+            <h4 class="modal-title">Create Encryption</h4>
+        </div>
+        <div class="modal-body">
+            <div class="row">
+                <div class="col-md-9">
+                    <div class="form-group">
+                        <label for="keyName">Select Key: (Base64 Encoding)</label>
+                        <input type="text" class="form-control" id="key" placeholder="Key" data-bind="value: key, hasFocus: keyFocus">
+                        <div>You can use the auto generated key or enter one of your own</div>
+                        <div>Save this key in a safe place: if you lose this key you could lose access to your data!</div><br />
+
+                        <label for="encryptionAlgorithm">Encryption Algorithm:</label>
+                        <select data-bind="options: ['DESC', 'R2C2', 'Rijndael', 'Triple DESC'], optionsCaption: 'Choose one...', value: encryptionAlgorithm, valueAllowUnset: false, hasFocus: algorithmFocus"></select><br />
+                        <label for="encryptedIndexes">Encrypted Indexes:</label>
+                        <input data-bind="checked: isEncryptedIndexes" type="checkbox" id="isEncryptedIndexes">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+    </form>
+</div>

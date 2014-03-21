@@ -36,8 +36,8 @@ namespace Raven.Tryouts
 				sp.Start();
 				try
 				{
-					using (var x = new AsyncSetBasedOps())
-						x.AwaitAsyncPatchByIndexShouldWork("voron").Wait();
+					using (var x = new IndexationTests())
+						x.ReducerTest();
 				}
 				catch (Exception e)
 				{

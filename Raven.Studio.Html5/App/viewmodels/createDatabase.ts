@@ -1,14 +1,19 @@
+import app = require("durandal/app");
 import document = require("models/document");
 import dialog = require("plugins/dialog");
 import createDatabaseCommand = require("commands/createDatabaseCommand");
 import collection = require("models/collection");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import database = require("models/database");
+import commandBase = require("commands/commandBase");
 
 class createDatabase extends dialogViewModelBase {
 
     public creationTask = $.Deferred();
     creationTaskStarted = false;
+
     databaseName = ko.observable('');
+    databaseNameFocus = ko.observable(true);
     isCompressionBundleEnabled = ko.observable(false);
     isEncryptionBundleEnabled = ko.observable(false);
     isExpirationBundleEnabled = ko.observable(false);
@@ -19,8 +24,12 @@ class createDatabase extends dialogViewModelBase {
     isPeriodicBackupBundleEnabled = ko.observable(true); // Old Raven Studio has this enabled by default
     isScriptedIndexBundleEnabled = ko.observable(false);
 
-    constructor() {
+    private databases = ko.observableArray<database>();
+    private newCommandBase = new commandBase();
+
+    constructor(databases) {
         super();
+        this.databases = databases;
     }
 
     cancel() {
@@ -39,13 +48,35 @@ class createDatabase extends dialogViewModelBase {
         // Next needs to configure bundle settings, if we've selected some bundles.
         // We haven't yet implemented bundle configuration, so for now we're just 
         // creating the database.
+
         var databaseName = this.databaseName();
-        var createDbCommand = new createDatabaseCommand(databaseName, this.getActiveBundles());
-        var createDbTask = createDbCommand.execute();
-        createDbTask.done(() => this.creationTask.resolve(databaseName));
-        createDbTask.fail(response => this.creationTask.reject(response));
-        this.creationTaskStarted = true;
-        dialog.close(this);
+        if (!databaseName) {
+            this.newCommandBase.reportError("Please fill out the Database Name field");
+            this.databaseNameFocus(true);
+        }
+        else if (this.isDatabaseNameExists(databaseName, this.databases()) == true) {
+            this.newCommandBase.reportError("Database Name Already Exists!");
+            this.databaseNameFocus(true);
+       }
+        else
+        {
+            $('#databaseName').each(function () {
+                this.setCustomValidity("");
+            });
+            this.creationTaskStarted = true;
+            this.creationTask.resolve(databaseName, this.getActiveBundles());
+            dialog.close(this);
+            //dialog.close(this, { databaseName: databaseName, bundles: this.getActiveBundles() });
+        }
+    }
+
+    private isDatabaseNameExists(databaseName: string, databases: database[]): boolean {
+        for (var i = 0; i < databases.length; i++) {
+            if (databaseName == databases[i].name) {
+                return true;
+            }
+        }
+        return false;
     }
 
     toggleCompressionBundle() {
@@ -91,7 +122,7 @@ class createDatabase extends dialogViewModelBase {
         }
 
         if (this.isEncryptionBundleEnabled()) {
-            activeBundles.push("Encryption"); // TODO: Encryption also needs to specify 2 additional settings: http://ravendb.net/docs/2.5/server/extending/bundles/encryption?version=2.5
+            activeBundles.push("Encryption");
         }
 
         if (this.isExpirationBundleEnabled()) {
@@ -121,7 +152,6 @@ class createDatabase extends dialogViewModelBase {
         if (this.isScriptedIndexBundleEnabled()) {
             activeBundles.push("ScriptedIndexResults");
         }
-
         return activeBundles;
     }
 }

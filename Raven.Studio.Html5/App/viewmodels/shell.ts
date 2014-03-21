@@ -20,6 +20,7 @@ import getBuildVersionCommand = require("commands/getBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
+import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 
 class shell extends viewModelBase {
     private router = router;
@@ -34,10 +35,15 @@ class shell extends viewModelBase {
     recordedErrors = ko.observableArray<alertArgs>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
+    isFirstModelPoll: boolean;
+
+
+    DocumentPrefix = ko.observable<String>();
+    
 
     constructor() {
         super();
-
+        this.isFirstModelPoll = true;
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
 
@@ -51,7 +57,7 @@ class shell extends viewModelBase {
 
         NProgress.set(.7);
         router.map([
-            { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: false },
+            { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: false, hash: this.appUrls.databasesManagement },
             { route: 'documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: this.appUrls.documents },
             { route: 'indexes*details', title: 'Indexes', moduleId: 'viewmodels/indexesShell', nav: true, hash: this.appUrls.indexes },
             { route: 'transformers*details', title: 'Transformers', moduleId: 'viewmodels/transformersShell', nav: false, hash: this.appUrls.transformers },
@@ -70,8 +76,9 @@ class shell extends viewModelBase {
 
     // Called by Durandal when shell.html has been put into the DOM.
     attached() {
+        var that = this;
         // The view must be attached to the DOM before we can hook up keyboard shortcuts.
-        jwerty.key("ctrl+alt+n", e => {
+        jwerty.key("ctrl+alt+n", e=> {
             e.preventDefault();
             this.newDocument();
         });
@@ -82,13 +89,42 @@ class shell extends viewModelBase {
             selector: '.use-bootstrap-tooltip',
             trigger: 'hover'
         });
+        
+        //TODO: Move this to a knockout binding handler
+        $("#goToDocInput").typeahead(
+            {
+            hint: true,
+            highlight: true,
+            minLength: 1
+        },
+        {
+            name: 'Documents',
+            displayKey: 'value',
+            source: (searchTerm, callback)=> {
+                var foundDocuments;
+                new getDocumentsMetadataByIDPrefixCommand(searchTerm, 25, that.activeDatabase())
+                    .execute()
+                    .done((results: string[])=> {
+                        var matches = [];
+                        $.each(results, (i, str)=> {
+                            matches.push({ value: str, editHref: appUrl.forEditDoc(str, null, null, that.activeDatabase()) });
+                        });
+                        callback(matches);
+                    })
+                    .fail(callback(['']));
 
-        // TODO: implement Go to document
-        //var dataset: Twitter.Typeahead.Dataset = {
-        //    name: "test",
-        //    local: ["hello","world"]
-        //};
-        //$("#goToDocInput").typeahead(dataset);
+            },
+            templates: {
+                suggestion: Handlebars.compile(['<p><a><strong>{{value}}</a></strong>'].join())
+            }
+
+
+            });
+
+
+        $('#goToDocInput').bind('typeahead:selected', (obj, datum, name) => {
+            router.navigate(datum.editHref);
+        });
 
     }
 
@@ -101,14 +137,16 @@ class shell extends viewModelBase {
             NProgress.set(newProgress);
         } else {
             NProgress.done();
+            $('.use-bootstrap-tooltip').tooltip('hide');
         }
     }
 
     databasesLoaded(databases) {
         var systemDatabase = new database("<system>");
         systemDatabase.isSystem = true;
+        systemDatabase.isVisible(false);
         this.databases(databases.concat([systemDatabase]));
-        this.databases()[0].activate();
+        this.databases.first(x=>x.isVisible()).activate();
     }
 
     launchDocEditor(docId?: string, docsList?: pagedList) {

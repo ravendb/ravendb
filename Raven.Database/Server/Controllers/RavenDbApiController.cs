@@ -537,7 +537,14 @@ namespace Raven.Database.Server.Controllers
                 }
                 catch (Exception e)
                 {
-                    var msg = "Could open database named: " + tenantId;
+                    string exceptionMessage = e.Message;
+                    var aggregateException = e as AggregateException;
+                    if (aggregateException != null)
+                    {
+                        exceptionMessage = aggregateException.ExtractSingleInnerException().Message;
+                    }
+                    var msg = "Could open database named: " + tenantId + Environment.NewLine + exceptionMessage;
+
                     Logger.WarnException(msg, e);
                     throw new HttpException(503, msg, e);
                 }

@@ -204,6 +204,9 @@ namespace Raven.Abstractions.Linq
                         if (s.Length == 0)
                             return s;
 
+                        if (s == "NaN")
+                            return double.NaN;
+
                         //optimizations, don't try to call TryParse if first char isn't a digit or '-'
                         if (char.IsDigit(s[0]) == false && s[0] != '-')
                             return s;

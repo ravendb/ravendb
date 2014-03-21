@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Transactions;
 using Raven.Client;
+using Raven.Client.Embedded;
 using Xunit;
 
 namespace Raven.Tests.Bugs.DTC
@@ -17,9 +18,8 @@ namespace Raven.Tests.Bugs.DTC
 			const int callCount = 10000;
 
             using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
-			{
-                if(documentStore.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
-                    return;
+            {
+                EnsureDtcIsSupported(documentStore);
 
 				int documentId;
 
@@ -55,7 +55,8 @@ namespace Raven.Tests.Bugs.DTC
 			}
 		}
 
-		#region Nested type: TestDocument
+
+	    #region Nested type: TestDocument
 
 		private class TestDocument
 		{

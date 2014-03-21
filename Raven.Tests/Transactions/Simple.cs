@@ -32,8 +32,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void PutNewDocInTxCommitAndThenGetIt()
 		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(db);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
@@ -46,8 +45,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void PutNewDocInTxAndThenGetItBeforeCommitReturnsNull()
 		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(db);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
@@ -58,8 +56,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void PutNewDocInTxAndThenGetItBeforeCommitInSameTransactionReturnsNonNull()
 		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(db);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
@@ -69,8 +66,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void UpdateDocInTxCommitAndThenGetIt()
 		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(db);
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
@@ -86,8 +82,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void UpdateDocInTxAndThenGetItBeforeCommit()
 		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(db);
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
@@ -99,8 +94,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void UpdateDocInTxAndThenGetItBeforeCommitInSameTx()
 		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(db);
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
 			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
@@ -113,8 +107,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void SeveralUpdatesInTheSameTransaction()
 		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(db);
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien1'}"), new RavenJObject(), transactionInformation);
