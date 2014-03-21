@@ -204,7 +204,7 @@ namespace Raven.Database.Actions
                 Header = new QueryHeaderInformation
                 {
                     Index = indexName,
-                    IsStable = stale,
+                    IsStale = stale,
                     ResultEtag = resultEtag,
                     IndexTimestamp = indexTimestamp.Item1,
                     IndexEtag = indexTimestamp.Item2,
