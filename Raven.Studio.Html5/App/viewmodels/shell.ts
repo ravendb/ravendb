@@ -137,6 +137,7 @@ class shell extends viewModelBase {
             NProgress.set(newProgress);
         } else {
             NProgress.done();
+            $('.use-bootstrap-tooltip').tooltip('hide');
         }
     }
 
