@@ -31,7 +31,7 @@ namespace Raven.Studio.Commands
 				                                                                .AsyncDatabaseCommands
 				                                                                .ForSystemDatabase();
 
-				                    var relativeUrl = "/admin/databases/" + databasesModel.SelectedDatabase.Name;
+			                        var relativeUrl = "/admin/databases/" + deleteDatabase.DatabaseName;
 
 				                    if (deleteDatabase.hardDelete.IsChecked == true)
 					                    relativeUrl += "?hard-delete=true";
@@ -44,7 +44,7 @@ namespace Raven.Studio.Commands
 					                                                                  .Value.Databases
 					                                                                  .FirstOrDefault(s =>
 						                                                                  s != Constants.SystemDatabase &&
-						                                                                  s != databasesModel.SelectedDatabase.Name) ??
+						                                                                  s != deleteDatabase.DatabaseName) ??
 					                                                  Constants.SystemDatabase;
 					                                   ExecuteCommand(new ChangeDatabaseCommand(), database);
 				                                   });
