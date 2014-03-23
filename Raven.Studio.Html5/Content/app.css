@@ -65,11 +65,11 @@ body {
   border-radius: 10px;
   -webkit-box-shadow: 0 0 5px 1px silver;
   box-shadow: 0 0 5px 1px silver;
-  margin-right: 10px;
   min-width: 140px;
   min-height: 60px;
   display: inline-block;
   padding: 8px;
+  margin: 0 10px 14px 0;
 }
 .database-page .databases-container .database:hover {
   background-color: white;
