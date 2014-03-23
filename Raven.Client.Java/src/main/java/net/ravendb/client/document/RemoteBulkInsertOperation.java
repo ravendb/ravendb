@@ -224,8 +224,8 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation, 
 
   private String createOperationUrl(BulkInsertOptions options) {
     String requestUrl = "/bulkInsert?";
-    if (options.isCheckForUpdates()) {
-      requestUrl += "checkForUpdates=true";
+    if (options.isOverwriteExisting()) {
+      requestUrl += "overwriteExisting=true";
     }
     if (options.isCheckReferencesInIndexes()) {
       requestUrl += "&checkReferencesInIndexes=true";

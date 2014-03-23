@@ -14,6 +14,7 @@ import net.ravendb.client.exceptions.NonAuthoritativeInformationException;
  */
 public interface IAdvancedDocumentSessionOperations {
 
+
   /**
    * The document store associated with this session
    * @return
@@ -176,4 +177,11 @@ public interface IAdvancedDocumentSessionOperations {
    * @param commands
    */
   public void defer(ICommandData... commands);
+
+  /**
+   * Version this entity when it is saved.  Use when Versioning bundle configured to ExcludeUnlessExplicit.
+   * @param entity
+   */
+  public void explicitlyVersion(Object entity);
+
 }

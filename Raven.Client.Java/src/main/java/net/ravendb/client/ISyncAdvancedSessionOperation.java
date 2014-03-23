@@ -3,6 +3,7 @@ package net.ravendb.client;
 import java.util.Iterator;
 
 import net.ravendb.abstractions.basic.Reference;
+import net.ravendb.abstractions.closure.Action1;
 import net.ravendb.abstractions.data.Etag;
 import net.ravendb.abstractions.data.FacetQuery;
 import net.ravendb.abstractions.data.FacetResults;
@@ -11,6 +12,7 @@ import net.ravendb.abstractions.data.StreamResult;
 import net.ravendb.client.document.batches.IEagerSessionOperations;
 import net.ravendb.client.document.batches.ILazySessionOperations;
 import net.ravendb.client.indexes.AbstractIndexCreationTask;
+import net.ravendb.client.indexes.AbstractTransformerCreationTask;
 import net.ravendb.client.linq.IRavenQueryable;
 
 
@@ -18,6 +20,8 @@ import net.ravendb.client.linq.IRavenQueryable;
  * Advanced synchronous session operations
  */
 public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionOperations {
+
+
   /**
    * Refreshes the specified entity from Raven server.
    * @param entity
@@ -85,6 +89,23 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
   public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize, String exclude, RavenPagingInformation pagingInformation);
 
 
+  /**
+   * Loads documents with the specified key prefix and applies the specified results transformer against the results
+   * @param clazz
+   * @param transformerClass
+   * @param keyPrefix
+   * @param matches
+   * @param start
+   * @param pageSize
+   * @param exclude
+   * @param pagingInformation
+   * @param configure
+   * @return
+   */
+  public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult[] loadStartingWith(Class<TResult> clazz, Class<TTransformer> transformerClass,
+    String keyPrefix, String matches, int start, int pageSize, String exclude,
+    RavenPagingInformation pagingInformation, Action1<ILoadConfiguration> configure);
+
 
   /**
    * Access the lazy operations
@@ -104,7 +125,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param indexClass The type of the index creator.
    * @return
    */
-  public <T, S extends AbstractIndexCreationTask> IDocumentQuery<T> luceneQuery(Class<T> clazz, Class<S> indexClass);
+  public <T, S extends AbstractIndexCreationTask> IDocumentQuery<T> documentQuery(Class<T> clazz, Class<S> indexClass);
 
   /**
    * Query the specified index using Lucene syntax
@@ -112,7 +133,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param isMapReduce Control how we treat identifier properties in map/reduce indexes
    * @return
    */
-  public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz, String indexName, boolean isMapReduce);
+  public <T> IDocumentQuery<T> documentQuery(Class<T> clazz, String indexName, boolean isMapReduce);
 
   /**
    * Query the specified index using Lucene syntax
@@ -120,7 +141,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param isMapReduce Control how we treat identifier properties in map/reduce indexes
    * @return
    */
-  public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz, String indexName);
+  public <T> IDocumentQuery<T> documentQuery(Class<T> clazz, String indexName);
 
 
   /**
@@ -128,7 +149,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param clazz
    * @return
    */
-  public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz);
+  public <T> IDocumentQuery<T> documentQuery(Class<T> clazz);
 
   /**
    * Gets the document URL for the specified entity.

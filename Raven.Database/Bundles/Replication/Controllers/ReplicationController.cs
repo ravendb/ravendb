@@ -132,7 +132,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					}
 
 					var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + src;
-					var replicationDocument = Database.Get(replicationDocKey, null);
+					var replicationDocument = Database.Documents.Get(replicationDocKey, null);
 					var lastAttachmentId = Etag.Empty;
 					if (replicationDocument != null)
 					{
@@ -144,7 +144,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					Guid serverInstanceId;
 					if (Guid.TryParse(GetQueryStringValue("dbid"), out serverInstanceId) == false)
 						serverInstanceId = Database.TransactionalStorage.Id;
-					Database.Put(replicationDocKey, null,
+					Database.Documents.Put(replicationDocKey, null,
 								 RavenJObject.FromObject(new SourceReplicationInformation
 								 {
 									 Source = src,
@@ -196,7 +196,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					}
 
 					var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + src;
-					var replicationDocument = Database.Get(replicationDocKey, null);
+					var replicationDocument = Database.Documents.Get(replicationDocKey, null);
 					Etag lastDocId = null;
 					if (replicationDocument != null)
 					{
@@ -208,7 +208,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					Guid serverInstanceId;
 					if (Guid.TryParse(GetQueryStringValue("dbid"), out serverInstanceId) == false)
 						serverInstanceId = Database.TransactionalStorage.Id;
-					Database.Put(replicationDocKey, null,
+					Database.Documents.Put(replicationDocKey, null,
 								 RavenJObject.FromObject(new SourceReplicationInformation
 								 {
 									 Source = src,
@@ -261,7 +261,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var document = Database.Get(Constants.RavenReplicationSourcesBasePath + "/" + src, null);
+				var document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + src, null);
 
 				SourceReplicationInformation sourceReplicationInformation;
 
@@ -300,7 +300,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var document = Database.Get(Constants.RavenReplicationSourcesBasePath + "/" + src, null);
+				var document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + src, null);
 
 				SourceReplicationInformation sourceReplicationInformation;
 
@@ -352,7 +352,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				//				  sourceReplicationInformation.LastDocumentEtag,
 				//				  sourceReplicationInformation.LastAttachmentEtag);
 
-				Database.Put(Constants.RavenReplicationSourcesBasePath + "/" + src, etag, newDoc, metadata, null);
+				Database.Documents.Put(Constants.RavenReplicationSourcesBasePath + "/" + src, etag, newDoc, metadata, null);
 			}
 
 			return GetEmptyMessage();
@@ -422,7 +422,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 		private ReplicationConfig GetReplicationConfig()
 		{
-			var configDoc = Database.Get(Constants.RavenReplicationConfig, null);
+			var configDoc = Database.Documents.Get(Constants.RavenReplicationConfig, null);
 
 			if (configDoc == null)
 				return null;

@@ -67,7 +67,7 @@ namespace Raven.Database.Data
 		    if (LoadedIds.Add(value) == false)
 		        return true;
 
-			var includedDoc = Database.Get(value, TransactionInformation);
+			var includedDoc = Database.Documents.Get(value, TransactionInformation);
 		    if (includedDoc == null)
 		        return false;
 

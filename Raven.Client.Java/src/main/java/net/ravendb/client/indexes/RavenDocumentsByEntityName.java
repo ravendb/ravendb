@@ -43,6 +43,8 @@ public class RavenDocumentsByEntityName extends AbstractIndexCreationTask {
     termVectors.put("LastModified", FieldTermVector.NO);
     def.setTermVectors(termVectors);
 
+    def.setDisableInMemoryIndexing(true);
+
     return def;
   }
 

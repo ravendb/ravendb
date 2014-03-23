@@ -9,11 +9,8 @@ using System.ComponentModel.Composition.Primitives;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using Raven.Abstractions.Data;
@@ -28,13 +25,12 @@ using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Server.Security;
 using Raven.Database.Storage;
-using Raven.Json.Linq;
+using Raven.Database.Util;
 using Raven.Server;
 using Xunit;
 using Xunit.Sdk;
@@ -300,7 +296,7 @@ namespace Raven.Tests.Helpers
 			else
 				newTransactionalStorage = new Storage.Esent.TransactionalStorage(ravenConfiguration, () => { });
 
-			newTransactionalStorage.Initialize(new DummyUuidGenerator(), documentCodecs ?? new OrderedPartCollection<AbstractDocumentCodec>());
+			newTransactionalStorage.Initialize(new SequentialUuidGenerator { EtagBase = 0 }, documentCodecs ?? new OrderedPartCollection<AbstractDocumentCodec>());
 			return newTransactionalStorage;
 		}
 
@@ -348,7 +344,7 @@ namespace Raven.Tests.Helpers
 
         protected PeriodicBackupStatus GetPerodicBackupStatus(DocumentDatabase db)
 	    {
-            return GetPerodicBackupStatus(key => db.Get(key, null));
+            return GetPerodicBackupStatus(key => db.Documents.Get(key, null));
 	    }
 
         protected PeriodicBackupStatus GetPerodicBackupStatus(IDatabaseCommands commands)
@@ -367,7 +363,7 @@ namespace Raven.Tests.Helpers
 
         protected void WaitForPeriodicBackup(DocumentDatabase db, PeriodicBackupStatus previousStatus)
         {
-            WaitForPeriodicBackup(key => db.Get(key, null), previousStatus);
+            WaitForPeriodicBackup(key => db.Documents.Get(key, null), previousStatus);
         }
 
         protected void WaitForPeriodicBackup(IDatabaseCommands commands, PeriodicBackupStatus previousStatus)
@@ -396,7 +392,7 @@ namespace Raven.Tests.Helpers
 
 		protected void WaitForBackup(DocumentDatabase db, bool checkError)
 		{
-			WaitForBackup(key => db.Get(key, null), checkError);
+			WaitForBackup(key => db.Documents.Get(key, null), checkError);
 		}
 
 		protected void WaitForBackup(IDatabaseCommands commands, bool checkError)
@@ -634,9 +630,12 @@ namespace Raven.Tests.Helpers
 
 		public static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
 		{
-			var field = database.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
+			var field = database.GetType().GetField("initializer", BindingFlags.Instance | BindingFlags.NonPublic);
 			Assert.NotNull(field);
-			var validateLicense = field.GetValue(database);
+			var initializer = field.GetValue(database);
+			var validateLicenseField = initializer.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
+			Assert.NotNull(validateLicenseField);
+			var validateLicense = validateLicenseField.GetValue(initializer);
 
 			var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
 			Assert.NotNull(currentLicenseProp);

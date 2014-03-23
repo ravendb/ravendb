@@ -1824,7 +1824,7 @@ namespace Raven.Client.Connection.Async
 																CultureInfo.InvariantCulture, DateTimeStyles.None),
 				IndexEtag = Etag.Parse(response.Headers.GetFirstValue("Raven-Index-Etag")),
 				ResultEtag = Etag.Parse(response.Headers.GetFirstValue("Raven-Result-Etag")),
-				IsStable = bool.Parse(response.Headers.GetFirstValue("Raven-Is-Stale")),
+				IsStale = bool.Parse(response.Headers.GetFirstValue("Raven-Is-Stale")),
 				TotalResults = int.Parse(response.Headers.GetFirstValue("Raven-Total-Results"))
 			};
 

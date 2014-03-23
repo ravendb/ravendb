@@ -260,7 +260,7 @@ namespace Raven.Client.Embedded
 		{
 			if (DocumentDatabase == null)
 				return;
-			var jsonDocument = DocumentDatabase.Get("Raven/StudioConfig", null);
+			var jsonDocument = DocumentDatabase.Documents.Get("Raven/StudioConfig", null);
 			RavenJObject doc;
 			RavenJObject metadata;
 			if(jsonDocument == null)
@@ -276,7 +276,7 @@ namespace Raven.Client.Embedded
 
 			doc["WarnWhenUsingSystemDatabase"] = false;
 
-			DocumentDatabase.Put("Raven/StudioConfig", null, doc, metadata, null);
+			DocumentDatabase.Documents.Put("Raven/StudioConfig", null, doc, metadata, null);
 		}
 
 

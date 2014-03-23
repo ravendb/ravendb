@@ -58,7 +58,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             var start = GetStart();
             var nextPageStart = start; // will trigger rapid pagination
 
-            var fileSystems = Database.GetDocumentsWithIdStartingWith("Raven/FileSystems/", null, null, start, GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
+            var fileSystems = Database.Documents.GetDocumentsWithIdStartingWith("Raven/FileSystems/", null, null, start, GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
 
             var fileSystemNames = fileSystems
                                     .Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/FileSystems/", string.Empty))

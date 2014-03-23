@@ -34,27 +34,27 @@ namespace Raven.Tests.Transactions
 		public void WhenUsingTransactionWillWorkIfDocumentEtagMatch()
 		{
             EnsureDtcIsSupported(db);
-			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
-			var doc = db.Get("ayende", null);
+			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
+			var doc = db.Documents.Get("ayende", null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
-			db.Put("ayende", doc.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+			db.Documents.Put("ayende", doc.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			db.PrepareTransaction(transactionInformation.Id);
 			db.Commit(transactionInformation.Id);
 
 
-			Assert.Equal("rahien", db.Get("ayende", null).ToJson()["ayende"].Value<string>());
+			Assert.Equal("rahien", db.Documents.Get("ayende", null).ToJson()["ayende"].Value<string>());
 		}
 
 		[Fact]
 		public void AfterPuttingDocInTxWillChangeEtag()
 		{
             EnsureDtcIsSupported(db);
-			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
-			var doc = db.Get("ayende", null);
+			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
+			var doc = db.Documents.Get("ayende", null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
-			db.Put("ayende", doc.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
-			var docInTx = db.Get("ayende", transactionInformation);
-			db.Put("ayende", docInTx.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+			db.Documents.Put("ayende", doc.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+			var docInTx = db.Documents.Get("ayende", transactionInformation);
+			db.Documents.Put("ayende", docInTx.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
 			Assert.NotEqual(doc.Etag, docInTx.Etag);
 
@@ -64,14 +64,14 @@ namespace Raven.Tests.Transactions
 		public void AfterCommitWillNotRetainSameEtag()
 		{
             EnsureDtcIsSupported(db);
-			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
-			var doc = db.Get("ayende", null);
+			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
+			var doc = db.Documents.Get("ayende", null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
-			db.Put("ayende", doc.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
-			var docInTx = db.Get("ayende", transactionInformation);
+			db.Documents.Put("ayende", doc.Etag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+			var docInTx = db.Documents.Get("ayende", transactionInformation);
 			db.PrepareTransaction(transactionInformation.Id);
 			db.Commit(transactionInformation.Id);
-			var docAfterTx = db.Get("ayende", null);
+			var docAfterTx = db.Documents.Get("ayende", null);
 
 			Assert.NotEqual(docAfterTx.Etag, docInTx.Etag);
 		}
@@ -80,11 +80,11 @@ namespace Raven.Tests.Transactions
 		public void WhenUsingTransactionWillFailIfDocumentEtagDoesNotMatch()
 		{
             EnsureDtcIsSupported(db);
-			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
+			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			Assert.Throws<ConcurrencyException>(
 				() =>
-				db.Put("ayende", Etag.InvalidEtag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(),
+				db.Documents.Put("ayende", Etag.InvalidEtag, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(),
 					   transactionInformation));
 		}
 	}

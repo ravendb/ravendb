@@ -21,7 +21,7 @@ namespace Raven.Bundles.Replication.Triggers
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var oldVersion = Database.GetStatic(key);
+				var oldVersion = Database.Attachments.GetStatic(key);
 				if(oldVersion == null)
 					return;
 
@@ -34,7 +34,7 @@ namespace Raven.Bundles.Replication.Triggers
 					return;
 				foreach (var prop in conflicts)
 				{
-					Database.DeleteStatic(prop.Value<string>(), null);
+					Database.Attachments.DeleteStatic(prop.Value<string>(), null);
 				}
 			}
 		}

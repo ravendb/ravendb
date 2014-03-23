@@ -121,7 +121,7 @@ namespace Raven.Database.Server.Controllers
 				//context.Log(log => log.Debug("\tBatch Operation worked on {0:#,#;;0} documents in {1}, task #: {2}", array.Length, sp.Elapsed, id));
 			});
 
-			Database.AddTask(task, status, out id);
+			Database.Tasks.AddTask(task, status, out id);
 
 			return GetMessageWithObject(new { OperationId = id });
 		}

@@ -20,7 +20,7 @@ namespace Raven.Database.Queries
 
         public static FacetResults ExecuteGetTermsQuery(this DocumentDatabase self, string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize)
         {
-            var facetSetup = self.Get(facetSetupDoc, null);
+            var facetSetup = self.Documents.Get(facetSetupDoc, null);
             if (facetSetup == null)
                 throw new InvalidOperationException("Could not find facets document: " + facetSetupDoc);
 

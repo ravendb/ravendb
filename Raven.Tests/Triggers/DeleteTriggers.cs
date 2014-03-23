@@ -33,12 +33,12 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanCascadeDeletes()
 		{
-			db.Put("abc", null, RavenJObject.Parse("{name: 'a'}"), RavenJObject.Parse("{'Cascade-Delete': 'def'}"), null);
-			db.Put("def", null, RavenJObject.Parse("{name: 'b'}"), new RavenJObject(), null);
+			db.Documents.Put("abc", null, RavenJObject.Parse("{name: 'a'}"), RavenJObject.Parse("{'Cascade-Delete': 'def'}"), null);
+			db.Documents.Put("def", null, RavenJObject.Parse("{name: 'b'}"), new RavenJObject(), null);
 
-			db.Delete("abc", null, null);
+			db.Documents.Delete("abc", null, null);
 
-			Assert.Null(db.Get("def", null));
+			Assert.Null(db.Documents.Get("def", null));
 		}
 		
 	}

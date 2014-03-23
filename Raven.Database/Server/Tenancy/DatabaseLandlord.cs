@@ -57,7 +57,7 @@ namespace Raven.Database.Server.Tenancy
         {
             JsonDocument jsonDocument;
             using (systemDatabase.DisableAllTriggersForCurrentThread())
-                jsonDocument = systemDatabase.Get("Raven/Databases/" + tenantId, null);
+                jsonDocument = systemDatabase.Documents.Get("Raven/Databases/" + tenantId, null);
             if (jsonDocument == null ||
                 jsonDocument.Metadata == null ||
                 jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists) ||
@@ -140,7 +140,7 @@ namespace Raven.Database.Server.Tenancy
                     var numberOfAllowedDbs = int.Parse(maxDatabases);
 
                     int nextPageStart = 0;
-                    var databases = systemDatabase.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, numberOfAllowedDbs, CancellationToken.None, ref nextPageStart).ToList();
+                    var databases = systemDatabase.Documents.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, numberOfAllowedDbs, CancellationToken.None, ref nextPageStart).ToList();
                     if (databases.Count >= numberOfAllowedDbs)
                         throw new InvalidOperationException(
                             "You have reached the maximum number of databases that you can have according to your license: " + numberOfAllowedDbs + Environment.NewLine +
@@ -188,7 +188,7 @@ namespace Raven.Database.Server.Tenancy
             if (initialized)
                 return;
             initialized = true;
-            SystemDatabase.OnDocumentChange += (database, notification, doc) =>
+            SystemDatabase.Notifications.OnDocumentChange += (database, notification, doc) =>
             {
                 if (notification.Id == null)
                     return;

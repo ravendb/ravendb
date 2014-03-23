@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.IO;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
@@ -11,11 +10,8 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client.Bundles.Versioning;
-using Raven.Database.Extensions;
-using Raven.Json.Linq;
 using Raven.Smuggler;
 using Xunit;
-using Xunit.Extensions;
 
 namespace Raven.Tests.Bundles.Versioning
 {
@@ -460,18 +456,21 @@ namespace Raven.Tests.Bundles.Versioning
             var file = Path.GetTempFileName();
 		    try
 			{
-				var exportSmuggler = new SmugglerApi(new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase });
-				exportSmuggler.ExportData(new SmugglerExportOptions { ToFile = file }, new SmugglerOptions()).Wait();
+				new SmugglerApi().ExportData(new SmugglerExportOptions { ToFile = file, From = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }, new SmugglerOptions()).Wait();
 
 				using (var documentStore2 = CreateDocumentStore(port: 8078))
 				{
-					var importSmuggler = new SmugglerApi(new RavenConnectionStringOptions
+					var importSmuggler = new SmugglerApi();
+					importSmuggler.ImportData(new SmugglerImportOptions
 					{
-						Url = documentStore2.Url,
-						Credentials = documentStore2.Credentials,
-                        DefaultDatabase = documentStore2.DefaultDatabase
-					});
-				    importSmuggler.ImportData(new SmugglerImportOptions { FromFile = file }, new SmugglerOptions()).Wait();
+						FromFile = file,
+						To = new RavenConnectionStringOptions
+						{
+							Url = documentStore2.Url,
+							Credentials = documentStore2.Credentials,
+							DefaultDatabase = documentStore2.DefaultDatabase
+						}
+					}, new SmugglerOptions()).Wait();
 
 					using (var session = documentStore2.OpenSession())
 					{

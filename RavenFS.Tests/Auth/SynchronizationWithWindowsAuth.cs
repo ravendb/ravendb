@@ -30,7 +30,7 @@ namespace RavenFS.Tests.Auth
         {
             if (server.SystemDatabase.Configuration.Port == Ports[1]) // setup only for destination
             {
-                server.SystemDatabase.Put("Raven/Authorization/WindowsSettings", null,
+                server.SystemDatabase.Documents.Put("Raven/Authorization/WindowsSettings", null,
                                           RavenJObject.FromObject(new WindowsAuthDocument
                                           {
                                               RequiredUsers = new List<WindowsAuthData>

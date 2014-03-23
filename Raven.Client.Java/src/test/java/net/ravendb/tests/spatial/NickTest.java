@@ -75,27 +75,27 @@ public class NickTest extends RemoteClientTest {
       // (can be checked here: http://www.movable-type.co.uk/scripts/latlong.html
 
       try (IDocumentSession session = store.openSession()) {
-        MySpatialDocument result = session.advanced().luceneQuery(MySpatialDocument.class, MySpatialIndex.class)
+        MySpatialDocument result = session.advanced().documentQuery(MySpatialDocument.class, MySpatialIndex.class)
           // 1.025 is for the 2.5% uncertainty at the circle circumference
           .withinRadiusOf(35.75* 1.025,  48.6003516, 2.4632387000000335)
           .singleOrDefault();
 
         assertNotNull(result);  // A location should be returned.
 
-        result = session.advanced().luceneQuery(MySpatialDocument.class, MySpatialIndex.class)
+        result = session.advanced().documentQuery(MySpatialDocument.class, MySpatialIndex.class)
           .withinRadiusOf(30,  48.6003516, 2.4632387000000335)
           .singleOrDefault();
 
         assertNull(result); // No result should be returned.
 
-        result = session.advanced().luceneQuery(MySpatialDocument.class, MySpatialIndex.class)
+        result = session.advanced().documentQuery(MySpatialDocument.class, MySpatialIndex.class)
           .withinRadiusOf(33,  48.6003516, 2.4632387000000335)
           .singleOrDefault();
 
         assertNull(result);  // A location should be returned.
 
         String shape = SpatialIndexQuery.getQueryShapeFromLatLon(48.6003516, 2.4632387000000335, 33);
-        result = session.advanced().luceneQuery(MySpatialDocument.class, MySpatialIndex.class)
+        result = session.advanced().documentQuery(MySpatialDocument.class, MySpatialIndex.class)
           .relatesToShape(Constants.DEFAULT_SPATIAL_FIELD_NAME, shape, SpatialRelation.INTERSECTS, 0)
           .singleOrDefault();
 

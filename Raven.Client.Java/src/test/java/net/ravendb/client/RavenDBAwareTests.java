@@ -16,6 +16,7 @@ import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.abstractions.json.linq.RavenJValue;
 import net.ravendb.client.IDocumentStore;
 import net.ravendb.client.connection.IDatabaseCommands;
+import net.ravendb.client.connection.IDocumentStoreReplicationInformer;
 import net.ravendb.client.connection.ReplicationInformer;
 import net.ravendb.client.connection.ServerClient;
 import net.ravendb.client.connection.implementation.HttpJsonRequestFactory;
@@ -102,7 +103,7 @@ public abstract class RavenDBAwareTests {
     replicationInformer = new ReplicationInformer(convention);
 
     serverClient = new ServerClient(DEFAULT_SERVER_URL_1, convention, new OperationCredentials(),
-      new Functions.StaticFunction1<String, ReplicationInformer>(replicationInformer), null, factory,
+      new Functions.StaticFunction1<String, IDocumentStoreReplicationInformer>((IDocumentStoreReplicationInformer)replicationInformer), null, factory,
       UUID.randomUUID(), new IDocumentConflictListener[0]);
 
   }
@@ -287,6 +288,7 @@ public abstract class RavenDBAwareTests {
       try {
         Thread.sleep(40);
       } catch (InterruptedException e) {
+        //ignore
       }
 
     }

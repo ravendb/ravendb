@@ -36,7 +36,7 @@ namespace Raven.Database.Impl
 		{
 			return PerformBulkOperation(indexName, queryToDelete, allowStale, (docId, tx) =>
 			{
-				database.Delete(docId, null, tx);
+				database.Documents.Delete(docId, null, tx);
 				return new { Document = docId, Deleted = true };
 			});
 		}
@@ -45,7 +45,7 @@ namespace Raven.Database.Impl
 		{
 			return PerformBulkOperation(indexName, queryToUpdate, allowStale, (docId, tx) =>
 			{
-				var patchResult = database.ApplyPatch(docId, null, patchRequests, tx);
+				var patchResult = database.Patches.ApplyPatch(docId, null, patchRequests, tx);
 				return new { Document = docId, Result = patchResult };
 			});
 		}
@@ -54,7 +54,7 @@ namespace Raven.Database.Impl
 		{
 			return PerformBulkOperation(indexName, queryToUpdate, allowStale, (docId, tx) =>
 			{
-				var patchResult = database.ApplyPatch(docId, null, patch, tx);
+				var patchResult = database.Patches.ApplyPatch(docId, null, patch, tx);
 				return new { Document = docId, Result = patchResult.Item1, Debug = patchResult.Item2 };
 			});
 		}
@@ -78,7 +78,7 @@ namespace Raven.Database.Impl
 			};
 
 			bool stale;
-			var queryResults = database.QueryDocumentIds(index, bulkIndexQuery, token, out stale);
+			var queryResults = database.Queries.QueryDocumentIds(index, bulkIndexQuery, token, out stale);
 
 			if (stale && allowStale == false)
 			{

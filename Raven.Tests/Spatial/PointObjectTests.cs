@@ -25,7 +25,7 @@ namespace Raven.Tests.Spatial
 		[Fact]
 		public void PointTest()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewRemoteDocumentStore())
 			{
 				store.Initialize();
 				store.ExecuteIndex(new PointIndex());
@@ -38,7 +38,13 @@ namespace Raven.Tests.Spatial
 					session.Store(new SpatialDoc { Point = new { Latitude = 45d, Longitude = 45d } });
 					session.Store(new SpatialDoc { Point = new { lat = 45d, lon = 45d } });
 					session.Store(new SpatialDoc { Point = new { lat = 45d, lng = 45d } });
-					session.Store(new SpatialDoc { Point = new { Lat = 45d, Long = 45d } });
+				    session.Store(new SpatialDoc {Point = new {Lat = 45d, Long = 45d}});
+                    session.Store(new SpatialDoc { Point = new [] { 45m, 45m } });
+					session.Store(new SpatialDoc { Point = new { X = 45m, Y = 45m } });
+					session.Store(new SpatialDoc { Point = new { Latitude = 45m, Longitude = 45m } });
+					session.Store(new SpatialDoc { Point = new { lat = 45m, lon = 45m } });
+					session.Store(new SpatialDoc { Point = new { lat = 45m, lng = 45m } });
+					session.Store(new SpatialDoc { Point = new { Lat = 45m, Long = 45m } });
 					session.Store(new SpatialDoc { Point = "geo:45.0,45.0,-78.4" });
 					session.Store(new SpatialDoc { Point = "geo:45.0,45.0,-78.4;u=0.2" });
 					session.SaveChanges();
@@ -52,7 +58,7 @@ namespace Raven.Tests.Spatial
 										 .Spatial(x => x.Point, x => x.WithinRadiusOf(700, 40, 40))
 					                     .Count();
 
-					Assert.Equal(8, matches);
+					Assert.Equal(14, matches);
 				}
 			}
 		}

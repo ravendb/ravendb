@@ -33,7 +33,7 @@ namespace RavenFS.Tests.Auth
 
         protected override void ConfigureServer(RavenDbServer server, string fileSystemName)
         {
-            server.SystemDatabase.Put("Raven/Authorization/WindowsSettings", null,
+            server.SystemDatabase.Documents.Put("Raven/Authorization/WindowsSettings", null,
                                       RavenJObject.FromObject(new WindowsAuthDocument
                                       {
                                           RequiredUsers = new List<WindowsAuthData>

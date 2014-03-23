@@ -98,8 +98,8 @@ namespace Raven.Tests.Bugs.TransformResults
 					var documentRetriever = new DocumentRetriever(accessor, new OrderedPartCollection<AbstractReadTrigger>(),
 					                                              documentStore.DocumentDatabase.TransactionalStorage
 					                                                           .GetInFlightTransactionalState(
-						                                                           documentStore.DocumentDatabase.Put,
-						                                                           documentStore.DocumentDatabase.Delete));
+						                                                           documentStore.DocumentDatabase.Documents.Put,
+						                                                           documentStore.DocumentDatabase.Documents.Delete));
 					var dynamicJsonObjects = new[] { new DynamicJsonObject(accessor.Documents.DocumentByKey("answer2s/" + answerId.ToString(), null).ToJson()), };
 					var transformResultsDefinition = abstractViewGenerator.TransformResultsDefinition(documentRetriever,
 																									  dynamicJsonObjects

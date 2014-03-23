@@ -53,6 +53,7 @@ class ctor {
         var defaults = {
             dynamicHeightTargetSelector: "footer",
             dynamicHeightBottomMargin: 0,
+            selectedIndices: ko.observableArray(),
             showCheckboxes: true,
             showIds: true,
             useContextMenu: true,

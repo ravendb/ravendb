@@ -14,13 +14,6 @@ public interface IAdminDatabaseCommands {
   public void startIndexing();
 
   /**
-   * Begins a backup operation
-   * @param backupLocation
-   * @param databaseDocument
-   */
-  public void startBackup(String backupLocation, DatabaseDocument databaseDocument);
-
-  /**
    *  Get the indexing status
    * @return
    */

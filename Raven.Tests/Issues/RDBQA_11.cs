@@ -41,16 +41,16 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerApi(new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase });
+                    var smuggler = new SmugglerApi();
 
-                    smuggler.ExportData(new SmugglerExportOptions { ToFile = path }, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
+					smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
-                    var smuggler = new SmugglerApi(new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase });
+                    var smuggler = new SmugglerApi();
 
-                    smuggler.ImportData(new SmugglerImportOptions { FromFile = path }, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
+					smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {
@@ -86,16 +86,16 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerApi(new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase });
+                    var smuggler = new SmugglerApi();
 
-                    smuggler.ExportData(new SmugglerExportOptions { ToFile = path }, options).Wait(TimeSpan.FromSeconds(15));
+					smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }, options).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
-                    var smuggler = new SmugglerApi(new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase });
+                    var smuggler = new SmugglerApi();
 
-                    smuggler.ImportData(new SmugglerImportOptions { FromFile = path }, options).Wait(TimeSpan.FromSeconds(15));
+					smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }, options).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {
@@ -131,18 +131,18 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerApi(new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase });
+                    var smuggler = new SmugglerApi();
 
-                    smuggler.ExportData(new SmugglerExportOptions { ToFile = path }, options).Wait(TimeSpan.FromSeconds(15));
+					smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }, options).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
                     SystemTime.UtcDateTime = () => DateTime.Now.AddMinutes(10);
 
-                    var smuggler = new SmugglerApi(new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase });
+                    var smuggler = new SmugglerApi();
 
-                    smuggler.ImportData(new SmugglerImportOptions { FromFile = path }, options).Wait(TimeSpan.FromSeconds(15));
+					smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }, options).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {

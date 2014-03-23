@@ -41,7 +41,7 @@ public class HighlightTest extends RemoteClientTest {
         session.saveChanges();
 
         Reference<FieldHighlightings> nameHighlightingRef = new Reference<>();
-        List<SearchItem> results = session.advanced().luceneQuery(SearchItem.class, "ContentSearchIndex")
+        List<SearchItem> results = session.advanced().documentQuery(SearchItem.class, "ContentSearchIndex")
             .waitForNonStaleResults()
             .highlight("Name", 128, 1, nameHighlightingRef)
             .search("Name", searchFor)
@@ -68,7 +68,7 @@ public class HighlightTest extends RemoteClientTest {
         session.saveChanges();
 
         Reference<FieldHighlightings> nameHighlightingRef = new Reference<>();
-        List<SearchItem> results = session.advanced().luceneQuery(SearchItem.class, "ContentSearchIndex")
+        List<SearchItem> results = session.advanced().documentQuery(SearchItem.class, "ContentSearchIndex")
             .waitForNonStaleResults(5 * 60 * 1000)
             .highlight("Name", 128, 1, nameHighlightingRef)
             .search("Name", searchFor)
@@ -96,7 +96,7 @@ public class HighlightTest extends RemoteClientTest {
         session.saveChanges();
 
         Reference<FieldHighlightings> nameHighlightingRef = new Reference<>();
-        List<SearchItem> results = session.advanced().luceneQuery(SearchItem.class, "ContentSearchIndex")
+        List<SearchItem> results = session.advanced().documentQuery(SearchItem.class, "ContentSearchIndex")
             .waitForNonStaleResults()
             .highlight("Name", 20, 1, nameHighlightingRef)
             .search("Name", searchFor)
@@ -124,7 +124,7 @@ public class HighlightTest extends RemoteClientTest {
         session.saveChanges();
 
         Reference<FieldHighlightings> nameHighlightingRef = new Reference<>();
-        List<SearchItem> results = session.advanced().luceneQuery(SearchItem.class, "ContentSearchIndex")
+        List<SearchItem> results = session.advanced().documentQuery(SearchItem.class, "ContentSearchIndex")
             .waitForNonStaleResults()
             .highlight("Name", 20, 1, nameHighlightingRef)
             .search("Name", searchFor)
@@ -156,7 +156,7 @@ public class HighlightTest extends RemoteClientTest {
         session.saveChanges();
 
         Reference<FieldHighlightings> nameHighlightingRef = new Reference<>();
-        List<SearchItem> results = session.advanced().luceneQuery(SearchItem.class, "ContentSearchIndex")
+        List<SearchItem> results = session.advanced().documentQuery(SearchItem.class, "ContentSearchIndex")
             .waitForNonStaleResults()
             .highlight("Name", 128, 20, nameHighlightingRef)
             .search("Name", searchFor)
@@ -193,7 +193,7 @@ public class HighlightTest extends RemoteClientTest {
         session.saveChanges();
 
         Reference<FieldHighlightings> nameHighlightingRef = new Reference<>();
-        List<SearchItem> results = session.advanced().luceneQuery(SearchItem.class, "ContentSearchIndex")
+        List<SearchItem> results = session.advanced().documentQuery(SearchItem.class, "ContentSearchIndex")
             .waitForNonStaleResults()
             .highlight("Name", 128, 20, nameHighlightingRef)
             .search("Name", searchFor)

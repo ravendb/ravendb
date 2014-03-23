@@ -41,7 +41,7 @@ public class TotalCountServerTest extends RemoteClientTest {
       }
 
       try (IDocumentSession session = store.openSession()) {
-        int resultCount = session.advanced().luceneQuery(Company.class).waitForNonStaleResults().getQueryResult().getTotalResults();
+        int resultCount = session.advanced().documentQuery(Company.class).waitForNonStaleResults().getQueryResult().getTotalResults();
         assertEquals(2, resultCount);
       }
     }

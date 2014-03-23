@@ -65,7 +65,7 @@ namespace Raven.Bundles.Replication.Triggers
 
 		private RavenJObject GetDocumentMetadata(string key)
 		{
-			var doc = Database.GetDocumentMetadata(key, null);
+			var doc = Database.Documents.GetDocumentMetadata(key, null);
             if (doc != null)
             {
                 var doesNotExist = doc.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists); // occurs when in transaction

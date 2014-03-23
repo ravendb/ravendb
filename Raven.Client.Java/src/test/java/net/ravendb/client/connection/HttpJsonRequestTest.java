@@ -63,7 +63,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
     replicationInformer = new ReplicationInformer(convention);
 
     serverClient = new ServerClient(DEFAULT_SERVER_URL_1, convention, new OperationCredentials(),
-      new Functions.StaticFunction1<String, ReplicationInformer>(replicationInformer), null, factory,
+      new Functions.StaticFunction1<String, IDocumentStoreReplicationInformer>(replicationInformer), null, factory,
       UUID.randomUUID(), new IDocumentConflictListener[0]);
     initFactory();
   }
