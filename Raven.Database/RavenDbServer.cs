@@ -5,11 +5,11 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Threading.Tasks;
-using Owin;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Database.Embedded;
 using Raven.Database.Server;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.WebApi;
@@ -19,10 +19,10 @@ namespace Raven.Server
 	public class RavenDbServer : IDisposable
 	{
 	    private readonly InMemoryRavenConfiguration configuration;
-	    private readonly IServerThingsForTests serverThingsForTests;
-		private readonly RavenDBOptions options;
-	    private readonly OwinHttpServer owinHttpServer;
-        private readonly IDocumentStore documentStore;
+	    private IServerThingsForTests serverThingsForTests;
+		private RavenDBOptions options;
+	    private OwinHttpServer owinHttpServer;
+        private IDocumentStore documentStore;
 
 	    public RavenDbServer()
 			: this(new RavenConfiguration())
@@ -31,14 +31,7 @@ namespace Raven.Server
 		public RavenDbServer(InMemoryRavenConfiguration configuration)
 		{
 		    this.configuration = configuration;
-		    owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer);
-			options = owinHttpServer.Options;
-			serverThingsForTests = new ServerThingsForTests(options);
-            documentStore = new DocumentStore
-            {
-                HttpMessageHandler = new OwinHttpMessageHandler(owinHttpServer.Invoke),
-                Url = "http://localhost"
-            }.Initialize();
+		   
 		}
 
 		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
@@ -62,6 +55,19 @@ namespace Raven.Server
 	    {
 	        get { return configuration.RunInMemory; }
             set { configuration.RunInMemory = value; }
+	    }
+
+	    public RavenDbServer Initialize()
+	    {
+            owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer);
+            options = owinHttpServer.Options;
+            serverThingsForTests = new ServerThingsForTests(options);
+            documentStore = new DocumentStore
+            {
+                HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke),
+                Url = "http://localhost"
+            }.Initialize();
+	        return this;
 	    }
 
 	    ///<summary>
