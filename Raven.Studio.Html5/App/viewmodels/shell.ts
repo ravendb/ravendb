@@ -199,7 +199,12 @@ class shell extends viewModelBase {
         systemDatabase.isSystem = true;
         systemDatabase.isVisible(false);
         this.databases(databases.concat([systemDatabase]));
-        this.databases.first(x=>x.isVisible()).activate();
+        if (this.databases().length == 1) {
+            systemDatabase.activate();
+        } else {
+            this.databases.first(x=> x.isVisible()).activate();
+        }
+        
     }
 
     launchDocEditor(docId?: string, docsList?: pagedList) {
