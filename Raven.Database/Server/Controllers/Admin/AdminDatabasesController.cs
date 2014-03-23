@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
@@ -40,14 +41,30 @@ namespace Raven.Database.Server.Controllers.Admin
 		[Route("admin/databases/{*id}")]
 		public async Task<HttpResponseMessage> DatabasesPut(string id)
 		{
+			if (Array.IndexOf(Constants.WindowsReservedFileNames, id) >= 0)
+			{
+				return GetMessageWithString(string.Format("The name '{0}' is forbidden for use in Windows!", id), HttpStatusCode.BadRequest);
+			}
+			try
+			{
+				if (Path.Combine(Database.Configuration.DataDirectory, id).Length > Constants.WindowsMaxPath)
+					return GetMessageWithString(string.Format("Database with the name '{0}' could not have length greater than 260...", id), HttpStatusCode.BadRequest);
+			}
+			catch (Exception e)
+			{
+				return GetMessageWithString(string.Format("Invalid name for a database! " + e.Message), HttpStatusCode.BadRequest);
+			}
+
 			if (IsSystemDatabase(id))
+			{
 				return GetMessageWithString("System Database document cannot be changed", HttpStatusCode.Forbidden);
-
+			}
 			var docKey = "Raven/Databases/" + id;
-
 			var existingDatabase = Database.Documents.Get(docKey, null);
 			if (existingDatabase != null)
-				return GetMessageWithString(string.Format("Database with the name '{0}' is already exists", id), HttpStatusCode.BadRequest);
+			{
+				return GetMessageWithString(string.Format("Database with the name '{0}' already exists", id), HttpStatusCode.BadRequest);
+			}
 
 			var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
 			if (dbDoc.Settings.ContainsKey("Bundles") && dbDoc.Settings["Bundles"].Contains("Encryption"))
