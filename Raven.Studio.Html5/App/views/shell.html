@@ -89,21 +89,20 @@
                 </li>
             </ul>
             <form class="navbar-form pull-left">
-                <!--data-bind="typeahead: { source: GetTopDocumentResults, minLength: 2 }, value: DocumentPrefix"-->
                 <input id="goToDocInput" type="text" class="form-control col-md-8" placeholder="Go to document" >
             </form>
             <ul class="nav navbar-nav pull-right">
                 <li>
-                    <a style="padding-right: 0; display: inline-block;" href="#">Databases &nbsp;<i class="fa fa-caret-right"></i>&nbsp;</a>
+                    <a style="padding-right: 0; display: inline-block;" data-bind="attr:{href:appUrls.databasesManagement}">Databases &nbsp;<i class=" fa fa-caret-right"></i>&nbsp;</a>
                 </li>
                 <li class="dropdown">
                     <a class="dropdown-toggle" data-bind="with: activeDatabase" data-toggle="dropdown" href="#" style="padding-left: 5px;">
                         <span data-bind="text: name"></span> 
-						<b class="caret"></b>
+                        <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu" data-bind="foreach: databases">
                         <li>
-                            <a href="#" data-bind="text: name, click: $root.selectDatabase.bind($root, $data)"></a>
+                            <a href="#" data-bind="text: name, click: $root.selectDatabase.bind($root, $data), visible:isVisible"></a>
                         </li>
                     </ul>
                 </li>

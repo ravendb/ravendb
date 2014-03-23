@@ -26,8 +26,9 @@
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
-    <TypeScriptCompile Include="App\commands\queryFacetCommand.ts" />
+    <TypeScriptCompile Include="App\commands\queryFacetsCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveTransformerCommand.ts" />
@@ -87,6 +88,7 @@
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
+    <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\backupDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyDocuments.ts" />
@@ -153,6 +155,7 @@
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
     <Content Include="App\views\resetIndexConfirm.html" />
+    <Content Include="App\views\createEncryptionConfirmation.html" />
     <Content Include="App\views\restoreDatabase.html" />
     <Content Include="App\views\backupDatabase.html" />
     <Content Include="App\views\deleteTransformerConfirm.html" />
@@ -187,10 +190,12 @@
     <Content Include="App\views\transformersShell.html" />
     <Content Include="App\views\userInfo.html" />
     <TypeScriptCompile Include="App\viewmodels\viewModelBase.ts" />
+    <TypeScriptCompile Include="App\viewmodels\viewSystemDatabaseConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\windowsAuth.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\cell.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\row.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />
+    <Content Include="App\views\viewSystemDatabaseConfirm.html" />
     <Content Include="App\views\windowsAuth.html" />
     <Content Include="Content\app.min.css">
       <DependentUpon>app.css</DependentUpon>

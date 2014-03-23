@@ -344,6 +344,8 @@
     <Compile Include="Bugs\SyncAsync.cs" />
     <Compile Include="Bugs\TransformationsUnitTest.cs" />
     <Compile Include="Faceted\LazyFacets.cs" />
+    <Compile Include="Issues\WaitForStaleOnAbandonedIndexShouldWork.cs" />
+    <Compile Include="Issues\RavenDB_1761.cs" />
     <Compile Include="Issues\RavenDB1508.cs" />
     <Compile Include="Issues\RavenDB1519.cs" />
     <Compile Include="Issues\RavenDB_1280_ReOpen.cs" />
@@ -387,11 +389,15 @@
     <Compile Include="Issues\RavenDB_1601.cs" />
     <Compile Include="Issues\RavenDB_1603.cs" />
     <Compile Include="Issues\RavenDB_1733.cs" />
+    <Compile Include="Issues\RavenDB_1754.cs" />
     <Compile Include="Issues\RDBQA_11.cs" />
+    <Compile Include="Issues\RDBQA_6.cs" />
     <Compile Include="Issues\RDBQA_7.cs" />
     <Compile Include="Issues\RDBQA_9.cs" />
     <Compile Include="Issues\ReplicationAlerts.cs" />
     <Compile Include="Issues\RavenDB_1557.cs" />
+    <Compile Include="Issues\RavenDB_1594.cs" />
+    <Compile Include="Issues\RavenDB_1762.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
     <Compile Include="Linq\GroupByAndDocumentId.cs" />
     <Compile Include="Linq\In.cs" />

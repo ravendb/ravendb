@@ -58,6 +58,10 @@ namespace Raven.Database.Json
 						RemoveValue(patchCmd, patchCmd.Name, token);
 						break;
 					case PatchCommandType.Modify:
+                        // create snapshot of property 
+                        token.EnsureCannotBeChangeAndEnableSnapshotting();    
+				        token = token.CreateSnapshot();
+				        document[patchCmd.Name] = token;
 						ModifyValue(patchCmd, patchCmd.Name, token);
 						break;
 					case PatchCommandType.Inc:

@@ -95,6 +95,13 @@ body {
 .database-page .databases-container .database.system-database.selected .text-muted {
   color: #3071a9;
 }
+.database-page .systemButton {
+  color: grey;
+  margin-top: 50px;
+  position: absolute;
+  top: -40px;
+  right: 25px;
+}
 .document-collections li {
   outline: none;
 }
@@ -121,6 +128,12 @@ body {
   padding-top: 5px;
 }
 .indexes-container .index-group .panel-heading:hover .indexGroup-actions-container {
+  display: inline-block;
+}
+#logsContainer .logRecord .logName .logName-actions-container {
+  display: none;
+}
+#logsContainer .logRecord:hover .logName-actions-container {
   display: inline-block;
 }
 .settings-container {

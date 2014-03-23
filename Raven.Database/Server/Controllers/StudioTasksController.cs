@@ -218,7 +218,7 @@ namespace Raven.Database.Server.Controllers
             }
 
             return GetEmptyMessage();
-	        
+
 	    }
 	}
 }

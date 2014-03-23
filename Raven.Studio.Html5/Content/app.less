@@ -127,6 +127,15 @@ html, body {
             }
         }
     }
+
+    .systemButton {
+        color:grey;
+        margin-top:50px;        
+        position:absolute;
+        top:-40px;
+        right:25px;
+    }
+
 }
 
 .document-collections {
@@ -177,6 +186,20 @@ html, body {
         }
     }
 }
+
+
+#logsContainer .logRecord {
+    .logName .logName-actions-container {
+        display: none;
+    }
+
+    &:hover {
+        .logName-actions-container {
+            display: inline-block;
+        }
+    }
+}
+
 
 .settings-container {
     margin-top: 10px;
@@ -470,6 +493,7 @@ html, body {
         }
     }
 }
+
 
 #editTransformerContainer .transformer {
   height: 600px;
