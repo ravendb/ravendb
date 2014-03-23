@@ -24,7 +24,7 @@ namespace Raven.Tests.Storage
 		{
 			store = NewDocumentStore();
 			db = store.DocumentDatabase;
-			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
+			db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		    entityNameId = db.IndexDefinitionStorage.GetIndexDefinition(new RavenDocumentsByEntityName().IndexName).IndexId;
 
 		}
@@ -40,7 +40,7 @@ namespace Raven.Tests.Storage
 		{
 			db.TransactionalStorage.Batch(accessor => Assert.False(accessor.Staleness.IsIndexStale(entityNameId, null, null)));
 
-			db.Put("ayende", null, new RavenJObject(), new RavenJObject(), null);
+			db.Documents.Put("ayende", null, new RavenJObject(), new RavenJObject(), null);
 
 			db.TransactionalStorage.Batch(accessor => Assert.True(accessor.Staleness.IsIndexStale(entityNameId, null, null)));
 		}
@@ -50,7 +50,7 @@ namespace Raven.Tests.Storage
 		{
 			db.TransactionalStorage.Batch(accessor => Assert.False(accessor.Staleness.IsIndexStale(entityNameId, null, null)));
 
-			db.Put("ayende", null, new RavenJObject(), new RavenJObject(), null);
+			db.Documents.Put("ayende", null, new RavenJObject(), new RavenJObject(), null);
 
 			bool indexed = false;
 			for (int i = 0; i < 500; i++)

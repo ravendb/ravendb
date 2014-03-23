@@ -39,6 +39,13 @@ public class MultiDatabase {
     }
   }
 
+  public static String getDatabaseUrl(String url, String database) {
+    if (Constants.SYSTEM_DATABASE.equals(database)) {
+      return getRootDatabaseUrl(url);
+    }
+    return getRootDatabaseUrl(url) + "/databases/" + database + "/";
+  }
+
   public static String getRootDatabaseUrl(String url) {
     int indexOfDatabases = url.indexOf("/databases/");
     if (indexOfDatabases != -1) {

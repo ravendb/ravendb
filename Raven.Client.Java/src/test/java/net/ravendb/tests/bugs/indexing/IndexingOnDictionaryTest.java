@@ -31,7 +31,7 @@ public class IndexingOnDictionaryTest extends RemoteClientTest {
       }
 
       try (IDocumentSession s = store.openSession()) {
-        List<User> users = s.advanced().luceneQuery(User.class)
+        List<User> users = s.advanced().documentQuery(User.class)
             .whereEquals("Items.Color", "Red")
             .toList();
         assertFalse(users.isEmpty());
@@ -54,7 +54,7 @@ public class IndexingOnDictionaryTest extends RemoteClientTest {
       }
 
       try (IDocumentSession s = store.openSession()) {
-        List<User> users = s.advanced().luceneQuery(User.class)
+        List<User> users = s.advanced().documentQuery(User.class)
             .whereEquals("Items,Key", "Color")
             .andAlso()
             .whereEquals("Items,Value", "Red")
@@ -80,7 +80,7 @@ public class IndexingOnDictionaryTest extends RemoteClientTest {
       }
 
       try (IDocumentSession s = store.openSession()) {
-        List<User> users = s.advanced().luceneQuery(User.class)
+        List<User> users = s.advanced().documentQuery(User.class)
             .whereEquals("NestedItems,Key", "Color")
             .andAlso()
             .whereEquals("NestedItems,Value.Name", "Red")
@@ -104,7 +104,7 @@ public class IndexingOnDictionaryTest extends RemoteClientTest {
       }
 
       try (IDocumentSession s = store.openSession()) {
-        List<User> users = s.advanced().luceneQuery(User.class)
+        List<User> users = s.advanced().documentQuery(User.class)
             .whereEquals("Items._3", "Red").toList();
         assertFalse(users.isEmpty());
       }

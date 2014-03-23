@@ -56,6 +56,8 @@ public class Constants {
   public final static double EARTH_MEAN_RADIUS_KM = 6371.0087714;
   public final static double MILES_TO_KM = 1.60934;
 
+  public final static String RAVEN_CREATE_VERSION = "Raven-Create-Version";
+
   public final static Locale getDefaultLocale() {
     return Locale.US;
   }

@@ -194,7 +194,7 @@ public class GameTest extends RemoteClientTest {
         session.saveChanges();
 
         List<ZoneCountResult> darykalSumResults = session.advanced()
-        .luceneQuery(GameEvent.class, "GameEventCountZoneBySpecificCharacter")
+        .documentQuery(GameEvent.class, "GameEventCountZoneBySpecificCharacter")
         .where("RealmName:Moonglade AND Region:SingleRegion AND DataUploadId:10")
         .selectFields(ZoneCountResult.class, "Zone", "Count")
         .waitForNonStaleResults(24 * 3600 * 1000)

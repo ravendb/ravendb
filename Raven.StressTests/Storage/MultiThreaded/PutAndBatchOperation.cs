@@ -12,8 +12,8 @@ namespace Raven.StressTests.Storage.MultiThreaded
 	{
 		protected override int SetupData()
 		{
-			DocumentDatabase.Put("Raven/Hilo/users", null, new RavenJObject(), new RavenJObject(), null);
-			DocumentDatabase.Put("Raven/Hilo/posts", null, new RavenJObject(), new RavenJObject(), null);
+			DocumentDatabase.Documents.Put("Raven/Hilo/users", null, new RavenJObject(), new RavenJObject(), null);
+			DocumentDatabase.Documents.Put("Raven/Hilo/posts", null, new RavenJObject(), new RavenJObject(), null);
 
 			DocumentDatabase.Batch(new[]
 			{

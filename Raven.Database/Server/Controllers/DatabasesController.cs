@@ -38,7 +38,7 @@ namespace Raven.Database.Server.Controllers
 			List<string> approvedDatabases = null;
 		    var start = GetStart();
 			var nextPageStart = start; // will trigger rapid pagination
-			var databases = Database.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, start,
+			var databases = Database.Documents.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, start,
 																	GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
 			var data = databases
 				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))

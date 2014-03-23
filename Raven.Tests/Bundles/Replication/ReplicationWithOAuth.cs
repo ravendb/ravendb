@@ -40,7 +40,7 @@ namespace Raven.Tests.Bundles.Replication
 
 			foreach (var server in servers)
 			{
-				server.SystemDatabase.Put("Raven/ApiKeys/Ayende", null, RavenJObject.FromObject(new ApiKeyDefinition
+				server.SystemDatabase.Documents.Put("Raven/ApiKeys/Ayende", null, RavenJObject.FromObject(new ApiKeyDefinition
 					{
 						Databases = new List<DatabaseAccess> { new DatabaseAccess { TenantId = "*" }, new DatabaseAccess { TenantId = "<system>" }, },
 						Enabled = true,

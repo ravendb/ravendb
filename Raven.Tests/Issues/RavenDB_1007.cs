@@ -49,22 +49,22 @@ namespace Raven.Tests.Issues
 			}))
 			{
 				db.SpinBackgroundWorkers();
-				db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
+				db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 
-				db.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
-				db.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.Documents.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.Documents.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
 				WaitForIndexing(db);
 
 				var databaseDocument = new DatabaseDocument();
-				db.StartBackup(BackupDir, false, databaseDocument);
+				db.Maintenance.StartBackup(BackupDir, false, databaseDocument);
 				WaitForBackup(db, true);
 
-				db.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.Documents.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
 				WaitForIndexing(db);
 
-				db.StartBackup(BackupDir, true, databaseDocument);
+				db.Maintenance.StartBackup(BackupDir, true, databaseDocument);
 				WaitForBackup(db, true);
 
 			}
@@ -91,7 +91,7 @@ namespace Raven.Tests.Issues
 				QueryResult queryResult;
 				do
 				{					
-					queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+					queryResult = db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 					{
 						Query = "Tag:[[Users]]",
 						PageSize = 10
@@ -125,15 +125,15 @@ namespace Raven.Tests.Issues
 			}))
 			{
 				db.SpinBackgroundWorkers();
-				db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
+				db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 
-				db.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
-				db.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
-				db.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.Documents.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.Documents.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.Documents.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
 				WaitForIndexing(db);
 
-				db.StartBackup(BackupDir, false, new DatabaseDocument());
+				db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
 				WaitForBackup(db, true);
 			}
 			IOExtensions.DeleteDirectory(DataDir);
@@ -158,7 +158,7 @@ namespace Raven.Tests.Issues
 				QueryResult queryResult;
 				do
 				{
-					queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+					queryResult = db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 					{
 						Query = "Tag:[[Users]]",
 						PageSize = 10

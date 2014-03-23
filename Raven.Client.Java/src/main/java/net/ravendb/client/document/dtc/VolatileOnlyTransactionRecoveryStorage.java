@@ -11,10 +11,12 @@ public class VolatileOnlyTransactionRecoveryStorage implements ITransactionRecov
 
   @Override
   public void createFile(String name, Action1<InputStream> createFile) {
+    // empty by design
   }
 
   @Override
   public void deleteFile(String name) {
+    // empty by design
   }
 
   @Override

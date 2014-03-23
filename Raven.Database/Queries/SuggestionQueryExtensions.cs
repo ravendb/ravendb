@@ -19,7 +19,7 @@ namespace Raven.Database.Queries
 				throw new InvalidOperationException("Cannot get suggestions for dynamic indexes, only static indexes with explicitly defined Suggestions are supported");
 			}
 		    
-            var indexDefinition = self.GetIndexDefinition(index);
+            var indexDefinition = self.Indexes.GetIndexDefinition(index);
 		    if (indexDefinition == null)
 		        throw new InvalidOperationException(string.Format("Could not find specified index '{0}'.", index));
 

@@ -68,13 +68,13 @@ namespace Raven.Database.Server.Controllers
 			var currentDatabase = Database;
 			var task = Task.Factory.StartNew(() =>
 			{
-				currentDatabase.BulkInsert(options, YieldBatches(inputStream , mre, batchSize => documents += batchSize), operationId);
+				currentDatabase.Documents.BulkInsert(options, YieldBatches(inputStream , mre, batchSize => documents += batchSize), operationId);
 				status.Documents = documents;
 				status.Completed = true;
 			});
 
 			long id;
-			Database.AddTask(task, status, out id);
+			Database.Tasks.AddTask(task, status, out id);
 
 			mre.Wait(Database.WorkContext.CancellationToken);
 

@@ -36,10 +36,10 @@ namespace Raven.Bundles.Expiration
 			Database = database;
 
 
-			var indexDefinition = database.GetIndexDefinition(RavenDocumentsByExpirationDate);
+			var indexDefinition = database.Indexes.GetIndexDefinition(RavenDocumentsByExpirationDate);
 			if (indexDefinition == null)
 			{
-				database.PutIndex(RavenDocumentsByExpirationDate,
+				database.Indexes.PutIndex(RavenDocumentsByExpirationDate,
 								  new IndexDefinition
 								  {
 									  Map =
@@ -83,7 +83,7 @@ namespace Raven.Bundles.Expiration
 					using (Database.DisableAllTriggersForCurrentThread())
 					{
 						cts.TimeoutAfter(TimeSpan.FromMinutes(5));
-						queryResult = Database.Query(RavenDocumentsByExpirationDate, new IndexQuery
+						queryResult = Database.Queries.Query(RavenDocumentsByExpirationDate, new IndexQuery
 						{
 							Start = start,
 							PageSize = pageSize,
@@ -109,7 +109,7 @@ namespace Raven.Bundles.Expiration
 
 				foreach (var id in list)
 				{
-					Database.Delete(id, null, null);
+					Database.Documents.Delete(id, null, null);
 				}
 			}
 			catch (Exception e)

@@ -379,7 +379,9 @@
     <Compile Include="Issues\RavenDB_1749.cs" />
     <Compile Include="Issues\RavenDB_1760.cs" />
     <Compile Include="Issues\RavenDB_1828.cs" />
+    <Compile Include="Issues\RavenDB_1877.cs" />
     <Compile Include="Issues\RDBQA_1.cs" />
+    <Compile Include="Issues\RDBQA_13.cs" />
     <Compile Include="Issues\RDBQA_4.cs" />
     <Compile Include="Issues\RavenDB_1553.cs" />
     <Compile Include="Issues\RavenDB_1555.cs" />
@@ -538,7 +540,6 @@
     <Compile Include="Bugs\Queries\Floats.cs" />
     <Compile Include="Bugs\Queries\Generics.cs" />
     <Compile Include="Bugs\Queries\NameStartsWith.cs" />
-    <Compile Include="Bugs\QueryIdGreaterThan.cs" />
     <Compile Include="Bugs\QueryingDateTime.cs" />
     <Compile Include="Bugs\QueryingOnMetadata.cs" />
     <Compile Include="Bugs\RavenDbAnyOfPropertyCollection.cs" />

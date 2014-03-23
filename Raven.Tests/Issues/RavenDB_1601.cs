@@ -487,11 +487,11 @@ PutDocument(opCounterId, opCounter);
                         switch (operation.Type)
                         {
                             case ScriptedJsonPatcher.OperationType.Put:
-                                store.DocumentDatabase.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson,
+                                store.DocumentDatabase.Documents.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson,
                                              operation.Document.Metadata, null);
                                 break;
                             case ScriptedJsonPatcher.OperationType.Delete:
-                                store.DocumentDatabase.Delete(operation.DocumentKey, null, null);
+                                store.DocumentDatabase.Documents.Delete(operation.DocumentKey, null, null);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException("operation.Type");

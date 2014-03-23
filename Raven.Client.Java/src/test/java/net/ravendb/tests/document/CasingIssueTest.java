@@ -26,7 +26,7 @@ public class CasingIssueTest extends RemoteClientTest {
         session.store(post);
         session.saveChanges();
 
-        Post single = session.advanced().luceneQuery(Post.class).waitForNonStaleResults().single();
+        Post single = session.advanced().documentQuery(Post.class).waitForNonStaleResults().single();
 
         assertEquals("test", single.getTitle());
       }
@@ -45,7 +45,7 @@ public class CasingIssueTest extends RemoteClientTest {
         session.store(post);
         session.saveChanges();
 
-        Post single = session.advanced().luceneQuery(Post.class).waitForNonStaleResults().single();
+        Post single = session.advanced().documentQuery(Post.class).waitForNonStaleResults().single();
 
         assertSame(post, single);
       }

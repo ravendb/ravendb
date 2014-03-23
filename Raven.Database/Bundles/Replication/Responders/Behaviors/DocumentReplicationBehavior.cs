@@ -20,7 +20,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override void DeleteItem(string id, Etag etag)
 		{
-			Database.Delete(id, etag, null);
+			Database.Documents.Delete(id, etag, null);
 		}
 
 		protected override void MarkAsDeleted(string id, RavenJObject metadata)
@@ -30,7 +30,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override void AddWithoutConflict(string id, Etag etag, RavenJObject metadata, RavenJObject incoming)
 		{
-			Database.Put(id, etag, incoming, metadata, null);
+			Database.Documents.Put(id, etag, incoming, metadata, null);
 			Actions.Lists.Remove(Constants.RavenReplicationDocsTombstones, id);
 		}
 

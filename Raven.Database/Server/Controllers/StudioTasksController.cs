@@ -42,7 +42,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/studio-tasks/createSampleData")]
 		public async Task<HttpResponseMessage> CreateSampleData()
 		{
-			var results = Database.Query(Constants.DocumentsByEntityNameIndex, new IndexQuery(), CancellationToken.None);
+			var results = Database.Queries.Query(Constants.DocumentsByEntityNameIndex, new IndexQuery(), CancellationToken.None);
 			if (results.Results.Count > 0)
 			{
 				return GetMessageWithString("You cannot create sample data in a database that already contains documents", HttpStatusCode.BadRequest);

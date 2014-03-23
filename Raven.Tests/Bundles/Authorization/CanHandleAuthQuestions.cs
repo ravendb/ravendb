@@ -55,7 +55,7 @@ namespace Raven.Tests.Bundles.Authorization
 				s.SaveChanges();
 			}
 
-            var jsonDocument = Database.Get(company.Id, null);
+            var jsonDocument = Database.Documents.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
 		}
@@ -100,7 +100,7 @@ namespace Raven.Tests.Bundles.Authorization
 				s.SaveChanges();
 			}
 
-            var jsonDocument = Database.Get(company.Id, null);
+            var jsonDocument = Database.Documents.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
 		}
@@ -145,7 +145,7 @@ namespace Raven.Tests.Bundles.Authorization
 				s.SaveChanges();
 			}
 
-            var jsonDocument = Database.Get(company.Id, null);
+            var jsonDocument = Database.Documents.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
 		}
@@ -190,7 +190,7 @@ namespace Raven.Tests.Bundles.Authorization
 				s.SaveChanges();
 			}
 
-            var jsonDocument = Database.Get(company.Id, null);
+            var jsonDocument = Database.Documents.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.False(isAllowed);
 		}
@@ -235,7 +235,7 @@ namespace Raven.Tests.Bundles.Authorization
 				s.SaveChanges();
 			}
 
-            var jsonDocument = Database.Get(company.Id, null);
+            var jsonDocument = Database.Documents.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.False(isAllowed);
 		}
@@ -397,7 +397,7 @@ namespace Raven.Tests.Bundles.Authorization
 				s.SaveChanges();
 			}
 
-            var jsonDocument = Database.Get(company.Id, null);
+            var jsonDocument = Database.Documents.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.False(isAllowed);
 		}
@@ -436,7 +436,7 @@ namespace Raven.Tests.Bundles.Authorization
 				s.SaveChanges();
 			}
 
-            var jsonDocument = Database.Get(company.Id, null);
+            var jsonDocument = Database.Documents.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
 		}
@@ -475,7 +475,7 @@ namespace Raven.Tests.Bundles.Authorization
 				s.SaveChanges();
 			}
 
-            var jsonDocument = Database.Get(company.Id, null);
+            var jsonDocument = Database.Documents.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
 		}
@@ -514,7 +514,7 @@ namespace Raven.Tests.Bundles.Authorization
 				s.SaveChanges();
 			}
 
-            var jsonDocument = Database.Get(company.Id, null);
+            var jsonDocument = Database.Documents.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
 		}
@@ -552,7 +552,7 @@ namespace Raven.Tests.Bundles.Authorization
 				s.SaveChanges();
 			}
 
-            var jsonDocument = Database.Get(company.Id, null);
+            var jsonDocument = Database.Documents.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
 		}
@@ -579,7 +579,7 @@ namespace Raven.Tests.Bundles.Authorization
 				s.SaveChanges();
 			}
 
-            var jsonDocument = Database.Get(company.Id, null);
+            var jsonDocument = Database.Documents.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.False(isAllowed);
 		}
@@ -603,7 +603,7 @@ namespace Raven.Tests.Bundles.Authorization
 				s.SaveChanges();
 			}
 
-            var jsonDocument = Database.Get(company.Id, null);
+            var jsonDocument = Database.Documents.Get(company.Id, null);
 			var isAllowed = authorizationDecisions.IsAllowed(userId, operation, company.Id, jsonDocument.Metadata, null);
 			Assert.True(isAllowed);
 		}

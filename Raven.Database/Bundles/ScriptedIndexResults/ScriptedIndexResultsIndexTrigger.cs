@@ -31,7 +31,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
             Index indexInstance = this.Database.IndexStorage.GetIndexInstance(indexId);
             if (indexInstance == null)
                 return null;
-            var jsonSetupDoc = Database.Get(Abstractions.Data.ScriptedIndexResults.IdPrefix + indexInstance.PublicName, null);
+            var jsonSetupDoc = Database.Documents.Get(Abstractions.Data.ScriptedIndexResults.IdPrefix + indexInstance.PublicName, null);
             if (jsonSetupDoc == null)
                 return null;
             var scriptedIndexResults = jsonSetupDoc.DataAsJson.JsonDeserialization<Abstractions.Data.ScriptedIndexResults>();
@@ -153,11 +153,11 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 	                    switch (operation.Type)
 	                    {
 							case ScriptedJsonPatcher.OperationType.Put:
-			                    database.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson,
+			                    database.Documents.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson,
 			                                 operation.Document.Metadata, null);
 								break;
 							case ScriptedJsonPatcher.OperationType.Delete:
-								database.Delete(operation.DocumentKey, null, null);
+								database.Documents.Delete(operation.DocumentKey, null, null);
 								break;
 							default:
 								throw new ArgumentOutOfRangeException("operation.Type");

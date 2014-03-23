@@ -22,7 +22,7 @@ namespace Raven.Database.Server.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 
-			var status = Database.GetTaskState(id);
+			var status = Database.Tasks.GetTaskState(id);
 			return status == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetMessageWithObject(status);
 		}
 	}

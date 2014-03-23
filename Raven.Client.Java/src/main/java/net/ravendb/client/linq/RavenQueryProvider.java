@@ -167,7 +167,7 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
    * Convert the expression to a Lucene query
    */
   @Override
-  public <S> IDocumentQuery<S> toLuceneQuery(Class<S> clazz, Expression<?> expression) {
+  public <S> IDocumentQuery<S> toDocumentQuery(Class<S> clazz, Expression<?> expression) {
     RavenQueryProviderProcessor<T> processor = getQueryProviderProcessor(this.clazz);
     IDocumentQuery<S> result = (IDocumentQuery<S>) processor.getLuceneQueryFor(expression);
     result.setResultTransformer(resultTranformer);

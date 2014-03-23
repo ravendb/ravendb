@@ -21,7 +21,7 @@ namespace Raven.Bundles.Versioning.Triggers
 	{
 		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			var jsonDocument = Database.Get(key, transactionInformation);
+			var jsonDocument = Database.Documents.Get(key, transactionInformation);
 			if (jsonDocument == null)
 				return VetoResult.Allowed;
 
@@ -83,7 +83,7 @@ namespace Raven.Bundles.Versioning.Triggers
 
 				object value;
 				metadata.__ExternalState.TryGetValue("Next-Revision", out value);
-				Database.Put(key + "/revisions/" + value, null, (RavenJObject)document.CreateSnapshot(), copyMetadata,
+				Database.Documents.Put(key + "/revisions/" + value, null, (RavenJObject)document.CreateSnapshot(), copyMetadata,
 							 transactionInformation);
 			}
 		}
@@ -98,7 +98,7 @@ namespace Raven.Bundles.Versioning.Triggers
 
 				if (revision == 1)
 				{
-					var existingDoc = Database.Get(key, null);
+					var existingDoc = Database.Documents.Get(key, null);
 					if (existingDoc != null)
 					{
 						RavenJToken existingRevisionToken;
@@ -140,7 +140,7 @@ namespace Raven.Bundles.Versioning.Triggers
 			while (true)
 			{
 				int nextPageStart = start; // will trigger rapid pagination
-				var docs = Database.GetDocumentsWithIdStartingWith(key + "/revisions/", null, null, start, pageSize, CancellationToken.None, ref nextPageStart);
+				var docs = Database.Documents.GetDocumentsWithIdStartingWith(key + "/revisions/", null, null, start, pageSize, CancellationToken.None, ref nextPageStart);
 				if (!docs.Any())
 					break;
 
@@ -178,7 +178,7 @@ namespace Raven.Bundles.Versioning.Triggers
 			if (latestValidRevision <= 0)
 				return;
 
-			Database.Delete(string.Format("{0}/revisions/{1}", key, latestValidRevision), null, transactionInformation);
+			Database.Documents.Delete(string.Format("{0}/revisions/{1}", key, latestValidRevision), null, transactionInformation);
 		}
 	}
 }

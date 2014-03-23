@@ -117,7 +117,7 @@ namespace Raven.Bundles.Replication.Responders
 			}
 
 			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
-				Database.RaiseNotifications(new ReplicationConflictNotification()
+				Database.Notifications.RaiseNotifications(new ReplicationConflictNotification()
 				                            {
 					                            Id = id,
 					                            Etag = createdConflict.Etag,
@@ -210,7 +210,7 @@ namespace Raven.Bundles.Replication.Responders
 			}
 
 			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
-				Database.RaiseNotifications(new ReplicationConflictNotification()
+				Database.Notifications.RaiseNotifications(new ReplicationConflictNotification()
 				                            {
 					                            Id = id,
 					                            Etag = createdConflict.Etag,

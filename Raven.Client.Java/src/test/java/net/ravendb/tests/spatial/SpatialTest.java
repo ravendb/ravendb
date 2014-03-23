@@ -163,7 +163,7 @@ public class SpatialTest extends RemoteClientTest {
       try (IDocumentSession session = store.openSession()) {
         Reference<RavenQueryStatistics> statsRef = new Reference<>();
         List<MyProjection> result = session.advanced()
-          .luceneQuery(MyDocument.class, MyIndex.class)
+          .documentQuery(MyDocument.class, MyIndex.class)
           .waitForNonStaleResults()
           .withinRadiusOf(0, 12.3456789f, 12.3456789f)
           .statistics(statsRef)
@@ -200,7 +200,7 @@ public class SpatialTest extends RemoteClientTest {
       try (IDocumentSession session = store.openSession()) {
         Reference<RavenQueryStatistics> statsRef = new Reference<>();
         List<MyProjection> result = session.advanced()
-          .luceneQuery(MyDocument.class, MyIndex.class)
+          .documentQuery(MyDocument.class, MyIndex.class)
           .waitForNonStaleResults()
           .withinRadiusOf(1, 10, 10)
           .statistics(statsRef)
@@ -257,7 +257,7 @@ public class SpatialTest extends RemoteClientTest {
       try (IDocumentSession session = store.openSession()) {
         Reference<RavenQueryStatistics> statsRef = new Reference<>();
         List<MySpatialDocument> result = session.advanced()
-          .luceneQuery(MySpatialDocument.class, MySpatialIndex.class)
+          .documentQuery(MySpatialDocument.class, MySpatialIndex.class)
           .waitForNonStaleResults()
           .withinRadiusOf(200, 12.3456789f, 12.3456789f)
           .statistics(statsRef)

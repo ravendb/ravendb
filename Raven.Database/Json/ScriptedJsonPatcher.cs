@@ -70,7 +70,7 @@ namespace Raven.Database.Json
 				{
 				    JsonDocument document;
                     if (documentKeyContext.TryGetValue(id, out document) == false)
-                        document = database.Get(id, null);
+                        document = database.Documents.Get(id, null);
 
                     return document == null ? null : document.ToJson();
 				};

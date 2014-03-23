@@ -61,7 +61,7 @@ namespace Raven.Database.Queries
 			while (true)
 			{
 				var indexQuery = CreateIndexQuery(query, map, realQuery);
-				result = documentDatabase.Query(map.IndexName, indexQuery, token);
+				result = documentDatabase.Queries.Query(map.IndexName, indexQuery, token);
 
 				if (!touchTemporaryIndexResult.Item2 ||
 					!result.IsStale ||
@@ -149,13 +149,13 @@ namespace Raven.Database.Queries
 
 	    private Tuple<string, bool> CreateAutoIndex(string permanentIndexName, Func<IndexDefinition> createDefinition)
 		{
-			if (documentDatabase.GetIndexDefinition(permanentIndexName) != null)
+			if (documentDatabase.Indexes.GetIndexDefinition(permanentIndexName) != null)
 				return Tuple.Create(permanentIndexName, false);
 
             lock (createIndexLock)
             {
                 var indexDefinition = createDefinition();
-                documentDatabase.PutIndex(permanentIndexName, indexDefinition);
+                documentDatabase.Indexes.PutIndex(permanentIndexName, indexDefinition);
             }
             
             return Tuple.Create(permanentIndexName, true);
