@@ -21,6 +21,7 @@ import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
+import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
 
 class shell extends viewModelBase {
     private router = router;
@@ -70,9 +71,46 @@ class shell extends viewModelBase {
 
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
+
+        this.router.guardRoute = (instance: Object, instruction: DurandalRouteInstruction) => this.getValidRoute(instance, instruction);
         
         this.connectToRavenServer();
     }
+
+    getValidRoute(instance: Object, instruction: DurandalRouteInstruction) :any {
+        if (!this.activeDatabase().isSystem && instruction.queryString && (instruction.queryString.indexOf("database=<system>") >= 0 || instruction.queryString.indexOf("database=%3Csystem%3E") >= 0 )) {
+            var systemDbConfirm = new viewSystemDatabaseConfirm(this.activeDatabase());
+
+            systemDbConfirm.viewTask.done(()=> {
+                var systemDb = appUrl.getSystemDatabase();
+                systemDb.activate();
+                router.navigate("#documents?database=" + encodeURIComponent(systemDb.name));
+
+            }).fail((lastDb:database) => {
+                var lastRoute = appUrl.forCurrentPage(lastDb);
+
+                if (!lastRoute) {
+                    if (window.location.hash.indexOf("database") < 0) {
+                        lastRoute = window.location.hash + "?database=" + encodeURIComponent(lastDb.name);
+                    } else {
+                        lastRoute = window.location.hash.replace("database=%3Csystem%3E", "database=" + encodeURIComponent(lastDb.name));
+                    } 
+                }
+                else if (lastRoute.indexOf("database") < 0) {
+                    lastRoute = lastRoute + "?database=" + encodeURIComponent(lastDb.name);
+                }
+
+                router.navigate(lastRoute ? lastRoute : window.location.hash);
+                
+            });
+            app.showDialog(systemDbConfirm);
+            return false;
+            //return appUrl.forCurrentPage(this.activeDatabase());
+        } else {
+            return true;
+        }
+    }
+
 
     // Called by Durandal when shell.html has been put into the DOM.
     attached() {
