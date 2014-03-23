@@ -34,7 +34,8 @@ namespace Raven.Bundles.Encryption
 				provider = GetCryptoProvider(null);
 				encryptor = provider.CreateEncryptor();
 				stream = new CryptoStream(dataStream, encryptor, CryptoStreamMode.Write);
-				return stream.WriteSalt(key).DisposeTogetherWith(provider, encryptor);
+				var disposingStream = stream.WriteSalt(key).DisposeTogetherWith(provider, encryptor);
+				return disposingStream;
 			}
 			catch
 			{
