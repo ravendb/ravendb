@@ -635,9 +635,12 @@ namespace Raven.Tests.Helpers
 
 		public static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
 		{
-			var field = database.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
+			var field = database.GetType().GetField("initializer", BindingFlags.Instance | BindingFlags.NonPublic);
 			Assert.NotNull(field);
-			var validateLicense = field.GetValue(database);
+			var initializer = field.GetValue(database);
+			var validateLicenseField = initializer.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
+			Assert.NotNull(validateLicenseField);
+			var validateLicense = validateLicenseField.GetValue(initializer);
 
 			var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
 			Assert.NotNull(currentLicenseProp);
