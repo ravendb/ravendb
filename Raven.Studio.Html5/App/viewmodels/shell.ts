@@ -84,7 +84,23 @@ class shell extends viewModelBase {
             systemDbConfirm.viewTask.done(()=> {
                 var systemDb = appUrl.getSystemDatabase();
                 systemDb.activate();
-                router.navigate("#documents?database=" + encodeURIComponent(systemDb.name));
+
+                var lastRoute = appUrl.forCurrentPage(systemDb);
+
+                if (!lastRoute) {
+                    if (window.location.hash.indexOf("database") < 0) {
+                        lastRoute = window.location.hash + "?database=" + encodeURIComponent(systemDb.name);
+                    } else {
+                        lastRoute = window.location.hash;
+                        lastRoute.substring(lastRoute.length - 2, lastRoute.length) == "&&" ? lastRoute = lastRoute.replace("&&", "&") : lastRoute = lastRoute + "&";
+                    }
+
+                }
+                else if (lastRoute.indexOf("database") < 0) {
+                    lastRoute = lastRoute + "?database=" + encodeURIComponent(systemDb.name);
+                }
+                
+                router.navigate(lastRoute);
 
             }).fail((lastDb:database) => {
                 var lastRoute = appUrl.forCurrentPage(lastDb);
@@ -105,7 +121,6 @@ class shell extends viewModelBase {
             });
             app.showDialog(systemDbConfirm);
             return false;
-            //return appUrl.forCurrentPage(this.activeDatabase());
         } else {
             return true;
         }
