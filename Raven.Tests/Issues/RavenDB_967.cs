@@ -53,24 +53,32 @@ namespace Raven.Tests.Issues
 				{
 					new ProductWithQueryInput().Execute(documentStore);
 
-					var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
-					{
-						Url = documentStore.Url,
-                        DefaultDatabase = documentStore.DefaultDatabase
-					});
+					var smugglerApi = new SmugglerApi();
 
-					smugglerApi.ExportData(new SmugglerExportOptions{ToFile = file}, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
+					smugglerApi.ExportData(new SmugglerExportOptions
+					{
+						ToFile = file,
+						From = new RavenConnectionStringOptions
+						{
+							Url = documentStore.Url,
+							DefaultDatabase = documentStore.DefaultDatabase
+						}
+					}, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
 				}
 
 				using (var documentStore = NewRemoteDocumentStore())
 				{
-					var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
-					{
-						Url = documentStore.Url,
-                        DefaultDatabase = documentStore.DefaultDatabase
-					});
+					var smugglerApi = new SmugglerApi();
 
-					smugglerApi.ImportData(new SmugglerImportOptions{FromFile = file}, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
+					smugglerApi.ImportData(new SmugglerImportOptions
+					{
+						FromFile = file,
+						To = new RavenConnectionStringOptions
+						{
+							Url = documentStore.Url,
+							DefaultDatabase = documentStore.DefaultDatabase
+						}
+					}, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
 
 					var transformers = documentStore.DatabaseCommands.GetTransformers(0, 128);
 

@@ -33,14 +33,14 @@ namespace Raven.Tests.MailingList
                         docId = foo.Id;
                         session.SaveChanges();
                     }
-                    var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions {Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase});
-					smugglerApi.ExportData(new SmugglerExportOptions { ToFile = file }, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
+                    var smugglerApi = new SmugglerApi();
+					smugglerApi.ExportData(new SmugglerExportOptions { ToFile = file, From = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var documentStore = NewRemoteDocumentStore())
                 {
-                    var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions {Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase});
-                    smugglerApi.ImportData(new SmugglerImportOptions{FromFile = file}, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
+                    var smugglerApi = new SmugglerApi();
+					smugglerApi.ImportData(new SmugglerImportOptions { FromFile = file, To = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
                     
                     using (var session = documentStore.OpenSession())
                     {
