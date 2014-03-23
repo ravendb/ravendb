@@ -155,7 +155,7 @@ class databases extends viewModelBase {
 
     goToDocuments(db: database) {
         // TODO: use appUrl for this.
-        router.navigate("#documents?database=" + db.name);
+        router.navigate("#documents?database=" + encodeURIComponent(db.name));
     }
 
     filterDatabases(filter: string) {
