@@ -5,8 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Owin.Hosting;
 using Owin;
-using Owin.EmbeddedHost;
 using Raven.Database.Config;
+using Raven.Database.Embedded;
 using Raven.Database.Server.Security.Windows;
 
 namespace Raven.Database.Server
