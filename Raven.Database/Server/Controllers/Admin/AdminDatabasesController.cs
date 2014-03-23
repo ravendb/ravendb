@@ -36,14 +36,29 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetMessageWithObject(dbDoc);
 		}
 
-		[HttpPut][Route("admin/databases/{*id}")]
+		[HttpPut]
+		[Route("admin/databases/{*id}")]
 		public async Task<HttpResponseMessage> DatabasesPut(string id)
 		{
 			if (IsSystemDatabase(id))
 				return GetMessageWithString("System Database document cannot be changed", HttpStatusCode.Forbidden);
 
 			var docKey = "Raven/Databases/" + id;
+
+			var existingDatabase = Database.Documents.Get(docKey, null);
+			if (existingDatabase != null)
+				return GetMessageWithString(string.Format("Database with the name '{0}' is already exists", id), HttpStatusCode.BadRequest);
+
 			var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
+			if (dbDoc.Settings.ContainsKey("Bundles") && dbDoc.Settings["Bundles"].Contains("Encryption"))
+			{
+				if (!dbDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
+				    !dbDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
+				{
+					return GetMessageWithString(string.Format("Failed to create '{0}' database, becuase of not valid encryption configuration.", id), HttpStatusCode.BadRequest);
+				}
+			}
+
 			DatabasesLandlord.Protect(dbDoc);
 			var json = RavenJObject.FromObject(dbDoc);
 			json.Remove("Id");
