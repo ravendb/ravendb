@@ -11,25 +11,11 @@ namespace Raven.Bundles.Encryption.Settings
 		private readonly Type algorithmType;
 		private readonly Func<SymmetricAlgorithm> algorithmGenerator;
 		private readonly bool encryptIndexes;
+		private readonly int defaultEncryptionKeyBitsSize;		
 
 		public readonly Codec Codec;
 
-		public EncryptionSettings()
-			: this(GenerateRandomEncryptionKey())
-		{
-		}
-
-		public EncryptionSettings(byte[] encryptionKey)
-			: this(encryptionKey, Constants.DefaultCryptoServiceProvider)
-		{
-		}
-
-		public EncryptionSettings(byte[] encryptionKey, Type symmetricAlgorithmType)
-			: this(encryptionKey, symmetricAlgorithmType, true)
-		{
-		}
-
-		public EncryptionSettings(byte[] encryptionKey, Type symmetricAlgorithmType, bool encryptIndexes)
+		public EncryptionSettings(byte[] encryptionKey, Type symmetricAlgorithmType, bool encryptIndexes,int defaultEncryptionKeyBitsSize)
 		{
 			EncryptionKey = encryptionKey;
 			this.encryptIndexes = encryptIndexes;
@@ -37,10 +23,9 @@ namespace Raven.Bundles.Encryption.Settings
 			Codec = new Codec(this);
 
 			algorithmType = symmetricAlgorithmType;
-
-			algorithmGenerator = Expression.Lambda<Func<SymmetricAlgorithm>>(
-				Expression.New(symmetricAlgorithmType)
-				).Compile();
+			this.defaultEncryptionKeyBitsSize = defaultEncryptionKeyBitsSize;
+			algorithmGenerator = Expression.Lambda<Func<SymmetricAlgorithm>>
+				(Expression.New(symmetricAlgorithmType)).Compile();
 		}
 
 		public static bool DontEncrypt(string key)
@@ -79,9 +64,9 @@ namespace Raven.Bundles.Encryption.Settings
 			get { return encryptIndexes; }
 		}
 
-		public static byte[] GenerateRandomEncryptionKey()
+		public int DefaultEncryptionKeyBitsSize
 		{
-			return GenerateRandomEncryptionKey(Constants.DefaultGeneratedEncryptionKeyLength);
+			get { return defaultEncryptionKeyBitsSize; }
 		}
 
 		public static byte[] GenerateRandomEncryptionKey(int length)

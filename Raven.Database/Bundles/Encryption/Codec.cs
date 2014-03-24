@@ -120,6 +120,7 @@ namespace Raven.Bundles.Encryption
 				GetCryptoProvider(null);
 			}
 
+// ReSharper disable once PossibleInvalidOperationException
 			return encryptionIVSize.Value;
 		}
 
@@ -146,10 +147,10 @@ namespace Raven.Bundles.Encryption
 
 		private Tuple<byte[], byte[]> GetStartingKeyAndIVForEncryption(SymmetricAlgorithm algorithm)
 		{
-			int bits = algorithm.ValidKeySize(Constants.DefaultKeySizeToUseInActualEncryptionInBits) ? 
-				Constants.DefaultKeySizeToUseInActualEncryptionInBits : 
+			int bits = algorithm.ValidKeySize(EncryptionSettings.DefaultEncryptionKeyBitsSize) ? 
+				EncryptionSettings.DefaultEncryptionKeyBitsSize :
 				algorithm.LegalKeySizes[0].MaxSize;
-
+			
 			encryptionKeySize = bits / 8;
 			encryptionIVSize = algorithm.IV.Length;
 

@@ -7,6 +7,7 @@ using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Runtime.Caching;
+using Raven.Abstractions.Data;
 using Raven.Database.Config.Settings;
 
 namespace Raven.Database.Config
@@ -22,6 +23,7 @@ namespace Raven.Database.Config
 
 		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
+			EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
 			MaxPageSize =
 				new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
 			MemoryCacheLimitMegabytes =
@@ -163,6 +165,8 @@ namespace Raven.Database.Config
 
 			return val;
 		}
+
+		public IntegerSetting EncryptionKeyBitsPreference { get; private set; }
 
 		public IntegerSettingWithMin MaxPageSize { get; private set; }
 
