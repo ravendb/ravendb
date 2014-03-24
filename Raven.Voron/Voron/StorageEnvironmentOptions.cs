@@ -261,16 +261,14 @@ namespace Voron
 		{
 			private readonly IVirtualPager _dataPager;
 
-			private Dictionary<string, IJournalWriter> _logs =
+			private readonly Dictionary<string, IJournalWriter> _logs =
 				new Dictionary<string, IJournalWriter>(StringComparer.OrdinalIgnoreCase);
 
-			private Dictionary<string, IntPtr> _headers =
+			private readonly Dictionary<string, IntPtr> _headers =
 				new Dictionary<string, IntPtr>(StringComparer.OrdinalIgnoreCase);
-
 
 			public PureMemoryStorageEnvironmentOptions()
 			{
-				//_dataPager = new Win32PureMemoryPager(); //TODO : after Win32PageFileBackedMemoryMappedPager is finished and works, change this to Win32PageFileBackedMemoryMappedPager with Guid.New as memoryName
 				_dataPager = new Win32PageFileBackedMemoryMappedPager();
 			}
 
