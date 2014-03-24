@@ -29,7 +29,6 @@ namespace Raven.Tests.Issues
 
 				var indexName = store.DatabaseCommands.GetIndexNames(0, 25).Single(s => s.StartsWith("Auto/"));
 
-
 				using (var session = store.OpenSession())
 				{
 					for (int i = 0; i < 10; i++)
@@ -47,7 +46,7 @@ namespace Raven.Tests.Issues
 				}
 
 				var statistics = store.DatabaseCommands.GetStatistics();
-				var indexStats = statistics.Indexes.Single(stats => stats.Name == indexName);
+				var indexStats = statistics.Indexes.Single(stats => stats.PublicName == indexName);
 				Assert.Equal(IndexingPriority.Normal, indexStats.Priority);
 			}
 		}

@@ -199,20 +199,23 @@ namespace Raven.Smuggler
 			return httpRavenRequest;
 		}
 
-		protected DocumentStore CreateStore()
-		{
-			var s = new DocumentStore
-			{
-				Url = ConnectionStringOptions.Url,
-				ApiKey = ConnectionStringOptions.ApiKey,
-				Credentials = ConnectionStringOptions.Credentials,
-				DefaultDatabase = ConnectionStringOptions.DefaultDatabase
-			};
+        protected DocumentStore CreateStore()
+        {
+            var s = new DocumentStore
+            {
+                Url = ConnectionStringOptions.Url,
+                ApiKey = ConnectionStringOptions.ApiKey,
+                Credentials = ConnectionStringOptions.Credentials
+            };
 
-			s.Initialize();
+            s.Initialize();
 
-			return s;
-		}
+            ValidateThatServerIsUpAndDatabaseExists(s);
+
+            s.DefaultDatabase = ConnectionStringOptions.DefaultDatabase;
+
+            return s;
+        }
 
 		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int limit)
 		{
@@ -419,5 +422,48 @@ namespace Raven.Smuggler
 			request.Write(document);
 			request.ExecuteRequest();
 		}
+
+        private void ValidateThatServerIsUpAndDatabaseExists(DocumentStore s)
+        {
+            var shouldDispose = false;
+
+            try
+            {
+                var commands = !string.IsNullOrEmpty(ConnectionStringOptions.DefaultDatabase)
+                                   ? s.DatabaseCommands.ForDatabase(ConnectionStringOptions.DefaultDatabase)
+                                   : s.DatabaseCommands;
+
+                commands.GetStatistics(); // check if database exist
+            }
+            catch (Exception e)
+            {
+                shouldDispose = true;
+
+                var responseException = e as ErrorResponseException;
+                if (responseException != null && responseException.StatusCode == HttpStatusCode.ServiceUnavailable && responseException.Message.StartsWith("Could not find a database named"))
+                    throw new SmugglerException(
+                        string.Format(
+                            "Smuggler does not support database creation (database '{0}' on server '{1}' must exist before running Smuggler).",
+                            ConnectionStringOptions.DefaultDatabase,
+                            s.Url), e);
+
+
+                if (e.InnerException != null)
+                {
+                    var webException = e.InnerException as WebException;
+                    if (webException != null)
+                    {
+                        throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", webException.Message), webException);
+                    }
+                }
+
+                throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", e.Message), e);
+            }
+            finally
+            {
+                if (shouldDispose)
+                    s.Dispose();
+            }
+        }
 	}
 }
