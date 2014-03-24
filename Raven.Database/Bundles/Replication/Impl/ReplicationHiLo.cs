@@ -41,7 +41,12 @@ namespace Raven.Bundles.Replication.Impl
 				{
 					if (current > currentMax.Value)
 					{
-						currentMax = new Hodler(GetNextMax());
+                        using (var locker = Database.DocumentLock.TryLock(250))
+                        {
+                            if (locker == null)
+                                continue;
+                            currentMax = new Hodler(GetNextMax());
+                        }
 					}
 					return Interlocked.Increment(ref current);
 				}
