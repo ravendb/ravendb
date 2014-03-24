@@ -21,12 +21,14 @@ class reporting extends viewModelBase {
     filter = ko.observable<string>();
     hasFilter = ko.observable(false);
     reportResults = ko.observable<pagedList>();
-
+    totalQueryResults = ko.computed(() => this.reportResults() ? this.reportResults().totalResultCount() : null);
+    queryDuration = ko.observable<string>();
+    
     activate(indexToActivateOrNull: string) {
         super.activate(indexToActivateOrNull);
 
-        this.fetchIndexes()
-            .done(() => this.selectInitialIndex(indexToActivateOrNull));
+        this.fetchIndexes().done(() => this.selectInitialIndex(indexToActivateOrNull));
+        this.selectedIndexName.subscribe(() => this.resetSelections());
 
         aceEditorBindingHandler.install();
     }
@@ -65,6 +67,12 @@ class reporting extends viewModelBase {
         this.addedValues().forEach(v => v.name = fieldName);
     }
 
+    resetSelections() {
+        this.selectedField(null);
+        this.addedValues([]);
+        this.availableFields([]);
+    }
+
     addValue(fieldName: string) {
         var val = facet.fromNameAndAggregation(this.selectedField(), fieldName);
         this.addedValues.push(val);
@@ -79,7 +87,11 @@ class reporting extends viewModelBase {
         var filterQuery = this.hasFilter() ? this.filter() : null;
         var facets = this.addedValues().map(v => v.toDto());
         var db = this.activeDatabase();
-        var resultsFetcher = (skip: number, take: number) => new queryFacetsCommand(selectedIndex, filterQuery, skip, take, facets, db).execute();
+        var resultsFetcher = (skip: number, take: number) => {
+            return new queryFacetsCommand(selectedIndex, filterQuery, skip, take, facets, db)
+                .execute()
+                .done((resultSet: pagedResultSet) => this.queryDuration(resultSet.additionalResultInfo));
+        };
         this.reportResults(new pagedList(resultsFetcher));
     }
 }

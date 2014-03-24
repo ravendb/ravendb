@@ -28,7 +28,6 @@ class queryFacetsCommand extends commandBase {
                 finishedTask.reject(response);
             })
             .done((results: facetResultSetDto) => {
-                debugger;
                 finishedTask.resolve(this.parseResults(results));
             });
 
@@ -63,14 +62,14 @@ class queryFacetsCommand extends commandBase {
                     items[i] = item;
                 }
 
-                items['Key'] = facetValue.Range;
-                items[facetAggregationLabel + " of " + aggregateField] = facetValue.Hits;
+                item['Key'] = facetValue.Range;
+                item[facetAggregationLabel + " of " + aggregateField] = facetValue.Hits;
             }
 
             propIndex++;
         }
 
-        return new pagedResultSet(items, totalItemCount);
+        return new pagedResultSet(items, totalItemCount, resultSet.Duration);
     }
 }
 

@@ -189,11 +189,6 @@ class appUrl {
         return this.baseUrl;
     }
 
-    static forExport(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
-        return "#tasks/export?" + databasePart;
-    }
-
     static forTerms(index: string, db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#indexes/terms/" + encodeURIComponent(index) + "?" + databasePart;

@@ -119,7 +119,7 @@
                         <pre class="form-control" style="height: 100px;" data-bind="aceEditor: { code: filter }"></pre>
                     </div>
                     <div class="col-md-1">
-                        <button type="button" class="close pull-left" aria-hidden="true" title="Remove the filter">&times;</button>
+                        <button type="button" class="close pull-left" aria-hidden="true" title="Remove the filter" data-bind="click: hasFilter.bind(hasFilter, false)">&times;</button>
                     </div>
                 </div>
             </div>
@@ -133,10 +133,23 @@
         <div class="col-md-11">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    Results
+                    <table class="table table-condensed" style="margin-bottom: 0;">
+                        <thead>
+                            <tr>
+                                <th>Total</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr data-bind="visible: reportResults">
+                                <td data-bind="text: totalQueryResults"></td>
+                                <td data-bind="text: queryDuration"></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="panel-body" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 60 }">
-                    <div id="reportResultsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: reportResults, gridSelector: '#reportResultsGrid', useContextMenu: false, showIds: false, showCheckboxes: false }"></div>
+                <div class="panel-body">
+                    <div id="reportResultsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: reportResults, gridSelector: '#reportResultsGrid', useContextMenu: false, showIds: false, showCheckboxes: false, maxHeight: '300px' }"></div>
                 </div>
             </div>
         </div>

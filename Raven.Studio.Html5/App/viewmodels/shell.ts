@@ -129,7 +129,6 @@ class shell extends viewModelBase {
 
     // Called by Durandal when shell.html has been put into the DOM.
     attached() {
-        var that = this;
         // The view must be attached to the DOM before we can hook up keyboard shortcuts.
         jwerty.key("ctrl+alt+n", e=> {
             e.preventDefault();
@@ -137,7 +136,7 @@ class shell extends viewModelBase {
         });
 
         $("body").tooltip({
-            delay: { show: 600, hide: 100 },
+            delay: { show: 1000, hide: 100 },
             container: 'body',
             selector: '.use-bootstrap-tooltip',
             trigger: 'hover'
@@ -146,30 +145,32 @@ class shell extends viewModelBase {
         //TODO: Move this to a knockout binding handler
         $("#goToDocInput").typeahead(
             {
-            hint: true,
-            highlight: true,
-            minLength: 1
-        },
-        {
-            name: 'Documents',
-            displayKey: 'value',
-            source: (searchTerm, callback)=> {
-                var foundDocuments;
-                new getDocumentsMetadataByIDPrefixCommand(searchTerm, 25, that.activeDatabase())
-                    .execute()
-                    .done((results: string[])=> {
-                        var matches = [];
-                        $.each(results, (i, str)=> {
-                            matches.push({ value: str, editHref: appUrl.forEditDoc(str, null, null, that.activeDatabase()) });
-                        });
-                        callback(matches);
-                    })
-                    .fail(callback(['']));
-
+                hint: true,
+                highlight: true,
+                minLength: 1
             },
-            templates: {
-                suggestion: Handlebars.compile(['<p><a><strong>{{value}}</a></strong>'].join())
-            }
+            {
+                name: 'Documents',
+                displayKey: 'value',
+                source: (searchTerm, callback) => {
+                    var foundDocuments;
+                    new getDocumentsMetadataByIDPrefixCommand(searchTerm, 25, this.activeDatabase())
+                        .execute()
+                        .done((results: string[]) => {
+                            var matches = results.map(val => {
+                                return {
+                                    value: val,
+                                    editHref: appUrl.forEditDoc(val, null, null, this.activeDatabase())
+                                }
+                            });
+                            callback(matches);
+                        })
+                        .fail(callback(['']));
+
+                },
+                templates: {
+                    suggestion: Handlebars.compile(['<p><a><strong>{{value}}</a></strong>'].join())
+                }
 
 
             });
