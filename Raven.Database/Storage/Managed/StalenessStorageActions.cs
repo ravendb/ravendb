@@ -8,8 +8,6 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Exceptions;
-using Raven.Database.Impl;
-using Raven.Database.Impl.Synchronization;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;

@@ -23,7 +23,6 @@ namespace Raven.Database.Storage
 
 		bool DeleteDocument(string key, Etag etag, out RavenJObject metadata, out Etag deletedETag);
 		AddDocumentResult AddDocument(string key, Etag etag, RavenJObject data, RavenJObject metadata);
-		AddDocumentResult PutDocumentMetadata(string key, RavenJObject metadata);
 
 		void IncrementDocumentCount(int value);
 		AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates);

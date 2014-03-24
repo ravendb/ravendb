@@ -19,7 +19,6 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
-using Raven.Database.Impl.Synchronization;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
@@ -48,12 +47,10 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private PrefetchingBehavior prefetchingBehavior;
 
-		private EtagSynchronizer etagSynchronizer;
 		private Etag lastLatestEtag;
 
 		public void Execute(DocumentDatabase database)
 		{
-			etagSynchronizer = database.EtagSynchronizer.GetSynchronizer(EtagSynchronizerType.SqlReplicator);
 			prefetchingBehavior = database.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
 
 			Database = database;
@@ -163,20 +160,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					continue;
 				}
 
-				var synchronizationEtag = etagSynchronizer.GetSynchronizationEtag();
-				var calculatedSynchronizationEtag = etagSynchronizer.CalculateSynchronizationEtag(synchronizationEtag, leastReplicatedEtag);
-
-				if (calculatedSynchronizationEtag.CompareTo(leastReplicatedEtag) < 0)
-				{
-					foreach (var lastReplicatedEtag in localReplicationStatus.LastReplicatedEtags)
-					{
-						if (calculatedSynchronizationEtag.CompareTo(lastReplicatedEtag.LastDocEtag) < 0)
-							lastReplicatedEtag.LastDocEtag = calculatedSynchronizationEtag;
-					}
-					SaveNewReplicationStatus(localReplicationStatus, calculatedSynchronizationEtag);
-				}
-
-				var documents = prefetchingBehavior.GetDocumentsBatchFrom(calculatedSynchronizationEtag);
+				var documents = prefetchingBehavior.GetDocumentsBatchFrom(leastReplicatedEtag);
 
 				Etag latestEtag = null, lastBatchEtag = null;
 				if (documents.Count != 0)
