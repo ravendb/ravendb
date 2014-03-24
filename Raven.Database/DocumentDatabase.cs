@@ -749,19 +749,6 @@ namespace Raven.Database
                 .ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
         }
 
-
-        public void PutDocumentMetadata(string key, RavenJObject metadata)
-        {
-            if (key == null)
-                throw new ArgumentNullException("key");
-            key = key.Trim();
-            TransactionalStorage.Batch(actions =>
-            {
-                actions.Documents.PutDocumentMetadata(key, metadata);
-                workContext.ShouldNotifyAboutWork(() => "PUT (metadata) " + key);
-            });
-        }
-
         public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
             workContext.PerformanceCounters.DocsPerSecond.Increment();
@@ -841,6 +828,7 @@ namespace Raven.Database
                 });
 
                 log.Debug("Put document {0} with etag {1}", key, newEtag);
+
                 return new PutResult
                 {
                     Key = key,
