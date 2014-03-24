@@ -24,6 +24,34 @@ class replicationDestination {
     });
     isValid = ko.computed(() => this.url() != null && this.url().length > 0);
 
+
+    // data members for the ui
+    isUserCredentials = ko.observable<boolean>(false);
+    isApiKeyCredentials = ko.observable<boolean>(false);
+    credentialsType = ko.computed(() => {
+        if (this.isUserCredentials()) {
+            return "user";
+        } else if (this.isApiKeyCredentials()) {
+            return "api-key";
+        } else {
+            return "none";
+        }
+    });
+
+    toggleUserCredentials() {
+        this.isUserCredentials.toggle();
+    }
+
+    toggleApiKeyCredentials() {
+        this.isApiKeyCredentials.toggle();
+    }
+
+    toggleIsAdvancedShows() {
+        this.isAdvancedShown.toggle();
+    }
+
+    isAdvancedShown = ko.observable< boolean>(false);
+
     constructor(dto: replicationDestinationDto) {
         this.url(dto.Url);
         this.username(dto.Username);
@@ -35,6 +63,12 @@ class replicationDestination {
         this.ignoredClient(dto.IgnoredClient);
         this.disabled(dto.Disabled);
         this.clientVisibleUrl(dto.ClientVisibleUrl);
+
+        if (this.username()) {
+            this.isUserCredentials(true);
+        } else if (this.apiKey()) {
+            this.isApiKeyCredentials(true);
+        }
     }
 
     static empty(): replicationDestination {
