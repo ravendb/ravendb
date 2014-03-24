@@ -21,6 +21,7 @@ import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
+import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
 
 class shell extends viewModelBase {
     private router = router;
@@ -70,13 +71,64 @@ class shell extends viewModelBase {
 
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
+
+        this.router.guardRoute = (instance: Object, instruction: DurandalRouteInstruction) => this.getValidRoute(instance, instruction);
         
         this.connectToRavenServer();
     }
 
+    getValidRoute(instance: Object, instruction: DurandalRouteInstruction) :any {
+        if (!this.activeDatabase().isSystem && instruction.queryString && (instruction.queryString.indexOf("database=<system>") >= 0 || instruction.queryString.indexOf("database=%3Csystem%3E") >= 0 )) {
+            var systemDbConfirm = new viewSystemDatabaseConfirm(this.activeDatabase());
+
+            systemDbConfirm.viewTask.done(()=> {
+                var systemDb = appUrl.getSystemDatabase();
+                systemDb.activate();
+
+                var lastRoute = appUrl.forCurrentPage(systemDb);
+
+                if (!lastRoute) {
+                    if (window.location.hash.indexOf("database") < 0) {
+                        lastRoute = window.location.hash + "?database=" + encodeURIComponent(systemDb.name);
+                    } else {
+                        lastRoute = window.location.hash;
+                        lastRoute.substring(lastRoute.length - 2, lastRoute.length) == "&&" ? lastRoute = lastRoute.replace("&&", "&") : lastRoute = lastRoute + "&";
+                    }
+
+                }
+                else if (lastRoute.indexOf("database") < 0) {
+                    lastRoute = lastRoute + "?database=" + encodeURIComponent(systemDb.name);
+                }
+                
+                router.navigate(lastRoute);
+
+            }).fail((lastDb:database) => {
+                var lastRoute = appUrl.forCurrentPage(lastDb);
+
+                if (!lastRoute) {
+                    if (window.location.hash.indexOf("database") < 0) {
+                        lastRoute = window.location.hash + "?database=" + encodeURIComponent(lastDb.name);
+                    } else {
+                        lastRoute = window.location.hash.replace("database=%3Csystem%3E", "database=" + encodeURIComponent(lastDb.name));
+                    } 
+                }
+                else if (lastRoute.indexOf("database") < 0) {
+                    lastRoute = lastRoute + "?database=" + encodeURIComponent(lastDb.name);
+                }
+
+                router.navigate(lastRoute ? lastRoute : window.location.hash);
+                
+            });
+            app.showDialog(systemDbConfirm);
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+
     // Called by Durandal when shell.html has been put into the DOM.
     attached() {
-        var that = this;
         // The view must be attached to the DOM before we can hook up keyboard shortcuts.
         jwerty.key("ctrl+alt+n", e=> {
             e.preventDefault();
@@ -84,7 +136,7 @@ class shell extends viewModelBase {
         });
 
         $("body").tooltip({
-            delay: { show: 600, hide: 100 },
+            delay: { show: 1000, hide: 100 },
             container: 'body',
             selector: '.use-bootstrap-tooltip',
             trigger: 'hover'
@@ -93,30 +145,32 @@ class shell extends viewModelBase {
         //TODO: Move this to a knockout binding handler
         $("#goToDocInput").typeahead(
             {
-            hint: true,
-            highlight: true,
-            minLength: 1
-        },
-        {
-            name: 'Documents',
-            displayKey: 'value',
-            source: (searchTerm, callback)=> {
-                var foundDocuments;
-                new getDocumentsMetadataByIDPrefixCommand(searchTerm, 25, that.activeDatabase())
-                    .execute()
-                    .done((results: string[])=> {
-                        var matches = [];
-                        $.each(results, (i, str)=> {
-                            matches.push({ value: str, editHref: appUrl.forEditDoc(str, null, null, that.activeDatabase()) });
-                        });
-                        callback(matches);
-                    })
-                    .fail(callback(['']));
-
+                hint: true,
+                highlight: true,
+                minLength: 1
             },
-            templates: {
-                suggestion: Handlebars.compile(['<p><a><strong>{{value}}</a></strong>'].join())
-            }
+            {
+                name: 'Documents',
+                displayKey: 'value',
+                source: (searchTerm, callback) => {
+                    var foundDocuments;
+                    new getDocumentsMetadataByIDPrefixCommand(searchTerm, 25, this.activeDatabase())
+                        .execute()
+                        .done((results: string[]) => {
+                            var matches = results.map(val => {
+                                return {
+                                    value: val,
+                                    editHref: appUrl.forEditDoc(val, null, null, this.activeDatabase())
+                                }
+                            });
+                            callback(matches);
+                        })
+                        .fail(callback(['']));
+
+                },
+                templates: {
+                    suggestion: Handlebars.compile(['<p><a><strong>{{value}}</a></strong>'].join())
+                }
 
 
             });
@@ -146,7 +200,12 @@ class shell extends viewModelBase {
         systemDatabase.isSystem = true;
         systemDatabase.isVisible(false);
         this.databases(databases.concat([systemDatabase]));
-        this.databases.first(x=>x.isVisible()).activate();
+        if (this.databases().length == 1) {
+            systemDatabase.activate();
+        } else {
+            this.databases.first(x=> x.isVisible()).activate();
+        }
+        
     }
 
     launchDocEditor(docId?: string, docsList?: pagedList) {

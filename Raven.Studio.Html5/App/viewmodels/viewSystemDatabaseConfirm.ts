@@ -8,7 +8,8 @@ class viewSystemDatabaseConfirm extends dialogViewModelBase {
 
     public viewTask = $.Deferred();
     
-    constructor() {
+    
+    constructor(private previousDb:database = null) {
         super();
     }
 
@@ -18,7 +19,7 @@ class viewSystemDatabaseConfirm extends dialogViewModelBase {
     }
 
     cancel() {
-        this.viewTask.reject();
+        this.viewTask.reject(this.previousDb);
         dialog.close(this);
     }
 }

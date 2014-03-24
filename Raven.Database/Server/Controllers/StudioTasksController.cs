@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -8,16 +9,16 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
 using Kent.Boogaart.KBCsv;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
-using Raven.Client.Connection.Async;
 using Raven.Client.Util;
 using Raven.Database.Smuggler;
-using Raven.Database.Tasks;
 using Raven.Json.Linq;
+using Newtonsoft.Json;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -91,6 +92,31 @@ namespace Raven.Database.Server.Controllers
             var byteStruct = new byte[Constants.DefaultGeneratedEncryptionKeyLength];
             randomNumberGenerator.GetBytes(byteStruct);
             var result = Convert.ToBase64String(byteStruct);
+
+            HttpResponseMessage response = Request.CreateResponse(HttpStatusCode.OK, result);
+            return response;
+        }
+
+        [HttpPost]
+        [Route("studio-tasks/is-base-64-key")]
+        public async Task<HttpResponseMessage> IsBase64Key(string path = null)
+        {
+            bool result = true;
+            try
+            {
+                //Request is of type HttpRequestMessage
+                string keyObjectString = await Request.Content.ReadAsStringAsync();
+                NameValueCollection nvc = HttpUtility.ParseQueryString(keyObjectString);
+                var key = nvc["key"];
+
+                //Convert base64-encoded hash value into a byte array.
+                //ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+                Convert.FromBase64String(key);
+            }
+            catch (Exception e)
+            {
+                result = false;
+            }
 
             HttpResponseMessage response = Request.CreateResponse(HttpStatusCode.OK, result);
             return response;
