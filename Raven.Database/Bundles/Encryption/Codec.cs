@@ -145,10 +145,11 @@ namespace Raven.Bundles.Encryption
 			return GetCryptoProvider(iv);
 		}
 
+
 		private Tuple<byte[], byte[]> GetStartingKeyAndIVForEncryption(SymmetricAlgorithm algorithm)
 		{
-			int bits = algorithm.ValidKeySize(EncryptionSettings.DefaultEncryptionKeyBitsSize) ? 
-				EncryptionSettings.DefaultEncryptionKeyBitsSize :
+			int bits = algorithm.ValidKeySize(EncryptionSettings.PreferedEncryptionKeyBitsSize) ? 
+				EncryptionSettings.PreferedEncryptionKeyBitsSize :
 				algorithm.LegalKeySizes[0].MaxSize;
 			
 			encryptionKeySize = bits / 8;

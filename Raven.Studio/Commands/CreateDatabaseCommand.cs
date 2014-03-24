@@ -150,29 +150,34 @@ namespace Raven.Studio.Commands
 			if (encryptionData != null)
 			{
 				settings[Constants.EncryptionKeySetting] = encryptionData.EncryptionKey.Text;
-				var content = ((ComboBoxItem)encryptionData.EncryptionAlgorithm.SelectedValue).Content;
-				switch (content.ToString())
-				{
-					case "DESC":
-						settings[Constants.AlgorithmTypeSetting] = "System.Security.Cryptography.DESCryptoServiceProvider, mscorlib";
-						break;
-					case "RC2C":
-						settings[Constants.AlgorithmTypeSetting] = "System.Security.Cryptography.RC2CryptoServiceProvider, mscorlib";
-						break;
-					case "Rijndael":
-						settings[Constants.AlgorithmTypeSetting] = "System.Security.Cryptography.RijndaelManaged, mscorlib";
-						break;
-					case "Triple DESC":
-						settings[Constants.AlgorithmTypeSetting] = "System.Security.Cryptography.TripleDESCryptoServiceProvider, mscorlib";
-						break;
-					default:
-						throw new ArgumentException("Could not understand encryption type: " + content);
-				}
+				var selectedEncryptionAlgorithmName = ((ComboBoxItem)encryptionData.EncryptionAlgorithm.SelectedValue).Content;
+				settings[Constants.AlgorithmTypeSetting] = ConvertEncryptionAlgorithmNameToFullType(selectedEncryptionAlgorithmName.ToString());
+
+				var selectedEncryptionKeyBitsPreference =
+					((ComboBoxItem) encryptionData.PreferedEncryptionKeyBits.SelectedValue).Content;
+				settings[Constants.EncryptionKeyBitsPreferenceSetting] = selectedEncryptionKeyBitsPreference.ToString();
 
 				settings[Constants.EncryptIndexes] = (encryptionData.EncryptIndexes.IsChecked ?? true).ToString();
 			}
 
 			return settings;
+		}
+
+		private string ConvertEncryptionAlgorithmNameToFullType(string encryptionAlgorithmName)
+		{
+			switch (encryptionAlgorithmName)
+			{
+				case "DESC":
+					return "System.Security.Cryptography.DESCryptoServiceProvider, mscorlib";
+				case "RC2C":
+					return "System.Security.Cryptography.RC2CryptoServiceProvider, mscorlib";
+				case "Rijndael":
+					 return "System.Security.Cryptography.RijndaelManaged, mscorlib";
+				case "Triple DESC":
+					return "System.Security.Cryptography.TripleDESCryptoServiceProvider, mscorlib";
+				default:
+					throw new ArgumentException("Could not understand encryption type: " + encryptionAlgorithmName);
+			}
 		}
 
 		private void HandleBundleAfterCreation(CreateSettingsModel settingsModel, string databaseName, string encryptionKey)

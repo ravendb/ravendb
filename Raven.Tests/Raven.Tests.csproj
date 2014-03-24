@@ -226,6 +226,7 @@
     <Compile Include="Bugs\RawQueryShouldGoThroughAnalysis.cs" />
     <Compile Include="Bugs\SyncAsync.cs" />
     <Compile Include="Bugs\TransformationsUnitTest.cs" />
+    <Compile Include="Bundles\Encryption\Crud.cs" />
     <Compile Include="Faceted\LazyFacets.cs" />
     <Compile Include="Issues\WaitForStaleOnAbandonedIndexShouldWork.cs" />
     <Compile Include="Issues\RavenDB_1761.cs" />
@@ -1036,7 +1037,6 @@
     <Compile Include="Bundles\Compression\Compression.cs" />
     <Compile Include="Bundles\Compression\Crud.cs" />
     <Compile Include="Bundles\Compression\Indexes.cs" />
-    <Compile Include="Bundles\Encryption\Crud.cs" />
     <Compile Include="Bundles\Encryption\Encryption.cs" />
     <Compile Include="Bundles\Encryption\Indexes.cs" />
     <Compile Include="Bundles\Encryption\WithoutEncryption.cs" />
