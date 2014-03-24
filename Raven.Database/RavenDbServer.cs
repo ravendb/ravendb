@@ -76,10 +76,13 @@ namespace Raven.Server
         public bool UseEmbeddedHttpServer { get; set; }
 
 	    public void Dispose()
-		{
-			documentStore.Dispose();
-            owinHttpServer.Dispose();
-		}
+	    {
+		    if (documentStore != null)
+			    documentStore.Dispose();
+
+		    if (owinHttpServer != null)
+			    owinHttpServer.Dispose();
+	    }
 
 		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
 		private class ServerThingsForTests : IServerThingsForTests

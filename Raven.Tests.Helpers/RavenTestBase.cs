@@ -555,6 +555,8 @@ namespace Raven.Tests.Helpers
 
 			foreach (var server in servers)
 			{
+				if (server == null)
+					continue;
 				try
 				{
 					server.Dispose();
