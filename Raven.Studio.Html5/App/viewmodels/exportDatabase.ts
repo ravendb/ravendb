@@ -9,9 +9,9 @@ class exportDatabase extends viewModelBase {
   removeAnalyzers = ko.observable(false);
 
   startExport() {
-    new exportDatabaseCommand()
+    new exportDatabaseCommand(this.activeDatabase())
       .execute();
   }
 }
 
-export = exportDatabase; 
+export = exportDatabase;
