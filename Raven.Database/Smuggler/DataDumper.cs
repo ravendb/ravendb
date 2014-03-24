@@ -92,7 +92,7 @@ namespace Raven.Database.Smuggler
 	        return result;
 	    }
 
-	    protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+	    protected override async Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
 		{
 			var totalCount = 0;
 	        var maxEtagReached = false;
@@ -167,12 +167,12 @@ namespace Raven.Database.Smuggler
 
         }
 
-		protected override Task<RavenJArray> GetTransformers(int start)
+		protected override Task<RavenJArray> GetTransformers(RavenConnectionStringOptions src, int start)
 		{
 			return new CompletedTask<RavenJArray>(database.Transformers.GetTransformers(start, SmugglerOptions.BatchSize));
 		}
 
-		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int limit)
+		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int limit)
 		{
 			const int dummy = 0;
 			var enumerator = database.Documents.GetDocuments(dummy, Math.Min(SmugglerOptions.BatchSize, limit), lastEtag, CancellationToken.None)
@@ -183,12 +183,12 @@ namespace Raven.Database.Smuggler
 			return new AsyncEnumeratorBridge<RavenJObject>(enumerator);
 		}
 
-		protected override Task<RavenJArray> GetIndexes(int totalCount)
+		protected override Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount)
 		{
 			return new CompletedTask<RavenJArray>(database.Indexes.GetIndexes(totalCount, 128));
 		}
 
-		protected override Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
+		protected override Task PutAttachment(RavenConnectionStringOptions dst, AttachmentExportInfo attachmentExportInfo)
 		{
 			if (attachmentExportInfo != null)
 			{
@@ -273,7 +273,7 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask();
 		}
 
-		protected override Task<string> GetVersion()
+		protected override Task<string> GetVersion(RavenConnectionStringOptions server)
 		{
 			return new CompletedTask<string>(DocumentDatabase.ProductVersion);
 		}
