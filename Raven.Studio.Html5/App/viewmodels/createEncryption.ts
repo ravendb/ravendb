@@ -5,6 +5,7 @@ import collection = require("models/collection");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import commandBase = require("commands/commandBase");
 import getNewEncryptionKey = require("commands/getNewEncryptionKey");
+import checkEncryptionKey = require("commands/checkEncryptionKey");
 
 class createEncryption extends dialogViewModelBase {
 
@@ -19,10 +20,10 @@ class createEncryption extends dialogViewModelBase {
 
     private newCommandBase = new commandBase();
 
-    constructor(private databaseName) {
+    constructor() {
         super();
 
-        var newEncryptionKey: getNewEncryptionKey = new getNewEncryptionKey(databaseName);
+        var newEncryptionKey: getNewEncryptionKey = new getNewEncryptionKey();
         newEncryptionKey
             .execute()
             .done(result=> {
@@ -44,7 +45,26 @@ class createEncryption extends dialogViewModelBase {
 
     save() {
         var key = this.key();
+
+        if (this.isClientSideInputOK(key)) {
+            var checkEncryption: checkEncryptionKey = new checkEncryptionKey(key);
+            checkEncryption
+                .execute()
+                .done(result=> {
+                    if (Boolean(result)) {
+                        this.creationEncryption.resolve(key, this.encryptionAlgorithm(), this.isEncryptedIndexes());
+                        this.creationEncryptionStarted = true;
+                        dialog.close(this);
+                    }
+
+                });
+        }
+    }
+
+    private isClientSideInputOK(key): boolean {
         var base64Matcher = new RegExp("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})([=]{1,2})?$");
+        var result = false;
+
         if (!key) {
             this.newCommandBase.reportError("Please fill out the key field");
             this.keyFocus(true);
@@ -53,14 +73,13 @@ class createEncryption extends dialogViewModelBase {
             this.newCommandBase.reportError("The key must be in base64 encoding format!");
             this.keyFocus(true);
         }
-        else if (this.encryptionAlgorithm() === undefined) {
+        else if (!this.encryptionAlgorithm()) {
             this.newCommandBase.reportError("Please select an encryption algorithm");
             this.algorithmFocus(true);
         } else {
-            this.creationEncryption.resolve(key, this.encryptionAlgorithm(), this.isEncryptedIndexes());
-            this.creationEncryptionStarted = true;
-            dialog.close(this);
+            result = true;
         }
+        return result;
     }
 }
 

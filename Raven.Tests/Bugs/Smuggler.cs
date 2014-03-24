@@ -5,30 +5,12 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class SmugglerTester : SmugglerApi
-	{
-		public SmugglerTester(RavenConnectionStringOptions connectionStringOptions)
-			: base(connectionStringOptions)
-		{
-		}
-
-		public string GetUrlGeneratedForRequest(string url, string method = "GET")
-		{
-			return CreateRequest(url, method).WebRequest.RequestUri.AbsoluteUri;
-		}
-	}
-
 	public class Smuggler : NoDisposalNeeded
 	{
 		[Fact]
 		public void should_respect_defaultdb_properly()
 		{
-			var connectionStringOptions = new RavenConnectionStringOptions();
-			//SmugglerAction action = SmugglerAction.Import;
-			connectionStringOptions.Url = "http://localhost:8080";
-			connectionStringOptions.DefaultDatabase = "test";
-
-			var api = new SmugglerTester(connectionStringOptions);
+			var connectionStringOptions = new RavenConnectionStringOptions {Url = "http://localhost:8080", DefaultDatabase = "test"};
 			var rootDatabaseUrl = GetRootDatabaseUrl(connectionStringOptions.Url);
 			var docUrl = rootDatabaseUrl + "/docs/Raven/Databases/" + connectionStringOptions.DefaultDatabase;
 			Console.WriteLine(docUrl);
