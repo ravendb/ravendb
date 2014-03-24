@@ -4,82 +4,130 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.IO;
-using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Smuggler;
-using Raven.Client.Extensions;
+
 using Raven.Database.Extensions;
-using Raven.Smuggler;
-using Xunit;
 
 namespace Raven.Tests.Issues
 {
+    using System.Threading.Tasks;
+
+    using Raven.Abstractions.Data;
+    using Raven.Abstractions.Exceptions;
+    using Raven.Abstractions.Smuggler;
+    using Raven.Client.Extensions;
+    using Raven.Smuggler;
+
+    using Xunit;
+
     public class RDBQA_6 : RavenTest
     {
-	    [Fact]
+        [Fact]
         public async Task SmugglerShouldThrowIfDatabaseDoesNotExist()
         {
-	        var backupPath = Path.GetTempFileName();
-		    using (var store = NewRemoteDocumentStore())
-		    {
-			    var smuggler = new SmugglerApi();
+            var path = Path.GetTempFileName();
 
-				var e = await AssertAsync.Throws<SmugglerException>(async () => await smuggler.ImportData(new SmugglerImportOptions { FromFile = backupPath, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = "DoesNotExist" } }, new SmugglerOptions()));
-			    Assert.Equal("Smuggler does not support database creation (database 'DoesNotExist' on server 'http://localhost:8079' must exist before running Smuggler).", e.Message);
+            try
+            {
+                using (var store = NewRemoteDocumentStore())
+                {
+                    var smuggler = new SmugglerApi(new RavenConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultDatabase = "DoesNotExist"
+                    });
 
-			    e = await AssertAsync.Throws<SmugglerException>(async () =>
-			    {
-				    var exportData = await smuggler.ExportData(new SmugglerExportOptions(), new SmugglerOptions());
-				    IOExtensions.DeleteDirectory(exportData.FilePath);
-			    });
-			    Assert.Equal("Smuggler does not support database creation (database 'DoesNotExist' on server 'http://localhost:8079' must exist before running Smuggler).", e.Message);
-		    }
+                    var e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ImportData(new SmugglerImportOptions { FromFile = path }, new SmugglerOptions()));
+
+                    Assert.Equal(string.Format("Smuggler does not support database creation (database 'DoesNotExist' on server '{0}' must exist before running Smuggler).", store.Url), e.Message);
+
+                    e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ExportData(new SmugglerExportOptions { ToFile = path }, new SmugglerOptions()));
+
+                    Assert.Equal(string.Format("Smuggler does not support database creation (database 'DoesNotExist' on server '{0}' must exist before running Smuggler).", store.Url), e.Message);
+                }
+            }
+            finally
+            {
+                IOExtensions.DeleteFile(path);
+            }
         }
 
-	    [Fact]
-	    public async Task SmugglerShouldNotThrowIfDatabaseExist1()
-	    {
-		    var backupPath = Path.GetTempFileName();
+        [Fact]
+        public async Task SmugglerShouldNotThrowIfDatabaseExist1()
+        {
+            var path = Path.GetTempFileName();
 
-		    using (var store = NewRemoteDocumentStore())
-		    {
-			    store.DatabaseCommands.ForSystemDatabase().EnsureDatabaseExists("DoesNotExist");
+            try
+            {
+                using (var store = NewRemoteDocumentStore())
+                {
+                    store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("DoesNotExist");
 
-			    var smuggler = new SmugglerApi();
+                    var smuggler = new SmugglerApi(new RavenConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultDatabase = "DoesNotExist"
+                    });
 
-				await smuggler.ImportData(new SmugglerImportOptions { FromFile = backupPath, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = "DoesNotExist" } }, new SmugglerOptions());
-				await smuggler.ExportData(new SmugglerExportOptions { From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = "DoesNotExist" }, ToFile = backupPath }, new SmugglerOptions());
-		    }
-	    }
+                    await smuggler.ImportData(new SmugglerImportOptions { FromFile = path }, new SmugglerOptions());
+                    await smuggler.ExportData(new SmugglerExportOptions { ToFile = path }, new SmugglerOptions());
+                }
+            }
+            finally
+            {
+                IOExtensions.DeleteFile(path);
+            }
+        }
 
-	    [Fact]
+        [Fact]
         public async Task SmugglerShouldNotThrowIfDatabaseExist2()
         {
-			var backupPath = Path.GetTempFileName();
+            var path = Path.GetTempFileName();
 
-		    using (var store = NewRemoteDocumentStore())
-		    {
-			    var smuggler = new SmugglerApi();
+            try
+            {
+                using (var store = NewRemoteDocumentStore())
+                {
+                    var smuggler = new SmugglerApi(new RavenConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultDatabase = store.DefaultDatabase
+                    });
 
-				await smuggler.ImportData(new SmugglerImportOptions { FromFile = backupPath, To = new RavenConnectionStringOptions { Url = store.Url } }, new SmugglerOptions());
-				await smuggler.ExportData(new SmugglerExportOptions { From = new RavenConnectionStringOptions { Url = store.Url } , ToFile = backupPath}, new SmugglerOptions());
-		    }
+                    await smuggler.ImportData(new SmugglerImportOptions { FromFile = path }, new SmugglerOptions());
+                    await smuggler.ExportData(new SmugglerExportOptions { ToFile = path }, new SmugglerOptions());
+                }
+            }
+            finally
+            {
+                IOExtensions.DeleteFile(path);
+            }
         }
 
         [Fact]
         public async Task SmugglerBehaviorWhenServerIsDown()
         {
-			var backupPath = Path.GetTempFileName();
-	        var smuggler = new SmugglerApi();
+            var path = Path.GetTempFileName();
 
-			var e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ImportData(new SmugglerImportOptions { FromFile = backupPath, To = new RavenConnectionStringOptions { Url = "http://localhost:8078/", DefaultDatabase = "DoesNotExist" } }, new SmugglerOptions()));
+            try
+            {
+                var smuggler = new SmugglerApi(new RavenConnectionStringOptions
+                {
+                    Url = "http://localhost:8078/",
+                    DefaultDatabase = "DoesNotExist"
+                });
 
-	        Assert.Equal("Smuggler encountered a connection problem: 'Unable to connect to the remote server'.", e.Message);
+                var e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ImportData(new SmugglerImportOptions { FromFile = path }, new SmugglerOptions()));
 
-			e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ExportData(new SmugglerExportOptions { From = new RavenConnectionStringOptions { Url = "http://localhost:8078/", DefaultDatabase = "DoesNotExist" } , ToFile = backupPath}, new SmugglerOptions()));
+                Assert.Equal("Smuggler encountered a connection problem: 'Unable to connect to the remote server'.", e.Message);
 
-	        Assert.Equal("Smuggler encountered a connection problem: 'Unable to connect to the remote server'.", e.Message);
+                e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ExportData(new SmugglerExportOptions { ToFile = path }, new SmugglerOptions()));
+
+                Assert.Equal("Smuggler encountered a connection problem: 'Unable to connect to the remote server'.", e.Message);
+            }
+            finally
+            {
+                IOExtensions.DeleteFile(path);
+            }
         }
     }
 }

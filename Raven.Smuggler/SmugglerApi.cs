@@ -45,6 +45,7 @@ namespace Raven.Smuggler
 			return str;
 		}
 
+		public RavenConnectionStringOptions ConnectionStringOptions { get; private set; }
 		private readonly HttpRavenRequestFactory httpRavenRequestFactory = new HttpRavenRequestFactory();
 
 		private BulkInsertOperation operation;
@@ -56,6 +57,11 @@ namespace Raven.Smuggler
 			{
 				return store.AsyncDatabaseCommands;
 			}
+		}
+
+		public SmugglerApi(RavenConnectionStringOptions connectionStringOptions)
+		{
+			ConnectionStringOptions = connectionStringOptions;
 		}
 
 	    protected override void PurgeTombstones(ExportDataResult result)
@@ -96,7 +102,7 @@ namespace Raven.Smuggler
 
 			SmugglerJintHelper.Initialize(options);
 
-			using (store = CreateStore(importOptions.To))
+            using (store = CreateStore())
 			{
 				Task disposeTask = null;
 
@@ -126,7 +132,7 @@ namespace Raven.Smuggler
 
 		public override async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptions options)
 		{
-			using (store = CreateStore(exportOptions.From))
+			using (store = CreateStore())
 			{
 				return await base.ExportData(exportOptions, options);
 			}
@@ -160,38 +166,29 @@ namespace Raven.Smuggler
 
 		protected async override Task<string> GetVersion()
 		{
-			var version = await Commands.GetBuildNumberAsync();
-			return version.ProductVersion;
+			var request = CreateRequest("/build/version");
+			var version = request.ExecuteRequest<RavenJObject>();
+
+			return version["ProductVersion"].ToString();
 		}
 
 		protected HttpRavenRequest CreateRequest(string url, string method = "GET")
 		{
-			var connection = new RavenConnectionStringOptions
-			{
-				Url = store.Url, 
-				ApiKey = store.ApiKey, 
-				Credentials = store.Credentials,
-				DefaultDatabase = store.DefaultDatabase, 
-				EnlistInDistributedTransactions = store.EnlistInDistributedTransactions, 
-				FailoverServers = store.FailoverServers, 
-				ResourceManagerId = store.ResourceManagerId
-			};
-
 			var builder = new StringBuilder();
 			if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase) == false)
 			{
-				builder.Append(connection.Url);
-				if (string.IsNullOrWhiteSpace(connection.DefaultDatabase) == false)
+				builder.Append(ConnectionStringOptions.Url);
+				if (string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase) == false)
 				{
-					if (connection.Url.EndsWith("/") == false)
+					if (ConnectionStringOptions.Url.EndsWith("/") == false)
 						builder.Append("/");
 					builder.Append("databases/");
-					builder.Append(connection.DefaultDatabase);
+					builder.Append(ConnectionStringOptions.DefaultDatabase);
 					builder.Append('/');
 				}
 			}
 			builder.Append(url);
-			var httpRavenRequest = httpRavenRequestFactory.Create(builder.ToString(), method, connection);
+			var httpRavenRequest = httpRavenRequestFactory.Create(builder.ToString(), method, ConnectionStringOptions);
 			httpRavenRequest.WebRequest.Timeout = (int)SmugglerOptions.Timeout.TotalMilliseconds;
 			if (LastRequestErrored)
 			{
@@ -202,20 +199,23 @@ namespace Raven.Smuggler
 			return httpRavenRequest;
 		}
 
-		protected DocumentStore CreateStore(RavenConnectionStringOptions to)
-		{
-			var s = new DocumentStore
-			{
-				Url = to.Url,
-				ApiKey = to.ApiKey,
-				Credentials = to.Credentials,
-				DefaultDatabase = to.DefaultDatabase
-			};
+        protected DocumentStore CreateStore()
+        {
+            var s = new DocumentStore
+            {
+                Url = ConnectionStringOptions.Url,
+                ApiKey = ConnectionStringOptions.ApiKey,
+                Credentials = ConnectionStringOptions.Credentials
+            };
 
-			s.Initialize();
+            s.Initialize();
 
-			return s;
-		}
+            ValidateThatServerIsUpAndDatabaseExists(s);
+
+            s.DefaultDatabase = ConnectionStringOptions.DefaultDatabase;
+
+            return s;
+        }
 
 		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int limit)
 		{
@@ -334,7 +334,7 @@ namespace Raven.Smuggler
 		{
 			if (attachmentExportInfo != null)
 			{
-				var request = CreateRequest("/static/" + attachmentExportInfo.Key, method: "PUT");
+				var request = CreateRequest("/static/" + attachmentExportInfo.Key, "PUT");
 				if (attachmentExportInfo.Metadata != null)
 				{
 					foreach (var header in attachmentExportInfo.Metadata)
@@ -393,20 +393,20 @@ namespace Raven.Smuggler
 
 		public bool LastRequestErrored { get; set; }
 
-		protected async override Task EnsureDatabaseExists(RavenConnectionStringOptions to)
+		protected async override Task EnsureDatabaseExists()
 		{
 			if (EnsuredDatabaseExists ||
-				string.IsNullOrWhiteSpace(to.DefaultDatabase))
+				string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase))
 				return;
 
 			EnsuredDatabaseExists = true;
 
-			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(to.Url);
-			var docUrl = rootDatabaseUrl + "/docs/Raven/Databases/" + to.DefaultDatabase;
+			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(ConnectionStringOptions.Url);
+			var docUrl = rootDatabaseUrl + "/docs/Raven/Databases/" + ConnectionStringOptions.DefaultDatabase;
 
 			try
 			{
-				httpRavenRequestFactory.Create(docUrl, "GET", to).ExecuteRequest();
+				httpRavenRequestFactory.Create(docUrl, "GET", ConnectionStringOptions).ExecuteRequest();
 				return;
 			}
 			catch (WebException e)
@@ -416,11 +416,54 @@ namespace Raven.Smuggler
 					throw;
 			}
 
-			var request = CreateRequest(docUrl, method: "PUT");
-			var document = RavenJObject.FromObject(MultiDatabase.CreateDatabaseDocument(to.DefaultDatabase));
+			var request = CreateRequest(docUrl, "PUT");
+			var document = RavenJObject.FromObject(MultiDatabase.CreateDatabaseDocument(ConnectionStringOptions.DefaultDatabase));
 			document.Remove("Id");
 			request.Write(document);
 			request.ExecuteRequest();
 		}
+
+        private void ValidateThatServerIsUpAndDatabaseExists(DocumentStore s)
+        {
+            var shouldDispose = false;
+
+            try
+            {
+                var commands = !string.IsNullOrEmpty(ConnectionStringOptions.DefaultDatabase)
+                                   ? s.DatabaseCommands.ForDatabase(ConnectionStringOptions.DefaultDatabase)
+                                   : s.DatabaseCommands;
+
+                commands.GetStatistics(); // check if database exist
+            }
+            catch (Exception e)
+            {
+                shouldDispose = true;
+
+                var responseException = e as ErrorResponseException;
+                if (responseException != null && responseException.StatusCode == HttpStatusCode.ServiceUnavailable && responseException.Message.StartsWith("Could not find a database named"))
+                    throw new SmugglerException(
+                        string.Format(
+                            "Smuggler does not support database creation (database '{0}' on server '{1}' must exist before running Smuggler).",
+                            ConnectionStringOptions.DefaultDatabase,
+                            s.Url), e);
+
+
+                if (e.InnerException != null)
+                {
+                    var webException = e.InnerException as WebException;
+                    if (webException != null)
+                    {
+                        throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", webException.Message), webException);
+                    }
+                }
+
+                throw new SmugglerException(string.Format("Smuggler encountered a connection problem: '{0}'.", e.Message), e);
+            }
+            finally
+            {
+                if (shouldDispose)
+                    s.Dispose();
+            }
+        }
 	}
 }
