@@ -454,7 +454,7 @@ Configuration options:
 		private static bool RunServerInDebugMode(RavenConfiguration ravenConfiguration, bool launchBrowser)
 		{
 			var sp = Stopwatch.StartNew();
-			using (var server = new RavenDbServer(ravenConfiguration))
+			using (var server = new RavenDbServer(ravenConfiguration){ UseEmbeddedHttpServer = true }.Initialize())
 			{
 				sp.Stop();
 				var path = Path.Combine(Environment.CurrentDirectory, "default.raven");
