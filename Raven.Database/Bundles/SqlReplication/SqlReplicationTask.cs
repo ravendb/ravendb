@@ -252,7 +252,7 @@ namespace Raven.Database.Bundles.SqlReplication
                                             return false;
                                         }
                                     }
-									return true;
+	                                return true;
                                 })
 								.ToList();
 
