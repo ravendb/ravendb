@@ -3,8 +3,10 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
@@ -41,18 +43,24 @@ namespace Raven.Database.Server.Controllers.Admin
 		[Route("admin/databases/{*id}")]
 		public async Task<HttpResponseMessage> DatabasesPut(string id)
 		{
-			if (Array.IndexOf(Constants.WindowsReservedFileNames, id) >= 0)
+			if (id == null)
+				return GetMessageWithString(string.Format("An empty name is forbidden for use!"), HttpStatusCode.BadRequest);
+			if (id.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+				return GetMessageWithString(string.Format("The name '{0}' contains charaters that are forbidden for use!", id), HttpStatusCode.BadRequest);
+			if (Array.IndexOf(Constants.WindowsReservedFileNames, id.ToLower()) >= 0)
+				return GetMessageWithString(string.Format("The name '{0}' is forbidden for use!", id), HttpStatusCode.BadRequest);
+			if ((Environment.OSVersion.Platform == PlatformID.Unix) && (id.Length > Constants.LinuxMaxFileNameLength) && (Database.Configuration.DataDirectory.Length + id.Length > Constants.LinuxMaxPath))
 			{
-				return GetMessageWithString(string.Format("The name '{0}' is forbidden for use in Windows!", id), HttpStatusCode.BadRequest);
+				int theoreticalMaxFileNameLength = Constants.LinuxMaxPath - Database.Configuration.DataDirectory.Length;
+				int maxfileNameLength = (theoreticalMaxFileNameLength > Constants.LinuxMaxFileNameLength) ? Constants.LinuxMaxFileNameLength : theoreticalMaxFileNameLength;
+				return GetMessageWithString(string.Format("Invalid name for a database! Databse name cannot exceed {0} characters", maxfileNameLength), HttpStatusCode.BadRequest);
 			}
-			try
-			{
+			else{ //windows platform
 				if (Path.Combine(Database.Configuration.DataDirectory, id).Length > Constants.WindowsMaxPath)
-					return GetMessageWithString(string.Format("Database with the name '{0}' could not have length greater than 260...", id), HttpStatusCode.BadRequest);
-			}
-			catch (Exception e)
-			{
-				return GetMessageWithString(string.Format("Invalid name for a database! " + e.Message), HttpStatusCode.BadRequest);
+				{
+					int maxfileNameLength = Constants.WindowsMaxPath - Database.Configuration.DataDirectory.Length;
+					return GetMessageWithString(string.Format("Invalid name for a database! Databse name cannot exceed {0} characters", maxfileNameLength), HttpStatusCode.BadRequest);
+				}
 			}
 
 			if (IsSystemDatabase(id))
