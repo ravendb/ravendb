@@ -2058,30 +2058,28 @@ namespace Raven.Database
 
         public BatchResult[] Batch(IList<ICommandData> commands)
         {
-           using (TransactionalStorage.WriteLock())
-           {
-               var shouldRetryIfGotConcurrencyError = commands.All(x => (x is PatchCommandData || x is ScriptedPatchCommandData));
+            using (DocumentLock.Lock())
+            using (TransactionalStorage.WriteLock())
+            {
+                var shouldRetryIfGotConcurrencyError = commands.All(x => (x is PatchCommandData || x is ScriptedPatchCommandData));
 
-               using (DocumentLock.Lock())
-               {
-                    if (shouldRetryIfGotConcurrencyError)
+                if (shouldRetryIfGotConcurrencyError)
+                {
+                    var sp = Stopwatch.StartNew();
+                    var result = BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(commands);
+                    log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
+                    return result;
+                }
+
+                BatchResult[] results = null;
+                TransactionalStorage.Batch(
+                    actions =>
                     {
-                        var sp = Stopwatch.StartNew();
-                        var result = BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(commands);
-                        log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
-                        return result;
-                    }
+                        results = ProcessBatch(commands);
+                    });
 
-                    BatchResult[] results = null;
-                    TransactionalStorage.Batch(
-                        actions =>
-                        {
-                            results = ProcessBatch(commands);
-                        });
-
-                    return results;
-               }
-           }
+                return results;
+            }
         }
 
         private BatchResult[] BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(IList<ICommandData> commands)
