@@ -226,23 +226,7 @@ namespace Raven.Database.Config
 
 		public int EncryptionKeyBitsPreference
 		{
-			get
-			{
-				var defaultEncryptionKeyBitsAsString = Settings[Constants.EncryptionKeyBitsPreferenceSetting];
-				if (String.IsNullOrWhiteSpace(defaultEncryptionKeyBitsAsString))
-					return Constants.DefaultKeySizeToUseInActualEncryptionInBits;
-
-				int defaultEncryptionKeySize;
-				if (!Int32.TryParse(defaultEncryptionKeyBitsAsString, out defaultEncryptionKeySize))
-					throw new ConfigurationErrorsException(Constants.EncryptionKeyBitsPreferenceSetting + " key must contain integer value");
-				return defaultEncryptionKeySize;
-			}
-			set
-			{
-				if(value <= 0)
-					throw new ConfigurationErrorsException(Constants.EncryptionKeyBitsPreferenceSetting + " key must contain integer value larger than 0");
-				Settings[Constants.EncryptionKeyBitsPreferenceSetting] = value.ToString(CultureInfo.InvariantCulture);
-			}
+		    get; set;
 		}
 
 		/// <summary>
