@@ -1,21 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
+using System.IO;
 using System.Runtime.InteropServices;
 using NLog;
-using Raven.Tests.Bugs;
-using Raven.Tests.Bugs.DTC;
-using Raven.Tests.Bundles.Replication;
-using Raven.Tests.Bundles.Replication.Bugs;
-using Raven.Tests.Document;
-using Raven.Tests.Faceted;
-using Raven.Tests.Indexes;
-using Raven.Tests.Issues;
-using Raven.Tests.MailingList;
-using Raven.Tests.Patching;
-using Raven.Tests.Queries;
-using Raven.Tests.Synchronization;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Tryouts
 {
@@ -23,31 +11,36 @@ namespace Raven.Tryouts
 	{
 		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
-		private static void Main(string[] args)
+		private unsafe static void Main(string[] args)
 		{
-			CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("pl-PL");
-			CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("pl-PL");
-		    var sp = Stopwatch.StartNew();
-			for (int i = 0; i < 3000; i++)
-			{
-				Console.WriteLine("Test loop #" + i + " prev " + sp.ElapsedMilliseconds);
-//                Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				sp.Reset();
-				sp.Start();
-				try
-				{
-					using (var x = new IndexationTests())
-						x.ReducerTest();
-				}
-				catch (Exception e)
-				{
-					Console.WriteLine("Error caught: " + e);
-					break;
-				}
-			}
+            for (int i = 0; i < 10; i++)
+            {
+                Console.Clear();
+                Console.WriteLine(i);
+                var s = new My
+                {
+                    B =  (byte*)1
+                };
+                var x = JsonConvert.SerializeObject(s); 
+                
+                try
+                {
+                  
+                    Console.WriteLine(x);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
+            }
 
 		}
 	}
+
+    public unsafe class My
+    {
+        public byte* B { get; set; }
+    }
 
 	public class OrderTotalResult
 	{
