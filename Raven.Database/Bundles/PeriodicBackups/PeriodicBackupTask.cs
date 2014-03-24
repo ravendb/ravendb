@@ -43,7 +43,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
         {
             Database = database;
 
-            Database.OnDocumentChange += (sender, notification, metadata) =>
+            Database.Notifications.OnDocumentChange += (sender, notification, metadata) =>
             {
                 if (notification.Id == null)
                     return;
@@ -70,7 +70,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
                 try
                 {
                     // Not having a setup doc means this DB isn't enabled for periodic backups
-                    var document = Database.Get(PeriodicBackupSetup.RavenDocumentKey, null);
+                    var document = Database.Documents.Get(PeriodicBackupSetup.RavenDocumentKey, null);
                     if (document == null)
                     {
                         backupConfigs = null;
@@ -78,7 +78,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
                         return;
                     }
 
-                    var status = Database.Get(PeriodicBackupStatus.RavenDocumentKey, null);
+                    var status = Database.Documents.Get(PeriodicBackupStatus.RavenDocumentKey, null);
 
                     backupStatus = status == null ? new PeriodicBackupStatus() : status.DataAsJson.JsonDeserialization<PeriodicBackupStatus>();
                     backupConfigs = document.DataAsJson.JsonDeserialization<PeriodicBackupSetup>();
@@ -252,7 +252,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
                             var ravenJObject = JsonExtensions.ToJObject(localBackupStatus);
                             ravenJObject.Remove("Id");
-                            var putResult = documentDatabase.Put(PeriodicBackupStatus.RavenDocumentKey, null, ravenJObject,
+                            var putResult = documentDatabase.Documents.Put(PeriodicBackupStatus.RavenDocumentKey, null, ravenJObject,
                                 new RavenJObject(), null);
 
                             // this result in backupStatus being refreshed

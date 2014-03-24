@@ -41,7 +41,7 @@ public class JamesCrowleyTest extends RemoteClientTest {
       }
 
       try (IDocumentSession session = store.openSession()) {
-        List<EventWithLocation> matchingEvents = session.advanced().luceneQuery(EventWithLocation.class, EventsBySimpleLocation.class)
+        List<EventWithLocation> matchingEvents = session.advanced().documentQuery(EventWithLocation.class, EventsBySimpleLocation.class)
           .waitForNonStaleResultsAsOfNow(5 * 60 * 1000)
           .toList();
         assertEquals(1, matchingEvents.size());

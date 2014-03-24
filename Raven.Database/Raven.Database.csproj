@@ -237,6 +237,16 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Actions\ActionsBase.cs" />
+    <Compile Include="Actions\AttachmentActions.cs" />
+    <Compile Include="Actions\MaintenanceActions.cs" />
+    <Compile Include="Actions\DocumentActions.cs" />
+    <Compile Include="Actions\IndexActions.cs" />
+    <Compile Include="Actions\NotificationActions.cs" />
+    <Compile Include="Actions\PatchActions.cs" />
+    <Compile Include="Actions\QueryActions.cs" />
+    <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Actions\TransformerActions.cs" />
     <Compile Include="Backup\ProgressNotifier.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\AttachmentAncestryPutTrigger.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualAttachmentDeleteTrigger.cs" />

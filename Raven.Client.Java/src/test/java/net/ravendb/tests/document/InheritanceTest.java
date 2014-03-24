@@ -39,7 +39,7 @@ public class InheritanceTest extends RemoteClientTest {
 
         session.saveChanges();
 
-        List<IServer> servers = session.advanced().luceneQuery(IServer.class).waitForNonStaleResults().toList();
+        List<IServer> servers = session.advanced().documentQuery(IServer.class).waitForNonStaleResults().toList();
         assertEquals(2, servers.size());
       }
     }

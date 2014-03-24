@@ -16,22 +16,23 @@ namespace Raven.Tests.Issues
 	    {
 	        using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
 	        {
-	            documentStore.DocumentDatabase.Put("FooBar1", null, new RavenJObject(), new RavenJObject(), null);
-	            documentStore.DocumentDatabase.Put("BarFoo2", null, new RavenJObject(), new RavenJObject(), null);
-	            documentStore.DocumentDatabase.Put("FooBar3", null, new RavenJObject(), new RavenJObject(), null);
-	            documentStore.DocumentDatabase.Put("FooBar11", null, new RavenJObject(), new RavenJObject(), null);
-	            documentStore.DocumentDatabase.Put("FooBar12", null, new RavenJObject(), new RavenJObject(), null);
-	            documentStore.DocumentDatabase.Put("FooBar21", null, new RavenJObject(), new RavenJObject(), null);
-	            documentStore.DocumentDatabase.Put("FooBar5", null, new RavenJObject(), new RavenJObject(), null);
-	            documentStore.DocumentDatabase.Put("BarFoo7", null, new RavenJObject(), new RavenJObject(), null);
-	            documentStore.DocumentDatabase.Put("FooBar111", null, new RavenJObject(), new RavenJObject(), null);
-	            documentStore.DocumentDatabase.Put("BarFoo6", null, new RavenJObject(), new RavenJObject(), null);
-	            documentStore.DocumentDatabase.Put("FooBar6", null, new RavenJObject(), new RavenJObject(), null);
-	            documentStore.DocumentDatabase.Put("FooBar8", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Documents.Put("FooBar1", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Documents.Put("BarFoo2", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Documents.Put("FooBar3", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Documents.Put("FooBar11", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Documents.Put("FooBar12", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Documents.Put("FooBar21", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Documents.Put("FooBar5", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Documents.Put("BarFoo7", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Documents.Put("FooBar111", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Documents.Put("BarFoo6", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Documents.Put("FooBar6", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Documents.Put("FooBar8", null, new RavenJObject(), new RavenJObject(), null);
 
 		        int nextPageStart = 0;
 		        var fetchedDocuments = documentStore
                     .DocumentDatabase
+                    .Documents
                     .GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, 0, 4, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
@@ -49,6 +50,7 @@ namespace Raven.Tests.Issues
 		        nextPageStart = 0;
                 fetchedDocuments = documentStore
                     .DocumentDatabase
+                    .Documents
                     .GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, 4, 4, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
@@ -66,6 +68,7 @@ namespace Raven.Tests.Issues
 				nextPageStart = 0;
                 fetchedDocuments = documentStore
                     .DocumentDatabase
+                    .Documents
                     .GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, 8, 4, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
@@ -85,22 +88,23 @@ namespace Raven.Tests.Issues
 		{
 			using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
 			{
-				documentStore.DocumentDatabase.Put("FooBar1", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("BarFoo2", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBar3", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBar11", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBar12", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBar21", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBar5", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("BarFoo7", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBar111", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("BarFoo6", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBar6", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBar8", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar1", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("BarFoo2", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar3", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar11", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar12", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar21", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar5", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("BarFoo7", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar111", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("BarFoo6", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar6", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar8", null, new RavenJObject(), new RavenJObject(), null);
 
 				int nextPageStart = 0;
 				var fetchedDocuments = documentStore
 					.DocumentDatabase
+                    .Documents
                     .GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, nextPageStart, 4, CancellationToken.None, ref nextPageStart)
 					.ToList();
 
@@ -117,6 +121,7 @@ namespace Raven.Tests.Issues
 
 				fetchedDocuments = documentStore
 					.DocumentDatabase
+                    .Documents
                     .GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, nextPageStart, 4, CancellationToken.None, ref nextPageStart)
 					.ToList();
 
@@ -133,6 +138,7 @@ namespace Raven.Tests.Issues
 
 				fetchedDocuments = documentStore
 					.DocumentDatabase
+                    .Documents
                     .GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, nextPageStart, 4, CancellationToken.None, ref nextPageStart)
 					.ToList();
 
@@ -152,22 +158,23 @@ namespace Raven.Tests.Issues
         {
             using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
             {
-                documentStore.DocumentDatabase.Put("FooBar1", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("BarFoo2", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("FooBar3", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("FooBar11", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("FooBar12", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("FooBar21", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("FooBar5", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("BarFoo7", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("FooBar111", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("BarFoo6", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("FooBar6", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("FooBar8", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar1", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("BarFoo2", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar3", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar11", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar12", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar21", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar5", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("BarFoo7", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar111", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("BarFoo6", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar6", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar8", null, new RavenJObject(), new RavenJObject(), null);
 
 	            int nextPageStart = 0;
 	            var fetchedDocuments = documentStore
                     .DocumentDatabase
+                    .Documents
                     .GetDocumentsWithIdStartingWith("FooBar", string.Empty, "1*", 0, 2, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
@@ -183,6 +190,7 @@ namespace Raven.Tests.Issues
 	            nextPageStart = 0;
                 fetchedDocuments = documentStore
                     .DocumentDatabase
+                    .Documents
                     .GetDocumentsWithIdStartingWith("FooBar", string.Empty, "1*", 2, 2, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
@@ -198,6 +206,7 @@ namespace Raven.Tests.Issues
 				nextPageStart = 0;
                 fetchedDocuments = documentStore
                     .DocumentDatabase
+                    .Documents
                     .GetDocumentsWithIdStartingWith("FooBar", string.Empty, "1*", 4, 2, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
@@ -217,22 +226,23 @@ namespace Raven.Tests.Issues
         {
             using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
             {
-                documentStore.DocumentDatabase.Put("FooBar1", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("BarFoo2", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("FooBar3", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("FooBar11", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("FooBar12", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("FooBar21", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("FooBar5", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("BarFoo7", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("FooBar111", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("BarFoo6", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("FooBar6", null, new RavenJObject(), new RavenJObject(), null);
-                documentStore.DocumentDatabase.Put("FooBar8", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar1", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("BarFoo2", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar3", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar11", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar12", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar21", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar5", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("BarFoo7", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar111", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("BarFoo6", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar6", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Documents.Put("FooBar8", null, new RavenJObject(), new RavenJObject(), null);
 
 	            int nextPageStart = 0;
 	            var fetchedDocuments = documentStore
                     .DocumentDatabase
+                    .Documents
                     .GetDocumentsWithIdStartingWith("FooBar", "1*", string.Empty, 0, 2, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
@@ -247,6 +257,7 @@ namespace Raven.Tests.Issues
 				nextPageStart = 0;
                 fetchedDocuments = documentStore
                     .DocumentDatabase
+                    .Documents
                     .GetDocumentsWithIdStartingWith("FooBar", "1*", string.Empty, 2, 1, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
@@ -260,6 +271,7 @@ namespace Raven.Tests.Issues
 				nextPageStart = 0;
                 fetchedDocuments = documentStore
                     .DocumentDatabase
+                    .Documents
                     .GetDocumentsWithIdStartingWith("FooBar", "1*", string.Empty, 3, 10, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
@@ -278,21 +290,21 @@ namespace Raven.Tests.Issues
 		{
 			using(var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
 			{
-				documentStore.DocumentDatabase.Put("FooBar1", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("BarFoo2", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBar3", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBar11", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBar12", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBar21", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBar5", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("BarFoo7", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBar111", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("BarFoo6", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBar6", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBar8", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar1", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("BarFoo2", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar3", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar11", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar12", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar21", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar5", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("BarFoo7", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar111", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("BarFoo6", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar6", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBar8", null, new RavenJObject(), new RavenJObject(), null);
 
 				int nextPageStart = 0;
-                var fetchedDocuments = documentStore.DocumentDatabase.GetDocumentsWithIdStartingWith("FooBar", string.Empty, "1*", 0, 4, CancellationToken.None, ref nextPageStart);
+                var fetchedDocuments = documentStore.DocumentDatabase.Documents.GetDocumentsWithIdStartingWith("FooBar", string.Empty, "1*", 0, 4, CancellationToken.None, ref nextPageStart);
 
 				var documentsList = fetchedDocuments.ToList();
 				var foundDocKeys = documentsList.Select(doc => doc.Value<RavenJObject>("@metadata"))
@@ -313,19 +325,19 @@ namespace Raven.Tests.Issues
 		{
 			using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
 			{
-				documentStore.DocumentDatabase.Put("FooBarAA", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBarBB", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBarCC", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBarDD", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBarDA", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBarEE", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBarFF", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBarGG", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBarHH", null, new RavenJObject(), new RavenJObject(), null);
-				documentStore.DocumentDatabase.Put("FooBarKK", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBarAA", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBarBB", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBarCC", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBarDD", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBarDA", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBarEE", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBarFF", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBarGG", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBarHH", null, new RavenJObject(), new RavenJObject(), null);
+				documentStore.DocumentDatabase.Documents.Put("FooBarKK", null, new RavenJObject(), new RavenJObject(), null);
 
 				int nextPageStart = 0;
-                var fetchedDocuments = documentStore.DocumentDatabase.GetDocumentsWithIdStartingWith("FooBar", string.Empty, "*A", 2, 4, CancellationToken.None, ref nextPageStart);
+                var fetchedDocuments = documentStore.DocumentDatabase.Documents.GetDocumentsWithIdStartingWith("FooBar", string.Empty, "*A", 2, 4, CancellationToken.None, ref nextPageStart);
 
 				var documentsList = fetchedDocuments.ToList();
 				var foundDocKeys = documentsList.Select(doc => doc.Value<RavenJObject>("@metadata"))

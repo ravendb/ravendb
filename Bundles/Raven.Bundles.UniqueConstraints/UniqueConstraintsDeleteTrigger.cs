@@ -17,7 +17,7 @@ namespace Raven.Bundles.UniqueConstraints
 			if (key.StartsWith("Raven"))
 				return;
 
-			var doc = Database.Get(key, transactionInformation);
+			var doc = Database.Documents.Get(key, transactionInformation);
 
 			if (doc == null)
 				return;
@@ -45,7 +45,7 @@ namespace Raven.Bundles.UniqueConstraints
 				{
                     var escapedUniqueValue = Util.EscapeUniqueValue(uniqueValue, constraint.CaseInsensitive);
                     var uniqueConstraintsDocumentKey = prefix + escapedUniqueValue;
-                    var uniqueConstraintsDocument = Database.Get(uniqueConstraintsDocumentKey, transactionInformation);
+                    var uniqueConstraintsDocument = Database.Documents.Get(uniqueConstraintsDocumentKey, transactionInformation);
 
                     if (uniqueConstraintsDocument == null)
                         continue;
@@ -54,11 +54,11 @@ namespace Raven.Bundles.UniqueConstraints
 
                     if (ShouldRemoveUniqueConstraintDocument(uniqueConstraintsDocument))
                     {
-                        Database.Delete(uniqueConstraintsDocumentKey, null, transactionInformation);
+                        Database.Documents.Delete(uniqueConstraintsDocumentKey, null, transactionInformation);
                     }
                     else if (removed)
                     {
-                        Database.Put(
+                        Database.Documents.Put(
                             uniqueConstraintsDocumentKey,
                             null,
                             uniqueConstraintsDocument.DataAsJson,

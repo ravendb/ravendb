@@ -25,7 +25,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             var json = RavenJObject.FromObject(dbDoc);
             json.Remove("Id");
 
-            Database.Put(docKey, null, json, new RavenJObject(), null);
+            Database.Documents.Put(docKey, null, json, new RavenJObject(), null);
 
             return GetEmptyMessage(HttpStatusCode.Created);
         }

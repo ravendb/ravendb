@@ -33,7 +33,7 @@ namespace Raven.Tests.Triggers
 					typeof(HideVirtuallyDeletedDocument),
 					typeof(UpperCaseNamesTrigger)))
 			});
-			db.PutIndex("ByName",
+			db.Indexes.PutIndex("ByName",
 						new IndexDefinition
 						{
 							Map = "from doc in docs select new{ doc.name}"
@@ -49,9 +49,9 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanFilterAccessToDocumentUsingTrigger_Get()
 		{
-			db.Put("abc", null, new RavenJObject(), RavenJObject.Parse("{'name': 'abC'}"), null);
+			db.Documents.Put("abc", null, new RavenJObject(), RavenJObject.Parse("{'name': 'abC'}"), null);
 
-			var jsonDocument = db.Get("abc", null);
+			var jsonDocument = db.Documents.Get("abc", null);
 
 			Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
 				jsonDocument.Metadata.Value<RavenJObject>("Raven-Read-Veto").Value<string>("Reason"));
@@ -60,9 +60,9 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanFilterAccessToDocumentUsingTrigger_GetDocuments()
 		{
-			db.Put("abc", null, new RavenJObject(), RavenJObject.Parse("{'name': 'abC'}"), null);
+			db.Documents.Put("abc", null, new RavenJObject(), RavenJObject.Parse("{'name': 'abC'}"), null);
 
-            var jsonDocument = db.GetDocuments(0, 25, null, CancellationToken.None).First();
+            var jsonDocument = db.Documents.GetDocuments(0, 25, null, CancellationToken.None).First();
 
 			Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
 				jsonDocument.Value<RavenJObject>("@metadata").Value<RavenJObject>("Raven-Read-Veto").Value<string>("Reason"));
@@ -71,13 +71,13 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanFilterAccessToDocumentUsingTrigger_Query()
 		{
-			db.Put("abc", null, RavenJObject.Parse("{'name': 'abC'}"), RavenJObject.Parse("{'name': 'abC'}"), null);
+			db.Documents.Put("abc", null, RavenJObject.Parse("{'name': 'abC'}"), RavenJObject.Parse("{'name': 'abC'}"), null);
 			db.SpinBackgroundWorkers();
 
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("ByName", new IndexQuery
+				queryResult = db.Queries.Query("ByName", new IndexQuery
 				{
 					Query = "name:abC",
 					PageSize = 10
@@ -91,13 +91,13 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanRemoveFilteredDocumentsFromIndexes()
 		{
-			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
+			db.Documents.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
 			db.SpinBackgroundWorkers();
 
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("ByName", new IndexQuery
+				queryResult = db.Queries.Query("ByName", new IndexQuery
 				{
 					Query = "name:abc",
 					PageSize = 10,
@@ -107,11 +107,11 @@ namespace Raven.Tests.Triggers
 
 			Assert.Equal(1, queryResult.Results.Count);
 
-			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject { { "Deleted", true } }, null);
+			db.Documents.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject { { "Deleted", true } }, null);
 
 			do
 			{
-				queryResult = db.Query("ByName", new IndexQuery
+				queryResult = db.Queries.Query("ByName", new IndexQuery
 				{
 					Query = "name:abC",
 					PageSize = 10,
@@ -125,9 +125,9 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanCompleteHideDocumentUsingTrigger()
 		{
-			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), RavenJObject.Parse("{'hidden': true}"), null);
+			db.Documents.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), RavenJObject.Parse("{'hidden': true}"), null);
 
-			var jsonDocument = db.Get("abc", null);
+			var jsonDocument = db.Documents.Get("abc", null);
 
 			Assert.Null(jsonDocument);
 		}
@@ -135,22 +135,22 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanCompleteHideDocumentUsingTrigger_GetDocuments()
 		{
-			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), RavenJObject.Parse("{'hidden': true}"), null);
+			db.Documents.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), RavenJObject.Parse("{'hidden': true}"), null);
 
 
-            Assert.Empty(db.GetDocuments(0, 25, null, CancellationToken.None));
+            Assert.Empty(db.Documents.GetDocuments(0, 25, null, CancellationToken.None));
 		}
 
 		[Fact]
 		public void CanCompleteHideDocumentUsingTrigger_Query()
 		{
-			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), RavenJObject.Parse("{'hidden': true}"), null);
+			db.Documents.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), RavenJObject.Parse("{'hidden': true}"), null);
 			db.SpinBackgroundWorkers();
 
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("ByName", new IndexQuery
+				queryResult = db.Queries.Query("ByName", new IndexQuery
 				{
 					Query = "name:abC",
 					PageSize = 10
@@ -166,14 +166,14 @@ namespace Raven.Tests.Triggers
 		{
 			for (int i = 0; i < 15; i++)
 			{
-				db.Put(i.ToString(), null, new RavenJObject { { "name", "ayende" } }, new RavenJObject { { "hidden", i % 2 == 0 } }, null);
+				db.Documents.Put(i.ToString(), null, new RavenJObject { { "name", "ayende" } }, new RavenJObject { { "hidden", i % 2 == 0 } }, null);
 			}
 			db.SpinBackgroundWorkers();
 
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("ByName", new IndexQuery
+				queryResult = db.Queries.Query("ByName", new IndexQuery
 				{
 					PageSize = 10
                 }, CancellationToken.None);
@@ -188,14 +188,14 @@ namespace Raven.Tests.Triggers
 		{
 			for (int i = 0; i < 15; i++)
 			{
-				db.Put(i.ToString("0000"), null, new RavenJObject { { "name", "ayende" } }, new RavenJObject { { "hidden", i % 2 == 0 } }, null);
+				db.Documents.Put(i.ToString("0000"), null, new RavenJObject { { "name", "ayende" } }, new RavenJObject { { "hidden", i % 2 == 0 } }, null);
 			}
 
 			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("ByName", new IndexQuery
+				queryResult = db.Queries.Query("ByName", new IndexQuery
 				{
 					PageSize = 3,
 					SortedFields = new[] { new SortedField("__document_id"), }
@@ -214,21 +214,21 @@ namespace Raven.Tests.Triggers
 		{
 			for (int i = 0; i < 15; i++)
 			{
-				db.Put(i.ToString("000"), null, new RavenJObject { { "name", "ayende" } }, new RavenJObject { { "hidden", i % 2 == 0 } }, null);
+				db.Documents.Put(i.ToString("000"), null, new RavenJObject { { "name", "ayende" } }, new RavenJObject { { "hidden", i % 2 == 0 } }, null);
 			}
 
 			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("ByName", new IndexQuery
+				queryResult = db.Queries.Query("ByName", new IndexQuery
 				{
 					PageSize = 3,
 					SortedFields = new[] { new SortedField("__document_id"), }
                 }, CancellationToken.None);
 			} while (queryResult.IsStale);
 
-			queryResult = db.Query("ByName", new IndexQuery
+			queryResult = db.Queries.Query("ByName", new IndexQuery
 			{
 				PageSize = 3,
 				Start = queryResult.SkippedResults + queryResult.Results.Count,
@@ -246,9 +246,9 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanModifyDocumentUsingTrigger()
 		{
-			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
+			db.Documents.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
 
-			var jsonDocument = db.Get("abc", null);
+			var jsonDocument = db.Documents.Get("abc", null);
 
 			Assert.Equal("ABC", jsonDocument.DataAsJson.Value<string>("name"));
 		}
@@ -256,22 +256,22 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanModifyDocumentUsingTrigger_GetDocuments()
 		{
-			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
+			db.Documents.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
 
 
-            Assert.Equal("ABC", db.GetDocuments(0, 10, null, CancellationToken.None).First().Value<string>("name"));
+            Assert.Equal("ABC", db.Documents.GetDocuments(0, 10, null, CancellationToken.None).First().Value<string>("name"));
 		}
 
 		[Fact]
 		public void CanModifyDocumentUsingTrigger_Query()
 		{
-			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
+			db.Documents.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
 
 			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("ByName", new IndexQuery
+				queryResult = db.Queries.Query("ByName", new IndexQuery
 				{
 					Query = "name:abC",
 					PageSize = 10

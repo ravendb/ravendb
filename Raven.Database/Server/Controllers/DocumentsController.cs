@@ -62,7 +62,7 @@ namespace Raven.Database.Server.Controllers
 		        int nextPageStart = GetNextPageStart();
 		        if (string.IsNullOrEmpty(startsWith))
 		            msg = GetMessageWithObject(
-		                Database.GetDocuments(GetStart(), GetPageSize(Database.Configuration.MaxPageSize), GetEtagFromQueryString(), cts.Token));
+		                Database.Documents.GetDocuments(GetStart(), GetPageSize(Database.Configuration.MaxPageSize), GetEtagFromQueryString(), cts.Token));
 		        else
 		        {
 			        var transformer = GetQueryStringValue("transformer");
@@ -70,7 +70,7 @@ namespace Raven.Database.Server.Controllers
 
 		            msg =
 		                GetMessageWithObject(
-		                    Database.GetDocumentsWithIdStartingWith(
+		                    Database.Documents.GetDocumentsWithIdStartingWith(
 		                        startsWith,
 		                        GetQueryStringValue("matches"),
 		                        GetQueryStringValue("exclude"),
@@ -92,7 +92,7 @@ namespace Raven.Database.Server.Controllers
 		public async Task<HttpResponseMessage> DocsPost()
 		{
 			var json = await ReadJsonAsync();
-			var id = Database.Put(null, Etag.Empty, json,
+			var id = Database.Documents.Put(null, Etag.Empty, json,
 								  InnerHeaders.FilterHeadersToObject(),
 								  GetRequestTransaction());
 
@@ -107,7 +107,7 @@ namespace Raven.Database.Server.Controllers
 			var msg = GetEmptyMessage();
 			msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
 			var transactionInformation = GetRequestTransaction();
-			var documentMetadata = Database.GetDocumentMetadata(docId, transactionInformation);
+			var documentMetadata = Database.Documents.GetDocumentMetadata(docId, transactionInformation);
 			if (documentMetadata == null)
 			{
 				msg.StatusCode = HttpStatusCode.NotFound;
@@ -145,7 +145,7 @@ namespace Raven.Database.Server.Controllers
 				_ => // we are running this here to ensure transactional safety for the two operations
 				{
 					var transactionInformation = GetRequestTransaction();
-					var documentMetadata = Database.GetDocumentMetadata(docId, transactionInformation);
+					var documentMetadata = Database.Documents.GetDocumentMetadata(docId, transactionInformation);
 					if (documentMetadata == null)
 					{
 						msg = GetEmptyMessage(HttpStatusCode.NotFound);
@@ -171,7 +171,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/docs/{*docId}")]
 		public HttpResponseMessage DocDelete(string docId)
 		{
-			Database.Delete(docId, GetEtag(), GetRequestTransaction());
+			Database.Documents.Delete(docId, GetEtag(), GetRequestTransaction());
 			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
@@ -181,7 +181,7 @@ namespace Raven.Database.Server.Controllers
 		public async Task<HttpResponseMessage> DocPut(string docId)
 		{
 			var json = await ReadJsonAsync();
-			var putResult = Database.Put(docId, GetEtag(), json, InnerHeaders.FilterHeadersToObject(), GetRequestTransaction());
+			var putResult = Database.Documents.Put(docId, GetEtag(), json, InnerHeaders.FilterHeadersToObject(), GetRequestTransaction());
 			return GetMessageWithObject(putResult, HttpStatusCode.Created);
 		}
 
@@ -192,7 +192,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var patchRequestJson = await ReadJsonArrayAsync();
 			var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
-			var patchResult = Database.ApplyPatch(docId, GetEtag(), patchRequests, GetRequestTransaction());
+			var patchResult = Database.Patches.ApplyPatch(docId, GetEtag(), patchRequests, GetRequestTransaction());
 			return ProcessPatchResult(docId, patchResult.PatchResult, null, null);
 		}
 
@@ -205,7 +205,7 @@ namespace Raven.Database.Server.Controllers
 			var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
 			bool testOnly;
 			bool.TryParse(GetQueryStringValue("test"), out testOnly);
-			var advPatchResult = Database.ApplyPatch(docId, GetEtag(), advPatch, GetRequestTransaction(), testOnly);
+			var advPatchResult = Database.Patches.ApplyPatch(docId, GetEtag(), advPatch, GetRequestTransaction(), testOnly);
 			return ProcessPatchResult(docId, advPatchResult.Item1.PatchResult, advPatchResult.Item2, advPatchResult.Item1.Document);
 		}
 
@@ -216,7 +216,7 @@ namespace Raven.Database.Server.Controllers
 				msg.StatusCode = HttpStatusCode.NotFound;
 				return msg;
 			}
-			var doc = Database.Get(docId, GetRequestTransaction());
+			var doc = Database.Documents.Get(docId, GetRequestTransaction());
 			if (doc == null)
 			{
 				msg.StatusCode = HttpStatusCode.NotFound;

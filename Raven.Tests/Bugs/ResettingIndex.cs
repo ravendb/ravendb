@@ -12,7 +12,7 @@ namespace Raven.Tests.Bugs
 			{
 				var ravenDocumentsByEntityName = new RavenDocumentsByEntityName();
 				ravenDocumentsByEntityName.Execute(store);
-				store.DocumentDatabase.ResetIndex(ravenDocumentsByEntityName.IndexName);
+				store.DocumentDatabase.Indexes.ResetIndex(ravenDocumentsByEntityName.IndexName);
 			}
 		}
 	}

@@ -60,9 +60,9 @@ namespace Raven.Tests.Storage.Voron
 			{
 				storage.Batch(accessor => Assert.Equal(Etag.Empty, accessor.Staleness.GetMostRecentAttachmentEtag()));
 
-				var etag1 = Etag.Parse("00000000-0000-0000-0000-000000000001");
-				var etag2 = Etag.Parse("00000000-0000-0000-0000-000000000002");
-				var etag3 = Etag.Parse("00000000-0000-0000-0000-000000000003");
+				var etag1 = Etag.Parse("02000000-0000-0000-0000-000000000001");
+				var etag2 = Etag.Parse("02000000-0000-0000-0000-000000000002");
+				var etag3 = Etag.Parse("02000000-0000-0000-0000-000000000003");
 
 				storage.Batch(accessor => accessor.Attachments.AddAttachment("key1", etag1, StreamFor("123"), new RavenJObject()));
 
@@ -86,9 +86,9 @@ namespace Raven.Tests.Storage.Voron
 			{
 				storage.Batch(accessor => Assert.Equal(Etag.Empty, accessor.Staleness.GetMostRecentDocumentEtag()));
 
-				var etag1 = Etag.Parse("00000000-0000-0000-0000-000000000001");
-				var etag2 = Etag.Parse("00000000-0000-0000-0000-000000000002");
-				var etag3 = Etag.Parse("00000000-0000-0000-0000-000000000003");
+				var etag1 = Etag.Parse("01000000-0000-0000-0000-000000000001");
+				var etag2 = Etag.Parse("01000000-0000-0000-0000-000000000002");
+				var etag3 = Etag.Parse("01000000-0000-0000-0000-000000000003");
 
 				storage.Batch(accessor => accessor.Documents.AddDocument("key1", Etag.Empty, new RavenJObject(), new RavenJObject()));
 
@@ -176,9 +176,9 @@ namespace Raven.Tests.Storage.Voron
 			{
 				storage.Batch(accessor => Assert.False(accessor.Staleness.IsMapStale(101)));
 
-				var etag1 = Etag.Parse("00000000-0000-0000-0000-000000000001");
-				var etag2 = Etag.Parse("00000000-0000-0000-0000-000000000002");
-				var etag3 = Etag.Parse("00000000-0000-0000-0000-000000000003");
+				var etag1 = Etag.Parse("01000000-0000-0000-0000-000000000001");
+				var etag2 = Etag.Parse("01000000-0000-0000-0000-000000000002");
+				var etag3 = Etag.Parse("01000000-0000-0000-0000-000000000003");
 
 				var date1 = DateTime.Now;
 				var date2 = DateTime.Now.AddSeconds(100);

@@ -26,7 +26,7 @@ class databases extends viewModelBase {
         this.searchText.subscribe(s=> this.filterDatabases(s));
     }
 
-  modelPolling() {
+    modelPolling() {
         new getDatabasesCommand()
             .execute()
             .done((results: database[]) => this.databasesLoaded(results));
@@ -60,10 +60,10 @@ class databases extends viewModelBase {
                 results.forEach(db=> this.fetchStats(db));
             }
 
-            // If we have no databases, show the "create a new database" screen.
+            /*// If we have no databases, show the "create a new database" screen.
             if (results.length === 0) {
                 this.newDatabase();
-            }
+            }*/
         }
     }
 
@@ -78,14 +78,14 @@ class databases extends viewModelBase {
                     var savedKey;
 
                     if (bundles.indexOf("Encryption") != -1) {
-                        var createEncryptionViewModel: createEncryption = new createEncryption(databaseName);
+                        var createEncryptionViewModel: createEncryption = new createEncryption();
                         createEncryptionViewModel
                             .creationEncryption
                             .done((key: string, encryptionAlgorithm: string, isEncryptedIndexes: string) => {
                                 savedKey = key;
                                 securedSettings = {
                                     'Raven/Encryption/Key': key,
-                                    'Raven/Encryption/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
+                                    'Raven/Encryptijon/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
                                     'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
                                 };
                                 deffered.resolve(securedSettings);
@@ -155,7 +155,7 @@ class databases extends viewModelBase {
 
     goToDocuments(db: database) {
         // TODO: use appUrl for this.
-        router.navigate("#documents?database=" + db.name);
+        router.navigate("#documents?database=" + encodeURIComponent(db.name));
     }
 
     filterDatabases(filter: string) {

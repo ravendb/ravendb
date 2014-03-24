@@ -3,6 +3,7 @@ package net.ravendb.client.connection;
 import net.ravendb.abstractions.basic.Reference;
 import net.ravendb.abstractions.closure.Function2;
 import net.ravendb.abstractions.closure.Function3;
+import net.ravendb.abstractions.data.Constants;
 import net.ravendb.abstractions.data.DatabaseDocument;
 import net.ravendb.abstractions.data.HttpMethods;
 import net.ravendb.abstractions.json.linq.RavenJObject;
@@ -63,14 +64,18 @@ public class AdminRequestCreator {
     return createRequestForSystemDatabase.apply("/admin/stats", HttpMethods.GET);
   }
 
-  public HttpJsonRequest startBackup(String backupLocation, DatabaseDocument databaseDocument, Reference<RavenJObject> backupSettingsRef) {
+  public HttpJsonRequest startBackup(String backupLocation, DatabaseDocument databaseDocument, String databaseName, Reference<RavenJObject> backupSettingsRef) {
     RavenJObject backupSettings = new RavenJObject();
     backupSettingsRef.value = backupSettings;
 
     backupSettings.add("BackupLocation", backupLocation);
     backupSettings.add("DatabaseDocument", RavenJObject.fromObject(databaseDocument));
 
-    return createRequest.apply("/admin/backup", HttpMethods.POST);
+    if (Constants.SYSTEM_DATABASE.equals(databaseName)) {
+        return createRequestForSystemDatabase.apply("/admin/backup", HttpMethods.POST);
+    }
+    return createRequestForSystemDatabase.apply("/databases/" + databaseName + "/admin/backup", HttpMethods.POST);
+
   }
 
   public HttpJsonRequest startRestore(String restoreLocation, String databaseLocation, String databaseName, boolean defrag, Reference<RavenJObject> restoreSettingsRef) {

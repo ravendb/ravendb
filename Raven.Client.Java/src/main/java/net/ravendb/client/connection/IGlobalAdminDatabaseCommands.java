@@ -65,6 +65,13 @@ public interface IGlobalAdminDatabaseCommands {
 
 
   /**
+   * Begins a backup operation
+   * @param backupLocation
+   * @param databaseDocument
+   */
+  public void startBackup(String backupLocation, DatabaseDocument databaseDocument, String databaseName);
+
+  /**
    * Ensures that the database exists, creating it if needed
    * @param name
    * @param ignoreFailures

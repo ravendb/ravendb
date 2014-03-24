@@ -27,7 +27,7 @@ namespace RavenFS.Tests.Auth
 
         protected override void ConfigureServer(RavenDbServer server, string fileSystemName)
         {
-            server.SystemDatabase.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+            server.SystemDatabase.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
             {
                 Name = "test",
                 Secret = "ThisIsMySecret",

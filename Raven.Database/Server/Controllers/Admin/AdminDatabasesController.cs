@@ -26,7 +26,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			var docKey = "Raven/Databases/" + id;
 
-			var document = Database.Get(docKey, null);
+			var document = Database.Documents.Get(docKey, null);
 			if (document == null)
 				return GetMessageWithString("Database " + id + " not found", HttpStatusCode.NotFound);
 
@@ -48,7 +48,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			var json = RavenJObject.FromObject(dbDoc);
 			json.Remove("Id");
 
-			Database.Put(docKey, null, json, new RavenJObject(), null);
+			Database.Documents.Put(docKey, null, json, new RavenJObject(), null);
 
 			return GetEmptyMessage();
 		}
@@ -61,12 +61,12 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			var docKey = "Raven/Databases/" + id;
 			var configuration = DatabasesLandlord.CreateTenantConfiguration(id);
-			var databasedocument = Database.Get(docKey, null);
+			var databasedocument = Database.Documents.Get(docKey, null);
 
 			if (configuration == null)
 				return GetEmptyMessage();
 
-			Database.Delete(docKey, null, null);
+			Database.Documents.Delete(docKey, null, null);
 			bool result;
 
 			if (bool.TryParse(InnerRequest.RequestUri.ParseQueryString()["hard-delete"], out result) && result)

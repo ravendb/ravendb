@@ -59,7 +59,7 @@ public class RavenQueryProviderProcessor<T> {
   private final Action1<QueryResult> afterQueryExecuted;
   private boolean chanedWhere;
   private int insideWhere;
-  private IAbstractDocumentQuery<T> luceneQuery;
+  private IAbstractDocumentQuery<T> documentQuery;
   private SpecialQueryType queryType = SpecialQueryType.NONE;
   private Class<?> newExpressionType;
   private String currentPath = "";
@@ -160,7 +160,7 @@ public class RavenQueryProviderProcessor<T> {
       whereParams.setValue(boolValue);
       whereParams.setAnalyzed(true);
       whereParams.setAllowWildcards(false);
-      luceneQuery.whereEquals(whereParams);
+      documentQuery.whereEquals(whereParams);
     } else {
       throw new IllegalStateException("Path type is not supported: " + expression + " " + expression.getType());
     }
@@ -204,12 +204,12 @@ public class RavenQueryProviderProcessor<T> {
         return;
       }
 
-      luceneQuery.openSubclause();
-      luceneQuery.where("*:*");
-      luceneQuery.andAlso();
-      luceneQuery.negateNext();
+      documentQuery.openSubclause();
+      documentQuery.where("*:*");
+      documentQuery.andAlso();
+      documentQuery.negateNext();
       visitExpression(expression.getArg(0));
-      luceneQuery.closeSubclause();
+      documentQuery.closeSubclause();
     } else if (expression.getOperator().equals(Ops.COL_IS_EMPTY)) {
       visitCollectionEmpty(expression.getArg(0), true);
     } else if (expression.getOperator().equals(Ops.IN)) {
@@ -252,20 +252,20 @@ public class RavenQueryProviderProcessor<T> {
   private void visitContainsAny(Operation<Boolean> expression) {
     ExpressionInfo memberInfo = getMember(expression.getArg(0));
     Object objects = getValueFromExpression(expression.getArg(1), getMemberType(memberInfo));
-    luceneQuery.containsAny(memberInfo.getPath(), (Collection<Object>)objects);
+    documentQuery.containsAny(memberInfo.getPath(), (Collection<Object>)objects);
   }
 
   private void visitContainsAll(Operation<Boolean> expression) {
     ExpressionInfo memberInfo = getMember(expression.getArg(0));
     Object objects = getValueFromExpression(expression.getArg(1), getMemberType(memberInfo));
-    luceneQuery.containsAll(memberInfo.getPath(), (Collection<Object>)objects);
+    documentQuery.containsAll(memberInfo.getPath(), (Collection<Object>)objects);
   }
 
   @SuppressWarnings("unchecked")
   private void visitIn(Operation<Boolean> expression) {
     ExpressionInfo memberInfo = getMember(expression.getArg(0));
     Object objects = getValueFromExpression(expression.getArg(1), getMemberType(memberInfo));
-    luceneQuery.whereIn(memberInfo.getPath(), (Collection<Object>)objects);
+    documentQuery.whereIn(memberInfo.getPath(), (Collection<Object>)objects);
   }
 
   private void visitIsNull(Operation<Boolean> expression) {
@@ -278,7 +278,7 @@ public class RavenQueryProviderProcessor<T> {
     whereParams.setAnalyzed(true);
     whereParams.setAllowWildcards(false);
     whereParams.setNestedPath(memberInfo.isNestedPath());
-    luceneQuery.whereEquals(whereParams);
+    documentQuery.whereEquals(whereParams);
   }
 
   private void visitContainsValue(Operation<Boolean> expression) {
@@ -301,10 +301,10 @@ public class RavenQueryProviderProcessor<T> {
 
   private void visitCollectionEmpty(Expression< ? > expression, boolean isNegated) {
     if (isNegated) {
-      luceneQuery.openSubclause();
-      luceneQuery.where("*:*");
-      luceneQuery.andAlso();
-      luceneQuery.negateNext();
+      documentQuery.openSubclause();
+      documentQuery.where("*:*");
+      documentQuery.andAlso();
+      documentQuery.negateNext();
     }
     ExpressionInfo memberInfo = getMember(expression);
     WhereParams whereParams = new WhereParams();
@@ -313,9 +313,9 @@ public class RavenQueryProviderProcessor<T> {
     whereParams.setAllowWildcards(true);
     whereParams.setAnalyzed(true);
     whereParams.setNestedPath(memberInfo.isNestedPath());
-    luceneQuery.whereEquals(whereParams);
+    documentQuery.whereEquals(whereParams);
     if (isNegated) {
-      luceneQuery.closeSubclause();
+      documentQuery.closeSubclause();
     }
 
   }
@@ -323,20 +323,20 @@ public class RavenQueryProviderProcessor<T> {
   public void visitStringEmpty(Expression<?> expression, boolean isNegated) {
 
     if (isNegated) {
-      luceneQuery.openSubclause();
-      luceneQuery.where("*:*");
-      luceneQuery.andAlso();
-      luceneQuery.negateNext();
+      documentQuery.openSubclause();
+      documentQuery.where("*:*");
+      documentQuery.andAlso();
+      documentQuery.negateNext();
     }
     ExpressionInfo memberInfo = getMember(expression);
-    luceneQuery.openSubclause();
-    luceneQuery.whereEquals(memberInfo.getPath(), Constants.NULL_VALUE, false);
-    luceneQuery.orElse();
-    luceneQuery.whereEquals(memberInfo.getPath(), Constants.EMPTY_STRING, false);
-    luceneQuery.closeSubclause();
+    documentQuery.openSubclause();
+    documentQuery.whereEquals(memberInfo.getPath(), Constants.NULL_VALUE, false);
+    documentQuery.orElse();
+    documentQuery.whereEquals(memberInfo.getPath(), Constants.EMPTY_STRING, false);
+    documentQuery.closeSubclause();
 
     if (isNegated) {
-      luceneQuery.closeSubclause();
+      documentQuery.closeSubclause();
     }
   }
 
@@ -345,15 +345,15 @@ public class RavenQueryProviderProcessor<T> {
       return;
     }
     if (subClauseDepth > 0) {
-      luceneQuery.openSubclause();
+      documentQuery.openSubclause();
     }
     subClauseDepth++;
     visitExpression(andAlso.getArg(0));
-    luceneQuery.andAlso();
+    documentQuery.andAlso();
     visitExpression(andAlso.getArg(1));
     subClauseDepth--;
     if (subClauseDepth > 0) {
-      luceneQuery.closeSubclause();
+      documentQuery.closeSubclause();
     }
   }
 
@@ -405,9 +405,9 @@ public class RavenQueryProviderProcessor<T> {
     Object max = (left.getOperator().equals(Ops.LT) || left.getOperator().equals(Ops.LOE)) ? leftMember.getItem2() : rightMember.getItem2();
 
     if (left.getOperator().equals(Ops.GOE) || left.getOperator().equals(Ops.LOE)) {
-      luceneQuery.whereBetweenOrEqual(leftMember.getItem1().getPath(), min, max);
+      documentQuery.whereBetweenOrEqual(leftMember.getItem1().getPath(), min, max);
     } else {
-      luceneQuery.whereBetween(leftMember.getItem1().getPath(), min, max);
+      documentQuery.whereBetween(leftMember.getItem1().getPath(), min, max);
     }
     return true;
   }
@@ -430,15 +430,15 @@ public class RavenQueryProviderProcessor<T> {
 
   private void visitOrElse(Operation<Boolean> orElse) {
     if (subClauseDepth > 0) {
-      luceneQuery.openSubclause();
+      documentQuery.openSubclause();
     }
     subClauseDepth++;
     visitExpression(orElse.getArg(0));
-    luceneQuery.orElse();
+    documentQuery.orElse();
     visitExpression(orElse.getArg(1));
     subClauseDepth--;
     if (subClauseDepth > 0) {
-      luceneQuery.closeSubclause();
+      documentQuery.closeSubclause();
     }
 
   }
@@ -450,7 +450,7 @@ public class RavenQueryProviderProcessor<T> {
     whereParams.setValue(getValueFromExpression(expression.getArg(1), getMemberType(memberInfo)));
     whereParams.setAnalyzed(true);
     whereParams.setAllowWildcards(false);
-    luceneQuery.whereEquals(whereParams);
+    documentQuery.whereEquals(whereParams);
   }
 
   private void visitEqualsNotIgnoreCase(Operation<Boolean> expression) {
@@ -460,7 +460,7 @@ public class RavenQueryProviderProcessor<T> {
     whereParams.setValue(getValueFromExpression(expression.getArg(1), getMemberType(memberInfo)));
     whereParams.setAnalyzed(false);
     whereParams.setAllowWildcards(false);
-    luceneQuery.whereEquals(whereParams);
+    documentQuery.whereEquals(whereParams);
   }
 
   private void visitEquals(Operation<Boolean> expression) {
@@ -475,12 +475,12 @@ public class RavenQueryProviderProcessor<T> {
 
     if (constantExpression != null && Boolean.FALSE.equals(constantExpression.getConstant())
       && !(expression.getArg(0) instanceof Path)) {
-      luceneQuery.openSubclause();
-      luceneQuery.where("*:*");
-      luceneQuery.andAlso();
-      luceneQuery.negateNext();
+      documentQuery.openSubclause();
+      documentQuery.where("*:*");
+      documentQuery.andAlso();
+      documentQuery.negateNext();
       visitExpression(expression.getArg(0));
-      luceneQuery.closeSubclause();
+      documentQuery.closeSubclause();
       return;
     }
 
@@ -497,7 +497,7 @@ public class RavenQueryProviderProcessor<T> {
     whereParams.setAnalyzed(true);
     whereParams.setAllowWildcards(true);
     whereParams.setNestedPath(memberInfo.isNestedPath());
-    luceneQuery.whereEquals(whereParams);
+    documentQuery.whereEquals(whereParams);
 
   }
 
@@ -517,23 +517,23 @@ public class RavenQueryProviderProcessor<T> {
 
     ExpressionInfo memberInfo = getMember(expression.getArg(0));
 
-    luceneQuery.openSubclause();
-    luceneQuery.negateNext();
+    documentQuery.openSubclause();
+    documentQuery.negateNext();
 
     WhereParams whereParams = new WhereParams();
     whereParams.setFieldName(memberInfo.getPath());
     whereParams.setValue(getValueFromExpression(expression.getArg(1), getMemberType(memberInfo)));
     whereParams.setAnalyzed(true);
     whereParams.setAllowWildcards(false);
-    luceneQuery.whereEquals(whereParams);
-    luceneQuery.andAlso();
+    documentQuery.whereEquals(whereParams);
+    documentQuery.andAlso();
     whereParams = new WhereParams();
     whereParams.setFieldName(memberInfo.getPath());
     whereParams.setValue("*");
     whereParams.setAnalyzed(true);
     whereParams.setAllowWildcards(true);
-    luceneQuery.whereEquals(whereParams);
-    luceneQuery.closeSubclause();
+    documentQuery.whereEquals(whereParams);
+    documentQuery.closeSubclause();
   }
 
   private Class<?> getMemberType(ExpressionInfo memberInfo) {
@@ -588,13 +588,13 @@ public class RavenQueryProviderProcessor<T> {
   private void visitStartsWith(Operation<Boolean> operation) {
     Expression< ? > expression = operation.getArg(0);
     ExpressionInfo memberInfo = getMember(expression);
-    luceneQuery.whereStartsWith(memberInfo.getPath(), getValueFromExpression(operation.getArg(1), getMemberType(memberInfo)));
+    documentQuery.whereStartsWith(memberInfo.getPath(), getValueFromExpression(operation.getArg(1), getMemberType(memberInfo)));
   }
 
   private void visitEndsWith(Operation<Boolean> operation) {
     Expression< ? > expression = operation.getArg(0);
     ExpressionInfo memberInfo = getMember(expression);
-    luceneQuery.whereEndsWith(memberInfo.getPath(), getValueFromExpression(operation.getArg(1), getMemberType(memberInfo)));
+    documentQuery.whereEndsWith(memberInfo.getPath(), getValueFromExpression(operation.getArg(1), getMemberType(memberInfo)));
   }
 
   private void visitGreatherThan(Operation<Boolean> expression) {
@@ -605,7 +605,7 @@ public class RavenQueryProviderProcessor<T> {
     ExpressionInfo memberInfo = getMember(expression.getArg(0));
     Object value = getValueFromExpression(expression.getArg(1), getMemberType(memberInfo));
 
-    luceneQuery.whereGreaterThan(getFieldNameForRangeQuery(memberInfo, value), value);
+    documentQuery.whereGreaterThan(getFieldNameForRangeQuery(memberInfo, value), value);
   }
 
   private void visitGreatherThanOrEqual(Operation<Boolean> expression) {
@@ -616,7 +616,7 @@ public class RavenQueryProviderProcessor<T> {
     ExpressionInfo memberInfo = getMember(expression.getArg(0));
     Object value = getValueFromExpression(expression.getArg(1), getMemberType(memberInfo));
 
-    luceneQuery.whereGreaterThanOrEqual(getFieldNameForRangeQuery(memberInfo, value), value);
+    documentQuery.whereGreaterThanOrEqual(getFieldNameForRangeQuery(memberInfo, value), value);
   }
 
   private void visitLessThan(Operation<Boolean> expression) {
@@ -627,7 +627,7 @@ public class RavenQueryProviderProcessor<T> {
     ExpressionInfo memberInfo = getMember(expression.getArg(0));
     Object value = getValueFromExpression(expression.getArg(1), getMemberType(memberInfo));
 
-    luceneQuery.whereLessThan(getFieldNameForRangeQuery(memberInfo, value), value);
+    documentQuery.whereLessThan(getFieldNameForRangeQuery(memberInfo, value), value);
   }
 
   private void visitLessThanOrEqual(Operation<Boolean> expression) {
@@ -638,7 +638,7 @@ public class RavenQueryProviderProcessor<T> {
     ExpressionInfo memberInfo = getMember(expression.getArg(0));
     Object value = getValueFromExpression(expression.getArg(1), getMemberType(memberInfo));
 
-    luceneQuery.whereLessThanOrEqual(getFieldNameForRangeQuery(memberInfo, value), value);
+    documentQuery.whereLessThanOrEqual(getFieldNameForRangeQuery(memberInfo, value), value);
   }
 
 
@@ -663,7 +663,7 @@ public class RavenQueryProviderProcessor<T> {
       whereParams.setAnalyzed(true);
       whereParams.setAllowWildcards(false);
       whereParams.setNestedPath(false);
-      luceneQuery.whereEquals(whereParams);
+      documentQuery.whereEquals(whereParams);
     } else {
       throw new IllegalStateException("Unable to handle constant:" + expression.getConstant());
     }
@@ -684,18 +684,18 @@ public class RavenQueryProviderProcessor<T> {
       insideWhere++;
       visitExpression(expression.getArg(0));
       if (chanedWhere) {
-        luceneQuery.andAlso();
-        luceneQuery.openSubclause();
+        documentQuery.andAlso();
+        documentQuery.openSubclause();
       }
       if (chanedWhere == false && insideWhere > 1) {
-        luceneQuery.openSubclause();
+        documentQuery.openSubclause();
       }
       visitExpression(expression.getArg(1));
       if (chanedWhere == false && insideWhere > 1) {
-        luceneQuery.closeSubclause();
+        documentQuery.closeSubclause();
       }
       if (chanedWhere) {
-        luceneQuery.closeSubclause();
+        documentQuery.closeSubclause();
       }
       chanedWhere = true;
       insideWhere--;
@@ -706,7 +706,7 @@ public class RavenQueryProviderProcessor<T> {
       visitExpression(expression.getArg(0));
       visitTake((Constant<Integer>) expression.getArg(1));
     } else if (operatorId.equals(LinqOps.Query.DISTINCT.getId())) {
-      luceneQuery.distinct();
+      documentQuery.distinct();
     } else if (operatorId.equals(LinqOps.Query.FIRST_OR_DEFAULT.getId())) {
       visitExpression(expression.getArg(0));
       visitFirstOrDefault();
@@ -738,13 +738,13 @@ public class RavenQueryProviderProcessor<T> {
       visitSearch(expression);
     } else if (operatorId.equals(LinqOps.Query.INTERSECT.getId())) {
       visitExpression(expression.getArg(0));
-      luceneQuery.intersect();
+      documentQuery.intersect();
       chanedWhere = false;
     } else if (operatorId.equals(LinqOps.Query.SELECT.getId())) {
 
       Class<?> rootType = extractRootTypeForSelect(expression.getArg(1));
       if (rootType != null) {
-        luceneQuery.addRootType((Class<T>) rootType);
+        documentQuery.addRootType((Class<T>) rootType);
       }
 
       visitExpression(expression.getArg(0));
@@ -835,7 +835,7 @@ public class RavenQueryProviderProcessor<T> {
   }
 
   private void addToFieldsToFetch(String docField, String renamedField) {
-    Field identityProperty = luceneQuery.getDocumentConvention().getIdentityProperty(clazz);
+    Field identityProperty = documentQuery.getDocumentConvention().getIdentityProperty(clazz);
     if (identityProperty != null && identityProperty.getName().equals(docField)) {
       fieldsToFetch.add(Constants.DOCUMENT_ID_FIELD_NAME);
       if (!identityProperty.getName().equals(renamedField)) {
@@ -846,7 +846,7 @@ public class RavenQueryProviderProcessor<T> {
     }
     if (renamedField != null && !docField.equals(renamedField)) {
       if (identityProperty == null) {
-        String idPropName = luceneQuery.getDocumentConvention().getFindIdentityPropertyNameFromEntityName().find(luceneQuery.getDocumentConvention().getTypeTagName(clazz));
+        String idPropName = documentQuery.getDocumentConvention().getFindIdentityPropertyNameFromEntityName().find(documentQuery.getDocumentConvention().getTypeTagName(clazz));
         if (docField.equals(idPropName)) {
           RenamedField renamedField2 = new RenamedField();
           renamedField2.setNewField(renamedField);
@@ -897,7 +897,7 @@ public class RavenQueryProviderProcessor<T> {
 
     visitExpression(target);
     if (expressions.size() > 1) {
-      luceneQuery.openSubclause();
+      documentQuery.openSubclause();
     }
 
     for (Operation<?> expression : Lists.reverse(expressions)) {
@@ -915,17 +915,17 @@ public class RavenQueryProviderProcessor<T> {
       }
       SearchOptionsSet options = (SearchOptionsSet) valueRef.value;
       if (chanedWhere && options.contains(SearchOptions.AND)) {
-        luceneQuery.andAlso();
+        documentQuery.andAlso();
       }
       if (options.contains(SearchOptions.NOT)) {
-        luceneQuery.negateNext();
+        documentQuery.negateNext();
       }
       if (LinqPathProvider.getValueFromExpressionWithoutConversion(expression.getArg(5), valueRef) == false) {
         throw new IllegalArgumentException("Could not extract value from " + expression);
       }
       EscapeQueryOptions queryOptions = (EscapeQueryOptions) valueRef.value;
-      luceneQuery.search(expressionInfo.getPath(), searchTerms, queryOptions);
-      luceneQuery.boost(boost);
+      documentQuery.search(expressionInfo.getPath(), searchTerms, queryOptions);
+      documentQuery.boost(boost);
 
       if (options.contains(SearchOptions.AND)) {
         chanedWhere = true;
@@ -934,7 +934,7 @@ public class RavenQueryProviderProcessor<T> {
 
 
     if (expressions.size() > 1) {
-      luceneQuery.closeSubclause();
+      documentQuery.closeSubclause();
     }
 
     if (LinqPathProvider.getValueFromExpressionWithoutConversion(searchExpression.getArg(4), valueRef) == false) {
@@ -962,19 +962,19 @@ public class RavenQueryProviderProcessor<T> {
       if (queryGenerator.getConventions().usesRangeType(fieldType)) {
         fieldName += "_Range";
       }
-      luceneQuery.addOrder(fieldName, orderSpec.getOrder() == Order.DESC, fieldType);
+      documentQuery.addOrder(fieldName, orderSpec.getOrder() == Order.DESC, fieldType);
 
     }
   }
 
   private void visitSkip(Constant<Integer> constantExpression) {
     //Don't have to worry about the cast failing, the Skip() extension method only takes an int
-    luceneQuery.skip(constantExpression.getConstant());
+    documentQuery.skip(constantExpression.getConstant());
   }
 
   private void visitTake(Constant<Integer> constantExpression) {
     //Don't have to worry about the cast failing, the Take() extension method only takes an int
-    luceneQuery.take(constantExpression.getConstant());
+    documentQuery.take(constantExpression.getConstant());
   }
 
   private void visitAny(Operation<?> exp) {
@@ -987,46 +987,46 @@ public class RavenQueryProviderProcessor<T> {
   }
 
   private void visitAny() {
-    luceneQuery.take(1);
+    documentQuery.take(1);
     queryType = SpecialQueryType.ANY;
   }
 
   private void visitCount() {
-    luceneQuery.take(0);
+    documentQuery.take(0);
     queryType = SpecialQueryType.COUNT;
   }
 
   private void visitLongCount() {
-    luceneQuery.take(0);
+    documentQuery.take(0);
     queryType = SpecialQueryType.LONG_COUNT;
   }
 
   private void visitSingle() {
-    luceneQuery.take(2);
+    documentQuery.take(2);
     queryType = SpecialQueryType.SINGLE;
   }
 
   private void visitSingleOrDefault() {
-    luceneQuery.take(2);
+    documentQuery.take(2);
     queryType = SpecialQueryType.SINGLE_OR_DEFAULT;
   }
 
   private void visitFirst() {
-    luceneQuery.take(1);
+    documentQuery.take(1);
     queryType = SpecialQueryType.FIRST;
   }
 
   private void visitFirstOrDefault() {
-    luceneQuery.take(1);
+    documentQuery.take(1);
     queryType = SpecialQueryType.FIRST_OR_DEFAULT;
   }
 
   private String getFieldNameForRangeQuery(ExpressionInfo expression, Object value) {
-    Field identityProperty = luceneQuery.getDocumentConvention().getIdentityProperty(clazz);
+    Field identityProperty = documentQuery.getDocumentConvention().getIdentityProperty(clazz);
     if (identityProperty != null && identityProperty.getName().equals(expression.getPath())) {
       return Constants.DOCUMENT_ID_FIELD_NAME;
     }
-    if (luceneQuery.getDocumentConvention().usesRangeType(value) && !expression.getPath().endsWith("_Range")) {
+    if (documentQuery.getDocumentConvention().usesRangeType(value) && !expression.getPath().endsWith("_Range")) {
       return expression.getPath() + "_Range";
     }
     return expression.getPath();
@@ -1034,13 +1034,13 @@ public class RavenQueryProviderProcessor<T> {
 
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> getLuceneQueryFor(Expression<?> expression) {
-    IDocumentQuery<T> q = queryGenerator.luceneQuery(clazz, indexName, isMapReduce);
-    luceneQuery = (IAbstractDocumentQuery<T>) q;
+    IDocumentQuery<T> q = queryGenerator.documentQuery(clazz, indexName, isMapReduce);
+    documentQuery = (IAbstractDocumentQuery<T>) q;
 
     q.setResultTransformer(resultsTransformer);
     visitExpression(expression);
     if (customizeQuery != null) {
-      customizeQuery.customize(new DocumentQueryCustomization((DocumentQuery< ? >) luceneQuery));
+      customizeQuery.customize(new DocumentQueryCustomization((DocumentQuery< ? >) documentQuery));
     }
     return q.selectFields(clazz, fieldsToFetch.toArray(new String[0]));
   }
@@ -1050,7 +1050,7 @@ public class RavenQueryProviderProcessor<T> {
 
     chanedWhere = false;
 
-    luceneQuery = (IAbstractDocumentQuery<T>) getLuceneQueryFor(expression);
+    documentQuery = (IAbstractDocumentQuery<T>) getLuceneQueryFor(expression);
     if (newExpressionType.equals(clazz)) {
       return executeQuery(clazz);
     } else {
@@ -1072,7 +1072,7 @@ public class RavenQueryProviderProcessor<T> {
         renamedFields.add(field);
       }
 
-    IDocumentQuery<TProjection> finalQuery = ((IDocumentQuery<T>)luceneQuery).selectFields(projectionClass, fieldsToFetch.toArray(new String[0]), renamedFields.toArray(new String[0]));
+    IDocumentQuery<TProjection> finalQuery = ((IDocumentQuery<T>)documentQuery).selectFields(projectionClass, fieldsToFetch.toArray(new String[0]), renamedFields.toArray(new String[0]));
     finalQuery.setResultTransformer(this.resultsTransformer);
     finalQuery.setQueryInputs(this.queryInputs);
 

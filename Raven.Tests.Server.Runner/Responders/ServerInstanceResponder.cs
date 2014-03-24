@@ -130,7 +130,7 @@ namespace Raven.Tests.Server.Runner.Responders
 
             if (serverConfiguration.HasApiKey)
             {
-                server.SystemDatabase.Put("Raven/ApiKeys/" + serverConfiguration.ApiKeyName, null, RavenJObject.FromObject(new ApiKeyDefinition
+                server.SystemDatabase.Documents.Put("Raven/ApiKeys/" + serverConfiguration.ApiKeyName, null, RavenJObject.FromObject(new ApiKeyDefinition
                 {
                     Name = serverConfiguration.ApiKeyName,
                     Secret = serverConfiguration.ApiKeySecret,
@@ -232,10 +232,13 @@ namespace Raven.Tests.Server.Runner.Responders
 			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
 		}
 
+
 		public static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
 		{
-			var field = database.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
-			var validateLicense = field.GetValue(database);
+			var field = database.GetType().GetField("initializer", BindingFlags.Instance | BindingFlags.NonPublic);
+			var initializer = field.GetValue(database);
+			var validateLicenseField = initializer.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
+			var validateLicense = validateLicenseField.GetValue(initializer);
 
 			var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
 

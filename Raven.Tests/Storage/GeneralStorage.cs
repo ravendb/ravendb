@@ -37,15 +37,15 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void Can_query_by_id_prefix()
 		{
-			db.Put("abc", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
-			db.Put("Raven/Databases/Hello", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
-			db.Put("Raven/Databases/Northwind", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
-			db.Put("Raven/Databases/Sys", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
-			db.Put("Raven/Databases/Db", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
-			db.Put("Raven/Database", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Documents.Put("abc", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Documents.Put("Raven/Databases/Hello", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Documents.Put("Raven/Databases/Northwind", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Documents.Put("Raven/Databases/Sys", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Documents.Put("Raven/Databases/Db", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Documents.Put("Raven/Database", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
 
 			int nextPageStart = 0;
-            var dbs = db.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, 10, CancellationToken.None, ref nextPageStart);
+            var dbs = db.Documents.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, 10, CancellationToken.None, ref nextPageStart);
 
 			Assert.Equal(4, dbs.Length);
 		}
@@ -53,9 +53,9 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void WhenPutAnIdWithASpace_IdWillBeAGuid()
 		{
-			db.Put(" ", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+			db.Documents.Put(" ", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
 
-			var doc = db.GetDocuments(0, 10, null, CancellationToken.None)
+			var doc = db.Documents.GetDocuments(0, 10, null, CancellationToken.None)
 				.OfType<RavenJObject>()
 				.Single();
 			var id = doc["@metadata"].Value<string>("@id");

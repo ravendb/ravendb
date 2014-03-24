@@ -29,6 +29,7 @@ import net.ravendb.abstractions.util.NetDateFormat;
 import net.ravendb.client.changes.IObservable;
 import net.ravendb.client.connection.CachedRequest;
 import net.ravendb.client.connection.CreateHttpJsonRequestParams;
+import net.ravendb.client.connection.IDocumentStoreReplicationInformer;
 import net.ravendb.client.connection.ObservableLineStream;
 import net.ravendb.client.connection.ReplicationInformer;
 import net.ravendb.client.connection.ServerClient.HandleReplicationStatusChangesCallback;
@@ -642,7 +643,7 @@ public class HttpJsonRequest {
   }
 
   public HttpJsonRequest addReplicationStatusHeaders(String thePrimaryUrl, String currentUrl,
-    ReplicationInformer replicationInformer, FailoverBehaviorSet failoverBehavior,
+    IDocumentStoreReplicationInformer replicationInformer, FailoverBehaviorSet failoverBehavior,
     HandleReplicationStatusChangesCallback handleReplicationStatusChangesCallback) {
 
     if (thePrimaryUrl.equalsIgnoreCase(currentUrl)) {

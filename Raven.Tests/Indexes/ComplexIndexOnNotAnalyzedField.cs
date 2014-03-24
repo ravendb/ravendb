@@ -35,13 +35,13 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void CanQueryOnKey()
 		{
-			db.Put("companies/", null,
+			db.Documents.Put("companies/", null,
 			       RavenJObject.Parse("{'Name':'Hibernating Rhinos', 'Partners': ['companies/49', 'companies/50']}"), 
 				   RavenJObject.Parse("{'Raven-Entity-Name': 'Companies'}"),
 			       null);
 
 
-			db.PutIndex("CompaniesByPartners", new IndexDefinition
+			db.Indexes.PutIndex("CompaniesByPartners", new IndexDefinition
 			{
 				Map = "from company in docs.Companies from partner in company.Partners select new { Partner = partner }",
 			});
@@ -49,7 +49,7 @@ namespace Raven.Tests.Indexes
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("CompaniesByPartners", new IndexQuery
+				queryResult = db.Queries.Query("CompaniesByPartners", new IndexQuery
 				{
 					Query = "Partner:companies/49",
 					PageSize = 10

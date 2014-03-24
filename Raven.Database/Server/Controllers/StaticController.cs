@@ -14,7 +14,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/static/")]
 		public HttpResponseMessage StaticGet()
 		{
-			var array = Database.GetAttachments(GetStart(),
+			var array = Database.Attachments.GetAttachments(GetStart(),
 										   GetPageSize(Database.Configuration.MaxPageSize),
 										   GetEtagFromQueryString(),
 										   GetQueryStringValue("startsWith"),
@@ -35,7 +35,7 @@ namespace Raven.Database.Server.Controllers
 			var result = GetEmptyMessage();
 			Database.TransactionalStorage.Batch(_ => // have to keep the session open for reading of the attachment stream
 			{
-				var attachmentAndHeaders = Database.GetStatic(filename);
+				var attachmentAndHeaders = Database.Attachments.GetStatic(filename);
 				if (attachmentAndHeaders == null)
 				{
 					result = GetEmptyMessage(HttpStatusCode.NotFound);
@@ -75,7 +75,7 @@ namespace Raven.Database.Server.Controllers
 			var result = GetEmptyMessage();
 			Database.TransactionalStorage.Batch(_ => // have to keep the session open for reading of the attachment stream
 			{
-				var attachmentAndHeaders = Database.GetStatic(filename);
+				var attachmentAndHeaders = Database.Attachments.GetStatic(filename);
 				if (attachmentAndHeaders == null)
 				{
 					result = GetEmptyMessage(HttpStatusCode.NotFound);
@@ -99,7 +99,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/static/{*filename}")]
 		public async Task<HttpResponseMessage> StaticPut(string filename)
 		{
-			var newEtag = Database.PutStatic(filename, GetEtag(), await InnerRequest.Content.ReadAsStreamAsync(), InnerHeaders.FilterHeadersAttachment());
+			var newEtag = Database.Attachments.PutStatic(filename, GetEtag(), await InnerRequest.Content.ReadAsStreamAsync(), InnerHeaders.FilterHeadersAttachment());
 
 			var msg = GetEmptyMessage(HttpStatusCode.Created);
 			msg.Headers.Location = Database.Configuration.GetFullUrl("static/" + filename);
@@ -114,7 +114,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage StaticPost(string id)
 		{
 			var filename = id;
-			var newEtagPost = Database.PutStatic(filename, GetEtag(), null, InnerHeaders.FilterHeadersAttachment());
+			var newEtagPost = Database.Attachments.PutStatic(filename, GetEtag(), null, InnerHeaders.FilterHeadersAttachment());
 
 			var msg = GetMessageWithObject(newEtagPost);
 			WriteETag(newEtagPost, msg);
@@ -127,7 +127,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage StaticDelete(string id)
 		{
 			var filename = id;
-			Database.DeleteStatic(filename, GetEtag());
+			Database.Attachments.DeleteStatic(filename, GetEtag());
 			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 	}
