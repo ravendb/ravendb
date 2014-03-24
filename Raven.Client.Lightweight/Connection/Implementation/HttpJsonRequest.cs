@@ -55,7 +55,8 @@ namespace Raven.Client.Connection
 		// avoid the potential for clearing the cache from a cached item
 		internal CachedRequest CachedRequestDetails;
 		private readonly HttpJsonRequestFactory factory;
-        private Action disableAuthentication = () => { };
+		private readonly Action disableAuthentication = () => { };
+		private readonly Func<HttpMessageHandler> recreateHandler; 
 		private readonly IHoldProfilingInformation owner;
 		private readonly Convention conventions;
 		private string postedData;
@@ -95,26 +96,30 @@ namespace Raven.Client.Connection
 			owner = requestParams.Owner;
 			conventions = requestParams.Convention;
 
-		    if (factory.httpMessageHandler != null)
-		    {
-		        handler = factory.httpMessageHandler;
-		    }
-		    else
-		    {
-                var webRequestHandler = new WebRequestHandler
-			    {
-				    UseDefaultCredentials = _credentials.HasCredentials() == false,
-				    Credentials = requestParams.Credentials.Credentials,
-			    };
-		        disableAuthentication = () =>
-		        {
-		            webRequestHandler.Credentials = null;
-		            webRequestHandler.UseDefaultCredentials = false;
-		        };
-		        handler = webRequestHandler;
-		    }
+			if (factory.httpMessageHandler != null)
+			{
+				handler = factory.httpMessageHandler;
+				recreateHandler = () => factory.httpMessageHandler;
+			}
+			else
+			{
+				var webRequestHandler = new WebRequestHandler
+				{
+					UseDefaultCredentials = _credentials.HasCredentials() == false,
+					Credentials = requestParams.Credentials.Credentials,
+				};
+				recreateHandler = () => new WebRequestHandler
+				{
+					Credentials = webRequestHandler.Credentials
+				};
+				disableAuthentication = () =>
+				{
+					webRequestHandler.Credentials = null;
+					webRequestHandler.UseDefaultCredentials = false;
+				};
+				handler = webRequestHandler;
+			}
 
-			
 			httpClient = new HttpClient(handler);
 
 			if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
@@ -431,13 +436,9 @@ namespace Raven.Client.Connection
 			await forbiddenResponseAsync;
 		}
 
-		private Task RecreateHttpClient(Action<HttpClient> configureHttpClient)
+		private async Task RecreateHttpClient(Action<HttpClient> configureHttpClient)
 		{
-            throw new NotImplementedException("DH TODO");
-			/*var newHttpClient = new HttpClient(new HttpClientHandler
-			{
-				Credentials = handler.Credentials,
-			});
+			var newHttpClient = new HttpClient(recreateHandler());
 
 			configureHttpClient(newHttpClient);
 			httpClient = newHttpClient;
@@ -445,17 +446,17 @@ namespace Raven.Client.Connection
 
 			if (postedData != null)
 			{
-                await WriteAsync(postedData);
+				await WriteAsync(postedData);
 			}
-            if (postedToken != null)
-            {
-                await WriteAsync(postedToken);
-            }
+			if (postedToken != null)
+			{
+				await WriteAsync(postedToken);
+			}
 
-            if (postedStream != null)
-            {
-                postedStream.Position = 0;
-            }*/
+			if (postedStream != null)
+			{
+				postedStream.Position = 0;
+			}
 		}
 
 		private async Task<RavenJToken> ReadJsonInternalAsync()
