@@ -1,7 +1,4 @@
-﻿/// <reference path="../../../Scripts/typings/knockout.postbox/knockout-postbox.d.ts" />
-/// <reference path="../../../Scripts/typings/durandal/durandal.d.ts" />
-
-import router = require("plugins/router");
+﻿import router = require("plugins/router");
 import widget = require("plugins/widget");
 import app = require("durandal/app");
 

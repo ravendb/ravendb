@@ -17,13 +17,14 @@ class databases extends viewModelBase {
     databases = ko.observableArray<database>();
     searchText = ko.observable("");
     selectedDatabase = ko.observable<database>();
-    lastModelPayloadHash: number;
-    systemDb:database;
+    systemDb: database;
+    initializedStats: boolean;
 
     constructor() {
         super();
+
         this.systemDb = appUrl.getSystemDatabase();
-        this.searchText.subscribe(s=> this.filterDatabases(s));
+        this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterDatabases(s));
     }
 
     modelPolling() {
@@ -41,25 +42,20 @@ class databases extends viewModelBase {
         return appUrl.forDocuments(null, db);
     }
 
-    initializedStats: boolean;
-
     databasesLoaded(results: Array<database>) {
-
-        var modelPayloadHash = results.map(d => d.name).join().hashCode();
-        var databasesHaveChanged = !this.lastModelPayloadHash || this.lastModelPayloadHash !== modelPayloadHash;
-        if (databasesHaveChanged) {
-            this.lastModelPayloadHash = modelPayloadHash;
-            
+        var databasesHaveChanged = this.checkDifferentDatabases(results);
+        if (databasesHaveChanged) {            
             this.databases(results);
 
             // If we have just a few databases, grab the db stats for all of them.
             // (Otherwise, we'll grab them when we click them.)
             var few = 20;
-            if (results.length < 20 && !this.initializedStats) {
+            if (results.length < few && !this.initializedStats) {
                 this.initializedStats = true;
                 results.forEach(db=> this.fetchStats(db));
             }
 
+            // Judah says: Why is this commented out? It was in the old Studio.
             /*// If we have no databases, show the "create a new database" screen.
             if (results.length === 0) {
                 this.newDatabase();
@@ -67,46 +63,61 @@ class databases extends viewModelBase {
         }
     }
 
+    checkDifferentDatabases(dbs: database[]) {
+        if (dbs.length !== this.databases().length) {
+            return true;
+        }
+
+        var freshDbNames = dbs.map(db => db.name);
+        var existingDbNames = this.databases().map(d => d.name);
+        return existingDbNames.some(existing => !freshDbNames.contains(existing));
+    }
+
     newDatabase() {
+        // Why do an inline require here? Performance.
+        // Since the database page is the common landing page, we want it to load quickly.
+        // Since the createDatabase page isn't required up front, we pull it in on demand.
         require(["viewmodels/createDatabase"], createDatabase => {
             var createDatabaseViewModel: createDatabase = new createDatabase(this.databases);
             createDatabaseViewModel
                 .creationTask
-                .done((databaseName: string, bundles: string[]) => {
-                    var securedSettings = {};
-                    var deffered = $.Deferred();
-                    var savedKey;
-
-                    if (bundles.indexOf("Encryption") != -1) {
-                        var createEncryptionViewModel: createEncryption = new createEncryption();
-                        createEncryptionViewModel
-                            .creationEncryption
-                            .done((key: string, encryptionAlgorithm: string, isEncryptedIndexes: string) => {
-                                savedKey = key;
-                                securedSettings = {
-                                    'Raven/Encryption/Key': key,
-                                    'Raven/Encryptijon/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
-                                    'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
-                                };
-                                deffered.resolve(securedSettings);
-                            });
-                        app.showDialog(createEncryptionViewModel);
-                    } else {
-                        deffered.resolve({});
-                    }
-
-                    deffered.done(() => {
-                        this.createDB(databaseName, bundles, securedSettings)
-                            .done(() => {
-                                this.databases.unshift(new database(databaseName));
-                                if (!jQuery.isEmptyObject(securedSettings)) {
-                                    var createEncryptionConfirmationViewModel: createEncryptionConfirmation = new createEncryptionConfirmation(savedKey);
-                                    app.showDialog(createEncryptionConfirmationViewModel);
-                                }
-                        });
-                    });
-                });
+                .done((databaseName: string, bundles: string[]) => this.showDbCreationAdvancedStepsIfNecessary(databaseName, bundles));
             app.showDialog(createDatabaseViewModel);
+        });
+    }
+
+    showDbCreationAdvancedStepsIfNecessary(databaseName: string, bundles: string[]) {
+        var securedSettings = {};
+        var deferred = $.Deferred();
+        var savedKey;
+
+        if (bundles.contains("Encryption")) {
+            var createEncryptionViewModel: createEncryption = new createEncryption();
+            createEncryptionViewModel
+                .creationEncryption
+                .done((key: string, encryptionAlgorithm: string, isEncryptedIndexes: string) => {
+                    savedKey = key;
+                    securedSettings = {
+                        'Raven/Encryption/Key': key,
+                        'Raven/Encryptijon/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
+                        'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
+                    };
+                    deferred.resolve(securedSettings);
+                });
+            app.showDialog(createEncryptionViewModel);
+        } else {
+            deferred.resolve({});
+        }
+
+        deferred.done(() => {
+            this.createDB(databaseName, bundles, securedSettings)
+                .done(() => {
+                    this.databases.unshift(new database(databaseName));
+                    if (!jQuery.isEmptyObject(securedSettings)) {
+                        var createEncryptionConfirmationViewModel: createEncryptionConfirmation = new createEncryptionConfirmation(savedKey);
+                        app.showDialog(createEncryptionConfirmationViewModel);
+                    }
+                });
         });
     }
 
@@ -155,7 +166,7 @@ class databases extends viewModelBase {
 
     goToDocuments(db: database) {
         // TODO: use appUrl for this.
-        router.navigate("#documents?database=" + db.name);
+        router.navigate("#documents?database=" + encodeURIComponent(db.name));
     }
 
     filterDatabases(filter: string) {
