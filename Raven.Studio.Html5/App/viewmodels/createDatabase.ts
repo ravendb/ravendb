@@ -69,6 +69,7 @@ class createDatabase extends dialogViewModelBase {
             message = "Database Name Already Exists!";
         }
         else if (!this.isValidName(databaseName)) {
+            debugger;
             message = "Please enter a valid database name!";
         } else {
             result = true;
@@ -83,11 +84,18 @@ class createDatabase extends dialogViewModelBase {
     }
 
     private isValidName(name): boolean {
-        return true;
-            var rg1 = /^[^\\/:\*\?"<>\|]+$/; // forbidden characters \ / : * ? " < > |
-            var rg2 = /^\./; // cannot start with dot (.)
-            var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
-        return rg1.test(name) && !rg2.test(name) && !rg3.test(name);
+        var rg1 = /^[^\\/:\*\?"<>\|]+$/; // forbidden characters \ / : * ? " < > |
+        var rg2 = /^\./; // cannot start with dot (.)
+        var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
+
+        var maxLength;
+        if (navigator.appVersion.indexOf("Win") != -1) {
+            maxLength = 260;
+        } else {
+            maxLength = 255;
+        }
+
+        return rg1.test(name) && !rg2.test(name) && !rg3.test(name) && (name.length <= maxLength);
     }
 
     private isDatabaseNameExists(databaseName: string, databases: database[]): boolean {
