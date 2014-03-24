@@ -70,7 +70,7 @@ namespace Raven.Database.Server.Security
         public bool TryAuthorize(RavenBaseApiController controller, out HttpResponseMessage msg)
 		{
 			var requestUrl = controller.GetRequestUrl();
-			if (NeverSecret.Urls.Contains(requestUrl))
+			if (NeverSecret.IsNeverSecretUrl(requestUrl))
 			{
 				msg = controller.GetEmptyMessage();
 				return true;
