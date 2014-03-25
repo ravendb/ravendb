@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Database.Impl.Synchronization;
@@ -10,7 +11,7 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Prefetching
 {
-	public class Prefetcher
+	public class Prefetcher : IDisposable
 	{
 		private readonly WorkContext workContext;
 		private IDictionary<PrefetchingUser, PrefetchingBehavior> prefetchingBehaviors = new Dictionary<PrefetchingUser, PrefetchingBehavior>();
@@ -70,6 +71,14 @@ namespace Raven.Database.Prefetching
 			if (prefetchingBehaviors.TryGetValue(user, out value) == false)
 				return;
 			value.AfterStorageCommitBeforeWorkNotifications(documents);
+		}
+
+		public void Dispose()
+		{
+			foreach (var prefetchingBehavior in prefetchingBehaviors)
+			{
+				prefetchingBehavior.Value.Dispose();
+			}	
 		}
 	}
 }
