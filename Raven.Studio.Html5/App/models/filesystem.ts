@@ -1,4 +1,5 @@
 ﻿class filesystem {
+    isSystem = false;
     isDefault = false;
     isSelected = ko.observable(false);
     statistics = ko.observable<filesystemStatisticsDto>();

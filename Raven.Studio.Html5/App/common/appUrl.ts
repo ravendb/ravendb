@@ -9,6 +9,7 @@ class appUrl {
     //private static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
     private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
+    private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
 
 	// Stores some computed values that update whenever the current database updates.
 	private static currentDbComputeds: computedAppUrls = {
@@ -37,7 +38,8 @@ class appUrl {
         scriptedIndexes: ko.computed(() => appUrl.forScriptedIndexes(appUrl.currentDatabase())),
 
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
-        databasesManagement: ko.computed(() => "#databases?database=" + appUrl.getEncodedDbPart(appUrl.currentDatabase()))
+        databasesManagement: ko.computed(() => "#databases?database=" + appUrl.getEncodedDbPart(appUrl.currentDatabase())),
+        filesystemsManagement: ko.computed(() => "#filesystems?filesystem=" + appUrl.getEncodedFsPart(appUrl.currentFilesystem()))
 	};
 
     static forDatabases(): string {
@@ -359,7 +361,11 @@ class appUrl {
 
 	private static getEncodedDbPart(db?: database) {
 		return db ? "&database=" + encodeURIComponent(db.name) : "";
-	}
+    }
+
+    private static getEncodedFsPart(fs?: filesystem) {
+        return fs ? "&filesystem=" + encodeURIComponent(fs.name) : "";
+    }
 }
 
 export = appUrl;

@@ -92,12 +92,16 @@
                 <input id="goToDocInput" type="text" class="form-control col-md-8" placeholder="Go to document">
             </form>
             <ul class="nav navbar-nav pull-right">
-                <li>
+                <li class="dropdown">
+                    <!--<a class="dropdown-toggle" data-bind="with: activeView" data-toggle="dropdown" href="#" style="padding-left: 5px;">
+                        <span data-bind="text: name"></span>
+                        <b class="caret"></b>
+                    </a>-->
                     <a style="padding-right: 0; display: inline-block;" data-bind="attr:{href:appUrls.databasesManagement}">Databases &nbsp;<i class=" fa fa-caret-right"></i>&nbsp;</a>
                 </li>
                 <li class="dropdown">
                     <a class="dropdown-toggle" data-bind="with: activeDatabase" data-toggle="dropdown" href="#" style="padding-left: 5px;">
-                        <span data-bind="text: name"></span> 
+                        <span data-bind="text: name"></span>
                         <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu" data-bind="foreach: databases">
@@ -118,7 +122,7 @@
             </ul>
         </div>
     </div>
-    
+
     <!--Alerts container-->
     <div class="studio-alerts" data-bind="with: currentAlert">
         <div class="alert alert-dismissable fade in" data-bind="attr: { id: id }, css: { 'alert-info': type === 0, 'alert-success': type === 1, 'alert-warning': type === 2, 'alert-danger': type === 3 }, event: { 'closed.bs.alert': $root.onAlertHidden.bind($root) }">
@@ -128,7 +132,7 @@
             <a class="alert alert-link" href="#" data-bind="visible: details, click: $root.showErrorsDialog.bind($root)">Details</a>
         </div>
     </div>
-    
+
     <div class="page-host" data-bind="router: { cacheViews: false }"></div>
 </div>
 

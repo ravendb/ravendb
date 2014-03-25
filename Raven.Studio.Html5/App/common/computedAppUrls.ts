@@ -26,4 +26,5 @@ interface computedAppUrls {
 
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
     databasesManagement: KnockoutComputed<string>;
+    filesystemsManagement: KnockoutComputed<string>;
 }

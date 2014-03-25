@@ -31,6 +31,7 @@
     <TypeScriptCompile Include="App\commands\getFilesystemDestinationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getFilesystemFilesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getFilesystemsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getFilesystemStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
@@ -96,6 +97,7 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystems.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
@@ -1189,7 +1191,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>0</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost:33979/</IISUrl>
+          <IISUrl>http://localhost:8080/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>
