@@ -5,10 +5,13 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using Lucene.Net.Util;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Constants = Raven.Abstractions.Data.Constants;
+using Version = System.Version;
 
 namespace Raven.Storage.Esent
 {
@@ -29,7 +32,7 @@ namespace Raven.Storage.Esent
 		{
 			path = Path.GetFullPath(path);
 			var logsPath = path;
-		    var configuredLogsPath = configuration.Settings["Raven/Esent/LogsPath"] ?? configuration.JournalsStoragePath;
+		    var configuredLogsPath = configuration.Settings["Raven/Esent/LogsPath"] ?? configuration.Settings[Constants.RavenTxJournalPath] ?? configuration.JournalsStoragePath;
 		    if (string.IsNullOrEmpty(configuredLogsPath) == false)
 			{
 				logsPath = configuredLogsPath.ToFullPath();

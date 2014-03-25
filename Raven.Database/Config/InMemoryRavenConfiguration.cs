@@ -191,9 +191,9 @@ namespace Raven.Database.Config
 				IndexStoragePath = indexStoragePathSettingValue;
 			}
 
-		    TrySettingUpJournalsPath();
+		    JournalsStoragePath = Settings["Raven/Esent/LogsPath"] ?? Settings[Constants.RavenTxJournalPath];
 
-			// HTTP settings
+		    // HTTP settings
 			HostName = ravenSettings.HostName.Value;
 
 			if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
@@ -239,14 +239,6 @@ namespace Raven.Database.Config
 
 			PostInit();
 		}
-
-	    private void TrySettingUpJournalsPath()
-	    {
-	        if (string.IsNullOrEmpty(Settings["Raven/Esent/LogsPath"]) == false)
-	            JournalsStoragePath = Settings["Raven/Esent/LogsPath"];
-            if (string.IsNullOrEmpty(Settings["Raven/Voron/JournalPath"]) == false)
-                JournalsStoragePath = Settings["Raven/Voron/JournalPath"];
-	    }
 
 	    /// <summary>
         /// This limits the number of concurrent multi get requests,

@@ -498,7 +498,7 @@ namespace Raven.Tests.Helpers
 			using (var documentStore = new DocumentStore
 			{
 				Url = url ?? "http://localhost:8079"
-			})
+			}.Initialize())
 			{
 			
 				Process.Start(documentStore.Url); // start the server

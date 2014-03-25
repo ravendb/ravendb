@@ -258,7 +258,7 @@ namespace Raven.Storage.Voron
                 filePathFolder.Create();
 
             var tempPath = configuration.Settings["Raven/Voron/TempPath"];
-	        var journalPath = configuration.Settings["Raven/Voron/JournalPath"] ?? configuration.JournalsStoragePath;
+	        var journalPath = configuration.Settings[Abstractions.Data.Constants.RavenTxJournalPath] ?? configuration.JournalsStoragePath;
             var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
             options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
             return options;

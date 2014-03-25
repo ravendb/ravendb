@@ -50,6 +50,7 @@ namespace Raven.Abstractions.Data
 
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
+        public const string RavenTxJournalPath = "Raven/TransactionJouranlsPath";
 		public const string RavenIndexPath = "Raven/IndexStoragePath";
 
 		//Files

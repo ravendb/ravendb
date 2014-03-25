@@ -70,8 +70,6 @@ namespace Raven.Database.Storage
                 Directory.CreateDirectory(journalLocation);
         }
 
-        public abstract string JournalPathConfigName { get; }
-
         protected string BackupIndexesPath()
         {
             return Path.Combine(backupLocation, "Indexes");

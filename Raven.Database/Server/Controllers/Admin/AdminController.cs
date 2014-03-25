@@ -153,20 +153,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 if (restoreRequest.IndexesLocation != null)
                     databaseDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
                 if (restoreRequest.JournalsLocation != null)
-                {
-                    if (ravenConfiguration.DefaultStorageTypeName == typeof (Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName)
-                    {
-                        databaseDocument.Settings["Raven/Esent/LogsPath"] = restoreRequest.IndexesLocation;
-                    }
-                    else if (ravenConfiguration.DefaultStorageTypeName == typeof (Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName)
-                    {
-                        databaseDocument.Settings["Raven/Voron/JournalPath"] = restoreRequest.IndexesLocation;
-                    }
-                    else
-                    {
-                        throw new ArgumentException("Unknown storage engine for restore " + ravenConfiguration.DefaultStorageTypeName);
-                    }
-                }
+                    databaseDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
                 databaseDocument.Id = databaseName;
                 DatabasesLandlord.Protect(databaseDocument);
                 DatabasesLandlord.SystemDatabase.Documents.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument),

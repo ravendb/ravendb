@@ -48,9 +48,5 @@ namespace Raven.Database.Storage.Voron.Backup
             }
         }
 
-        public override string JournalPathConfigName
-        {
-            get { return "Raven/Voron/JournalPath"; }
-        }
     }
 }
