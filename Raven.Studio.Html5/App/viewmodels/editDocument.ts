@@ -33,8 +33,29 @@ class editDocument extends viewModelBase {
     docsList = ko.observable<pagedList>();
     docEditor: AceAjax.Editor;
     databaseForEditedDoc: database;
+    topRecentDocuments = ko.computed(() => {
+        var curDb = this.activeDatabase().name;
+
+        var recentDocumentsForCurDb = editDocument.recentDocumentsInDatabases().first(x=> x.databaseName === curDb);
+
+        if (recentDocumentsForCurDb) {
+            var value = recentDocumentsForCurDb.recentDocuments().slice(0, 5).map((docId: string)=> {
+                return {
+                    docId: docId,
+                    docUrl: appUrl.forEditDoc(docId, null, null, this.activeDatabase())
+                };
+            });
+            return value;
+        } else {
+            return [];
+        }
+
+    });
 
     static editDocSelector = "#editDocumentContainer";
+
+    public static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string>}>();
+    
 
     constructor() {
         super();
@@ -117,6 +138,20 @@ class editDocument extends viewModelBase {
         }
 		
         if (navigationArgs && navigationArgs.id) {
+            var existingRecentDocumentsStore = editDocument.recentDocumentsInDatabases.first(x=> x.databaseName == this.databaseForEditedDoc.name);
+            if (existingRecentDocumentsStore) {
+                var existingDocumentInStore = existingRecentDocumentsStore.recentDocuments.first(x=> x === navigationArgs.id);
+                if (!existingDocumentInStore) {
+                    if (existingRecentDocumentsStore.recentDocuments().length == 5) {
+                        existingRecentDocumentsStore.recentDocuments.shift();
+                    }
+                    existingRecentDocumentsStore.recentDocuments.push(navigationArgs.id);
+                }
+
+            } else {
+                editDocument.recentDocumentsInDatabases.push({ databaseName: this.databaseForEditedDoc.name, recentDocuments: ko.observableArray([navigationArgs.id]) });
+            }
+            
             return true;
         } else {
             this.editNewDocument();
@@ -344,6 +379,7 @@ class editDocument extends viewModelBase {
             observableToUpdate(docEditorText);
         }
     }
+
 }
 
 export = editDocument;
