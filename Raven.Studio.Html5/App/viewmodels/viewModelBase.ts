@@ -1,22 +1,32 @@
 import appUrl = require("common/appUrl");
 import database = require("models/database");
+import filesystem = require("models/filesystem");
 import router = require("plugins/router");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
 class viewModelBase {
-  activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
+    activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
+    activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
+
   private keyboardShortcutDomContainers: string[] = [];
 
      /*
      * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
      */
     activate(args) {
+
         var db = appUrl.getDatabase();
         var currentDb = this.activeDatabase();
         if (!currentDb || currentDb.name !== db.name) {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
+        }
+
+        var fs = appUrl.getFilesystem();
+        var currentFilesystem = this.activeFilesystem();
+        if (!currentFilesystem || currentFilesystem.name !== fs.name) {
+            ko.postbox.publish("ActivateFilesystemWithName", fs.name);
         }
 		
 		this.modelPollingStart();
@@ -27,6 +37,7 @@ class viewModelBase {
      */
     deactivate() {
         this.activeDatabase.unsubscribeFrom("ActivateDatabase");
+        this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
 		this.modelPollingStop();
     }
@@ -76,6 +87,7 @@ class viewModelBase {
     this.modelPolling();
     this.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
     this.activeDatabase.subscribe(() => this.forceModelPolling());
+    this.activeFilesystem.subscribe(() => this.forceModelPolling());
   }
 
   modelPollingStop() {

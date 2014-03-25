@@ -1184,6 +1184,10 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Commercial\RavenDB.public" />
+    <None Include="..\Raven.Studio.Html5\Content\app.css.map">
+      <Link>Server\Html5Studio\Content\app.css.map</Link>
+      <DependentUpon>app.css</DependentUpon>
+    </None>
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>

@@ -6,6 +6,7 @@ import app = require("durandal/app");
 import sys = require("durandal/system");
 
 import database = require("models/database");
+import filesystem = require("models/filesystem");
 import document = require("models/document");
 import appUrl = require("common/appUrl");
 import collection = require("models/collection");
@@ -16,6 +17,7 @@ import alertType = require("common/alertType");
 import pagedList = require("common/pagedList");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
+import getFilesystemsCommand = require("commands/getFilesystemsCommand");
 import getBuildVersionCommand = require("commands/getBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
@@ -25,7 +27,7 @@ import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm
 
 class shell extends viewModelBase {
     private router = router;
-    databases = ko.observableArray<database>();
+    databases = ko.observableArray<database>();    
     currentAlert = ko.observable<alertArgs>();
     queuedAlert: alertArgs;
     databasesLoadedTask: JQueryPromise<any>;
@@ -38,15 +40,17 @@ class shell extends viewModelBase {
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
     isFirstModelPoll: boolean;
 
+    filesystems = ko.observableArray<filesystem>();
+    filesystemsLoadedTask: JQueryPromise<any>;
 
     DocumentPrefix = ko.observable<String>();
     
-
     constructor() {
         super();
         this.isFirstModelPoll = true;
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
+        ko.postbox.subscribe("ActivateFilesystemWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
 
         this.appUrls = appUrl.forCurrentDatabase();
 
@@ -204,8 +208,14 @@ class shell extends viewModelBase {
             systemDatabase.activate();
         } else {
             this.databases.first(x=> x.isVisible()).activate();
+        }        
+    }
+
+    filesystemsLoaded(filesystems) {
+        this.filesystems(filesystems);
+        if (this.filesystems().length != 0) {
+            this.filesystems.first(x=> x.isVisible()).activate();
         }
-        
     }
 
     launchDocEditor(docId?: string, docsList?: pagedList) {
@@ -219,6 +229,16 @@ class shell extends viewModelBase {
             .fail(result => this.handleRavenConnectionFailure(result))
             .done(results => {
                 this.databasesLoaded(results);
+                router.activate();
+                this.fetchBuildVersion();
+                this.fetchLicenseStatus();
+            });
+
+        this.filesystemsLoadedTask = new getFilesystemsCommand()
+            .execute()
+            .fail(result => this.handleRavenConnectionFailure(result))
+            .done(results => {
+                this.filesystemsLoaded(results);
                 router.activate();
                 this.fetchBuildVersion();
                 this.fetchLicenseStatus();
@@ -290,6 +310,17 @@ class shell extends viewModelBase {
                 var matchingDatabase = this.databases().first(d => d.name == databaseName);
                 if (matchingDatabase && this.activeDatabase() !== matchingDatabase) {
                     ko.postbox.publish("ActivateDatabase", matchingDatabase);
+                }
+            });
+        }
+    }
+
+    activateFilesystemWithName(filesystemName: string) {
+        if (this.filesystemsLoadedTask) {
+            this.filesystemsLoadedTask.done(() => {            
+                var matchingFilesystem = this.filesystems().first(d => d.name == filesystemName);
+                if (matchingFilesystem && this.activeFilesystem() !== matchingFilesystem) {
+                    ko.postbox.publish("ActivateFilesystem", matchingFilesystem);
                 }
             });
         }

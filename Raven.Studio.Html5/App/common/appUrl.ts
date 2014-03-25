@@ -1,4 +1,5 @@
 import database = require("models/database");
+import filesystem = require("models/filesystem");
 import pagedList = require("common/pagedList");
 import router = require("plugins/router");
 
@@ -267,6 +268,40 @@ class appUrl {
         var db = new database("<system>");
         db.isSystem = true;
         return db;
+    }
+
+    /**
+    * Gets the filesystem from the current web browser address. Returns the no database if no database name is found.
+    */
+    static getFilesystem(): filesystem {
+
+        // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
+
+        var filesystemIndicator = "filesystem=";
+        var hash = window.location.hash;
+        var fsIndex = hash.indexOf(filesystemIndicator);
+        if (fsIndex >= 0) {
+            // A database is specified in the address.
+            var fsSegmentEnd = hash.indexOf("&", fsIndex);
+            if (fsSegmentEnd === -1) {
+                fsSegmentEnd = hash.length;
+            }
+
+            var filesystemName = hash.substring(fsIndex + filesystemIndicator.length, fsSegmentEnd);
+            var unescapedDatabaseName = decodeURIComponent(filesystemName);
+            var fs = new filesystem(unescapedDatabaseName);
+            fs.isDefault = unescapedDatabaseName === "<default>";
+            return fs;
+        } else {
+            // No database is specified in the URL. Assume it's the system database.
+            return this.getDefaultFilesystem();
+        }
+    }
+
+    static getDefaultFilesystem(): filesystem {
+        var fs = new filesystem("<default>");
+        fs.isDefault = true;
+        return fs;
     }
  
     /**
