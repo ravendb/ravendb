@@ -16,7 +16,7 @@ namespace Raven.Database.Storage.Voron.Backup
 
         public override void Execute()
         {
-			ValidateRestorePreconditions(BackupMethods.Filename);
+			var logsPath = ValidateRestorePreconditionsAndReturnLogsPath(BackupMethods.Filename);
 
             try
             {
@@ -26,10 +26,10 @@ namespace Raven.Database.Storage.Voron.Backup
 				var backupFilenamePath = BackupFilenamePath(BackupMethods.Filename);
 
 				if (Directory.GetDirectories(backupLocation, "Inc*").Any() == false)
-		            BackupMethods.Full.Restore(backupFilenamePath, configuration.DataDirectory);
+		            BackupMethods.Full.Restore(backupFilenamePath, configuration.DataDirectory, logsPath);
 	            else
 				{
-                    using (var options = StorageEnvironmentOptions.ForPath(configuration.DataDirectory))
+                    using (var options = StorageEnvironmentOptions.ForPath(configuration.DataDirectory, journalPath: logsPath))
                     {
                         var backupPaths = Directory.GetDirectories(backupLocation, "Inc*")
                             .OrderBy(dir=>dir)

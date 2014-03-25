@@ -42,12 +42,10 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		private void Initialize(bool allowIncrementalBackups)
 		{
-			CreatedNew = Directory.EnumerateFileSystemEntries(directoryPath).Any() == false;
+		    CreatedNew = Directory.EnumerateFileSystemEntries(directoryPath).Any() == false;
 
-            Options = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(directoryPath, tempPath)
-			{
-				IncrementalBackupEnabled = allowIncrementalBackups
-			};
+		    Options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath);
+		    Options.IncrementalBackupEnabled = allowIncrementalBackups;
 		}
 	}
 }

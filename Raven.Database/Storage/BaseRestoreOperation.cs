@@ -39,7 +39,7 @@ namespace Raven.Database.Storage
             throw e;
         }
 
-        protected string ValidateRestorePreconditions(string backupFilename)
+        protected string ValidateRestorePreconditionsAndReturnLogsPath(string backupFilename)
         {
             if (File.Exists(BackupFilenamePath(backupFilename)) == false)
             {
@@ -61,16 +61,15 @@ namespace Raven.Database.Storage
             if (Directory.Exists(indexLocation) == false)
                 Directory.CreateDirectory(indexLocation);
 
-            var logsPath = databaseLocation;
 
-            if (string.IsNullOrWhiteSpace(configuration.Settings[Constants.RavenLogsPath])) return logsPath;
+            if (string.IsNullOrWhiteSpace(configuration.Settings[Constants.RavenTxLogsDir]))
+                return databaseLocation;
 
-            logsPath = configuration.Settings[Constants.RavenLogsPath].ToFullPath();
+            var logsPath = configuration.Settings[Constants.RavenTxLogsDir].ToFullPath();
 
             if (Directory.Exists(logsPath) == false)
-            {
                 Directory.CreateDirectory(logsPath);
-            }
+
             return logsPath;
         }
 

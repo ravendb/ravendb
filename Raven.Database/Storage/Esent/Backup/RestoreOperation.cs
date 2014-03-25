@@ -27,38 +27,8 @@ namespace Raven.Database.Storage.Esent.Backup
 
 		public override void Execute()
 		{
-			if (File.Exists(Path.Combine(backupLocation, "RavenDB.Backup")) == false)
-			{
-				output("Error: " + backupLocation + " doesn't look like a valid backup");
-				output("Error: Restore Canceled");
-				throw new InvalidOperationException(backupLocation + " doesn't look like a valid backup");
-			}
-
-			if (Directory.Exists(databaseLocation) && Directory.GetFileSystemEntries(databaseLocation).Length > 0)
-			{
-				output("Error: Database already exists, cannot restore to an existing database.");
-				output("Error: Restore Canceled");
-				throw new IOException("Database already exists, cannot restore to an existing database.");
-			}
-
-			if (Directory.Exists(databaseLocation) == false)
-				Directory.CreateDirectory(databaseLocation);
-
-			if (Directory.Exists(indexLocation) == false)
-				Directory.CreateDirectory(indexLocation);
-
-			var logsPath = databaseLocation;
-
-			if (!string.IsNullOrWhiteSpace(configuration.Settings[Constants.RavenLogsPath]))
-			{
-				logsPath = configuration.Settings[Constants.RavenLogsPath].ToFullPath();
-
-				if (Directory.Exists(logsPath) == false)
-				{
-					Directory.CreateDirectory(logsPath);
-				}
-			}
-
+            var logsPath = ValidateRestorePreconditionsAndReturnLogsPath("RavenDB.Backup");
+			
 			Directory.CreateDirectory(Path.Combine(logsPath, "logs"));
 			Directory.CreateDirectory(Path.Combine(logsPath, "temp"));
 			Directory.CreateDirectory(Path.Combine(logsPath, "system"));
@@ -76,6 +46,7 @@ namespace Raven.Database.Storage.Esent.Backup
 			TransactionalStorage.CreateInstance(out instance, "restoring " + Guid.NewGuid());
 			try
 			{
+			    configuration.Settings["Raven/Esent/LogsPath"] = logsPath;
 				new TransactionalStorageConfigurator(configuration, null).ConfigureInstance(instance, databaseLocation);
 				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, RestoreStatusCallback);
 				var fileThatGetsCreatedButDoesntSeemLikeItShould =

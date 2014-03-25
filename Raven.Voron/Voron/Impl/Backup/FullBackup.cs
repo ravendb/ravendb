@@ -121,9 +121,22 @@ namespace Voron.Impl.Backup
 			}
 		}
 
-		public void Restore(string backupPath, string voronDataDir)
+		public void Restore(string backupPath, string voronDataDir, string journalDir = null)
 		{
-			ZipFile.ExtractToDirectory(backupPath, voronDataDir);
+		    journalDir = journalDir ?? voronDataDir;
+
+		    using (var zip = ZipFile.OpenRead(backupPath))
+		    {
+		        foreach (var entry in zip.Entries)
+		        {
+		            var dst = Path.GetExtension(entry.Name) == ".journal" ? journalDir : voronDataDir;
+		            using (var input = entry.Open())
+                    using(var output = new FileStream(Path.Combine(dst, entry.Name), FileMode.CreateNew))
+		            {
+		                input.CopyTo(output);
+		            }
+		        }
+		    }
 		}
 	}
 }

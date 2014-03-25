@@ -117,8 +117,8 @@ namespace Raven.Database.Server.Controllers.Admin
 				if (databasedocument != null)
 				{
 					var dbDoc = databasedocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
-					if (dbDoc != null && dbDoc.Settings.ContainsKey(Constants.RavenLogsPath))
-						IOExtensions.DeleteDirectory(dbDoc.Settings[Constants.RavenLogsPath]);
+					if (dbDoc != null && dbDoc.Settings.ContainsKey(Constants.RavenTxLogsDir))
+						IOExtensions.DeleteDirectory(dbDoc.Settings[Constants.RavenTxLogsDir]);
 				}
 			}
 
