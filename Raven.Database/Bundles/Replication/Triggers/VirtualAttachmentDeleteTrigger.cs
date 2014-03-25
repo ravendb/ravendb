@@ -44,7 +44,7 @@ namespace Raven.Bundles.Replication.Triggers
 		{
 			using(Database.DisableAllTriggersForCurrentThread())
 			{
-				var attachment = Database.GetStatic(key);
+				var attachment = Database.Attachments.GetStatic(key);
 				if (attachment == null)
 					return;
 
@@ -87,7 +87,7 @@ namespace Raven.Bundles.Replication.Triggers
 
 			foreach (var c in conflicts)
 			{
-				var conflict = Database.GetStatic(c.Value<string>());
+				var conflict = Database.Attachments.GetStatic(c.Value<string>());
 				var conflictSource = conflict.Metadata.Value<RavenJValue>(Constants.RavenReplicationSource).Value<string>();
 
 				if (conflictSource != currentSource)

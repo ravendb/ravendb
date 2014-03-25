@@ -34,6 +34,8 @@ import net.ravendb.client.IDocumentStore;
 import net.ravendb.client.changes.IDatabaseChanges;
 import net.ravendb.client.changes.RemoteDatabaseChanges;
 import net.ravendb.client.connection.IDatabaseCommands;
+import net.ravendb.client.connection.IDocumentStoreReplicationInformer;
+import net.ravendb.client.connection.IReplicationInformerBase;
 import net.ravendb.client.connection.OperationMetadata;
 import net.ravendb.client.connection.ReplicationInformer;
 import net.ravendb.client.connection.ServerClient;
@@ -66,11 +68,11 @@ public class DocumentStore extends DocumentStoreBase {
 
   protected Function0<IDatabaseCommands> databaseCommandsGenerator;
 
-  private final ConcurrentMap<String, ReplicationInformer> replicationInformers =  new ConcurrentSkipListMap<>(String.CASE_INSENSITIVE_ORDER);
+  private final ConcurrentMap<String, IDocumentStoreReplicationInformer> replicationInformers =  new ConcurrentSkipListMap<>(String.CASE_INSENSITIVE_ORDER);
   private String identifier;
 
   private final AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<>(String.CASE_INSENSITIVE_ORDER);
-  private HttpJsonRequestFactory jsonRequestFactory = new HttpJsonRequestFactory(DEFAULT_NUMBER_OF_CACHED_REQUESTS);
+  protected HttpJsonRequestFactory jsonRequestFactory = new HttpJsonRequestFactory(DEFAULT_NUMBER_OF_CACHED_REQUESTS);
 
 
   private ConcurrentMap<String, EvictItemsFromCacheBasedOnChanges> observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentHashMap<>();
@@ -224,7 +226,7 @@ public class DocumentStore extends DocumentStoreBase {
       }
     }
 
-    for (ReplicationInformer ri : replicationInformers.values()) {
+    for (IDocumentStoreReplicationInformer ri : replicationInformers.values()) {
       ri.close();
     }
 
@@ -426,21 +428,21 @@ public class DocumentStore extends DocumentStoreBase {
     };
 
   }
-  private class ReplicationInformerGetter implements Function1<String, ReplicationInformer> {
+  protected class ReplicationInformerGetter implements Function1<String, IDocumentStoreReplicationInformer> {
 
     @Override
-    public ReplicationInformer apply(String dbName) {
+    public IDocumentStoreReplicationInformer apply(String dbName) {
       return getReplicationInformerForDatabase(dbName);
     }
 
   }
 
 
-  public ReplicationInformer getReplicationInformerForDatabase() {
+  public IDocumentStoreReplicationInformer getReplicationInformerForDatabase() {
     return getReplicationInformerForDatabase(null);
   }
 
-  public ReplicationInformer getReplicationInformerForDatabase(String dbName) {
+  public IDocumentStoreReplicationInformer getReplicationInformerForDatabase(String dbName) {
     String key = url;
     if (dbName == null) {
       dbName = defaultDatabase;
@@ -449,7 +451,7 @@ public class DocumentStore extends DocumentStoreBase {
       key = MultiDatabase.getRootDatabaseUrl(url) + "/databases/" + dbName;
     }
     replicationInformers.putIfAbsent(key, conventions.getReplicationInformerFactory().create(key));
-    ReplicationInformer informer = replicationInformers.get(key);
+    IDocumentStoreReplicationInformer informer = replicationInformers.get(key);
 
     if (failoverServers == null) {
       return informer;
@@ -618,7 +620,7 @@ public class DocumentStore extends DocumentStoreBase {
         databaseName = Constants.SYSTEM_DATABASE;
       }
       observeChangesAndEvictItemsFromCacheForDatabases.putIfAbsent(databaseName,
-        new EvictItemsFromCacheBasedOnChanges(databaseName, createDatabaseChanges(databaseName), new ExpireItemsFromCacheAction()));
+        new EvictItemsFromCacheBasedOnChanges(databaseName, changes(databaseName), new ExpireItemsFromCacheAction()));
     }
 
     super.afterSessionCreated(session);

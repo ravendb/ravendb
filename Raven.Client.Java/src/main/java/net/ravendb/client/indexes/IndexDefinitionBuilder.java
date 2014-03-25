@@ -28,6 +28,7 @@ public class IndexDefinitionBuilder {
   private Map<String, FieldStorage> storesStrings;
 
   private Long maxIndexOutputsPerDocument;
+  private boolean disableInMemoryIndexing;
 
   private Map<Path<?>, FieldIndexing> indexes;
   private Map<String, FieldIndexing> indexesStrings;
@@ -85,6 +86,16 @@ public class IndexDefinitionBuilder {
   public String getReduce() {
     return reduce;
   }
+
+  public boolean isDisableInMemoryIndexing() {
+    return disableInMemoryIndexing;
+  }
+
+
+  public void setDisableInMemoryIndexing(boolean disableInMemoryIndexing) {
+    this.disableInMemoryIndexing = disableInMemoryIndexing;
+  }
+
   public Map<Path< ? >, SortOptions> getSortOptions() {
     return sortOptions;
   }
@@ -237,6 +248,7 @@ public class IndexDefinitionBuilder {
       indexDefinition.getSortOptions().put(sortOptions.getKey(), sortOptions.getValue());
     }
 
+    indexDefinition.setDisableInMemoryIndexing(disableInMemoryIndexing);
     indexDefinition.setMaxIndexOutputsPerDocument(maxIndexOutputsPerDocument);
 
     if (map != null) {

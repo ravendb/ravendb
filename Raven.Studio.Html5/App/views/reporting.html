@@ -77,9 +77,9 @@
             </div>
             <br />
             <br />
-            <ul class="list-group col-md-6" data-bind="foreach: addedValues">
+            <ul class="list-group col-md-6" data-bind="foreach: addedValues, visible: addedValues().length > 0">
                 <li class="list-group-item">
-                    <strong data-bind="text: name"></strong>
+                    <strong data-bind="text: aggregationField"></strong>
                     <span class="text-muted"> summarized by </span>
                     <div class="btn-group">
                         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
@@ -93,7 +93,7 @@
                             <li data-bind="click: setAggregationToAverage"><a href="#">Average</a></li>
                         </ul>
                     </div>
-                    <button type="button" class="close" data-bind="click: $root.removeValue.bind($root, $data)" aria-hidden="true">&times;</button>
+                    <button type="button" class="close" data-bind="click: $root.removeValue.bind($root, $data)" aria-hidden="true" title="Remove this value">&times;</button>
                 </li>
             </ul>
         </div>
@@ -109,12 +109,48 @@
                 <i class="fa fa-info-circle text-info"></i>
             </span>
         </label>
-        <div class="col-md-6">
+        <div class="col-md-5">
             <button class="btn btn-default use-bootstrap-tooltip" title="Add a filter (Alt+F)" data-bind="visible: !hasFilter(), click: hasFilter.bind(true)">
                 <i class="fa fa-plus"></i>
             </button>
             <div data-bind="visible: hasFilter">
-                <pre class="form-control" style="height: 100px;" data-bind="aceEditor: { code: filter }"></pre>
+                <div class="row">
+                    <div class="col-md-11">
+                        <pre class="form-control" style="height: 100px;" data-bind="aceEditor: { code: filter }"></pre>
+                    </div>
+                    <div class="col-md-1">
+                        <button type="button" class="close pull-left" aria-hidden="true" title="Remove the filter" data-bind="click: hasFilter.bind(hasFilter, false)">&times;</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="reportGridGroup" class="form-group">
+        <label id="indexQueryLabelContainer" class="col-sm-1 control-label">
+            Results
+        </label>
+        <div class="col-md-11">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <table class="table table-condensed" style="margin-bottom: 0;">
+                        <thead>
+                            <tr>
+                                <th>Total</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr data-bind="visible: reportResults">
+                                <td data-bind="text: totalQueryResults"></td>
+                                <td data-bind="text: queryDuration"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="panel-body">
+                    <div id="reportResultsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: reportResults, gridSelector: '#reportResultsGrid', useContextMenu: false, showIds: false, showCheckboxes: false, maxHeight: '300px' }"></div>
+                </div>
             </div>
         </div>
     </div>

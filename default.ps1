@@ -20,7 +20,7 @@ properties {
 	$global:configuration = "Debug"
 }
 
-task default -depends Stable,Test, DoReleasePart1
+task default -depends Test, DoReleasePart1
 
 task Verify40 {
 	if( (ls "$env:windir\Microsoft.NET\Framework\v4.0*") -eq $null ) {

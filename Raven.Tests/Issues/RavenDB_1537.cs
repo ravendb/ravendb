@@ -239,13 +239,15 @@ namespace Raven.Tests.Issues
 
             using (var store = NewRemoteDocumentStore())
             {
-                var dataDumper = new SmugglerApi(new RavenConnectionStringOptions
-                {
-                    Url = store.Url
-                });
+	            var connection = new RavenConnectionStringOptions
+	            {
+		            Url = store.Url
+	            };
+	            var dataDumper = new SmugglerApi();
                 dataDumper.ImportData(new SmugglerImportOptions
                 {
                     FromFile = backupPath,
+					To = connection,
                 }, new SmugglerOptions
                 {
                     Incremental = true,

@@ -36,17 +36,17 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanReplicateValuesFromIndexToDataTable()
 		{
-			store.DocumentDatabase.PutIndex("test", new IndexDefinition
+			store.DocumentDatabase.Indexes.PutIndex("test", new IndexDefinition
 			{
 				Map = "from doc in docs from prj in doc.Projects select new{Project = prj}",
 				Stores = { { "Project", FieldStorage.Yes } }
 			});
-			store.DocumentDatabase.Put("t", null, RavenJObject.Parse("{'Projects': ['RavenDB', 'NHibernate']}"), new RavenJObject(), null);
+			store.DocumentDatabase.Documents.Put("t", null, RavenJObject.Parse("{'Projects': ['RavenDB', 'NHibernate']}"), new RavenJObject(), null);
 
 			QueryResult queryResult;
 			do
 			{
-				queryResult = store.DocumentDatabase.Query("test", new IndexQuery { Start = 0, PageSize = 2, Query = "Project:RavenDB" }, CancellationToken.None);
+				queryResult = store.DocumentDatabase.Queries.Query("test", new IndexQuery { Start = 0, PageSize = 2, Query = "Project:RavenDB" }, CancellationToken.None);
 			} while (queryResult.IsStale);
 
 			var indexToDataTable = store.DocumentDatabase.IndexUpdateTriggers.OfType<IndexToDataTable>().Single();

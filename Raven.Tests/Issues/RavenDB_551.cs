@@ -156,7 +156,7 @@ namespace Raven.Tests.Issues
                         Id = Guid.NewGuid().ToString()
 					};
 				Assert.Throws<ConcurrencyException>(() => 
-					store.DocumentDatabase.Delete("items/1", Etag.InvalidEtag, tx));
+					store.DocumentDatabase.Documents.Delete("items/1", Etag.InvalidEtag, tx));
 			}
 		}
 
@@ -175,9 +175,9 @@ namespace Raven.Tests.Issues
 				{
                     Id = Guid.NewGuid().ToString()
 				};
-				store.DocumentDatabase.Put("items/1", null, new RavenJObject(), new RavenJObject(), tx);
+				store.DocumentDatabase.Documents.Put("items/1", null, new RavenJObject(), new RavenJObject(), tx);
 				Assert.Throws<ConcurrencyException>(() =>
-					store.DocumentDatabase.Delete("items/1", Etag.InvalidEtag, tx));
+					store.DocumentDatabase.Documents.Delete("items/1", Etag.InvalidEtag, tx));
 			}
 		}
 
@@ -197,9 +197,9 @@ namespace Raven.Tests.Issues
 				{
                     Id = Guid.NewGuid().ToString()
 				};
-				store.DocumentDatabase.Delete("items/1", null, tx);
+				store.DocumentDatabase.Documents.Delete("items/1", null, tx);
 				Assert.Throws<ConcurrencyException>(() =>
-					store.DocumentDatabase.Delete("items/1", Etag.InvalidEtag, tx));
+					store.DocumentDatabase.Documents.Delete("items/1", Etag.InvalidEtag, tx));
 			}
 		}
 
@@ -214,14 +214,14 @@ namespace Raven.Tests.Issues
 					session.Store(new Item());
 					session.SaveChanges();
 				}
-				var jsonDocument = store.DocumentDatabase.Get("items/1", null);
-				store.DocumentDatabase.Delete("items/1", null, new TransactionInformation
+				var jsonDocument = store.DocumentDatabase.Documents.Get("items/1", null);
+				store.DocumentDatabase.Documents.Delete("items/1", null, new TransactionInformation
 					{
                         Id = Guid.NewGuid().ToString(),
 						Timeout = TimeSpan.FromSeconds(2)
 					});
 				Assert.Throws<ConcurrencyException>(() =>
-					store.DocumentDatabase.Delete("items/1", jsonDocument.Etag, new TransactionInformation
+					store.DocumentDatabase.Documents.Delete("items/1", jsonDocument.Etag, new TransactionInformation
 						{
                             Id = Guid.NewGuid().ToString()
 						}));
@@ -239,12 +239,12 @@ namespace Raven.Tests.Issues
 					session.Store(new Item());
 					session.SaveChanges();
 				}
-				store.DocumentDatabase.Delete("items/1", null, new TransactionInformation
+				store.DocumentDatabase.Documents.Delete("items/1", null, new TransactionInformation
 					{
                         Id = Guid.NewGuid().ToString()
 					});
 				Assert.Throws<ConcurrencyException>(() =>
-					store.DocumentDatabase.Delete("items/1", Etag.InvalidEtag, new TransactionInformation
+					store.DocumentDatabase.Documents.Delete("items/1", Etag.InvalidEtag, new TransactionInformation
 						{
                             Id = Guid.NewGuid().ToString()
 						}));

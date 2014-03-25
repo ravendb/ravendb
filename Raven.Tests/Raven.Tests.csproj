@@ -215,9 +215,6 @@
     </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="xunit">
-      <HintPath>..\SharedLibs\xunit\xunit.dll</HintPath>
-    </Reference>
     <Reference Include="xunit, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\xunit\xunit.dll</HintPath>
@@ -225,15 +222,6 @@
     <Reference Include="xunit.extensions, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\xunit\xunit.extensions.dll</HintPath>
-    </Reference>
-    <Reference Include="xunit.runner.msbuild">
-      <HintPath>..\packages\xunit.1.9.1\lib\net20\xunit.runner.msbuild.dll</HintPath>
-    </Reference>
-    <Reference Include="xunit.runner.tdnet">
-      <HintPath>..\packages\xunit.1.9.1\lib\net20\xunit.runner.tdnet.dll</HintPath>
-    </Reference>
-    <Reference Include="xunit.runner.utility">
-      <HintPath>..\packages\xunit.1.9.1\lib\net20\xunit.runner.utility.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -344,6 +332,8 @@
     <Compile Include="Bugs\SyncAsync.cs" />
     <Compile Include="Bugs\TransformationsUnitTest.cs" />
     <Compile Include="Faceted\LazyFacets.cs" />
+    <Compile Include="Issues\WaitForStaleOnAbandonedIndexShouldWork.cs" />
+    <Compile Include="Issues\RavenDB_1761.cs" />
     <Compile Include="Issues\RavenDB1508.cs" />
     <Compile Include="Issues\RavenDB1519.cs" />
     <Compile Include="Issues\RavenDB_1280_ReOpen.cs" />
@@ -366,7 +356,6 @@
     <Compile Include="Issues\RavenDB_1560.cs" />
     <Compile Include="Issues\RavenDB_1595.cs" />
     <Compile Include="Issues\RavenDB_1565.cs" />
-    <Compile Include="Issues\RavenDB_1594.cs" />
     <Compile Include="Issues\RavenDB_1609.cs" />
     <Compile Include="Issues\RavenDB_1610.cs" />
     <Compile Include="Issues\RavenDB_1650.cs" />
@@ -377,7 +366,9 @@
     <Compile Include="Issues\RavenDB_1749.cs" />
     <Compile Include="Issues\RavenDB_1760.cs" />
     <Compile Include="Issues\RavenDB_1828.cs" />
+    <Compile Include="Issues\RavenDB_1877.cs" />
     <Compile Include="Issues\RDBQA_1.cs" />
+    <Compile Include="Issues\RDBQA_13.cs" />
     <Compile Include="Issues\RDBQA_4.cs" />
     <Compile Include="Issues\RavenDB_1553.cs" />
     <Compile Include="Issues\RavenDB_1555.cs" />
@@ -387,11 +378,15 @@
     <Compile Include="Issues\RavenDB_1601.cs" />
     <Compile Include="Issues\RavenDB_1603.cs" />
     <Compile Include="Issues\RavenDB_1733.cs" />
+    <Compile Include="Issues\RavenDB_1754.cs" />
     <Compile Include="Issues\RDBQA_11.cs" />
+    <Compile Include="Issues\RDBQA_6.cs" />
     <Compile Include="Issues\RDBQA_7.cs" />
     <Compile Include="Issues\RDBQA_9.cs" />
     <Compile Include="Issues\ReplicationAlerts.cs" />
     <Compile Include="Issues\RavenDB_1557.cs" />
+    <Compile Include="Issues\RavenDB_1594.cs" />
+    <Compile Include="Issues\RavenDB_1762.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
     <Compile Include="Linq\GroupByAndDocumentId.cs" />
     <Compile Include="Linq\In.cs" />
@@ -532,7 +527,6 @@
     <Compile Include="Bugs\Queries\Floats.cs" />
     <Compile Include="Bugs\Queries\Generics.cs" />
     <Compile Include="Bugs\Queries\NameStartsWith.cs" />
-    <Compile Include="Bugs\QueryIdGreaterThan.cs" />
     <Compile Include="Bugs\QueryingDateTime.cs" />
     <Compile Include="Bugs\QueryingOnMetadata.cs" />
     <Compile Include="Bugs\RavenDbAnyOfPropertyCollection.cs" />

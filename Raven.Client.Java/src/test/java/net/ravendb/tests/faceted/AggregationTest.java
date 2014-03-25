@@ -102,7 +102,7 @@ public class AggregationTest extends RemoteClientTest {
         session.store(order3);
         session.saveChanges();
       }
-      waitForNonStaleIndexes(serverClient);
+      waitForNonStaleIndexes(store.getDatabaseCommands());
 
       try (IDocumentSession session = store.openSession()) {
         FacetResults r = session.query(Order.class, Orders_All.class)
@@ -151,7 +151,7 @@ public class AggregationTest extends RemoteClientTest {
         session.store(order3);
         session.saveChanges();
       }
-      waitForNonStaleIndexes(serverClient);
+      waitForNonStaleIndexes(store.getDatabaseCommands());
 
       try (IDocumentSession session = store.openSession()) {
         FacetResults r = session.query(Order.class, "Orders/All")
@@ -212,7 +212,7 @@ public class AggregationTest extends RemoteClientTest {
         session.store(order3);
         session.saveChanges();
       }
-      waitForNonStaleIndexes(serverClient);
+      waitForNonStaleIndexes(store.getDatabaseCommands());
 
       try (IDocumentSession session = store.openSession()) {
         FacetResults r = session.query(Order.class, "Orders/All")
@@ -267,7 +267,7 @@ public class AggregationTest extends RemoteClientTest {
         session.store(order3);
         session.saveChanges();
       }
-      waitForNonStaleIndexes(serverClient);
+      waitForNonStaleIndexes(store.getDatabaseCommands());
 
       try (IDocumentSession session = store.openSession()) {
         FacetResults r = session.query(Order.class, "Orders/All")
@@ -316,7 +316,7 @@ public class AggregationTest extends RemoteClientTest {
         session.store(order3);
         session.saveChanges();
       }
-      waitForNonStaleIndexes(serverClient);
+      waitForNonStaleIndexes(store.getDatabaseCommands());
 
       try (IDocumentSession session = store.openSession()) {
         FacetResults r = session.query(Order.class, "Orders/All")

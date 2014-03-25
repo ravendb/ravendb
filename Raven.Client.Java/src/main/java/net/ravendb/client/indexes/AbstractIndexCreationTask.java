@@ -35,6 +35,8 @@ public class AbstractIndexCreationTask extends AbstractCommonApiForIndexesAndTra
 
   protected Long maxIndexOutputsPerDocument;
 
+  protected boolean disableInMemoryIndexing;
+
   protected Map<Path<?>, FieldStorage> stores;
   protected Map<String, FieldStorage> storesStrings;
   protected Map<Path<?>, SortOptions> indexSortOptions;
@@ -78,6 +80,15 @@ public class AbstractIndexCreationTask extends AbstractCommonApiForIndexesAndTra
     return getClass().getSimpleName().replace('_', '/');
   }
 
+
+  public boolean isDisableInMemoryIndexing() {
+    return disableInMemoryIndexing;
+  }
+
+
+  public void setDisableInMemoryIndexing(boolean disableInMemoryIndexing) {
+    this.disableInMemoryIndexing = disableInMemoryIndexing;
+  }
 
   /**
    * Executes the index creation against the specified document store.
@@ -131,6 +142,7 @@ public class AbstractIndexCreationTask extends AbstractCommonApiForIndexesAndTra
     builder.setSpatialIndexes(spatialIndexes);
     builder.setSpatialIndexesStrings(spatialIndexesStrings);
     builder.setMaxIndexOutputsPerDocument(maxIndexOutputsPerDocument);
+    builder.setDisableInMemoryIndexing(disableInMemoryIndexing);
     return builder.toIndexDefinition(conventions);
 
   }

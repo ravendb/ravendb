@@ -38,7 +38,7 @@ namespace Raven.Bundles.UniqueConstraints
 				{
 				    var escapedUniqueValue = Util.EscapeUniqueValue(uniqueValue, constraint.CaseInsensitive);
                     var uniqueConstraintsDocumentKey = prefix + escapedUniqueValue;
-                    var uniqueConstraintsDocument = Database.Get(uniqueConstraintsDocumentKey, transactionInformation);
+                    var uniqueConstraintsDocument = Database.Documents.Get(uniqueConstraintsDocumentKey, transactionInformation);
 
                     if (uniqueConstraintsDocument != null)
                         ConvertUniqueConstraintsDocumentIfNecessary(uniqueConstraintsDocument, escapedUniqueValue); // backward compatibility
@@ -48,7 +48,7 @@ namespace Raven.Bundles.UniqueConstraints
 				    AddConstraintToUniqueConstraintsDocument(uniqueConstraintsDocument, escapedUniqueValue, key);
 				    uniqueConstraintsDocument.Metadata[Constants.IsConstraintDocument] = true;
 
-				    Database.Put(
+				    Database.Documents.Put(
                         uniqueConstraintsDocumentKey,
 						null,
 						uniqueConstraintsDocument.DataAsJson,
@@ -95,7 +95,7 @@ namespace Raven.Bundles.UniqueConstraints
 				{
                     var escapedUniqueValue = Util.EscapeUniqueValue(uniqueValue, constraint.CaseInsensitive);
 				    var checkDocKey = prefix + escapedUniqueValue;
-                    var checkDoc = Database.Get(checkDocKey, transactionInformation);
+                    var checkDoc = Database.Documents.Get(checkDocKey, transactionInformation);
 
 					if (checkDoc == null)
 						continue;
@@ -130,7 +130,7 @@ namespace Raven.Bundles.UniqueConstraints
 			if (properties == null || properties.Length <= 0)
 				return;
 
-			var oldDoc = Database.Get(key, transactionInformation);
+			var oldDoc = Database.Documents.Get(key, transactionInformation);
 
 			if (oldDoc == null)
 			{
@@ -168,7 +168,7 @@ namespace Raven.Bundles.UniqueConstraints
 			    {
                     var escapedUniqueValue = Util.EscapeUniqueValue(oldUniqueValue, constraint.CaseInsensitive);
                     var uniqueConstraintsDocumentKey = prefix + escapedUniqueValue;
-                    var uniqueConstraintsDocument = Database.Get(uniqueConstraintsDocumentKey, transactionInformation);
+                    var uniqueConstraintsDocument = Database.Documents.Get(uniqueConstraintsDocumentKey, transactionInformation);
 
                     if (uniqueConstraintsDocument == null)
                         continue;
@@ -177,11 +177,11 @@ namespace Raven.Bundles.UniqueConstraints
 
                     if (ShouldRemoveUniqueConstraintDocument(uniqueConstraintsDocument))
                     {
-                        Database.Delete(uniqueConstraintsDocumentKey, null, transactionInformation);
+                        Database.Documents.Delete(uniqueConstraintsDocumentKey, null, transactionInformation);
                     }
                     else if (removed)
                     {
-                        Database.Put(
+                        Database.Documents.Put(
                             uniqueConstraintsDocumentKey,
                             null,
                             uniqueConstraintsDocument.DataAsJson,

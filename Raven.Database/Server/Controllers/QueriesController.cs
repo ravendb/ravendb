@@ -65,8 +65,8 @@ namespace Raven.Database.Server.Controllers
 					if (loadedIds.Add(value) == false)
 						continue;
 					var documentByKey = string.IsNullOrEmpty(transformer)
-										? Database.Get(value, transactionInformation)
-										: Database.GetWithTransformer(value, transformer, transactionInformation, queryInputs);
+										? Database.Documents.Get(value, transactionInformation)
+										: Database.Documents.GetWithTransformer(value, transformer, transactionInformation, queryInputs);
 					if (documentByKey == null)
 						continue;
 					result.Results.Add(documentByKey.ToJson());

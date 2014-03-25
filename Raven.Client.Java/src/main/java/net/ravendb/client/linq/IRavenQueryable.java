@@ -36,6 +36,15 @@ public interface IRavenQueryable<T> extends IOrderedQueryable<T>, LinqExtensions
    * @param resultClass
    * @return
    */
+  <S> IRavenQueryable<S> transformWith(String transformerName, Class<S> resultClass);
+
+
+  /**
+   * Specifies a result transformer to use on the results
+   * @param transformerClazz
+   * @param resultClass
+   * @return
+   */
   <S> IRavenQueryable<S> transformWith(Class<? extends AbstractTransformerCreationTask> transformerClazz, Class<S> resultClass);
 
   /**

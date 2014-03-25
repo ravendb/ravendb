@@ -2,7 +2,6 @@ package net.ravendb.client.document;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.net.IDN;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -65,6 +64,7 @@ import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 
 
+import com.google.common.base.Defaults;
 import com.mysema.query.types.Expression;
 import com.mysema.query.types.Path;
 
@@ -237,7 +237,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
   protected Action1<QueryResult> afterQueryExecutedCallback;
   protected Etag cutoffEtag;
-  private QueryOperator defaultOperator = QueryOperator.OR;
+  protected QueryOperator defaultOperator = QueryOperator.OR;
 
   private static final Pattern ESPACE_POSTFIX_WILDCARD = Pattern.compile("\\\\\\*($|\\s)");
 
@@ -313,7 +313,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     }
   }
 
-  private void updateStatsAndHighlightings(QueryResult queryResult) {
+  protected void updateStatsAndHighlightings(QueryResult queryResult) {
     this.queryStats.updateQueryStats(queryResult);
     this.highlightings.update(queryResult);
   }
@@ -792,6 +792,47 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   public IDocumentQuery<T> skip(int count) {
     start = count;
     return (IDocumentQuery<T>) this;
+  }
+
+  public T first() {
+    return executeQueryOperation(1).get(0);
+  }
+
+  public T firstOrDefault() {
+    List<T> result = executeQueryOperation(1);
+    if (result.isEmpty()) {
+      return Defaults.defaultValue(clazz);
+    }
+    return result.get(0);
+  }
+
+  public T single() {
+    List<T> result = executeQueryOperation(2);
+    if (result.size() != 1) {
+      throw new IllegalStateException("Expected single result, got: " + result.size());
+    }
+    return result.get(0);
+  }
+
+  public T singleOrDefault() {
+    List<T> result = executeQueryOperation(2);
+    if (result.size() > 1) {
+      throw new IllegalStateException("Expected single result, got: " + result.size());
+    }
+    if (result.isEmpty()) {
+      return Defaults.defaultValue(clazz);
+    }
+    return result.get(0);
+  }
+
+  private List<T> executeQueryOperation(int take) {
+    if (pageSize == null || pageSize > take) {
+          take(take);
+    }
+
+    initSync();
+
+    return queryOperation.complete(clazz);
   }
 
   @Override
@@ -1423,6 +1464,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       spatialIndexQuery.setCutoff(cutoff);
       spatialIndexQuery.setCutoffEtag(cutoffEtag);
       spatialIndexQuery.setWaitForNonStaleResultsAsOfNow(theWaitForNonStaleResultsAsOfNow);
+      spatialIndexQuery.setWaitForNonStaleResults(theWaitForNonStaleResults);
       List<SortedField> sortedFields =new ArrayList<>();
       for (String orderByField: orderByFields) {
         sortedFields.add(new SortedField(orderByField));
@@ -1458,6 +1500,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     indexQuery.setCutoff(cutoff);
     indexQuery.setCutoffEtag(cutoffEtag);
     indexQuery.setWaitForNonStaleResultsAsOfNow(theWaitForNonStaleResultsAsOfNow);
+    indexQuery.setWaitForNonStaleResults(theWaitForNonStaleResults);
     List<SortedField> sortedFields =new ArrayList<>();
     for (String orderByField: orderByFields) {
       sortedFields.add(new SortedField(orderByField));

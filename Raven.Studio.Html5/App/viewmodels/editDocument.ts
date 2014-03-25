@@ -15,6 +15,8 @@ import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
+import alertType = require("common/alertType");
+import alertArgs = require("common/alertArgs");
 
 class editDocument extends viewModelBase {
 
@@ -45,6 +47,7 @@ class editDocument extends viewModelBase {
             }
         });
 
+       
         this.metadata.subscribe((meta: documentMetadata) => {
             if (meta) {
                 this.metaPropsToRestoreOnSave.length = 0;
@@ -52,13 +55,29 @@ class editDocument extends viewModelBase {
 
                 // We don't want to show certain reserved properties in the metadata text area.
                 // Remove them from the DTO, restore them on save.
-                var metaPropsToRemove = ["Non-Authoritative-Information", "@id", "Last-Modified", "Raven-Last-Modified", "@etag", "Origin"];
-                metaPropsToRemove.forEach(p => {
-                    if (metaDto[p]) {
+                var metaPropsToRemove = ["@id", "@etag", "Origin", "Raven-Server-Build", "Raven-Client-Version", "Non-Authoritative-Information", "Raven-Timer-Request",
+                    "Raven-Authenticated-User", "Raven-Last-Modified", "Has-Api-Key", "Access-Control-Allow-Origin", "Access-Control-Max-Age", "Access-Control-Allow-Methods",
+                    "Access-Control-Request-Headers", "Access-Control-Allow-Headers", "Reverse-Via", "Persistent-Auth", "Allow", "Content-Disposition", "Content-Encoding",
+                    "Content-Language", "Content-Location", "Content-MD5", "Content-Range", "Content-Type", "Expires", "Last-Modified", "Content-Length", "Keep-Alive", "X-Powered-By",
+                    "X-AspNet-Version", "X-Requested-With", "X-SourceFiles", "Accept-Charset", "Accept-Encoding", "Accept", "Accept-Language", "Authorization", "Cookie", "Expect",
+                    "From", "Host", "If-MatTemp-Index-Scorech", "If-Modified-Since", "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards", "Referer", "TE", "User-Agent", "Accept-Ranges",
+                    "Age", "Allow", "ETag", "Location", "Retry-After", "Server", "Set-Cookie2", "Set-Cookie", "Vary", "Www-Authenticate", "Cache-Control", "Connection", "Date", "Pragma",
+                    "Trailer", "Transfer-Encoding", "Upgrade", "Via", "Warning", "X-ARR-LOG-ID", "X-ARR-SSL", "X-Forwarded-For", "X-Original-URL"];
+
+                for (var property in metaDto) {
+                    if (metaDto.hasOwnProperty(property) && metaPropsToRemove.indexOf(property) != -1) {
+                        if (metaDto[property]) {
+                            this.metaPropsToRestoreOnSave.push({ name: property, value: metaDto[property].toString() });
+                        }
+                        delete metaDto[property];
+                    }
+                }
+                /*metaPropsToRemove.forEach(p => {
+                    if (p in metaDto) {
                         this.metaPropsToRestoreOnSave.push({ name: p, value: metaDto[p].toString() });
                         delete metaDto[p];
                     }
-                });
+                });*/
                 var metaString = this.stringify(metaDto);
                 this.metadataText(metaString);
                 this.userSpecifiedId(meta.id);
@@ -98,7 +117,7 @@ class editDocument extends viewModelBase {
         }
 		
         if (navigationArgs && navigationArgs.id) {
-            return this.loadDocument(navigationArgs.id);
+            return true;
         } else {
             this.editNewDocument();
         }
@@ -139,8 +158,7 @@ class editDocument extends viewModelBase {
     }
 
     failedToLoadDoc(docId, errorResponse) {
-        sys.log("Failed to load document for editing.", errorResponse);
-        app.showMessage("Can't edit '" + docId + "'. Details logged in the browser console.", ":-(", ['Dismiss']);
+        ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + docId + " document", null));
     }
 
     saveDocument() {
@@ -185,6 +203,30 @@ class editDocument extends viewModelBase {
 
     activateDoc() {
         this.isEditingMetadata(false);
+    }
+
+    canActivate(args) {
+        if (args && args.id) {
+
+            var canActivateResult = $.Deferred();
+            new getDocumentWithMetadataCommand(args.id, this.activeDatabase())
+                .execute()
+                .done((document) => {
+                    this.document(document);
+                    canActivateResult.resolve({ can: true });
+                })
+                .fail(() => {
+                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + args.id + " document", null));
+                    canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
+                }
+            );
+            return canActivateResult;
+        } else {
+            return $.Deferred().resolve({ can: true });
+        }
+
+        
+        
     }
 
     loadDocument(id: string): JQueryPromise<document> {

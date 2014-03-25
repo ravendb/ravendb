@@ -1,7 +1,4 @@
-﻿/// <reference path="../../../Scripts/typings/knockout.postbox/knockout-postbox.d.ts" />
-/// <reference path="../../../Scripts/typings/durandal/durandal.d.ts" />
-
-import router = require("plugins/router");
+﻿import router = require("plugins/router");
 import widget = require("plugins/widget");
 import app = require("durandal/app");
 
@@ -34,6 +31,7 @@ class ctor {
     gridViewport: JQuery;
     scrollThrottleTimeoutHandle = 0;
     firstVisibleRow: row = null;
+
     settings: {
         documentsSource: KnockoutObservable<pagedList>;
         dynamicHeightTargetSelector: string;
@@ -53,6 +51,7 @@ class ctor {
         var defaults = {
             dynamicHeightTargetSelector: "footer",
             dynamicHeightBottomMargin: 0,
+            selectedIndices: ko.observableArray(),
             showCheckboxes: true,
             showIds: true,
             useContextMenu: true,
@@ -149,7 +148,6 @@ class ctor {
 
     setupKeyboardShortcuts() {
         this.setupKeyboardShortcut("DELETE", () => this.deleteSelectedDocs());
-        this.setupKeyboardShortcut("F2", () => this.editLastSelectedDoc());
         this.setupKeyboardShortcut("Ctrl+C,D", () => this.copySelectedDocs());
         this.setupKeyboardShortcut("Ctrl+C,I", () => this.copySelectedDocIds());
     }

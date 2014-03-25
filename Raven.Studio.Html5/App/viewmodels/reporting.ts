@@ -3,8 +3,10 @@ import appUrl = require("common/appUrl");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
 import facet = require("models/facet");
-import queryFacetCommand = require("commands/queryFacetCommand");
+import queryFacetsCommand = require("commands/queryFacetsCommand");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import pagedList = require("common/pagedList");
+import pagedResultSet = require("common/pagedResultSet");
 
 class reporting extends viewModelBase {
     selectedIndexName = ko.observable<string>();
@@ -18,12 +20,15 @@ class reporting extends viewModelBase {
     addedValues = ko.observableArray<facet>();
     filter = ko.observable<string>();
     hasFilter = ko.observable(false);
-
+    reportResults = ko.observable<pagedList>();
+    totalQueryResults = ko.computed(() => this.reportResults() ? this.reportResults().totalResultCount() : null);
+    queryDuration = ko.observable<string>();
+    
     activate(indexToActivateOrNull: string) {
         super.activate(indexToActivateOrNull);
 
-        this.fetchIndexes()
-            .done(() => this.selectInitialIndex(indexToActivateOrNull));
+        this.fetchIndexes().done(() => this.selectInitialIndex(indexToActivateOrNull));
+        this.selectedIndexName.subscribe(() => this.resetSelections());
 
         aceEditorBindingHandler.install();
     }
@@ -57,13 +62,19 @@ class reporting extends viewModelBase {
 
     setSelectedField(fieldName: string) {
         this.selectedField(fieldName);
+
+        // Update all facets to use that too.
+        this.addedValues().forEach(v => v.name = fieldName);
+    }
+
+    resetSelections() {
+        this.selectedField(null);
+        this.addedValues([]);
+        this.availableFields([]);
     }
 
     addValue(fieldName: string) {
-        // Example queries:
-        // /databases/TestDb/facets/Orders/ByCompany?&facetStart=0&facetPageSize=256&facets=%5B%7B%22Mode%22%3A0%2C%22Aggregation%22%3A1%2C%22AggregationField%22%3A%22Company%22%2C%22Name%22%3A%22Company%22%2C%22DisplayName%22%3A%22Company-Company%22%2C%22Ranges%22%3A%5B%5D%2C%22MaxResults%22%3Anull%2C%22TermSortMode%22%3A0%2C%22IncludeRemainingTerms%22%3Afalse%7D%5D&noCache=1402558754
-        // /databases/TestDb/facets/Orders/ByCompany?&facetStart=0&facetPageSize=256&facets=[{"Mode":0,"Aggregation":1,"AggregationField":"Company","Name":"Company","DisplayName":"Company-Company","Ranges":[],"MaxResults":null,"TermSortMode":0,"IncludeRemainingTerms":false}]&noCache=1402558754
-        var val = facet.fromName(fieldName);
+        var val = facet.fromNameAndAggregation(this.selectedField(), fieldName);
         this.addedValues.push(val);
     }
 
@@ -72,8 +83,16 @@ class reporting extends viewModelBase {
     }
 
     runReport() {
-        var filterQuery = this.filter();
-        //new queryFacetCommand(
+        var selectedIndex = this.selectedIndexName();
+        var filterQuery = this.hasFilter() ? this.filter() : null;
+        var facets = this.addedValues().map(v => v.toDto());
+        var db = this.activeDatabase();
+        var resultsFetcher = (skip: number, take: number) => {
+            return new queryFacetsCommand(selectedIndex, filterQuery, skip, take, facets, db)
+                .execute()
+                .done((resultSet: pagedResultSet) => this.queryDuration(resultSet.additionalResultInfo));
+        };
+        this.reportResults(new pagedList(resultsFetcher));
     }
 }
 

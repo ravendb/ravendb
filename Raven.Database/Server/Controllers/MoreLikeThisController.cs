@@ -31,7 +31,7 @@ namespace Raven.Database.Server.Controllers
 					HttpStatusCode.NotFound);
 			}
 
-			var indexEtag = Database.GetIndexEtag(parameters.IndexName, null);
+			var indexEtag = Database.Indexes.GetIndexEtag(parameters.IndexName, null);
 			if (MatchEtag(indexEtag))
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 

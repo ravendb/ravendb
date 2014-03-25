@@ -2,6 +2,7 @@ class facet {
     mode: number; // Default = 0, Ranges = 1
     aggregation = ko.observable<number>(); // None = 0, Count = 1, Max = 2, Min = 4, Average = 8, Sum = 16
     aggregationField: string;
+    aggregationType: string;
     name: string;
     displayName: string;
     ranges: any[];
@@ -14,6 +15,7 @@ class facet {
     constructor(dto: facetDto) {
         this.aggregation(dto.Aggregation);
         this.aggregationField = dto.AggregationField;
+        this.aggregationType = dto.AggregationType;
         this.displayName = dto.DisplayName;
         this.includeRemainingTerms = dto.IncludeRemainingTerms;
         this.maxResults = dto.MaxResults;
@@ -27,6 +29,7 @@ class facet {
         return {
             Aggregation: this.aggregation(),
             AggregationField: this.aggregationField,
+            AggregationType: "System.Int32",
             DisplayName: this.displayName,
             IncludeRemainingTerms: this.includeRemainingTerms,
             MaxResults: this.maxResults,
@@ -37,11 +40,12 @@ class facet {
         };
     }
 
-    static fromName(name: string): facet {
+    static fromNameAndAggregation(name: string, aggregationField: string): facet {
         var dto: facetDto = {
             Aggregation: 0,
-            AggregationField: name,
-            DisplayName: name + "-" + name,
+            AggregationField: aggregationField,
+            AggregationType: "System.Int32",
+            DisplayName: name + "-" + aggregationField,
             IncludeRemainingTerms: false,
             MaxResults: null,
             Mode: 0,
@@ -53,7 +57,7 @@ class facet {
         return new facet(dto);
     }
 
-    private static getLabelForAggregation(aggregation: number) {
+    static getLabelForAggregation(aggregation: number) {
         // None = 0, Count = 1, Max = 2, Min = 4, Average = 8, Sum = 16
         return aggregation === 1 ? "Count" :
             aggregation === 2 ? "Max" :

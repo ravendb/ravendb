@@ -20,7 +20,7 @@ namespace Raven.Tests.Issues
 				store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
 				{
 					int tries;
-					var val = store.DocumentDatabase.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("users/", accessor, null,
+					var val = store.DocumentDatabase.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("users/", accessor, null,
 					                                                                                           out tries);
 					Assert.True(30 > tries);
 					Assert.Equal(1338, val);
@@ -29,7 +29,7 @@ namespace Raven.Tests.Issues
 				store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
 				{
 					int tries;
-					var val = store.DocumentDatabase.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("users/", accessor, null,
+					var val = store.DocumentDatabase.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("users/", accessor, null,
 																											   out tries);
 					Assert.Equal(1, tries);
 					Assert.Equal(1339, val);

@@ -58,6 +58,10 @@ namespace Raven.Database.Json
 						RemoveValue(patchCmd, patchCmd.Name, token);
 						break;
 					case PatchCommandType.Modify:
+                        // create snapshot of property 
+                        token.EnsureCannotBeChangeAndEnableSnapshotting();    
+				        token = token.CreateSnapshot();
+				        document[patchCmd.Name] = token;
 						ModifyValue(patchCmd, patchCmd.Name, token);
 						break;
 					case PatchCommandType.Inc:
@@ -282,7 +286,7 @@ namespace Raven.Database.Json
 		private static void EnsurePreviousValueMatchCurrentValue(PatchRequest patchCmd, RavenJToken property)
 		{
 			var prevVal = patchCmd.PrevVal;
-			if (prevVal == null)
+            if (prevVal == null || prevVal.Type == JTokenType.Null)
 				return;
 			switch (prevVal.Type)
 			{

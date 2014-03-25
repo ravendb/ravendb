@@ -372,7 +372,7 @@ public class FacetPagingTest extends FacetTestBase {
         s.store(new FacetSetup("facets/CameraFacets", facets));
         s.saveChanges();
 
-        FacetResults facetResults = s.advanced().luceneQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets", 2, 2);
+        FacetResults facetResults = s.advanced().documentQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets", 2, 2);
 
         QCamera x = QCamera.camera;
 
@@ -426,7 +426,7 @@ public class FacetPagingTest extends FacetTestBase {
         s.store(new FacetSetup("facets/CameraFacets", facets));
         s.saveChanges();
 
-        FacetResults facetResults = s.advanced().luceneQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets", 2, 2);
+        FacetResults facetResults = s.advanced().documentQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets", 2, 2);
 
         QCamera x = QCamera.camera;
 
@@ -480,7 +480,7 @@ public class FacetPagingTest extends FacetTestBase {
         s.store(new FacetSetup("facets/CameraFacets", facets));
         s.saveChanges();
 
-        FacetResults facetResults = s.advanced().luceneQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets", 2, 2);
+        FacetResults facetResults = s.advanced().documentQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets", 2, 2);
 
         QCamera x = QCamera.camera;
 
@@ -534,7 +534,7 @@ public class FacetPagingTest extends FacetTestBase {
         s.store(new FacetSetup("facets/CameraFacets", facets));
         s.saveChanges();
 
-        FacetResults facetResults = s.advanced().luceneQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets", 2, 2);
+        FacetResults facetResults = s.advanced().documentQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets", 2, 2);
 
         QCamera x = QCamera.camera;
 
@@ -588,7 +588,7 @@ public class FacetPagingTest extends FacetTestBase {
         s.store(new FacetSetup("facets/CameraFacets", facets));
         s.saveChanges();
 
-        FacetResults facetResults = s.advanced().luceneQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets", 2);
+        FacetResults facetResults = s.advanced().documentQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets", 2);
 
         QCamera x = QCamera.camera;
 
@@ -639,7 +639,7 @@ public class FacetPagingTest extends FacetTestBase {
         s.store(new FacetSetup("facets/CameraFacets", facets));
         s.saveChanges();
 
-        FacetResults facetResults = s.advanced().luceneQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets", 2);
+        FacetResults facetResults = s.advanced().documentQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets", 2);
 
         QCamera x = QCamera.camera;
 

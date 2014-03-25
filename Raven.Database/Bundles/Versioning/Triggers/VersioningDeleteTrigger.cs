@@ -28,7 +28,7 @@ namespace Raven.Bundles.Versioning.Triggers
 
 		public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
 		{
-			var document = Database.Get(key, transactionInformation);
+			var document = Database.Documents.Get(key, transactionInformation);
 			if (document == null)
 				return VetoResult.Allowed;
 
@@ -43,7 +43,7 @@ namespace Raven.Bundles.Versioning.Triggers
 				if (revisionPos != -1)
 				{
 					var parentKey = key.Remove(revisionPos);
-					var parentDoc = Database.Get(parentKey, transactionInformation);
+					var parentDoc = Database.Documents.Get(parentKey, transactionInformation);
 					if (parentDoc == null)
 						return VetoResult.Allowed;
 				}
@@ -69,7 +69,7 @@ namespace Raven.Bundles.Versioning.Triggers
                             continue;
                         if (versioningConfig != null && versioningConfig.PurgeOnDelete)
                         {
-                            Database.Delete(jsonDocument.Key, null, transactionInformation);
+                            Database.Documents.Delete(jsonDocument.Key, null, transactionInformation);
                         }
                         else
                         {

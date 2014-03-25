@@ -1554,7 +1554,7 @@ namespace Raven.Database.Indexing
 
 		protected object LoadDocument(string key)
 		{
-			var jsonDocument = context.Database.Get(key, null);
+			var jsonDocument = context.Database.Documents.Get(key, null);
 			if (jsonDocument == null)
 				return new DynamicNullObject();
 			return new DynamicJsonObject(jsonDocument.ToJson());
@@ -1623,7 +1623,7 @@ namespace Raven.Database.Indexing
                 });    
             }
 
-            context.Database.RaiseNotifications(new IndexChangeNotification()
+            context.Database.Notifications.RaiseNotifications(new IndexChangeNotification()
             {
                 Name = PublicName,
                 Type = IndexChangeTypes.IndexMarkedAsErrored 

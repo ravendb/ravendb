@@ -36,7 +36,7 @@ namespace Raven.Database.Plugins.Builtins
 		    if (bundlesChangesAllowed)
 		        return VetoResult.Allowed;
 
-		    var existingDbDoc = Database.Get(key, transactionInformation);
+		    var existingDbDoc = Database.Documents.Get(key, transactionInformation);
 
 		    if (existingDbDoc == null)
 		        return VetoResult.Allowed;

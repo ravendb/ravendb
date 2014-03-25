@@ -76,9 +76,7 @@ public class MultiLoadOperation {
 
   public <T> T[] complete(Class<T> clazz) {
     for (int i = 0; i < includeResults.length; i++) {
-      JsonDocument include = includeResults[i];
-      Class<?> entityType = (this.includes.length > i) ? this.includes[i].getItem2() : Object.class;
-      sessionOperations.trackEntity(entityType, include);
+      sessionOperations.trackIncludedDocumnet(includeResults[i]);
     }
 
     JsonDocument[] selectedResults = selectResults();

@@ -43,7 +43,7 @@ namespace Raven.Bundles.Replication.Triggers
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var document = Database.Get(key, transactionInformation);
+				var document = Database.Documents.Get(key, transactionInformation);
 
 				if (document == null)
 					return;
@@ -80,7 +80,7 @@ namespace Raven.Bundles.Replication.Triggers
 
 			foreach (var c in conflicts)
 			{
-				var conflict = Database.Get(c.Value<string>(), transactionInformation);
+				var conflict = Database.Documents.Get(c.Value<string>(), transactionInformation);
 				var conflictSource = conflict.Metadata.Value<RavenJValue>(Constants.RavenReplicationSource).Value<string>();
 
 				if (conflictSource != currentSource)

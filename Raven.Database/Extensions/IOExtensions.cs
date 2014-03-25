@@ -158,9 +158,7 @@ namespace Raven.Database.Extensions
 		static void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
 		{
 			if (!target.Exists)
-			{
 				Directory.CreateDirectory(target.FullName);
-			}
 
 			// copy all files in the immediate directly
 			foreach (FileInfo fi in source.GetFiles())
@@ -176,6 +174,4 @@ namespace Raven.Database.Extensions
 			}
 		}
 	}
-
-
 }

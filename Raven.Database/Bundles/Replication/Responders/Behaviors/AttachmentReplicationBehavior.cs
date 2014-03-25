@@ -21,7 +21,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override void DeleteItem(string id, Etag etag)
 		{
-			Database.DeleteStatic(id, etag);
+			Database.Attachments.DeleteStatic(id, etag);
 		}
 
 		protected override void MarkAsDeleted(string id, RavenJObject metadata)
@@ -31,7 +31,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override void AddWithoutConflict(string id, Etag etag, RavenJObject metadata, byte[] incoming)
 		{
-			Database.PutStatic(id, etag, new MemoryStream(incoming), metadata);
+			Database.Attachments.PutStatic(id, etag, new MemoryStream(incoming), metadata);
 			Actions.Lists.Remove(Constants.RavenReplicationAttachmentsTombstones, id);
 		}
 

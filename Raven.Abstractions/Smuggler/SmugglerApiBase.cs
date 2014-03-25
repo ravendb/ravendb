@@ -468,7 +468,7 @@ namespace Raven.Abstractions.Smuggler
             public string Key { get; set; }
         }
 
-		protected abstract Task EnsureDatabaseExists();
+		protected abstract Task EnsureDatabaseExists(RavenConnectionStringOptions to);
 
 		public async virtual Task ImportData(SmugglerImportOptions importOptions, SmugglerOptions options, Stream stream)
 		{
@@ -476,7 +476,7 @@ namespace Raven.Abstractions.Smuggler
 
 			await DetectServerSupportedFeatures();
 
-			await EnsureDatabaseExists();
+			await EnsureDatabaseExists(importOptions.To);
 			Stream sizeStream;
 
 			var sw = Stopwatch.StartNew();

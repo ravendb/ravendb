@@ -1,5 +1,7 @@
 ﻿using System.Text;
 
+using Raven.Abstractions.Util;
+
 namespace Raven.Tests.Storage.Voron
 {
 	using System;
@@ -156,7 +158,8 @@ using Raven.Database.Plugins;
 				var nonExistingDocumentEtag = new Etag(UuidType.Documents, 0, 0);
 				storage.Batch(viewer => resultEtag = viewer.Documents.GetBestNextDocumentEtag(nonExistingDocumentEtag));
 
-				Assert.Equal(resultEtag, nonExistingDocumentEtag);
+			    var e = EtagUtil.Increment(nonExistingDocumentEtag, 1);
+                Assert.Equal(e, resultEtag);
 			}
 		}
 

@@ -88,11 +88,11 @@ html, body {
             border-radius: 10px;
             -webkit-box-shadow: 0 0 5px 1px silver;
             box-shadow: 0 0 5px 1px silver;
-            margin-right: 10px;
             min-width: 140px;
             min-height: 60px;
             display: inline-block;
             padding: 8px;
+            margin: 0 10px 14px 0;
 
             @selectColor: rgb(66, 139, 202);
             @hoverColor: lighten(@selectColor, 10%);
@@ -127,6 +127,15 @@ html, body {
             }
         }
     }
+
+    .systemButton {
+        color:grey;
+        margin-top:50px;        
+        position:absolute;
+        top:-40px;
+        right:25px;
+    }
+
 }
 
 .document-collections {
@@ -178,13 +187,33 @@ html, body {
     }
 }
 
+
+#logsContainer .logRecord {
+    .logName .logName-actions-container {
+        display: none;
+    }
+
+    &:hover {
+        .logName-actions-container {
+            display: inline-block;
+        }
+    }
+}
+
+
 .settings-container {
     margin-top: 10px;
 
-    .api-key-card, .replication-destination-card, .win-auth-card {
+    .api-key-card, .win-auth-card {
         display: inline-block;
         width: 500px;
         margin-right: 20px;
+    }
+
+    .replication-destination-card {
+           display: inline-table;
+            width: 500px;
+            margin-right: 20px;
     }
 
     .win-auth-tabs {
@@ -470,6 +499,7 @@ html, body {
         }
     }
 }
+
 
 #editTransformerContainer .transformer {
   height: 600px;

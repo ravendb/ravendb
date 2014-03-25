@@ -25,4 +25,5 @@ interface computedAppUrls {
     scriptedIndexes: KnockoutComputed<string>;
 
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
+    databasesManagement: KnockoutComputed<string>;
 }

@@ -52,14 +52,15 @@ namespace Raven.Tests.Issues
 
 	                session.SaveChanges();
 	            }
-	            var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
-	            {
-	                Url = store.Url,
-                    DefaultDatabase = store.DefaultDatabase
-	            });
+	            var smugglerApi = new SmugglerApi();
 	            await smugglerApi.ExportData(new SmugglerExportOptions
 	            {
 	                ToFile = file,
+					From = new RavenConnectionStringOptions
+					{
+						Url = store.Url,
+						DefaultDatabase = store.DefaultDatabase
+					}
 	                },new SmugglerOptions{
 				TransformScript = @"function(doc) { 
 						var id = doc['@metadata']['@id']; 
@@ -72,14 +73,15 @@ namespace Raven.Tests.Issues
 
 	        using (var documentStore = NewRemoteDocumentStore())
 	        {
-	            var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
-	            {
-	                Url = documentStore.Url,
-                    DefaultDatabase = documentStore.DefaultDatabase
-	            });
+	            var smugglerApi = new SmugglerApi();
 	            await smugglerApi.ImportData(new SmugglerImportOptions
 	            {
 	                FromFile = file,
+					To = new RavenConnectionStringOptions
+					{
+						Url = documentStore.Url,
+						DefaultDatabase = documentStore.DefaultDatabase
+					}
 	                },new SmugglerOptions{TransformScript = @"function(doc) { 
 						var id = doc['@metadata']['@id']; 
 						if(id === 'foos/1')
@@ -115,13 +117,14 @@ namespace Raven.Tests.Issues
 
 	                session.SaveChanges();
 	            }
-	            var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
+	            var smugglerApi = new SmugglerApi();
+	            await smugglerApi.ExportData(new SmugglerExportOptions
+	            {
+					From = new RavenConnectionStringOptions
 	            {
 	                Url = store.Url,
                     DefaultDatabase = store.DefaultDatabase
-	            });
-	            await smugglerApi.ExportData(new SmugglerExportOptions
-	            {
+	            },
 	                ToFile = file,
 				}, new SmugglerOptions
 				{
@@ -134,13 +137,14 @@ namespace Raven.Tests.Issues
 
 	        using (var store = NewRemoteDocumentStore())
 	        {
-	            var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
-	            {
-	                Url = store.Url,
-                    DefaultDatabase = store.DefaultDatabase
-	            });
+	            var smugglerApi = new SmugglerApi();
 	            await smugglerApi.ImportData(new SmugglerImportOptions
-	            {
+				{
+					To = new RavenConnectionStringOptions
+					{
+						Url = store.Url,
+						DefaultDatabase = store.DefaultDatabase
+					},
 	                FromFile = file,
 				}, new SmugglerOptions
 				{

@@ -20,9 +20,9 @@ namespace Raven.Tests.Spatial
 				}
 				};
 
-				store.DocumentDatabase.PutIndex("eventsByLatLng", indexDefinition);
+				store.DocumentDatabase.Indexes.PutIndex("eventsByLatLng", indexDefinition);
 
-				store.DocumentDatabase.Put("Events/1", null,
+				store.DocumentDatabase.Documents.Put("Events/1", null,
 					RavenJObject.Parse(@"{""Venue"": ""Jimmy's Old Town Tavern"", ""Latitude"": null, ""Longitude"": null }"),
 					RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
 
@@ -54,9 +54,9 @@ namespace Raven.Tests.Spatial
 				}
 				};
 
-				store.DocumentDatabase.PutIndex("eventsByLatLng", indexDefinition);
+				store.DocumentDatabase.Indexes.PutIndex("eventsByLatLng", indexDefinition);
 
-				store.DocumentDatabase.Put("Events/1", null,
+				store.DocumentDatabase.Documents.Put("Events/1", null,
 					RavenJObject.Parse(@"{""Venue"": ""Jimmy's Old Town Tavern"", ""Latitude"": null, ""Longitude"": null }"),
 					RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
 

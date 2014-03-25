@@ -61,11 +61,11 @@ namespace Raven.Bundles.Replication.Impl
 
             JsonDocument document;
             using (Database.TransactionalStorage.DisableBatchNesting())
-                document = Database.Get(Constants.RavenReplicationVersionHiLo, null);
+                document = Database.Documents.Get(Constants.RavenReplicationVersionHiLo, null);
 
             if (document == null)
             {
-                document = Database.Get(Constants.RavenReplicationVersionHiLo, null);
+                document = Database.Documents.Get(Constants.RavenReplicationVersionHiLo, null);
                 if (document != null)
                     return NextMax(document, currentMax.Value);
             }
@@ -78,11 +78,11 @@ namespace Raven.Bundles.Replication.Impl
                         var minNextMax = currentMax.Value;
 
                         if (document == null)
-                            document = Database.Get(Constants.RavenReplicationVersionHiLo, null);
+                            document = Database.Documents.Get(Constants.RavenReplicationVersionHiLo, null);
 
                         if (document == null)
                         {
-                            Database.Put(Constants.RavenReplicationVersionHiLo,
+                            Database.Documents.Put(Constants.RavenReplicationVersionHiLo,
                                          Etag.Empty,
                                 // sending empty guid means - ensure the that the document does NOT exists
                                          RavenJObject.FromObject(RavenJObject.FromObject(new { Max = minNextMax + capacity })),
@@ -105,7 +105,7 @@ namespace Raven.Bundles.Replication.Impl
 	    {
 	        var max = GetMaxFromDocument(document, minNextMax);
 	        document.DataAsJson["Max"] = max + capacity;
-	        Database.Put(Constants.RavenReplicationVersionHiLo, document.Etag, document.DataAsJson, document.Metadata, null);
+	        Database.Documents.Put(Constants.RavenReplicationVersionHiLo, document.Etag, document.DataAsJson, document.Metadata, null);
 	        current = max + 1;
 	        return max + capacity;
 	    }
