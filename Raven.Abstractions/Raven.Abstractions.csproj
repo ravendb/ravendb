@@ -120,6 +120,7 @@
     <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
     <Compile Include="Data\AttachmentInformation.cs" />
+    <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Data\DatabaseMetrics.cs" />
     <Compile Include="Data\FacetQuery.cs" />
     <Compile Include="Data\FailoverServers.cs" />

@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -59,12 +60,15 @@ namespace Raven.Client.Connection.Async
 			return json.Deserialize<AdminStatistics>(innerAsyncServerClient.convention);
 		}
 
-		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, string databaseName)
+		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
 		{
-			RavenJObject backupSettings;
-			var request = adminRequest.StartBackup(backupLocation, databaseDocument, databaseName, out backupSettings);
+		    var request = adminRequest.StartBackup(backupLocation, databaseDocument, databaseName, incremental);
 
-			return request.WriteAsync(backupSettings.ToString(Formatting.None));
+            return request.WriteAsync(RavenJObject.FromObject(new BackupRequest
+            {
+                BackupLocation = backupLocation,
+                DatabaseDocument = databaseDocument
+            }));
 		}
 
 		public Task StartRestoreAsync(RestoreRequest restoreRequest)

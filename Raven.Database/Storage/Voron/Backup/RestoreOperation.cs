@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using System;
 using System.IO;
@@ -37,14 +38,21 @@ namespace Raven.Database.Storage.Voron.Backup
                             .OrderBy(dir=>dir)
                             .Select(dir=> Path.Combine(dir,BackupMethods.Filename))
                             .ToList();
-                        BackupMethods.Incremental.Restore(options,backupPaths);
+                        BackupMethods.Incremental.Restore(options, new IncrementalBackup.IncrementalRestorePaths
+                        {
+                            DatabaseLocation = _restoreRequest.DatabaseLocation,
+                            JournalLocation = _restoreRequest.JournalsLocation
+                        }, backupPaths);
                     }
 				}
 
             }
             catch (Exception e)
             {
-                LogFailureAndRethrow(e);
+                output("Restore Operation: Failure! Could not restore database!");
+                output(e.ToString());
+                log.WarnException("Could not complete restore", e);
+                throw;
             }
         }
 

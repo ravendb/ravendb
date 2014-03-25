@@ -521,7 +521,7 @@ namespace Raven.Client.Connection
         /// <summary>
         /// Begins a backup operation
         /// </summary>
-        void StartBackup(string backupLocation, DatabaseDocument databaseDocument, string databaseName);
+        void StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName);
 
         IDatabaseCommands Commands { get; }
 	}

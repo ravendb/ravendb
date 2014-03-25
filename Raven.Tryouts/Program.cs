@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using NLog;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
 {
@@ -13,25 +14,16 @@ namespace Raven.Tryouts
 
 		private unsafe static void Main(string[] args)
 		{
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 100; i++)
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                var s = new My
+
+                using (var x = new RavenDB1369())
                 {
-                    B =  (byte*)1
-                };
-                var x = JsonConvert.SerializeObject(s); 
-                
-                try
-                {
-                  
-                    Console.WriteLine(x);
+                    x.CanRestoreIncrementalToMultipleLocationsToDifferentDatabase();
                 }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                }
+
             }
 
 		}

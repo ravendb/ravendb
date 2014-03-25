@@ -497,7 +497,7 @@ namespace Raven.Client.Connection.Async
         /// <summary>
         /// Begins an async backup operation
         /// </summary>
-        Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, string databaseName);
+        Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName);
 	}
 
 	public interface IAsyncAdminDatabaseCommands

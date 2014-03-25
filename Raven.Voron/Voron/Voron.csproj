@@ -62,6 +62,7 @@
     <Compile Include="Exceptions\QuotaException.cs" />
     <Compile Include="Impl\Backup\FullBackup.cs" />
     <Compile Include="Impl\Backup\IncrementalBackupInfo.cs" />
+    <Compile Include="Impl\Backup\VoronBackupUtil.cs" />
     <Compile Include="Impl\Constants.cs" />
     <Compile Include="Impl\Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Impl\Backup\IncrementalBackup.cs" />

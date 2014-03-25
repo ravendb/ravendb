@@ -35,15 +35,6 @@ namespace Raven.Database.Storage
 
         public abstract void Execute();
 
-        protected void LogFailureAndRethrow(Exception e)
-        {
-            output("Restore Operation: Failure! Could not restore database!");
-            output(e.ToString());
-            log.WarnException("Could not complete restore", e);
-
-            throw e;
-        }
-
         protected void ValidateRestorePreconditionsAndReturnLogsPath(string backupFilename)
         {
             if (File.Exists(BackupFilenamePath(backupFilename)) == false)

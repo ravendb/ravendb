@@ -50,7 +50,7 @@ namespace Raven.Tests.Bundles.Encryption
 				}
 
 				var backupFolderDb1 = NewDataPath("BackupFolderDb1");
-				await store.AsyncDatabaseCommands.ForDatabase("Db1").GlobalAdmin.StartBackupAsync(backupFolderDb1, db1, "Db1");
+				await store.AsyncDatabaseCommands.ForDatabase("Db1").GlobalAdmin.StartBackupAsync(backupFolderDb1, db1,false ,"Db1");
 				WaitForBackup(store.DatabaseCommands.ForDatabase("Db1"), true);
 
 			    await store.AsyncDatabaseCommands.GlobalAdmin.StartRestoreAsync(new RestoreRequest

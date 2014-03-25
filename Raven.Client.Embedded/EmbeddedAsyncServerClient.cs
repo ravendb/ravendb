@@ -308,7 +308,7 @@ namespace Raven.Client.Embedded
             return new CompletedTask<IndexMergeResults>(databaseCommands.GetIndexMergeSuggestions());
         }
 
-		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, string databaseName)
+		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
 		{
 			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();

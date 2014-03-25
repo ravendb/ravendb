@@ -24,7 +24,7 @@ namespace Raven.Tests.Issues
             {
                 store.DatabaseCommands.Put("keys/1", null, new RavenJObject { { "Key", 1 } }, new RavenJObject());
 
-                await store.AsyncDatabaseCommands.GlobalAdmin.StartBackupAsync(backupDir, new DatabaseDocument(), Constants.SystemDatabase);
+                await store.AsyncDatabaseCommands.GlobalAdmin.StartBackupAsync(backupDir, new DatabaseDocument(), false, Constants.SystemDatabase);
 
                 WaitForBackup(store.DatabaseCommands, true);
 
