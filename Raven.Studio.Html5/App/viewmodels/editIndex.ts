@@ -12,6 +12,8 @@ import appUrl = require("common/appUrl");
 import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import dialog = require("plugins/dialog");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import alertType = require("common/alertType");
+import alertArgs = require("common/alertArgs");
 
 class editIndex extends viewModelBase { 
 
@@ -39,6 +41,22 @@ class editIndex extends viewModelBase {
         this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
     }
 
+    canActivate(args) {
+        if (args) {
+            var canActivateResult = $.Deferred();
+            this.fetchIndexToEdit(args)
+                .done(()=> canActivateResult.resolve({ can: true }))
+                .fail(() => {
+                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + decodeURIComponent(args) + " index", null));
+                    canActivateResult.resolve({ redirect: appUrl.forIndexes(this.activeDatabase() )});
+                });
+
+            return canActivateResult;
+        } else {
+            return $.Deferred().resolve({ can: true });
+        }
+    }
+
     activate(indexToEditName: string) {
         super.activate(indexToEditName);
         
@@ -54,7 +72,6 @@ class editIndex extends viewModelBase {
 
     editExistingIndex(unescapedIndexName: string) {
         var indexName = decodeURIComponent(unescapedIndexName);
-        this.fetchIndexToEdit(indexName);
         this.fetchIndexPriority(indexName);
         this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
         this.statsUrl(appUrl.forStatus(this.activeDatabase()));
@@ -91,8 +108,8 @@ class editIndex extends viewModelBase {
         });
     }
 
-    fetchIndexToEdit(indexName: string) {
-        new getIndexDefinitionCommand(indexName, this.activeDatabase())
+    fetchIndexToEdit(indexName: string) : JQueryPromise<any>{
+        return new getIndexDefinitionCommand(indexName, this.activeDatabase())
             .execute()
             .done((results: indexDefinitionContainerDto) => this.editedIndex(new indexDefinition(results.Index)));
     }
