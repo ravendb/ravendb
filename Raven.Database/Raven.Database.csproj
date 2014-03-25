@@ -1027,9 +1027,6 @@
     <Compile Include="Storage\Voron\StorageActions\GeneralStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActions\IndexingStorageActions.cs" />
     <Compile Include="Storage\Voron\Impl\Table.cs" />
-    <Compile Include="Storage\Voron\Impl\IPersistenceSource.cs" />
-    <Compile Include="Storage\Voron\Impl\MemoryMapPersistanceSource.cs" />
-    <Compile Include="Storage\Voron\Impl\MemoryPersistanceSource.cs" />
     <Compile Include="Storage\Voron\StorageActions\ListsStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActions\MappedResultsStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActions\QueueStorageActions.cs" />
@@ -1175,7 +1172,7 @@
     <EmbeddedResource Include="Server\WebUI\js\rdb.jsonEditor\rdb.jsonEditor.js" />
     <EmbeddedResource Include="Server\WebUI\statistics.html" />
     <EmbeddedResource Include="Server\WebUI\view.html" />
-    <EmbeddedResource Include="..\Raven.Studio.Html5\**"  Exclude="*.dll.config">
+    <EmbeddedResource Include="..\Raven.Studio.Html5\**" Exclude="*.dll.config">
       <Link>Server\Html5Studio\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </EmbeddedResource>
   </ItemGroup>

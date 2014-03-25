@@ -389,7 +389,7 @@ namespace Raven.Storage.Esent
             SystemParameters.CacheSizeMax = cacheSizeMax;
         }
 
-        public bool Initialize(IUuidGenerator uuidGenerator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
+        public void Initialize(IUuidGenerator uuidGenerator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
         {
             try
             {
@@ -409,13 +409,11 @@ namespace Raven.Storage.Esent
 
                 Api.JetInit(ref instance);
 
-                var newDb = EnsureDatabaseIsCreatedAndAttachToDatabase();
+                EnsureDatabaseIsCreatedAndAttachToDatabase();
 
                 SetIdFromDb();
 
                 tableColumnsCache.InitColumDictionaries(instance, database);
-
-                return newDb;
             }
             catch (Exception e)
             {
