@@ -323,7 +323,7 @@ class shell extends viewModelBase {
         if (db.name != this.activeDatabase().name) {
             db.activate();
             var updatedUrl = appUrl.forCurrentPage(db);
-                this.navigate(updatedUrl);
+            this.navigate(updatedUrl);
         }
     }
 
