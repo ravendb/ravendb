@@ -14,7 +14,7 @@ using Xunit.Extensions;
 
 namespace Raven.Tests
 {
-	public class IncrementalBackupTest : TransactionalStorageTestBase
+	public class IncrementalBackupTest : RavenTest
 	{
 		private const string BackupDir = @".\BackupDatabase\";
 
@@ -45,7 +45,7 @@ namespace Raven.Tests
 			    if (!Directory.Exists(indexDefinitionsFolder))
 			        Directory.CreateDirectory(indexDefinitionsFolder);
 
-			    Assert.DoesNotThrow(() => store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument()));			    
+			    Assert.DoesNotThrow(() => store.DocumentDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument()));			    
 				WaitForBackup(store.DocumentDatabase, true);
 
 				using (var session = store.OpenSession())
@@ -54,7 +54,7 @@ namespace Raven.Tests
 					session.SaveChanges();
 				}
 
-				Assert.DoesNotThrow(() => store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument()));
+				Assert.DoesNotThrow(() => store.DocumentDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument()));
 				WaitForBackup(store.DocumentDatabase, true);
 			}
 		}

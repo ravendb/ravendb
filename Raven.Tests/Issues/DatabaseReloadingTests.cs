@@ -29,24 +29,23 @@ namespace Raven.Tests.Issues
             }.Initialize())
             {
 
-				if (server.SystemDatabase.TransactionalStorage.SupportsDtc == false)
-					return;
+                EnsureDtcIsSupported(server);
                 store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument { Id = TenantName, Settings = { {"Raven/DataDir", @"~\Databases\Mine"} }, });
 
                 var tx1 = new TransactionInformation {Id = Guid.NewGuid().ToString()};
                 var tx2 = new TransactionInformation { Id = Guid.NewGuid().ToString() };
 
                 var tenantDatabaseDocument = store.DatabaseCommands.Get("Raven/Databases/" + TenantName);
-                server.SystemDatabase.Put("Raven/Databases/" + TenantName, null, tenantDatabaseDocument.DataAsJson, tenantDatabaseDocument.Metadata, tx1);
+                server.SystemDatabase.Documents.Put("Raven/Databases/" + TenantName, null, tenantDatabaseDocument.DataAsJson, tenantDatabaseDocument.Metadata, tx1);
                 server.SystemDatabase.PrepareTransaction(tx1.Id);
 				server.SystemDatabase.Commit(tx1.Id);
 
                 var tenantDb = GetDocumentDatabaseForTenant(server, TenantName);
-                tenantDb.Put("Foo/1", null, new RavenJObject { { "Test", "123" } }, new RavenJObject(), tx2);
+                tenantDb.Documents.Put("Foo/1", null, new RavenJObject { { "Test", "123" } }, new RavenJObject(), tx2);
                 tenantDb.PrepareTransaction(tx2.Id);
 				tenantDb.Commit(tx2.Id);
 
-                var fooDoc = tenantDb.Get("Foo/1", new TransactionInformation {Id = Guid.NewGuid().ToString()});
+                var fooDoc = tenantDb.Documents.Get("Foo/1", new TransactionInformation {Id = Guid.NewGuid().ToString()});
                 Assert.NotNull(fooDoc);
             }
         }
@@ -60,19 +59,17 @@ namespace Raven.Tests.Issues
                 Url = "http://localhost:8079"
             }.Initialize())
             {
-				if (server.SystemDatabase.TransactionalStorage.SupportsDtc == false)
-					return;
-                
+                EnsureDtcIsSupported(server);
                 store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument { Id = TenantName, Settings = { { "Raven/DataDir", @"~\Databases\Mine" } }, });
 
                 var tx1 = new TransactionInformation { Id = Guid.NewGuid().ToString() };
                 var tx2 = new TransactionInformation { Id = Guid.NewGuid().ToString() };
 
                 var tenantDatabaseDocument = store.DatabaseCommands.Get("Raven/Databases/" + TenantName);
-                server.SystemDatabase.Put("Raven/Databases/mydb", null, tenantDatabaseDocument.DataAsJson, tenantDatabaseDocument.Metadata, tx1);
+                server.SystemDatabase.Documents.Put("Raven/Databases/mydb", null, tenantDatabaseDocument.DataAsJson, tenantDatabaseDocument.Metadata, tx1);
 
                 var tenantDb = GetDocumentDatabaseForTenant(server, TenantName);
-                tenantDb.Put("Foo/1", null, new RavenJObject { { "Test", "123" } }, new RavenJObject(), tx2);
+                tenantDb.Documents.Put("Foo/1", null, new RavenJObject { { "Test", "123" } }, new RavenJObject(), tx2);
 
 				server.SystemDatabase.PrepareTransaction(tx1.Id);
                 server.SystemDatabase.Commit(tx1.Id);
@@ -81,7 +78,7 @@ namespace Raven.Tests.Issues
 				tenantDb.PrepareTransaction(tx2.Id);
                 tenantDb.Commit(tx2.Id);
 
-                var fooDoc = tenantDb.Get("Foo/1", new TransactionInformation { Id = Guid.NewGuid().ToString() });
+                var fooDoc = tenantDb.Documents.Get("Foo/1", new TransactionInformation { Id = Guid.NewGuid().ToString() });
                 Assert.NotNull(fooDoc);
             }
         }
@@ -93,8 +90,7 @@ namespace Raven.Tests.Issues
 			using (var server = GetNewServer(runInMemory: false))
             using (var store = NewRemoteDocumentStore(ravenDbServer:server))
             {
-				if (server.SystemDatabase.TransactionalStorage.SupportsDtc == false)
-					return;
+                EnsureDtcIsSupported(server);
                 
                 store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument { Id = TenantName, Settings = { { "Raven/DataDir", @"~\Databases\Mine" } }, });
 
@@ -102,10 +98,10 @@ namespace Raven.Tests.Issues
                 var tx2 = new TransactionInformation { Id = Guid.NewGuid().ToString() };
 
 				var tenantDb = GetDocumentDatabaseForTenant(server, TenantName);
-				tenantDb.Put("Foo/1", null, new RavenJObject { { "Test", "123" } }, new RavenJObject(), tx2);
+				tenantDb.Documents.Put("Foo/1", null, new RavenJObject { { "Test", "123" } }, new RavenJObject(), tx2);
 				
 				var tenantDatabaseDocument = store.DatabaseCommands.ForSystemDatabase().Get("Raven/Databases/" + TenantName);
-                server.SystemDatabase.Put("Raven/Databases/" + TenantName, null, tenantDatabaseDocument.DataAsJson, tenantDatabaseDocument.Metadata, tx1);
+                server.SystemDatabase.Documents.Put("Raven/Databases/" + TenantName, null, tenantDatabaseDocument.DataAsJson, tenantDatabaseDocument.Metadata, tx1);
 				server.SystemDatabase.PrepareTransaction(tx1.Id);
 				server.SystemDatabase.Commit(tx1.Id);
 

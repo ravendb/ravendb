@@ -102,6 +102,10 @@
     <Reference Include="Jint.Raven">
       <HintPath>..\SharedLibs\Jint.Raven.dll</HintPath>
     </Reference>
+    <Reference Include="Kent.Boogaart.KBCsv">
+      <HintPath>..\packages\Kent.Boogaart.KBCsv.1.4.0.0\lib\sl40\Kent.Boogaart.KBCsv.dll</HintPath>
+      <HintPath>..\packages\Kent.Boogaart.KBCsv.1.4.0.0\lib\net40\Kent.Boogaart.KBCsv.dll</HintPath>
+    </Reference>
     <Reference Include="Lucene.Net, Version=2.3.2.1, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
@@ -233,6 +237,16 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Actions\ActionsBase.cs" />
+    <Compile Include="Actions\AttachmentActions.cs" />
+    <Compile Include="Actions\MaintenanceActions.cs" />
+    <Compile Include="Actions\DocumentActions.cs" />
+    <Compile Include="Actions\IndexActions.cs" />
+    <Compile Include="Actions\NotificationActions.cs" />
+    <Compile Include="Actions\PatchActions.cs" />
+    <Compile Include="Actions\QueryActions.cs" />
+    <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Actions\TransformerActions.cs" />
     <Compile Include="Backup\ProgressNotifier.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\AttachmentAncestryPutTrigger.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualAttachmentDeleteTrigger.cs" />
@@ -545,7 +559,6 @@
     <Compile Include="Config\Settings\StringSetting.cs" />
     <Compile Include="Config\Settings\TimeSpanSetting.cs" />
     <Compile Include="Data\TouchedDocumentInfo.cs" />
-    <Compile Include="Data\RestoreRequest.cs" />
     <Compile Include="Extensions\RoleFinder.cs" />
     <Compile Include="Extensions\WhoIsLocking.cs" />
     <Compile Include="Indexing\CurrentIndexingScope.cs" />
@@ -713,7 +726,6 @@
     <Compile Include="Server\Security\Windows\WindowsRequestAuthorizer.cs" />
     <Compile Include="Impl\CachedDocument.cs" />
     <Compile Include="Impl\DatabaseBulkOperations.cs" />
-    <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Data\DynamicQueryMapping.cs" />
     <Compile Include="Data\DynamicQueryMappingItem.cs" />
     <Compile Include="Impl\DocumentCacher.cs" />
@@ -1013,9 +1025,6 @@
     <Compile Include="Storage\Voron\StorageActions\GeneralStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActions\IndexingStorageActions.cs" />
     <Compile Include="Storage\Voron\Impl\Table.cs" />
-    <Compile Include="Storage\Voron\Impl\IPersistenceSource.cs" />
-    <Compile Include="Storage\Voron\Impl\MemoryMapPersistanceSource.cs" />
-    <Compile Include="Storage\Voron\Impl\MemoryPersistanceSource.cs" />
     <Compile Include="Storage\Voron\StorageActions\ListsStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActions\MappedResultsStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActions\QueueStorageActions.cs" />
@@ -1161,7 +1170,7 @@
     <EmbeddedResource Include="Server\WebUI\js\rdb.jsonEditor\rdb.jsonEditor.js" />
     <EmbeddedResource Include="Server\WebUI\statistics.html" />
     <EmbeddedResource Include="Server\WebUI\view.html" />
-    <EmbeddedResource Include="..\Raven.Studio.Html5\**">
+    <EmbeddedResource Include="..\Raven.Studio.Html5\**" Exclude="*.dll.config">
       <Link>Server\Html5Studio\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </EmbeddedResource>
   </ItemGroup>

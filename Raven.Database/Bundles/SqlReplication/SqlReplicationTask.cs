@@ -57,7 +57,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			prefetchingBehavior = database.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
 
 			Database = database;
-			Database.OnDocumentChange += (sender, notification, metadata) =>
+			Database.Notifications.OnDocumentChange += (sender, notification, metadata) =>
 			{
 				if (notification.Id == null)
 					return;
@@ -119,7 +119,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private SqlReplicationStatus GetReplicationStatus()
 		{
-			var jsonDocument = Database.Get(RavenSqlreplicationStatus, null);
+			var jsonDocument = Database.Documents.Get(RavenSqlreplicationStatus, null);
 			return jsonDocument == null
 									? new SqlReplicationStatus()
 									: jsonDocument.DataAsJson.JsonDeserialization<SqlReplicationStatus>();
@@ -303,7 +303,7 @@ namespace Raven.Database.Bundles.SqlReplication
 				try
 				{
 					var obj = RavenJObject.FromObject(localReplicationStatus);
-					Database.Put(RavenSqlreplicationStatus, null, obj, new RavenJObject(), null);
+					Database.Documents.Put(RavenSqlreplicationStatus, null, obj, new RavenJObject(), null);
 
 					lastLatestEtag = latestEtag;
 					break;

@@ -2,11 +2,12 @@ import commandBase = require("commands/commandBase");
 
 class createDatabaseCommand extends commandBase {
 
-    constructor(private databaseName: string, private activeBundles: string[]) {
+    constructor(private databaseName: string, private activeBundles: string[], private securedSettings: {}) {
         super();
 
         if (!databaseName) {
-            throw new Error("Database must have a name.");
+            this.reportError("Database must have a name!");
+            throw new Error("Database must have a name!");
         }
     }
 
@@ -19,7 +20,7 @@ class createDatabaseCommand extends commandBase {
                 "Raven/DataDir": "~\\Databases\\" + this.databaseName,
                 "Raven/ActiveBundles": this.activeBundles.join(";")
             },
-            "SecuredSettings": {}, // TODO: based on the selected bundles, we may need to include additional settings here
+            "SecuredSettings": this.securedSettings, // TODO: based on the selected bundles, we may need to include additional settings here
             "Disabled": false
         };
 

@@ -57,7 +57,7 @@ public class DynamicFieldIndexingTest extends RemoteClientTest {
       }
 
       try (IDocumentSession session = store.openSession()) {
-        List<Item> list = session.advanced().luceneQuery(Item.class, WithDynamicIndex.class)
+        List<Item> list = session.advanced().documentQuery(Item.class, WithDynamicIndex.class)
           .waitForNonStaleResults()
           .whereEquals("Name", "Fitzchak")
           .toList();
@@ -82,7 +82,7 @@ public class DynamicFieldIndexingTest extends RemoteClientTest {
       }
 
       try (IDocumentSession session = store.openSession()) {
-        List<Item> list = session.advanced().luceneQuery(Item.class, WithDynamicIndex.class)
+        List<Item> list = session.advanced().documentQuery(Item.class, WithDynamicIndex.class)
           .waitForNonStaleResults(5 * 60 * 1000)
           .whereEquals("First Name", "Fitzchak")
           .toList();

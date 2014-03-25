@@ -11,6 +11,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database;
+using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Xunit;
@@ -76,7 +77,7 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-				store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument());
+				store.DocumentDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
 				WaitForBackup(store.DocumentDatabase, true);
 
 				Thread.Sleep(1000); // incremental tag has seconds precision
@@ -89,7 +90,7 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(store);
 
-				store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument());
+				store.DocumentDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
 				WaitForBackup(store.DocumentDatabase, true);
 
 				Thread.Sleep(1000); // incremental tag has seconds precision
@@ -98,12 +99,12 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(store);
 
-				store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument());
+				store.DocumentDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
 				WaitForBackup(store.DocumentDatabase, true);
 
 				var output = new StringBuilder();
 
-				DocumentDatabase.Restore(new RavenConfiguration
+				MaintenanceActions.Restore(new RavenConfiguration
 				{
 					Settings =
 				{
@@ -111,7 +112,12 @@ namespace Raven.Tests.Issues
 					{"Raven/Voron/AllowIncrementalBackups", "true"}
 				}
 
-				}, BackupDir, DataDir, s => output.Append(s), defrag: true);
+				}, new RestoreRequest
+				{
+				    BackupLocation = BackupDir,
+                    Defrag = true,
+                    DatabaseLocation = DataDir
+				}, s => output.Append(s));
 
 				Assert.DoesNotContain("error", output.ToString().ToLower());
 
@@ -128,7 +134,7 @@ namespace Raven.Tests.Issues
 
 					Assert.Equal(3, indexStats.Length); // Users/* and Raven/DocumentsByEntityName 
 
-					QueryResult docs = db.Query("Users/ByName", new IndexQuery
+					QueryResult docs = db.Queries.Query("Users/ByName", new IndexQuery
 					{
 						Query = "Name:*",
 						Start = 0,
@@ -137,7 +143,7 @@ namespace Raven.Tests.Issues
 
 					Assert.Equal(2, docs.Results.Count);
 
-					docs = db.Query("Users/ByNameAndCountry", new IndexQuery
+					docs = db.Queries.Query("Users/ByNameAndCountry", new IndexQuery
 					{
 						Query = "Name:*",
 						Start = 0,

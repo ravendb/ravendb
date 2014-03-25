@@ -1,6 +1,8 @@
 import sqlReplication = require("models/sqlReplication");
 import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import getSqlReplicationsCommand = require("commands/getSqlReplicationsCommand");
+import saveSqlReplicationsCommand = require("commands/saveSqlReplicationsCommand");
 
 class sqlReplications extends viewModelBase {
 
@@ -13,7 +15,7 @@ class sqlReplications extends viewModelBase {
     }
 
     activate() {
-        this.replications([sqlReplication.empty(), sqlReplication.empty(), sqlReplication.empty()]);
+        this.fetchSqlReplications();
     }
 
     attached() {
@@ -24,8 +26,33 @@ class sqlReplications extends viewModelBase {
         });
     }
 
+    private fetchSqlReplications() {
+        var db = this.activeDatabase();
+        if (db) {
+            new getSqlReplicationsCommand(db)
+                .execute()
+                .done(results => this.replications(results));
+        }
+    }
+
     saveChanges() {
-        
+        var db = this.activeDatabase();
+        if (db) {
+            this.replications().forEach(r => r.setIdFromName());
+            new saveSqlReplicationsCommand(this.replications(), db)
+                .execute()
+                .done((result: bulkDocumentDto[]) => this.updateKeys(result));;
+        }
+    }
+
+    private updateKeys(serverKeys: bulkDocumentDto[]) {
+        this.replications().forEach(key => {
+            var serverKey = serverKeys.first(k => k.Key === key.getId());
+            if (serverKey) {
+                key.__metadata.etag = serverKey.Etag;
+                key.__metadata.lastModified = serverKey.Metadata['Last-Modified'];
+            }
+        });
     }
 
     addNewSqlReplication() {

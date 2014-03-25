@@ -47,6 +47,7 @@ public class AbstractMultiMapIndexCreationTask extends AbstractIndexCreationTask
     builder.setTermVectorsStrings(termVectorsStrings);
     builder.setSpatialIndexes(spatialIndexes);
     builder.setSpatialIndexesStrings(spatialIndexesStrings);
+    builder.setDisableInMemoryIndexing(disableInMemoryIndexing);
     IndexDefinition indexDefinition = builder.toIndexDefinition(conventions, false);
     indexDefinition.setMaps(maps);
 

@@ -239,13 +239,15 @@ namespace Raven.Tests.Issues
 
             using (var store = NewRemoteDocumentStore())
             {
-                var dataDumper = new SmugglerApi(new RavenConnectionStringOptions
-                {
-                    Url = store.Url
-                });
+	            var connection = new RavenConnectionStringOptions
+	            {
+		            Url = store.Url
+	            };
+	            var dataDumper = new SmugglerApi();
                 dataDumper.ImportData(new SmugglerImportOptions
                 {
                     FromFile = backupPath,
+					To = connection,
                 }, new SmugglerOptions
                 {
                     Incremental = true,
@@ -635,12 +637,12 @@ namespace Raven.Tests.Issues
 
             public new Task<Etag> ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
-                return base.ExportDocuments(options, jsonWriter, lastEtag, maxEtag);
+                return base.ExportDocuments(new RavenConnectionStringOptions(), options, jsonWriter, lastEtag, maxEtag);
             }
 
             public new Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
-                return base.ExportAttachments(jsonWriter, lastEtag, maxEtag);
+                return base.ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }
 
             public new void ExportDeletions(JsonTextWriter jsonWriter, SmugglerOptions options, ExportDataResult result, LastEtagsInfo maxEtags)

@@ -24,7 +24,7 @@ namespace Raven.Tests.Indexes
 		{
 			store = NewDocumentStore();
 			db = store.DocumentDatabase;
-			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
+			db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		}
 
 		public override void Dispose()
@@ -36,13 +36,13 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void CanQueryOverDefaultIndex()
 		{
-			db.Put("users/ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"),
+			db.Documents.Put("users/ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"),
 			       RavenJObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
 
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+				queryResult = db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 				{
 					Query = "Tag:[[Users]]",
 					PageSize = 10
@@ -56,11 +56,11 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void CanPageOverDefaultIndex()
 		{
-			db.Put("users/ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"),
+			db.Documents.Put("users/ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"),
 				   RavenJObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
-			db.Put("users/rob", null, RavenJObject.Parse("{'email':'robashton@codeofrob.com'}"),
+			db.Documents.Put("users/rob", null, RavenJObject.Parse("{'email':'robashton@codeofrob.com'}"),
 				   RavenJObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
-			db.Put("users/joe", null, RavenJObject.Parse("{'email':'joe@bloggs.com'}"),
+			db.Documents.Put("users/joe", null, RavenJObject.Parse("{'email':'joe@bloggs.com'}"),
 				   RavenJObject.Parse("{'Raven-Entity-Name': 'Users'}"), null);
 
 			QueryResult queryResultPageOne;
@@ -68,7 +68,7 @@ namespace Raven.Tests.Indexes
 			QueryResult queryResultPageThree;
 			do
 			{
-				queryResultPageOne = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+				queryResultPageOne = db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 				{
 					Query = "Tag:[[Users]]",
 					Start = 0,
@@ -78,7 +78,7 @@ namespace Raven.Tests.Indexes
 			} while (queryResultPageOne.IsStale);
 			do
 			{
-				queryResultPageTwo = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+				queryResultPageTwo = db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 				{
 					Query = "Tag:[[Users]]",
 					Start = 1,
@@ -89,7 +89,7 @@ namespace Raven.Tests.Indexes
 
 			do
 			{
-				queryResultPageThree = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+				queryResultPageThree = db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 				{
 					Query = "Tag:[[Users]]",
 					Start = 2,

@@ -11,6 +11,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
+using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using System.Net.Http;
@@ -42,7 +43,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 }
                 else
                 {
-                    var jsonDocument = DatabasesLandlord.SystemDatabase.Get("Raven/Databases/" + Database.Name, null);
+                    var jsonDocument = DatabasesLandlord.SystemDatabase.Documents.Get("Raven/Databases/" + Database.Name, null);
                     if (jsonDocument != null)
                     {
                         backupRequest.DatabaseDocument = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
@@ -52,12 +53,12 @@ namespace Raven.Database.Server.Controllers.Admin
                 }
             }
 
-			Database.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
+			Database.Maintenance.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
 
 			return GetEmptyMessage(HttpStatusCode.Created);		
 		}
 
-		protected WindowsBuiltInRole[] AdditionalSupportedRoles
+		protected override WindowsBuiltInRole[] AdditionalSupportedRoles
 		{
 			get
 			{
@@ -79,7 +80,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			DatabaseDocument databaseDocument = null;
 
-			var databaseDocumentPath = Path.Combine(restoreRequest.RestoreLocation, "Database.Document");
+			var databaseDocumentPath = Path.Combine(restoreRequest.BackupLocation, "Database.Document");
 			if (File.Exists(databaseDocumentPath))
 			{
 				var databaseDocumentText = File.ReadAllText(databaseDocumentPath);
@@ -96,7 +97,7 @@ namespace Raven.Database.Server.Controllers.Admin
 								: "A database name must be supplied if the restore location does not contain a valid Database.Document file";
 
                 restoreStatus.Messages.Add(errorMessage);
-				DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null, RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+                DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null, RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
 
 				return GetMessageWithString(errorMessage,HttpStatusCode.BadRequest);
 			}
@@ -118,9 +119,9 @@ namespace Raven.Database.Server.Controllers.Admin
 				}
 			}
 
-            if (File.Exists(Path.Combine(restoreRequest.RestoreLocation, Voron.Impl.Constants.DatabaseFilename)))
+            if (File.Exists(Path.Combine(restoreRequest.BackupLocation, Voron.Impl.Constants.DatabaseFilename)))
                 ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
-			else if (Directory.Exists(Path.Combine(restoreRequest.RestoreLocation, "new")))
+            else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
 				ravenConfiguration.DefaultStorageTypeName = typeof (Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 
 			ravenConfiguration.CustomizeValuesForTenant(databaseName);
@@ -129,50 +130,41 @@ namespace Raven.Database.Server.Controllers.Admin
 			string documentDataDir;
 			ravenConfiguration.DataDirectory = ResolveTenantDataDirectory(restoreRequest.DatabaseLocation, databaseName, out documentDataDir);
 
-			DatabasesLandlord.SystemDatabase.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
-			var defrag = "true".Equals(GetQueryStringValue("defrag"), StringComparison.InvariantCultureIgnoreCase);
+			DatabasesLandlord.SystemDatabase.Documents.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
+		    
+            bool defrag;
+		    if (bool.TryParse(GetQueryStringValue("defrag"), out defrag))
+		        restoreRequest.Defrag = defrag;
 
-		    var state = new RavenJObject
-		    {
-		        {"Done", false},
-		        {"Error", null}
-		    };
-			var task = Task.Factory.StartNew(() =>
-			{
-				DocumentDatabase.Restore(ravenConfiguration, restoreRequest.RestoreLocation, null,
-					msg =>
-					{
-						restoreStatus.Messages.Add(msg);
-						DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
-							RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
-					}, defrag);
-
-				if (databaseDocument == null)
-					return;
-
-				databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
-				databaseDocument.Id = databaseName;
-				DatabasesLandlord.Protect(databaseDocument);
-				DatabasesLandlord.SystemDatabase.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument),
-					new RavenJObject(), null);
-
-				restoreStatus.Messages.Add("The new database was created");
-				DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
-					RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
-			}, TaskCreationOptions.LongRunning)
-            .ContinueWith(t =>
+            await Task.Factory.StartNew(() =>
             {
-                if (t.Exception != null)
-                    state["Error"] = t.Exception.ToString();
-                else
-                    state["Done"] = true;
-            });
+                MaintenanceActions.Restore(ravenConfiguration,restoreRequest,
+                    msg =>
+                    {
+                        restoreStatus.Messages.Add(msg);
+                        DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+                            RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+                    });
 
-		    long id;
-		    Database.AddTask(task, state, out id);
+                if (databaseDocument == null)
+                    return;
 
+                databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
+                if (restoreRequest.IndexesLocation != null)
+                    databaseDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
+                if (restoreRequest.JournalsLocation != null)
+                    databaseDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
+                databaseDocument.Id = databaseName;
+                DatabasesLandlord.Protect(databaseDocument);
+                DatabasesLandlord.SystemDatabase.Documents.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument),
+                    new RavenJObject(), null);
 
-		    return GetMessageWithObject(new {Id = id});
+                restoreStatus.Messages.Add("The new database was created");
+                DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+                    RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+            }, TaskCreationOptions.LongRunning);
+
+            return GetEmptyMessage();
 		}
 
 		private string ResolveTenantDataDirectory(string databaseLocation, string databaseName, out string documentDataDir)

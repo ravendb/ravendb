@@ -64,7 +64,7 @@ namespace Raven.Tests.Querying
 
 					WaitForIndexing(store);
 
-					var result = store.DocumentDatabase.Query("BlogPosts/PostsCountByTag", new IndexQuery{SkipDuplicateChecking = true}, CancellationToken.None);
+					var result = store.DocumentDatabase.Queries.Query("BlogPosts/PostsCountByTag", new IndexQuery{SkipDuplicateChecking = true}, CancellationToken.None);
 					Assert.Equal(2, result.Results.Count);
 				}
 			}

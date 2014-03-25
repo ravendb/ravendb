@@ -21,22 +21,20 @@ namespace Raven.Database.Storage.Voron.Impl
 
 	public class TableStorage : IDisposable
 	{
-		private readonly IPersistenceSource persistenceSource;
+	    private readonly StorageEnvironmentOptions _options;
+	    private readonly IBufferPool _bufferPool;
 
-	    private readonly IBufferPool bufferPool;
+	    private readonly StorageEnvironment _env;
 
-	    private readonly StorageEnvironment env;
-
-		public TableStorage(IPersistenceSource persistenceSource, IBufferPool bufferPool)
+		public TableStorage(StorageEnvironmentOptions options, IBufferPool bufferPool)
 		{
-			if (persistenceSource == null)
-				throw new ArgumentNullException("persistenceSource");
+			if (options == null)
+				throw new ArgumentNullException("options");
 
-			this.persistenceSource = persistenceSource;
-		    this.bufferPool = bufferPool;
+		    _options = options;
+		    _bufferPool = bufferPool;
 
-		    Debug.Assert(persistenceSource.Options != null);
-			env = new StorageEnvironment(persistenceSource.Options);
+			_env = new StorageEnvironment(options);
 
 			Initialize();
 			CreateSchema();
@@ -46,10 +44,10 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			var reportData = new Dictionary<string, object>
 	        {
-	            {"MaxNodeSize", persistenceSource.Options.DataPager.MaxNodeSize},
-	            {"NumberOfAllocatedPages", persistenceSource.Options.DataPager.NumberOfAllocatedPages},
+	            {"MaxNodeSize", _options.DataPager.MaxNodeSize},
+	            {"NumberOfAllocatedPages", _options.DataPager.NumberOfAllocatedPages},
 	           // {"PageMaxSpace", persistenceSource.Options.DataPager.PageMaxSpace},
-	            {"PageMinSpace", persistenceSource.Options.DataPager.PageMinSpace},
+	            {"PageMinSpace", _options.DataPager.PageMinSpace},
 	           // {"PageSize", persistenceSource.Options.DataPager.PageSize},
                 {"Documents", GetEntriesCount(Documents)},
                 {"Indexes", GetEntriesCount(IndexingStats)},
@@ -62,7 +60,7 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public SnapshotReader CreateSnapshot()
 		{
-			return env.CreateSnapshot();
+			return _env.CreateSnapshot();
 		}
 
 		public Table Details { get; private set; }
@@ -101,7 +99,7 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			get
 			{
-				return env;
+				return _env;
 			}
 		}
 
@@ -109,7 +107,7 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 		    try
 		    {
-                env.Writer.Write(writeBatch);
+                _env.Writer.Write(writeBatch);
 		    }
 		    catch (AggregateException ae)
 		    {
@@ -120,7 +118,7 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public long GetEntriesCount(TableBase table)
 		{
-			using (var tx = env.NewTransaction(TransactionFlags.Read))
+			using (var tx = _env.NewTransaction(TransactionFlags.Read))
 			{
 				return tx.State.GetTree(tx,table.TableName).State.EntriesCount;
 			}
@@ -131,7 +129,7 @@ namespace Raven.Database.Storage.Voron.Impl
 			if (Debugger.IsAttached == false)
 				return;
 
-			using (var tx = env.NewTransaction(TransactionFlags.Read))
+			using (var tx = _env.NewTransaction(TransactionFlags.Read))
 			{
 				RenderAndShow(tx, table, showEntries);
 			}
@@ -155,14 +153,14 @@ namespace Raven.Database.Storage.Voron.Impl
 		}
 
 		public void Dispose()
-		{			if (env != null)
-				env.Dispose();
+		{			if (_env != null)
+				_env.Dispose();
 		}
 
 		//create all relevant storage trees in one place
 		private void CreateSchema()
 		{
-			using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+			using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				CreateDetailsSchema(tx);
 				CreateDocumentsSchema(tx);
@@ -188,54 +186,54 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		private void CreateReduceStatsSchema(Transaction tx)
 		{
-			env.CreateTree(tx, Tables.ReduceStats.TableName);
+			_env.CreateTree(tx, Tables.ReduceStats.TableName);
 		}
 
 		private void CreateReduceResultsSchema(Transaction tx)
 		{
-			env.CreateTree(tx, Tables.ReduceResults.TableName);
-			env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel));
-			env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket));
-			env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket));
-			env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByView));
-			env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.Data));
+			_env.CreateTree(tx, Tables.ReduceResults.TableName);
+			_env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel));
+			_env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket));
+			_env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket));
+			_env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByView));
+			_env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.Data));
 		}
 
 		private void CreateReduceKeyCountsSchema(Transaction tx)
 		{
-			env.CreateTree(tx, Tables.ReduceKeyCounts.TableName);
-			env.CreateTree(tx, ReduceKeyCounts.GetIndexKey(Tables.ReduceKeyCounts.Indices.ByView));
+			_env.CreateTree(tx, Tables.ReduceKeyCounts.TableName);
+			_env.CreateTree(tx, ReduceKeyCounts.GetIndexKey(Tables.ReduceKeyCounts.Indices.ByView));
 		}
 
 		private void CreateReduceKeyTypesSchema(Transaction tx)
 		{
-			env.CreateTree(tx, Tables.ReduceKeyTypes.TableName);
-			env.CreateTree(tx, ReduceKeyTypes.GetIndexKey(Tables.ReduceKeyCounts.Indices.ByView));
+			_env.CreateTree(tx, Tables.ReduceKeyTypes.TableName);
+			_env.CreateTree(tx, ReduceKeyTypes.GetIndexKey(Tables.ReduceKeyCounts.Indices.ByView));
 		}
 
 		private void CreateAttachmentsSchema(Transaction tx)
 		{
-			env.CreateTree(tx, Tables.Attachments.TableName);
-			env.CreateTree(tx, Attachments.GetIndexKey(Tables.Attachments.Indices.ByEtag));
-            env.CreateTree(tx, Attachments.GetIndexKey(Tables.Attachments.Indices.Metadata));
+			_env.CreateTree(tx, Tables.Attachments.TableName);
+			_env.CreateTree(tx, Attachments.GetIndexKey(Tables.Attachments.Indices.ByEtag));
+            _env.CreateTree(tx, Attachments.GetIndexKey(Tables.Attachments.Indices.Metadata));
 		}
 
 		private void CreateMappedResultsSchema(Transaction tx)
 		{
-			env.CreateTree(tx, Tables.MappedResults.TableName);
-			env.CreateTree(tx, MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByView));
-			env.CreateTree(tx, MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByViewAndDocumentId));
-			env.CreateTree(tx, MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByViewAndReduceKey));
-			env.CreateTree(tx, MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket));
-			env.CreateTree(tx, MappedResults.GetIndexKey(Tables.MappedResults.Indices.Data));
+			_env.CreateTree(tx, Tables.MappedResults.TableName);
+			_env.CreateTree(tx, MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByView));
+			_env.CreateTree(tx, MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByViewAndDocumentId));
+			_env.CreateTree(tx, MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByViewAndReduceKey));
+			_env.CreateTree(tx, MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket));
+			_env.CreateTree(tx, MappedResults.GetIndexKey(Tables.MappedResults.Indices.Data));
 		}
 
 		private void CreateScheduledReductionsSchema(Transaction tx)
 		{
-			env.CreateTree(tx, Tables.ScheduledReductions.TableName);
-			env.CreateTree(tx, ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByView));
-			env.CreateTree(tx, ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByViewAndLevel));
-			env.CreateTree(tx, ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey));
+			_env.CreateTree(tx, Tables.ScheduledReductions.TableName);
+			_env.CreateTree(tx, ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByView));
+			_env.CreateTree(tx, ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByViewAndLevel));
+			_env.CreateTree(tx, ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey));
 		}
 
 		private void CreateStalenessSchema(Transaction tx)
@@ -244,80 +242,80 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		private void CreateTasksSchema(Transaction tx)
 		{
-			env.CreateTree(tx, Tables.Tasks.TableName);
-			env.CreateTree(tx, Tasks.GetIndexKey(Tables.Tasks.Indices.ByIndexAndType));
-			env.CreateTree(tx, Tasks.GetIndexKey(Tables.Tasks.Indices.ByType));
-			env.CreateTree(tx, Tasks.GetIndexKey(Tables.Tasks.Indices.ByIndex));
+			_env.CreateTree(tx, Tables.Tasks.TableName);
+			_env.CreateTree(tx, Tasks.GetIndexKey(Tables.Tasks.Indices.ByIndexAndType));
+			_env.CreateTree(tx, Tasks.GetIndexKey(Tables.Tasks.Indices.ByType));
+			_env.CreateTree(tx, Tasks.GetIndexKey(Tables.Tasks.Indices.ByIndex));
 		}
 
 		private void CreateListsSchema(Transaction tx)
 		{
-			env.CreateTree(tx, Tables.Lists.TableName);
-			env.CreateTree(tx, Lists.GetIndexKey(Tables.Lists.Indices.ByName));
-			env.CreateTree(tx, Lists.GetIndexKey(Tables.Lists.Indices.ByNameAndKey));
+			_env.CreateTree(tx, Tables.Lists.TableName);
+			_env.CreateTree(tx, Lists.GetIndexKey(Tables.Lists.Indices.ByName));
+			_env.CreateTree(tx, Lists.GetIndexKey(Tables.Lists.Indices.ByNameAndKey));
 		}
 
 		private void CreateQueuesSchema(Transaction tx)
 		{
-			env.CreateTree(tx, Tables.Queues.TableName);
-			env.CreateTree(tx, Queues.GetIndexKey(Tables.Queues.Indices.ByName));
-			env.CreateTree(tx, Queues.GetIndexKey(Tables.Queues.Indices.Data));
+			_env.CreateTree(tx, Tables.Queues.TableName);
+			_env.CreateTree(tx, Queues.GetIndexKey(Tables.Queues.Indices.ByName));
+			_env.CreateTree(tx, Queues.GetIndexKey(Tables.Queues.Indices.Data));
 		}
 
 		private void CreateDocumentReferencesSchema(Transaction tx)
 		{
-			env.CreateTree(tx, Tables.DocumentReferences.TableName);
-			env.CreateTree(tx, DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByRef));
-			env.CreateTree(tx, DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByView));
-			env.CreateTree(tx, DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByViewAndKey));
-			env.CreateTree(tx, DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByKey));
+			_env.CreateTree(tx, Tables.DocumentReferences.TableName);
+			_env.CreateTree(tx, DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByRef));
+			_env.CreateTree(tx, DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByView));
+			_env.CreateTree(tx, DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByViewAndKey));
+			_env.CreateTree(tx, DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByKey));
 		}
 
 		private void CreateLastIndexedEtagsSchema(Transaction tx)
 		{
-			env.CreateTree(tx, Tables.LastIndexedEtags.TableName);
+			_env.CreateTree(tx, Tables.LastIndexedEtags.TableName);
 		}
 
 		private void CreateIndexingStatsSchema(Transaction tx)
 		{
-			env.CreateTree(tx, Tables.IndexingStats.TableName);
+			_env.CreateTree(tx, Tables.IndexingStats.TableName);
 		}
 
 		private void CreateDetailsSchema(Transaction tx)
 		{
-			env.CreateTree(tx, Tables.Details.TableName);
+			_env.CreateTree(tx, Tables.Details.TableName);
 		}
 
 		private void CreateDocumentsSchema(Transaction tx)
 		{
-			env.CreateTree(tx, Tables.Documents.TableName);
-			env.CreateTree(tx, Documents.GetIndexKey(Tables.Documents.Indices.KeyByEtag));
-			env.CreateTree(tx, Documents.GetIndexKey(Tables.Documents.Indices.Metadata));
+			_env.CreateTree(tx, Tables.Documents.TableName);
+			_env.CreateTree(tx, Documents.GetIndexKey(Tables.Documents.Indices.KeyByEtag));
+			_env.CreateTree(tx, Documents.GetIndexKey(Tables.Documents.Indices.Metadata));
 		}
 
 		private void CreateGeneralSchema(Transaction tx)
 		{
-			env.CreateTree(tx, Tables.General.TableName);
+			_env.CreateTree(tx, Tables.General.TableName);
 		}
 
 		private void Initialize()
 		{
-			Documents = new Table(Tables.Documents.TableName, bufferPool, Tables.Documents.Indices.KeyByEtag, Tables.Documents.Indices.Metadata);
-			Details = new Table(Tables.Details.TableName, bufferPool);
-            IndexingStats = new Table(Tables.IndexingStats.TableName, bufferPool);
-            LastIndexedEtags = new Table(Tables.LastIndexedEtags.TableName, bufferPool);
-            DocumentReferences = new Table(Tables.DocumentReferences.TableName, bufferPool, Tables.DocumentReferences.Indices.ByRef, Tables.DocumentReferences.Indices.ByView, Tables.DocumentReferences.Indices.ByViewAndKey, Tables.DocumentReferences.Indices.ByKey);
-            Queues = new Table(Tables.Queues.TableName, bufferPool, Tables.Queues.Indices.ByName, Tables.Queues.Indices.Data);
-            Lists = new Table(Tables.Lists.TableName, bufferPool, Tables.Lists.Indices.ByName, Tables.Lists.Indices.ByNameAndKey);
-            Tasks = new Table(Tables.Tasks.TableName, bufferPool, Tables.Tasks.Indices.ByIndexAndType, Tables.Tasks.Indices.ByType, Tables.Tasks.Indices.ByIndex);
-            ScheduledReductions = new Table(Tables.ScheduledReductions.TableName, bufferPool, Tables.ScheduledReductions.Indices.ByView, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey, Tables.ScheduledReductions.Indices.ByViewAndLevel);
-            MappedResults = new Table(Tables.MappedResults.TableName, bufferPool, Tables.MappedResults.Indices.ByView, Tables.MappedResults.Indices.ByViewAndDocumentId, Tables.MappedResults.Indices.ByViewAndReduceKey, Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket, Tables.MappedResults.Indices.Data);
-            ReduceKeyCounts = new Table(Tables.ReduceKeyCounts.TableName, bufferPool, Tables.ReduceKeyCounts.Indices.ByView);
-            ReduceKeyTypes = new Table(Tables.ReduceKeyTypes.TableName, bufferPool, Tables.ReduceKeyTypes.Indices.ByView);
-            Attachments = new Table(Tables.Attachments.TableName, bufferPool, Tables.Attachments.Indices.ByEtag, Tables.Attachments.Indices.Metadata);
-            ReduceResults = new Table(Tables.ReduceResults.TableName, bufferPool, Tables.ReduceResults.Indices.ByView, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket, Tables.ReduceResults.Indices.Data);
-            General = new Table(Tables.General.TableName, bufferPool);
-            ReduceStats = new Table(Tables.ReduceStats.TableName, bufferPool);
+			Documents = new Table(Tables.Documents.TableName, _bufferPool, Tables.Documents.Indices.KeyByEtag, Tables.Documents.Indices.Metadata);
+			Details = new Table(Tables.Details.TableName, _bufferPool);
+            IndexingStats = new Table(Tables.IndexingStats.TableName, _bufferPool);
+            LastIndexedEtags = new Table(Tables.LastIndexedEtags.TableName, _bufferPool);
+            DocumentReferences = new Table(Tables.DocumentReferences.TableName, _bufferPool, Tables.DocumentReferences.Indices.ByRef, Tables.DocumentReferences.Indices.ByView, Tables.DocumentReferences.Indices.ByViewAndKey, Tables.DocumentReferences.Indices.ByKey);
+            Queues = new Table(Tables.Queues.TableName, _bufferPool, Tables.Queues.Indices.ByName, Tables.Queues.Indices.Data);
+            Lists = new Table(Tables.Lists.TableName, _bufferPool, Tables.Lists.Indices.ByName, Tables.Lists.Indices.ByNameAndKey);
+            Tasks = new Table(Tables.Tasks.TableName, _bufferPool, Tables.Tasks.Indices.ByIndexAndType, Tables.Tasks.Indices.ByType, Tables.Tasks.Indices.ByIndex);
+            ScheduledReductions = new Table(Tables.ScheduledReductions.TableName, _bufferPool, Tables.ScheduledReductions.Indices.ByView, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey, Tables.ScheduledReductions.Indices.ByViewAndLevel);
+            MappedResults = new Table(Tables.MappedResults.TableName, _bufferPool, Tables.MappedResults.Indices.ByView, Tables.MappedResults.Indices.ByViewAndDocumentId, Tables.MappedResults.Indices.ByViewAndReduceKey, Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket, Tables.MappedResults.Indices.Data);
+            ReduceKeyCounts = new Table(Tables.ReduceKeyCounts.TableName, _bufferPool, Tables.ReduceKeyCounts.Indices.ByView);
+            ReduceKeyTypes = new Table(Tables.ReduceKeyTypes.TableName, _bufferPool, Tables.ReduceKeyTypes.Indices.ByView);
+            Attachments = new Table(Tables.Attachments.TableName, _bufferPool, Tables.Attachments.Indices.ByEtag, Tables.Attachments.Indices.Metadata);
+            ReduceResults = new Table(Tables.ReduceResults.TableName, _bufferPool, Tables.ReduceResults.Indices.ByView, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket, Tables.ReduceResults.Indices.Data);
+            General = new Table(Tables.General.TableName, _bufferPool);
+            ReduceStats = new Table(Tables.ReduceStats.TableName, _bufferPool);
 		}
 
 	}

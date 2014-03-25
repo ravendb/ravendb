@@ -14,7 +14,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var index = id;
 
-			var indexEtag = Database.GetIndexEtag(index, null);
+			var indexEtag = Database.Indexes.GetIndexEtag(index, null);
 			if (MatchEtag(indexEtag))
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
@@ -23,7 +23,7 @@ namespace Raven.Database.Server.Controllers
 
 			var msg = GetMessageWithObject(executeGetTermsQuery);
 
-			WriteETag(Database.GetIndexEtag(index, null), msg);
+			WriteETag(Database.Indexes.GetIndexEtag(index, null), msg);
 			return msg;
 		}
 	}

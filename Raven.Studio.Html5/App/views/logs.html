@@ -24,7 +24,11 @@
         <form class="form-inline" style="display: inline-block; vertical-align: middle;">
             <input type="text" class="form-control col-md-8" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" />
         </form>
-        <div id="logTableContainer" style="overflow-y: auto; position: absolute; bottom: 10px; top: 50px; width: 100%;">
+        <div style="padding-top: 10px" data-bind="foreach: filteredLoggers">
+            <a class="btn btn-default" data-bind="text: $data, click: $root.unHidelogType.bind($root)">
+            </a>
+        </div>
+        <div id="logTableContainer" style="overflow-y: auto; position: absolute; bottom: 10px; top: 50px; width: 100%; padding-top:40px">
             <table class="single-line-row-table table table-condensed" data-bind="event: { keydown: tableKeyDown }" tabindex="1">
                 <thead>
                     <tr>
@@ -36,12 +40,21 @@
                     </tr>
                 </thead>
                 <tbody data-bind="foreach: allLogs, delegatedHandler: 'click'">
-                    <tr data-click="selectLog" data-bind="visible: IsVisible, css: { warning: Level === 'Warn', danger: Level === 'Error' || Level === 'Fatal', 'selected': $data === $parent.selectedLog() }">
+                    <tr class="logRecord" data-click="selectLog" data-bind="visible: IsVisible, css: { warning: Level === 'Warn', danger: Level === 'Error' || Level === 'Fatal', 'selected': $data === $parent.selectedLog() }">
                         <td data-bind="text: Level"></td>
                         <td data-bind="text: TimeStampText, attr: { title: TimeStampText }"></td>
                         <td data-bind="text: Message, attr: { title: Message }"></td>
                         <td data-bind="text: Exception, attr: { title: Exception }"></td>
-                        <td data-bind="text: LoggerName"></td>
+                        <td class="logName">
+                            <div class="pull-left" data-bind="text: LoggerName"></div>
+                            <div class="pull-left logName-actions-container">
+                                
+                                    <button class="btn btn-primary use-bootstrap-tooltip" data-bind="click: $root.hideLogType.bind($root), attr:{title: 'Remove ' + LoggerName.split('.').slice(2).join('.')  + ' from List'}">
+                                        <i class="fa fa-filter"></i>
+                                    </button>
+                                
+                            </div>
+                        </td>
                     </tr>
                 </tbody>
             </table>

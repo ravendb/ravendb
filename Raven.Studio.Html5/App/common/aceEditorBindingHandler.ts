@@ -20,7 +20,6 @@ class aceEditorBindingHandler {
 
             // This tells Durandal to fire this binding handler only after composition 
             // is complete and attached to the DOM.
-            // This is required so that we know the correct height for the element.
             // See http://durandaljs.com/documentation/Interacting-with-the-DOM/
             composition.addBindingHandler("aceEditor");
         }

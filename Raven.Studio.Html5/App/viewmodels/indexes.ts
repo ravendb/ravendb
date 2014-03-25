@@ -8,6 +8,7 @@ import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import getStoredQueriesCommand = require("commands/getStoredQueriesCommand");
 import querySort = require("models/querySort");
 import app = require("durandal/app");
+import resetIndexConfirm = require("viewmodels/resetIndexConfirm");
 
 class indexes extends viewModelBase {
 
@@ -33,10 +34,6 @@ class indexes extends viewModelBase {
     attached() {
         // Alt+Minus and Alt+Plus are already setup. Since laptops don't have a dedicated key for plus, we'll also use the equal sign key (co-opted for plus).
         this.createKeyboardShortcut("Alt+=", () => this.expandAll(), this.containerSelector);
-    }
-
-    deactivate() {
-        this.removeKeyboardShortcuts(this.containerSelector);
     }
 
     fetchIndexes() {
@@ -81,10 +78,20 @@ class indexes extends viewModelBase {
 
     putIndexIntoGroupNamed(i: index, groupName: string) {
         var group = this.indexGroups.first(g => g.entityName === groupName);
+        var indexExists: boolean;
         if (group) {
-            group.indexes.push(i);
+            indexExists = !!group.indexes.first((cur: index) => cur.name == i.name);
+            if (!indexExists) {
+                group.indexes.push(i);
+            }
         } else {
-            this.indexGroups.push({ entityName: groupName, indexes: ko.observableArray([i]) });
+            indexExists = !!this.indexGroups.first((curGroup: { entityName: string; indexes: KnockoutObservableArray<index> }) =>
+                !!curGroup.indexes.first((cur: index) => cur.name == i.name));
+
+            if (!indexExists) {
+
+                this.indexGroups.push({ entityName: groupName, indexes: ko.observableArray([i]) });
+            }
         }
     }
 
@@ -119,6 +126,10 @@ class indexes extends viewModelBase {
         this.promptDeleteIndexes([i]);
     }
 
+    deleteIndexGroup(i: { entityName: string; indexes: KnockoutObservableArray<index> }) {
+        this.promptDeleteIndexes(i.indexes());
+    }
+
     promptDeleteIndexes(indexes: index[]) {
         if (indexes.length > 0) {
             var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
@@ -126,6 +137,12 @@ class indexes extends viewModelBase {
             deleteIndexesVm.deleteTask.done(() => this.removeIndexesFromAllGroups(indexes));
         }
     }
+
+    resetIndex(indexToReset: index) {
+        var resetIndexVm = new resetIndexConfirm(indexToReset.name, this.activeDatabase());
+        app.showDialog(resetIndexVm);
+    }
+    
 
     removeIndexesFromAllGroups(indexes: index[]) {
         this.indexGroups().forEach(g => {

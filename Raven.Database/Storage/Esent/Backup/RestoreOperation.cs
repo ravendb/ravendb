@@ -6,10 +6,10 @@
 using System;
 using System.IO;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
-using Raven.Database.Extensions;
-using Raven.Abstractions.Data;
+using Raven.Database.Data;
 using System.Linq;
 using Raven.Storage.Esent;
 
@@ -17,51 +17,18 @@ namespace Raven.Database.Storage.Esent.Backup
 {
 	public class RestoreOperation : BaseRestoreOperation
 	{
-		private readonly bool defrag;
-
-        public RestoreOperation(string backupLocation, InMemoryRavenConfiguration configuration, Action<string> operationOutputCallback, bool defrag)
-            : base(backupLocation, configuration, operationOutputCallback)
+        public RestoreOperation(RestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> operationOutputCallback)
+            : base(restoreRequest, configuration, operationOutputCallback)
 		{
-			this.defrag = defrag;
 		}
 
 		public override void Execute()
 		{
-			if (File.Exists(Path.Combine(backupLocation, "RavenDB.Backup")) == false)
-			{
-				output("Error: " + backupLocation + " doesn't look like a valid backup");
-				output("Error: Restore Canceled");
-				throw new InvalidOperationException(backupLocation + " doesn't look like a valid backup");
-			}
-
-			if (Directory.Exists(databaseLocation) && Directory.GetFileSystemEntries(databaseLocation).Length > 0)
-			{
-				output("Error: Database already exists, cannot restore to an existing database.");
-				output("Error: Restore Canceled");
-				throw new IOException("Database already exists, cannot restore to an existing database.");
-			}
-
-			if (Directory.Exists(databaseLocation) == false)
-				Directory.CreateDirectory(databaseLocation);
-
-			if (Directory.Exists(indexLocation) == false)
-				Directory.CreateDirectory(indexLocation);
-
-			var logsPath = databaseLocation;
-
-			if (!string.IsNullOrWhiteSpace(configuration.Settings[Constants.RavenLogsPath]))
-			{
-				logsPath = configuration.Settings[Constants.RavenLogsPath].ToFullPath();
-
-				if (Directory.Exists(logsPath) == false)
-				{
-					Directory.CreateDirectory(logsPath);
-				}
-			}
-
-			Directory.CreateDirectory(Path.Combine(logsPath, "logs"));
-			Directory.CreateDirectory(Path.Combine(logsPath, "temp"));
-			Directory.CreateDirectory(Path.Combine(logsPath, "system"));
+            ValidateRestorePreconditionsAndReturnLogsPath("RavenDB.Backup");
+			
+			Directory.CreateDirectory(Path.Combine(journalLocation, "logs"));
+            Directory.CreateDirectory(Path.Combine(journalLocation, "temp"));
+            Directory.CreateDirectory(Path.Combine(journalLocation, "system"));
 
 			CombineIncrementalBackups();
 
@@ -76,7 +43,8 @@ namespace Raven.Database.Storage.Esent.Backup
 			TransactionalStorage.CreateInstance(out instance, "restoring " + Guid.NewGuid());
 			try
 			{
-				new TransactionalStorageConfigurator(configuration, null).ConfigureInstance(instance, databaseLocation);
+                Configuration.Settings["Raven/Esent/LogsPath"] = journalLocation;
+				new TransactionalStorageConfigurator(Configuration, null).ConfigureInstance(instance, databaseLocation);
 				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, RestoreStatusCallback);
 				var fileThatGetsCreatedButDoesntSeemLikeItShould =
 					new FileInfo(
@@ -90,10 +58,10 @@ namespace Raven.Database.Storage.Esent.Backup
 					fileThatGetsCreatedButDoesntSeemLikeItShould.MoveTo(dataFilePath);
 				}
 
-				if (defrag)
+				if (_restoreRequest.Defrag)
 				{
 					output("Esent Restore: Begin Database Compaction");
-					TransactionalStorage.Compact(configuration, CompactStatusCallback);
+					TransactionalStorage.Compact(Configuration, CompactStatusCallback);
 					output("Esent Restore: Database Compaction Completed");
 				}
 			}
@@ -119,7 +87,7 @@ namespace Raven.Database.Storage.Esent.Backup
 			}
 		}
 
-		private void CombineIncrementalBackups()
+	    private void CombineIncrementalBackups()
 		{
 			var directories = Directory.GetDirectories(backupLocation, "Inc*")
 				.OrderBy(dir => dir)

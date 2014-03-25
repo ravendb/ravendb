@@ -1146,27 +1146,24 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, string databaseName)
+		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (MultiDatabase.GetDatabaseUrl(url, databaseName) + "/admin/backup").NoCache(), "POST", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
+		    var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+		        (MultiDatabase.GetDatabaseUrl(url, databaseName) + "/admin/backup?incremental=" + incremental).NoCache(),
+		        "POST", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
 			request.AddOperationHeaders(OperationsHeaders);
-			return request.WriteAsync(new RavenJObject
+			return request.WriteAsync(RavenJObject.FromObject(new BackupRequest
 			{
-				{"BackupLocation", backupLocation},
-				{"DatabaseDocument", RavenJObject.FromObject(databaseDocument)}
-			}.ToString(Formatting.None));
+			    BackupLocation = backupLocation,
+                DatabaseDocument = databaseDocument
+			}));
 		}
 
-		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string name = null, bool defrag = false)
+		public Task StartRestoreAsync(RestoreRequest restoreRequest)
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/restore?defrag=" + defrag).NoCache(), "POST", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/restore").NoCache(), "POST", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
 			request.AddOperationHeaders(OperationsHeaders);
-			return request.WriteAsync(new RavenJObject
-			{
-				{"RestoreLocation", restoreLocation},
-				{"DatabaseLocation", databaseLocation},
-				{"DatabaseName", name}
-			}.ToString(Formatting.None));
+			return request.WriteAsync(RavenJObject.FromObject(restoreRequest));
 		}
 
 		public Task<string> GetIndexingStatusAsync()
@@ -1824,7 +1821,7 @@ namespace Raven.Client.Connection.Async
 																CultureInfo.InvariantCulture, DateTimeStyles.None),
 				IndexEtag = Etag.Parse(response.Headers.GetFirstValue("Raven-Index-Etag")),
 				ResultEtag = Etag.Parse(response.Headers.GetFirstValue("Raven-Result-Etag")),
-				IsStable = bool.Parse(response.Headers.GetFirstValue("Raven-Is-Stale")),
+				IsStale = bool.Parse(response.Headers.GetFirstValue("Raven-Is-Stale")),
 				TotalResults = int.Parse(response.Headers.GetFirstValue("Raven-Total-Results"))
 			};
 

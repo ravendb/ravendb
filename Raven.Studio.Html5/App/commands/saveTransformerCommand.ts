@@ -14,16 +14,23 @@ class saveTransformerCommand extends commandBase {
     execute(): JQueryPromise<transformer> {
         var doneTask = $.Deferred();
         
-        var saveTransformerUrl = "/transformers/" + this.trans['name'];
-        var saveTrancsormerPutArgs = JSON.stringify(this.trans['definition']['Name']);
+        var saveTransformerUrl = "/transformers/" + this.trans.name();
+        var saveTransformerPutArgs = JSON.stringify(this.trans.toSaveDto());
         
 
-        this.put(saveTransformerUrl, saveTrancsormerPutArgs, this.db)
-            .fail(xhr=> doneTask.reject(xhr))
+        this.put(saveTransformerUrl, saveTransformerPutArgs, this.db)
+            .fail((result:JQueryXHR)=> {
+                
+                this.reportError("Unable to save transformer", result.responseText, result.statusText);
+                doneTask.reject(result);
+            })
             .done((result: getTransformerResultDto) => {
                 new getSingleTransformerCommand(result.Transformer, this.db).execute()
                     .fail(xhr=> doneTask.reject(xhr))
-                    .done((savedTransformer: savedTransformerDto) => doneTask.resolve(new transformer().initFromSave(savedTransformer)));
+                    .done((savedTransformer: savedTransformerDto) => {
+                        this.reportInfo("Saved " + this.trans.name());
+                    doneTask.resolve(new transformer().initFromSave(savedTransformer));
+                });
         });
     
                 

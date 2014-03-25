@@ -21,6 +21,7 @@ using Raven.Abstractions.Util;
 using Raven.Database;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
+using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Impl.DTC;
 using Raven.Database.Plugins;
@@ -167,9 +168,9 @@ namespace Raven.Storage.Esent
             Task.Factory.StartNew(backupOperation.Execute);
         }
 
-        public void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
+        public void Restore(RestoreRequest  restoreRequest, Action<string> output)
         {
-            new RestoreOperation(backupLocation, configuration, output, defrag).Execute();
+            new RestoreOperation(restoreRequest, configuration, output).Execute();
         }
 
         public DatabaseSizeInformation GetDatabaseSize()
@@ -389,7 +390,7 @@ namespace Raven.Storage.Esent
             SystemParameters.CacheSizeMax = cacheSizeMax;
         }
 
-        public bool Initialize(IUuidGenerator uuidGenerator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
+        public void Initialize(IUuidGenerator uuidGenerator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
         {
             try
             {
@@ -409,13 +410,11 @@ namespace Raven.Storage.Esent
 
                 Api.JetInit(ref instance);
 
-                var newDb = EnsureDatabaseIsCreatedAndAttachToDatabase();
+                EnsureDatabaseIsCreatedAndAttachToDatabase();
 
                 SetIdFromDb();
 
                 tableColumnsCache.InitColumDictionaries(instance, database);
-
-                return newDb;
             }
             catch (Exception e)
             {

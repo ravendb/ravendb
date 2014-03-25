@@ -10,6 +10,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Indexes;
 using Raven.Database;
+using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
@@ -33,7 +34,7 @@ namespace Raven.Tests.Storage
 				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false
 			});
-			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
+			db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		}
 
 		public override void Dispose()
@@ -45,19 +46,24 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void AfterBackupRestoreCanReadDocument()
 		{
-			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
+			db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
 			
-			db.StartBackup(BackupDir, false, new DatabaseDocument());
+			db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
 			WaitForBackup(db, true);
 
 			db.Dispose();
 			IOExtensions.DeleteDirectory(DataDir);
 
-			DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir, s => { }, defrag: true);
+		    MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
+		    {
+		        BackupLocation = BackupDir,
+		        DatabaseLocation = DataDir,
+		        Defrag = true
+		    }, s => { });
 
 			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir});
 
-			var document = db.Get("ayende", null);
+			var document = db.Documents.Get("ayende", null);
 			Assert.NotNull(document);
 
 			var jObject = document.ToJson();
@@ -68,22 +74,26 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void AfterBackupRestoreCanQueryIndex_CreatedAfterRestore()
 		{
-			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+			db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
-			db.StartBackup(BackupDir, false, new DatabaseDocument());
+			db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
 			WaitForBackup(db, true);
 
 			db.Dispose();
 			IOExtensions.DeleteDirectory(DataDir);
 
-			DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir, s => { }, defrag: true);
+		    MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
+		    {
+		        BackupLocation = BackupDir,
+		        DatabaseLocation = DataDir
+		    }, s => { });
 
 			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
 			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+				queryResult = db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 				{
 					Query = "Tag:[[Users]]",
 					PageSize = 10
@@ -95,12 +105,12 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void AfterBackupRestoreCanQueryIndex_CreatedBeforeRestore()
 		{
-			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+			db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+				queryResult = db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 				{
 					Query = "Tag:[[Users]]",
 					PageSize = 10
@@ -108,17 +118,22 @@ namespace Raven.Tests.Storage
 			} while (queryResult.IsStale);
 			Assert.Equal(1, queryResult.Results.Count);
 
-			db.StartBackup(BackupDir, false, new DatabaseDocument());
+			db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
 			WaitForBackup(db, true);
 
 			db.Dispose();
 			IOExtensions.DeleteDirectory(DataDir);
 
-			DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir, s => { }, defrag: true);
+		    MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
+		    {
+		        BackupLocation = BackupDir,
+		        DatabaseLocation = DataDir,
+                Defrag = true
+		    }, s => { });
 
 			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
 
-			queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+			queryResult = db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 			{
 				Query = "Tag:[[Users]]",
 				PageSize = 10
@@ -129,12 +144,12 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void AfterFailedBackupRestoreCanDetectError()
 		{
-			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+			db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+				queryResult = db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 				{
 					Query = "Tag:[[Users]]",
 					PageSize = 10
@@ -143,7 +158,7 @@ namespace Raven.Tests.Storage
 			Assert.Equal(1, queryResult.Results.Count);
 
 			File.WriteAllText("raven.db.test.backup.txt", "Sabotage!");
-			db.StartBackup("raven.db.test.backup.txt", false, new DatabaseDocument());
+			db.Maintenance.StartBackup("raven.db.test.backup.txt", false, new DatabaseDocument());
 			WaitForBackup(db, false);
 
 			Assert.True(GetStateOfLastStatusMessage().Severity == BackupStatus.BackupMessageSeverity.Error);
@@ -151,7 +166,7 @@ namespace Raven.Tests.Storage
 
 		private BackupStatus.BackupMessage GetStateOfLastStatusMessage()
 		{
-			JsonDocument jsonDocument = db.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
+			JsonDocument jsonDocument = db.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
 			var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 			return backupStatus.Messages.OrderByDescending(m => m.Timestamp).First();
 		}

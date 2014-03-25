@@ -475,7 +475,7 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
         session.query(SomeDataProjection.class).customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults()).toList();
 
         //This is the lucene query we want to mimic
-        List<SomeDataProjection> luceneResult = session.advanced().luceneQuery(OrderItem.class, "ByLineCost")
+        List<SomeDataProjection> luceneResult = session.advanced().documentQuery(OrderItem.class, "ByLineCost")
             .where("Cost_Range:{Dx1 TO NULL}")
             .selectFields(SomeDataProjection.class)
             .toList();

@@ -101,9 +101,9 @@ public class AdminServerClient implements IAdminDatabaseCommands, IGlobalAdminDa
 
 
   @Override
-  public void startBackup(String backupLocation, DatabaseDocument databaseDocument) {
+  public void startBackup(String backupLocation, DatabaseDocument databaseDocument, String databaseName) {
     Reference<RavenJObject> backupSettingsRef = new Reference<>();
-    HttpJsonRequest request = adminRequest.startBackup(backupLocation, databaseDocument, backupSettingsRef);
+    HttpJsonRequest request = adminRequest.startBackup(backupLocation, databaseDocument, databaseName, backupSettingsRef);
 
     request.write(backupSettingsRef.value.toString());
     request.executeRequest();
@@ -157,26 +157,29 @@ public class AdminServerClient implements IAdminDatabaseCommands, IGlobalAdminDa
 
     ServerClient serverClient = (ServerClient) innerServerClient.forSystemDatabase();
 
-    serverClient.forceReadFromMaster();
-    DatabaseDocument doc = MultiDatabase.createDatabaseDocument(name);
+    try (AutoCloseable readFromMaster = serverClient.forceReadFromMaster()) {
+      DatabaseDocument doc = MultiDatabase.createDatabaseDocument(name);
 
-    try {
-      if (serverClient.get(doc.getId()) != null) {
-        return;
+      try {
+        if (serverClient.get(doc.getId()) != null) {
+          return;
+        }
+        serverClient.getGlobalAdmin().createDatabase(doc);
+      } catch (Exception e) {
+        if (!ignoreFailures) {
+          throw new RuntimeException(e);
+        }
       }
-      serverClient.getGlobalAdmin().createDatabase(doc);
-    } catch (Exception e) {
-      if (!ignoreFailures) {
-        throw new RuntimeException(e);
+
+      try {
+        new RavenDocumentsByEntityName().execute(serverClient.forDatabase(name), new DocumentConvention());
+      } catch (Exception e) {
+        // we really don't care if this fails, and it might, if the user doesn't have permissions on the new db
       }
-    }
 
-    try {
-      new RavenDocumentsByEntityName().execute(serverClient.forDatabase(name), new DocumentConvention());
     } catch (Exception e) {
-      // we really don't care if this fails, and it might, if the user doesn't have permissions on the new db
+        // we really don't care if this fails, and it might, if the user doesn't have permissions on the new db
     }
-
   }
 
   @Override

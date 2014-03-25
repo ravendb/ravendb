@@ -52,7 +52,7 @@ public class SpatialSearchTest extends RemoteClientTest {
 
       try (IDocumentSession session = store.openSession()) {
         Reference<RavenQueryStatistics> statsRef = new Reference<>();
-        session.advanced().luceneQuery(Event.class, "SpatialIdx")
+        session.advanced().documentQuery(Event.class, "SpatialIdx")
         .statistics(statsRef)
         .whereLessThanOrEqual("Date", DateUtils.addYears(new Date(), 1))
         .withinRadiusOf(6.0,  38.96939, -77.386398)
@@ -96,7 +96,7 @@ public class SpatialSearchTest extends RemoteClientTest {
       try (IDocumentSession session = store.openSession()) {
         Reference<RavenQueryStatistics> statsRef = new Reference<>();
         QEvent x = QEvent.event;
-        List<Event> events = session.advanced().luceneQuery(Event.class, "SpatialIdx")
+        List<Event> events = session.advanced().documentQuery(Event.class, "SpatialIdx")
           .statistics(statsRef)
           .whereBetweenOrEqual("Capacity", 0, 2000)
           .withinRadiusOf(6.0, 38.96939, -77.386398)
@@ -115,7 +115,7 @@ public class SpatialSearchTest extends RemoteClientTest {
       try (IDocumentSession session = store.openSession()) {
         Reference<RavenQueryStatistics> statsRef = new Reference<>();
         QEvent x = QEvent.event;
-        List<Event> events = session.advanced().luceneQuery(Event.class, "SpatialIdx")
+        List<Event> events = session.advanced().documentQuery(Event.class, "SpatialIdx")
           .statistics(statsRef)
           .whereBetweenOrEqual("Capacity", 0, 2000)
           .withinRadiusOf(6.0, 38.96939, -77.386398)
@@ -156,7 +156,7 @@ public class SpatialSearchTest extends RemoteClientTest {
       waitForNonStaleIndexes(store.getDatabaseCommands());
 
       try (IDocumentSession session = store.openSession()) {
-        List<Event> events = session.advanced().luceneQuery(Event.class, "SpatialIdx")
+        List<Event> events = session.advanced().documentQuery(Event.class, "SpatialIdx")
           .withinRadiusOf(6.0, 38.96939, -77.386398)
           .sortByDistance()
           .addOrder("Venue", false)
@@ -172,7 +172,7 @@ public class SpatialSearchTest extends RemoteClientTest {
       }
 
       try (IDocumentSession session = store.openSession()) {
-        List<Event> events = session.advanced().luceneQuery(Event.class, "SpatialIdx")
+        List<Event> events = session.advanced().documentQuery(Event.class, "SpatialIdx")
           .withinRadiusOf(6.0, 38.96939, -77.386398)
           .addOrder("Venue", false)
           .sortByDistance()

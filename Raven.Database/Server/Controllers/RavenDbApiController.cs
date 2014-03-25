@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -13,12 +12,12 @@ using System.Web.Http.Routing;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Config;
-using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using System.Linq;
@@ -537,7 +536,14 @@ namespace Raven.Database.Server.Controllers
                 }
                 catch (Exception e)
                 {
-                    var msg = "Could open database named: " + tenantId;
+                    string exceptionMessage = e.Message;
+                    var aggregateException = e as AggregateException;
+                    if (aggregateException != null)
+                    {
+                        exceptionMessage = aggregateException.ExtractSingleInnerException().Message;
+                    }
+                    var msg = "Could open database named: " + tenantId + Environment.NewLine + exceptionMessage;
+
                     Logger.WarnException(msg, e);
                     throw new HttpException(503, msg, e);
                 }

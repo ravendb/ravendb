@@ -308,25 +308,19 @@ namespace Raven.Client.Embedded
             return new CompletedTask<IndexMergeResults>(databaseCommands.GetIndexMergeSuggestions());
         }
 
-		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, string databaseName)
+		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
 		{
 			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();
 		}
 
-		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false)
-		{
-			// No sync equivalent on IDatabaseCommands.
-			throw new NotSupportedException();
-		}
+	    public Task StartRestoreAsync(RestoreRequest restoreRequest)
+	    {
+            // No sync equivalent on IDatabaseCommands.
+            throw new NotSupportedException();
+	    }
 
-		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null)
-		{
-			// No sync equivalent on IDatabaseCommands.
-			throw new NotSupportedException();
-		}
-
-		public Task<string> GetIndexingStatusAsync()
+	    public Task<string> GetIndexingStatusAsync()
 		{
 			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();

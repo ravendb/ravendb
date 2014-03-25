@@ -32,70 +32,65 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void PutTwoDocumentsAndThenCommit()
 		{
-		    if (db.TransactionalStorage.SupportsDtc == false)
-		        return;
-
+            EnsureDtcIsSupported(db);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
-			db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
-			db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+			db.Documents.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+			db.Documents.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
 			db.PrepareTransaction(transactionInformation.Id);
 			db.Commit(transactionInformation.Id);
 
-			Assert.NotNull(db.Get("ayende1", null));
-			Assert.NotNull(db.Get("ayende2", null));
+			Assert.NotNull(db.Documents.Get("ayende1", null));
+			Assert.NotNull(db.Documents.Get("ayende2", null));
 		}
 
 		[Fact]
 		public void CommittingWillOnlyCommitSingleTransaction()
 		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(db);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
-			db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
-            db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) });
+			db.Documents.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+            db.Documents.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) });
 
 			db.PrepareTransaction(transactionInformation.Id);
 			db.Commit(transactionInformation.Id);
 
-			Assert.NotNull(db.Get("ayende1", null));
-			Assert.True(db.Get("ayende2", null).Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
+			Assert.NotNull(db.Documents.Get("ayende1", null));
+			Assert.True(db.Documents.Get("ayende2", null).Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
 		}
 
 		[Fact]
 		public void PutTwoDocumentsAndThenCommitReversedOrder()
 		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(db);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
-			db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
-			db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+			db.Documents.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+			db.Documents.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
 			db.PrepareTransaction(transactionInformation.Id);
 			db.Commit(transactionInformation.Id);
 
-			Assert.NotNull(db.Get("ayende1", null));
-			Assert.NotNull(db.Get("ayende2", null));
+			Assert.NotNull(db.Documents.Get("ayende1", null));
+			Assert.NotNull(db.Documents.Get("ayende2", null));
 		}
 
 		[Fact]
 		public void WhileUpdatingSeveralDocumentsCannotAccessAnyOfThem()
-		{
-            if (db.TransactionalStorage.SupportsDtc == false)
-                return;
+        {
+            EnsureDtcIsSupported(db);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
-			db.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
-			Assert.True(db.Get("ayende1", null).Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
-			Assert.Null(db.Get("ayende2", null)); 
-			db.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
-			Assert.True(db.Get("ayende1", null).Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
-			Assert.True(db.Get("ayende2", null).Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
+			db.Documents.Put("ayende1", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+			Assert.True(db.Documents.Get("ayende1", null).Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
+			Assert.Null(db.Documents.Get("ayende2", null)); 
+			db.Documents.Put("ayende2", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+			Assert.True(db.Documents.Get("ayende1", null).Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
+			Assert.True(db.Documents.Get("ayende2", null).Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
 
 			db.PrepareTransaction(transactionInformation.Id);
 			db.Commit(transactionInformation.Id);
 
-			Assert.NotNull(db.Get("ayende1", null));
-			Assert.NotNull(db.Get("ayende2", null));
+			Assert.NotNull(db.Documents.Get("ayende1", null));
+			Assert.NotNull(db.Documents.Get("ayende2", null));
 		}
 	}
 }

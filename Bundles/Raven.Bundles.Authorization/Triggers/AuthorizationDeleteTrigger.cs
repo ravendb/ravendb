@@ -28,7 +28,7 @@ namespace Raven.Bundles.Authorization.Triggers
 				if (string.IsNullOrEmpty(operation) || string.IsNullOrEmpty(user))
 					return VetoResult.Allowed;
 
-				var previousDocument = Database.Get(key, transactionInformation);
+				var previousDocument = Database.Documents.Get(key, transactionInformation);
 				if (previousDocument == null)
 					return VetoResult.Allowed;
 

@@ -313,7 +313,7 @@ public class FacetedIndexLimitTest extends FacetTestBase {
         s.store(new FacetSetup("facets/CameraFacets", facets));
         s.saveChanges();
 
-        FacetResults facetResults = s.advanced().luceneQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets");
+        FacetResults facetResults = s.advanced().documentQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets");
 
         assertEquals(5, facetResults.getResults().get("Manufacturer").getValues().size());
         assertEquals("canon", facetResults.getResults().get("Manufacturer").getValues().get(0).getRange());
@@ -373,7 +373,7 @@ public class FacetedIndexLimitTest extends FacetTestBase {
         cal.set(2000, 0, 1);
         Date date = DateUtils.truncate(cal.getTime(), Calendar.DAY_OF_MONTH);
 
-        FacetResults facetResults = s.advanced().luceneQuery(Camera.class, "CameraCost").whereGreaterThan(x.dateOfListing, date).toFacets("facets/CameraFacets");
+        FacetResults facetResults = s.advanced().documentQuery(Camera.class, "CameraCost").whereGreaterThan(x.dateOfListing, date).toFacets("facets/CameraFacets");
 
         assertEquals(2, facetResults.getResults().get("Manufacturer").getValues().size());
         assertEquals("canon", facetResults.getResults().get("Manufacturer").getValues().get(0).getRange());
@@ -420,7 +420,7 @@ public class FacetedIndexLimitTest extends FacetTestBase {
         cal.set(2000, 0, 1);
         Date date = DateUtils.truncate(cal.getTime(), Calendar.DAY_OF_MONTH);
 
-        FacetResults facetResults = s.advanced().luceneQuery(Camera.class, "CameraCost").whereGreaterThan(x.dateOfListing, date).toFacets("facets/CameraFacets");
+        FacetResults facetResults = s.advanced().documentQuery(Camera.class, "CameraCost").whereGreaterThan(x.dateOfListing, date).toFacets("facets/CameraFacets");
 
         assertEquals(3, facetResults.getResults().get("Manufacturer").getValues().size());
         assertEquals("sony", facetResults.getResults().get("Manufacturer").getValues().get(0).getRange());
@@ -464,7 +464,7 @@ public class FacetedIndexLimitTest extends FacetTestBase {
         s.store(new FacetSetup("facets/CameraFacets", facets));
         s.saveChanges();
 
-        FacetResults facetResults = s.advanced().luceneQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets");
+        FacetResults facetResults = s.advanced().documentQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets");
 
         QCamera x = QCamera.camera;
 
@@ -520,7 +520,7 @@ public class FacetedIndexLimitTest extends FacetTestBase {
         s.store(new FacetSetup("facets/CameraFacets", facets));
         s.saveChanges();
 
-        FacetResults facetResults = s.advanced().luceneQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets");
+        FacetResults facetResults = s.advanced().documentQuery(Camera.class, "CameraCost").toFacets("facets/CameraFacets");
 
         QCamera x = QCamera.camera;
 

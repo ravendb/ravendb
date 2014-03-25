@@ -2,23 +2,26 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 
 class restoreDatabase extends viewModelBase {
-  defarg = ko.observable<boolean>(false);
+  defrag = ko.observable<boolean>(false);
+  backupLocation = ko.observable<string>('C:\\path-to-your-backup-folder');
+  databaseLocation = ko.observable<string>();
+  databaseName = ko.observable<string>();
+
   restoreStatusMessages = ko.observableArray<string>();
   isBusy = ko.observable<boolean>();
 
-
   startRestore() {
     var restoreDatabaseDto: restoreRequestDto = {
-      RestoreLocation: '',
-      DatabaseLocation: '',
-      DatabaseName: ''
+      RestoreLocation: this.backupLocation(),
+      DatabaseLocation: this.databaseLocation(),
+      DatabaseName: this.databaseName()
     };
     var updateRestoreStatus = (newRestoreStatus: restoreStatusDto) => {
       this.restoreStatusMessages(newRestoreStatus.Messages);
       this.isBusy(!!newRestoreStatus.IsRunning);
     };
 
-    new startRestoreCommand(this.activeDatabase(), this.defarg(), restoreDatabaseDto, updateRestoreStatus)
+    new startRestoreCommand(this.activeDatabase(), this.defrag(), restoreDatabaseDto, updateRestoreStatus)
       .execute()
       .always(() => this.isBusy(false));
   }

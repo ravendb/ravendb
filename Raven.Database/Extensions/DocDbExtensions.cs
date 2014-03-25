@@ -19,7 +19,7 @@ namespace Raven.Database.Extensions
 			while (true)
 			{
 				AlertsDocument alertsDocument;
-				var alertsDoc = self.Get(Constants.RavenAlerts, null);
+				var alertsDoc = self.Documents.Get(Constants.RavenAlerts, null);
 				RavenJObject metadata;
 				Etag etag;
 				if (alertsDoc == null)
@@ -44,7 +44,7 @@ namespace Raven.Database.Extensions
 				document.Remove("Id");
 				try
 				{
-					self.Put(Constants.RavenAlerts, etag, document, metadata, null);
+					self.Documents.Put(Constants.RavenAlerts, etag, document, metadata, null);
 					return;
 				}
 				catch (ConcurrencyException)

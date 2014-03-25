@@ -66,6 +66,16 @@ namespace Voron.Trees
 			}
 		}
 
+		/// <summary>
+		/// Deletes the current key/value pair and returns true if there is 
+		/// another key after it
+		/// </summary>
+		public bool DeleteCurrentAndMoveNext()
+		{
+			_tree.Delete(_tx, CurrentKey);
+			return MovePrev() && MoveNext();
+		}
+
 		public NodeHeader* Current
 		{
 			get

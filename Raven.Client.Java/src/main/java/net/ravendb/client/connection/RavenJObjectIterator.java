@@ -36,7 +36,6 @@ public class RavenJObjectIterator implements Iterator<RavenJObject>, AutoCloseab
     JsonToken token = jsonParser.nextToken();
     if (token == JsonToken.END_ARRAY) {
       hasNext = false;
-      //TODO:httpResponse.close();
       EntityUtils.consumeQuietly(httpEntity);
       this.currentObject = null;
     } else {

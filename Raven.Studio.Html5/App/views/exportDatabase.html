@@ -1,3 +1,53 @@
-﻿<div>
-    TODO: export database
+﻿<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">Export Database</h3>
+    </div>
+    <div class="panel-body">
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                <div class="glyphicon glyphicon-info-sign"></div>
+                Export your database to a dump file.
+            </div>
+        </div>
+
+        <button class="btn btn-primary" data-bind="click: startExport">
+            <div class="glyphicon glyphicon-export"></div>
+            Export Database
+        </button>
+
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <div>
+                    <label>
+                        <input type="checkbox" data-bind="checked: includeDocuments">
+                        <span>Include Documents</span>
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <input type="checkbox" data-bind="checked: includeIndexes">
+                        <span>Include Indexes</span>
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <input type="checkbox" data-bind="checked: includeTransformers">
+                        <span>Include Transformers</span>
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <input type="checkbox" data-bind="checked: includeAttachments">
+                        <span>Include Attachments</span>
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <input type="checkbox" data-bind="checked: removeAnalyzers">
+                        <span>Remove Analyzers</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

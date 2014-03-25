@@ -431,7 +431,7 @@ namespace Raven.Database.Server.Controllers
 			filePath = Path.Combine("~/../../../../Raven.Studio.Html5", docPath);
 			if (File.Exists(filePath))
 				return WriteFile(filePath);
-			
+
 			return WriteEmbeddedFileOfType(embeddedPath, docPath);
 		}
 

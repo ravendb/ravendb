@@ -72,14 +72,14 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     this.provider.afterQueryExecuted(new Action1<QueryResult>() {
 
       @Override
-      public void apply(QueryResult queryResult) {
+      public void apply(final QueryResult queryResult) {
         afterQueryExecuted(queryResult);
       }
     });
     this.expression = expression != null ? expression : Expressions.constant("root");
   }
 
-  private void afterQueryExecuted(QueryResult queryResult) {
+  protected void afterQueryExecuted(QueryResult queryResult) {
     this.queryStats.updateQueryStats(queryResult);
     this.highlightings.update(queryResult);
   }
@@ -133,6 +133,11 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     }
   }
 
+  @Override
+  public <S> IRavenQueryable<S> transformWith(String transformerName, Class<S> resultClass) {
+    provider.transformWith(transformerName);
+    return as(resultClass);
+  }
 
   @Override
   public IRavenQueryable<T> addQueryInput(String name, RavenJToken value) {
@@ -154,19 +159,19 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
   @Override
   public String toString() {
     RavenQueryProviderProcessor<T> ravenQueryProvider = getRavenQueryProvider();
-    IDocumentQuery<T> luceneQuery = ravenQueryProvider.getLuceneQueryFor(expression);
+    IDocumentQuery<T> documentQuery = ravenQueryProvider.getLuceneQueryFor(expression);
     String fields = "";
     if (!ravenQueryProvider.getFieldsToFetch().isEmpty()) {
       fields = "<" + StringUtils.join(ravenQueryProvider.getFieldsToFetch(), ", ") + ">: ";
     }
-    return fields + luceneQuery;
+    return fields + documentQuery;
   }
 
   @Override
   public IndexQuery getIndexQuery() {
     RavenQueryProviderProcessor<T> ravenQueryProvider = getRavenQueryProvider();
-    IDocumentQuery<T> luceneQuery = ravenQueryProvider.getLuceneQueryFor(expression);
-    return luceneQuery.getIndexQuery();
+    IDocumentQuery<T> documentQuery = ravenQueryProvider.getLuceneQueryFor(expression);
+    return documentQuery.getIndexQuery();
   }
 
   @Override
@@ -188,8 +193,8 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
   public String getIndexQueried() {
     RavenQueryProviderProcessor<T> ravenQueryProvider = new RavenQueryProviderProcessor<>(clazz, provider.getQueryGenerator(), null, null, indexName, new HashSet<String>(),
         new ArrayList<RenamedField>(), isMapReduce, provider.getResultTranformer(), provider.getQueryInputs());
-    IDocumentQuery<T> luceneQuery = ravenQueryProvider.getLuceneQueryFor(expression);
-    return ((IRavenQueryInspector)luceneQuery).getIndexQueried();
+    IDocumentQuery<T> documentQuery = ravenQueryProvider.getLuceneQueryFor(expression);
+    return ((IRavenQueryInspector)documentQuery).getIndexQueried();
   }
 
   @Override
@@ -209,8 +214,8 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
   public Tuple<String, String> getLastEqualityTerm() {
     RavenQueryProviderProcessor<T> ravenQueryProvider = new RavenQueryProviderProcessor<>(clazz, provider.getQueryGenerator(), null, null, indexName, new HashSet<String>(),
         new ArrayList<RenamedField>(), isMapReduce, provider.getResultTranformer(), provider.getQueryInputs());
-    IDocumentQuery<T> luceneQuery = ravenQueryProvider.getLuceneQueryFor(expression);
-    return ((IRavenQueryInspector) luceneQuery).getLastEqualityTerm();
+    IDocumentQuery<T> documentQuery = ravenQueryProvider.getLuceneQueryFor(expression);
+    return ((IRavenQueryInspector) documentQuery).getLastEqualityTerm();
   }
 
   public void fieldsToFetch(List<String> fields) {

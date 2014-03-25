@@ -37,16 +37,17 @@ class alertArgs {
             var error: string = detailsObj.Error;
             if (error && typeof error === "string") {
                 var indexOfStackTrace = error.indexOf("\r\n");
+
                 if (indexOfStackTrace !== -1) {
                     this.parsedErrorInfo = {
-                        message: error.substr(0, indexOfStackTrace),
-                        stackTrace: error.substr(indexOfStackTrace + "\r\n".length),
+                        message: detailsObj.Message?detailsObj.Message:error.substr(0, indexOfStackTrace),
+                        stackTrace: detailsObj.Message?error:error.substr(indexOfStackTrace + "\r\n".length),
                         url: detailsObj.Url || ""
                     };
                 } else {
                     this.parsedErrorInfo = {
-                        message: error,
-                        stackTracke: "",
+                        message: detailsObj.Message?detailsObj.Message:error,
+                        stackTracke: error,
                         url: detailsObj.Url
                     }
                 }

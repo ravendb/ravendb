@@ -307,6 +307,10 @@ interface transformerDto {
     }
 }
 
+interface saveTransformerDto {
+    'Name': string;
+    'TransformResults':string;
+}
 
 interface getTransformerResultDto {
     'Transformer':string;
@@ -388,7 +392,7 @@ interface sqlReplicationTableDto {
     DocumentKeyColumn: string;
 }
 
-interface sqlReplicationDto {
+interface sqlReplicationDto extends documentDto {
     Name: string;
     Disabled: boolean;
     ParameterizeDeletesDisabled: boolean;
@@ -399,4 +403,39 @@ interface sqlReplicationDto {
     ConnectionStringName: string;
     ConnectionStringSettingName: string;
     SqlReplicationTables: sqlReplicationTableDto[];
+}
+
+interface facetDto {
+    Mode: number; // Default = 0, Ranges = 1
+    Aggregation: number; // None = 0, Count = 1, Max = 2, Min = 4, Average = 8, Sum = 16
+    AggregationField: string;
+    AggregationType: string;
+    Name: string;
+    DisplayName: string;
+    Ranges: any[];
+    MaxResults: number;
+    TermSortMode: number;
+    IncludeRemainingTerms: boolean;
+}
+
+interface facetResultSetDto {
+    Results: any; // An object containing keys that look like [FacetName]-[FacetAggregationField]. For example "Company-Total". Each key will be of type facetResultDto.
+    Duration: string;
+}
+
+interface facetResultDto {
+    Values: facetValueDto[];
+    RemainingTerms: string[];
+    RemainingTermsCount: number;
+    RemainingHits: number;
+}
+
+interface facetValueDto {
+    Range: string;
+    Hits: number;
+    Count: number;
+    Sum: number;
+    Max: number;
+    Min: number;
+    Average: number;
 }

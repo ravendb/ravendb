@@ -125,8 +125,15 @@ public class DatabaseStatistics {
   private ActualIndexingBatchSize[] actualIndexingBatchSize;
   private FutureBatchStats[] prefetches;
   private UUID databaseId;
+  private boolean supportsDtc;
 
+  public boolean isSupportsDtc() {
+    return supportsDtc;
+  }
 
+  public void setSupportsDtc(boolean supportsDtc) {
+    this.supportsDtc = supportsDtc;
+  }
   public ActualIndexingBatchSize[] getActualIndexingBatchSize() {
     return actualIndexingBatchSize;
   }

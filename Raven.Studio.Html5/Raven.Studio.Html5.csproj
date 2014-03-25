@@ -20,15 +20,24 @@
     <TargetFrameworkProfile />
   </PropertyGroup>
   <ItemGroup>
+    <TypeScriptCompile Include="App\commands\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\createSampleDataCommand.ts" />
+    <TypeScriptCompile Include="App\commands\deleteTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
+    <TypeScriptCompile Include="App\commands\exportDatabaseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\queryFacetsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\resetIndexCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\startRestoreCommand.ts" />
     <TypeScriptCompile Include="App\commands\startIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\backupDatabaseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\createSampleDataCommand.ts" />
     <TypeScriptCompile Include="App\commands\stopIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\createDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\importDatabaseCommand.ts" />
@@ -69,6 +78,7 @@
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
+    <TypeScriptCompile Include="App\models\facet.ts" />
     <TypeScriptCompile Include="App\models\index.ts" />
     <TypeScriptCompile Include="App\models\indexDefinition.ts" />
     <TypeScriptCompile Include="App\models\indexPriority.ts" />
@@ -78,6 +88,9 @@
     <TypeScriptCompile Include="App\models\transformer.ts" />
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
+    <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
+    <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
+    <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\backupDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyDocuments.ts" />
@@ -90,6 +103,7 @@
     <TypeScriptCompile Include="App\viewmodels\deleteDocumentsMatchingQueryConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteDocuments.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteIndexesConfirm.ts" />
+    <TypeScriptCompile Include="App\viewmodels\deleteTransformerConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\dialogViewModelBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\editDocument.ts" />
     <TypeScriptCompile Include="App\viewmodels\editIndex.ts" />
@@ -105,6 +119,8 @@
     <TypeScriptCompile Include="App\viewmodels\queryShell.ts" />
     <TypeScriptCompile Include="App\viewmodels\recentErrors.ts" />
     <TypeScriptCompile Include="App\viewmodels\replicationStats.ts" />
+    <TypeScriptCompile Include="App\viewmodels\reporting.ts" />
+    <TypeScriptCompile Include="App\viewmodels\saveTransformerWithNewNameConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
@@ -134,10 +150,17 @@
     <TypeScriptCompile Include="App\viewmodels\sqlReplications.ts" />
     <TypeScriptCompile Include="App\models\sqlReplicationTable.ts" />
     <TypeScriptCompile Include="App\models\sqlReplication.ts" />
+    <TypeScriptCompile Include="App\commands\getSqlReplicationsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveSqlReplicationsCommand.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\createEncryptionConfirmation.html" />
+    <Content Include="App\views\resetIndexConfirm.html" />
+    <Content Include="App\views\createEncryptionConfirmation.html" />
     <Content Include="App\views\restoreDatabase.html" />
     <Content Include="App\views\backupDatabase.html" />
+    <Content Include="App\views\deleteTransformerConfirm.html" />
+    <Content Include="App\views\saveTransformerWithNewNameConfirm.html" />
     <Content Include="App\views\sqlReplications.html" />
     <Content Include="App\views\createSampleData.html" />
     <Content Include="App\views\csvImport.html" />
@@ -161,17 +184,23 @@
     <Content Include="App\views\periodicBackup.html" />
     <Content Include="App\views\query.html" />
     <Content Include="App\views\replicationStats.html" />
+    <Content Include="App\views\reporting.html" />
     <Content Include="App\views\settings.html" />
     <Content Include="App\views\toggleIndexing.html" />
     <Content Include="App\views\transformers.html" />
     <Content Include="App\views\transformersShell.html" />
     <Content Include="App\views\userInfo.html" />
     <TypeScriptCompile Include="App\viewmodels\viewModelBase.ts" />
+    <TypeScriptCompile Include="App\viewmodels\viewSystemDatabaseConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\windowsAuth.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\cell.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\row.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />
+    <Content Include="App\views\viewSystemDatabaseConfirm.html" />
     <Content Include="App\views\windowsAuth.html" />
+    <Content Include="Content\app.min.css">
+      <DependentUpon>app.css</DependentUpon>
+    </Content>
     <Content Include="Content\bootstrap-theme.css" />
     <Content Include="Content\bootstrap-theme.min.css" />
     <Content Include="Content\bootstrap.css" />
@@ -804,12 +833,23 @@
     <Content Include="Content\app.css.map">
       <DependentUpon>app.css</DependentUpon>
     </Content>
+    <Content Include="App_Readme\Handlebarsjs_README.md" />
+    <Content Include="App_Readme\Handlebarsjs_LICENSE" />
     <None Include="Scripts\jquery-2.1.0.intellisense.js" />
+    <Content Include="Scripts\handlebars.amd.js" />
+    <Content Include="Scripts\handlebars.amd.min.js" />
+    <Content Include="Scripts\handlebars.js" />
+    <Content Include="Scripts\handlebars.min.js" />
+    <Content Include="Scripts\handlebars.runtime.amd.js" />
+    <Content Include="Scripts\handlebars.runtime.amd.min.js" />
+    <Content Include="Scripts\handlebars.runtime.js" />
+    <Content Include="Scripts\handlebars.runtime.min.js" />
     <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-2.1.0.min.js" />
     <Content Include="Scripts\jwerty-0.3.js" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.amd.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\handlebars\handlebars.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery\jquery.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jwerty\jwerty.d.ts" />
     <Content Include="Scripts\knockout-3.1.0.debug.js" />
@@ -1161,4 +1201,10 @@
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
+  </Target>
 </Project>

@@ -40,9 +40,7 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void CanUseTransactionsToIsolateSaves()
 		{
-            if(documentStore.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
-                return;
-
+            EnsureDtcIsSupported(documentStore);
 			var company = new Company { Name = "Company Name" };
 			using (var session = documentStore.OpenSession())
 			{
@@ -73,7 +71,7 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void CanResetBuiltinIndex()
 		{
-			documentStore.DocumentDatabase.ResetIndex("Raven/DocumentsByEntityName");
+			documentStore.DocumentDatabase.Indexes.ResetIndex("Raven/DocumentsByEntityName");
 		}
 
 		[Fact]
@@ -129,8 +127,7 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void WillProcessAllDifferentDocumentsEnlistedInATransaction()
 		{
-            if(documentStore.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
-                return;
+            EnsureDtcIsSupported(documentStore);
 
 			using (var tx = new TransactionScope())
 			{
@@ -282,10 +279,8 @@ namespace Raven.Tests.Document
 
 		[Fact]
 		public void CanUseTransactionsToIsolateDelete()
-		{
-            if(documentStore.DocumentDatabase.TransactionalStorage.SupportsDtc == false)
-                return;
-
+        {
+            EnsureDtcIsSupported(documentStore);
 			var company = new Company { Name = "Company Name" };
 			using (var session = documentStore.OpenSession())
 			{

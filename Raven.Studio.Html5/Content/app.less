@@ -88,11 +88,11 @@ html, body {
             border-radius: 10px;
             -webkit-box-shadow: 0 0 5px 1px silver;
             box-shadow: 0 0 5px 1px silver;
-            margin-right: 10px;
             min-width: 140px;
             min-height: 60px;
             display: inline-block;
             padding: 8px;
+            margin: 0 10px 14px 0;
 
             @selectColor: rgb(66, 139, 202);
             @hoverColor: lighten(@selectColor, 10%);
@@ -106,14 +106,36 @@ html, body {
             &.selected {
                 -webkit-box-shadow: 0 0 6px 0 @selectColor;
                 box-shadow: 0 0 6px 0 @selectColor;
-                background-color: fade(@hoverColor, 25%);
+                background-color: @selectColor;
+                
+                a, .text-muted {
+                    color: white;
+                }
             }
 
             &.system-database {
-                background-color: rgba(192, 192, 192, 0.21);
+                @systemDbColor: rgba(192, 192, 192, 0.21);
+                background-color: @systemDbColor;
+
+                &.selected {
+                    background-color: darken(@systemDbColor, 70%);
+
+                    a, .text-muted {
+                        color: darken(@selectColor, 10%);
+                    }
+                }
             }
         }
     }
+
+    .systemButton {
+        color:grey;
+        margin-top:50px;        
+        position:absolute;
+        top:-40px;
+        right:25px;
+    }
+
 }
 
 .document-collections {
@@ -143,7 +165,41 @@ html, body {
             }
         }
     }
+
+    .index-group .panel-heading {
+        padding-top:0;
+    }
+
+    .index-group .panel-heading .panel-title{
+        padding-top:15px;
+    }
+    .index-group .panel-heading {
+                .indexGroup-actions-container {
+            display: none;
+            padding-top:5px;
+        }
+
+        &:hover {
+            .indexGroup-actions-container {
+                display: inline-block;
+            }
+        }
+    }
 }
+
+
+#logsContainer .logRecord {
+    .logName .logName-actions-container {
+        display: none;
+    }
+
+    &:hover {
+        .logName-actions-container {
+            display: inline-block;
+        }
+    }
+}
+
 
 .settings-container {
     margin-top: 10px;
@@ -436,6 +492,101 @@ html, body {
             text-overflow: ellipsis;
         }
     }
+}
+
+
+#editTransformerContainer .transformer {
+  height: 600px;
+}
+
+#csvImportContainer .fileinputs {
+    position: relative;
+}
+
+#csvImportContainer .fakefile {
+	position: absolute;
+	top: 0;
+	left: 0;
+	z-index: 1;
+}
+
+#csvImportContainer .file {
+	position: relative;
+	text-align: right;
+	-moz-opacity:0 ;
+	filter:~"alpha(opacity: 0)";
+	opacity: 0;
+	z-index: 2;
+}
+
+.twitter-typeahead .tt-hint {
+    display: block;
+    height: 34px;
+    padding: 6px 12px;
+    font-size: 14px;
+    line-height: 1.428571429;
+    border: 1px solid transparent;
+    border-radius:4px;
+    visibility:hidden;
+}
+.twitter-typeahead .hint-small {
+    height: 30px;
+    padding: 5px 10px;
+    font-size: 12px;
+    border-radius: 3px;
+    line-height: 1.5;
+}
+.twitter-typeahead .hint-large {
+    height: 45px;
+    padding: 10px 16px;
+    font-size: 18px;
+    border-radius: 6px;
+    line-height: 1.33;
+}
+
+.typeahead {
+  background-color: #fff;
+}
+
+.typeahead:focus {
+  border: 2px solid #0097cf;
+}
+
+.tt-query {
+  -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+     -moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+          box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+}
+
+.tt-dropdown-menu {
+  width: 422px;
+  margin-top: 12px;
+  padding: 8px 0;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  -webkit-border-radius: 8px;
+     -moz-border-radius: 8px;
+          border-radius: 8px;
+  -webkit-box-shadow: 0 5px 10px rgba(0,0,0,.2);
+     -moz-box-shadow: 0 5px 10px rgba(0,0,0,.2);
+          box-shadow: 0 5px 10px rgba(0,0,0,.2);
+}
+
+.tt-suggestion {
+  padding: 3px 20px;
+  font-size: 18px;
+  line-height: 24px;
+}
+
+.tt-suggestion.tt-cursor {
+  color: #fff;
+  background-color: #32aec4;
+
+}
+
+.tt-suggestion p {
+  margin: 0;
 }
 
 #logsContainer, #alertsContainer, #indexErrorsContainer {

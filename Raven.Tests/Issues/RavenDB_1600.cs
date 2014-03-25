@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Threading;
+using Raven.Database.Actions;
 
 namespace Raven.Tests.Issues
 {
@@ -54,10 +55,10 @@ namespace Raven.Tests.Issues
 			}))
 			{
 				db.SpinBackgroundWorkers();
-				db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
+				db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 
-				db.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
-				db.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.Documents.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.Documents.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
 				var results = db.ExecuteDynamicQuery("Users", new IndexQuery()
 				{
@@ -75,12 +76,17 @@ namespace Raven.Tests.Issues
 
                 autoIdexes.ForEach(x => db.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(x.Id, IndexingPriority.Idle)));
 				
-				db.StartBackup(BackupDir, false, new DatabaseDocument());
+				db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
 				WaitForBackup(db, true);
 			}
 			IOExtensions.DeleteDirectory(DataDir);
 
-			DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir, s => { }, defrag: true);
+		    MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
+		    {
+		        BackupLocation = BackupDir,
+		        DatabaseLocation = DataDir,
+                Defrag = true
+		    },s => { });
 
 			using (var db = new DocumentDatabase(new RavenConfiguration
 			{
