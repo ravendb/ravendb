@@ -20,8 +20,8 @@ class editDocument extends viewModelBase {
 
     document = ko.observable<document>();
     metadata: KnockoutComputed<documentMetadata>;
-    documentText = ko.observable('');
-    metadataText = ko.observable('');
+    documentText = ko.observable('').extend({ required: true });
+    metadataText = ko.observable('').extend({ required: true });
     isEditingMetadata = ko.observable(false);
     isBusy = ko.observable(false);
     metaPropsToRestoreOnSave = [];
@@ -45,7 +45,7 @@ class editDocument extends viewModelBase {
             }
         });
 
-       
+        var self = this;
         this.metadata.subscribe((meta: documentMetadata) => {
             if (meta) {
                 this.metaPropsToRestoreOnSave.length = 0;
@@ -65,17 +65,12 @@ class editDocument extends viewModelBase {
                 for (var property in metaDto) {
                     if (metaDto.hasOwnProperty(property) && metaPropsToRemove.indexOf(property) != -1) {
                         if (metaDto[property]) {
-                            this.metaPropsToRestoreOnSave.push({ name: property, value: metaDto[property].toString() });
+                            self.metaPropsToRestoreOnSave.push({ name: property, value: metaDto[property].toString() });
                         }
                         delete metaDto[property];
                     }
                 }
-                /*metaPropsToRemove.forEach(p => {
-                    if (p in metaDto) {
-                        this.metaPropsToRestoreOnSave.push({ name: p, value: metaDto[p].toString() });
-                        delete metaDto[p];
-                    }
-                });*/
+
                 var metaString = this.stringify(metaDto);
                 this.metadataText(metaString);
                 this.userSpecifiedId(meta.id);
@@ -127,13 +122,18 @@ class editDocument extends viewModelBase {
         this.setupKeyboardShortcuts();
     }
 
+    compositionComplete() {
+        this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText]);
+    }
+
     initializeDocEditor() {
         // Startup the Ace editor with JSON syntax highlighting.
         this.docEditor = ace.edit("docEditor");
         this.docEditor.setTheme("ace/theme/github");
         this.docEditor.setFontSize("16px");
         this.docEditor.getSession().setMode("ace/mode/json");
-        $("#docEditor").on('blur', ".ace_text-input", () => this.storeDocEditorTextIntoObservable());
+        $("#docEditor").on('keydown', ".ace_text-input", () => this.storeDocEditorTextIntoObservable());
+        //$("#docEditor").on('mousedown', ".ace_text-input", () => this.storeDocEditorTextIntoObservable());
         this.updateDocEditorText();
     }
 
@@ -179,6 +179,9 @@ class editDocument extends viewModelBase {
         var saveCommand = new saveDocumentCommand(this.userSpecifiedId(), newDoc, appUrl.getDatabase());
         var saveTask = saveCommand.execute();
         saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
+            // Resync Changes
+            this.dirtyFlag().reset();
+
             this.isCreatingNewDocument(false);
             this.loadDocument(idAndEtag.Key);
             this.updateUrl(idAndEtag.Key);
@@ -206,7 +209,12 @@ class editDocument extends viewModelBase {
 
     loadDocument(id: string): JQueryPromise<document> {
         var loadDocTask = new getDocumentWithMetadataCommand(id, this.databaseForEditedDoc).execute();
-        loadDocTask.done(document => this.document(document));
+        loadDocTask.done(document=> {
+            this.document(document);
+
+            // Resync Changes
+            this.dirtyFlag().reset();
+        });
         loadDocTask.fail(response => this.failedToLoadDoc(id, response));
         loadDocTask.always(() => this.isBusy(false));
         this.isBusy(true);
@@ -234,6 +242,9 @@ class editDocument extends viewModelBase {
             viewModel.deletionTask.done(() => this.nextDocumentOrFirst());
             app.showDialog(viewModel, editDocument.editDocSelector);
         }
+
+        // Resync Changes
+        this.dirtyFlag().reset();
     }
 
     formatDocument() {
@@ -314,9 +325,10 @@ class editDocument extends viewModelBase {
 
     storeDocEditorTextIntoObservable() {
         if (this.docEditor) {
+            //debugger;
             var docEditorText = this.docEditor.getSession().getValue();
             var observableToUpdate = this.isEditingMetadata() ? this.metadataText : this.documentText;
-            observableToUpdate(docEditorText);
+            //observableToUpdate(docEditorText);
         }
     }
 }
