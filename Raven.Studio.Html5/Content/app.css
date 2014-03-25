@@ -140,9 +140,13 @@ body {
   margin-top: 10px;
 }
 .settings-container .api-key-card,
-.settings-container .replication-destination-card,
 .settings-container .win-auth-card {
   display: inline-block;
+  width: 500px;
+  margin-right: 20px;
+}
+.settings-container .replication-destination-card {
+  display: inline-table;
   width: 500px;
   margin-right: 20px;
 }

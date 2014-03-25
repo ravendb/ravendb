@@ -40,10 +40,16 @@ class replicationDestination {
 
     toggleUserCredentials() {
         this.isUserCredentials.toggle();
+        if (this.isUserCredentials()) {
+            this.isApiKeyCredentials(false);
+        }
     }
 
     toggleApiKeyCredentials() {
         this.isApiKeyCredentials.toggle();
+        if (this.isApiKeyCredentials()) {
+            this.isUserCredentials(false);
+        }
     }
 
     toggleIsAdvancedShows() {
