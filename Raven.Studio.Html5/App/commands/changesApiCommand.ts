@@ -36,6 +36,7 @@ class changesApiCommand extends commandBase {
           // Connection was closed.
         }
       }, false);*/
+      return null;
     }
 }
 
