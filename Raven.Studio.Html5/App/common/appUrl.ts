@@ -318,7 +318,9 @@ class appUrl {
 
 	private static getEncodedDbPart(db?: database) {
 		return db ? "&database=" + encodeURIComponent(db.name) : "";
-	}
+    }
+
+    public static warnWhenUsingSystemDatabase: boolean = true;
 }
 
 export = appUrl;
