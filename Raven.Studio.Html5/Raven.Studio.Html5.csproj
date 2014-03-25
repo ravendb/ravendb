@@ -21,10 +21,15 @@
   </PropertyGroup>
   <ItemGroup>
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
+    <TypeScriptCompile Include="App\commands\createFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\createFilesystemFolderCommand.ts" />
     <TypeScriptCompile Include="App\commands\createSampleDataCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
+    <TypeScriptCompile Include="App\commands\downloadFileFromFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getFilesystemDestinationsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getFilesystemFilesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
@@ -72,11 +77,13 @@
     <TypeScriptCompile Include="App\commands\saveIndexAsPersistentCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexLockModeCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexDefinitionCommand.ts" />
+    <TypeScriptCompile Include="App\commands\uploadFileToFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
     <TypeScriptCompile Include="App\models\facet.ts" />
+    <TypeScriptCompile Include="App\models\filesystem.ts" />
     <TypeScriptCompile Include="App\models\index.ts" />
     <TypeScriptCompile Include="App\models\indexDefinition.ts" />
     <TypeScriptCompile Include="App\models\indexPriority.ts" />
@@ -150,7 +157,6 @@
     <TypeScriptCompile Include="App\models\sqlReplication.ts" />
     <TypeScriptCompile Include="App\commands\getSqlReplicationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveSqlReplicationsCommand.ts" />
-    <Content Include="App\commands\getNewEncryptionKey.js" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
