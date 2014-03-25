@@ -25,6 +25,7 @@ namespace Raven.Database.Storage
         protected BaseRestoreOperation(RestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> output)
         {
             _restoreRequest = restoreRequest;
+            backupLocation = restoreRequest.BackupLocation;
             databaseLocation = _restoreRequest.DatabaseLocation.ToFullPath();
             indexLocation = (_restoreRequest.IndexesLocation ?? _restoreRequest.DatabaseLocation).ToFullPath();
             journalLocation = (_restoreRequest.JournalsLocation ?? _restoreRequest.DatabaseLocation).ToFullPath();

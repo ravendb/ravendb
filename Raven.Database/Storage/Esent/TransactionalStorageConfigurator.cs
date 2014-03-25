@@ -29,9 +29,10 @@ namespace Raven.Storage.Esent
 		{
 			path = Path.GetFullPath(path);
 			var logsPath = path;
-			if (string.IsNullOrEmpty(configuration.Settings["Raven/Esent/LogsPath"]) == false)
+		    var configuredLogsPath = configuration.Settings["Raven/Esent/LogsPath"] ?? configuration.JournalsStoragePath;
+		    if (string.IsNullOrEmpty(configuredLogsPath) == false)
 			{
-				logsPath = configuration.Settings["Raven/Esent/LogsPath"].ToFullPath();
+				logsPath = configuredLogsPath.ToFullPath();
 			}
 			var circularLog = GetValueFromConfiguration("Raven/Esent/CircularLog", true);
 			var logFileSizeInMb = GetValueFromConfiguration("Raven/Esent/LogFileSize", 64);

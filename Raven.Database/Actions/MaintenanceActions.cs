@@ -55,6 +55,7 @@ namespace Raven.Database.Actions
 
         public void StartBackup(string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument databaseDocument)
         {
+            if (databaseDocument == null) throw new ArgumentNullException("databaseDocument");
             var document = Database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
             if (document != null)
             {
