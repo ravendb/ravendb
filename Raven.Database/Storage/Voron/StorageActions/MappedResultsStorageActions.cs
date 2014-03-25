@@ -37,7 +37,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 
-        public MappedResultsStorageActions(TableStorage tableStorage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, SnapshotReader snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool)
+        public MappedResultsStorageActions(TableStorage tableStorage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, Reference<SnapshotReader> snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool)
 			: base(snapshot, bufferPool)
 		{
 			this.tableStorage = tableStorage;
