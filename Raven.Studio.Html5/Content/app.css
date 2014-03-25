@@ -552,29 +552,3 @@ footer ul {
   height: 160px;
 }
 /*# sourceMappingURL=app.css.map */
-
-
-/* Start of Filesystem styles */
-/* TODO: as this styles are apparently the same than .database-page, consider renaming the original ones to a generic name*/
-
-.filesystem-page .btn-toolbar {
-  margin-bottom: 20px;
-}
-
-.filesystem-page .filesystems-container {
-  margin-top: 10px;
-}
-
-.filesystem-page .filesystems-container .filesystem {
-  cursor: pointer;
-  border-radius: 10px;
-  -webkit-box-shadow: 0 0 5px 1px silver;
-  box-shadow: 0 0 5px 1px silver;
-  min-width: 140px;
-  min-height: 60px;
-  display: inline-block;
-  padding: 8px;
-  margin: 0 10px 14px 0;
-}
-
-/* End of Filesystem styles */
