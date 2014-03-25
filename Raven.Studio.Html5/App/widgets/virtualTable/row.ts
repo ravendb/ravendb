@@ -1,5 +1,6 @@
 import document = require("models/document");
 import cell = require("widgets/virtualTable/cell");
+import viewModel = require("widgets/virtualTable/viewModel");
 
 class row {
     top = ko.observable(0);
@@ -10,7 +11,7 @@ class row {
     editUrl = ko.observable("");
     isChecked = ko.observable(false);
 
-    constructor(addIdCell: boolean) {
+    constructor(addIdCell: boolean, public viewModel: viewModel) {
         if (addIdCell) {
             this.addOrUpdateCellMap('Id', null);
         }
@@ -37,7 +38,8 @@ class row {
         for (var i = 0; i < rowProperties.length; i++) {
             var prop = rowProperties[i];
             var cellValue = rowData[prop];
-            if (typeof cellValue === "object") {
+            // pass json object when not custom template!
+            if (typeof cellValue === "object" && this.getCellTemplateName(prop) !== cell.customTemplate) {
                 cellValue = JSON.stringify(cellValue, null, 4);
             }
             this.addOrUpdateCellMap(prop, cellValue);
@@ -82,6 +84,11 @@ class row {
 
         if (propertyName === "__IsChecked") {
             return cell.checkboxTemplate;
+        }
+
+        var customProps = this.viewModel.settings.customColumnParams[propertyName];
+        if (customProps && customProps.template) {
+            return cell.customTemplate;
         }
 
         return cell.defaultTemplate;

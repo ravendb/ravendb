@@ -10,7 +10,16 @@ class database {
     }
 
 	activate() {
-		ko.postbox.publish("ActivateDatabase", this);
+        ko.postbox.publish("ActivateDatabase", this);
+    }
+
+    static getNameFromUrl(url: string) {
+        // for embedded studio we don't pass full url
+        if (url.indexOf("http") < 0) {
+            return url;
+        }
+        var index = url.indexOf("databases/");
+        return (index > 0) ? url.substring(index + 10) : "";
     }
 }
 

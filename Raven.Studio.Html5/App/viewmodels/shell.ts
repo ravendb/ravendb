@@ -61,6 +61,7 @@ class shell extends viewModelBase {
         router.map([
             { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: false, hash: this.appUrls.databasesManagement },
             { route: 'documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: this.appUrls.documents },
+            { route: 'conflicts', title: 'Conflicts', moduleId: 'viewmodels/conflicts', nav: true, hash: this.appUrls.conflicts },
             { route: 'indexes*details', title: 'Indexes', moduleId: 'viewmodels/indexesShell', nav: true, hash: this.appUrls.indexes },
             { route: 'transformers*details', title: 'Transformers', moduleId: 'viewmodels/transformersShell', nav: false, hash: this.appUrls.transformers },
             { route: 'query*details', title: 'Query', moduleId: 'viewmodels/queryShell', nav: true, hash: this.appUrls.query(null) },

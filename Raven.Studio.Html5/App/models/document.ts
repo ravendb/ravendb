@@ -11,6 +11,10 @@ class document {
         }
     }
 
+    getEntityName() {
+        return this.__metadata.ravenEntityName;
+    }
+
     getId() {
         return this.__metadata.id;
     }
