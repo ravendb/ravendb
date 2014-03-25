@@ -758,7 +758,6 @@ namespace Raven.Database
             Etag newEtag = Etag.Empty;
 
             using (DocumentLock.Lock())
-            using (TransactionalStorage.WriteLock())
             {
                 TransactionalStorage.Batch(actions =>
                 {
@@ -1002,7 +1001,6 @@ namespace Raven.Database
             RavenJObject metadataVar = null;
 
             using (DocumentLock.Lock())
-            using (TransactionalStorage.WriteLock())
             {
                 TransactionalStorage.Batch(actions =>
                 {
@@ -2059,7 +2057,6 @@ namespace Raven.Database
         public BatchResult[] Batch(IList<ICommandData> commands)
         {
             using (DocumentLock.Lock())
-            using (TransactionalStorage.WriteLock())
             {
                 var shouldRetryIfGotConcurrencyError = commands.All(x => (x is PatchCommandData || x is ScriptedPatchCommandData));
 
