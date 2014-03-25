@@ -92,6 +92,7 @@
     <TypeScriptCompile Include="App\models\indexPriority.ts" />
     <TypeScriptCompile Include="App\models\luceneField.ts" />
     <TypeScriptCompile Include="App\models\querySort.ts" />
+    <TypeScriptCompile Include="App\models\resource.ts" />
     <TypeScriptCompile Include="App\models\spatialIndexField.ts" />
     <TypeScriptCompile Include="App\models\transformer.ts" />
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />

@@ -1,5 +1,6 @@
 import database = require("models/database");
 import filesystem = require("models/filesystem");
+import resource = require("models/resource");
 import pagedList = require("common/pagedList");
 import router = require("plugins/router");
 
@@ -190,9 +191,12 @@ class appUrl {
         return "#tasks?" + databasePart;
     }
 
-    static forDatabaseQuery(db: database) {
-        if (db && !db.isSystem) {
-            return appUrl.baseUrl + "/databases/" + db.name;
+    static forResouceQuery(res: resource) {
+        if (res && res instanceof database && !res.isSystem) {
+            return appUrl.baseUrl + "/databases/" + res.name;
+        }
+        else if (res && res instanceof filesystem) {
+            return appUrl.baseUrl + "/" + res.name;
         }
 
         return this.baseUrl;
