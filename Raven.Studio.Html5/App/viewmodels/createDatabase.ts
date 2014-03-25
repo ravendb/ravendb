@@ -50,24 +50,52 @@ class createDatabase extends dialogViewModelBase {
         // creating the database.
 
         var databaseName = this.databaseName();
-        if (!databaseName) {
-            this.newCommandBase.reportError("Please fill out the Database Name field");
-            this.databaseNameFocus(true);
-        }
-        else if (this.isDatabaseNameExists(databaseName, this.databases()) == true) {
-            this.newCommandBase.reportError("Database Name Already Exists!");
-            this.databaseNameFocus(true);
-       }
-        else
-        {
-            $('#databaseName').each(function () {
-                this.setCustomValidity("");
-            });
+
+        if (this.isClientSideInputOK(databaseName)) {
             this.creationTaskStarted = true;
             this.creationTask.resolve(databaseName, this.getActiveBundles());
             dialog.close(this);
-            //dialog.close(this, { databaseName: databaseName, bundles: this.getActiveBundles() });
         }
+    }
+
+    private isClientSideInputOK(databaseName): boolean {
+        var result = false;
+        var message = "";
+
+        if (!databaseName) {
+            message = "Please fill out the Database Name field";
+        }
+        else if (this.isDatabaseNameExists(databaseName, this.databases()) == true) {
+            message = "Database Name Already Exists!";
+        }
+        else if (!this.isValidName(databaseName)) {
+            debugger;
+            message = "Please enter a valid database name!";
+        } else {
+            result = true;
+        }
+
+        if (result == false) {
+            this.newCommandBase.reportError(message);
+            this.databaseNameFocus(true);
+        }
+
+        return result;
+    }
+
+    private isValidName(name): boolean {
+        var rg1 = /^[^\\/:\*\?"<>\|]+$/; // forbidden characters \ / : * ? " < > |
+        var rg2 = /^\./; // cannot start with dot (.)
+        var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
+
+        var maxLength;
+        if (navigator.appVersion.indexOf("Win") != -1) {
+            maxLength = 260;
+        } else {
+            maxLength = 255;
+        }
+
+        return rg1.test(name) && !rg2.test(name) && !rg3.test(name) && (name.length <= maxLength);
     }
 
     private isDatabaseNameExists(databaseName: string, databases: database[]): boolean {
