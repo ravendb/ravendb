@@ -15,6 +15,8 @@ import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
+import alertType = require("common/alertType");
+import alertArgs = require("common/alertArgs");
 
 class editDocument extends viewModelBase {
 
@@ -115,7 +117,7 @@ class editDocument extends viewModelBase {
         }
 		
         if (navigationArgs && navigationArgs.id) {
-            return this.loadDocument(navigationArgs.id);
+            return true;
         } else {
             this.editNewDocument();
         }
@@ -156,8 +158,7 @@ class editDocument extends viewModelBase {
     }
 
     failedToLoadDoc(docId, errorResponse) {
-        sys.log("Failed to load document for editing.", errorResponse);
-        app.showMessage("Can't edit '" + docId + "'. Details logged in the browser console.", ":-(", ['Dismiss']);
+        ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + docId + " document", null));
     }
 
     saveDocument() {
@@ -202,6 +203,30 @@ class editDocument extends viewModelBase {
 
     activateDoc() {
         this.isEditingMetadata(false);
+    }
+
+    canActivate(args) {
+        if (args && args.id) {
+
+            var canActivateResult = $.Deferred();
+            new getDocumentWithMetadataCommand(args.id, this.activeDatabase())
+                .execute()
+                .done((document) => {
+                    this.document(document);
+                    canActivateResult.resolve({ can: true });
+                })
+                .fail(() => {
+                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + args.id + " document", null));
+                    canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
+                }
+            );
+            return canActivateResult;
+        } else {
+            return $.Deferred().resolve({ can: true });
+        }
+
+        
+        
     }
 
     loadDocument(id: string): JQueryPromise<document> {
