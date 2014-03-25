@@ -1157,16 +1157,11 @@ namespace Raven.Client.Connection.Async
 			}.ToString(Formatting.None));
 		}
 
-		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string name = null, bool defrag = false)
+		public Task StartRestoreAsync(RestoreRequest restoreRequest)
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/restore?defrag=" + defrag).NoCache(), "POST", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/restore").NoCache(), "POST", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
 			request.AddOperationHeaders(OperationsHeaders);
-			return request.WriteAsync(new RavenJObject
-			{
-				{"RestoreLocation", restoreLocation},
-				{"DatabaseLocation", databaseLocation},
-				{"DatabaseName", name}
-			}.ToString(Formatting.None));
+			return request.WriteAsync(RavenJObject.FromObject(restoreRequest));
 		}
 
 		public Task<string> GetIndexingStatusAsync()

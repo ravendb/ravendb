@@ -4,15 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Data
 {
 	public class RestoreRequest
 	{
         public string BackupLocation { get; set; }
         
-        [Obsolete, JsonIgnore]
+        [Obsolete]
 		public string RestoreLocation { get { return BackupLocation; } set { BackupLocation = value; } }
 
 		public string DatabaseLocation { get; set; }
@@ -20,5 +19,6 @@ namespace Raven.Database.Data
 
         public string JournalsLocation { get; set; }
         public string IndexesLocation { get; set; }
+	    public bool Defrag { get; set; }
 	}
 }

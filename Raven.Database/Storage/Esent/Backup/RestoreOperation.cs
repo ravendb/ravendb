@@ -6,10 +6,10 @@
 using System;
 using System.IO;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
-using Raven.Database.Extensions;
-using Raven.Abstractions.Data;
+using Raven.Database.Data;
 using System.Linq;
 using Raven.Storage.Esent;
 
@@ -17,21 +17,18 @@ namespace Raven.Database.Storage.Esent.Backup
 {
 	public class RestoreOperation : BaseRestoreOperation
 	{
-		private readonly bool defrag;
-
-        public RestoreOperation(string backupLocation, InMemoryRavenConfiguration configuration, Action<string> operationOutputCallback, bool defrag)
-            : base(backupLocation, configuration, operationOutputCallback)
+        public RestoreOperation(RestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> operationOutputCallback)
+            : base(restoreRequest, configuration, operationOutputCallback)
 		{
-			this.defrag = defrag;
 		}
 
 		public override void Execute()
 		{
-            var logsPath = ValidateRestorePreconditionsAndReturnLogsPath("RavenDB.Backup");
+            ValidateRestorePreconditionsAndReturnLogsPath("RavenDB.Backup");
 			
-			Directory.CreateDirectory(Path.Combine(logsPath, "logs"));
-			Directory.CreateDirectory(Path.Combine(logsPath, "temp"));
-			Directory.CreateDirectory(Path.Combine(logsPath, "system"));
+			Directory.CreateDirectory(Path.Combine(journalLocation, "logs"));
+            Directory.CreateDirectory(Path.Combine(journalLocation, "temp"));
+            Directory.CreateDirectory(Path.Combine(journalLocation, "system"));
 
 			CombineIncrementalBackups();
 
@@ -46,8 +43,8 @@ namespace Raven.Database.Storage.Esent.Backup
 			TransactionalStorage.CreateInstance(out instance, "restoring " + Guid.NewGuid());
 			try
 			{
-			    configuration.Settings["Raven/Esent/LogsPath"] = logsPath;
-				new TransactionalStorageConfigurator(configuration, null).ConfigureInstance(instance, databaseLocation);
+                Configuration.Settings["Raven/Esent/LogsPath"] = journalLocation;
+				new TransactionalStorageConfigurator(Configuration, null).ConfigureInstance(instance, databaseLocation);
 				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, RestoreStatusCallback);
 				var fileThatGetsCreatedButDoesntSeemLikeItShould =
 					new FileInfo(
@@ -61,10 +58,10 @@ namespace Raven.Database.Storage.Esent.Backup
 					fileThatGetsCreatedButDoesntSeemLikeItShould.MoveTo(dataFilePath);
 				}
 
-				if (defrag)
+				if (_restoreRequest.Defrag)
 				{
 					output("Esent Restore: Begin Database Compaction");
-					TransactionalStorage.Compact(configuration, CompactStatusCallback);
+					TransactionalStorage.Compact(Configuration, CompactStatusCallback);
 					output("Esent Restore: Database Compaction Completed");
 				}
 			}

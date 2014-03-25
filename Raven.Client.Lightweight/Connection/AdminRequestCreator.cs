@@ -80,16 +80,9 @@ namespace Raven.Client.Connection
             
 		}
 
-		public HttpJsonRequest StartRestore(string restoreLocation, string databaseLocation, string databaseName, bool defrag, out RavenJObject restoreSettings)
+		public HttpJsonRequest CreateRestoreRequest()
 		{
-			restoreSettings = new RavenJObject
-			{
-				{"RestoreLocation", restoreLocation},
-				{"DatabaseLocation", databaseLocation},
-				{"DatabaseName", databaseName}
-			};
-
-			return createRequest("/admin/restore?defrag=" + defrag, "POST");
+			return createRequest("/admin/restore", "POST");
 		}
 
 		public HttpJsonRequest IndexingStatus(string serverUrl)

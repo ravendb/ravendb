@@ -67,12 +67,11 @@ namespace Raven.Client.Connection.Async
 			return request.WriteAsync(backupSettings.ToString(Formatting.None));
 		}
 
-		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false)
+		public Task StartRestoreAsync(RestoreRequest restoreRequest)
 		{
-			RavenJObject restoreSettings;
-			var request = adminRequest.StartRestore(restoreLocation, databaseLocation, databaseName, defrag, out restoreSettings);
+		    var request = adminRequest.CreateRestoreRequest();
 
-			return request.WriteAsync(restoreSettings.ToString(Formatting.None));
+			return request.WriteAsync(RavenJObject.FromObject(restoreRequest));
 		}
 
 		public Task<string> GetIndexingStatusAsync()
