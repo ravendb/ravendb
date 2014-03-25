@@ -19,16 +19,17 @@ class createEncryption extends dialogViewModelBase {
     algorithmFocus = ko.observable(false);
 
     private newCommandBase = new commandBase();
+    private newEncryptionKey: getNewEncryptionKey;
 
     constructor() {
         super();
 
-        var newEncryptionKey: getNewEncryptionKey = new getNewEncryptionKey();
-        newEncryptionKey
+        this.newEncryptionKey = new getNewEncryptionKey();
+        this.newEncryptionKey
             .execute()
             .done(result=> {
                 this.key(result);
-            });
+        });
     }
 
     cancel() {
@@ -41,6 +42,14 @@ class createEncryption extends dialogViewModelBase {
         if (!this.creationEncryptionStarted) {
             this.creationEncryption.reject();
         }
+    }
+
+    refresh_encryption() {
+        this.newEncryptionKey
+            .execute()
+            .done(result=> {
+                this.key(result);
+            });
     }
 
     save() {

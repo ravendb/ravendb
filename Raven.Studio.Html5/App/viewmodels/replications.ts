@@ -12,6 +12,7 @@ class replications extends viewModelBase {
 
     replicationConfig = ko.observable<replicationConfig>();
     replicationsSetup = ko.observable<replicationsSetup>();
+    
 
     activate() {
 
@@ -40,6 +41,14 @@ class replications extends viewModelBase {
 
     removeDestination(repl: replicationDestination) {
         this.replicationsSetup().destinations.remove(repl);
+    }
+
+    toggleUserCredentials(destination: replicationDestination) {
+        destination.isUserCredentials.toggle();
+    }
+
+    toggleApiKeyCredentials(destination: replicationDestination) {
+        destination.isApiKeyCredentials.toggle();
     }
 
     saveChanges() {

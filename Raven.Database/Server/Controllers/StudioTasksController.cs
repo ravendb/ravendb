@@ -25,6 +25,7 @@ namespace Raven.Database.Server.Controllers
 	public class StudioTasksController : RavenDbApiController
 	{
         const int csvImportBatchSize = 512;
+
 		[HttpPost]
 		[Route("studio-tasks/import")]
 		[Route("databases/{databaseName}/studio-tasks/import")]
@@ -36,6 +37,26 @@ namespace Raven.Database.Server.Controllers
 				FromStream = await InnerRequest.Content.ReadAsStreamAsync()
 			}, new SmugglerOptions());
 			throw new InvalidOperationException();
+		}
+
+
+		[HttpPost]
+		[Route("studio-tasks/exportDatabase")]
+		[Route("databases/{databaseName}/studio-tasks/exportDatabase")]
+		public async Task<HttpResponseMessage> ExportDatabase()
+		{
+			var smugglerOptions = new SmugglerOptions();
+
+			var result = GetEmptyMessage();
+			result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
+			{
+				await new DataDumper(Database).ExportData(new SmugglerExportOptions
+				{
+					ToStream = outputStream
+				}, smugglerOptions);
+			});
+			
+			return result;
 		}
 
 		[HttpPost]
