@@ -67,7 +67,7 @@ public interface IRavenQueryProvider extends IQueryProvider {
    * @param expression
    * @return
    */
-  public <T> IDocumentQuery<T> toLuceneQuery(Class<T> clazz, Expression<?> expression);
+  public <T> IDocumentQuery<T> toDocumentQuery(Class<T> clazz, Expression<?> expression);
 
   /**
    * Convert the Linq query to a lazy Lucene query and provide a function to execute when it is being evaluate

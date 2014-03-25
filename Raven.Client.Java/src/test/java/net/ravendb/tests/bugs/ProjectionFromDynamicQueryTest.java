@@ -27,7 +27,7 @@ public class ProjectionFromDynamicQueryTest extends RemoteClientTest {
       }
 
       try (IDocumentSession s = store.openSession()) {
-        RavenJObject result = s.advanced().luceneQuery(User.class)
+        RavenJObject result = s.advanced().documentQuery(User.class)
             .whereEquals("Name", "Ayende", true)
             .selectFields(RavenJObject.class, "Email")
             .first();
@@ -73,7 +73,7 @@ public class ProjectionFromDynamicQueryTest extends RemoteClientTest {
       }
 
       try (IDocumentSession s = store.openSession()) {
-        RavenJObject result = s.advanced().luceneQuery(Person.class)
+        RavenJObject result = s.advanced().documentQuery(Person.class)
             .waitForNonStaleResults()
             .whereEquals("Name", "Ayende", true)
             .selectFields(RavenJObject.class, "BillingAddress")
@@ -99,7 +99,7 @@ public class ProjectionFromDynamicQueryTest extends RemoteClientTest {
       }
 
       try (IDocumentSession s = store.openSession()) {
-        RavenJObject result = s.advanced().luceneQuery(Person.class)
+        RavenJObject result = s.advanced().documentQuery(Person.class)
             .whereEquals("Name", "Ayende", true)
             .selectFields(RavenJObject.class, "BillingAddress.City")
             .first();
@@ -129,7 +129,7 @@ public class ProjectionFromDynamicQueryTest extends RemoteClientTest {
       }
 
       try (IDocumentSession s = store.openSession()) {
-        RavenJObject result = s.advanced().luceneQuery(Person.class)
+        RavenJObject result = s.advanced().documentQuery(Person.class)
             .whereEquals("Name", "Ayende", true)
             .selectFields(RavenJObject.class, "Addresses[0].City")
             .first();

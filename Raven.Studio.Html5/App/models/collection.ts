@@ -15,7 +15,7 @@ class collection {
     isSystemDocuments = false;
 
     private documentsList: pagedList;
-    private static allDocsCollectionName = "All Documents";
+    public static allDocsCollectionName = "All Documents";
     private static systemDocsCollectionName = "System Documents";
     private static styleMap: any = {};
 

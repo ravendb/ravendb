@@ -2,7 +2,7 @@
 
 class getNewEncryptionKey extends commandBase {
 
-    constructor(private databaseName: string) {
+    constructor() {
         super();
     }
 

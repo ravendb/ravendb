@@ -2,13 +2,16 @@ import deleteDatabaseCommand = require("commands/deleteDatabaseCommand");
 import database = require("models/database");
 import dialog = require("plugins/dialog");
 import appUrl = require("common/appUrl");
+import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import router = require("plugins/router");
 
-class deleteDatabaseConfirm {
+class deleteDatabaseConfirm extends dialogViewModelBase {
     private isKeepingFiles = ko.observable(true);
-    private exportDbUrl = "";
     public deleteTask = $.Deferred();
 
     constructor(private dbToDelete: database, private systemDb: database) {
+        super();
+
         if (!dbToDelete) {
             throw new Error("Must specified database to delete.");
         }
@@ -16,8 +19,11 @@ class deleteDatabaseConfirm {
         if (!systemDb) {
             throw new Error("Must specify system database");
         }
+    }
 
-        this.exportDbUrl = appUrl.forExport(dbToDelete);
+    navigateToExportDatabase() {
+        dialog.close(this);
+        router.navigate(appUrl.forExportDatabase(this.dbToDelete));
     }
 
     keepFiles() {

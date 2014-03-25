@@ -24,25 +24,7 @@ public abstract class AbstractAuthenticator {
     if (StringUtils.isEmpty(currentOauthToken)) {
       return;
     }
-
   }
-
-  /*
-   * protected void SetAuthorization(HttpClient httpClient)
-        {
-            if (string.IsNullOrEmpty(CurrentOauthToken))
-                return;
-
-            try
-            {
-                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CurrentOauthToken);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException(string.Format("Could not set the Authorization to the value 'Bearer {0}'", CurrentOauthToken), ex);
-            }
-        }
-   */
 
   protected static void setHeader(HttpUriRequest request, String key, String value) {
     request.setHeader(key, value);

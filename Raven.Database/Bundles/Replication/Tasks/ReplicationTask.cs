@@ -237,7 +237,7 @@ namespace Raven.Bundles.Replication.Tasks
 			while (true)
 			{
 				int nextPageStart = skip; // will trigger rapid pagination
-				var docs = docDb.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, skip, 128, CancellationToken.None, ref nextPageStart);
+				var docs = docDb.Documents.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, skip, 128, CancellationToken.None, ref nextPageStart);
 				if (docs.Length == 0)
 				{
 					notifications.TryAdd(null, 15 * 1000); // marker to stop notify this
@@ -305,7 +305,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private bool IsNotFailing(ReplicationStrategy dest, int currentReplicationAttempts)
 		{
-			var jsonDocument = docDb.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(dest.ConnectionStringOptions.Url), null);
+			var jsonDocument = docDb.Documents.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(dest.ConnectionStringOptions.Url), null);
 			if (jsonDocument == null)
 				return true;
 			var failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
@@ -512,14 +512,14 @@ namespace Raven.Bundles.Replication.Tasks
 			if (string.IsNullOrWhiteSpace(lastError) == false)
 				stats.LastError = lastError;
 
-			var jsonDocument = docDb.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null);
+			var jsonDocument = docDb.Documents.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null);
 			var failureInformation = new DestinationFailureInformation { Destination = url };
 			if (jsonDocument != null)
 			{
 				failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
 			}
 			failureInformation.FailureCount += 1;
-			docDb.Put(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null,
+			docDb.Documents.Put(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null,
 					  RavenJObject.FromObject(failureInformation), new RavenJObject(), null);
 		}
 
@@ -552,7 +552,7 @@ namespace Raven.Bundles.Replication.Tasks
 			if (!string.IsNullOrWhiteSpace(lastError))
 				stats.LastError = lastError;
 
-			docDb.Delete(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null, null);
+			docDb.Documents.Delete(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null, null);
 		}
 
 		private bool IsFirstFailure(string url)
@@ -705,7 +705,7 @@ namespace Raven.Bundles.Replication.Tasks
 							docsToReplicate
 								.Where(document =>
 								{
-									var info = docDb.GetRecentTouchesFor(document.Key);
+									var info = docDb.Documents.GetRecentTouchesFor(document.Key);
 									if (info != null)
 									{
 										if (info.PreTouchEtag.CompareTo(result.LastEtag) <= 0)
@@ -936,7 +936,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private ReplicationStrategy[] GetReplicationDestinations()
 		{
-			var document = docDb.Get(Constants.RavenReplicationDestinations, null);
+			var document = docDb.Documents.Get(Constants.RavenReplicationDestinations, null);
 			if (document == null)
 			{
 				return new ReplicationStrategy[0];
@@ -959,7 +959,7 @@ namespace Raven.Bundles.Replication.Tasks
 				{
 					var ravenJObject = RavenJObject.FromObject(jsonDeserialization);
 					ravenJObject.Remove("Id");
-					docDb.Put(Constants.RavenReplicationDestinations, document.Etag, ravenJObject, document.Metadata, null);
+					docDb.Documents.Put(Constants.RavenReplicationDestinations, document.Etag, ravenJObject, document.Metadata, null);
 				}
 				catch (ConcurrencyException)
 				{

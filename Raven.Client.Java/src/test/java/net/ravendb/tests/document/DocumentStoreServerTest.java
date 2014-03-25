@@ -132,7 +132,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
         session.store(entity);
         session.saveChanges();
 
-        session.advanced().luceneQuery(Company.class).waitForNonStaleResults().toList(); // wait for the index to settle down
+        session.advanced().documentQuery(Company.class).waitForNonStaleResults().toList(); // wait for the index to settle down
       }
 
       IndexQuery query = new IndexQuery();
@@ -140,7 +140,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
       store.getDatabaseCommands().deleteByIndex("Raven/DocumentsByEntityName", query, false).waitForCompletion();
 
       try (IDocumentSession session = store.openSession()) {
-        assertEquals(0, session.advanced().luceneQuery(Company.class).waitForNonStaleResults().toList().size());
+        assertEquals(0, session.advanced().documentQuery(Company.class).waitForNonStaleResults().toList().size());
       }
     }
   }
@@ -169,7 +169,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
         session.store(c3);
         session.saveChanges();
 
-        session.advanced().luceneQuery(Company.class, "CompaniesByName").waitForNonStaleResults().toList(); // wait for the index to settle down
+        session.advanced().documentQuery(Company.class, "CompaniesByName").waitForNonStaleResults().toList(); // wait for the index to settle down
       }
 
       QCompany c = QCompany.company;
@@ -304,7 +304,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
         session.store(entity);
         session.saveChanges();
 
-        session.advanced().luceneQuery(Company.class).waitForNonStaleResults().toList();  // wait for the index to settle down
+        session.advanced().documentQuery(Company.class).waitForNonStaleResults().toList();  // wait for the index to settle down
       }
 
       IndexQuery query = new IndexQuery();
@@ -361,7 +361,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
 
 
       try (IDocumentSession session = store.openSession()) {
-        IDocumentQuery<DateHolder> query = session.advanced().luceneQuery(Object.class, "my_index").selectFields(DateHolder.class, "Date").waitForNonStaleResults();
+        IDocumentQuery<DateHolder> query = session.advanced().documentQuery(Object.class, "my_index").selectFields(DateHolder.class, "Date").waitForNonStaleResults();
         DateHolder dateHolder = query.toList().get(0);
         assertEquals(date , dateHolder.getDate());
       }
@@ -406,7 +406,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
       }
 
       try (IDocumentSession session = store.openSession()) {
-        IDocumentQuery<RavenJObject> query = session.advanced().luceneQuery(RavenJObject.class, "my_index").where("Type:Feats AND Language:Fran�ais").waitForNonStaleResults();
+        IDocumentQuery<RavenJObject> query = session.advanced().documentQuery(RavenJObject.class, "my_index").where("Type:Feats AND Language:Fran�ais").waitForNonStaleResults();
         query.toList();
 
         assertEquals(1, query.getQueryResult().getTotalResults());
@@ -434,7 +434,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
       }
 
       try (IDocumentSession session = store.openSession()) {
-        IDocumentQuery<RavenJObject> query = session.advanced().luceneQuery(RavenJObject.class, "my_index")
+        IDocumentQuery<RavenJObject> query = session.advanced().documentQuery(RavenJObject.class, "my_index")
             .where("Type:Feats AND Language:Fran�ais")
             .selectFields(RavenJObject.class, "Value")
             .waitForNonStaleResults();
@@ -666,7 +666,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
 
         store.getDatabaseCommands().putIndex("company_by_name", indexDefinition);
 
-        IDocumentQuery<Company> q = session.advanced().luceneQuery(Company.class, "company_by_name").
+        IDocumentQuery<Company> q = session.advanced().documentQuery(Company.class, "company_by_name").
             selectFields(Company.class, "Name", "Phone").waitForNonStaleResults();
 
         Company single = q.single();
@@ -896,7 +896,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
         session.saveChanges();
 
         try (IDocumentSession session2 = store.openSession()) {
-          List<Company> companyFound = session2.advanced().luceneQuery(Company.class).waitForNonStaleResults().toList();
+          List<Company> companyFound = session2.advanced().documentQuery(Company.class).waitForNonStaleResults().toList();
           assertEquals(2, companyFound.size());
         }
 
@@ -929,9 +929,9 @@ public class DocumentStoreServerTest extends RemoteClientTest {
         store.getDatabaseCommands().putIndex("company_by_name", indexDefinition);
 
         // wait unit the index is build
-        session.advanced().luceneQuery(Company.class, "company_by_name").waitForNonStaleResults().toList();
+        session.advanced().documentQuery(Company.class, "company_by_name").waitForNonStaleResults().toList();
 
-        List<Company> companies = session.advanced().luceneQuery(Company.class, "company_by_name").
+        List<Company> companies = session.advanced().documentQuery(Company.class, "company_by_name").
             orderBy("Phone").waitForNonStaleResults().toList();
 
         assertEquals("Company 2", companies.get(0).getName());
@@ -958,7 +958,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
         store.getDatabaseCommands().putIndex("eventsByLatLng", indexDefinition);
 
         // Wait until the index is built
-        session.advanced().luceneQuery(Event.class, "eventsByLatLng")
+        session.advanced().documentQuery(Event.class, "eventsByLatLng")
         .waitForNonStaleResults()
         .toList();
 
@@ -966,7 +966,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
         final double radiusInKm = 6.0 * 1.609344;
 
         List<Event> events = session.advanced()
-            .luceneQuery(Event.class, "eventsByLatLng")
+            .documentQuery(Event.class, "eventsByLatLng")
             .whereEquals("Tag", "Event")
             .withinRadiusOf(radiusInKm, lat, lng)
             .sortByDistance()
@@ -1013,7 +1013,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
         session.store(user);
         session.saveChanges();
 
-        User single = session.advanced().luceneQuery(LinqIndexesFromClient.User.class, "UsersByLocation").
+        User single = session.advanced().documentQuery(LinqIndexesFromClient.User.class, "UsersByLocation").
             where("Name:Yael").
             waitForNonStaleResults().
             single();
@@ -1046,7 +1046,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
         session.store(user);
         session.saveChanges();
 
-        LocationCount single = session.advanced().luceneQuery(LinqIndexesFromClient.LocationCount.class, "UsersCountByLocation")
+        LocationCount single = session.advanced().documentQuery(LinqIndexesFromClient.LocationCount.class, "UsersCountByLocation")
             .where("Location:\"Tel Aviv\"")
             .waitForNonStaleResults()
             .single();
@@ -1091,7 +1091,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
 
         session.saveChanges();
 
-        LocationAge single = session.advanced().luceneQuery(LinqIndexesFromClient.LocationAge.class, "AvgAgeByLocation")
+        LocationAge single = session.advanced().documentQuery(LinqIndexesFromClient.LocationAge.class, "AvgAgeByLocation")
             .where("Location:\"Tel Aviv\"")
             .waitForNonStaleResults()
             .single();
@@ -1135,7 +1135,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
 
         session.saveChanges();
 
-        User user = session.advanced().luceneQuery(LinqIndexesFromClient.User.class, "MaxAge")
+        User user = session.advanced().documentQuery(LinqIndexesFromClient.User.class, "MaxAge")
             .orderBy("-Age")
             .take(1)
             .waitForNonStaleResults()
@@ -1176,7 +1176,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
         session.saveChanges();
 
         User user = session.advanced()
-            .luceneQuery(LinqIndexesFromClient.User.class, "MaxAge")
+            .documentQuery(LinqIndexesFromClient.User.class, "MaxAge")
             .orderByDescending("Age")
             .take(1)
             .waitForNonStaleResults()

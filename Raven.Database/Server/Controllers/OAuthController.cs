@@ -131,7 +131,7 @@ namespace Raven.Database.Server.Controllers
 
 		private Tuple<string, AccessToken> GetApiKeySecret(string apiKeyName)
 		{
-			var document = DatabasesLandlord.SystemDatabase.Get("Raven/ApiKeys/" + apiKeyName, null);
+			var document = DatabasesLandlord.SystemDatabase.Documents.Get("Raven/ApiKeys/" + apiKeyName, null);
 			if (document == null)
 				return null;
 

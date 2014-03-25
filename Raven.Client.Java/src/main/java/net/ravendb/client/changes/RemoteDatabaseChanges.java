@@ -39,6 +39,7 @@ import net.ravendb.abstractions.logging.LogManager;
 import net.ravendb.abstractions.util.AtomicDictionary;
 import net.ravendb.abstractions.util.Base62Util;
 import net.ravendb.client.connection.CreateHttpJsonRequestParams;
+import net.ravendb.client.connection.IDocumentStoreReplicationInformer;
 import net.ravendb.client.connection.OperationMetadata;
 import net.ravendb.client.connection.RavenUrlExtensions;
 import net.ravendb.client.connection.ReplicationInformer;
@@ -72,7 +73,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
   private OperationCredentials credentials;
   private final HttpJsonRequestFactory jsonRequestFactory;
   private final DocumentConvention conventions;
-  private final ReplicationInformer replicationInformer;
+  private final IDocumentStoreReplicationInformer replicationInformer;
   private final Action0 onDispose;
   private final Function4<String, Etag, String[] , OperationMetadata, Boolean> tryResolveConflictByUsingRegisteredConflictListeners;
   private final AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<>(String.CASE_INSENSITIVE_ORDER);
@@ -107,7 +108,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
 
 
   public RemoteDatabaseChanges(String url, String apiKey, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions,
-    ReplicationInformer replicationInformer, Action0 onDispose,
+    IDocumentStoreReplicationInformer replicationInformer, Action0 onDispose,
     Function4<String, Etag, String[], OperationMetadata, Boolean> tryResolveConflictByUsingRegisteredConflictListeners) {
     connectionStatusChanged = Arrays.<EventHandler<VoidArgs>> asList(new EventHandler<VoidArgs>() {
       @Override
@@ -145,6 +146,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
 
     CreateHttpJsonRequestParams requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, HttpMethods.GET, null, credentials, conventions);
     requestParams.setAvoidCachingRequest(true);
+    requestParams.setDisableRequestCompression(true);
     logger.info("Trying to connect to %s with id %s", requestParams.getUrl(), id);
     boolean retry = false;
     IObservable<String> serverEvents = null;

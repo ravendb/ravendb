@@ -14,6 +14,7 @@ import net.ravendb.client.indexes.AbstractIndexCreationTask;
 import net.ravendb.client.spatial.SpatialCriteriaFactory;
 import net.ravendb.tests.spatial.QPointObjectTest_SpatialDoc;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.mysema.query.annotations.QueryEntity;
@@ -54,6 +55,7 @@ public class PointObjectTest extends RemoteClientTest {
   }
 
   @Test
+  @Ignore("Waiting for RavenDB-1877")
   public void pointTest() throws Exception {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
       store.executeIndex(new PointIndex());

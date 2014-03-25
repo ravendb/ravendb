@@ -66,12 +66,12 @@ public class SearchOperatorTest extends RemoteClientTest {
         session.saveChanges();
 
         // search for the keyword software
-        List<Something> results = session.advanced().luceneQuery(Something.class, FTSIndex.class)
+        List<Something> results = session.advanced().documentQuery(Something.class, FTSIndex.class)
             .search("MyProp", "software").waitForNonStaleResultsAsOfLastWrite()
             .toList();
         assertEquals(1, results.size());
 
-        results = session.advanced().luceneQuery(Something.class, FTSIndex.class)
+        results = session.advanced().documentQuery(Something.class, FTSIndex.class)
             .search("MyProp", "software~").waitForNonStaleResultsAsOfLastWrite()
             .toList();
         assertEquals(2, results.size());

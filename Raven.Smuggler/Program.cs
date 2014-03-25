@@ -174,7 +174,7 @@ namespace Raven.Smuggler
 				PrintUsageAndExit(e);
 			}
 
-			var smugglerApi = new SmugglerApi(connectionStringOptions);
+			var smugglerApi = new SmugglerApi();
 
 			try
 			{

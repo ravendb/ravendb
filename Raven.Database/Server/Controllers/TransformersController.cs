@@ -18,7 +18,7 @@ namespace Raven.Database.Server.Controllers
 			var transformer = id;
 			if (string.IsNullOrEmpty(transformer) == false && transformer != "/")
 			{
-				var transformerDefinition = Database.GetTransformerDefinition(transformer);
+				var transformerDefinition = Database.Transformers.GetTransformerDefinition(transformer);
 				if (transformerDefinition == null)
 					return GetEmptyMessage(HttpStatusCode.NotFound);
 
@@ -39,9 +39,9 @@ namespace Raven.Database.Server.Controllers
 			bool namesOnly;
 			RavenJArray transformers;
 			if (bool.TryParse(namesOnlyString, out namesOnly) && namesOnly)
-				transformers = Database.GetTransformerNames(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
+				transformers = Database.Transformers.GetTransformerNames(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
 			else
-				transformers = Database.GetTransformers(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
+				transformers = Database.Transformers.GetTransformers(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
 
 			return GetMessageWithObject(transformers);
 		}
@@ -58,7 +58,7 @@ namespace Raven.Database.Server.Controllers
 
 			try
 			{
-				var transformerName = Database.PutTransform(transformer, data);
+				var transformerName = Database.Transformers.PutTransform(transformer, data);
 				return GetMessageWithObject(new { Transformer = transformerName }, HttpStatusCode.Created);
 			}
 			catch (Exception ex)
@@ -76,7 +76,7 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/transformers/{*id}")]
 		public HttpResponseMessage TransformersDelete(string id)
 		{
-			Database.DeleteTransfom(id);
+			Database.Transformers.DeleteTransform(id);
 			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 	}

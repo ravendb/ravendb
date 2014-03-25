@@ -33,6 +33,8 @@ class appUrl {
         periodicBackup: ko.computed(() => appUrl.forPeriodicBackup(appUrl.currentDatabase())),
         replications: ko.computed(() => appUrl.forReplications(appUrl.currentDatabase())),
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
+        scriptedIndexes: ko.computed(() => appUrl.forScriptedIndexes(appUrl.currentDatabase())),
+
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
         databasesManagement: ko.computed(() => "#databases?database=" + appUrl.getEncodedDbPart(appUrl.currentDatabase()))
 	};
@@ -118,6 +120,10 @@ class appUrl {
         return "#settings/sqlReplication?" + appUrl.getEncodedDbPart(db);
     }
 
+    static forScriptedIndexes(db: database): string {
+        return "#settings/scriptedIndex?" + appUrl.getEncodedDbPart(db);
+    }
+
 	static forDocuments(collection: string, db: database): string {
         var collectionPart = collection ? "collection=" + encodeURIComponent(collection) : "";
         var databasePart = appUrl.getEncodedDbPart(db);
@@ -187,11 +193,6 @@ class appUrl {
         }
 
         return this.baseUrl;
-    }
-
-    static forExport(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
-        return "#tasks/export?" + databasePart;
     }
 
     static forTerms(index: string, db: database): string {
@@ -299,8 +300,18 @@ class appUrl {
                 var newUrlWithDatabase = existingDbQueryString ?
                     existingAddress.replace(existingDbQueryString, newDbQueryString) :
                     existingAddress + (window.location.hash.indexOf("?") >= 0 ? "&" : "?") + "database=" + encodeURIComponent(db.name);
+
+                // in case replacing fails
+                /*if (newUrlWithDatabase === existingAddress) {
+                    existingDbQueryString = dbNameInAddress ? "database=" + dbNameInAddress : null;
+                    newDbQueryString = "database=" + encodeURIComponent(db.name);
+
+                    newUrlWithDatabase = existingDbQueryString ?
+                    existingAddress.replace(existingDbQueryString, newDbQueryString) :
+                    existingAddress + (window.location.hash.indexOf("?") >= 0 ? "&" : "?") + "database=" + encodeURIComponent(db.name);
+                }*/
                 return newUrlWithDatabase;
-            }
+            } 
         }
     }
 

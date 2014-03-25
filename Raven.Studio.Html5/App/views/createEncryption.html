@@ -6,15 +6,22 @@
         </div>
         <div class="modal-body">
             <div class="row">
-                <div class="col-md-9">
+                <div class="col-md-12">
                     <div class="form-group">
                         <label for="keyName">Select Key: (Base64 Encoding)</label>
-                        <input type="text" class="form-control" id="key" placeholder="Key" data-bind="value: key, hasFocus: keyFocus">
+                        <div class="row">
+                            <div class="col-xs-11">
+                                <input required type="text" class="form-control" id="key" placeholder="Key" data-bind="value: key, hasFocus: keyFocus">
+                            </div>
+                            <a class="btn" title="Refresh" data-bind="click: refresh_encryption">
+                                <span class="glyphicon glyphicon-refresh"></span>
+                            </a>
+                        </div>
                         <div>You can use the auto generated key or enter one of your own</div>
                         <div>Save this key in a safe place: if you lose this key you could lose access to your data!</div><br />
 
                         <label for="encryptionAlgorithm">Encryption Algorithm:</label>
-                        <select data-bind="options: ['DESC', 'R2C2', 'Rijndael', 'Triple DESC'], optionsCaption: 'Choose one...', value: encryptionAlgorithm, valueAllowUnset: false, hasFocus: algorithmFocus"></select><br />
+                        <select required data-bind="options: ['DESC', 'R2C2', 'Rijndael', 'Triple DESC'], optionsCaption: 'Choose one...', value: encryptionAlgorithm, valueAllowUnset: false, hasFocus: algorithmFocus"></select><br />
                         <label for="encryptedIndexes">Encrypted Indexes:</label>
                         <input data-bind="checked: isEncryptedIndexes" type="checkbox" id="isEncryptedIndexes">
                     </div>

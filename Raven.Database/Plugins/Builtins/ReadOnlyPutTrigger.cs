@@ -16,7 +16,7 @@ namespace Raven.Database.Plugins.Builtins
             if (!isNewReadOnly)
                 return VetoResult.Allowed;
 
-            var old = Database.Get(key, transactionInformation);
+            var old = Database.Documents.Get(key, transactionInformation);
             if (old == null)
                 return VetoResult.Allowed;
 

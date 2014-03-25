@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -8,22 +9,23 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
 using Kent.Boogaart.KBCsv;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
-using Raven.Client.Connection.Async;
 using Raven.Client.Util;
 using Raven.Database.Smuggler;
-using Raven.Database.Tasks;
 using Raven.Json.Linq;
+using Newtonsoft.Json;
 
 namespace Raven.Database.Server.Controllers
 {
 	public class StudioTasksController : RavenDbApiController
 	{
         const int csvImportBatchSize = 512;
+
 		[HttpPost]
 		[Route("studio-tasks/import")]
 		[Route("databases/{databaseName}/studio-tasks/import")]
@@ -37,12 +39,32 @@ namespace Raven.Database.Server.Controllers
 			throw new InvalidOperationException();
 		}
 
+
+		[HttpPost]
+		[Route("studio-tasks/exportDatabase")]
+		[Route("databases/{databaseName}/studio-tasks/exportDatabase")]
+		public async Task<HttpResponseMessage> ExportDatabase()
+		{
+			var smugglerOptions = new SmugglerOptions();
+
+			var result = GetEmptyMessage();
+			result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
+			{
+				await new DataDumper(Database).ExportData(new SmugglerExportOptions
+				{
+					ToStream = outputStream
+				}, smugglerOptions);
+			});
+			
+			return result;
+		}
+
 		[HttpPost]
 		[Route("studio-tasks/createSampleData")]
 		[Route("databases/{databaseName}/studio-tasks/createSampleData")]
 		public async Task<HttpResponseMessage> CreateSampleData()
 		{
-			var results = Database.Query(Constants.DocumentsByEntityNameIndex, new IndexQuery(), CancellationToken.None);
+			var results = Database.Queries.Query(Constants.DocumentsByEntityNameIndex, new IndexQuery(), CancellationToken.None);
 			if (results.Results.Count > 0)
 			{
 				return GetMessageWithString("You cannot create sample data in a database that already contains documents", HttpStatusCode.BadRequest);
@@ -70,6 +92,31 @@ namespace Raven.Database.Server.Controllers
             var byteStruct = new byte[Constants.DefaultGeneratedEncryptionKeyLength];
             randomNumberGenerator.GetBytes(byteStruct);
             var result = Convert.ToBase64String(byteStruct);
+
+            HttpResponseMessage response = Request.CreateResponse(HttpStatusCode.OK, result);
+            return response;
+        }
+
+        [HttpPost]
+        [Route("studio-tasks/is-base-64-key")]
+        public async Task<HttpResponseMessage> IsBase64Key(string path = null)
+        {
+            bool result = true;
+            try
+            {
+                //Request is of type HttpRequestMessage
+                string keyObjectString = await Request.Content.ReadAsStringAsync();
+                NameValueCollection nvc = HttpUtility.ParseQueryString(keyObjectString);
+                var key = nvc["key"];
+
+                //Convert base64-encoded hash value into a byte array.
+                //ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+                Convert.FromBase64String(key);
+            }
+            catch (Exception e)
+            {
+                result = false;
+            }
 
             HttpResponseMessage response = Request.CreateResponse(HttpStatusCode.OK, result);
             return response;

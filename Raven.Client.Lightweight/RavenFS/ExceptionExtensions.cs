@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Client.RavenFS
@@ -156,30 +157,6 @@ namespace Raven.Client.RavenFS
 				return aggregateException;
 
 			return webException.BetterWebExceptionError();
-		}
-
-		/// <summary>
-		///     Recursively examines the inner exceptions of an <see cref="AggregateException" /> and returns a single child exception.
-		/// </summary>
-		/// <returns>
-		///     If any of the aggregated exceptions have more than one inner exception, null is returned.
-		/// </returns>
-		public static Exception ExtractSingleInnerException(this AggregateException e)
-		{
-			if (e == null)
-				return null;
-			while (true)
-			{
-				if (e.InnerExceptions.Count != 1)
-					return null;
-
-				var aggregateException = e.InnerExceptions[0] as AggregateException;
-				if (aggregateException == null)
-					break;
-				e = aggregateException;
-			}
-
-			return e.InnerExceptions[0];
 		}
 
 		/// <summary>

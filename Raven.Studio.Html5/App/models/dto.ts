@@ -420,6 +420,7 @@ interface facetDto {
 
 interface facetResultSetDto {
     Results: any; // An object containing keys that look like [FacetName]-[FacetAggregationField]. For example "Company-Total". Each key will be of type facetResultDto.
+    Duration: string;
 }
 
 interface facetResultDto {
@@ -437,4 +438,9 @@ interface facetValueDto {
     Max: number;
     Min: number;
     Average: number;
+}
+
+interface scriptedIndexDto extends documentDto {
+    IndexScript: string;
+    DeleteScript: string;
 }

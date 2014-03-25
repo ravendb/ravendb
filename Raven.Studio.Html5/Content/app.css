@@ -1,4 +1,4 @@
-﻿html,
+html,
 body {
   height: 100%;
 }
@@ -65,11 +65,11 @@ body {
   border-radius: 10px;
   -webkit-box-shadow: 0 0 5px 1px silver;
   box-shadow: 0 0 5px 1px silver;
-  margin-right: 10px;
   min-width: 140px;
   min-height: 60px;
   display: inline-block;
   padding: 8px;
+  margin: 0 10px 14px 0;
 }
 .database-page .databases-container .database:hover {
   background-color: white;
@@ -140,9 +140,13 @@ body {
   margin-top: 10px;
 }
 .settings-container .api-key-card,
-.settings-container .replication-destination-card,
 .settings-container .win-auth-card {
   display: inline-block;
+  width: 500px;
+  margin-right: 20px;
+}
+.settings-container .replication-destination-card {
+  display: inline-table;
   width: 500px;
   margin-right: 20px;
 }
@@ -544,4 +548,6 @@ footer ul {
 #recentErrorsDialog .http-status {
   width: 100%;
 }
-/*# sourceMappingURL=app.css.map */
+#scriptedIndex .map {
+  height: 160px;
+}

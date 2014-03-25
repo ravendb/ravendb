@@ -36,9 +36,9 @@ namespace Raven.Database.Server.Controllers
 			bool namesOnly;
 			RavenJArray indexes;
 			if (bool.TryParse(namesOnlyString, out namesOnly) && namesOnly)
-				indexes = Database.GetIndexNames(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
+				indexes = Database.Indexes.GetIndexNames(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
 			else
-				indexes = Database.GetIndexes(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
+				indexes = Database.Indexes.GetIndexes(GetStart(), GetPageSize(Database.Configuration.MaxPageSize));
 
 			return GetMessageWithObject(indexes);
 		}
@@ -80,7 +80,7 @@ namespace Raven.Database.Server.Controllers
 
 			try
 			{
-				Database.PutIndex(index, data);
+				Database.Indexes.PutIndex(index, data);
 				return GetMessageWithObject(new { Index = index }, HttpStatusCode.Created);
 			}
 			catch (Exception ex)
@@ -142,7 +142,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage IndexReset(string id)
 		{
 			var index = id;
-			Database.ResetIndex(index);
+			Database.Indexes.ResetIndex(index);
 			return GetMessageWithObject(new { Reset = index });
 		}
 
@@ -152,7 +152,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage IndexDelete(string id)
 		{
 			var index = id;
-			Database.DeleteIndex(index);
+			Database.Indexes.DeleteIndex(index);
 			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
@@ -180,9 +180,11 @@ namespace Raven.Database.Server.Controllers
 
 		private HttpResponseMessage GetIndexDefinition(string index)
 		{
-			var indexDefinition = Database.GetIndexDefinition(index);
+			var indexDefinition = Database.Indexes.GetIndexDefinition(index);
 			if (indexDefinition == null)
 				return GetEmptyMessage(HttpStatusCode.NotFound);
+
+			indexDefinition.Fields = Database.Indexes.GetIndexFields(index);
 
 			return GetMessageWithObject(new
 			{
@@ -348,7 +350,7 @@ namespace Raven.Database.Server.Controllers
 
 	    private QueryResultWithIncludes PerformQueryAgainstExistingIndex(string index, IndexQuery indexQuery, out Etag indexEtag, HttpResponseMessage msg, CancellationToken token)
 		{
-			indexEtag = Database.GetIndexEtag(index, null, indexQuery.ResultsTransformer);
+			indexEtag = Database.Indexes.GetIndexEtag(index, null, indexQuery.ResultsTransformer);
 			if (MatchEtag(indexEtag))
 			{
 				Database.IndexStorage.MarkCachedQuery(index);
@@ -356,8 +358,8 @@ namespace Raven.Database.Server.Controllers
 				return null;
 			}
 
-			var queryResult = Database.Query(index, indexQuery, token);
-			indexEtag = Database.GetIndexEtag(index, queryResult.ResultEtag, indexQuery.ResultsTransformer);
+			var queryResult = Database.Queries.Query(index, indexQuery, token);
+			indexEtag = Database.Indexes.GetIndexEtag(index, queryResult.ResultEtag, indexQuery.ResultsTransformer);
 			return queryResult;
 		}
 
@@ -368,7 +370,7 @@ namespace Raven.Database.Server.Controllers
 
 			if (dynamicIndexName != null && Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
-				indexEtag = Database.GetIndexEtag(dynamicIndexName, null, indexQuery.ResultsTransformer);
+				indexEtag = Database.Indexes.GetIndexEtag(dynamicIndexName, null, indexQuery.ResultsTransformer);
 				if (MatchEtag(indexEtag))
 				{
 					Database.IndexStorage.MarkCachedQuery(dynamicIndexName);
@@ -405,7 +407,7 @@ namespace Raven.Database.Server.Controllers
 			// if that is the case. This can also happen when the optimizer
 			// decided to switch indexes for a query.
 			indexEtag = (dynamicIndexName == null || queryResult.IndexName == dynamicIndexName)
-							? Database.GetIndexEtag(queryResult.IndexName, queryResult.ResultEtag, indexQuery.ResultsTransformer)
+							? Database.Indexes.GetIndexEtag(queryResult.IndexName, queryResult.ResultEtag, indexQuery.ResultsTransformer)
 							: Etag.InvalidEtag;
 
 			return queryResult;
@@ -586,7 +588,7 @@ namespace Raven.Database.Server.Controllers
 
 					indexTimestamp = accessor.Staleness.IndexLastUpdatedAt(definition.IndexId);
 				});
-			var indexEtag = Database.GetIndexEtag(index, null, indexQuery.ResultsTransformer);
+			var indexEtag = Database.Indexes.GetIndexEtag(index, null, indexQuery.ResultsTransformer);
 
 			return GetMessageWithObject(
 				new

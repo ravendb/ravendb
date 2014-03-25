@@ -45,7 +45,6 @@ namespace Raven.Smuggler
 			return str;
 		}
 
-		public RavenConnectionStringOptions ConnectionStringOptions { get; private set; }
 		private readonly HttpRavenRequestFactory httpRavenRequestFactory = new HttpRavenRequestFactory();
 
 		private BulkInsertOperation operation;
@@ -57,11 +56,6 @@ namespace Raven.Smuggler
 			{
 				return store.AsyncDatabaseCommands;
 			}
-		}
-
-		public SmugglerApi(RavenConnectionStringOptions connectionStringOptions)
-		{
-			ConnectionStringOptions = connectionStringOptions;
 		}
 
 	    protected override void PurgeTombstones(ExportDataResult result)
@@ -102,7 +96,7 @@ namespace Raven.Smuggler
 
 			SmugglerJintHelper.Initialize(options);
 
-            using (store = CreateStore())
+			using (store = CreateStore(importOptions.To))
 			{
 				Task disposeTask = null;
 
@@ -132,7 +126,7 @@ namespace Raven.Smuggler
 
 		public override async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptions options)
 		{
-			using (store = CreateStore())
+			using (store = CreateStore(exportOptions.From))
 			{
 				return await base.ExportData(exportOptions, options);
 			}
@@ -166,29 +160,38 @@ namespace Raven.Smuggler
 
 		protected async override Task<string> GetVersion()
 		{
-			var request = CreateRequest("/build/version");
-			var version = request.ExecuteRequest<RavenJObject>();
-
-			return version["ProductVersion"].ToString();
+			var version = await Commands.GetBuildNumberAsync();
+			return version.ProductVersion;
 		}
 
 		protected HttpRavenRequest CreateRequest(string url, string method = "GET")
 		{
+			var connection = new RavenConnectionStringOptions
+			{
+				Url = store.Url, 
+				ApiKey = store.ApiKey, 
+				Credentials = store.Credentials,
+				DefaultDatabase = store.DefaultDatabase, 
+				EnlistInDistributedTransactions = store.EnlistInDistributedTransactions, 
+				FailoverServers = store.FailoverServers, 
+				ResourceManagerId = store.ResourceManagerId
+			};
+
 			var builder = new StringBuilder();
 			if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase) == false)
 			{
-				builder.Append(ConnectionStringOptions.Url);
-				if (string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase) == false)
+				builder.Append(connection.Url);
+				if (string.IsNullOrWhiteSpace(connection.DefaultDatabase) == false)
 				{
-					if (ConnectionStringOptions.Url.EndsWith("/") == false)
+					if (connection.Url.EndsWith("/") == false)
 						builder.Append("/");
 					builder.Append("databases/");
-					builder.Append(ConnectionStringOptions.DefaultDatabase);
+					builder.Append(connection.DefaultDatabase);
 					builder.Append('/');
 				}
 			}
 			builder.Append(url);
-			var httpRavenRequest = httpRavenRequestFactory.Create(builder.ToString(), method, ConnectionStringOptions);
+			var httpRavenRequest = httpRavenRequestFactory.Create(builder.ToString(), method, connection);
 			httpRavenRequest.WebRequest.Timeout = (int)SmugglerOptions.Timeout.TotalMilliseconds;
 			if (LastRequestErrored)
 			{
@@ -199,14 +202,14 @@ namespace Raven.Smuggler
 			return httpRavenRequest;
 		}
 
-		protected DocumentStore CreateStore()
+		protected DocumentStore CreateStore(RavenConnectionStringOptions to)
 		{
 			var s = new DocumentStore
 			{
-				Url = ConnectionStringOptions.Url,
-				ApiKey = ConnectionStringOptions.ApiKey,
-				Credentials = ConnectionStringOptions.Credentials,
-				DefaultDatabase = ConnectionStringOptions.DefaultDatabase
+				Url = to.Url,
+				ApiKey = to.ApiKey,
+				Credentials = to.Credentials,
+				DefaultDatabase = to.DefaultDatabase
 			};
 
 			s.Initialize();
@@ -331,7 +334,7 @@ namespace Raven.Smuggler
 		{
 			if (attachmentExportInfo != null)
 			{
-				var request = CreateRequest("/static/" + attachmentExportInfo.Key, "PUT");
+				var request = CreateRequest("/static/" + attachmentExportInfo.Key, method: "PUT");
 				if (attachmentExportInfo.Metadata != null)
 				{
 					foreach (var header in attachmentExportInfo.Metadata)
@@ -390,20 +393,20 @@ namespace Raven.Smuggler
 
 		public bool LastRequestErrored { get; set; }
 
-		protected async override Task EnsureDatabaseExists()
+		protected async override Task EnsureDatabaseExists(RavenConnectionStringOptions to)
 		{
 			if (EnsuredDatabaseExists ||
-				string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase))
+				string.IsNullOrWhiteSpace(to.DefaultDatabase))
 				return;
 
 			EnsuredDatabaseExists = true;
 
-			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(ConnectionStringOptions.Url);
-			var docUrl = rootDatabaseUrl + "/docs/Raven/Databases/" + ConnectionStringOptions.DefaultDatabase;
+			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(to.Url);
+			var docUrl = rootDatabaseUrl + "/docs/Raven/Databases/" + to.DefaultDatabase;
 
 			try
 			{
-				httpRavenRequestFactory.Create(docUrl, "GET", ConnectionStringOptions).ExecuteRequest();
+				httpRavenRequestFactory.Create(docUrl, "GET", to).ExecuteRequest();
 				return;
 			}
 			catch (WebException e)
@@ -413,8 +416,8 @@ namespace Raven.Smuggler
 					throw;
 			}
 
-			var request = CreateRequest(docUrl, "PUT");
-			var document = RavenJObject.FromObject(MultiDatabase.CreateDatabaseDocument(ConnectionStringOptions.DefaultDatabase));
+			var request = CreateRequest(docUrl, method: "PUT");
+			var document = RavenJObject.FromObject(MultiDatabase.CreateDatabaseDocument(to.DefaultDatabase));
 			document.Remove("Id");
 			request.Write(document);
 			request.ExecuteRequest();

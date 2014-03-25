@@ -83,7 +83,7 @@ public class IntersectionTest extends RemoteClientTest {
     createIndexAndSampleData(store);
     try (IDocumentSession s = store.openSession()) {
       //This should be BarCodeNumber = -999, 10001
-      List<TShirt> resultPage1 = s.advanced().luceneQuery(TShirt.class, "TShirtNested")
+      List<TShirt> resultPage1 = s.advanced().documentQuery(TShirt.class, "TShirtNested")
           .where("Name:Wolf INTERSECT Types_Color:Blue AND Types_Size:Small INTERSECT Types_Color:Gray AND Types_Size:Large")
           .orderBy("BarcodeNumber")
           .take(2)
@@ -100,7 +100,7 @@ public class IntersectionTest extends RemoteClientTest {
       assertArrayEquals(new Integer[] { -999, 10001}, barCodeNumbers.toArray(new Integer[0]));
 
       //This should be BarCodeNumber = 10001, 10002 (i.e. it spans pages 1 & 2)
-      List<TShirt> resultPage1a = s.advanced().luceneQuery(TShirt.class, "TShirtNested")
+      List<TShirt> resultPage1a = s.advanced().documentQuery(TShirt.class, "TShirtNested")
           .where("Name:Wolf INTERSECT Types_Color:Blue AND Types_Size:Small INTERSECT Types_Color:Gray AND Types_Size:Large")
           .orderBy("BarcodeNumber")
           .skip(1)
@@ -118,7 +118,7 @@ public class IntersectionTest extends RemoteClientTest {
       assertArrayEquals(new Integer[] { 10001, 10002}, barCodeNumbers.toArray(new Integer[0]));
 
     //This should be BarCodeNumber = 10002, 10003, 10004, 10006 (But NOT 10005
-      List<TShirt> resultPage2 = s.advanced().luceneQuery(TShirt.class, "TShirtNested")
+      List<TShirt> resultPage2 = s.advanced().documentQuery(TShirt.class, "TShirtNested")
       .where("Name:Wolf INTERSECT Types_Color:Blue AND Types_Size:Small INTERSECT Types_Color:Gray AND Types_Size:Large")
       .orderBy("BarcodeNumber")
       .skip(2)
