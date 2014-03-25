@@ -31,6 +31,7 @@ class ctor {
     gridViewport: JQuery;
     scrollThrottleTimeoutHandle = 0;
     firstVisibleRow: row = null;
+
     settings: {
         documentsSource: KnockoutObservable<pagedList>;
         dynamicHeightTargetSelector: string;
@@ -147,7 +148,6 @@ class ctor {
 
     setupKeyboardShortcuts() {
         this.setupKeyboardShortcut("DELETE", () => this.deleteSelectedDocs());
-        this.setupKeyboardShortcut("F2", () => this.editLastSelectedDoc());
         this.setupKeyboardShortcut("Ctrl+C,D", () => this.copySelectedDocs());
         this.setupKeyboardShortcut("Ctrl+C,I", () => this.copySelectedDocIds());
     }
