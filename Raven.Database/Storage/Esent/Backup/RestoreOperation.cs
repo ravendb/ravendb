@@ -90,7 +90,12 @@ namespace Raven.Database.Storage.Esent.Backup
 			}
 		}
 
-		private void CombineIncrementalBackups()
+	    public override string JournalPathConfigName
+	    {
+	        get { return "Raven/Esent/LogsPath"; }
+	    }
+
+	    private void CombineIncrementalBackups()
 		{
 			var directories = Directory.GetDirectories(backupLocation, "Inc*")
 				.OrderBy(dir => dir)

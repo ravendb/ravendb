@@ -223,7 +223,7 @@ namespace Raven.Storage.Voron
 	        using (var snapshot = tableStorage.CreateSnapshot())
 	        {
 	            var read = tableStorage.Details.Read(snapshot, "id", null);
-	            if (read == null) //precaution - might prevent NRE in edge cases
+	            if (read == null) // new db
 	            {
 	                Id = Guid.NewGuid();
 	                using (var writeIdBatch = new WriteBatch())
@@ -234,7 +234,7 @@ namespace Raven.Storage.Voron
 	            }
 	            else
 	            {
-	                if (read.Reader == null || read.Reader.Length != 16)
+                    if (read.Reader == null || read.Reader.Length != 16)//precaution - might prevent NRE in edge cases
 	                    throw new InvalidDataException("Failed to initialize Voron transactional storage. Possible data corruption.");
 	                using (var stream = read.Reader.AsStream())
 	                using (var reader = new BinaryReader(stream))
@@ -244,7 +244,6 @@ namespace Raven.Storage.Voron
 	            }
 	        }
 	    }
-
 
 	    private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
         {
@@ -258,8 +257,8 @@ namespace Raven.Storage.Voron
                 filePathFolder.Create();
 
             var tempPath = configuration.Settings["Raven/Voron/TempPath"];
-
-            var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath);
+	        var journalPath = configuration.Settings["Raven/Voron/JournalPath"];
+            var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
             options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
             return options;
         }

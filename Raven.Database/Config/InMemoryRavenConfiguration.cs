@@ -191,6 +191,8 @@ namespace Raven.Database.Config
 				IndexStoragePath = indexStoragePathSettingValue;
 			}
 
+		    TrySettingUpJournalsPath();
+
 			// HTTP settings
 			HostName = ravenSettings.HostName.Value;
 
@@ -238,7 +240,15 @@ namespace Raven.Database.Config
 			PostInit();
 		}
 
-        /// <summary>
+	    private void TrySettingUpJournalsPath()
+	    {
+	        if (string.IsNullOrEmpty(Settings["Raven/Esent/LogsPath"]) == false)
+	            JournalsStoragePath = Settings["Raven/Esent/LogsPath"];
+            if (string.IsNullOrEmpty(Settings["Raven/Voron/JournalPath"]) == false)
+                JournalsStoragePath = Settings["Raven/Voron/JournalPath"];
+	    }
+
+	    /// <summary>
         /// This limits the number of concurrent multi get requests,
         /// Note that this plays with the max number of requests allowed as well as the max number
         /// of sessions
@@ -768,7 +778,7 @@ namespace Raven.Database.Config
 
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
-		private string indexStoragePath;
+		private string indexStoragePath, journalStoragePath;
 		private string fileSystemIndexStoragePath;
 		private int? maxNumberOfParallelIndexTasks;
 		private int initialNumberOfItemsToIndexInSingleBatch;
@@ -813,6 +823,17 @@ namespace Raven.Database.Config
 			}
 			set { indexStoragePath = value.ToFullPath(); }
 		}
+
+        public string JournalsStoragePath
+        {
+            get
+            {
+                return journalStoragePath;
+            }
+            set {
+                journalStoragePath = value != null ? value.ToFullPath() : null;
+            }
+        }
 
 		public string FileSystemIndexStoragePath
 		{

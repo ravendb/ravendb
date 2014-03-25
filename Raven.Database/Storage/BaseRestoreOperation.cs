@@ -61,17 +61,18 @@ namespace Raven.Database.Storage
             if (Directory.Exists(indexLocation) == false)
                 Directory.CreateDirectory(indexLocation);
 
-
-            if (string.IsNullOrWhiteSpace(configuration.Settings[Constants.RavenTxLogsDir]))
+            if (string.IsNullOrWhiteSpace(configuration.Settings[JournalPathConfigName]))
                 return databaseLocation;
 
-            var logsPath = configuration.Settings[Constants.RavenTxLogsDir].ToFullPath();
+            var logsPath = configuration.Settings[JournalPathConfigName].ToFullPath();
 
             if (Directory.Exists(logsPath) == false)
                 Directory.CreateDirectory(logsPath);
 
             return logsPath;
         }
+
+        public abstract string JournalPathConfigName { get; }
 
         protected string BackupIndexesPath()
         {
