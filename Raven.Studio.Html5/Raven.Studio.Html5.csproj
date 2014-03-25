@@ -147,8 +147,13 @@
     <TypeScriptCompile Include="App\models\sqlReplication.ts" />
     <TypeScriptCompile Include="App\commands\getSqlReplicationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveSqlReplicationsCommand.ts" />
+    <TypeScriptCompile Include="App\viewmodels\scriptedIndexes.ts" />
+    <TypeScriptCompile Include="App\models\scriptedIndex.ts" />
+    <TypeScriptCompile Include="App\models\scriptedIndexMap.ts" />
+    <TypeScriptCompile Include="App\commands\getScriptedIndexesCommand.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\scriptedIndexes.html" />
     <Content Include="App\views\resetIndexConfirm.html" />
     <Content Include="App\views\restoreDatabase.html" />
     <Content Include="App\views\backupDatabase.html" />

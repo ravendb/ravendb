@@ -33,6 +33,7 @@ class appUrl {
         periodicBackup: ko.computed(() => appUrl.forPeriodicBackup(appUrl.currentDatabase())),
         replications: ko.computed(() => appUrl.forReplications(appUrl.currentDatabase())),
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
+        scriptedIndexes: ko.computed(() => appUrl.forScriptedIndexes(appUrl.currentDatabase())),
 
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null)
 	};
@@ -116,6 +117,10 @@ class appUrl {
 
     static forSqlReplications(db: database): string {
         return "#settings/sqlReplication?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forScriptedIndexes(db: database): string {
+        return "#settings/scriptedIndex?" + appUrl.getEncodedDbPart(db);
     }
 
 	static forDocuments(collection: string, db: database): string {

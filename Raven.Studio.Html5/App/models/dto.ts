@@ -416,3 +416,8 @@ interface facetDto {
     TermSortMode: number;
     IncludeRemainingTerms: boolean;
 }
+
+interface scriptedIndexDto extends documentDto {
+    IndexScript: string;
+    DeleteScript: string;
+}
