@@ -91,5 +91,13 @@
                 </div>
             </div>
         </div>
+        
+        <div class="col-md-4">
+            <h4>Recent Documents</h4>
+            <hr />
+            <ul class="list-group" data-bind="foreach: topRecentDocuments">
+                <li class="list-group-item"><a data-bind="text:$data.docId, attr:{hfef:$data.docUrl}"></a></li>
+            </ul>
+        </div>
     </div>
 </div>
