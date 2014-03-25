@@ -20,6 +20,7 @@
     <TargetFrameworkProfile />
   </PropertyGroup>
   <ItemGroup>
+    <TypeScriptCompile Include="App\commands\changesApiCommand.ts" />
     <TypeScriptCompile Include="App\commands\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\createSampleDataCommand.ts" />
@@ -152,9 +153,14 @@
     <TypeScriptCompile Include="App\models\sqlReplication.ts" />
     <TypeScriptCompile Include="App\commands\getSqlReplicationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveSqlReplicationsCommand.ts" />
+    <TypeScriptCompile Include="App\viewmodels\scriptedIndexes.ts" />
+    <TypeScriptCompile Include="App\models\scriptedIndex.ts" />
+    <TypeScriptCompile Include="App\models\scriptedIndexMap.ts" />
+    <TypeScriptCompile Include="App\commands\getScriptedIndexesCommand.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
+    <Content Include="App\views\scriptedIndexes.html" />
     <Content Include="App\views\resetIndexConfirm.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
     <Content Include="App\views\restoreDatabase.html" />
