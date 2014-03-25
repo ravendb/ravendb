@@ -439,3 +439,8 @@ interface facetValueDto {
     Min: number;
     Average: number;
 }
+
+interface scriptedIndexDto extends documentDto {
+    IndexScript: string;
+    DeleteScript: string;
+}

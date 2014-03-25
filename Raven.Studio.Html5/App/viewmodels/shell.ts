@@ -320,10 +320,11 @@ class shell extends viewModelBase {
     }
 
     selectDatabase(db: database) {
-        db.activate();
-
-        var updatedUrl = appUrl.forCurrentPage(db);
-        this.navigate(updatedUrl);
+        if (db.name != this.activeDatabase().name) {
+            db.activate();
+            var updatedUrl = appUrl.forCurrentPage(db);
+            this.navigate(updatedUrl);
+        }
     }
 
     fetchBuildVersion() {
