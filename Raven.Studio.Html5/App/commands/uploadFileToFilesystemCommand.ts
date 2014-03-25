@@ -13,12 +13,13 @@ class uploadFileToFilesystemCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        this.reportInfo("Uploading file " +this.fileName+"...");
+        //this.reportInfo("Uploading file " +this.fileName+"...");
 
         //var url = '/files?name=' + this.fileName + '&uploadId=' + this.uploadId;
         //var createTask = this.put(url, null, this.fs);
 
         //return createTask;
+        throw new Error("Not Implemented");
     }
 }
 
