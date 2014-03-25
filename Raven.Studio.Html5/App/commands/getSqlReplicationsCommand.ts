@@ -7,7 +7,7 @@ class getSqlReplicationsCommand extends commandBase {
     constructor(private db: database) {
         super();
     }
-    
+
     execute(): JQueryPromise<Array<sqlReplication>> {
         var args = {
             startsWith: "Raven/SqlReplication/Configuration/",

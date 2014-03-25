@@ -22,6 +22,7 @@ interface computedAppUrls {
     periodicBackup: KnockoutComputed<string>;
     replications: KnockoutComputed<string>;
     sqlReplications: KnockoutComputed<string>;
+    scriptedIndexes: KnockoutComputed<string>;
 
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
     databasesManagement: KnockoutComputed<string>;
