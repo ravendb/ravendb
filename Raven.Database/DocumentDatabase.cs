@@ -654,6 +654,12 @@ namespace Raven.Database
                     lastCollectionEtags.Flush();
             });
 
+			exceptionAggregator.Execute(() =>
+			{
+				if (prefetcher != null)
+					prefetcher.Dispose();
+			});
+
             exceptionAggregator.Execute(() =>
             {
                 initializer.UnsubscribeToDomainUnloadOrProcessExit();
