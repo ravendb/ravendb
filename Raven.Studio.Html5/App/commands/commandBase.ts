@@ -1,6 +1,8 @@
 import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
 import database = require("models/database");
+import filesystem = require("models/filesystem");
+import resource = require("models/resource");
 import appUrl = require("common/appUrl");
 
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
@@ -66,26 +68,26 @@ class commandBase {
         }
     }
 
-    put(relativeUrl: string, args: any, database?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "PUT", database, options);
+    put(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "PUT", resource, options);
     }
 
-    reset(relativeUrl: string, args: any, database?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "RESET", database, options);
+    reset(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "RESET", resource, options);
     }
 
     /*
      * Performs a DELETE rest call.
     */
-    del(relativeUrl: string, args: any, database?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "DELETE", database, options);
+    del(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "DELETE", resource, options);
     }
 
-    post(relativeUrl: string, args: any, database?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "POST", database, options);
+    post(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "POST", resource, options);
     }
 
-    private ajax(relativeUrl: string, args: any, method: string, database?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
+    private ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
         // ContentType:
         //
         // Can't use application/json in cross-domain requests, otherwise it 
@@ -99,7 +101,7 @@ class commandBase {
             "application/json; charset=utf-8";
         var defaultOptions = {
             cache: false,
-            url: appUrl.forDatabaseQuery(database) + relativeUrl,
+            url: appUrl.forResouceQuery(resource) + relativeUrl,
             data: args,
             dataType: "json",
             contentType: contentType, 
