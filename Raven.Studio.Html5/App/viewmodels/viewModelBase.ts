@@ -6,11 +6,6 @@ import app = require("durandal/app");
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
-
-interface KnockoutStatic {
-    DirtyFlag(any): void;
-}
-
 class viewModelBase {
     activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private keyboardShortcutDomContainers: string[] = [];
@@ -47,7 +42,7 @@ class viewModelBase {
         this.modelPollingStart();
         
         window.onbeforeunload = (e: any) => {
-            self.saveInObservable();
+            this.saveInObservable();
             var isDirty = viewModelBase.dirtyFlag().isDirty();
             if (isDirty) {
                 var message = "You have unsaved data.";
@@ -68,10 +63,6 @@ class viewModelBase {
         // Resync Changes
         viewModelBase.dirtyFlag().reset();
     }
-
-    //A method to save the current value in the observables from text boxes and inputs before a refresh/page close.
-    //Should be implemented on the inhereting class.
-    saveInObservable() {}
 
     /*
     * Called by Durandal before deactivate in order to detemine whether removing from the DOM is necessary.
@@ -109,6 +100,11 @@ class viewModelBase {
         }
     }
     
+    //A method to save the current value in the observables from text boxes and inputs before a refresh/page close.
+    //Should be implemented on the inhereting class.
+    saveInObservable() {
+
+    }
 
     private removeKeyboardShortcuts(elementSelector: string) {
         $(elementSelector).unbind('keydown.jwerty');
@@ -166,17 +162,6 @@ class viewModelBase {
         }));
 		
 		return canNavTask;
-    }
-	
-    modelPollingStop() {
-        clearInterval(this.modelPollingHandle);
-    }
-
-    modelPolling() {
-    }
-
-    forceModelPolling() {
-        this.modelPolling();
     }
 }
 
