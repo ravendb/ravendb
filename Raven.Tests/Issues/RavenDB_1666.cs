@@ -111,6 +111,9 @@ namespace Raven.Tests.Issues
             RegisterRouteForOnlySysDb<FileSystemsController>(a => a.Stats());
             RegisterRouteForOnlySysDb<FileSystemsController>(a => a.Names());
 
+            RegisterRouteForOnlySysDb<StudioTasksController>(a => a.GetNewEncryption(null));
+            RegisterRouteForOnlySysDb<StudioTasksController>(a => a.IsBase64Key(null));
+
             const string nonSystemDbPrefix = "databases/{databaseName}/";
 
             var routeMethods = typeof (RavenDbApiController).Assembly
