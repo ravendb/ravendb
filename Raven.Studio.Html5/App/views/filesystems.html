@@ -25,8 +25,8 @@
         <br />
         <div class="filesystems-container" data-bind="foreach: filesystems">
             <div class="filesystem" data-bind="visible: isVisible, click: function () { $root.selectFilesystem($data); return true; }, css: { selected: isSelected}">
-                <h4><a data-bind="text: name, attr: { href: $root.getDocumentsUrl($data) }"></a></h4>
-                <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: docCount() + ' documents'"></span>
+                <h4><a data-bind="text: name, attr: { href: $root.getFilesystemUrl($data) }"></a></h4>
+                <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: filesCount() + ' files'"></span>
             </div>
         </div>
     </div>

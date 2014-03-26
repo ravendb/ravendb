@@ -53,8 +53,8 @@ class commandBase {
         return "?" + propNameAndValues.join("&");
     }
 
-    query<T>(relativeUrl: string, args: any, database?: database, resultsSelector?: (results: any) => T): JQueryPromise<T> {
-        var ajax = this.ajax(relativeUrl, args, "GET", database);
+    query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T): JQueryPromise<T> {
+        var ajax = this.ajax(relativeUrl, args, "GET", resource);
         if (resultsSelector) {
             var task = $.Deferred();
             ajax.done((results, status, xhr) => {
@@ -101,7 +101,7 @@ class commandBase {
             "application/json; charset=utf-8";
         var defaultOptions = {
             cache: false,
-            url: appUrl.forResouceQuery(resource) + relativeUrl,
+            url: appUrl.forResourceQuery(resource) + relativeUrl,
             data: args,
             dataType: "json",
             contentType: contentType, 

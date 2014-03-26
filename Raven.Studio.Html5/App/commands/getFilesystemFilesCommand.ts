@@ -3,15 +3,13 @@ import filesystem = require("models/filesystem");
 
 class getFilesystemFilesCommand extends commandBase {
 
-    constructor() {
+    constructor(private fs: filesystem) {
         super();
-
-        throw new Error("Not Implemented");
     }
 
     execute(): JQueryPromise<any> {
-
-        throw new Error("Not Implemented");
+        var url = "/stats";
+        return this.query<filesystemFileHeaderDto>(url, null, this.fs);
     }
 }
 

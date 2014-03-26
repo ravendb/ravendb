@@ -42,7 +42,7 @@ class appUrl {
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
         databasesManagement: ko.computed(() => "#databases?database=" + appUrl.getEncodedDbPart(appUrl.currentDatabase())),
         filesystemsManagement: ko.computed(() => "#filesystems?filesystem=" + appUrl.getEncodedFsPart(appUrl.currentFilesystem()))
-	};
+    };
 
     static forDatabases(): string {
         return "#databases";
@@ -197,12 +197,12 @@ class appUrl {
         return "#tasks?" + databasePart;
     }
 
-    static forResouceQuery(res: resource) {
+    static forResourceQuery(res: resource) {
         if (res && res instanceof database && !res.isSystem) {
             return appUrl.baseUrl + "/databases/" + res.name;
         }
         else if (res && res instanceof filesystem) {
-            return appUrl.baseUrl + "/" + res.name;
+            return appUrl.baseUrl + "/ravenfs/" + res.name;
         }
 
         return this.baseUrl;
@@ -246,6 +246,11 @@ class appUrl {
     static forCsvImport(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#tasks/csvImport?" + databasePart;
+    }
+
+    static forFilesystem(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems?" + filesystemPart;
     }
 
 	/**

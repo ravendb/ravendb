@@ -1,16 +1,16 @@
-//import commandBase = require("commands/commandBase");
-//import filesystem = require("models/filesystem");
+import commandBase = require("commands/commandBase");
+import filesystem = require("models/filesystem");
 
-//class getFilesystemStatsCommand extends commandBase {
+class getFilesystemStatsCommand extends commandBase {
 
-//    constructor(private fs: filesystem) {
-//        super();
-//    }
+    constructor(private fs: filesystem) {
+        super();
+    }
 
-//    execute(): JQueryPromise<filesystemStatisticsDto> {
-//        var url = "/stats";
-//        return this.query<filesystemStatisticsDto>(url, null, this.fs);
-//    }
-//}
+    execute(): JQueryPromise<filesystemStatisticsDto> {
+        var url = "/stats";
+        return this.query<filesystemStatisticsDto>(url, null, this.fs);
+    }
+}
 
-//export = getFilesystemStatsCommand;
+export = getFilesystemStatsCommand;
