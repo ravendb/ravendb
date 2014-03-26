@@ -62,7 +62,11 @@ namespace Raven.Tests.Bundles.CompressionAndEncryption
 		protected void RecycleServer()
 		{
 			ravenDbServer.Dispose();
-			ravenDbServer =  new RavenDbServer(settings);
+			ravenDbServer =  new RavenDbServer(settings)
+			{
+			    UseEmbeddedHttpServer = true
+			};
+		    ravenDbServer.Initialize();
 		}
 
 		protected void Close()
