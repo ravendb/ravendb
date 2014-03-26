@@ -4,12 +4,12 @@ import appUrl = require("common/appUrl");
 
 
 class transformer {
-    public name = ko.observable<string>();
+    public name = ko.observable<string>().extend({ required: true });
+    public transformResults = ko.observable<string>().extend({ required: true });
 
     private originalName = ko.observable<string>();
-
     public wasNameChanged = ko.computed<boolean>(()=> this.name() != this.originalName());
-    public transformResults = ko.observable<string>();
+    
     editUrl: KnockoutComputed<string>;
     
 

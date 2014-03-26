@@ -25,11 +25,12 @@ class saveTransformerCommand extends commandBase {
                 doneTask.reject(result);
             })
             .done((result: getTransformerResultDto) => {
+                doneTask.resolve();
                 new getSingleTransformerCommand(result.Transformer, this.db).execute()
                     .fail(xhr=> doneTask.reject(xhr))
                     .done((savedTransformer: savedTransformerDto) => {
                         this.reportInfo("Saved " + this.trans.name());
-                    doneTask.resolve(new transformer().initFromSave(savedTransformer));
+                        doneTask.resolve(new transformer().initFromSave(savedTransformer));
                 });
         });
     

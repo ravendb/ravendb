@@ -26,7 +26,7 @@ class editDocument extends viewModelBase {
     isBusy = ko.observable(false);
     metaPropsToRestoreOnSave = [];
     editedDocId: KnockoutComputed<string>;
-    userSpecifiedId = ko.observable('');
+    userSpecifiedId = ko.observable('').extend({ required: true });
     isCreatingNewDocument = ko.observable(false);
     docsList = ko.observable<pagedList>();
     docEditor: AceAjax.Editor;
@@ -122,8 +122,14 @@ class editDocument extends viewModelBase {
         this.setupKeyboardShortcuts();
     }
 
+    // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
-        this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText]);
+        this.userSpecifiedId('');
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
+    }
+
+    saveInObservable() {
+        this.storeDocEditorTextIntoObservable();
     }
 
     initializeDocEditor() {
@@ -132,8 +138,7 @@ class editDocument extends viewModelBase {
         this.docEditor.setTheme("ace/theme/github");
         this.docEditor.setFontSize("16px");
         this.docEditor.getSession().setMode("ace/mode/json");
-        $("#docEditor").on('keydown', ".ace_text-input", () => this.storeDocEditorTextIntoObservable());
-        //$("#docEditor").on('mousedown', ".ace_text-input", () => this.storeDocEditorTextIntoObservable());
+        $("#docEditor").on('blur', ".ace_text-input", () => this.storeDocEditorTextIntoObservable());
         this.updateDocEditorText();
     }
 
@@ -180,7 +185,7 @@ class editDocument extends viewModelBase {
         var saveTask = saveCommand.execute();
         saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
             // Resync Changes
-            this.dirtyFlag().reset();
+            viewModelBase.dirtyFlag().reset();
 
             this.isCreatingNewDocument(false);
             this.loadDocument(idAndEtag.Key);
@@ -213,7 +218,7 @@ class editDocument extends viewModelBase {
             this.document(document);
 
             // Resync Changes
-            this.dirtyFlag().reset();
+            viewModelBase.dirtyFlag().reset();
         });
         loadDocTask.fail(response => this.failedToLoadDoc(id, response));
         loadDocTask.always(() => this.isBusy(false));
@@ -244,7 +249,7 @@ class editDocument extends viewModelBase {
         }
 
         // Resync Changes
-        this.dirtyFlag().reset();
+        viewModelBase.dirtyFlag().reset();
     }
 
     formatDocument() {
@@ -325,10 +330,9 @@ class editDocument extends viewModelBase {
 
     storeDocEditorTextIntoObservable() {
         if (this.docEditor) {
-            //debugger;
             var docEditorText = this.docEditor.getSession().getValue();
             var observableToUpdate = this.isEditingMetadata() ? this.metadataText : this.documentText;
-            //observableToUpdate(docEditorText);
+            observableToUpdate(docEditorText);
         }
     }
 }
