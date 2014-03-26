@@ -1,21 +1,19 @@
-interface collectionInfoDto {
-	Results: documentDto[];
-	Includes: any[];
-	IsStale: boolean;
-	IndexTimestamp: string;
-	TotalResults: number;
-	SkippedResults: number;
-	IndexName: string; 
-	IndexEtag: string;
-	ResultEtag: string;
-	Highlightings: any;
-	NonAuthoritativeInformation: boolean;
-	LastQueryTime: string;
-	DurationMilliseconds: number;
+interface collectionInfoDto extends indexResultsDto<documentDto> {
 }
 
-interface documentDto {
-	'@metadata'?: documentMetadataDto;
+interface documentDto extends metadataAwareDto {
+	
+}
+
+interface conflictsInfoDto extends indexResultsDto<conflictDto> {
+}
+
+interface dictionary<TValue> {
+    [key: string]: TValue;
+}
+
+interface metadataAwareDto {
+    '@metadata'?: documentMetadataDto;
 }
 
 interface documentMetadataDto {
@@ -243,7 +241,7 @@ interface periodicBackupSetupDto {
     FullBackupIntervalMilliseconds: number;
 }
 
-interface indexQueryResultsDto {
+interface indexResultsDto<T extends metadataAwareDto> {
     DurationMilliseconds: number;
     Highlightings: any;
     Includes: any;
@@ -254,9 +252,13 @@ interface indexQueryResultsDto {
     LastQueryTime: string;
     NonAuthoritativeInformation: boolean;
     ResultEtag: string;
-    Results: documentDto[];
+    Results: T[];
     SkippedResults: number;
     TotalResults: number;
+}
+
+interface indexQueryResultsDto extends indexResultsDto<documentDto> {
+   
 }
 
 interface replicationDestinationDto {
@@ -445,6 +447,28 @@ interface scriptedIndexDto extends documentDto {
     DeleteScript: string;
 }
 
+interface conflictDto extends documentDto {
+    Id: string;
+    ConflictDetectedAt: string;
+    Versions: conflictVersionsDto[];
+}
+
+interface replicationSourceDto extends documentDto {
+    LastDocumentEtag?: string;
+    LastAttachmentEtag?: string;
+    ServerInstanceId: string;
+    Source: string;
+}
+
+interface conflictVersionsDto {
+    Id: string;
+    SourceId: string;
+}
+
+interface documentBase {
+    getId(): string;
+    getDocumentPropertyNames(): Array<string>;
+}
 
 //// Start RavenFS Interfaces ////
 

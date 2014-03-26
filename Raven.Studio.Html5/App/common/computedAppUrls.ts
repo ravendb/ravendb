@@ -1,6 +1,7 @@
 // Interface
 interface computedAppUrls {
     documents: KnockoutComputed<string>;
+    conflicts: KnockoutComputed<string>;
     patch: KnockoutComputed<string>;
     indexes: KnockoutComputed<string>;
     newIndex: KnockoutComputed<string>;
