@@ -34,8 +34,9 @@ class viewModelBase {
     /*
      * Creates a keyboard shortcut local to the specified element and its children.
      * The shortcut will be removed as soon as the view model is deactivated.
+     * Also defines shortcut for ace edito, if ace editor was recieved
      */
-    createKeyboardShortcut(keys: string, handler: () => void, elementSelector: string) {
+    createKeyboardShortcut(keys: string, handler: () => void, elementSelector: string, aceEditor: AceAjax.Editor = null, macKey:string=null,shortcutName:string=null) {
         jwerty.key(keys, e => {
             e.preventDefault();
             handler();
@@ -44,6 +45,20 @@ class viewModelBase {
         if (!this.keyboardShortcutDomContainers.contains(elementSelector)) {
             this.keyboardShortcutDomContainers.push(elementSelector);
         }
+
+        if (aceEditor) {
+            this.bindAceKey(aceEditor, handler, keys, shortcutName);
+        }
+
+    }
+
+    bindAceKey(editor: AceAjax.Editor, handler: () => void, winkey: string, macKey: string= null, shortcutName:string=null) {
+        editor.commands.addCommand({
+            name: shortcutName?shortcutName:winkey,
+            bindKey: { win: winkey, mac: macKey ? macKey : winkey },
+            exec: handler,
+            readOnly: true
+        });
     }
 
     private removeKeyboardShortcuts(elementSelector: string) {
