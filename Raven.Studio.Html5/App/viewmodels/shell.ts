@@ -180,7 +180,6 @@ class shell extends viewModelBase {
         $('#goToDocInput').bind('typeahead:selected', (obj, datum, name) => {
             router.navigate(datum.editHref);
         });
-
     }
 
     showNavigationProgress(isNavigating: boolean) {

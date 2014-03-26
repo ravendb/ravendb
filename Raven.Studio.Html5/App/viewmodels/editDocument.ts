@@ -56,6 +56,7 @@ class editDocument extends viewModelBase {
 
     public static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string>}>();
     
+    docEditroHasFocus = ko.observable(true);
 
     constructor() {
         super();
@@ -162,6 +163,7 @@ class editDocument extends viewModelBase {
     attached() {
         this.initializeDocEditor();
         this.setupKeyboardShortcuts();
+        this.focusOnEditor();
     }
 
     initializeDocEditor() {
@@ -175,16 +177,28 @@ class editDocument extends viewModelBase {
     }
 
     setupKeyboardShortcuts() {        
-        this.createKeyboardShortcut("alt+s", () => this.saveDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("alt+r", () => this.refreshDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("shift+d", () => this.isEditingMetadata(false), editDocument.editDocSelector);
-        this.createKeyboardShortcut("shift+m", () => this.isEditingMetadata(true), editDocument.editDocSelector);
-        this.createKeyboardShortcut("home", () => this.firstDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("end", () => this.lastDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("alt+←", () => this.previousDocumentOrLast(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("alt+→", () => this.nextDocumentOrFirst(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("alt+[", () => this.formatDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("delete", () => this.deleteDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+shift+d", () => this.focusOnDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+shift+m", () => this.focusOnMetadata(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+home", () => this.firstDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+end", () => this.lastDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+page-up", () => this.previousDocumentOrLast(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+page-down", () => this.nextDocumentOrFirst(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+shift+del", () => this.deleteDocument(), editDocument.editDocSelector);
+    }
+
+    focusOnMetadata() {
+        this.isEditingMetadata(true);
+        this.focusOnEditor();
+    }
+
+    focusOnDocument() {
+        this.isEditingMetadata(false);
+        this.focusOnEditor();
+    }
+
+    focusOnEditor() {
+        this.docEditor.focus();
     }
 
     editNewDocument() {
