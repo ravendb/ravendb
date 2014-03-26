@@ -63,8 +63,8 @@ class shell extends viewModelBase {
 
         NProgress.set(.7);
         router.map([
-            { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: false, hash: this.appUrls.databasesManagement },
-            { route: ['', 'filesystems'], title: 'Filesystems', moduleId: 'viewmodels/filesystems', nav: false, hash: this.appUrls.filesystemsManagement },
+            { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: true, hash: this.appUrls.databasesManagement },
+            { route: ['', 'filesystems'], title: 'Filesystems', moduleId: 'viewmodels/filesystems', nav: true, hash: this.appUrls.filesystemsManagement },
             { route: 'documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: this.appUrls.documents },
             { route: 'conflicts', title: 'Conflicts', moduleId: 'viewmodels/conflicts', nav: true, hash: this.appUrls.conflicts },
             { route: 'indexes*details', title: 'Indexes', moduleId: 'viewmodels/indexesShell', nav: true, hash: this.appUrls.indexes },

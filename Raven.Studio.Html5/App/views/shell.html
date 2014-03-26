@@ -1,105 +1,132 @@
 ﻿<div>
     <div class="navbar navbar-fixed-top navbar-default">
         <div class="navbar-inner">
-            <ul class="nav navbar-nav">
-                <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
-                    <a data-bind="attr: { href: appUrls.documents }">Documents</a>
-                </li>
-                <li class="dropdown" data-bind="css: { active: appUrls.isActive('Documents') }">
-                    <a class="dropdown-toggle caret-after" data-toggle="dropdown">
-                        <b class="caret"></b>
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li>
-                            <a tabindex="-1" data-bind="attr: { href: appUrls.documents }">Documents</a>
-                        </li>
-                        <li>
-                            <a tabindex="-1" data-bind="attr: { href: appUrls.conflicts }">Conflicts</a>
-                        </li>
-                        <li>
-                            <a tabindex="-1" data-bind="attr: { href: appUrls.patch }">Patch</a>
-                        </li>
-                    </ul>
-                </li>
 
-                <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Indexes') }">
-                    <a data-bind="attr: { href: appUrls.indexes }">Indexes</a>
-                </li>
-                <li class="dropdown" data-bind="css: { active: appUrls.isActive('Indexes') }">
-                    <a class="dropdown-toggle caret-after" data-toggle="dropdown">
-                        <b class="caret"></b>
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li>
-                            <a tabindex="-1" data-bind="attr: { href: appUrls.indexes }">Indexes</a>
-                        </li>
-                        <li>
-                            <a tabindex="-1" data-bind="attr: { href: appUrls.transformers }">Transformers</a>
-                        </li>
-                    </ul>
-                </li>
+            <div id="databasesNavbar" data-bind="visible: appUrls.isActive('Databases')">
 
-                <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Query') }">
-                    <a data-bind="attr: { href: appUrls.query(null) }">Query</a>
-                </li>
-                <li class="dropdown" data-bind="css: { active: appUrls.isActive('Query') }">
-                    <a class="dropdown-toggle caret-after" data-toggle="dropdown">
-                        <b class="caret"></b>
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li>
-                            <a tabindex="-1" data-bind="attr: { href: appUrls.query(null) }">Query</a>
-                        </li>
-                        <li>
-                            <a tabindex="-1" data-bind="attr: { href: appUrls.reporting }">Reporting</a>
-                        </li>
-                    </ul>
-                </li>
+                <ul class=" nav navbar-nav">
+                    <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
+                        <a data-bind="attr: { href: appUrls.documents }">Documents</a>
+                    </li>
+                    <li class="dropdown" data-bind="css: { active: appUrls.isActive('Documents') }">
+                        <a class="dropdown-toggle caret-after" data-toggle="dropdown">
+                            <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a tabindex="-1" data-bind="attr: { href: appUrls.documents }">Documents</a>
+                            </li>
+                            <li>
+                                <a tabindex="-1" data-bind="attr: { href: appUrls.conflicts }">Conflicts</a>
+                            </li>
+                            <li>
+                                <a tabindex="-1" data-bind="attr: { href: appUrls.patch }">Patch</a>
+                            </li>
+                        </ul>
+                    </li>
 
-                <li data-bind="css: { active: appUrls.isActive('Tasks') }">
-                    <a data-bind="attr: { href: appUrls.tasks }">Tasks</a>
-                </li>
+                    <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Indexes') }">
+                        <a data-bind="attr: { href: appUrls.indexes }">Indexes</a>
+                    </li>
+                    <li class="dropdown" data-bind="css: { active: appUrls.isActive('Indexes') }">
+                        <a class="dropdown-toggle caret-after" data-toggle="dropdown">
+                            <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a tabindex="-1" data-bind="attr: { href: appUrls.indexes }">Indexes</a>
+                            </li>
+                            <li>
+                                <a tabindex="-1" data-bind="attr: { href: appUrls.transformers }">Transformers</a>
+                            </li>
+                        </ul>
+                    </li>
 
-                <li data-bind="css: { active: appUrls.isActive('Settings') }">
-                    <a data-bind="attr: { href: appUrls.settings }">Settings</a>
-                </li>
+                    <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Query') }">
+                        <a data-bind="attr: { href: appUrls.query(null) }">Query</a>
+                    </li>
+                    <li class="dropdown" data-bind="css: { active: appUrls.isActive('Query') }">
+                        <a class="dropdown-toggle caret-after" data-toggle="dropdown">
+                            <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a tabindex="-1" data-bind="attr: { href: appUrls.query(null) }">Query</a>
+                            </li>
+                            <li>
+                                <a tabindex="-1" data-bind="attr: { href: appUrls.reporting }">Reporting</a>
+                            </li>
+                        </ul>
+                    </li>
 
-                <li data-bind="css: { active: appUrls.isActive('Status') }">
-                    <a data-bind="attr: { href: appUrls.status }">Status</a>
-                </li>
-            </ul>
+                    <li data-bind="css: { active: appUrls.isActive('Tasks') }">
+                        <a data-bind="attr: { href: appUrls.tasks }">Tasks</a>
+                    </li>
 
-            <ul class="nav navbar-nav">
-                <li class="dropdown">
-                    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                        <i class="fa fa-plus"></i> New <b class="caret"></b>
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li>
-                            <a href="#" data-bind="click: newDocument">
-                                <i class="fa fa-file-o"></i>
-                                <span>Document</span>
-                                <span class="text-muted keyboard-shortcut">Ctrl+Alt+N</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a data-bind="attr: { href: newIndexUrl }"><i class=" fa fa-bolt"></i> Index</a>
-                        </li>
-                        <li>
-                            <a data-bind="attr: { href: newTransformerUrl }"><i class="fa fa-search"></i> Transformer</a>
-                        </li>
-                    </ul>
-                </li>
-            </ul>
-            <form class="navbar-form pull-left">
-                <input id="goToDocInput" type="text" class="form-control col-md-8" placeholder="Go to document">
-            </form>
+                    <li data-bind="css: { active: appUrls.isActive('Settings') }">
+                        <a data-bind="attr: { href: appUrls.settings }">Settings</a>
+                    </li>
+
+                    <li data-bind="css: { active: appUrls.isActive('Status') }">
+                        <a data-bind="attr: { href: appUrls.status }">Status</a>
+                    </li>
+                </ul>
+
+                <ul class="nav navbar-nav">
+                    <li class="dropdown">
+                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                            <i class="fa fa-plus"></i> New <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a href="#" data-bind="click: newDocument">
+                                    <i class="fa fa-file-o"></i>
+                                    <span>Document</span>
+                                    <span class="text-muted keyboard-shortcut">Ctrl+Alt+N</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a data-bind="attr: { href: newIndexUrl }"><i class=" fa fa-bolt"></i> Index</a>
+                            </li>
+                            <li>
+                                <a data-bind="attr: { href: newTransformerUrl }"><i class="fa fa-search"></i> Transformer</a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <form class="navbar-form pull-left">
+                    <input id="goToDocInput" type="text" class="form-control col-md-8" placeholder="Go to document">
+                </form>
+
+            </div>
+
+            <div id="filesystemsNavbar" data-bind="visible: appUrls.isActive('Filesystems')">
+                
+                <ul class=" nav navbar-nav">
+                    
+                    <li data-bind="css: { active: appUrls.isActive('FilesystemFiles') }">
+                        <a data-bind="attr: { href: appUrls.filesystemFiles }">Files</a>
+                    </li>
+                    
+                    <li data-bind="css: { active: appUrls.isActive('FilesystemSearch') }">
+                        <a data-bind="attr: { href: appUrls.filesystemSearch }">Search</a>
+                    </li>
+                    
+                    <li data-bind="css: { active: appUrls.isActive('FilesystemSynchronization') }">
+                        <a data-bind="attr: { href: appUrls.filesystemSynchronization }">Synchronization</a>
+                    </li>
+                    
+                    <li data-bind="css: { active: appUrls.isActive('FilesystemConfiguration') }">
+                        <a data-bind="attr: { href: appUrls.filesystemConfiguration }">Configuration</a>
+                    </li>
+
+                </ul>
+
+            </div>
+
             <ul class="nav navbar-nav pull-right">
                 <li class="dropdown">
-                    <!--<a class="dropdown-toggle" data-bind="with: activeView" data-toggle="dropdown" href="#" style="padding-left: 5px;">
-                        <span data-bind="text: name"></span>
-                        <b class="caret"></b>
-                    </a>-->
                     <a style="padding-right: 0; display: inline-block;" data-bind="attr:{href:appUrls.databasesManagement}">Databases &nbsp;<i class=" fa fa-caret-right"></i>&nbsp;</a>
                 </li>
                 <li class="dropdown">
