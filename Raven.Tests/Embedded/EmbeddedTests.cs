@@ -16,7 +16,7 @@ using Xunit;
 
 namespace Raven.Tests.Embedded
 {
-    public class EmbeddedTests
+    public class EmbeddedTests : NoDisposalNeeded
     {
         [Fact]
         public void Can_get_documents()

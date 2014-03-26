@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-    public class RavenDB_1877
+    public class RavenDB_1877 : NoDisposalNeeded
     {
         [Fact]
          public void CanReadShapeFromListOfDecimal()
