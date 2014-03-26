@@ -1,21 +1,37 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
 
-import conflict = require("models/conflict");
-import database = require("models/database");
-import pagedList = require("common/pagedList");
+import pagedResultSet = require("common/pagedResultSet");
 import appUrl = require("common/appUrl");
+import pagedList = require("common/pagedList");
+
+import conflict = require("models/conflict");
+import indexPriority = require("models/indexPriority");
+import database = require("models/database");
+import conflictVersion = require("models/conflictVersion");
+import transformer = require("models/transformer");
+import indexDefinition = require("models/indexDefinition");
+import replicationSource = require("models/replicationSource");
+
 import getConflictsCommand = require("commands/getConflictsCommand");
 import getReplicationSourcesCommand = require("commands/getReplicationSourcesCommand");
+import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
+import getSingleTransformerCommand = require("commands/getSingleTransformerCommand");
+import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
+import saveTransformerCommand = require("commands/saveTransformerCommand");
+
 import viewModelBase = require("viewmodels/viewModelBase");
-import pagedResultSet = require("common/pagedResultSet");
-import replicationSource = require("models/replicationSource");
-import conflictVersion = require("models/conflictVersion");
 
 class conflicts extends viewModelBase {
 
     displayName = "conflicts";
     sourcesLookup: { [s: string]: replicationSource; } = {};
+
+    //TODO: subscribe to databases and remove item from list once user delete DB.
+    static performedIndexChecks: Array<string> = [];
+
+    static conflictsIndexName = "Raven/ConflictDocuments";
+    static conflictsTransformerName = "Raven/ConflictDocumentsTransformer";
 
 
     //TODO: cache for replication sources
@@ -27,9 +43,12 @@ class conflicts extends viewModelBase {
     activate(args) {
         super.activate(args);
         this.activeDatabase.subscribe((db: database) => this.databaseChanged(db));
-        this.fetchConflicts(appUrl.getDatabase());
 
-        return this.loadReplicationSources(this.activeDatabase());
+        return this.performIndexCheck(this.activeDatabase()).then(() => {
+            return this.loadReplicationSources(this.activeDatabase());
+        }).done(() => {
+            this.fetchConflicts(appUrl.getDatabase());
+        });
     }
 
     fetchConflicts(database: database) {
@@ -42,6 +61,62 @@ class conflicts extends viewModelBase {
             .done(results => this.replicationSourcesLoaded(results, db));
     }
 
+    performIndexCheck(db: database): JQueryPromise<void> {
+
+        // first look in cache
+        if (conflicts.performedIndexChecks.contains(db.name)) {
+            return $.Deferred().resolve();
+        }
+
+        var performCheckTask = $.Deferred();
+
+        // perform index check against DB
+        $.when(new getIndexDefinitionCommand(conflicts.conflictsIndexName, db).execute(),
+            new getSingleTransformerCommand(conflicts.conflictsTransformerName, db).execute())
+            .done(() => performCheckTask.resolve())
+            .fail( 
+            function (index, transformer) {
+
+                var indexTask = new saveIndexDefinitionCommand(conflicts.getConflictsIndexDefinition(), indexPriority.normal, db).execute();
+                var transformerTask = new saveTransformerCommand(conflicts.getConflictsTransformerDefinition(), db).execute();
+
+                $.when(indexTask, transformerTask).done(function () {
+                    conflicts.performedIndexChecks.push(db.name);
+                    performCheckTask.resolve();
+                }).fail(() => performCheckTask.reject() );
+            });
+
+        return performCheckTask;
+    }
+
+    static getConflictsIndexDefinition(): indexDefinitionDto {
+        var indexDef = indexDefinition.empty();
+        indexDef.name(conflicts.conflictsIndexName);
+        indexDef.maps()[0](
+        "from doc in docs " +
+            " let id = doc[\"@metadata\"][\"@id\"] " + 
+            " where doc[\"@metadata\"][\"Raven-Replication-Conflict\"] == true && (id.Length < 47 || !id.Substring(id.Length - 47).StartsWith(\"/conflicts/\", StringComparison.OrdinalIgnoreCase)) " + 
+            " select new { ConflictDetectedAt = (DateTime)doc[\"@metadata\"][\"Last-Modified\"] }");
+
+        return indexDef.toDto();
+    }
+    static getConflictsTransformerDefinition(): transformer {
+        var transDef = transformer.empty();
+        transDef.name(conflicts.conflictsTransformerName);
+        transDef.transformResults("from result in results " +
+            " select new {  " +
+	        " Id = result[\"__document_id\"], " +
+	        " ConflictDetectedAt = result[\"@metadata\"].Value<DateTime>(\"Last-Modified\"),  " +
+	        " EntityName = result[\"@metadata\"][\"Raven-Entity-Name\"], " +
+	        " Versions = result.Conflicts.Select(versionId => { " +
+            "                 var version = LoadDocument(versionId); " +
+            "                 return new { Id = versionId, SourceId = version[\"@metadata\"][\"Raven-Replication-Source\"] }; " +
+            "             }) " +
+            "         }");
+        return transDef;
+    }
+    
+
     replicationSourcesLoaded(sources: Array<replicationSource>, db: database) {
         this.sourcesLookup = {};
         $.map(sources, s => this.sourcesLookup[s.serverInstanceId] = s);
@@ -50,8 +125,11 @@ class conflicts extends viewModelBase {
     databaseChanged(db: database) {
         var conflictsUrl = appUrl.forConflicts(db);
         router.navigate(conflictsUrl, false);
-        this.fetchConflicts(db);
-        //TODO: update replication sources
+        this.performIndexCheck(db).then(() => {
+            return this.loadReplicationSources(db);
+        }).done(() => {
+                this.fetchConflicts(db);
+        });
     }
 
     private createPagedList(database: database): pagedList {

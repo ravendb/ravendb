@@ -1,6 +1,6 @@
 import documentMetadata = require("models/documentMetadata");
 
-class document {
+class document implements documentBase {
     __metadata: documentMetadata;
     constructor(dto: documentDto) {
         this.__metadata = new documentMetadata(dto['@metadata']);

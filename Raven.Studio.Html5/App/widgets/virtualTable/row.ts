@@ -32,7 +32,7 @@ class row {
             .forEach(c => this.addOrUpdateCellMap(c, null));
     }
 
-    fillCells(rowData: document) {
+    fillCells(rowData: documentBase) {
         this.isInUse(true);
         var rowProperties = rowData.getDocumentPropertyNames();
         for (var i = 0; i < rowProperties.length; i++) {
@@ -45,8 +45,8 @@ class row {
             this.addOrUpdateCellMap(prop, cellValue);
         }
 
-        if (rowData.__metadata && rowData.__metadata.id) {
-            this.addOrUpdateCellMap("Id", rowData.__metadata.id);
+        if (rowData.getId()) {
+            this.addOrUpdateCellMap("Id", rowData.getId());
         }
     }
 
