@@ -243,7 +243,10 @@ namespace Raven.Tests.Helpers
 			ravenConfiguration.PostInit();
 
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
-            var ravenDbServer = new RavenDbServer(ravenConfiguration) { UseEmbeddedHttpServer = true }.Initialize();
+            var ravenDbServer = new RavenDbServer(ravenConfiguration)
+            {
+	            UseEmbeddedHttpServer = true,
+            }.Initialize();
 			servers.Add(ravenDbServer);
 
 			try
