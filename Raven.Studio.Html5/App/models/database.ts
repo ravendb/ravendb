@@ -9,7 +9,12 @@ class database extends resource {
     }
 
 	activate() {
-		ko.postbox.publish("ActivateDatabase", this);
+        ko.postbox.publish("ActivateDatabase", this);
+    }
+
+    static getNameFromUrl(url: string) {
+        var index = url.indexOf("databases/");
+        return (index > 0) ? url.substring(index + 10) : "";
     }
 }
 

@@ -4,6 +4,7 @@ class cell {
     static defaultTemplate = "defaultTemplate";
     static idTemplate = "idTemplate";
     static checkboxTemplate = "checkboxTemplate";
+    static customTemplate = "customTemplate";
 
     constructor(data: any, public templateName: string) {
         this.data(data);

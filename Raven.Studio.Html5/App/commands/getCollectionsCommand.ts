@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import collection = require("models/collection");
 
-class createDatabaseCommand extends commandBase {
+class getCollectionsCommand extends commandBase {
 
     /**
 	* @param ownerDb The database the collections will belong to.
@@ -28,4 +28,4 @@ class createDatabaseCommand extends commandBase {
     }
 }
 
-export = createDatabaseCommand;
+export = getCollectionsCommand;
