@@ -28,7 +28,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private readonly IUuidGenerator generator;
 
-        public QueueStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool)
+        public QueueStorageActions(TableStorage tableStorage, IUuidGenerator generator, Reference<SnapshotReader> snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool)
 			: base(snapshot, bufferPool)
 		{
 			this.tableStorage = tableStorage;

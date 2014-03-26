@@ -17,7 +17,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		private readonly TableStorage tableStorage;
 		private readonly Reference<WriteBatch> writeBatch;
 
-		public StalenessStorageActions(TableStorage tableStorage, SnapshotReader snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool)
+		public StalenessStorageActions(TableStorage tableStorage, Reference<SnapshotReader> snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool)
 			: base(snapshot, bufferPool)
 		{
 			this.tableStorage = tableStorage;

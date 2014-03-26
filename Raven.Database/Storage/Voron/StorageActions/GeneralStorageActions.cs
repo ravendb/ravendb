@@ -3,7 +3,6 @@
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.Impl;
-using Raven.Database.Util.Streams;
 
 using Voron.Impl;
 
@@ -15,15 +14,17 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	    private readonly Table generalTable;
 	    private readonly TableStorage storage;
 		private readonly Reference<WriteBatch> writeBatch;
+        private readonly Reference<SnapshotReader> snapshot;
 
-		private int maybePulseCount;
+        private int maybePulseCount;
 
-		public GeneralStorageActions(TableStorage storage,Table generalTable, Reference<WriteBatch> writeBatch, SnapshotReader snapshot, IBufferPool bufferPool)
-            :base(snapshot, bufferPool)
-		{
-			this.storage = storage;
+        public GeneralStorageActions(TableStorage storage, Table generalTable, Reference<WriteBatch> writeBatch, Reference<SnapshotReader> snapshot, IBufferPool bufferPool)
+            : base(snapshot, bufferPool)
+        {
+            this.storage = storage;
             this.generalTable = generalTable;
             this.writeBatch = writeBatch;
+            this.snapshot = snapshot;
         }
 
         public long GetNextIdentityValue(string name)
@@ -59,7 +60,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
         public void PulseTransaction()
         {
 			storage.Write(writeBatch.Value);
+
+            snapshot.Value.Dispose();
             writeBatch.Value.Dispose();
+
+            snapshot.Value = storage.CreateSnapshot();
 			writeBatch.Value = new WriteBatch {DisposeAfterWrite = writeBatch.Value.DisposeAfterWrite};
 		}
 

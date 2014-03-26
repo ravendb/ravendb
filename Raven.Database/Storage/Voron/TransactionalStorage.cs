@@ -96,14 +96,14 @@ namespace Raven.Storage.Voron
 
 		public IStorageActionsAccessor CreateAccessor()
 		{
-			var snapshot = tableStorage.CreateSnapshot();
+		    var snapshotReference = new Reference<SnapshotReader> { Value = tableStorage.CreateSnapshot() };
 			var writeBatchReference = new Reference<WriteBatch> { Value = new WriteBatch() };
 			
 			var accessor = new StorageActionsAccessor(uuidGenerator, _documentCodecs,
-                    documentCacher, writeBatchReference, snapshot, tableStorage, this, bufferPool);
+                    documentCacher, writeBatchReference, snapshotReference, tableStorage, this, bufferPool);
 			accessor.OnDispose += () =>
 			{
-				snapshot.Dispose();
+                snapshotReference.Value.Dispose();
                 writeBatchReference.Value.Dispose();
 			};
 
@@ -157,40 +157,39 @@ namespace Raven.Storage.Voron
 			onCommit(); // call user code after we exit the lock
 		}
 
-		private IStorageActionsAccessor ExecuteBatch(Action<IStorageActionsAccessor> action)
-		{
-			using (var snapshot = tableStorage.CreateSnapshot())
-			{
-			    var writeBatchRef = new Reference<WriteBatch>();
-                try
-                {
-                    writeBatchRef.Value = new WriteBatch() {DisposeAfterWrite = false};// prevent from disposing after write to allow read from batch OnStorageCommit
-                    var storageActionsAccessor = new StorageActionsAccessor(uuidGenerator, _documentCodecs,
-                                                                            documentCacher, writeBatchRef, snapshot,
-                                                                            tableStorage, this, bufferPool);
+        private IStorageActionsAccessor ExecuteBatch(Action<IStorageActionsAccessor> action)
+        {
+            var snapshotRef = new Reference<SnapshotReader>();
+            var writeBatchRef = new Reference<WriteBatch>();
+            try
+            {
+                snapshotRef.Value = tableStorage.CreateSnapshot();
+                writeBatchRef.Value = new WriteBatch { DisposeAfterWrite = false }; // prevent from disposing after write to allow read from batch OnStorageCommit
+                var storageActionsAccessor = new StorageActionsAccessor(uuidGenerator, _documentCodecs,
+                                                                        documentCacher, writeBatchRef, snapshotRef,
+                                                                        tableStorage, this, bufferPool);
 
-                    if (disableBatchNesting.Value == null)
-                        current.Value = storageActionsAccessor;
+                if (disableBatchNesting.Value == null)
+                    current.Value = storageActionsAccessor;
 
-                    action(storageActionsAccessor);
-                    storageActionsAccessor.SaveAllTasks();
+                action(storageActionsAccessor);
+                storageActionsAccessor.SaveAllTasks();
 
-                    tableStorage.Write(writeBatchRef.Value);
+                tableStorage.Write(writeBatchRef.Value);
 
-                    storageActionsAccessor.ExecuteOnStorageCommit();
+                storageActionsAccessor.ExecuteOnStorageCommit();
 
-                    return storageActionsAccessor;
-                }
-                finally
-                {
-                    if (writeBatchRef.Value != null)
-                    {
-                        writeBatchRef.Value.Dispose();
-                    }
-                }
-			   
-			}
-		}
+                return storageActionsAccessor;
+            }
+            finally
+            {
+                if (snapshotRef.Value != null)
+                    snapshotRef.Value.Dispose();
+
+                if (writeBatchRef.Value != null)
+                    writeBatchRef.Value.Dispose();
+            }
+        }
 
 		public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
 		{
