@@ -1,13 +1,20 @@
 import appUrl = require("common/appUrl");
 import database = require("models/database");
 import router = require("plugins/router");
+import app = require("durandal/app");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
+
+interface KnockoutStatic {
+    DirtyFlag(any): void;
+}
+
 class viewModelBase {
-  activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
-  private keyboardShortcutDomContainers: string[] = [];
+    activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
+    private keyboardShortcutDomContainers: string[] = [];
+    public static dirtyFlag = new ko.DirtyFlag([]);
 
      /*
      * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
@@ -18,8 +25,45 @@ class viewModelBase {
         if (!currentDb || currentDb.name !== db.name) {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
         }
-		
-		this.modelPollingStart();
+        this.modelPollingStart();
+        
+        var self = this;
+        window.onbeforeunload = function (e: any) {
+            self.saveInObservable();
+            var isDirty = viewModelBase.dirtyFlag().isDirty();
+            if (isDirty) {
+                var message = "You have unsaved data.";
+                e = e || window.event;
+                // For IE and Firefox
+                if (e) {
+                    e.returnValue = message;
+                }
+                // For Safari
+                return message;
+            }
+            return null;
+        };
+    }
+
+    // Called back after the entire composition has finished (parents and children included)
+    compositionComplete() {
+        // Resync Changes
+        viewModelBase.dirtyFlag().reset();
+    }
+
+    //A method to save the current value in the observables from text boxes and inputs before a refresh/page close.
+    //Should be implemented on the inhereting class.
+    saveInObservable() {}
+
+    /*
+    * Called by Durandal before deactivate in order to detemine whether removing from the DOM is necessary.
+    */
+    canDeactivate(isClose): any {
+        var isDirty = viewModelBase.dirtyFlag().isDirty();
+        if (isDirty) {
+            return app.showMessage('You have unsaved data. Are you sure you want to close?', 'Unsaved Data', ['Yes', 'No']);
+        }
+        return true;
     }
 
     /*
@@ -70,26 +114,26 @@ class viewModelBase {
         router.navigate(url, options);
     }
 
-  //#region Model Polling
+    //#region Model Polling
 
-  modelPollingHandle: number;
+    modelPollingHandle: number;
 
-  modelPollingStart() {
-    this.modelPolling();
-    this.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
-    this.activeDatabase.subscribe(() => this.forceModelPolling());
-  }
+    modelPollingStart() {
+        this.modelPolling();
+        this.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
+        this.activeDatabase.subscribe(() => this.forceModelPolling());
+    }
 
-  modelPollingStop() {
-    clearInterval(this.modelPollingHandle);
-  }
+    modelPollingStop() {
+        clearInterval(this.modelPollingHandle);
+    }
 
-  modelPolling() {
-  }
+    modelPolling() {
+    }
 
-  forceModelPolling() {
-    this.modelPolling();
-  }
+    forceModelPolling() {
+        this.modelPolling();
+    }
 
   //#endregion Model Polling
 }

@@ -22,13 +22,13 @@ class editDocument extends viewModelBase {
 
     document = ko.observable<document>();
     metadata: KnockoutComputed<documentMetadata>;
-    documentText = ko.observable('');
-    metadataText = ko.observable('');
+    documentText = ko.observable('').extend({ required: true });
+    metadataText = ko.observable('').extend({ required: true });
     isEditingMetadata = ko.observable(false);
     isBusy = ko.observable(false);
     metaPropsToRestoreOnSave = [];
     editedDocId: KnockoutComputed<string>;
-    userSpecifiedId = ko.observable('');
+    userSpecifiedId = ko.observable('').extend({ required: true });
     isCreatingNewDocument = ko.observable(false);
     docsList = ko.observable<pagedList>();
     docEditor: AceAjax.Editor;
@@ -69,7 +69,7 @@ class editDocument extends viewModelBase {
             }
         });
 
-       
+        var self = this;
         this.metadata.subscribe((meta: documentMetadata) => {
             if (meta) {
                 this.metaPropsToRestoreOnSave.length = 0;
@@ -89,17 +89,12 @@ class editDocument extends viewModelBase {
                 for (var property in metaDto) {
                     if (metaDto.hasOwnProperty(property) && metaPropsToRemove.indexOf(property) != -1) {
                         if (metaDto[property]) {
-                            this.metaPropsToRestoreOnSave.push({ name: property, value: metaDto[property].toString() });
+                            self.metaPropsToRestoreOnSave.push({ name: property, value: metaDto[property].toString() });
                         }
                         delete metaDto[property];
                     }
                 }
-                /*metaPropsToRemove.forEach(p => {
-                    if (p in metaDto) {
-                        this.metaPropsToRestoreOnSave.push({ name: p, value: metaDto[p].toString() });
-                        delete metaDto[p];
-                    }
-                });*/
+
                 var metaString = this.stringify(metaDto);
                 this.metadataText(metaString);
                 this.userSpecifiedId(meta.id);
@@ -166,6 +161,16 @@ class editDocument extends viewModelBase {
         this.focusOnEditor();
     }
 
+    // Called back after the entire composition has finished (parents and children included)
+    compositionComplete() {
+        this.userSpecifiedId('');
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
+    }
+
+    saveInObservable() {
+        this.storeDocEditorTextIntoObservable();
+    }
+
     initializeDocEditor() {
         // Startup the Ace editor with JSON syntax highlighting.
         this.docEditor = ace.edit("docEditor");
@@ -229,6 +234,9 @@ class editDocument extends viewModelBase {
         var saveCommand = new saveDocumentCommand(this.userSpecifiedId(), newDoc, appUrl.getDatabase());
         var saveTask = saveCommand.execute();
         saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
+            // Resync Changes
+            viewModelBase.dirtyFlag().reset();
+
             this.isCreatingNewDocument(false);
             this.loadDocument(idAndEtag.Key);
             this.updateUrl(idAndEtag.Key);
@@ -280,7 +288,12 @@ class editDocument extends viewModelBase {
 
     loadDocument(id: string): JQueryPromise<document> {
         var loadDocTask = new getDocumentWithMetadataCommand(id, this.databaseForEditedDoc).execute();
-        loadDocTask.done(document => this.document(document));
+        loadDocTask.done(document=> {
+            this.document(document);
+
+            // Resync Changes
+            viewModelBase.dirtyFlag().reset();
+        });
         loadDocTask.fail(response => this.failedToLoadDoc(id, response));
         loadDocTask.always(() => this.isBusy(false));
         this.isBusy(true);
@@ -308,6 +321,9 @@ class editDocument extends viewModelBase {
             viewModel.deletionTask.done(() => this.nextDocumentOrFirst());
             app.showDialog(viewModel, editDocument.editDocSelector);
         }
+
+        // Resync Changes
+        viewModelBase.dirtyFlag().reset();
     }
 
     formatDocument() {

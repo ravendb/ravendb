@@ -69,7 +69,6 @@ class createDatabase extends dialogViewModelBase {
             message = "Database Name Already Exists!";
         }
         else if (!this.isValidName(databaseName)) {
-            debugger;
             message = "Please enter a valid database name!";
         } else {
             result = true;

@@ -12,6 +12,7 @@ class appUrl {
 	// Stores some computed values that update whenever the current database updates.
 	private static currentDbComputeds: computedAppUrls = {
         documents: ko.computed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
+        conflicts: ko.computed(() => appUrl.forConflicts(appUrl.currentDatabase())),
         patch: ko.computed(() => appUrl.forPatch(appUrl.currentDatabase())),
         indexes: ko.computed(() => appUrl.forIndexes(appUrl.currentDatabase())),
         transformers: ko.computed(() => appUrl.forTransformers(appUrl.currentDatabase())),
@@ -128,6 +129,11 @@ class appUrl {
         var collectionPart = collection ? "collection=" + encodeURIComponent(collection) : "";
         var databasePart = appUrl.getEncodedDbPart(db);
 		return "#documents?" + collectionPart + databasePart;
+    }
+
+    static forConflicts(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#conflicts?" + databasePart;
     }
 
     static forPatch(db: database): string {

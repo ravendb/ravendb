@@ -11,15 +11,14 @@ import saveTransformerWithNewNameConfirm = require("viewmodels/saveTransformerWi
 import dialog = require("plugins/dialog");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
+import ace = require("ace/ace");
 
 class editTransformer extends viewModelBase {
-
     editedTransformer = ko.observable<transformer>();
     isEditingExistingTransformer = ko.observable(false);
     popoverOptions = ko.observable<any>();
     static containerSelector = "#editTransformerContainer";
     editorCollection = ko.observableArray<{ alias: string; controller: HTMLElement }>();
-    
     
     constructor() {
         super();
@@ -42,6 +41,18 @@ class editTransformer extends viewModelBase {
         this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editTransformer.containerSelector);
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteTransformer(), editTransformer.containerSelector);
         this.focusOnEditor();
+    }
+
+    // Called back after the entire composition has finished (parents and children included)
+    compositionComplete() {
+        super.compositionComplete();
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults]);
+    }
+
+    saveInObservable() {
+        var docEditor = ace.edit("docEditor");
+        var docEditorText = docEditor.getSession().getValue();
+        this.editedTransformer().transformResults(docEditorText);
     }
 
     addTransformerHelpPopover() {
@@ -84,13 +95,16 @@ class editTransformer extends viewModelBase {
 
             new saveTransformerCommand(this.editedTransformer(), this.activeDatabase())
                 .execute()
-                .done((trans: transformer) => {
-                    this.editedTransformer(trans);
+                .done(() => {
+                    //this.editedTransformer(trans);
                     if (!this.isEditingExistingTransformer()) {
                         this.isEditingExistingTransformer(true);
                     }
                 });
         }
+
+        // Resync Changes
+        viewModelBase.dirtyFlag().reset();
     }
 
     deleteTransformer() {
@@ -99,14 +113,14 @@ class editTransformer extends viewModelBase {
         if (transformer) {
             var db = this.activeDatabase();
             var deleteViewmodel = new deleteTransformerConfirm([transformer.name()], db);
-            deleteViewmodel.deleteTask.done(() => router.navigate(appUrl.forTransformers(db)));
+            deleteViewmodel.deleteTask.done(() => {
+                // Resync Changes
+                viewModelBase.dirtyFlag().reset();
+                router.navigate(appUrl.forTransformers(db));
+            });
             dialog.show(deleteViewmodel);
         }
-    
     }
-
 }
-
-
 
 export = editTransformer;
