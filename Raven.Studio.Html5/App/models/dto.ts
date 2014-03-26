@@ -469,13 +469,3 @@ interface documentBase {
     getId(): string;
     getDocumentPropertyNames(): Array<string>;
 }
-
-//// Start RavenFS Interfaces ////
-
-// TODO: Implement this based on FileSystemStats
-interface filesystemStatisticsDto {
-    Name: string;
-    FileCount: number;
-}
-
-//// End RavenFS Interfaces ////
