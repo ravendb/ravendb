@@ -3,9 +3,6 @@ import filesystem = require("models/filesystem");
 
 class getFilesystemFilesCommand extends commandBase {
 
-    /**
-    * @param ownerDb The database the collections will belong to.
-    */
     constructor() {
         super();
 
