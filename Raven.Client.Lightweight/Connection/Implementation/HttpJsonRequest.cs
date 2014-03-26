@@ -420,7 +420,7 @@ namespace Raven.Client.Connection
 			if (unauthorizedResponseAsync == null)
 				return false;
 
-			await RecreateHttpClient(await unauthorizedResponseAsync);
+			RecreateHttpClient(await unauthorizedResponseAsync);
 			return true;
 		}
 
@@ -436,22 +436,13 @@ namespace Raven.Client.Connection
 			await forbiddenResponseAsync;
 		}
 
-		private async Task RecreateHttpClient(Action<HttpClient> configureHttpClient)
+		private void RecreateHttpClient(Action<HttpClient> configureHttpClient)
 		{
 			var newHttpClient = new HttpClient(recreateHandler());
 
 			configureHttpClient(newHttpClient);
 			httpClient = newHttpClient;
 			isRequestSentToServer = false;
-
-			if (postedData != null)
-			{
-				await WriteAsync(postedData);
-			}
-			if (postedToken != null)
-			{
-				await WriteAsync(postedToken);
-			}
 
 			if (postedStream != null)
 			{
