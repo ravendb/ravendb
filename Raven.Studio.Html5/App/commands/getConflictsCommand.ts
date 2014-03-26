@@ -27,14 +27,13 @@ class getConflictsCommand extends commandBase {
             resultsTransformer: "Raven/ConflictDocumentsTransformer"
         };
 
-
-
         //TODO: create index somewhere + transformer
         var resultsSelector = (dto: conflictsInfoDto) => new conflictsInfo(dto);
         var url = "/indexes/Raven/ConflictDocuments";
         var conflictsTask = $.Deferred();
         this.query(url, args, this.ownerDb, resultsSelector).
-            then(conflicts => {
+            fail(response => conflictsTask.reject(response)).
+            done(conflicts => {
                 var items = conflicts.results;
                 var resultsSet = new pagedResultSet(items, conflicts.totalResults);
                 conflictsTask.resolve(resultsSet);

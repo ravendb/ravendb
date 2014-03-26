@@ -18,6 +18,7 @@ class getReplicationSourcesCommand extends commandBase {
         return this.query("/docs", args, this.db, (dtos: replicationSourceDto[]) => {
             var sources = dtos.map(dto => new replicationSource(dto));
             // and push current db as replication source
+            //TODO: this.db.name returns database name instead of entire url!
             sources.push(new replicationSource({ ServerInstanceId: this.db.statistics().DatabaseId, Source: this.db.name }));
             return sources;
 

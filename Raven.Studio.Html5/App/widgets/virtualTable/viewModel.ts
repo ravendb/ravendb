@@ -195,12 +195,12 @@ class ctor {
         }
     }
 
-    fillRow(rowData: document, rowIndex: number) {
+    fillRow(rowData: documentBase, rowIndex: number) {
         var rowAtIndex: row = ko.utils.arrayFirst(this.recycleRows(), (r: row) => r.rowIndex() === rowIndex);
         if (rowAtIndex) {
             rowAtIndex.fillCells(rowData);
             rowAtIndex.collectionClass(this.getCollectionClassFromDocument(rowData));
-            rowAtIndex.editUrl(appUrl.forEditDoc(rowData.getId(), rowData.getEntityName(), rowIndex, appUrl.getDatabase()));
+            rowAtIndex.editUrl(appUrl.forEditDoc(rowData.getId(), this.getEntityName(rowData), rowIndex, appUrl.getDatabase()));
         }
     }
 
@@ -214,9 +214,18 @@ class ctor {
         }
     }
 
-    getCollectionClassFromDocument(doc: document): string {
-        var entityName = doc.getEntityName();
-        return collection.getCollectionCssClass(entityName);
+    getEntityName(doc: documentBase) {
+        var obj: any = doc;
+        if (obj && obj.getEntityName) {
+            var document = <document> obj;
+            return document.getEntityName();
+        }
+        return null;
+    }
+
+    getCollectionClassFromDocument(doc: documentBase): string {
+        
+        return collection.getCollectionCssClass(this.getEntityName(doc));
     }
 
     getColumnWidth(columnName: string): number {
@@ -246,7 +255,7 @@ class ctor {
         return columnName;
     }
 
-    ensureColumnsForRows(rows: Array<document>) {
+    ensureColumnsForRows(rows: Array<documentBase>) {
         // This is called when items finish loading and are ready for display.
         // Keep allocations to a minimum.
 

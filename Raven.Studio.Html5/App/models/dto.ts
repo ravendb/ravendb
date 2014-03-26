@@ -460,3 +460,7 @@ interface conflictVersionsDto {
     SourceId: string;
 }
 
+interface documentBase {
+    getId(): string;
+    getDocumentPropertyNames(): Array<string>;
+}
