@@ -72,10 +72,12 @@ class conflicts extends viewModelBase {
         // perform index check against DB
         $.when(new getIndexDefinitionCommand(conflicts.conflictsIndexName, db).execute(),
             new getSingleTransformerCommand(conflicts.conflictsTransformerName, db).execute())
-            .done(() => performCheckTask.resolve())
+            .done(() => {
+                conflicts.performedIndexChecks.push(db.name);
+                performCheckTask.resolve();
+            })
             .fail( 
-            function (index, transformer) {
-
+            function () {
                 var indexTask = new saveIndexDefinitionCommand(conflicts.getConflictsIndexDefinition(), indexPriority.normal, db).execute();
                 var transformerTask = new saveTransformerCommand(conflicts.getConflictsTransformerDefinition(), db).execute();
 
