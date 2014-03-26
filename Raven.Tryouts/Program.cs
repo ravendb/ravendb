@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using NLog;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Tests.Bugs;
 
 namespace Raven.Tryouts
 {
@@ -17,21 +18,10 @@ namespace Raven.Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                var s = new My
-                {
-                    B =  (byte*)1
-                };
-                var x = JsonConvert.SerializeObject(s); 
-                
-                try
-                {
-                  
-                    Console.WriteLine(x);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                }
+	            using (var x = new AsyncSetBasedOps())
+	            {
+		            x.AwaitAsyncPatchByIndexShouldWork("voron").Wait();
+	            }
             }
 
 		}
