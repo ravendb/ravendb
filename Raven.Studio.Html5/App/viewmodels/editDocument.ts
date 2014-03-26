@@ -143,9 +143,9 @@ class editDocument extends viewModelBase {
                 var existingDocumentInStore = existingRecentDocumentsStore.recentDocuments.first(x=> x === navigationArgs.id);
                 if (!existingDocumentInStore) {
                     if (existingRecentDocumentsStore.recentDocuments().length == 5) {
-                        existingRecentDocumentsStore.recentDocuments.shift();
+                        existingRecentDocumentsStore.recentDocuments.pop();
                     }
-                    existingRecentDocumentsStore.recentDocuments.push(navigationArgs.id);
+                    existingRecentDocumentsStore.recentDocuments.unshift(navigationArgs.id);
                 }
 
             } else {
