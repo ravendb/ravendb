@@ -240,7 +240,9 @@ class editDocument extends viewModelBase {
         this.isEditingMetadata(false);
     }
 
-    canActivate(args) {
+    canActivate(args: any) {
+        super.canActivate(args);
+
         if (args && args.id) {
 
             var canActivateResult = $.Deferred();

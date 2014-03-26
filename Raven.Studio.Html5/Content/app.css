@@ -1,4 +1,4 @@
-html,
+﻿html,
 body {
   height: 100%;
 }
@@ -54,6 +54,15 @@ body {
   padding-left: 6px;
   padding-right: 8px;
 }
+.database-page {
+  /*.systemButton {
+        color:grey;
+        margin-top:50px;        
+        position:absolute;
+        top:-40px;
+        right:25px;
+    }*/
+}
 .database-page .btn-toolbar {
   margin-bottom: 20px;
 }
@@ -94,13 +103,6 @@ body {
 .database-page .databases-container .database.system-database.selected a,
 .database-page .databases-container .database.system-database.selected .text-muted {
   color: #3071a9;
-}
-.database-page .systemButton {
-  color: grey;
-  margin-top: 50px;
-  position: absolute;
-  top: -40px;
-  right: 25px;
 }
 .document-collections li {
   outline: none;
@@ -551,3 +553,4 @@ footer ul {
 #scriptedIndex .map {
   height: 160px;
 }
+/*# sourceMappingURL=app.css.map */

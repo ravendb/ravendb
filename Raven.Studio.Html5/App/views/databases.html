@@ -1,17 +1,13 @@
 ﻿<section class="database-page">
     <div style="position: relative">
         <ul class="breadcrumb">
-                <li>
-                    <h3>
-                        <a href="#databases">
-                            Databases
-                        </a>
-                    </h3>
-                </li>
+            <li>
+                <h3>
+                    <a href="#databases">Databases</a>
+                </h3>
+            </li>
         </ul>
-        <button class="btn btn-default systemButton" data-bind="click: goToSystemDatabase">
-            <span>System Database</span>
-        </button>
+        <a class="btn btn-warning pull-right" data-bind="attr: { href: docsForSystemUrl }">System Database</a>
         <div class="btn-toolbar">
             <button type="button" class="btn btn-primary" data-bind="click: newDatabase" accesskey="n" title="Create a new database. (Alt+N)"><i class="fa fa-plus"></i> New Database</button>
             <form class="form-inline" style="display: inline-block; vertical-align: middle;">

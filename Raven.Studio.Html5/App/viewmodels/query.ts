@@ -74,9 +74,8 @@ class query extends viewModelBase {
         $.when(
             this.fetchAllCollections(),
             this.fetchAllIndexes(),
-            this.fetchRecentQueries())
-            .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash))
-        .fail((x)=>alert(x));
+            this.fetchRecentQueries()
+            ).done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
     }
 
     selectInitialQuery(indexNameOrRecentQueryHash: string) {
