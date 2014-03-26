@@ -99,5 +99,13 @@
                 <li class="list-group-item"><a data-bind="text:$data.docId, attr:{href:$data.docUrl}"></a></li>
             </ul>
         </div>
+        
+        <div class="col-md-4">
+            <h4>Related Documents</h4>
+            <hr />
+            <ul class="list-group" data-bind="foreach: relatedDocumentHrefs">
+                <li class="list-group-item"><a data-bind="text:$data.id, attr:{href:$data.href}"></a></li>
+            </ul>
+        </div>
     </div>
 </div>

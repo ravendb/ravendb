@@ -52,6 +52,10 @@ class editDocument extends viewModelBase {
 
     });
 
+    relatedDocumentHrefs=ko.observableArray<{id:string;href:string}>();
+
+
+
     static editDocSelector = "#editDocumentContainer";
 
     public static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string>}>();
@@ -271,6 +275,7 @@ class editDocument extends viewModelBase {
                 .done((document) => {
                     this.document(document);
                     canActivateResult.resolve({ can: true });
+                    this.relatedDocumentHrefs(this.findRelatedDocuments(document));
                 })
                 .fail(() => {
                     ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + args.id + " document", null));
@@ -281,10 +286,24 @@ class editDocument extends viewModelBase {
         } else {
             return $.Deferred().resolve({ can: true });
         }
-
-        
-        
     }
+
+    findRelatedDocuments(doc: documentBase): { id: string; href: string }[] {
+        var results: { id: string; href: string }[] = [];
+        var documentFields = doc.getDocumentPropertyNames();
+        for (var key in documentFields) {
+            if (typeof doc[documentFields[key]] === "string" && doc[documentFields[key]].indexOf("/") > 0) {
+                results.push({
+                    id: doc[documentFields[key]].toString(),
+                    href: appUrl.forEditDoc(doc[documentFields[key]].toString(), null, null, this.activeDatabase())}
+            );
+            }
+            
+        }
+
+        return results;
+    }
+
 
     loadDocument(id: string): JQueryPromise<document> {
         var loadDocTask = new getDocumentWithMetadataCommand(id, this.databaseForEditedDoc).execute();
