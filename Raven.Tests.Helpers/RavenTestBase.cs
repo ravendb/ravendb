@@ -150,6 +150,7 @@ namespace Raven.Tests.Helpers
 				string dataDirectory = null,
 				string requestedStorage = null,
 				bool enableAuthentication = false,
+                bool ensureDatabaseExists = true,
 				Action<DocumentStore> configureStore = null)
 		{
 		    databaseName = NormalizeDatabaseName(databaseName);
@@ -169,7 +170,7 @@ namespace Raven.Tests.Helpers
 				configureStore(store);
 			ModifyStore(store);
 
-		    store.Initialize(ensureDatabaseExists: false);
+		    store.Initialize(ensureDatabaseExists);
 			return store;
 		}
 
