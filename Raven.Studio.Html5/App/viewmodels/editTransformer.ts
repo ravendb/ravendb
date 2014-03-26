@@ -11,7 +11,6 @@ import saveTransformerWithNewNameConfirm = require("viewmodels/saveTransformerWi
 import dialog = require("plugins/dialog");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
-import ace = require("ace/ace");
 
 class editTransformer extends viewModelBase {
     editedTransformer = ko.observable<transformer>();
@@ -50,7 +49,8 @@ class editTransformer extends viewModelBase {
     }
 
     saveInObservable() {
-        var docEditor = ace.edit("docEditor");
+        debugger;
+        var docEditor = ko.utils.domData.get($("#transAceEditor")[0], "aceEditor");
         var docEditorText = docEditor.getSession().getValue();
         this.editedTransformer().transformResults(docEditorText);
     }
