@@ -1,7 +1,7 @@
+import pagedResultSet = require("common/pagedResultSet");
 import commandBase = require("commands/commandBase");
 import database = require("models/database");
 import conflict = require("models/conflict");
-import pagedResultSet = require("common/pagedResultSet");
 import conflictsInfo = require("models/conflictsInfo");
 
 class getConflictsCommand extends commandBase {
@@ -27,7 +27,6 @@ class getConflictsCommand extends commandBase {
             resultsTransformer: "Raven/ConflictDocumentsTransformer"
         };
 
-        //TODO: create index somewhere + transformer
         var resultsSelector = (dto: conflictsInfoDto) => new conflictsInfo(dto);
         var url = "/indexes/Raven/ConflictDocuments";
         var conflictsTask = $.Deferred();
