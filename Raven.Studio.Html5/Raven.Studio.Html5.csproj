@@ -85,6 +85,7 @@
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
+    <TypeScriptCompile Include="App\models\filesystemDto.ts" />
     <TypeScriptCompile Include="App\models\facet.ts" />
     <TypeScriptCompile Include="App\models\filesystem.ts" />
     <TypeScriptCompile Include="App\models\index.ts" />
