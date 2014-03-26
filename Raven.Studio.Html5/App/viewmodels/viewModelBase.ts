@@ -6,10 +6,16 @@ import app = require("durandal/app");
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
+
+interface KnockoutStatic {
+    DirtyFlag(any): void;
+}
+
 class viewModelBase {
     activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private keyboardShortcutDomContainers: string[] = [];
     private modelPollingHandle: number;
+    public static dirtyFlag = new ko.DirtyFlag([]);
 
     /*
      * Called by Durandal when checking whether this navigation is allowed. 
@@ -37,8 +43,45 @@ class viewModelBase {
         if (!currentDb || currentDb.name !== db.name) {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
         }
-
+		
         this.modelPollingStart();
+        
+        window.onbeforeunload = (e: any) => {
+            self.saveInObservable();
+            var isDirty = viewModelBase.dirtyFlag().isDirty();
+            if (isDirty) {
+                var message = "You have unsaved data.";
+                e = e || window.event;
+                // For IE and Firefox
+                if (e) {
+                    e.returnValue = message;
+                }
+                // For Safari
+                return message;
+            }
+            return null;
+        };
+    }
+
+    // Called back after the entire composition has finished (parents and children included)
+    compositionComplete() {
+        // Resync Changes
+        viewModelBase.dirtyFlag().reset();
+    }
+
+    //A method to save the current value in the observables from text boxes and inputs before a refresh/page close.
+    //Should be implemented on the inhereting class.
+    saveInObservable() {}
+
+    /*
+    * Called by Durandal before deactivate in order to detemine whether removing from the DOM is necessary.
+    */
+    canDeactivate(isClose): any {
+        var isDirty = viewModelBase.dirtyFlag().isDirty();
+        if (isDirty) {
+            return app.showMessage('You have unsaved data. Are you sure you want to close?', 'Unsaved Data', ['Yes', 'No']);
+        }
+        return true;
     }
 
     /*
@@ -53,6 +96,7 @@ class viewModelBase {
     /*
      * Creates a keyboard shortcut local to the specified element and its children.
      * The shortcut will be removed as soon as the view model is deactivated.
+     * Also defines shortcut for ace edito, if ace editor was recieved
      */
     createKeyboardShortcut(keys: string, handler: () => void, elementSelector: string) {
         jwerty.key(keys, e => {
@@ -64,6 +108,7 @@ class viewModelBase {
             this.keyboardShortcutDomContainers.push(elementSelector);
         }
     }
+    
 
     private removeKeyboardShortcuts(elementSelector: string) {
         $(elementSelector).unbind('keydown.jwerty');
@@ -119,8 +164,19 @@ class viewModelBase {
                 });
             app.showDialog(systemDbConfirm);
         }));
+		
+		return canNavTask;
+    }
+	
+    modelPollingStop() {
+        clearInterval(this.modelPollingHandle);
+    }
 
-        return canNavTask;
+    modelPolling() {
+    }
+
+    forceModelPolling() {
+        this.modelPolling();
     }
 }
 

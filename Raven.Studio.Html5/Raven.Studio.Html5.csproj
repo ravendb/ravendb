@@ -167,6 +167,7 @@
     <TypeScriptCompile Include="App\models\conflictVersion.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\createEncryption.html" />
     <Content Include="App\views\conflicts.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
     <Content Include="App\views\scriptedIndexes.html" />
@@ -874,6 +875,7 @@
     <Content Include="Scripts\knockout-delegatedEvents.min.js" />
     <Content Include="Scripts\knockout-postbox.js" />
     <Content Include="Scripts\knockout-postbox.min.js" />
+    <Content Include="Scripts\knockout.dirtyFlag.js" />
     <Content Include="Scripts\moment-with-langs.js" />
     <Content Include="Scripts\moment-with-langs.min.js" />
     <Content Include="Scripts\moment.js" />

@@ -12,13 +12,13 @@ import dialog = require("plugins/dialog");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 
-class editTransformer extends  viewModelBase{
-
+class editTransformer extends viewModelBase {
     editedTransformer = ko.observable<transformer>();
     isEditingExistingTransformer = ko.observable(false);
     popoverOptions = ko.observable<any>();
-    containerSelector = "#editTransformerContainer";
-
+    static containerSelector = "#editTransformerContainer";
+    editorCollection = ko.observableArray<{ alias: string; controller: HTMLElement }>();
+    
     constructor() {
         super();
         aceEditorBindingHandler.install();
@@ -35,8 +35,24 @@ class editTransformer extends  viewModelBase{
         }
     }
 
-    attached() {
+    attached() { 
         this.addTransformerHelpPopover();
+        this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editTransformer.containerSelector);
+        this.createKeyboardShortcut("alt+shift+del", () => this.deleteTransformer(), editTransformer.containerSelector);
+        this.focusOnEditor();
+    }
+
+    // Called back after the entire composition has finished (parents and children included)
+    compositionComplete() {
+        super.compositionComplete();
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults]);
+    }
+
+    saveInObservable() {
+        debugger;
+        var docEditor = ko.utils.domData.get($("#transAceEditor")[0], "aceEditor");
+        var docEditorText = docEditor.getSession().getValue();
+        this.editedTransformer().transformResults(docEditorText);
     }
 
     addTransformerHelpPopover() {
@@ -45,6 +61,17 @@ class editTransformer extends  viewModelBase{
             trigger: 'hover',
             content: 'The Transform function allows you to change the shape of individual result documents before the server returns them. It uses C# LINQ query syntax <br/> <br/> Example: <pre> <br/> <span class="code-keyword">from</span> order <span class="code-keyword">in</span> orders <br/> <span class="code-keyword">let</span> region = Database.Load(result.RegionId) <br/> <span class="code-keyword">select new</span> { <br/> result.Date, <br/> result.Amount, <br/> Region = region.Name, <br/> Manager = region.Manager <br/>}</pre>',
         });
+    }
+
+    focusOnEditor() {
+        var editorElement = $("#transAceEditor").length == 1 ? $("#transAceEditor")[0] : null;
+        if (editorElement) {
+            var editor = ko.utils.domData.get($("#transAceEditor")[0], "aceEditor");
+
+            if (editor) {
+                editor.focus();
+            }
+        }
     }
 
     editExistingTransformer(unescapedTransformerName: string) {
@@ -68,13 +95,16 @@ class editTransformer extends  viewModelBase{
 
             new saveTransformerCommand(this.editedTransformer(), this.activeDatabase())
                 .execute()
-                .done((trans: transformer) => {
-                    this.editedTransformer(trans);
+                .done(() => {
+                    //this.editedTransformer(trans);
                     if (!this.isEditingExistingTransformer()) {
                         this.isEditingExistingTransformer(true);
                     }
                 });
         }
+
+        // Resync Changes
+        viewModelBase.dirtyFlag().reset();
     }
 
     deleteTransformer() {
@@ -83,14 +113,14 @@ class editTransformer extends  viewModelBase{
         if (transformer) {
             var db = this.activeDatabase();
             var deleteViewmodel = new deleteTransformerConfirm([transformer.name()], db);
-            deleteViewmodel.deleteTask.done(() => router.navigate(appUrl.forTransformers(db)));
+            deleteViewmodel.deleteTask.done(() => {
+                // Resync Changes
+                viewModelBase.dirtyFlag().reset();
+                router.navigate(appUrl.forTransformers(db));
+            });
             dialog.show(deleteViewmodel);
         }
-    
     }
-
 }
-
-
 
 export = editTransformer;

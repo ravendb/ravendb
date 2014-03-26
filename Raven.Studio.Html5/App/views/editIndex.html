@@ -15,7 +15,7 @@
             <ul class="dropdown-menu">
                 <li class="use-bootstrap-tooltip" data-bind="click: addMap" title="Add a map function (Alt+M)" accesskey="M"><a href="#">Map</a></li>
                 <li class="use-bootstrap-tooltip" data-bind="click: addReduce, visible: !hasExistingReduce()" title="Add a reduce function (Alt+R)" accesskey="R"><a href="#">Reduce</a></li>
-                <li class="use-bootstrap-tooltip" data-bind="click: addField" title="Add a field (Alt+F)" accesskey="F"><a href="#">Field</a></li>
+                <li class="use-bootstrap-tooltip" data-bind="click: addField" title="Add a field (Alt+G)" accesskey="G"><a href="#">Field</a></li>
                 <li class="use-bootstrap-tooltip" data-bind="click: addTransform, visible: !hasExistingTransform()" title="Add a transform function (Alt+T) - deprecated. Use Result Transformers instead" accesskey="T"><a class="text-muted" href="#">Transform</a></li>
                 <li class="use-bootstrap-tooltip" data-bind="click: addSpatialField" title="Add a spatial field (Alt+P)" accesskey="P"><a href="#">Spatial Field</a></li>
             </ul>
@@ -61,7 +61,7 @@
                 <div class="col-md-11">
                     <div class="row">
                         <div class="col-md-11">
-                            <input type="text" class="form-control" id="indexName" placeholder="Index name" accesskey="N" data-bind="value: name" title="Index name (Alt+N)" />
+                            <input type="text" class="form-control use-bootstrap-tooltip" id="indexName" placeholder="Index name" accesskey="I" data-bind="value: name" title="Index name (Alt+I)" />
                         </div>
                     </div>
                 </div>

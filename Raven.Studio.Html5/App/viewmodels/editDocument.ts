@@ -22,13 +22,13 @@ class editDocument extends viewModelBase {
 
     document = ko.observable<document>();
     metadata: KnockoutComputed<documentMetadata>;
-    documentText = ko.observable('');
-    metadataText = ko.observable('');
+    documentText = ko.observable('').extend({ required: true });
+    metadataText = ko.observable('').extend({ required: true });
     isEditingMetadata = ko.observable(false);
     isBusy = ko.observable(false);
     metaPropsToRestoreOnSave = [];
     editedDocId: KnockoutComputed<string>;
-    userSpecifiedId = ko.observable('');
+    userSpecifiedId = ko.observable('').extend({ required: true });
     isCreatingNewDocument = ko.observable(false);
     docsList = ko.observable<pagedList>();
     docEditor: AceAjax.Editor;
@@ -52,10 +52,15 @@ class editDocument extends viewModelBase {
 
     });
 
+    relatedDocumentHrefs=ko.observableArray<{id:string;href:string}>();
+
+
+
     static editDocSelector = "#editDocumentContainer";
 
     public static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string>}>();
     
+    docEditroHasFocus = ko.observable(true);
 
     constructor() {
         super();
@@ -68,7 +73,7 @@ class editDocument extends viewModelBase {
             }
         });
 
-       
+        var self = this;
         this.metadata.subscribe((meta: documentMetadata) => {
             if (meta) {
                 this.metaPropsToRestoreOnSave.length = 0;
@@ -88,17 +93,12 @@ class editDocument extends viewModelBase {
                 for (var property in metaDto) {
                     if (metaDto.hasOwnProperty(property) && metaPropsToRemove.indexOf(property) != -1) {
                         if (metaDto[property]) {
-                            this.metaPropsToRestoreOnSave.push({ name: property, value: metaDto[property].toString() });
+                            self.metaPropsToRestoreOnSave.push({ name: property, value: metaDto[property].toString() });
                         }
                         delete metaDto[property];
                     }
                 }
-                /*metaPropsToRemove.forEach(p => {
-                    if (p in metaDto) {
-                        this.metaPropsToRestoreOnSave.push({ name: p, value: metaDto[p].toString() });
-                        delete metaDto[p];
-                    }
-                });*/
+
                 var metaString = this.stringify(metaDto);
                 this.metadataText(metaString);
                 this.userSpecifiedId(meta.id);
@@ -136,7 +136,7 @@ class editDocument extends viewModelBase {
                 this.docsList(list);
             }
         }
-		
+
         if (navigationArgs && navigationArgs.id) {
             var existingRecentDocumentsStore = editDocument.recentDocumentsInDatabases.first(x=> x.databaseName == this.databaseForEditedDoc.name);
             if (existingRecentDocumentsStore) {
@@ -162,6 +162,17 @@ class editDocument extends viewModelBase {
     attached() {
         this.initializeDocEditor();
         this.setupKeyboardShortcuts();
+        this.focusOnEditor();
+    }
+
+    // Called back after the entire composition has finished (parents and children included)
+    compositionComplete() {
+        this.userSpecifiedId('');
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
+    }
+
+    saveInObservable() {
+        this.storeDocEditorTextIntoObservable();
     }
 
     initializeDocEditor() {
@@ -175,16 +186,28 @@ class editDocument extends viewModelBase {
     }
 
     setupKeyboardShortcuts() {        
-        this.createKeyboardShortcut("alt+s", () => this.saveDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("alt+r", () => this.refreshDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("shift+d", () => this.isEditingMetadata(false), editDocument.editDocSelector);
-        this.createKeyboardShortcut("shift+m", () => this.isEditingMetadata(true), editDocument.editDocSelector);
-        this.createKeyboardShortcut("home", () => this.firstDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("end", () => this.lastDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("alt+←", () => this.previousDocumentOrLast(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("alt+→", () => this.nextDocumentOrFirst(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("alt+[", () => this.formatDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("delete", () => this.deleteDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+shift+d", () => this.focusOnDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+shift+m", () => this.focusOnMetadata(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+home", () => this.firstDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+end", () => this.lastDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+page-up", () => this.previousDocumentOrLast(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+page-down", () => this.nextDocumentOrFirst(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+shift+del", () => this.deleteDocument(), editDocument.editDocSelector);
+    }
+
+    focusOnMetadata() {
+        this.isEditingMetadata(true);
+        this.focusOnEditor();
+    }
+
+    focusOnDocument() {
+        this.isEditingMetadata(false);
+        this.focusOnEditor();
+    }
+
+    focusOnEditor() {
+        this.docEditor.focus();
     }
 
     editNewDocument() {
@@ -215,6 +238,9 @@ class editDocument extends viewModelBase {
         var saveCommand = new saveDocumentCommand(this.userSpecifiedId(), newDoc, appUrl.getDatabase());
         var saveTask = saveCommand.execute();
         saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
+            // Resync Changes
+            viewModelBase.dirtyFlag().reset();
+
             this.isCreatingNewDocument(false);
             this.loadDocument(idAndEtag.Key);
             this.updateUrl(idAndEtag.Key);
@@ -240,9 +266,7 @@ class editDocument extends viewModelBase {
         this.isEditingMetadata(false);
     }
 
-    canActivate(args: any) {
-        super.canActivate(args);
-
+    canActivate(args) {
         if (args && args.id) {
 
             var canActivateResult = $.Deferred();
@@ -251,6 +275,7 @@ class editDocument extends viewModelBase {
                 .done((document) => {
                     this.document(document);
                     canActivateResult.resolve({ can: true });
+                    this.relatedDocumentHrefs(this.findRelatedDocuments(document));
                 })
                 .fail(() => {
                     ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + args.id + " document", null));
@@ -261,14 +286,33 @@ class editDocument extends viewModelBase {
         } else {
             return $.Deferred().resolve({ can: true });
         }
-
-        
-        
     }
+
+    findRelatedDocuments(doc: documentBase): { id: string; href: string }[] {
+        var results: { id: string; href: string }[] = [];
+        var documentFields = doc.getDocumentPropertyNames();
+        for (var key in documentFields) {
+            if (typeof doc[documentFields[key]] === "string" && doc[documentFields[key]].indexOf("/") > 0) {
+                results.push({
+                    id: doc[documentFields[key]].toString(),
+                    href: appUrl.forEditDoc(doc[documentFields[key]].toString(), null, null, this.activeDatabase())}
+            );
+            }
+            
+        }
+
+        return results;
+    }
+
 
     loadDocument(id: string): JQueryPromise<document> {
         var loadDocTask = new getDocumentWithMetadataCommand(id, this.databaseForEditedDoc).execute();
-        loadDocTask.done(document => this.document(document));
+        loadDocTask.done(document=> {
+            this.document(document);
+
+            // Resync Changes
+            viewModelBase.dirtyFlag().reset();
+        });
         loadDocTask.fail(response => this.failedToLoadDoc(id, response));
         loadDocTask.always(() => this.isBusy(false));
         this.isBusy(true);
@@ -296,6 +340,9 @@ class editDocument extends viewModelBase {
             viewModel.deletionTask.done(() => this.nextDocumentOrFirst());
             app.showDialog(viewModel, editDocument.editDocSelector);
         }
+
+        // Resync Changes
+        viewModelBase.dirtyFlag().reset();
     }
 
     formatDocument() {

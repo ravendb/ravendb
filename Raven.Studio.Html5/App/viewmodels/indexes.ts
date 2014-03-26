@@ -9,6 +9,7 @@ import getStoredQueriesCommand = require("commands/getStoredQueriesCommand");
 import querySort = require("models/querySort");
 import app = require("durandal/app");
 import resetIndexConfirm = require("viewmodels/resetIndexConfirm");
+import router = require("plugins/router"); 
 
 class indexes extends viewModelBase {
 
