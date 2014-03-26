@@ -11,7 +11,6 @@ import database = require("models/database");
 import conflictVersion = require("models/conflictVersion");
 import transformer = require("models/transformer");
 import indexDefinition = require("models/indexDefinition");
-import replicationSource = require("models/replicationSource");
 
 import getConflictsCommand = require("commands/getConflictsCommand");
 import getReplicationSourcesCommand = require("commands/getReplicationSourcesCommand");
@@ -25,7 +24,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 class conflicts extends viewModelBase {
 
     displayName = "conflicts";
-    sourcesLookup: { [s: string]: replicationSource; } = {};
+    sourcesLookup: dictionary<string> = {};
 
     //TODO: subscribe to databases and remove item from list once user delete DB.
     static performedIndexChecks: Array<string> = [];
@@ -55,7 +54,7 @@ class conflicts extends viewModelBase {
         this.currentConflictsPagedItems(this.createPagedList(database));
     }
 
-    loadReplicationSources(db: database): JQueryPromise<replicationSource[]> {
+    loadReplicationSources(db: database): JQueryPromise<dictionary<string>> {
         return new getReplicationSourcesCommand(db)
             .execute()
             .done(results => this.replicationSourcesLoaded(results, db));
@@ -93,9 +92,9 @@ class conflicts extends viewModelBase {
         var indexDef = indexDefinition.empty();
         indexDef.name(conflicts.conflictsIndexName);
         indexDef.maps()[0](
-        "from doc in docs " +
-            " let id = doc[\"@metadata\"][\"@id\"] " + 
-            " where doc[\"@metadata\"][\"Raven-Replication-Conflict\"] == true && (id.Length < 47 || !id.Substring(id.Length - 47).StartsWith(\"/conflicts/\", StringComparison.OrdinalIgnoreCase)) " + 
+        "from doc in docs \r\n" +
+            " let id = doc[\"@metadata\"][\"@id\"] \r\n" + 
+            " where doc[\"@metadata\"][\"Raven-Replication-Conflict\"] == true && (id.Length < 47 || !id.Substring(id.Length - 47).StartsWith(\"/conflicts/\", StringComparison.OrdinalIgnoreCase)) \r\n" + 
             " select new { ConflictDetectedAt = (DateTime)doc[\"@metadata\"][\"Last-Modified\"] }");
 
         return indexDef.toDto();
@@ -103,23 +102,22 @@ class conflicts extends viewModelBase {
     static getConflictsTransformerDefinition(): transformer {
         var transDef = transformer.empty();
         transDef.name(conflicts.conflictsTransformerName);
-        transDef.transformResults("from result in results " +
-            " select new {  " +
-	        " Id = result[\"__document_id\"], " +
-	        " ConflictDetectedAt = result[\"@metadata\"].Value<DateTime>(\"Last-Modified\"),  " +
-	        " EntityName = result[\"@metadata\"][\"Raven-Entity-Name\"], " +
-	        " Versions = result.Conflicts.Select(versionId => { " +
-            "                 var version = LoadDocument(versionId); " +
-            "                 return new { Id = versionId, SourceId = version[\"@metadata\"][\"Raven-Replication-Source\"] }; " +
-            "             }) " +
-            "         }");
+        transDef.transformResults("from result in results \r\n" +
+            "                select new {  \r\n" +
+	        "                    Id = result[\"__document_id\"], \r\n" +
+	        "                    ConflictDetectedAt = result[\"@metadata\"].Value<DateTime>(\"Last-Modified\"),  \r\n" +
+	        "                    EntityName = result[\"@metadata\"][\"Raven-Entity-Name\"], \r\n" +
+	        "                    Versions = result.Conflicts.Select(versionId => { \r\n" +
+            "                        var version = LoadDocument(versionId); \r\n" +
+            "                 return new { Id = versionId, SourceId = version[\"@metadata\"][\"Raven-Replication-Source\"] }; \r\n" +
+            "             }) \r\n" +
+            "         }\r\n");
         return transDef;
     }
     
 
-    replicationSourcesLoaded(sources: Array<replicationSource>, db: database) {
-        this.sourcesLookup = {};
-        $.map(sources, s => this.sourcesLookup[s.serverInstanceId] = s);
+    replicationSourcesLoaded(sources: dictionary<string> , db: database) {
+        this.sourcesLookup = sources;
     }
 
     databaseChanged(db: database) {
@@ -144,20 +142,14 @@ class conflicts extends viewModelBase {
     getTextForVersion(conflictVersion: conflictVersion) {
         var replicationSource = this.sourcesLookup[conflictVersion.sourceId];
         var text = "";
-        if (replicationSource && replicationSource.name) {
-            text = " (" + replicationSource.name + ")";
+        if (replicationSource) {
+            text = " (" + replicationSource + ")";
         }
         return text;
     }
 
     getServerUrlForVersion(conflictVersion: conflictVersion) {
-        var replicationSource = this.sourcesLookup[conflictVersion.sourceId];
-        var text = "";
-        if (replicationSource && replicationSource.source) {
-            text = replicationSource.source;
-        }
-        return text;
-        
+        return this.sourcesLookup[conflictVersion.sourceId] || "";
     }
 
 }

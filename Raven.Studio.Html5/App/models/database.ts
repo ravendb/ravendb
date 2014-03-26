@@ -14,10 +14,6 @@ class database {
     }
 
     static getNameFromUrl(url: string) {
-        // for embedded studio we don't pass full url
-        if (url.indexOf("http") < 0) {
-            return url;
-        }
         var index = url.indexOf("databases/");
         return (index > 0) ? url.substring(index + 10) : "";
     }

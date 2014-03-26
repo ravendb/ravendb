@@ -8,6 +8,10 @@ interface documentDto extends metadataAwareDto {
 interface conflictsInfoDto extends indexResultsDto<conflictDto> {
 }
 
+interface dictionary<TValue> {
+    [key: string]: TValue;
+}
+
 interface metadataAwareDto {
     '@metadata'?: documentMetadataDto;
 }

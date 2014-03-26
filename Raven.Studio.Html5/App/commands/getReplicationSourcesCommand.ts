@@ -1,5 +1,4 @@
 import commandBase = require("commands/commandBase");
-import replicationSource = require("models/replicationSource");
 import database = require("models/database");
 
 class getReplicationSourcesCommand extends commandBase {
@@ -7,7 +6,7 @@ class getReplicationSourcesCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Array<replicationSource>> {
+    execute(): JQueryPromise<dictionary<string>> {
         var args = {
             startsWith: "Raven/Replication/Sources",
             exclude: null,
@@ -16,12 +15,11 @@ class getReplicationSourcesCommand extends commandBase {
         };
 
         return this.query("/docs", args, this.db, (dtos: replicationSourceDto[]) => {
-            var sources = dtos.map(dto => new replicationSource(dto));
-            // and push current db as replication source
-            //TODO: this.db.name returns database name instead of entire url!
-            sources.push(new replicationSource({ ServerInstanceId: this.db.statistics().DatabaseId, Source: this.db.name }));
-            return sources;
+            var result: dictionary<string> = {};
+            dtos.forEach(v => result[v.ServerInstanceId] = database.getNameFromUrl(v.Source));
+            result[this.db.statistics().DatabaseId] = this.db.name;
 
+            return result;
         });
     }
 }
