@@ -37,7 +37,12 @@ namespace Raven.Server
 		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
 		public DocumentDatabase SystemDatabase
 		{
-			get { return options.SystemDatabase; }
+		    get
+		    {
+		        if (options == null)
+		            return null;
+		        return options.SystemDatabase;
+		    }
 		}
 
 		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
