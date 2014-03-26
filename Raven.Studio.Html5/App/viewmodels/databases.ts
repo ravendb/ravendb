@@ -196,13 +196,19 @@ class databases extends viewModelBase {
     }
 
     goToSystemDatabase() {
-        var systemDbConfirm = new viewSystemDatabaseConfirm();
-        systemDbConfirm.viewTask.done(()=> {
+        if (appUrl.warnWhenUsingSystemDatabase == true) {
+            var systemDbConfirm = new viewSystemDatabaseConfirm();
+            systemDbConfirm.viewTask.done(()=> {
+                var systemDb = appUrl.getSystemDatabase();
+                systemDb.activate();
+                this.goToDocuments(systemDb);
+            });
+            app.showDialog(systemDbConfirm);
+        } else {
             var systemDb = appUrl.getSystemDatabase();
             systemDb.activate();
             this.goToDocuments(systemDb);
-        });
-        app.showDialog(systemDbConfirm);
+        }
     }
 
 }

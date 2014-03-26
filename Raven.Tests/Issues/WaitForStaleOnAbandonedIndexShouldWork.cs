@@ -29,7 +29,6 @@ namespace Raven.Tests.Issues
 
 				var indexName = store.DatabaseCommands.GetIndexNames(0, 25).Single(s => s.StartsWith("Auto/"));
 
-
 				using (var session = store.OpenSession())
 				{
 					for (int i = 0; i < 10; i++)

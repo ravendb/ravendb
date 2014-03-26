@@ -22,6 +22,7 @@ import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
+import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 
 class shell extends viewModelBase {
     private router = router;
@@ -78,7 +79,7 @@ class shell extends viewModelBase {
     }
 
     getValidRoute(instance: Object, instruction: DurandalRouteInstruction) :any {
-        if (!this.activeDatabase().isSystem && instruction.queryString && (instruction.queryString.indexOf("database=<system>") >= 0 || instruction.queryString.indexOf("database=%3Csystem%3E") >= 0 )) {
+        if (appUrl.warnWhenUsingSystemDatabase && !this.activeDatabase().isSystem && instruction.queryString && (instruction.queryString.indexOf("database=<system>") >= 0 || instruction.queryString.indexOf("database=%3Csystem%3E") >= 0 )) {
             var systemDbConfirm = new viewSystemDatabaseConfirm(this.activeDatabase());
 
             systemDbConfirm.viewTask.done(()=> {
@@ -219,10 +220,18 @@ class shell extends viewModelBase {
             .fail(result => this.handleRavenConnectionFailure(result))
             .done(results => {
                 this.databasesLoaded(results);
-                router.activate();
-                this.fetchBuildVersion();
-                this.fetchLicenseStatus();
-            });
+            new getDocumentWithMetadataCommand("Raven/StudioConfig", appUrl.getSystemDatabase()).
+                execute()
+                .done((doc: document)=> {
+                    if (!doc["WarnWhenUsingSystemDatabase"] && doc["WarnWhenUsingSystemDatabase"] == false) {
+                        appUrl.warnWhenUsingSystemDatabase = false;
+                    }
+                }).always(()=> {
+                    router.activate();
+                    this.fetchBuildVersion();
+                    this.fetchLicenseStatus();
+                });
+        });
     }
 
     handleRavenConnectionFailure(result) {
