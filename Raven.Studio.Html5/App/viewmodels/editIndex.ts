@@ -68,7 +68,26 @@ class editIndex extends viewModelBase {
             this.priority(indexPriority.normal);
             this.editedIndex(this.createNewIndexDefinition());
         }
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.name, this.editedTransformer().transformResults]);
     }
+
+    attached() {
+        this.addMapHelpPopover();
+        this.addReduceHelpPopover();
+        this.addTransformHelpPopover();
+    }
+
+    // Called back after the entire composition has finished (parents and children included)
+    /*compositionComplete() {
+        super.compositionComplete();
+        
+    }
+
+    saveInObservable() {
+        var docEditor = ace.edit("docEditor");
+        var docEditorText = docEditor.getSession().getValue();
+        this.editedTransformer().transformResults(docEditorText);
+    }*/
 
     editExistingIndex(unescapedIndexName: string) {
         var indexName = decodeURIComponent(unescapedIndexName);
@@ -76,12 +95,6 @@ class editIndex extends viewModelBase {
         this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
         this.statsUrl(appUrl.forStatus(this.activeDatabase()));
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
-    }
-
-    attached() {
-        this.addMapHelpPopover();
-        this.addReduceHelpPopover();
-        this.addTransformHelpPopover();
     }
 
     addMapHelpPopover() {

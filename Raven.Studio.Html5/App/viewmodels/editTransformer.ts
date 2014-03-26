@@ -19,6 +19,8 @@ class editTransformer extends viewModelBase {
     static containerSelector = "#editTransformerContainer";
     editorCollection = ko.observableArray<{ alias: string; controller: HTMLElement }>();
     
+    private docEditor;
+
     constructor() {
         super();
         aceEditorBindingHandler.install();
@@ -33,25 +35,23 @@ class editTransformer extends viewModelBase {
         } else {
             this.editedTransformer(transformer.empty());
         }
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults]);
     }
 
-    attached() { 
+    attached() {
         this.addTransformerHelpPopover();
         this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editTransformer.containerSelector);
-        this.createKeyboardShortcut("alt+shift+del", () => this.deleteTransformer(), editTransformer.containerSelector);
-        this.focusOnEditor();
+        this.createKeyboardShortcut("alt+shift+del", ()=> this.deleteTransformer(), editTransformer.containerSelector);
     }
 
     // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
-        super.compositionComplete();
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults]);
+        this.docEditor = ko.utils.domData.get($("#transformerAceEditor")[0], "aceEditor");
+        this.focusOnEditor();
     }
 
     saveInObservable() {
-        debugger;
-        var docEditor = ko.utils.domData.get($("#transAceEditor")[0], "aceEditor");
-        var docEditorText = docEditor.getSession().getValue();
+        var docEditorText = this.docEditor.getSession().getValue();
         this.editedTransformer().transformResults(docEditorText);
     }
 
@@ -66,10 +66,8 @@ class editTransformer extends viewModelBase {
     focusOnEditor() {
         var editorElement = $("#transAceEditor").length == 1 ? $("#transAceEditor")[0] : null;
         if (editorElement) {
-            var editor = ko.utils.domData.get($("#transAceEditor")[0], "aceEditor");
-
-            if (editor) {
-                editor.focus();
+            if (this.docEditor) {
+                this.docEditor.focus();
             }
         }
     }
