@@ -169,7 +169,7 @@ namespace Raven.Tests.Helpers
 				configureStore(store);
 			ModifyStore(store);
 
-			store.Initialize();
+		    store.Initialize(ensureDatabaseExists: false);
 			return store;
 		}
 

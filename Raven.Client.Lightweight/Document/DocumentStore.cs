@@ -373,11 +373,16 @@ namespace Raven.Client.Document
 			return databaseCommands;
 		}
 
+	    public override IDocumentStore Initialize()
+	    {
+	        return Initialize(true);
+	    }
+
 		/// <summary>
 		/// Initializes this instance.
 		/// </summary>
 		/// <returns></returns>
-		public override IDocumentStore Initialize()
+		public IDocumentStore Initialize(bool ensureDatabaseExists)
 		{
 			if (initialized)
 				return this;
@@ -412,7 +417,8 @@ namespace Raven.Client.Document
 #if !NETFX_CORE && !MONO
 				RecoverPendingTransactions();
 
-				if (string.IsNullOrEmpty(DefaultDatabase) == false && 
+				if (ensureDatabaseExists && 
+                    string.IsNullOrEmpty(DefaultDatabase) == false && 
 					DefaultDatabase.Equals(Constants.SystemDatabase) == false) //system database exists anyway
 				{
 					DatabaseCommands.ForSystemDatabase().GlobalAdmin.EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
