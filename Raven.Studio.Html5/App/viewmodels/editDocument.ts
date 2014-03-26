@@ -137,7 +137,7 @@ class editDocument extends viewModelBase {
 
     // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
-        this.userSpecifiedId('');
+        //this.userSpecifiedId(''); // Don't clear this out: it will remove the ID of the document we're editing.
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
     }
 

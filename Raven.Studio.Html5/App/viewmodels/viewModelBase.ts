@@ -10,8 +10,8 @@ class viewModelBase {
     activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private keyboardShortcutDomContainers: string[] = [];
     private modelPollingHandle: number;
-    public static dirtyFlag = new ko.DirtyFlag([]);
-
+    static dirtyFlag = new ko.DirtyFlag([]);
+    
     /*
      * Called by Durandal when checking whether this navigation is allowed. 
      * Possible return values: boolean, promise<boolean>, {redirect: 'some/other/route'}, promise<{redirect: 'some/other/route'}>

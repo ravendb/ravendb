@@ -29,6 +29,11 @@ class databases extends viewModelBase {
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterDatabases(s));
     }
 
+    // Override canActivate: we can always load this page, regardless of any system db prompt.
+    canActivate(args: any): any {
+        return true;
+    }
+
     modelPolling() {
         new getDatabasesCommand()
             .execute()
