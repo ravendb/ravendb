@@ -1,8 +1,12 @@
 class column {
 
     width = ko.observable(0);
+    name: string; // prop name
+    title: string; // title (human readable text)
 
-    constructor(public name: string, width: number) {
+    constructor(name: string, width: number, title?: string) {
+        this.name = name;
+        this.title = title || name;
         this.width(width);
     }
 }

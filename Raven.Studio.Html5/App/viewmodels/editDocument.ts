@@ -15,6 +15,8 @@ import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
+import alertType = require("common/alertType");
+import alertArgs = require("common/alertArgs");
 
 class editDocument extends viewModelBase {
 
@@ -31,8 +33,29 @@ class editDocument extends viewModelBase {
     docsList = ko.observable<pagedList>();
     docEditor: AceAjax.Editor;
     databaseForEditedDoc: database;
+    topRecentDocuments = ko.computed(() => {
+        var curDb = this.activeDatabase().name;
+
+        var recentDocumentsForCurDb = editDocument.recentDocumentsInDatabases().first(x=> x.databaseName === curDb);
+
+        if (recentDocumentsForCurDb) {
+            var value = recentDocumentsForCurDb.recentDocuments().slice(0, 5).map((docId: string)=> {
+                return {
+                    docId: docId,
+                    docUrl: appUrl.forEditDoc(docId, null, null, this.activeDatabase())
+                };
+            });
+            return value;
+        } else {
+            return [];
+        }
+
+    });
 
     static editDocSelector = "#editDocumentContainer";
+
+    public static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string>}>();
+    
 
     constructor() {
         super();
@@ -110,7 +133,21 @@ class editDocument extends viewModelBase {
         }
 		
         if (navigationArgs && navigationArgs.id) {
-            return this.loadDocument(navigationArgs.id);
+            var existingRecentDocumentsStore = editDocument.recentDocumentsInDatabases.first(x=> x.databaseName == this.databaseForEditedDoc.name);
+            if (existingRecentDocumentsStore) {
+                var existingDocumentInStore = existingRecentDocumentsStore.recentDocuments.first(x=> x === navigationArgs.id);
+                if (!existingDocumentInStore) {
+                    if (existingRecentDocumentsStore.recentDocuments().length == 5) {
+                        existingRecentDocumentsStore.recentDocuments.pop();
+                    }
+                    existingRecentDocumentsStore.recentDocuments.unshift(navigationArgs.id);
+                }
+
+            } else {
+                editDocument.recentDocumentsInDatabases.push({ databaseName: this.databaseForEditedDoc.name, recentDocuments: ko.observableArray([navigationArgs.id]) });
+            }
+            
+            return true;
         } else {
             this.editNewDocument();
         }
@@ -161,8 +198,7 @@ class editDocument extends viewModelBase {
     }
 
     failedToLoadDoc(docId, errorResponse) {
-        sys.log("Failed to load document for editing.", errorResponse);
-        app.showMessage("Can't edit '" + docId + "'. Details logged in the browser console.", ":-(", ['Dismiss']);
+        ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + docId + " document", null));
     }
 
     saveDocument() {
@@ -210,6 +246,30 @@ class editDocument extends viewModelBase {
 
     activateDoc() {
         this.isEditingMetadata(false);
+    }
+
+    canActivate(args) {
+        if (args && args.id) {
+
+            var canActivateResult = $.Deferred();
+            new getDocumentWithMetadataCommand(args.id, this.activeDatabase())
+                .execute()
+                .done((document) => {
+                    this.document(document);
+                    canActivateResult.resolve({ can: true });
+                })
+                .fail(() => {
+                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + args.id + " document", null));
+                    canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
+                }
+            );
+            return canActivateResult;
+        } else {
+            return $.Deferred().resolve({ can: true });
+        }
+
+        
+        
     }
 
     loadDocument(id: string): JQueryPromise<document> {
@@ -335,6 +395,7 @@ class editDocument extends viewModelBase {
             observableToUpdate(docEditorText);
         }
     }
+
 }
 
 export = editDocument;

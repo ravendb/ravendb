@@ -31,6 +31,7 @@ class ctor {
     gridViewport: JQuery;
     scrollThrottleTimeoutHandle = 0;
     firstVisibleRow: row = null;
+
     settings: {
         documentsSource: KnockoutObservable<pagedList>;
         dynamicHeightTargetSelector: string;
@@ -41,6 +42,7 @@ class ctor {
         showIds: boolean;
         useContextMenu: boolean;
         maxHeight: string;
+        customColumnParams: { [column: string]: customColumnParams };
     }
 
     constructor() {
@@ -54,7 +56,8 @@ class ctor {
             showCheckboxes: true,
             showIds: true,
             useContextMenu: true,
-            maxHeight: 'none'
+            maxHeight: 'none',
+            customColumnParams: {},
         };
         this.settings = $.extend(defaults, settings);
 
@@ -112,7 +115,7 @@ class ctor {
     createRecycleRows(rowCount: number) {
         var rows = [];
         for (var i = 0; i < rowCount; i++) {
-            var newRow = new row(this.settings.showIds);
+            var newRow = new row(this.settings.showIds, this);
             newRow.createPlaceholderCells(this.columns().map(c => c.name));
             newRow.rowIndex(i);
             var desiredTop = i * this.rowHeight;
@@ -147,7 +150,6 @@ class ctor {
 
     setupKeyboardShortcuts() {
         this.setupKeyboardShortcut("DELETE", () => this.deleteSelectedDocs());
-        this.setupKeyboardShortcut("F2", () => this.editLastSelectedDoc());
         this.setupKeyboardShortcut("Ctrl+C,D", () => this.copySelectedDocs());
         this.setupKeyboardShortcut("Ctrl+C,I", () => this.copySelectedDocIds());
     }
@@ -193,12 +195,12 @@ class ctor {
         }
     }
 
-    fillRow(rowData: document, rowIndex: number) {
+    fillRow(rowData: documentBase, rowIndex: number) {
         var rowAtIndex: row = ko.utils.arrayFirst(this.recycleRows(), (r: row) => r.rowIndex() === rowIndex);
         if (rowAtIndex) {
             rowAtIndex.fillCells(rowData);
             rowAtIndex.collectionClass(this.getCollectionClassFromDocument(rowData));
-            rowAtIndex.editUrl(appUrl.forEditDoc(rowData.getId(), rowData.__metadata.ravenEntityName, rowIndex, appUrl.getDatabase()));
+            rowAtIndex.editUrl(appUrl.forEditDoc(rowData.getId(), this.getEntityName(rowData), rowIndex, appUrl.getDatabase()));
         }
     }
 
@@ -212,12 +214,48 @@ class ctor {
         }
     }
 
-    getCollectionClassFromDocument(doc: document): string {
-        var entityName = doc.__metadata.ravenEntityName;
-        return collection.getCollectionCssClass(entityName);
+    getEntityName(doc: documentBase) {
+        var obj: any = doc;
+        if (obj && obj.getEntityName) {
+            var document = <document> obj;
+            return document.getEntityName();
+        }
+        return null;
     }
 
-    ensureColumnsForRows(rows: Array<document>) {
+    getCollectionClassFromDocument(doc: documentBase): string {
+        
+        return collection.getCollectionCssClass(this.getEntityName(doc));
+    }
+
+    getColumnWidth(columnName: string): number {
+        var customParams = this.settings.customColumnParams;
+        if (customParams && customParams[columnName]) {
+            if (customParams[columnName].width) {
+                return customParams[columnName].width;
+            }
+        }
+
+        var defaultColumnWidth = 200;
+        var columnWidth = defaultColumnWidth;
+        if (columnName === "Id") {
+            return ctor.idColumnWidth;
+        }
+        return defaultColumnWidth;
+    }
+
+    getColumnName(columnName: string): string {
+        var customParams = this.settings.customColumnParams;
+        if (customParams && customParams[columnName]) {
+            if (customParams[columnName].title) {
+                return customParams[columnName].title;
+            }
+        }
+        // fallback to default value - no override found.
+        return columnName;
+    }
+
+    ensureColumnsForRows(rows: Array<documentBase>) {
         // This is called when items finish loading and are ready for display.
         // Keep allocations to a minimum.
 
@@ -244,14 +282,11 @@ class ctor {
         }
 
         for (var prop in columnsNeeded) {
-            var defaultColumnWidth = 200;
-            var columnWidth = defaultColumnWidth;
-            if (prop === "Id") {
-                columnWidth = ctor.idColumnWidth;
-            }
+            var columnWidth = this.getColumnWidth(prop);
+            var columnName = this.getColumnName(prop);
 
             // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
-            var newColumn = new column(prop, columnWidth);
+            var newColumn = new column(prop, columnWidth, columnName);
             if (prop === "Name") {
                 this.columns.splice(2, 0, newColumn);
             } else if (this.columns().length < 10) {
@@ -321,6 +356,14 @@ class ctor {
         }
 
         return null;
+    }
+
+    getTemplateFor(columnName: string): string {
+        var params = this.settings.customColumnParams[columnName];
+        if (params) {
+            return params.template;
+        }
+        return undefined;
     }
 
     toggleRowChecked(row: row, isShiftSelect = false) {

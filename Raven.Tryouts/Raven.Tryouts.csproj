@@ -46,6 +46,7 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -206,10 +207,6 @@
     <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
       <Project>{14F2D508-8E06-407B-9451-97E99538E26B}</Project>
       <Name>Raven.Tests.Helpers</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
-      <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>
-      <Name>Raven.Tests</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron.Tests\Voron.Tests.csproj">
       <Project>{3C2CD044-CF12-48D1-9C43-64A9058C165E}</Project>

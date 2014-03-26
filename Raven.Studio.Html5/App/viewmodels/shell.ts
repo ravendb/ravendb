@@ -22,6 +22,7 @@ import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
+import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 
 class shell extends viewModelBase {
     private router = router;
@@ -60,6 +61,7 @@ class shell extends viewModelBase {
         router.map([
             { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: false, hash: this.appUrls.databasesManagement },
             { route: 'documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: this.appUrls.documents },
+            { route: 'conflicts', title: 'Conflicts', moduleId: 'viewmodels/conflicts', nav: true, hash: this.appUrls.conflicts },
             { route: 'indexes*details', title: 'Indexes', moduleId: 'viewmodels/indexesShell', nav: true, hash: this.appUrls.indexes },
             { route: 'transformers*details', title: 'Transformers', moduleId: 'viewmodels/transformersShell', nav: false, hash: this.appUrls.transformers },
             { route: 'query*details', title: 'Query', moduleId: 'viewmodels/queryShell', nav: true, hash: this.appUrls.query(null) },
@@ -78,7 +80,7 @@ class shell extends viewModelBase {
     }
 
     getValidRoute(instance: Object, instruction: DurandalRouteInstruction) :any {
-        if (!this.activeDatabase().isSystem && instruction.queryString && (instruction.queryString.indexOf("database=<system>") >= 0 || instruction.queryString.indexOf("database=%3Csystem%3E") >= 0 )) {
+        if (appUrl.warnWhenUsingSystemDatabase && !this.activeDatabase().isSystem && instruction.queryString && (instruction.queryString.indexOf("database=<system>") >= 0 || instruction.queryString.indexOf("database=%3Csystem%3E") >= 0 )) {
             var systemDbConfirm = new viewSystemDatabaseConfirm(this.activeDatabase());
 
             systemDbConfirm.viewTask.done(()=> {
@@ -219,10 +221,18 @@ class shell extends viewModelBase {
             .fail(result => this.handleRavenConnectionFailure(result))
             .done(results => {
                 this.databasesLoaded(results);
-                router.activate();
-                this.fetchBuildVersion();
-                this.fetchLicenseStatus();
-            });
+            new getDocumentWithMetadataCommand("Raven/StudioConfig", appUrl.getSystemDatabase()).
+                execute()
+                .done((doc: document)=> {
+                    if (!doc["WarnWhenUsingSystemDatabase"] && doc["WarnWhenUsingSystemDatabase"] == false) {
+                        appUrl.warnWhenUsingSystemDatabase = false;
+                    }
+                }).always(()=> {
+                    router.activate();
+                    this.fetchBuildVersion();
+                    this.fetchLicenseStatus();
+                });
+        });
     }
 
     handleRavenConnectionFailure(result) {
@@ -320,10 +330,11 @@ class shell extends viewModelBase {
     }
 
     selectDatabase(db: database) {
-        db.activate();
-
-        var updatedUrl = appUrl.forCurrentPage(db);
-        this.navigate(updatedUrl);
+        if (db.name != this.activeDatabase().name) {
+            db.activate();
+            var updatedUrl = appUrl.forCurrentPage(db);
+            this.navigate(updatedUrl);
+        }
     }
 
     fetchBuildVersion() {
