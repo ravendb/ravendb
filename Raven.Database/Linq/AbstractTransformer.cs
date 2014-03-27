@@ -20,6 +20,11 @@ namespace Raven.Database.Linq
 		// ReSharper disable once InconsistentNaming
 		protected DynamicNullObject __dynamic_null = new DynamicNullObject();
 
+		// Required for RavenDB-1519
+		protected dynamic LoadDocument<TIgnored>(object key)
+		{
+			return LoadDocument(key);
+		}
 
 		protected dynamic LoadDocument(object key)
 		{

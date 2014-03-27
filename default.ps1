@@ -284,21 +284,13 @@ task CopyServer -depends CreateOutpuDirectories {
 	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $buildartifacts_dir\Output\Server\Raven.Server.exe.config
 }
 
-task CopyInstaller {
-	if($env:buildlabel -eq 13)
-	{
-	  return
-	}
+function SignFile($filePath){
 
-	Copy-Item $base_dir\Raven.Setup\bin\$global:configuration\RavenDB.Setup.exe "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
-}
-
-task SignInstaller {
 	if($env:buildlabel -eq 13)
 	{
 		return
 	}
-  
+	
 	$signTool = "C:\Program Files (x86)\Windows Kits\8.0\bin\x86\signtool.exe"
 	if (!(Test-Path $signTool)) 
 	{
@@ -327,10 +319,29 @@ task SignInstaller {
 	{
 		throw "Certificate password must be provided"
 	}
-  
-  $installerFile = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
     
-  Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "http://timestamp.verisign.com/scripts/timstamp.dll" "$installerFile" }
+	Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "http://timestamp.verisign.com/scripts/timstamp.dll" "$filePath" }
+}
+
+task SignServer {
+  $serverFile = "$build_dir\Output\Server\Raven.Server.exe"
+  SignFile($serverFile)
+  
+} 
+
+task CopyInstaller {
+	if($env:buildlabel -eq 13)
+	{
+	  return
+	}
+
+	Copy-Item $build_dir\RavenDB.Setup.exe "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
+}
+
+task SignInstaller {
+
+  $installerFile = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
+  SignFile($installerFile)
 } 
 
 task CreateDocs {
@@ -401,6 +412,7 @@ task DoReleasePart1 -depends Compile, `
 	CopyWeb, `
 	CopyBundles, `
 	CopyServer, `
+	SignServer, `
 	CopyRootFiles, `
 	ZipOutput {	
 	
@@ -713,9 +725,10 @@ task CreateSymbolSources -depends CreateNugetPackages {
 					$srcDirName2 = [io.path]::GetFileNameWithoutExtension($projectPath)
 
 					Get-ChildItem $srcDirName2\*.cs -Recurse |	ForEach-Object {
-						$indexOf = $_.FullName.IndexOf($srcDirName2)
+						$indexOf = $_.FullName.IndexOf($srcDirName2)	
 						$copyTo = $_.FullName.Substring($indexOf + $srcDirName2.Length + 1)
-						$copyTo = "$nuget_dir\$dirName\src\$copyTo"
+						$copyTo = "$nuget_dir\$dirName\src\$srcDirName2\$copyTo"
+						
 						New-Item -ItemType File -Path $copyTo -Force | Out-Null
 						Copy-Item $_.FullName $copyTo -Recurse -Force
 					}
@@ -742,6 +755,7 @@ task CreateSymbolSources -depends CreateNugetPackages {
 								Write-Host "Copy $srcDirName2\$fileToCopy" -ForegroundColor Magenta
 								Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
 							}
+							
 							New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
 							Copy-Item "$srcDirName2\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
 						}
@@ -751,13 +765,13 @@ task CreateSymbolSources -depends CreateNugetPackages {
 			}
 		}
 		
-		Get-ChildItem "$nuget_dir\$dirName\*.dll" -recurse -exclude Raven* | ForEach-Object {
+		Get-ChildItem "$nuget_dir\$dirName\src\*.dll" -recurse -exclude Raven* | ForEach-Object {
 			Remove-Item $_ -force -recurse -ErrorAction SilentlyContinue
 		}
-		Get-ChildItem "$nuget_dir\$dirName\*.pdb" -recurse -exclude Raven* | ForEach-Object {
+		Get-ChildItem "$nuget_dir\$dirName\src\*.pdb" -recurse -exclude Raven* | ForEach-Object {
 			Remove-Item $_ -force -recurse -ErrorAction SilentlyContinue
 		}
-		Get-ChildItem "$nuget_dir\$dirName\*.xml" -recurse | ForEach-Object {
+		Get-ChildItem "$nuget_dir\$dirName\src\*.xml" -recurse | ForEach-Object {
 			Remove-Item $_ -force -recurse -ErrorAction SilentlyContinue
 		}
 		

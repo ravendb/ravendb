@@ -41,9 +41,9 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void TwoMastersOneSlaveAttachmentReplicationIssue()
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
-			var store3 = CreateStore();
+			var store1 = CreateStore(requestedStorage: "esent");
+			var store2 = CreateStore(requestedStorage: "esent");
+			var store3 = CreateStore(requestedStorage: "esent");
 
 			SetupReplication(store1.DatabaseCommands, store2, store3);
 			SetupReplication(store2.DatabaseCommands, store1, store3);
@@ -60,6 +60,8 @@ namespace Raven.Tests.Issues
 
 			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
+			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
+
 			var attachment = store2.DatabaseCommands.GetAttachment("users/1");
 			store2.DatabaseCommands.PutAttachment("users/1", attachment.Etag, new MemoryStream(new byte[] { 2 }), attachment.Metadata);
 
@@ -72,6 +74,8 @@ namespace Raven.Tests.Issues
 
 			RemoveReplication(store2.DatabaseCommands);
 			SetupReplication(store1.DatabaseCommands, store3);
+
+			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
 			var conflictException = Assert.Throws<ConflictException>(() =>
 			{
@@ -88,6 +92,8 @@ namespace Raven.Tests.Issues
 			RemoveReplication(store2.DatabaseCommands);
 			SetupReplication(store1.DatabaseCommands, store2, store3);
 			SetupReplication(store2.DatabaseCommands, store1, store3);
+
+			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
 			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
@@ -146,9 +152,9 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void TwoMastersOneSlaveDocumentReplicationIssue()
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
-			var store3 = CreateStore();
+			var store1 = CreateStore(requestedStorage:"esent");
+			var store2 = CreateStore(requestedStorage: "esent");
+			var store3 = CreateStore(requestedStorage: "esent");
 
 			SetupReplication(store1.DatabaseCommands, store2, store3);
 			SetupReplication(store2.DatabaseCommands, store1, store3);
@@ -166,6 +172,8 @@ namespace Raven.Tests.Issues
 			RemoveReplication(store2.DatabaseCommands);
 
 			SetupReplication(store2.DatabaseCommands, store3);
+
+			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
 			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
@@ -210,6 +218,8 @@ namespace Raven.Tests.Issues
 			RemoveReplication(store2.DatabaseCommands);
 			SetupReplication(store1.DatabaseCommands, store3);
 
+			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
+
 			var conflictException = Assert.Throws<ConflictException>(() =>
 			{
 				for (int i = 0; i < RetriesCount; i++)
@@ -228,6 +238,8 @@ namespace Raven.Tests.Issues
 			RemoveReplication(store2.DatabaseCommands);
 			SetupReplication(store1.DatabaseCommands, store2, store3);
 			SetupReplication(store2.DatabaseCommands, store1, store3);
+
+			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
 			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 

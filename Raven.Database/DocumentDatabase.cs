@@ -32,7 +32,6 @@ using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Impl.DTC;
-using Raven.Database.Impl.Synchronization;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
@@ -55,8 +54,6 @@ namespace Raven.Database
         private readonly TaskScheduler backgroundTaskScheduler;
 
         private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
-
-        private readonly DatabaseEtagSynchronizer etagSynchronizer;
 
         private readonly object idleLocker = new object();
 
@@ -88,6 +85,8 @@ namespace Raven.Database
 
         public DocumentDatabase(InMemoryRavenConfiguration configuration, TransportState transportState = null)
         {
+            DocumentLock = new PutSerialLock();
+            this.configuration = configuration;
             Name = configuration.DatabaseName;
             Configuration = configuration;
             this.transportState = transportState ?? new TransportState();
@@ -154,9 +153,8 @@ namespace Raven.Database
                     
                     CompleteWorkContextSetup();
 
-                    etagSynchronizer = new DatabaseEtagSynchronizer(TransactionalStorage);
                     prefetcher = new Prefetcher(workContext);
-                    indexingExecuter = new IndexingExecuter(workContext, etagSynchronizer, prefetcher);
+                    indexingExecuter = new IndexingExecuter(workContext, prefetcher);
 
                     RaiseIndexingWiringComplete();
 
@@ -223,6 +221,8 @@ namespace Raven.Database
         [ImportMany]
         public OrderedPartCollection<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
 
+        internal PutSerialLock DocumentLock { get; private set; }
+
         public AttachmentActions Attachments { get; private set; }
 
         public TaskScheduler BackgroundTaskScheduler
@@ -253,14 +253,6 @@ namespace Raven.Database
         public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
         public DocumentActions Documents { get; private set; }
-
-        public DatabaseEtagSynchronizer EtagSynchronizer
-        {
-            get
-            {
-                return etagSynchronizer;
-            }
-        }
 
         [ImportMany]
         public OrderedPartCollection<AbstractDynamicCompilationExtension> Extensions { get; set; }
@@ -509,7 +501,7 @@ namespace Raven.Database
 
         public BatchResult[] Batch(IList<ICommandData> commands)
         {
-            using (TransactionalStorage.WriteLock())
+            using (DocumentLock.Lock())
             {
                 var shouldRetryIfGotConcurrencyError = commands.All(x => ((x is PatchCommandData || IsScriptedPatchCommandDataWithoutEtagProperty(x)) && (x.Etag == null)));
                 if (shouldRetryIfGotConcurrencyError)
@@ -521,7 +513,11 @@ namespace Raven.Database
                 }
 
                 BatchResult[] results = null;
-                TransactionalStorage.Batch(actions => { results = ProcessBatch(commands); });
+                TransactionalStorage.Batch(
+                    actions =>
+                    {
+                        results = ProcessBatch(commands);
+                    });
 
                 return results;
             }
@@ -534,15 +530,18 @@ namespace Raven.Database
 
             try
             {
-                try
+                using (DocumentLock.Lock())
                 {
-                    inFlightTransactionalState.Commit(txId);
-                    Log.Debug("Commit of tx {0} completed", txId);
-                    workContext.ShouldNotifyAboutWork(() => "DTC transaction commited");
-                }
-                finally
-                {
-                    inFlightTransactionalState.Rollback(txId); // this is where we actually remove the tx
+                    try
+                    {
+                        inFlightTransactionalState.Commit(txId);
+                        log.Debug("Commit of tx {0} completed", txId);
+                        workContext.ShouldNotifyAboutWork(() => "DTC transaction commited");
+                    }
+                    finally
+                    {
+                        inFlightTransactionalState.Rollback(txId); // this is where we actually remove the tx
+                    }
                 }
             }
             catch (Exception e)
@@ -1160,6 +1159,8 @@ namespace Raven.Database
                 database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
             }
         }
+
+        private DisposableAction exitDocumentSerialLock;
     }
 
     
