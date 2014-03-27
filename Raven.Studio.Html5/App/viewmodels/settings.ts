@@ -59,7 +59,8 @@ class settings extends viewModelBase {
         return true;
     }
 
-    canActivate(args) {
+    activate(args) {
+        super.activate(args);
         if (args) {
             var canActivateResult = $.Deferred();
             var db = this.activeDatabase();
@@ -85,10 +86,6 @@ class settings extends viewModelBase {
         } else {
             return $.Deferred().resolve({ can: true });
         }
-    }
-
-    activate(args) {
-        super.activate(args);
     }
 
     routeIsVisible(route: DurandalRouteConfiguration) {
