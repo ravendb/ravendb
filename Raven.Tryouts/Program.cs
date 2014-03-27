@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using NLog;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Tests.Bugs;
+using Raven.Tests.Bugs.Indexing;
 
 namespace Raven.Tryouts
 {
@@ -14,14 +15,19 @@ namespace Raven.Tryouts
 
 		private unsafe static void Main(string[] args)
 		{
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 1000; i++)
             {
                 Console.Clear();
                 Console.WriteLine(i);
-	            using (var x = new AsyncSetBasedOps())
-	            {
-		            x.AwaitAsyncPatchByIndexShouldWork("voron").Wait();
-	            }
+                //using (var x = new AsyncSetBasedOps())
+                //{
+                //    x.AwaitAsyncPatchByIndexShouldWork("voron").Wait();
+                //}
+
+                using (var x = new DynamicFields())
+                {
+                    x.CanCreateCompletelyDynamicNumericFields();
+                }
             }
 
 		}
