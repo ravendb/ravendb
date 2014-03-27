@@ -85,7 +85,7 @@ class editTransformer extends viewModelBase {
         }
     }
 
-    editExistingTransformer(unescapedTransformerName: string) :JQueryPromise{
+    editExistingTransformer(unescapedTransformerName: string) :JQueryPromise<any>{
         var indexName = decodeURIComponent(unescapedTransformerName);
         return this.fetchTransformerToEdit(indexName)
             .done((trans: savedTransformerDto) => this.editedTransformer(new transformer().initFromSave(trans)));
