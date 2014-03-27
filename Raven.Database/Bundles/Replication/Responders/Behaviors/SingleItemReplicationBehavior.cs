@@ -91,8 +91,18 @@ namespace Raven.Bundles.Replication.Responders
 			TExternal resolvedItemToSave;
 			if (TryResolveConflict(id, metadata, incoming, existingItem, out resolvedMetadataToSave, out resolvedItemToSave))
 			{
-				AddWithoutConflict(id, existingEtag, resolvedMetadataToSave, resolvedItemToSave);
-				return;
+                if (metadata.ContainsKey("Raven-Remove-Document-Marker") &&
+                   metadata.Value<bool>("Raven-Remove-Document-Marker"))
+                {
+                    DeleteItem(id, null);
+                    MarkAsDeleted(id, metadata);
+                }
+                else
+                {
+                    var etag = deleted == false ? existingEtag : null;
+                    AddWithoutConflict(id, etag, metadata, incoming);
+                }
+                return;
 			}
 
 			CreatedConflict createdConflict;

@@ -601,11 +601,6 @@ namespace Raven.Storage.Esent
             }
         }
 
-        public IDisposable WriteLock()
-        {
-            return null; // Esent doesn't need this
-        }
-
 		public IDisposable DisableBatchNesting()
 		{
 			disableBatchNesting.Value = new object();

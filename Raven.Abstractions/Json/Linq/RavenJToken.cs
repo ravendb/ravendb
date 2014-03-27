@@ -462,10 +462,10 @@ namespace Raven.Json.Linq
 		/// </param>
 		/// <param name="errorWhenNoMatch">A flag to indicate whether an error should be thrown if no token is found.</param>
 		/// <returns>The <see cref="RavenJToken"/> that matches the object path.</returns>
-		public RavenJToken SelectToken(string path, bool errorWhenNoMatch)
+		public RavenJToken SelectToken(string path, bool errorWhenNoMatch, bool createSnapshots = false)
 		{
 			var p = new RavenJPath(path);
-			return p.Evaluate(this, errorWhenNoMatch);
+			return p.Evaluate(this, errorWhenNoMatch, createSnapshots);
 		}
 
         /// <summary>
@@ -494,9 +494,9 @@ namespace Raven.Json.Linq
         /// </param>
         /// <param name="errorWhenNoMatch">A flag to indicate whether an error should be thrown if no token is found.</param>
         /// <returns>The <see cref="RavenJToken"/> that matches the object path.</returns>
-        public RavenJToken SelectToken(RavenJPath path, bool errorWhenNoMatch)
+        public RavenJToken SelectToken(RavenJPath path, bool errorWhenNoMatch, bool createSnapshots = false)
         {
-            return path.Evaluate(this, errorWhenNoMatch);
+            return path.Evaluate(this, errorWhenNoMatch, createSnapshots);
         }
 
 		/// <summary>

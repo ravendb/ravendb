@@ -315,6 +315,7 @@
     <Compile Include="Extensions\CancellationTokenSource.cs" />
     <Compile Include="Impl\DTC\EsentInFlightTransactionalState.cs" />
     <Compile Include="Impl\DTC\EsentTransactionContext.cs" />
+    <Compile Include="Impl\PutSerialLock.cs" />
     <Compile Include="Indexing\IndependentBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
     <Compile Include="LastCollectionEtags.cs" />
@@ -516,10 +517,7 @@
     <Compile Include="Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Extensions\DocDbExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
-    <Compile Include="Impl\Synchronization\DatabaseEtagSynchronizer.cs" />
     <Compile Include="Impl\DTC\InFlightTransactionalState.cs" />
-    <Compile Include="Impl\Synchronization\EtagSynchronizer.cs" />
-    <Compile Include="Impl\Synchronization\EtagSynchronizerType.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\BaseFragmentsBuilder.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FastVectorHighlighter.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FieldFragList.cs" />
@@ -1179,7 +1177,7 @@
     <EmbeddedResource Include="Server\WebUI\js\rdb.jsonEditor\rdb.jsonEditor.js" />
     <EmbeddedResource Include="Server\WebUI\statistics.html" />
     <EmbeddedResource Include="Server\WebUI\view.html" />
-    <EmbeddedResource Include="..\Raven.Studio.Html5\**"  Exclude="*.dll.config">
+    <EmbeddedResource Include="..\Raven.Studio.Html5\**" Exclude="*.dll.config">
       <Link>Server\Html5Studio\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </EmbeddedResource>
   </ItemGroup>

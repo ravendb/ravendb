@@ -234,7 +234,6 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			env.CreateTree(tx, Tables.ScheduledReductions.TableName);
 			env.CreateTree(tx, ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByView));
-			env.CreateTree(tx, ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByViewAndLevel));
 			env.CreateTree(tx, ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey));
 		}
 
@@ -310,7 +309,7 @@ namespace Raven.Database.Storage.Voron.Impl
             Queues = new Table(Tables.Queues.TableName, bufferPool, Tables.Queues.Indices.ByName, Tables.Queues.Indices.Data);
             Lists = new Table(Tables.Lists.TableName, bufferPool, Tables.Lists.Indices.ByName, Tables.Lists.Indices.ByNameAndKey);
             Tasks = new Table(Tables.Tasks.TableName, bufferPool, Tables.Tasks.Indices.ByIndexAndType, Tables.Tasks.Indices.ByType, Tables.Tasks.Indices.ByIndex);
-            ScheduledReductions = new Table(Tables.ScheduledReductions.TableName, bufferPool, Tables.ScheduledReductions.Indices.ByView, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey, Tables.ScheduledReductions.Indices.ByViewAndLevel);
+            ScheduledReductions = new Table(Tables.ScheduledReductions.TableName, bufferPool, Tables.ScheduledReductions.Indices.ByView, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
             MappedResults = new Table(Tables.MappedResults.TableName, bufferPool, Tables.MappedResults.Indices.ByView, Tables.MappedResults.Indices.ByViewAndDocumentId, Tables.MappedResults.Indices.ByViewAndReduceKey, Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket, Tables.MappedResults.Indices.Data);
             ReduceKeyCounts = new Table(Tables.ReduceKeyCounts.TableName, bufferPool, Tables.ReduceKeyCounts.Indices.ByView);
             ReduceKeyTypes = new Table(Tables.ReduceKeyTypes.TableName, bufferPool, Tables.ReduceKeyTypes.Indices.ByView);

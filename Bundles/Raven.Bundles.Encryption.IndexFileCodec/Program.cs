@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Bundles.Encryption.Settings;
@@ -69,12 +70,12 @@ If decryption fails, a message will be written to standard error.
 
 		static void Encrypt(byte[] password, string file, Stream input, Stream output)
 		{
-			input.CopyTo(new SeekableCryptoStream(new EncryptionSettings(password), file, output));
+			input.CopyTo(new SeekableCryptoStream(new EncryptionSettings(password, typeof(Rijndael), true, 128), file, output));
 		}
 
 		static void Decrypt(byte[] password, string file, Stream input, Stream output)
 		{
-			new SeekableCryptoStream(new EncryptionSettings(password), file, input).CopyTo(output);
+			new SeekableCryptoStream(new EncryptionSettings(password, typeof(Rijndael), true, 128), file, input).CopyTo(output);
 		}
 	}
 }

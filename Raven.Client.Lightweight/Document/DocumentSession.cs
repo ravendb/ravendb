@@ -461,11 +461,19 @@ namespace Raven.Client.Document
             value.ETag = jsonDocument.Etag;
             value.OriginalValue = jsonDocument.DataAsJson;
             var newEntity = ConvertToEntity(typeof(T),value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
-            foreach (var property in entity.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            var type = entity.GetType();
+            foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
-                if (!property.CanWrite || !property.CanRead || property.GetIndexParameters().Length != 0)
+                var prop = property;
+                if (prop.DeclaringType != type && prop.DeclaringType != null)
+                {
+                    prop = prop.DeclaringType.GetProperty(prop.Name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    if (prop == null)
+                        prop = property; // shouldn't happen ever...
+                }
+                if (!prop.CanWrite || !prop.CanRead || prop.GetIndexParameters().Length != 0)
                     continue;
-                property.SetValue(entity, property.GetValue(newEntity, null), null);
+                prop.SetValue(entity, prop.GetValue(newEntity, null), null);
             }
         }
 
