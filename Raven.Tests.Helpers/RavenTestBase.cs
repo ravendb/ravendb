@@ -249,7 +249,7 @@ namespace Raven.Tests.Helpers
             {
 	            UseEmbeddedHttpServer = true,
             };
-            ravenDbServer.Initialize();
+            ravenDbServer.Initialize(configureServer);
 			servers.Add(ravenDbServer);
 
 			try

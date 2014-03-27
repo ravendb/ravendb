@@ -201,6 +201,13 @@ namespace Raven.Bundles.Replication.Responders
 			}
 			else
 			{
+                RavenJObject resolvedMetadataToSave;
+                TExternal resolvedItemToSave;
+                if (TryResolveConflict(id, metadata, incoming, existingItem, out resolvedMetadataToSave, out resolvedItemToSave))
+                {
+                    AddWithoutConflict(id, existingEtag, resolvedMetadataToSave, resolvedItemToSave);
+                    return;
+                }
 				var newConflictId = SaveConflictedItem(id, metadata, incoming, existingEtag);
 				log.Debug("Existing item {0} is in conflict with replicated delete from {1}, marking item as conflicted", id, Src);
 
