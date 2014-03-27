@@ -171,7 +171,7 @@ namespace Raven.Database.Indexing
 						recoveryTried = true;
 						startupLog.WarnException("Could not open index " + indexName + ". Trying to recover index", e);
 
-                        keysToDeleteAfterRecovery = TryRecoveringIndex(indexName, indexDefinition, luceneDirectory);
+                        keysToDeleteAfterRecovery = TryRecoveringIndex(indexDefinition, luceneDirectory);
 					}
 					else
 					{
@@ -220,7 +220,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private string[] TryRecoveringIndex(string indexName, IndexDefinition indexDefinition,
+		private string[] TryRecoveringIndex(IndexDefinition indexDefinition,
 											Lucene.Net.Store.Directory luceneDirectory)
 		{
 			string[] keysToDeleteAfterRecovery = null;
