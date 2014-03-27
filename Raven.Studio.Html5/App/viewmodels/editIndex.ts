@@ -158,8 +158,13 @@ class editIndex extends viewModelBase {
                         this.isEditingExistingIndex(true);
                         this.editExistingIndex(index.Name);
                     }
-                });
+                this.updateUrl(index.Name);
+            });
         }
+    }
+
+    updateUrl(indexName: string) {
+        router.navigate(appUrl.forEditIndex(indexName, this.activeDatabase()));
     }
 
     refreshIndex() {
