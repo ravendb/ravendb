@@ -63,12 +63,7 @@ namespace Raven.Client.Document
 
 		private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
 
-		private HttpJsonRequestFactory jsonRequestFactory =
-#if !NETFX_CORE
- new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
-#else
-			  new HttpJsonRequestFactory();
-#endif
+	    private HttpJsonRequestFactory jsonRequestFactory;
 
 		private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
 
@@ -144,7 +139,7 @@ namespace Raven.Client.Document
 #if !NETFX_CORE
 			Credentials = CredentialCache.DefaultNetworkCredentials;
 #endif
-			ResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
+            ResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
 
 #if !NETFX_CORE
 			SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
@@ -153,7 +148,7 @@ namespace Raven.Client.Document
 			SharedOperationsHeaders = new System.Collections.Generic.Dictionary<string, string>();
 			Conventions = new DocumentConvention { AllowMultipuleAsyncOperations = true };
 #endif
-		}
+        }
 
 		private string identifier;
 
@@ -378,11 +373,16 @@ namespace Raven.Client.Document
 			return databaseCommands;
 		}
 
+	    public override IDocumentStore Initialize()
+	    {
+	        return Initialize(true);
+	    }
+
 		/// <summary>
 		/// Initializes this instance.
 		/// </summary>
 		/// <returns></returns>
-		public override IDocumentStore Initialize()
+		public IDocumentStore Initialize(bool ensureDatabaseExists)
 		{
 			if (initialized)
 				return this;
@@ -390,7 +390,7 @@ namespace Raven.Client.Document
 			AssertValidConfiguration();
 
 #if !NETFX_CORE
-			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests);
+			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandler);
 #else
 			jsonRequestFactory = new HttpJsonRequestFactory();
 #endif
@@ -417,7 +417,8 @@ namespace Raven.Client.Document
 #if !NETFX_CORE && !MONO
 				RecoverPendingTransactions();
 
-				if (string.IsNullOrEmpty(DefaultDatabase) == false && 
+				if (ensureDatabaseExists && 
+                    string.IsNullOrEmpty(DefaultDatabase) == false && 
 					DefaultDatabase.Equals(Constants.SystemDatabase) == false) //system database exists anyway
 				{
 					DatabaseCommands.ForSystemDatabase().GlobalAdmin.EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
@@ -864,9 +865,10 @@ namespace Raven.Client.Document
 				maxNumberOfCachedRequests = value;
 				if (jsonRequestFactory != null)
 					jsonRequestFactory.Dispose();
-				jsonRequestFactory = new HttpJsonRequestFactory(maxNumberOfCachedRequests);
+                jsonRequestFactory = new HttpJsonRequestFactory(maxNumberOfCachedRequests, HttpMessageHandler);
 			}
 		}
+	    public HttpMessageHandler HttpMessageHandler { get; set; }
 #endif
 
 

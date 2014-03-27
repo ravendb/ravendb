@@ -28,7 +28,7 @@ namespace Raven.Tests.Bundles.Expiration
 		public Expiration()
 		{
 			SystemTime.UtcDateTime = () => DateTime.UtcNow;
-			ravenDbServer = GetNewServer(activeBundles: "DocumentExpiration", configureServer: configuration =>
+            ravenDbServer = GetNewServer(activeBundles: "DocumentExpiration", configureConfig: configuration =>
 			{
 				configuration.Settings["Raven/Expiration/DeleteFrequencySeconds"] = "1";
 			});

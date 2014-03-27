@@ -3,7 +3,6 @@ using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
-using Raven.Database.Util.Streams;
 using Raven.Storage.Voron;
 
 namespace Raven.Database.Storage.Voron
@@ -27,17 +26,17 @@ namespace Raven.Database.Storage.Voron
         private readonly DateTime createdAt = SystemTime.UtcNow;
 		public event Action OnDispose;
 
-        public StorageActionsAccessor(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, IDocumentCacher documentCacher, Reference<WriteBatch> writeBatchReference, SnapshotReader snapshot, TableStorage storage, TransactionalStorage transactionalStorage, IBufferPool bufferPool)
+        public StorageActionsAccessor(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, IDocumentCacher documentCacher, Reference<WriteBatch> writeBatchReference, Reference<SnapshotReader> snapshotReference, TableStorage storage, TransactionalStorage transactionalStorage, IBufferPool bufferPool)
         {
-			Documents = new DocumentsStorageActions(generator, documentCodecs, documentCacher, writeBatchReference, snapshot, storage, bufferPool);
-            Indexing = new IndexingStorageActions(storage, generator, snapshot, writeBatchReference, this, bufferPool);
-            Queue = new QueueStorageActions(storage, generator, snapshot, writeBatchReference, bufferPool);
-            Lists = new ListsStorageActions(storage, generator, snapshot, writeBatchReference, bufferPool);
-            Tasks = new TasksStorageActions(storage, generator, snapshot, writeBatchReference, bufferPool);
-            Staleness = new StalenessStorageActions(storage, snapshot, writeBatchReference, bufferPool);
-            MapReduce = new MappedResultsStorageActions(storage, generator, documentCodecs, snapshot, writeBatchReference, bufferPool);
-            Attachments = new AttachmentsStorageActions(storage.Attachments, writeBatchReference, snapshot, generator, storage, transactionalStorage, bufferPool);
-            General = new GeneralStorageActions(storage, storage.General, writeBatchReference, snapshot, bufferPool);
+			Documents = new DocumentsStorageActions(generator, documentCodecs, documentCacher, writeBatchReference, snapshotReference, storage, bufferPool);
+            Indexing = new IndexingStorageActions(storage, generator, snapshotReference, writeBatchReference, this, bufferPool);
+            Queue = new QueueStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool);
+            Lists = new ListsStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool);
+            Tasks = new TasksStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool);
+            Staleness = new StalenessStorageActions(storage, snapshotReference, writeBatchReference, bufferPool);
+            MapReduce = new MappedResultsStorageActions(storage, generator, documentCodecs, snapshotReference, writeBatchReference, bufferPool);
+            Attachments = new AttachmentsStorageActions(storage.Attachments, writeBatchReference, snapshotReference, generator, storage, transactionalStorage, bufferPool);
+            General = new GeneralStorageActions(storage, storage.General, writeBatchReference, snapshotReference, bufferPool);
 		}
 
 

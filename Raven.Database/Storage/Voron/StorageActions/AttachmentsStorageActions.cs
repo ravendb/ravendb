@@ -36,7 +36,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public AttachmentsStorageActions(Table attachmentsTable,
 										 Reference<WriteBatch> writeBatch, 
-										 SnapshotReader snapshot, 
+										 Reference<SnapshotReader> snapshot, 
 									     IUuidGenerator uuidGenerator, 
                                          TableStorage tableStorage,
                                          Raven.Storage.Voron.TransactionalStorage transactionalStorage, 

@@ -150,6 +150,7 @@ namespace Raven.Tests.Helpers
 				string dataDirectory = null,
 				string requestedStorage = null,
 				bool enableAuthentication = false,
+                bool ensureDatabaseExists = true,
 				Action<DocumentStore> configureStore = null)
 		{
 		    databaseName = NormalizeDatabaseName(databaseName);
@@ -169,7 +170,7 @@ namespace Raven.Tests.Helpers
 				configureStore(store);
 			ModifyStore(store);
 
-			store.Initialize();
+		    store.Initialize(ensureDatabaseExists);
 			return store;
 		}
 
@@ -204,7 +205,8 @@ namespace Raven.Tests.Helpers
 			string requestedStorage = null,
 			bool enableAuthentication = false,
 			string activeBundles = null,
-			Action<InMemoryRavenConfiguration> configureServer = null,
+			Action<RavenDBOptions> configureServer = null,
+            Action<InMemoryRavenConfiguration> configureConfig = null,
             [CallerMemberName] string databaseName = null)
 		{
 		    databaseName = NormalizeDatabaseName(databaseName != Constants.SystemDatabase ? databaseName : null);
@@ -236,14 +238,18 @@ namespace Raven.Tests.Helpers
 				ravenConfiguration.Settings["Raven/ActiveBundles"] = activeBundles;
 			}
 
-			if (configureServer != null)
-				configureServer(ravenConfiguration);
+			if (configureConfig != null)
+                configureConfig(ravenConfiguration);
 			ModifyConfiguration(ravenConfiguration);
 
 			ravenConfiguration.PostInit();
 
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
-			var ravenDbServer = new RavenDbServer(ravenConfiguration);
+            var ravenDbServer = new RavenDbServer(ravenConfiguration)
+            {
+	            UseEmbeddedHttpServer = true,
+            };
+            ravenDbServer.Initialize();
 			servers.Add(ravenDbServer);
 
 			try
@@ -555,6 +561,8 @@ namespace Raven.Tests.Helpers
 
 			foreach (var server in servers)
 			{
+				if (server == null)
+					continue;
 				try
 				{
 					server.Dispose();

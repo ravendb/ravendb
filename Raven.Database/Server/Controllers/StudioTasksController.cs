@@ -181,6 +181,7 @@ namespace Raven.Database.Server.Controllers
 
 
 	    [HttpPost]
+        [Route("studio-tasks/loadCsvFile")]
 	    [Route("databases/{databaseName}/studio-tasks/loadCsvFile")]
 	    public async Task<HttpResponseMessage> LoadCsvFile()
 	    {
