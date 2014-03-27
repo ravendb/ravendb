@@ -171,10 +171,7 @@ class shell extends viewModelBase {
         new getDocumentWithMetadataCommand("Raven/StudioConfig", appUrl.getSystemDatabase())
             .execute()
             .done((doc: document) => {
-                var systemDbWarning = doc["WarnWhenUsingSystemDatabase"];
-                if (systemDbWarning === false) {
-                    appUrl.warnWhenUsingSystemDatabase = false;
-                }
+              appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
             });
     }
 

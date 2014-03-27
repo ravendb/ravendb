@@ -43,13 +43,17 @@ namespace Raven.Database.Server.Controllers
 		[HttpPost]
 		[Route("studio-tasks/exportDatabase")]
 		[Route("databases/{databaseName}/studio-tasks/exportDatabase")]
-		public async Task<HttpResponseMessage> ExportDatabase()
+		public async Task<HttpResponseMessage> ExportDatabase(SmugglerOptionsDto dto)
 		{
 			var smugglerOptions = new SmugglerOptions();
+			// smugglerOptions.OperateOnTypes = ;
 
 			var result = GetEmptyMessage();
 			result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
 			{
+				{
+					
+				};
 				await new DataDumper(Database).ExportData(new SmugglerExportOptions
 				{
 					ToStream = outputStream
@@ -268,5 +272,14 @@ namespace Raven.Database.Server.Controllers
             return GetEmptyMessage();
 
 	    }
+	}
+
+	public class SmugglerOptionsDto
+	{
+		public bool IncludeDocuments { get; set; }
+		public bool IncludeIndexes { get; set; }
+		public bool IncludeTransformers { get; set; }
+		public bool IncludeAttachments { get; set; }
+		public bool RemoveAnalyzers { get; set; }
 	}
 }
