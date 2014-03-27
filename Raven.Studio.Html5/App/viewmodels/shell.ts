@@ -44,8 +44,6 @@ class shell extends viewModelBase {
     filesystems = ko.observableArray<filesystem>();
     filesystemsLoadedTask: JQueryPromise<any>;
 
-    currentView = ko.observable<string>();
-
     DocumentPrefix = ko.observable<String>();
     
     constructor() {
@@ -367,14 +365,6 @@ class shell extends viewModelBase {
         if (db.name != this.activeDatabase().name) {
             db.activate();
             var updatedUrl = appUrl.forCurrentPage(db);
-            this.navigate(updatedUrl);
-        }
-    }
-
-    selectFilesystem(fs: filesystem) {
-        if (fs.name != this.activeFilesystem().name) {
-            fs.activate();
-            var updatedUrl = appUrl.forCurrentPage(fs);
             this.navigate(updatedUrl);
         }
     }

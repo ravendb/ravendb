@@ -2,7 +2,7 @@
     <div class="navbar navbar-fixed-top navbar-default">
         <div class="navbar-inner">
 
-            <div id="databasesNavbar" data-bind="visible: activeView() == 'Documents'">
+            <div id="databasesNavbar" data-bind="visible: appUrls.isActive('Databases')">
 
                 <ul class=" nav navbar-nav">
                     <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
@@ -101,7 +101,7 @@
 
             </div>
 
-            <div id="filesystemsNavbar" data-bind="visible: activeView() == 'Filesystems'">
+            <div id="filesystemsNavbar" data-bind="visible: appUrls.isActive('Filesystems')">
                 
                 <ul class=" nav navbar-nav">
                     

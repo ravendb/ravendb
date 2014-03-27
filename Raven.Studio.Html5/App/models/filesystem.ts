@@ -7,7 +7,7 @@ class filesystem extends resource {
     files = ko.observableArray<filesystemFileHeaderDto>();
 
     constructor(public name: string) {
-        super(name, "filesystem");
+        super(name);
        
     }
 

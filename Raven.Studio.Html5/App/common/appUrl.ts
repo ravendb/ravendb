@@ -41,7 +41,7 @@ class appUrl {
 
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
         databasesManagement: ko.computed(() => "#databases?database=" + appUrl.getEncodedDbPart(appUrl.currentDatabase())),
-        filesystemsManagement: ko.computed(() => "#filesystems?filesystem=" + appUrl.getEncodedPart(appUrl.currentFilesystem()))
+        filesystemsManagement: ko.computed(() => "#filesystems?filesystem=" + appUrl.getEncodedFsPart(appUrl.currentFilesystem()))
     };
 
     static forDatabases(): string {
@@ -249,7 +249,7 @@ class appUrl {
     }
 
     static forFilesystem(fs: filesystem): string {
-        var filesystemPart = appUrl.getEncodedPart(fs);
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
         return "#filesystems?" + filesystemPart;
     }
 
@@ -340,18 +340,18 @@ class appUrl {
     /**
     * Gets the address for the current page but for the specified database.
     */
-    static forCurrentPage(rs: resource) {
+    static forCurrentPage(db: database) {
         var routerInstruction = router.activeInstruction();
         if (routerInstruction) {
-            var dbNameInAddress = routerInstruction.queryParams ? routerInstruction.queryParams[rs.type] : null;
-            var isDifferentDbInAddress = !dbNameInAddress || dbNameInAddress !== rs.name.toLowerCase();
+            var dbNameInAddress = routerInstruction.queryParams ? routerInstruction.queryParams['database'] : null;
+            var isDifferentDbInAddress = !dbNameInAddress || dbNameInAddress !== db.name.toLowerCase();
             if (isDifferentDbInAddress) {
                 var existingAddress = window.location.hash;
-                var existingDbQueryString = dbNameInAddress ? rs.type + "=" + encodeURIComponent(dbNameInAddress) : null;
-                var newDbQueryString = rs.type + "=" + encodeURIComponent(rs.name);
+                var existingDbQueryString = dbNameInAddress ? "database=" + encodeURIComponent(dbNameInAddress) : null;
+                var newDbQueryString = "database=" + encodeURIComponent(db.name);
                 var newUrlWithDatabase = existingDbQueryString ?
                     existingAddress.replace(existingDbQueryString, newDbQueryString) :
-                    existingAddress + (window.location.hash.indexOf("?") >= 0 ? "&" : "?") + rs.type + "=" + encodeURIComponent(rs.name);
+                    existingAddress + (window.location.hash.indexOf("?") >= 0 ? "&" : "?") + "database=" + encodeURIComponent(db.name);
 
                 // in case replacing fails
                 /*if (newUrlWithDatabase === existingAddress) {
@@ -372,16 +372,14 @@ class appUrl {
 	*/
 	static forCurrentDatabase(): computedAppUrls {
 		return appUrl.currentDbComputeds;
-    }
+	}
 
-    private static getEncodedPart(rs?: resource) {
-        return rs ? '&' + rs.type + "=" + encodeURIComponent(rs.name) : "";
-    }
-
-    /* Made obsolete by getEncondedPart */
-    //////////////////////////////////////
 	private static getEncodedDbPart(db?: database) {
 		return db ? "&database=" + encodeURIComponent(db.name) : "";
+    }
+
+    private static getEncodedFsPart(fs?: filesystem) {
+        return fs ? "&filesystem=" + encodeURIComponent(fs.name) : "";
     }
 
     public static warnWhenUsingSystemDatabase: boolean = true;

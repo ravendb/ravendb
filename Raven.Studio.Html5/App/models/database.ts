@@ -4,7 +4,7 @@ class database extends resource {
     statistics = ko.observable<databaseStatisticsDto>();
 
     constructor(public name: string) {
-        super(name, "database");
+        super(name);
         this.itemCount = ko.computed(() => this.statistics() ? this.statistics().CountOfDocuments : 0);
     }
 
