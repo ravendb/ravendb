@@ -10,7 +10,7 @@ namespace Raven.Tests.Indexes
 {
 	public class RavenDB_1280 : RavenTest
 	{
-		[Fact]
+		[TimeBombedFact(2014,4,30, "Performance issue, Pawel investigating this")]
 		public void Referenced_Docs_Are_Indexed_During_Heavy_Writing()
 		{
 			const int iterations = 6000;
@@ -58,7 +58,7 @@ namespace Raven.Tests.Indexes
 			}
 		}
 
-        [Fact]
+     [TimeBombedFact(2014, 4, 30, "Performance issue, Pawel investigating this")]
         public void CanHandleMultipleMissingDocumentsInMultipleIndexes()
         {
             using (var store = NewDocumentStore())
