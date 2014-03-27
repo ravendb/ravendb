@@ -39,7 +39,11 @@ namespace Raven.Tests.Issues
 								Settings = { { "Raven/ActiveBundles", "PeriodicBackup" } },
 			             	};
 			config.PostInit();
-			ravenDbServer = new RavenDbServer(config);
+		    ravenDbServer = new RavenDbServer(config)
+		    {
+		        UseEmbeddedHttpServer = true
+		    };
+		    ravenDbServer.Initialize();
 			documentStore = new DocumentStore
 			{
 				Url = "http://localhost:8079"
@@ -109,8 +113,6 @@ namespace Raven.Tests.Issues
 				}
 				session.SaveChanges();
 			}
-
-			Thread.Sleep(10000);
 
 			var connection = new RavenConnectionStringOptions {Url = documentStore.Url, DefaultDatabase = "DestDB"};
 			var smugglerApi = new SmugglerApi();

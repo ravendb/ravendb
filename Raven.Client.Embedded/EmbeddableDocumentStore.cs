@@ -292,7 +292,6 @@ namespace Raven.Client.Embedded
 
 		}
 
-
 		/// <summary>
 		/// Expose the internal http server, if used
 		/// </summary>

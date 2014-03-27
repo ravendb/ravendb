@@ -37,7 +37,11 @@ namespace Raven.Tests.Bundles.CompressionAndEncryption
 			};
 			ConfigureServer(settings);
 			settings.PostInit();
-			ravenDbServer = new RavenDbServer(settings);
+			ravenDbServer = new RavenDbServer(settings)
+			{
+				UseEmbeddedHttpServer = true
+			};
+			ravenDbServer.Initialize();
 			documentStore = new DocumentStore
 			{
 				Url = "http://localhost:8079"
@@ -58,7 +62,11 @@ namespace Raven.Tests.Bundles.CompressionAndEncryption
 		protected void RecycleServer()
 		{
 			ravenDbServer.Dispose();
-			ravenDbServer =  new RavenDbServer(settings);
+			ravenDbServer =  new RavenDbServer(settings)
+			{
+			    UseEmbeddedHttpServer = true
+			};
+		    ravenDbServer.Initialize();
 		}
 
 		protected void Close()

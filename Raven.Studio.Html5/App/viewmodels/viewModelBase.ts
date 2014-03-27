@@ -2,6 +2,7 @@ import appUrl = require("common/appUrl");
 import database = require("models/database");
 import router = require("plugins/router");
 import app = require("durandal/app");
+import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -11,7 +12,8 @@ class viewModelBase {
     private keyboardShortcutDomContainers: string[] = [];
     private modelPollingHandle: number;
     static dirtyFlag = new ko.DirtyFlag([]);
-    
+    private static isConfirmedUsingSystemDatabase: boolean;
+
     /*
      * Called by Durandal when checking whether this navigation is allowed. 
      * Possible return values: boolean, promise<boolean>, {redirect: 'some/other/route'}, promise<{redirect: 'some/other/route'}>
@@ -20,12 +22,17 @@ class viewModelBase {
      * p.s. from Judah: a big scary prompt when loading the system DB is a bit heavy-handed, no? 
      */
     canActivate(args: any): any {
-        // See if we're on the system database. If so, we'll may to prompt before continuing.
-        var activeDb = this.activeDatabase();
-        if (activeDb && activeDb.isSystem && appUrl.warnWhenUsingSystemDatabase) {
+        var database = appUrl.getDatabase();
+
+        if (database.isSystem) {
+            if (viewModelBase.isConfirmedUsingSystemDatabase) {
+                return true;
+            }
+
             return this.promptNavSystemDb();
         }
 
+        viewModelBase.isConfirmedUsingSystemDatabase = false;
         return true;
     }
 
@@ -38,9 +45,9 @@ class viewModelBase {
         if (!currentDb || currentDb.name !== db.name) {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
         }
-		
+
         this.modelPollingStart();
-        
+
         window.onbeforeunload = (e: any) => {
             this.saveInObservable();
             var isDirty = viewModelBase.dirtyFlag().isDirty();
@@ -101,7 +108,7 @@ class viewModelBase {
             this.keyboardShortcutDomContainers.push(elementSelector);
         }
     }
-    
+
     //A method to save the current value in the observables from text boxes and inputs before a refresh/page close.
     //Should be implemented on the inhereting class.
     saveInObservable() {
@@ -147,24 +154,25 @@ class viewModelBase {
         clearInterval(this.modelPollingHandle);
     }
 
-    private promptNavSystemDb(): JQueryPromise<boolean> {
+    private promptNavSystemDb(): any {
+        if (!appUrl.warnWhenUsingSystemDatabase) {
+            return true;
+        }
+
         var canNavTask = $.Deferred<boolean>();
 
-        // Load the viewSystemDatabaseConfirm view model on demand.
-        // We really don't need it until the user tries to navigate to the system DB.
-        require(["viewmodels/viewSystemDatabaseConfirm"], (viewSystemDatabaseConfirm => {
-            var systemDbConfirm = new viewSystemDatabaseConfirm();
-            systemDbConfirm.viewTask
-                .fail(() => canNavTask.resolve(false))
-                .done(() => {
-                    appUrl.warnWhenUsingSystemDatabase = false;
-                    canNavTask.resolve(true);
-                });
-            app.showDialog(systemDbConfirm);
-        }));
-		
-		return canNavTask;
+        var systemDbConfirm = new viewSystemDatabaseConfirm();
+        systemDbConfirm.viewTask
+            .fail(() => canNavTask.resolve({ redirect: 'databases' }))
+            .done(() => {
+                viewModelBase.isConfirmedUsingSystemDatabase = true;
+                canNavTask.resolve(true);
+            });
+        app.showDialog(systemDbConfirm);
+
+        return canNavTask;
     }
+
 }
 
 export = viewModelBase;

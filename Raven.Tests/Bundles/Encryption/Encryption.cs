@@ -24,7 +24,7 @@ namespace Raven.Tests.Bundles.Encryption
 
 		private void createServer()
 		{
-			ravenDbServer = GetNewServer(runInMemory: false, dataDirectory: path, activeBundles: "Encryption", configureServer: configuration =>
+            ravenDbServer = GetNewServer(runInMemory: false, dataDirectory: path, activeBundles: "Encryption", configureConfig: configuration =>
 			{
 				configuration.Settings["Raven/Encryption/Key"] = "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8=";
 			});

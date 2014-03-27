@@ -4,13 +4,13 @@ import database = require("models/database");
 
 class exportDatabaseCommand extends commandBase {
 
-    constructor(private db: database) {
+    constructor(private smugglerOptions: smugglerOptionsDto, private db: database) {
         super();
     }
 
     execute(): JQueryPromise<any> {
 
-      return this.post("/studio-tasks/exportDatabase", null, this.db)
+      return this.post("/studio-tasks/exportDatabase", this.smugglerOptions, this.db)
         .fail((response: JQueryXHR) => {
           debugger
         })

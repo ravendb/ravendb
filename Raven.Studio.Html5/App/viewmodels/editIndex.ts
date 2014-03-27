@@ -18,7 +18,7 @@ import alertArgs = require("common/alertArgs");
 class editIndex extends viewModelBase { 
 
     isEditingExistingIndex = ko.observable(false);
-    priority = ko.observable<indexPriority>();
+    priority = ko.observable<indexPriority>().extend({ required: true });
     priorityLabel: KnockoutComputed<string>;
     priorityFriendlyName: KnockoutComputed<string>;
     editedIndex = ko.observable<indexDefinition>();
@@ -41,13 +41,13 @@ class editIndex extends viewModelBase {
         this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
     }
 
-    canActivate(args) {
-        if (args) {
+    canActivate(indexToEditName: string) {
+        if (indexToEditName) {
             var canActivateResult = $.Deferred();
-            this.fetchIndexToEdit(args)
+            this.fetchIndexToEdit(indexToEditName)
                 .done(()=> canActivateResult.resolve({ can: true }))
                 .fail(() => {
-                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + decodeURIComponent(args) + " index", null));
+                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + decodeURIComponent(indexToEditName) + " index", null));
                     canActivateResult.resolve({ redirect: appUrl.forIndexes(this.activeDatabase() )});
                 });
 
@@ -68,22 +68,24 @@ class editIndex extends viewModelBase {
             this.priority(indexPriority.normal);
             this.editedIndex(this.createNewIndexDefinition());
         }
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.editedIndex().name]);
     }
 
     attached() {
         this.addMapHelpPopover();
         this.addReduceHelpPopover();
         this.addTransformHelpPopover();
+
+        var indexDef = this.editedIndex();
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.fields, indexDef.transformResults, indexDef.spatialFields]);
+        //need to add more fields like: this.editedIndex().luceneFields()[0].name, this.editedIndex().luceneFields()[0].indexing()
     }
 
     // Called back after the entire composition has finished (parents and children included)
-    /*compositionComplete() {
+    compositionComplete() {
         super.compositionComplete();
-        
     }
 
-    saveInObservable() {
+    /*saveInObservable() {
         var docEditor = ace.edit("docEditor");
         var docEditorText = docEditor.getSession().getValue();
         this.editedTransformer().transformResults(docEditorText);
@@ -173,6 +175,9 @@ class editIndex extends viewModelBase {
             this.editedIndex(null);
             this.editExistingIndex(existingIndex.name());
         }
+
+        // Resync Changes
+        viewModelBase.dirtyFlag().reset();
     }
 
     deleteIndex() {
