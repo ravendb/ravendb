@@ -7,7 +7,6 @@ import getDatabasesCommand = require("commands/getDatabasesCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import deleteDatabaseConfirm = require("viewmodels/deleteDatabaseConfirm");
 import createDatabase = require("viewmodels/createDatabase");
-import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
 import createDatabaseCommand = require("commands/createDatabaseCommand");
 import createEncryption = require("viewmodels/createEncryption");
 import createEncryptionConfirmation = require("viewmodels/createEncryptionConfirmation");

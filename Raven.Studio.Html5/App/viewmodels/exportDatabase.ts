@@ -9,7 +9,14 @@ class exportDatabase extends viewModelBase {
   removeAnalyzers = ko.observable(false);
 
   startExport() {
-    new exportDatabaseCommand(this.activeDatabase())
+    var smugglerOptions: smugglerOptionsDto = {
+      IncludeDocuments: this.includeDocuments(),
+      IncludeIndexes: this.includeIndexes(),
+      IncludeTransformers: this.includeTransformers(),
+      IncludeAttachments: this.includeAttachments(),
+      RemoveAnalyzers: this.removeAnalyzers()
+    };
+    new exportDatabaseCommand(smugglerOptions, this.activeDatabase())
       .execute();
   }
 }
