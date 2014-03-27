@@ -1,4 +1,5 @@
 import app = require("durandal/app");
+import system = require("durandal/system");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
@@ -6,6 +7,7 @@ import databases = require("viewmodels/databases");
 import filesystem = require("models/filesystem");
 import getFilesystemsCommand = require("commands/getFilesystemsCommand");
 import getFilesystemStatsCommand = require("commands/getFilesystemStatsCommand");
+import uploadFileToFilesystemCommand = require("commands/uploadFileToFilesystemCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 class filesystems extends viewModelBase {
@@ -15,12 +17,48 @@ class filesystems extends viewModelBase {
     selectedFilesystem = ko.observable<filesystem>();
     defaultFs: filesystem;
     initializedStats: boolean;
+    uploadQueue = ko.observableArray();
+    fileName = ko.observable<File>();
 
     constructor() {
         super();
 
         this.defaultFs = appUrl.getDefaultFilesystem();
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterFilesystems(s));
+
+        ko.bindingHandlers["fileUpload"] = {
+            init: function (element, valueAccessor) {
+                $(element).after('<div class="progress"><div class="bar"></div><div class="percent">0%</div></div><div class="progressError"></div>');
+            },
+            update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+                var options = ko.utils.unwrapObservable(valueAccessor());
+                var context = <filesystems>bindingContext.$data;
+                var filesystem = ko.utils.unwrapObservable<filesystem>(bindingContext.$data["activeFilesystem"]);
+
+
+                if (options) {
+                    if (element.files.length) {
+                        var file = <File>element.files[0];
+                        var guid = system.guid();
+                        context.uploadQueue.push({ id: guid, fileName: file.name, status: "Queued" });
+                        new uploadFileToFilesystemCommand(file, guid, filesystem, function (event: any) {
+                            if (event.lengthComputable) {
+                                var percentComplete = event.loaded / event.total;
+                                $(".bar").width(percentComplete);
+                                $(".percent").html(percentComplete + "%");
+                            }
+                        }, true).execute().done();
+
+                        //var match = ko.utils.arrayFirst(context.uploadQueue, function (element) {
+                        //    return element["id"] === guid;
+                        //});
+
+                        //match["status"] = "Uploading...";
+                    }
+                }
+            },
+
+        }
     }
 
     modelPolling() {

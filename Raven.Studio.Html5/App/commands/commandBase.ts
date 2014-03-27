@@ -72,6 +72,14 @@ class commandBase {
         return this.ajax(relativeUrl, args, "PUT", resource, options);
     }
 
+    //putBinary(relativeUrl: string, content: any, contentLenght: number, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+    //    var request = new XMLHttpRequest();
+    //    request.open("PUT", appUrl.forResouceQuery(resource) + relativeUrl, true);
+    //    request.setRequestHeader("Content-Length", contentLenght.toString());
+
+    //    request.send(content);
+    //}
+
     reset(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
         return this.ajax(relativeUrl, args, "RESET", resource, options);
     }
