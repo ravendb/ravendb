@@ -56,10 +56,7 @@ namespace Voron.Tests.Backups
 			var options = StorageEnvironmentOptions.ForPath(_restoredStoragePath);
 			options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
-            BackupMethods.Incremental.Restore(options,new IncrementalBackup.IncrementalRestorePaths
-            {
-                DatabaseLocation = _restoredStoragePath,
-            }, new[] { _incrementalBackupFile(0) });
+            BackupMethods.Incremental.Restore(options, new[] { _incrementalBackupFile(0) });
 
 			using (var env = new StorageEnvironment(options))
 			{
@@ -128,10 +125,7 @@ namespace Voron.Tests.Backups
 			var options = StorageEnvironmentOptions.ForPath(_restoredStoragePath);
 			options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
-            BackupMethods.Incremental.Restore(options, new IncrementalBackup.IncrementalRestorePaths
-            {
-                DatabaseLocation = _restoredStoragePath
-            }, new[]
+            BackupMethods.Incremental.Restore(options, new[]
             {
                 _incrementalBackupFile(0),
                 _incrementalBackupFile(1),
@@ -199,10 +193,7 @@ namespace Voron.Tests.Backups
 			var options = StorageEnvironmentOptions.ForPath(_restoredStoragePath);
 			options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
-            BackupMethods.Incremental.Restore(options, new IncrementalBackup.IncrementalRestorePaths
-            {
-                DatabaseLocation = _restoredStoragePath
-            }, new[]
+            BackupMethods.Incremental.Restore(options, new[]
             {
                 _incrementalBackupFile(0),
                 _incrementalBackupFile(1)

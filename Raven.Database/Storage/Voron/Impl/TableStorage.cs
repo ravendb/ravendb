@@ -21,22 +21,21 @@ namespace Raven.Database.Storage.Voron.Impl
 
 	public class TableStorage : IDisposable
 	{
-		private readonly IPersistenceSource persistenceSource;
-
+	    private readonly StorageEnvironmentOptions _options;
 	    private readonly IBufferPool bufferPool;
 
 	    private readonly StorageEnvironment env;
 
-		public TableStorage(IPersistenceSource persistenceSource, IBufferPool bufferPool)
+		public TableStorage(StorageEnvironmentOptions options, IBufferPool bufferPool)
 		{
-			if (persistenceSource == null)
-				throw new ArgumentNullException("persistenceSource");
+            if (options == null)
+                throw new ArgumentNullException("options");
 
-			this.persistenceSource = persistenceSource;
+		    _options = options;
 		    this.bufferPool = bufferPool;
 
-		    Debug.Assert(persistenceSource.Options != null);
-			env = new StorageEnvironment(persistenceSource.Options);
+            Debug.Assert(options != null);
+            env = new StorageEnvironment(options);
 
 			Initialize();
 			CreateSchema();
@@ -46,10 +45,10 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			var reportData = new Dictionary<string, object>
 	        {
-	            {"MaxNodeSize", persistenceSource.Options.DataPager.MaxNodeSize},
-	            {"NumberOfAllocatedPages", persistenceSource.Options.DataPager.NumberOfAllocatedPages},
+	            {"MaxNodeSize", _options.DataPager.MaxNodeSize},
+	            {"NumberOfAllocatedPages", _options.DataPager.NumberOfAllocatedPages},
 	           // {"PageMaxSpace", persistenceSource.Options.DataPager.PageMaxSpace},
-	            {"PageMinSpace", persistenceSource.Options.DataPager.PageMinSpace},
+	            {"PageMinSpace", _options.DataPager.PageMinSpace},
 	           // {"PageSize", persistenceSource.Options.DataPager.PageSize},
                 {"Documents", GetEntriesCount(Documents)},
                 {"Indexes", GetEntriesCount(IndexingStats)},
