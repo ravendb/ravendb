@@ -468,3 +468,11 @@ interface documentBase {
     getId(): string;
     getDocumentPropertyNames(): Array<string>;
 }
+
+interface smugglerOptionsDto {
+  IncludeDocuments: boolean;
+  IncludeIndexes: boolean;
+  IncludeTransformers: boolean;
+  IncludeAttachments: boolean;
+  RemoveAnalyzers: boolean;
+}
