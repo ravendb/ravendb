@@ -1,9 +1,8 @@
 import document = require("models/document");
-import documentMetadata = require("models/documentMetadata");
 
 class scriptedIndex extends document {
 
-    public metadata: documentMetadata;
+    deleteLater = ko.observable<boolean>();
 
     indexScript = ko.observable<string>();
     deleteScript = ko.observable<string>();
@@ -14,12 +13,14 @@ class scriptedIndex extends document {
 
         this.indexScript(dto.IndexScript);
         this.deleteScript(dto.DeleteScript);
-
-        this.metadata = new documentMetadata(dto['@metadata']);
     }
 
-    static empty(): scriptedIndex {
+    static emptyForIndex(indexName: string): scriptedIndex {
+        var meta = [];
+        meta['@id'] = "Raven/ScriptedIndexResults/" + indexName;
+        meta['Raven-Entity-Name'] = 'ScriptedIndexResults';
         return new scriptedIndex({
+            '@metadata': meta,
             IndexScript: "",
             DeleteScript: ""
         });
@@ -27,7 +28,6 @@ class scriptedIndex extends document {
 
     toDto(): scriptedIndexDto {
         var meta = this.__metadata.toDto();
-        meta['@id'] = "Raven/ScriptedIndexResults/" + "TEST";
         return {
             '@metadata': meta,
             IndexScript: this.indexScript(),
@@ -35,6 +35,19 @@ class scriptedIndex extends document {
         };
     }
 
+    markToDelete() {
+        this.deleteLater(true);
+        this.indexScript("");
+        this.deleteScript("");
+    }
+
+    cancelDeletion() {
+        this.deleteLater(false);
+    }
+
+    isMarkedToDelete(): boolean {
+        return this.deleteLater();
+    }
 }
 
 export = scriptedIndex;
