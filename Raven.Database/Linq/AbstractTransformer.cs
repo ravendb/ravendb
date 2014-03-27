@@ -46,6 +46,18 @@ namespace Raven.Database.Linq
 
 	    }
 
+        protected RavenJToken QueryOrDefault(string key, object val)
+        {
+            if (CurrentTransformationScope.Current == null)
+                throw new InvalidOperationException("Query was accessed without CurrentTransformationScope.Current being set");
+
+            RavenJToken value;
+            if (CurrentTransformationScope.Current.QueryInputs.TryGetValue(key, out value) == false)
+                return RavenJToken.FromObject(val);
+            return value;
+
+        }
+
 	    public object Include(object key)
 		{
 			if (CurrentTransformationScope.Current == null)
