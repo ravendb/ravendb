@@ -31,6 +31,7 @@ class ctor {
     gridViewport: JQuery;
     scrollThrottleTimeoutHandle = 0;
     firstVisibleRow: row = null;
+    documentsSourceSubscription: KnockoutSubscription = null;
 
     settings: {
         documentsSource: KnockoutObservable<pagedList>;
@@ -71,7 +72,7 @@ class ctor {
             this.columns.push(new column("Id", ctor.idColumnWidth));
         }
 
-        this.settings.documentsSource.subscribe(list => {
+        this.documentsSourceSubscription = this.settings.documentsSource.subscribe(list => {
             this.recycleRows().forEach(r => {
                 r.resetCells();
                 r.isInUse(false);
@@ -95,6 +96,7 @@ class ctor {
         this.gridViewport = this.grid.find(".ko-grid-viewport-container");
         this.gridViewport.on('DynamicHeightSet', () => this.onWindowHeightChanged());
         this.gridViewport.scroll(() => this.onGridScrolled());
+
         this.setupKeyboardShortcuts();
         if (this.settings.useContextMenu) {
             this.setupContextMenu();
@@ -103,7 +105,11 @@ class ctor {
 
     detached() {
         $(this.settings.gridSelector).unbind('keydown.jwerty');
+        
         this.gridViewport.off('DynamicHeightSet');
+        if (this.documentsSourceSubscription) {
+            this.documentsSourceSubscription.dispose();
+        }
     }
 
     calculateRecycleRowCount() {
