@@ -225,7 +225,7 @@ namespace Raven.Database.Bundles.SqlReplication
 								.Where(x => lastReplicatedEtag.CompareTo(x.Etag) <= 0) // haven't replicate the etag yet
                                 .Where(document =>
                                 {
-                                    var info = Database.GetRecentTouchesFor(document.Key);
+                                    var info = Database.Documents.GetRecentTouchesFor(document.Key);
                                     if (info != null)
                                     {
                                         if (info.TouchedEtag.CompareTo(lastReplicatedEtag) > 0)

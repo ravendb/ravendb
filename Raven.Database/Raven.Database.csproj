@@ -315,7 +315,6 @@
     <Compile Include="Extensions\CancellationTokenSource.cs" />
     <Compile Include="Impl\DTC\EsentInFlightTransactionalState.cs" />
     <Compile Include="Impl\DTC\EsentTransactionContext.cs" />
-    <Compile Include="Impl\DTC\MuninInFlightTransactionalState.cs" />
     <Compile Include="Impl\PutSerialLock.cs" />
     <Compile Include="Indexing\IndependentBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
@@ -1178,7 +1177,7 @@
     <EmbeddedResource Include="Server\WebUI\js\rdb.jsonEditor\rdb.jsonEditor.js" />
     <EmbeddedResource Include="Server\WebUI\statistics.html" />
     <EmbeddedResource Include="Server\WebUI\view.html" />
-    <EmbeddedResource Include="..\Raven.Studio.Html5\**"  Exclude="*.dll.config">
+    <EmbeddedResource Include="..\Raven.Studio.Html5\**" Exclude="*.dll.config">
       <Link>Server\Html5Studio\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </EmbeddedResource>
   </ItemGroup>

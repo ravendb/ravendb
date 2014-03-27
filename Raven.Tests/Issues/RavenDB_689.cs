@@ -41,9 +41,9 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void TwoMastersOneSlaveAttachmentReplicationIssue()
 		{
-			var store1 = CreateStore(requestedStorage: "esent");
-			var store2 = CreateStore(requestedStorage: "esent");
-			var store3 = CreateStore(requestedStorage: "esent");
+			var store1 = CreateStore();
+			var store2 = CreateStore();
+			var store3 = CreateStore();
 
 			SetupReplication(store1.DatabaseCommands, store2, store3);
 			SetupReplication(store2.DatabaseCommands, store1, store3);
@@ -152,9 +152,9 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void TwoMastersOneSlaveDocumentReplicationIssue()
 		{
-			var store1 = CreateStore(requestedStorage:"esent");
-			var store2 = CreateStore(requestedStorage: "esent");
-			var store3 = CreateStore(requestedStorage: "esent");
+			var store1 = CreateStore();
+			var store2 = CreateStore();
+			var store3 = CreateStore();
 
 			SetupReplication(store1.DatabaseCommands, store2, store3);
 			SetupReplication(store2.DatabaseCommands, store1, store3);

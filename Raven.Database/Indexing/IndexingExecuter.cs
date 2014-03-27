@@ -93,10 +93,10 @@ namespace Raven.Database.Indexing
 		{
 			indexesToWorkOn = context.Configuration.IndexingScheduler.FilterMapIndexes(indexesToWorkOn);
 
-			if(indexesToWorkOn.Count == 0)
+			if (indexesToWorkOn.Count == 0)
 				return;
 
-            var lastIndexedGuidForAllIndexes =
+            var lastIndexedEtagForAllIndexes =
                    indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToEtag();
 
 			context.CancellationToken.ThrowIfCancellationRequested();

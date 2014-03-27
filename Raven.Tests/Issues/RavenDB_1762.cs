@@ -36,12 +36,16 @@ namespace Raven.Tests.Issues
                 Enabled = false;
             }
 
-            public override bool TryResolve(string id, Raven.Json.Linq.RavenJObject metadata, Raven.Json.Linq.RavenJObject document, Raven.Abstractions.Data.JsonDocument existingDoc, Func<string, Raven.Abstractions.Data.JsonDocument> getDocument)
+            public override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc, Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave, out RavenJObject documentToSave)
             {
                 if (Enabled)
                 {
                     metadata.Add("Raven-Remove-Document-Marker", true);
                 }
+
+                metadataToSave = metadata;
+                documentToSave = document;
+
                 return Enabled;
             }
         }
@@ -72,7 +76,7 @@ namespace Raven.Tests.Issues
                     target.Add(key, source[key]);
             }
 
-            public override bool TryResolve(string id, Raven.Json.Linq.RavenJObject metadata, Raven.Json.Linq.RavenJObject document, Raven.Abstractions.Data.JsonDocument existingDoc, Func<string, Raven.Abstractions.Data.JsonDocument> getDocument)
+            public override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc, Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave, out RavenJObject documentToSave)
             {
                 if (Enabled)
                 {
@@ -83,13 +87,16 @@ namespace Raven.Tests.Issues
                     }
                 }
 
+                metadataToSave = metadata;
+                documentToSave = document;
+
                 return Enabled;
             }
         }
 
-        protected override void ConfigureServer(RavenConfiguration serverConfiguration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            serverConfiguration.Catalog.Catalogs.Add(new TypeCatalog(typeof(DeleteOnConflict), typeof(PutOnConflict)));
+            configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(DeleteOnConflict), typeof(PutOnConflict)));
         }
 
         const string docId = "users/1";

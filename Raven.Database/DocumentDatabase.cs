@@ -86,7 +86,6 @@ namespace Raven.Database
         public DocumentDatabase(InMemoryRavenConfiguration configuration, TransportState transportState = null)
         {
             DocumentLock = new PutSerialLock();
-            this.configuration = configuration;
             Name = configuration.DatabaseName;
             Configuration = configuration;
             this.transportState = transportState ?? new TransportState();
@@ -535,7 +534,7 @@ namespace Raven.Database
                     try
                     {
                         inFlightTransactionalState.Commit(txId);
-                        log.Debug("Commit of tx {0} completed", txId);
+                        Log.Debug("Commit of tx {0} completed", txId);
                         workContext.ShouldNotifyAboutWork(() => "DTC transaction commited");
                     }
                     finally
