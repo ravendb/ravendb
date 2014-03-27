@@ -62,9 +62,9 @@ namespace Raven.Server
             set { configuration.RunInMemory = value; }
 	    }
 
-	    public RavenDbServer Initialize()
+	    public RavenDbServer Initialize(Action<RavenDBOptions> configur = null)
 	    {
-            owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer);
+            owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer, configure: configur);
             options = owinHttpServer.Options;
             serverThingsForTests = new ServerThingsForTests(options);
             documentStore = new DocumentStore
@@ -73,6 +73,11 @@ namespace Raven.Server
                 Url = "http://localhost"
             }.Initialize();
 	        return this;
+	    }
+
+	    public RavenDBOptions Options
+	    {
+	        get { return options; }
 	    }
 
 	    ///<summary>

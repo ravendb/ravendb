@@ -24,7 +24,7 @@ namespace Raven.Tests.Bundles.Expiration
 
 		public WithCascade()
 		{
-			ravenDbServer = GetNewServer(databaseName: Constants.SystemDatabase, activeBundles: "documentExpiration", configureServer: configuration =>
+            ravenDbServer = GetNewServer(databaseName: Constants.SystemDatabase, activeBundles: "documentExpiration", configureConfig: configuration =>
 			{
 				configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(CascadeDeleteTrigger).Assembly));
 				configuration.Settings["Raven/Expiration/DeleteFrequencySeconds"] = "1";
