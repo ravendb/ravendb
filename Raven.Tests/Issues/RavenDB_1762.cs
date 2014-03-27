@@ -12,10 +12,12 @@ using Raven.Bundles.Replication.Plugins;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Database.Config;
+using Raven.Database.Server;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.Replication;
-using Raven.Tests.Linq;
+using Raven.Tests.MailingList;
 using Xunit;
+using User = Raven.Tests.Linq.User;
 
 namespace Raven.Tests.Issues
 {
@@ -93,11 +95,11 @@ namespace Raven.Tests.Issues
                 return Enabled;
             }
         }
-
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
-        {
-            configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(DeleteOnConflict), typeof(PutOnConflict)));
-        }
+	    protected override void ConfigureServer(RavenDBOptions dbOptions)
+	    {
+	        dbOptions.DatabaseLandlord.SetupTenantConfiguration += configuration =>
+	            configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof (DeleteOnConflict)));
+	    }
 
         const string docId = "users/1";
 

@@ -381,7 +381,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams)
 		{
 			var scheduledReductionsByViewAndLevelAndReduceKey = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
-            var deleter = new ScheduledReductionDeleter(getItemsToReduceParams.ItemsToDelete);
+            var deleter = new ScheduledReductionDeleter(getItemsToReduceParams.ItemsToDelete, o =>
+            {
+                var json = o as RavenJObject;
+                if (json == null) 
+                    return null;
+
+                var etag = Etag.Parse(json.Value<byte[]>("etag"));
+                return etag.ToString();
+            });
 
 			var seenLocally = new HashSet<Tuple<string, int>>();
 			foreach (var reduceKey in getItemsToReduceParams.ReduceKeys.ToArray())
@@ -998,13 +1006,27 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
     public class ScheduledReductionDeleter
     {
-        private readonly ConcurrentSet<object> set;
+        private readonly ConcurrentSet<object> innerSet;
 
-        private readonly IDictionary<Slice, object> state = new Dictionary<Slice, object>(); 
+        private readonly IDictionary<Slice, object> state = new Dictionary<Slice, object>(new SliceEqualityComparer());
 
-        public ScheduledReductionDeleter(ConcurrentSet<object> set)
+        public ScheduledReductionDeleter(ConcurrentSet<object> set, Func<object, Slice> extractKey)
         {
-            this.set = set;
+            innerSet = set;
+
+            InitializeState(set, extractKey);
+        }
+
+        private void InitializeState(IEnumerable<object> set, Func<object, Slice> extractKey)
+        {
+            foreach (var item in set)
+            {
+                var key = extractKey(item);
+                if (key == null)
+                    continue;
+
+                state.Add(key, null);
+            }
         }
 
         public bool Delete(Slice key, object value)
@@ -1013,7 +1035,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 return false;
 
             state.Add(key, null);
-            set.Add(value);
+            innerSet.Add(value);
 
             return true;
         }

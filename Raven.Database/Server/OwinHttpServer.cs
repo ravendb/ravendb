@@ -13,14 +13,16 @@ namespace Raven.Database.Server
 {
 	public sealed class OwinHttpServer : IDisposable
 	{
-		private readonly IDisposable server;
+	    private readonly IDisposable server;
 		private readonly Startup startup;
 		private static readonly byte[] NotFoundBody = Encoding.UTF8.GetBytes("Route invalid");
 	    private readonly OwinEmbeddedHost owinEmbeddedHost;
 
-	    public OwinHttpServer(InMemoryRavenConfiguration config, DocumentDatabase db = null, bool useHttpServer = true)
+	    public OwinHttpServer(InMemoryRavenConfiguration config, DocumentDatabase db = null, bool useHttpServer = true, Action<RavenDBOptions> configure = null)
 		{
-			startup = new Startup(config, db);
+	        startup = new Startup(config, db);
+	        if (configure != null)
+	            configure(startup.Options);
 		    owinEmbeddedHost = OwinEmbeddedHost.Create(app => startup.Configuration(app));
 
 	        if (!useHttpServer)
