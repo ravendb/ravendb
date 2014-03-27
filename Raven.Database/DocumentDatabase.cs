@@ -822,11 +822,6 @@ namespace Raven.Database
             }
         }
 
-        public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation, Action<string> output, bool defrag)
-        {
-            MaintenanceActions.Restore(configuration, backupLocation, databaseLocation, output, defrag);
-        }
-
         public void Rollback(string txId)
         {
             inFlightTransactionalState.Rollback(txId);

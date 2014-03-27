@@ -112,14 +112,10 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (bool.TryParse(InnerRequest.RequestUri.ParseQueryString()["hard-delete"], out result) && result)
 			{
 				IOExtensions.DeleteDirectory(configuration.DataDirectory);
-				IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
-
-				if (databasedocument != null)
-				{
-					var dbDoc = databasedocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
-					if (dbDoc != null && dbDoc.Settings.ContainsKey(Constants.RavenLogsPath))
-						IOExtensions.DeleteDirectory(dbDoc.Settings[Constants.RavenLogsPath]);
-				}
+                if (configuration.IndexStoragePath != null)
+				    IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
+                if (configuration.JournalsStoragePath != null)
+                    IOExtensions.DeleteDirectory(configuration.JournalsStoragePath);
 			}
 
 			return GetEmptyMessage();

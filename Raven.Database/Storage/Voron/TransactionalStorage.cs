@@ -2,11 +2,12 @@
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database;
+using Raven.Database.Data;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Voron;
 using Raven.Database.Storage.Voron.Backup;
 using Raven.Database.Util.Streams;
-
+using Voron;
 using VoronExceptions = Voron.Exceptions;
 using Task = System.Threading.Tasks.Task;
 
@@ -201,46 +202,67 @@ namespace Raven.Storage.Voron
             current.Value.OnStorageCommit += action;
         }
 
-		public bool Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
+		public void Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
 		{
 		    if (generator == null) throw new ArgumentNullException("generator");
 		    if (documentCodecs == null) throw new ArgumentNullException("documentCodecs");
 
 		    uuidGenerator = generator;
-			_documentCodecs = documentCodecs;
+		    _documentCodecs = documentCodecs;
 
-			var persistenceSource = configuration.RunInMemory ? (IPersistenceSource)new MemoryPersistenceSource() : new MemoryMapPersistenceSource(configuration);
+		    StorageEnvironmentOptions options = configuration.RunInMemory ?
+		        StorageEnvironmentOptions.CreateMemoryOnly() :
+		        CreateStorageOptionsFromConfiguration(configuration);
 
-			tableStorage = new TableStorage(persistenceSource, bufferPool);
-
-			if (persistenceSource.CreatedNew)
-			{
-				Id = Guid.NewGuid();
-
-				using (var writeIdBatch = new WriteBatch())
-				{
-					tableStorage.Details.Add(writeIdBatch, "id", Id.ToByteArray());
-					tableStorage.Write(writeIdBatch);
-				}
-			}
-			else
-			{
-				using (var snapshot = tableStorage.CreateSnapshot())
-				{
-					var read = tableStorage.Details.Read(snapshot, "id", null);
-					if (read == null || read.Reader == null || read.Reader.Length == 0) //precaution - might prevent NRE in edge cases
-						throw new InvalidDataException("Failed to initialize Voron transactional storage. Possible data corruption.");
-
-					using (var stream = read.Reader.AsStream())
-					using (var reader = new BinaryReader(stream))
-					{
-						Id = new Guid(reader.ReadBytes((int) stream.Length));
-					}
-				}
-			}
-
-			return persistenceSource.CreatedNew;
+		    tableStorage = new TableStorage(options, bufferPool);
+		    SetupDatabaseId();
 		}
+
+	    private void SetupDatabaseId()
+	    {
+	        using (var snapshot = tableStorage.CreateSnapshot())
+	        {
+	            var read = tableStorage.Details.Read(snapshot, "id", null);
+	            if (read == null) // new db
+	            {
+	                Id = Guid.NewGuid();
+	                using (var writeIdBatch = new WriteBatch())
+	                {
+	                    tableStorage.Details.Add(writeIdBatch, "id", Id.ToByteArray());
+	                    tableStorage.Write(writeIdBatch);
+	                }
+	            }
+	            else
+	            {
+                    if (read.Reader == null || read.Reader.Length != 16)//precaution - might prevent NRE in edge cases
+	                    throw new InvalidDataException("Failed to initialize Voron transactional storage. Possible data corruption.");
+	                using (var stream = read.Reader.AsStream())
+	                using (var reader = new BinaryReader(stream))
+	                {
+	                    Id = new Guid(reader.ReadBytes((int) stream.Length));
+	                }
+	            }
+	        }
+	    }
+
+	    private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
+        {
+            bool allowIncrementalBackupsSetting;
+            if (bool.TryParse(configuration.Settings["Raven/Voron/AllowIncrementalBackups"] ?? "false", out allowIncrementalBackupsSetting) == false)
+                throw new ArgumentException("Raven/Voron/AllowIncrementalBackups settings key contains invalid value");
+
+            var directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
+            var filePathFolder = new DirectoryInfo(directoryPath);
+            if (filePathFolder.Exists == false)
+                filePathFolder.Create();
+
+            var tempPath = configuration.Settings["Raven/Voron/TempPath"];
+	        var journalPath = configuration.Settings[Abstractions.Data.Constants.RavenTxJournalPath] ?? configuration.JournalsStoragePath;
+            var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
+            options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
+            return options;
+        }
+
 
 		public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup,
 			DatabaseDocument documentDatabase)
@@ -254,9 +276,9 @@ namespace Raven.Storage.Voron
             Task.Factory.StartNew(backupOperation.Execute);
 		}       
 
-		public void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
+		public void Restore(RestoreRequest restoreRequest, Action<string> output)
 		{
-			new RestoreOperation(backupLocation, configuration, output).Execute();
+			new RestoreOperation(restoreRequest, configuration, output).Execute();
 		}
 
 	    public DatabaseSizeInformation GetDatabaseSize()

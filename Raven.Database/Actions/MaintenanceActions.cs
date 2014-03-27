@@ -25,12 +25,12 @@ namespace Raven.Database.Actions
         {
         }
 
-        internal static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation, Action<string> output, bool defrag)
+        public static void Restore(RavenConfiguration configuration, RestoreRequest restoreRequest, Action<string> output)
         {
-            var databaseDocumentPath = Path.Combine(backupLocation, "Database.Document");
+            var databaseDocumentPath = Path.Combine(restoreRequest.BackupLocation, "Database.Document");
             if (File.Exists(databaseDocumentPath) == false)
             {
-                throw new InvalidOperationException("Cannot restore when the Database.Document file is missing in the backup folder: " + backupLocation);
+                throw new InvalidOperationException("Cannot restore when the Database.Document file is missing in the backup folder: " + restoreRequest.BackupLocation);
             }
 
             var databaseDocumentText = File.ReadAllText(databaseDocumentPath);
@@ -42,19 +42,20 @@ namespace Raven.Database.Actions
                 storage = "esent";
             }
 
-            if (!string.IsNullOrWhiteSpace(databaseLocation))
+            if (!string.IsNullOrWhiteSpace(restoreRequest.DatabaseLocation))
             {
-                configuration.DataDirectory = databaseLocation;
+                configuration.DataDirectory = restoreRequest.DatabaseLocation;
             }
 
             using (var transactionalStorage = configuration.CreateTransactionalStorage(storage, () => { }))
             {
-                transactionalStorage.Restore(backupLocation, databaseLocation, output, defrag);
+                transactionalStorage.Restore(restoreRequest, output);
             }
         }
 
         public void StartBackup(string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument databaseDocument)
         {
+            if (databaseDocument == null) throw new ArgumentNullException("databaseDocument");
             var document = Database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
             if (document != null)
             {

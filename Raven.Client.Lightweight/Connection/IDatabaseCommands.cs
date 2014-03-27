@@ -516,12 +516,12 @@ namespace Raven.Client.Connection
         /// <summary>
         /// Begins a restore operation
         /// </summary>
-        void StartRestore(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false);
+        void StartRestore(RestoreRequest restoreRequest);
 
         /// <summary>
         /// Begins a backup operation
         /// </summary>
-        void StartBackup(string backupLocation, DatabaseDocument databaseDocument, string databaseName);
+        void StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName);
 
         IDatabaseCommands Commands { get; }
 	}

@@ -3,9 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using Raven.Abstractions.Data;
-
-namespace Raven.Database.Data
+namespace Raven.Abstractions.Data
 {
 	public class BackupRequest
 	{
