@@ -615,8 +615,9 @@ namespace Raven.Client.Document
 				case "String":
 					return SortOptions.String;
 				default:
-					return customDefaultSortOptions.ContainsKey(typeName)
-						       ? customDefaultSortOptions[typeName]
+			        SortOptions value;
+			        return customDefaultSortOptions.TryGetValue(typeName, out value)
+						       ? value
 						       : SortOptions.String;
 			}
 		}
@@ -631,7 +632,7 @@ namespace Raven.Client.Document
 				type = nonNullable;
 
 			if (type == typeof (int) || type == typeof (long) || type == typeof (double) || type == typeof (float) ||
-			    type == typeof (decimal) || type == typeof (TimeSpan))
+			    type == typeof (decimal) || type == typeof (TimeSpan) || type == typeof(short))
 				return true;
 
 			return customRangeTypes.Contains(type);
