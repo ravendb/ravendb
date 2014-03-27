@@ -306,16 +306,7 @@ class appUrl {
                 var newUrlWithDatabase = existingDbQueryString ?
                     existingAddress.replace(existingDbQueryString, newDbQueryString) :
                     existingAddress + (window.location.hash.indexOf("?") >= 0 ? "&" : "?") + "database=" + encodeURIComponent(db.name);
-
-                // in case replacing fails
-                /*if (newUrlWithDatabase === existingAddress) {
-                    existingDbQueryString = dbNameInAddress ? "database=" + dbNameInAddress : null;
-                    newDbQueryString = "database=" + encodeURIComponent(db.name);
-
-                    newUrlWithDatabase = existingDbQueryString ?
-                    existingAddress.replace(existingDbQueryString, newDbQueryString) :
-                    existingAddress + (window.location.hash.indexOf("?") >= 0 ? "&" : "?") + "database=" + encodeURIComponent(db.name);
-                }*/
+              
                 return newUrlWithDatabase;
             } 
         }
