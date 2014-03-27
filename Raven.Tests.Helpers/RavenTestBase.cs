@@ -205,7 +205,8 @@ namespace Raven.Tests.Helpers
 			string requestedStorage = null,
 			bool enableAuthentication = false,
 			string activeBundles = null,
-			Action<InMemoryRavenConfiguration> configureServer = null,
+			Action<RavenDBOptions> configureServer = null,
+            Action<InMemoryRavenConfiguration> configureConfig = null,
             [CallerMemberName] string databaseName = null)
 		{
 		    databaseName = NormalizeDatabaseName(databaseName != Constants.SystemDatabase ? databaseName : null);
@@ -237,8 +238,8 @@ namespace Raven.Tests.Helpers
 				ravenConfiguration.Settings["Raven/ActiveBundles"] = activeBundles;
 			}
 
-			if (configureServer != null)
-				configureServer(ravenConfiguration);
+			if (configureConfig != null)
+                configureConfig(ravenConfiguration);
 			ModifyConfiguration(ravenConfiguration);
 
 			ravenConfiguration.PostInit();
@@ -247,7 +248,8 @@ namespace Raven.Tests.Helpers
             var ravenDbServer = new RavenDbServer(ravenConfiguration)
             {
 	            UseEmbeddedHttpServer = true,
-            }.Initialize();
+            };
+            ravenDbServer.Initialize();
 			servers.Add(ravenDbServer);
 
 			try

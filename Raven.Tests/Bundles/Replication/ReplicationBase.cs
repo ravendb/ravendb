@@ -60,7 +60,8 @@ namespace Raven.Tests.Bundles.Replication
                 activeBundles: "replication" + (enableCompressionBundle ? ";compression" : string.Empty),
                 enableAuthentication: anonymousUserAccessMode == AnonymousUserAccessMode.None,
                 databaseName: databaseName, 
-				configureServer: ConfigureServer);
+				configureConfig: ConfigureConfig, 
+                configureServer: ConfigureServer);
 
             if (enableAuthorization)
             {
@@ -74,7 +75,12 @@ namespace Raven.Tests.Bundles.Replication
             return documentStore;
         }
 
-	    protected virtual void ConfigureServer(InMemoryRavenConfiguration inMemoryRavenConfiguration)
+        protected virtual void ConfigureServer(RavenDBOptions options)
+        {
+            
+        }
+
+        protected virtual void ConfigureConfig(InMemoryRavenConfiguration inMemoryRavenConfiguration)
 	    {
 		    
 	    }

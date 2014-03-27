@@ -13,23 +13,25 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Database.Config;
+using Raven.Database.Server;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Bundles.Replication;
-using Raven.Tests.Linq;
+using Raven.Tests.MailingList;
 using Xunit;
 using Xunit.Sdk;
+using User = Raven.Tests.Linq.User;
 
 namespace Raven.Tests.Issues
 {
 	public class RavenDB_1762 : ReplicationBase
 	{
 		private const string docId = "users/1";
-
-		protected override void ConfigureServer(InMemoryRavenConfiguration serverConfiguration)
-		{
-			serverConfiguration.Catalog.Catalogs.Add(new TypeCatalog(typeof (DeleteOnConflict)));
-		}
+	    protected override void ConfigureServer(RavenDBOptions dbOptions)
+	    {
+	        dbOptions.DatabaseLandlord.SetupTenantConfiguration += configuration =>
+	            configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof (DeleteOnConflict)));
+	    }
 
 		private void CanResolveConflict(bool resolveConflict, Action<IDocumentStore, IDocumentStore> testCallback)
 		{
