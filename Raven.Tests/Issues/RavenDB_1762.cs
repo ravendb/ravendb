@@ -11,6 +11,7 @@ using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Client;
 using Raven.Client.Exceptions;
+using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Json.Linq;
@@ -23,6 +24,7 @@ namespace Raven.Tests.Issues
 {
     public class RavenDB_1762 : ReplicationBase
     {
+        
         [InheritedExport(typeof(AbstractDocumentReplicationConflictResolver))]
         public class DeleteOnConflict : AbstractDocumentReplicationConflictResolver
         {
@@ -98,7 +100,10 @@ namespace Raven.Tests.Issues
 	    protected override void ConfigureServer(RavenDBOptions dbOptions)
 	    {
 	        dbOptions.DatabaseLandlord.SetupTenantConfiguration += configuration =>
-	            configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof (DeleteOnConflict)));
+	        {
+                configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(DeleteOnConflict)));
+                configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(PutOnConflict)));
+	        };
 	    }
 
         const string docId = "users/1";
@@ -249,7 +254,6 @@ namespace Raven.Tests.Issues
         {
             CanResolveConflict(new DeleteOnConflict(), resolver => resolver.Disable(), delegate(IDocumentStore store1, IDocumentStore store2)
             {
-
                 using (var s = store2.OpenSession())
                 {
                     var user = s.Load<User>(docId);
