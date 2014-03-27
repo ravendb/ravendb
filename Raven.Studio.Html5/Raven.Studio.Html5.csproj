@@ -165,6 +165,7 @@
     <TypeScriptCompile Include="App\models\conflictsInfo.ts" />
     <TypeScriptCompile Include="App\models\abstractQueryResult.ts" />
     <TypeScriptCompile Include="App\models\conflictVersion.ts" />
+    <TypeScriptCompile Include="App\commands\saveScriptedIndexesCommand.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\createEncryption.html" />

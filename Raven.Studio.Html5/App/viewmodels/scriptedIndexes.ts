@@ -4,6 +4,7 @@ import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import scriptedIndex = require("models/scriptedIndex");
 import scriptedIndexMap = require("models/scriptedIndexMap");
 import getScriptedIndexesCommand = require("commands/getScriptedIndexesCommand");
+import saveScriptedIndexesCommand = require("commands/saveScriptedIndexesCommand");
 
 class scriptedIndexes extends viewModelBase {
 
@@ -37,7 +38,14 @@ class scriptedIndexes extends viewModelBase {
     fetchAllScriptedIndexes() {
         new getScriptedIndexesCommand(this.activeDatabase())
             .execute()
-            .done((indexes: scriptedIndex[]) => this.scrIndexes(new scriptedIndexMap(indexes)));
+            .done((indexes: scriptedIndex[]) => this.performAllScriptedIndexes(indexes));
+    }
+
+    performAllScriptedIndexes(indexes: scriptedIndex[]) {
+        this.scrIndexes(new scriptedIndexMap(indexes));
+        if (this.indexNames().length > 0) {
+            this.setSelectedIndex(this.indexNames.first());
+        }
     }
 
     attached() {
@@ -74,6 +82,27 @@ class scriptedIndexes extends viewModelBase {
     private getIndexForName(indexName: string) {
         var index = this.scrIndexes().getIndex(indexName);
         this.scrIndex(index);
+    }
+
+    saveChanges() {
+        new saveScriptedIndexesCommand(this.scrIndexes(), this.activeDatabase())
+            .execute()
+            .done((result: bulkDocumentDto[]) => this.updateIndexes(result));
+    }
+
+    private updateIndexes(serverIndexes: bulkDocumentDto[]) {
+        this.scrIndexes().getIndexes().forEach(index => {
+            var serverIndex = serverIndexes.first(k => k.Key === index.getId());
+            if (serverIndex && !serverIndex.Deleted) {
+                index.__metadata.etag = serverIndex.Etag;
+                index.__metadata.lastModified = serverIndex.Metadata['Last-Modified'];
+            }
+        });
+    }
+
+    deleteScript() {
+        this.scrIndexes().removeIndex(this.selectedIndex());
+        this.getIndexForName(this.selectedIndex());
     }
 }
 
