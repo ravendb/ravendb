@@ -68,7 +68,7 @@ class editIndex extends viewModelBase {
             this.priority(indexPriority.normal);
             this.editedIndex(this.createNewIndexDefinition());
         }
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.name, this.editedTransformer().transformResults]);
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.editedIndex().name]);
     }
 
     attached() {
@@ -151,6 +151,9 @@ class editIndex extends viewModelBase {
             saveCommand
                 .execute()
                 .done(() => {
+                    // Resync Changes
+                    viewModelBase.dirtyFlag().reset();
+
                     if (!this.isEditingExistingIndex()) {
                         this.isEditingExistingIndex(true);
                         this.editExistingIndex(index.Name);

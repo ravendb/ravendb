@@ -19,8 +19,6 @@ class editTransformer extends viewModelBase {
     static containerSelector = "#editTransformerContainer";
     editorCollection = ko.observableArray<{ alias: string; controller: HTMLElement }>();
     
-    private docEditor;
-
     constructor() {
         super();
         aceEditorBindingHandler.install();
@@ -35,23 +33,22 @@ class editTransformer extends viewModelBase {
         } else {
             this.editedTransformer(transformer.empty());
         }
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults]);
     }
 
     attached() {
         this.addTransformerHelpPopover();
         this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editTransformer.containerSelector);
-        this.createKeyboardShortcut("alt+shift+del", ()=> this.deleteTransformer(), editTransformer.containerSelector);
+        this.createKeyboardShortcut("alt+shift+del", () => this.deleteTransformer(), editTransformer.containerSelector);
+
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults]);
     }
 
     // Called back after the entire composition has finished (parents and children included)
-    compositionComplete() {
-        this.docEditor = ko.utils.domData.get($("#transformerAceEditor")[0], "aceEditor");
-        this.focusOnEditor();
-    }
+    compositionComplete() {}
 
     saveInObservable() {
-        var docEditorText = this.docEditor.getSession().getValue();
+        var docEditor = ko.utils.domData.get($("#transformerAceEditor")[0], "aceEditor");
+        var docEditorText = docEditor.getSession().getValue();
         this.editedTransformer().transformResults(docEditorText);
     }
 
@@ -63,11 +60,12 @@ class editTransformer extends viewModelBase {
         });
     }
 
-    focusOnEditor() {
-        var editorElement = $("#transAceEditor").length == 1 ? $("#transAceEditor")[0] : null;
+    focusOnEditor(elements = null, data = null) {
+        var editorElement = $("#transformerAceEditor").length == 1 ? $("#transformerAceEditor")[0] : null;
         if (editorElement) {
-            if (this.docEditor) {
-                this.docEditor.focus();
+            var docEditor = ko.utils.domData.get($("#transformerAceEditor")[0], "aceEditor");
+            if (docEditor) {
+                docEditor.focus();
             }
         }
     }
@@ -112,8 +110,6 @@ class editTransformer extends viewModelBase {
             var db = this.activeDatabase();
             var deleteViewmodel = new deleteTransformerConfirm([transformer.name()], db);
             deleteViewmodel.deleteTask.done(() => {
-                // Resync Changes
-                viewModelBase.dirtyFlag().reset();
                 router.navigate(appUrl.forTransformers(db));
             });
             dialog.show(deleteViewmodel);

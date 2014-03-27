@@ -61,7 +61,7 @@
                 <div class="col-md-11">
                     <div class="row">
                         <div class="col-md-11">
-                            <input type="text" class="form-control use-bootstrap-tooltip" id="indexName" placeholder="Index name" accesskey="N" data-bind="value: name" title="Index name (Alt+N)" />
+                            <input type="text" class="form-control use-bootstrap-tooltip" id="indexName" placeholder="Index name" accesskey="N" data-bind="value: name, valueUpdate: 'afterkeyup'" title="Index name (Alt+N)" />
                         </div>
                     </div>
                 </div>
@@ -74,7 +74,7 @@
                 <div data-bind="foreach: maps" class="col-md-11">
                     <div class="row">
                         <div class="col-md-11">
-                            <pre id="indexEditor" class="form-control map" data-bind="aceEditor: { code: $data }"></pre>
+                            <pre id="indexEditor" class="form-control map" data-bind="aceEditor: { code: $data, getFocus: true }"></pre>
                         </div>
                         <button type="button" class="close pull-left use-bootstrap-tooltip" data-bind="visible: $index() !== 0 || $root.hasMultipleMaps(), click: $root.removeMap.bind($root, $index())" aria-hidden="true" title="Remove this map from the index">&times;</button>
                     </div>
