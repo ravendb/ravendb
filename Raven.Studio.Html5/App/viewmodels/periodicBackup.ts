@@ -7,11 +7,16 @@ import savePeriodicBackupSetupCommand = require("commands/savePeriodicBackupSetu
 class periodicBackup extends viewModelBase {
 
     backupSetup = ko.observable<periodicBackupSetup>();
+    static containerId = "#periodicBackupContainer";
 
     activate() {
         this.backupSetup(new periodicBackupSetup);
         this.fetchPeriodicBackupSetup();
         this.fetchPeriodicBackupAccountsSettings();
+    }
+
+    attached() {
+        
     }
 
     fetchPeriodicBackupSetup() {
@@ -33,6 +38,7 @@ class periodicBackup extends viewModelBase {
     }
 
     activatePeriodicBackup() {
+        debugger;
         this.backupSetup().activated(true);
     }
 

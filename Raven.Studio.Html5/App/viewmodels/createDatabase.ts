@@ -36,6 +36,11 @@ class createDatabase extends dialogViewModelBase {
         dialog.close(this);
     }
 
+    attached() {
+        super.attached();
+        this.databaseNameFocus(true);
+    }
+
     deactivate() {
         // If we were closed via X button or other dialog dismissal, reject the deletion task since
         // we never started it.
@@ -65,7 +70,7 @@ class createDatabase extends dialogViewModelBase {
         if (!databaseName) {
             message = "Please fill out the Database Name field";
         }
-        else if (this.isDatabaseNameExists(databaseName, this.databases()) == true) {
+        else if (this.isDatabaseNameExists(databaseName, this.databases()) === true) {
             message = "Database Name Already Exists!";
         }
         else if (!this.isValidName(databaseName)) {
