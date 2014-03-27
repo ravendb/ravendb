@@ -50,8 +50,8 @@
         <div class="panel-heading">
             <div class="pull-left panel-title">Replication destinations</div>
             <div class="pull-right">
-                <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: createNewDestination" title="Add a replication destination (Alt+R)" accesskey="R"><i class="fa fa-plus"></i> Add destination</button>
-                <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveChanges" title="Save replication destinations (Alt+S, R)"><i class="fa fa-save"></i></button>
+                <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add destination</button>
+                <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveChanges" title="Save replication destinations (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
             </div>
             <div class="clearfix"></div>
         </div>
@@ -94,9 +94,12 @@
                                     <input type="text" class="form-control" data-bind="value: database" />
                                 </div>
                             </div>
-                            <div>
-                                <button data-bind="click:toggleUserCredentials">User</button>
-                                <button data-bind="click:toggleApiKeyCredentials">ApiKey</button>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label">Credentials</label>
+                                <div class="col-sm-7">
+                                    <button type="button" class="btn btn-default" data-bind="click:toggleUserCredentials, css:{active:isUserCredentials}">User</button>
+                                    <button type="button" class="btn btn-default" data-bind="click:toggleApiKeyCredentials, css:{active:isApiKeyCredentials}">ApiKey</button>
+                                </div>
                             </div>
                             <div data-bind="visible:isUserCredentials">
                                 <div class="form-group">

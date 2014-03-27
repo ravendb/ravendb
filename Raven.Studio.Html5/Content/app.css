@@ -1,4 +1,4 @@
-﻿html,
+html,
 body {
   height: 100%;
 }
@@ -54,6 +54,15 @@ body {
   padding-left: 6px;
   padding-right: 8px;
 }
+.database-page {
+  /*.systemButton {
+        color:grey;
+        margin-top:50px;        
+        position:absolute;
+        top:-40px;
+        right:25px;
+    }*/
+}
 .database-page .btn-toolbar {
   margin-bottom: 20px;
 }
@@ -95,13 +104,6 @@ body {
 .database-page .databases-container .database.system-database.selected .text-muted {
   color: #3071a9;
 }
-.database-page .systemButton {
-  color: grey;
-  margin-top: 50px;
-  position: absolute;
-  top: -40px;
-  right: 25px;
-}
 .document-collections li {
   outline: none;
 }
@@ -140,9 +142,13 @@ body {
   margin-top: 10px;
 }
 .settings-container .api-key-card,
-.settings-container .replication-destination-card,
 .settings-container .win-auth-card {
   display: inline-block;
+  width: 500px;
+  margin-right: 20px;
+}
+.settings-container .replication-destination-card {
+  display: inline-table;
   width: 500px;
   margin-right: 20px;
 }
@@ -543,5 +549,8 @@ footer ul {
 #recentErrorsDialog .error-details,
 #recentErrorsDialog .http-status {
   width: 100%;
+}
+#scriptedIndex .map {
+  height: 160px;
 }
 /*# sourceMappingURL=app.css.map */

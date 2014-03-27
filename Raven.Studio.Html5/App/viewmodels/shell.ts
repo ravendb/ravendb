@@ -21,7 +21,7 @@ import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
-import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
+import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 
 class shell extends viewModelBase {
     private router = router;
@@ -36,15 +36,9 @@ class shell extends viewModelBase {
     recordedErrors = ko.observableArray<alertArgs>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
-    isFirstModelPoll: boolean;
-
-
-    DocumentPrefix = ko.observable<String>();
-    
 
     constructor() {
         super();
-        this.isFirstModelPoll = true;
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
 
@@ -60,6 +54,7 @@ class shell extends viewModelBase {
         router.map([
             { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: false, hash: this.appUrls.databasesManagement },
             { route: 'documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: this.appUrls.documents },
+            { route: 'conflicts', title: 'Conflicts', moduleId: 'viewmodels/conflicts', nav: true, hash: this.appUrls.conflicts },
             { route: 'indexes*details', title: 'Indexes', moduleId: 'viewmodels/indexesShell', nav: true, hash: this.appUrls.indexes },
             { route: 'transformers*details', title: 'Transformers', moduleId: 'viewmodels/transformersShell', nav: false, hash: this.appUrls.transformers },
             { route: 'query*details', title: 'Query', moduleId: 'viewmodels/queryShell', nav: true, hash: this.appUrls.query(null) },
@@ -71,61 +66,8 @@ class shell extends viewModelBase {
 
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
-
-        this.router.guardRoute = (instance: Object, instruction: DurandalRouteInstruction) => this.getValidRoute(instance, instruction);
-        
         this.connectToRavenServer();
     }
-
-    getValidRoute(instance: Object, instruction: DurandalRouteInstruction) :any {
-        if (!this.activeDatabase().isSystem && instruction.queryString && (instruction.queryString.indexOf("database=<system>") >= 0 || instruction.queryString.indexOf("database=%3Csystem%3E") >= 0 )) {
-            var systemDbConfirm = new viewSystemDatabaseConfirm(this.activeDatabase());
-
-            systemDbConfirm.viewTask.done(()=> {
-                var systemDb = appUrl.getSystemDatabase();
-                systemDb.activate();
-
-                var lastRoute = appUrl.forCurrentPage(systemDb);
-
-                if (!lastRoute) {
-                    if (window.location.hash.indexOf("database") < 0) {
-                        lastRoute = window.location.hash + "?database=" + encodeURIComponent(systemDb.name);
-                    } else {
-                        lastRoute = window.location.hash;
-                        lastRoute.substring(lastRoute.length - 2, lastRoute.length) == "&&" ? lastRoute = lastRoute.replace("&&", "&") : lastRoute = lastRoute + "&";
-                    }
-
-                }
-                else if (lastRoute.indexOf("database") < 0) {
-                    lastRoute = lastRoute + "?database=" + encodeURIComponent(systemDb.name);
-                }
-                
-                router.navigate(lastRoute);
-
-            }).fail((lastDb:database) => {
-                var lastRoute = appUrl.forCurrentPage(lastDb);
-
-                if (!lastRoute) {
-                    if (window.location.hash.indexOf("database") < 0) {
-                        lastRoute = window.location.hash + "?database=" + encodeURIComponent(lastDb.name);
-                    } else {
-                        lastRoute = window.location.hash.replace("database=%3Csystem%3E", "database=" + encodeURIComponent(lastDb.name));
-                    } 
-                }
-                else if (lastRoute.indexOf("database") < 0) {
-                    lastRoute = lastRoute + "?database=" + encodeURIComponent(lastDb.name);
-                }
-
-                router.navigate(lastRoute ? lastRoute : window.location.hash);
-                
-            });
-            app.showDialog(systemDbConfirm);
-            return false;
-        } else {
-            return true;
-        }
-    }
-
 
     // Called by Durandal when shell.html has been put into the DOM.
     attached() {
@@ -179,7 +121,6 @@ class shell extends viewModelBase {
         $('#goToDocInput').bind('typeahead:selected', (obj, datum, name) => {
             router.navigate(datum.editHref);
         });
-
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -219,9 +160,21 @@ class shell extends viewModelBase {
             .fail(result => this.handleRavenConnectionFailure(result))
             .done(results => {
                 this.databasesLoaded(results);
-                router.activate();
+                this.fetchStudioConfig();
                 this.fetchBuildVersion();
                 this.fetchLicenseStatus();
+                router.activate();
+            });
+    }
+
+    fetchStudioConfig() {
+        new getDocumentWithMetadataCommand("Raven/StudioConfig", appUrl.getSystemDatabase())
+            .execute()
+            .done((doc: document) => {
+                var systemDbWarning = doc["WarnWhenUsingSystemDatabase"];
+                if (systemDbWarning === false) {
+                    appUrl.warnWhenUsingSystemDatabase = false;
+                }
             });
     }
 
@@ -320,10 +273,11 @@ class shell extends viewModelBase {
     }
 
     selectDatabase(db: database) {
-        db.activate();
-
-        var updatedUrl = appUrl.forCurrentPage(db);
-        this.navigate(updatedUrl);
+        if (db.name != this.activeDatabase().name) {
+            db.activate();
+            var updatedUrl = appUrl.forCurrentPage(db);
+            this.navigate(updatedUrl);
+        }
     }
 
     fetchBuildVersion() {

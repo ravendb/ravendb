@@ -22,19 +22,23 @@ class editDocument extends viewModelBase {
 
     document = ko.observable<document>();
     metadata: KnockoutComputed<documentMetadata>;
-    documentText = ko.observable('');
-    metadataText = ko.observable('');
+    documentText = ko.observable('').extend({ required: true });
+    metadataText = ko.observable('').extend({ required: true });
     isEditingMetadata = ko.observable(false);
     isBusy = ko.observable(false);
     metaPropsToRestoreOnSave = [];
     editedDocId: KnockoutComputed<string>;
-    userSpecifiedId = ko.observable('');
+    userSpecifiedId = ko.observable('').extend({ required: true });
     isCreatingNewDocument = ko.observable(false);
     docsList = ko.observable<pagedList>();
     docEditor: AceAjax.Editor;
     databaseForEditedDoc: database;
+    topRecentDocuments = ko.computed(() => this.getTopRecentDocuments());
+    relatedDocumentHrefs=ko.observableArray<{id:string;href:string}>();
+    docEditroHasFocus = ko.observable(true);
 
     static editDocSelector = "#editDocumentContainer";
+    static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string>}>();
 
     constructor() {
         super();
@@ -47,43 +51,7 @@ class editDocument extends viewModelBase {
             }
         });
 
-       
-        this.metadata.subscribe((meta: documentMetadata) => {
-            if (meta) {
-                this.metaPropsToRestoreOnSave.length = 0;
-                var metaDto = this.metadata().toDto();
-
-                // We don't want to show certain reserved properties in the metadata text area.
-                // Remove them from the DTO, restore them on save.
-                var metaPropsToRemove = ["@id", "@etag", "Origin", "Raven-Server-Build", "Raven-Client-Version", "Non-Authoritative-Information", "Raven-Timer-Request",
-                    "Raven-Authenticated-User", "Raven-Last-Modified", "Has-Api-Key", "Access-Control-Allow-Origin", "Access-Control-Max-Age", "Access-Control-Allow-Methods",
-                    "Access-Control-Request-Headers", "Access-Control-Allow-Headers", "Reverse-Via", "Persistent-Auth", "Allow", "Content-Disposition", "Content-Encoding",
-                    "Content-Language", "Content-Location", "Content-MD5", "Content-Range", "Content-Type", "Expires", "Last-Modified", "Content-Length", "Keep-Alive", "X-Powered-By",
-                    "X-AspNet-Version", "X-Requested-With", "X-SourceFiles", "Accept-Charset", "Accept-Encoding", "Accept", "Accept-Language", "Authorization", "Cookie", "Expect",
-                    "From", "Host", "If-MatTemp-Index-Scorech", "If-Modified-Since", "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards", "Referer", "TE", "User-Agent", "Accept-Ranges",
-                    "Age", "Allow", "ETag", "Location", "Retry-After", "Server", "Set-Cookie2", "Set-Cookie", "Vary", "Www-Authenticate", "Cache-Control", "Connection", "Date", "Pragma",
-                    "Trailer", "Transfer-Encoding", "Upgrade", "Via", "Warning", "X-ARR-LOG-ID", "X-ARR-SSL", "X-Forwarded-For", "X-Original-URL"];
-
-                for (var property in metaDto) {
-                    if (metaDto.hasOwnProperty(property) && metaPropsToRemove.indexOf(property) != -1) {
-                        if (metaDto[property]) {
-                            this.metaPropsToRestoreOnSave.push({ name: property, value: metaDto[property].toString() });
-                        }
-                        delete metaDto[property];
-                    }
-                }
-                /*metaPropsToRemove.forEach(p => {
-                    if (p in metaDto) {
-                        this.metaPropsToRestoreOnSave.push({ name: p, value: metaDto[p].toString() });
-                        delete metaDto[p];
-                    }
-                });*/
-                var metaString = this.stringify(metaDto);
-                this.metadataText(metaString);
-                this.userSpecifiedId(meta.id);
-            }
-        });
-
+        this.metadata.subscribe((meta: documentMetadata) => this.metadataChanged(meta));
         this.editedDocId = ko.computed(() => this.metadata() ? this.metadata().id : '');
 
         // When we programmatically change the document text or meta text, push it into the editor.
@@ -92,8 +60,31 @@ class editDocument extends viewModelBase {
         this.isEditingMetadata.subscribe(() => this.updateDocEditorText());
     }
 
-    activate(navigationArgs) {
+    // Called by Durandal when seeing if we can activate this view.
+    canActivate(args: any) {
+        super.canActivate(args);
+        if (args && args.id) {
 
+            var canActivateResult = $.Deferred();
+            new getDocumentWithMetadataCommand(args.id, this.activeDatabase())
+                .execute()
+                .done((document) => {
+                    this.document(document);
+                    canActivateResult.resolve({ can: true });
+                    this.relatedDocumentHrefs(this.findRelatedDocuments(document));
+                })
+                .fail(() => {
+                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + args.id + " document", null));
+                    canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
+                }
+                );
+            return canActivateResult;
+        } else {
+            return $.Deferred().resolve({ can: true });
+        }
+    }
+
+    activate(navigationArgs) {
         super.activate(navigationArgs);
 
         // Find the database and collection we're supposed to load.
@@ -115,8 +106,22 @@ class editDocument extends viewModelBase {
                 this.docsList(list);
             }
         }
-		
+
         if (navigationArgs && navigationArgs.id) {
+            var existingRecentDocumentsStore = editDocument.recentDocumentsInDatabases.first(x=> x.databaseName == this.databaseForEditedDoc.name);
+            if (existingRecentDocumentsStore) {
+                var existingDocumentInStore = existingRecentDocumentsStore.recentDocuments.first(x=> x === navigationArgs.id);
+                if (!existingDocumentInStore) {
+                    if (existingRecentDocumentsStore.recentDocuments().length == 5) {
+                        existingRecentDocumentsStore.recentDocuments.pop();
+                    }
+                    existingRecentDocumentsStore.recentDocuments.unshift(navigationArgs.id);
+                }
+
+            } else {
+                editDocument.recentDocumentsInDatabases.push({ databaseName: this.databaseForEditedDoc.name, recentDocuments: ko.observableArray([navigationArgs.id]) });
+            }
+            
             return true;
         } else {
             this.editNewDocument();
@@ -127,6 +132,17 @@ class editDocument extends viewModelBase {
     attached() {
         this.initializeDocEditor();
         this.setupKeyboardShortcuts();
+        this.focusOnEditor();
+    }
+
+    // Called back after the entire composition has finished (parents and children included)
+    compositionComplete() {
+        //this.userSpecifiedId(''); // Don't clear this out: it will remove the ID of the document we're editing.
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
+    }
+
+    saveInObservable() {
+        this.storeDocEditorTextIntoObservable();
     }
 
     initializeDocEditor() {
@@ -140,16 +156,28 @@ class editDocument extends viewModelBase {
     }
 
     setupKeyboardShortcuts() {        
-        this.createKeyboardShortcut("alt+s", () => this.saveDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("alt+r", () => this.refreshDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("shift+d", () => this.isEditingMetadata(false), editDocument.editDocSelector);
-        this.createKeyboardShortcut("shift+m", () => this.isEditingMetadata(true), editDocument.editDocSelector);
-        this.createKeyboardShortcut("home", () => this.firstDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("end", () => this.lastDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("alt+←", () => this.previousDocumentOrLast(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("alt+→", () => this.nextDocumentOrFirst(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("alt+[", () => this.formatDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("delete", () => this.deleteDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+shift+d", () => this.focusOnDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+shift+m", () => this.focusOnMetadata(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+home", () => this.firstDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+end", () => this.lastDocument(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+page-up", () => this.previousDocumentOrLast(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+page-down", () => this.nextDocumentOrFirst(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+shift+del", () => this.deleteDocument(), editDocument.editDocSelector);
+    }
+
+    focusOnMetadata() {
+        this.isEditingMetadata(true);
+        this.focusOnEditor();
+    }
+
+    focusOnDocument() {
+        this.isEditingMetadata(false);
+        this.focusOnEditor();
+    }
+
+    focusOnEditor() {
+        this.docEditor.focus();
     }
 
     editNewDocument() {
@@ -180,6 +208,9 @@ class editDocument extends viewModelBase {
         var saveCommand = new saveDocumentCommand(this.userSpecifiedId(), newDoc, appUrl.getDatabase());
         var saveTask = saveCommand.execute();
         saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
+            // Resync Changes
+            viewModelBase.dirtyFlag().reset();
+
             this.isCreatingNewDocument(false);
             this.loadDocument(idAndEtag.Key);
             this.updateUrl(idAndEtag.Key);
@@ -205,33 +236,31 @@ class editDocument extends viewModelBase {
         this.isEditingMetadata(false);
     }
 
-    canActivate(args) {
-        if (args && args.id) {
-
-            var canActivateResult = $.Deferred();
-            new getDocumentWithMetadataCommand(args.id, this.activeDatabase())
-                .execute()
-                .done((document) => {
-                    this.document(document);
-                    canActivateResult.resolve({ can: true });
-                })
-                .fail(() => {
-                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + args.id + " document", null));
-                    canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
-                }
+    findRelatedDocuments(doc: documentBase): { id: string; href: string }[] {
+        var results: { id: string; href: string }[] = [];
+        var documentFields = doc.getDocumentPropertyNames();
+        for (var key in documentFields) {
+            if (typeof doc[documentFields[key]] === "string" && doc[documentFields[key]].indexOf("/") > 0) {
+                results.push({
+                    id: doc[documentFields[key]].toString(),
+                    href: appUrl.forEditDoc(doc[documentFields[key]].toString(), null, null, this.activeDatabase())}
             );
-            return canActivateResult;
-        } else {
-            return $.Deferred().resolve({ can: true });
+            }
+            
         }
 
-        
-        
+        return results;
     }
+
 
     loadDocument(id: string): JQueryPromise<document> {
         var loadDocTask = new getDocumentWithMetadataCommand(id, this.databaseForEditedDoc).execute();
-        loadDocTask.done(document => this.document(document));
+        loadDocTask.done(document=> {
+            this.document(document);
+
+            // Resync Changes
+            viewModelBase.dirtyFlag().reset();
+        });
         loadDocTask.fail(response => this.failedToLoadDoc(id, response));
         loadDocTask.always(() => this.isBusy(false));
         this.isBusy(true);
@@ -259,6 +288,9 @@ class editDocument extends viewModelBase {
             viewModel.deletionTask.done(() => this.nextDocumentOrFirst());
             app.showDialog(viewModel, editDocument.editDocSelector);
         }
+
+        // Resync Changes
+        viewModelBase.dirtyFlag().reset();
     }
 
     formatDocument() {
@@ -342,6 +374,56 @@ class editDocument extends viewModelBase {
             var docEditorText = this.docEditor.getSession().getValue();
             var observableToUpdate = this.isEditingMetadata() ? this.metadataText : this.documentText;
             observableToUpdate(docEditorText);
+        }
+    }
+
+    getTopRecentDocuments() {
+        var currentDbName = this.activeDatabase().name;
+        var recentDocumentsForCurDb = editDocument.recentDocumentsInDatabases().first(x => x.databaseName === currentDbName);
+        if (recentDocumentsForCurDb) {
+            var value = recentDocumentsForCurDb
+                .recentDocuments()
+                .slice(0, 5)
+                .map((docId: string) => {
+                    return {
+                        docId: docId,
+                        docUrl: appUrl.forEditDoc(docId, null, null, this.activeDatabase())
+                    };
+                });
+            return value;
+        } else {
+            return [];
+        }
+    }
+
+    metadataChanged(meta: documentMetadata) {
+        if (meta) {
+            this.metaPropsToRestoreOnSave.length = 0;
+            var metaDto = this.metadata().toDto();
+
+            // We don't want to show certain reserved properties in the metadata text area.
+            // Remove them from the DTO, restore them on save.
+            var metaPropsToRemove = ["@id", "@etag", "Origin", "Raven-Server-Build", "Raven-Client-Version", "Non-Authoritative-Information", "Raven-Timer-Request",
+                "Raven-Authenticated-User", "Raven-Last-Modified", "Has-Api-Key", "Access-Control-Allow-Origin", "Access-Control-Max-Age", "Access-Control-Allow-Methods",
+                "Access-Control-Request-Headers", "Access-Control-Allow-Headers", "Reverse-Via", "Persistent-Auth", "Allow", "Content-Disposition", "Content-Encoding",
+                "Content-Language", "Content-Location", "Content-MD5", "Content-Range", "Content-Type", "Expires", "Last-Modified", "Content-Length", "Keep-Alive", "X-Powered-By",
+                "X-AspNet-Version", "X-Requested-With", "X-SourceFiles", "Accept-Charset", "Accept-Encoding", "Accept", "Accept-Language", "Authorization", "Cookie", "Expect",
+                "From", "Host", "If-MatTemp-Index-Scorech", "If-Modified-Since", "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards", "Referer", "TE", "User-Agent", "Accept-Ranges",
+                "Age", "Allow", "ETag", "Location", "Retry-After", "Server", "Set-Cookie2", "Set-Cookie", "Vary", "Www-Authenticate", "Cache-Control", "Connection", "Date", "Pragma",
+                "Trailer", "Transfer-Encoding", "Upgrade", "Via", "Warning", "X-ARR-LOG-ID", "X-ARR-SSL", "X-Forwarded-For", "X-Original-URL"];
+
+            for (var property in metaDto) {
+                if (metaDto.hasOwnProperty(property) && metaPropsToRemove.contains(property)) {
+                    if (metaDto[property]) {
+                        this.metaPropsToRestoreOnSave.push({ name: property, value: metaDto[property].toString() });
+                    }
+                    delete metaDto[property];
+                }
+            }
+
+            var metaString = this.stringify(metaDto);
+            this.metadataText(metaString);
+            this.userSpecifiedId(meta.id);
         }
     }
 }

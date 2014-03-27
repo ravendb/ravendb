@@ -409,6 +409,9 @@ interface KnockoutStatic {
     renderTemplate(template: string, viewModel: any, options?: any, target?: any, renderMode?: any): any;
     unwrap(value: any): any;
 
+    //for DirtyFlag plugin
+    DirtyFlag(any): void;
+
     //////////////////////////////////
     // templateSources.js
     //////////////////////////////////

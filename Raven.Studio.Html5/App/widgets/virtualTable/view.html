@@ -6,15 +6,15 @@
         </div>
         <!-- /ko -->
         <!-- ko if: name !== '__IsChecked' -->
-        <div class="ko-grid-column-header" data-bind="style: { width: width() + 'px' }, text: name, attr: { title: name }"></div>
+        <div class="ko-grid-column-header" data-bind="style: { width: width() + 'px' }, text: title, attr: { title: title }"></div>
         <!-- /ko -->
     </div>
     <div class="ko-grid-viewport-container" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: settings.dynamicHeightTargetSelector, bottomMargin: settings.dynamicHeightBottomMargin }, style: { 'max-height': settings.maxHeight }">
         <div class="ko-grid-viewport" data-bind="foreach: recycleRows, style: { height: virtualHeight() + 'px' }">
-            <div class="ko-grid-row" data-bind="foreach: $parent.columns, visible: isInUse, style: { height: $parent.rowHeight + 'px', top: top() + 'px' }, css: { even: rowIndex() % 2 === 0, checked: isChecked }">
-                <div class="ko-grid-cell" data-bind="style: { width: width() + 'px' }, attr: { title: $parent.getCellData(name) }">
+            <div class="ko-grid-row" data-bind="foreach: $parent.columns, visible: isInUse, style: { height: $parent.rowHeight + 'px', top: top() + 'px' }, css: { even: rowIndex() % 2 === 0, checked: isChecked}">
+                <div class="ko-grid-cell" data-bind="style: { width: width() + 'px' }, attr: { title: ($parent.getCellTemplate(name) !== 'customTemplate') ? $parent.getCellData(name) : '' }">
                     <!-- ko if: $parent.getCellTemplate(name) === 'defaultTemplate' -->
-                    <span data-bind="text: $parent.cellMap[name].data"></span>
+                    <span><a data-bind="text: $parent.cellMap[name].data, attr:{href:$parent.editUrl}"></a></span> 
                     <!-- /ko -->
                     <!-- ko if: $parent.getCellTemplate(name) === null -->
                     <span></span>
@@ -25,6 +25,9 @@
                     <!-- ko if: $parent.getCellTemplate(name) === 'idTemplate' -->
                     <span class="collection-color-strip" data-bind="css: $parent.collectionClass"></span>
                     <a href="#" data-bind="attr: { href: $parent.editUrl }"><span data-bind="text: $parent.cellMap[name].data"></span></a>
+                    <!-- /ko -->
+                    <!-- ko if: $parent.getCellTemplate(name) === 'customTemplate' -->
+                    <span  data-bind="template: { name: $parents[1].getTemplateFor(name), data: $parent.cellMap[name].data }"></span>
                     <!-- /ko -->
                 </div>
             </div>

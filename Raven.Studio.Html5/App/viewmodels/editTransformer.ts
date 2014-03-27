@@ -11,17 +11,35 @@ import saveTransformerWithNewNameConfirm = require("viewmodels/saveTransformerWi
 import dialog = require("plugins/dialog");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
+import alertType = require("common/alertType");
+import alertArgs = require("common/alertArgs");
 
-class editTransformer extends  viewModelBase{
-
+class editTransformer extends viewModelBase {
     editedTransformer = ko.observable<transformer>();
     isEditingExistingTransformer = ko.observable(false);
     popoverOptions = ko.observable<any>();
-    containerSelector = "#editTransformerContainer";
-
+    static containerSelector = "#editTransformerContainer";
+    editorCollection = ko.observableArray<{ alias: string; controller: HTMLElement }>();
+    
     constructor() {
         super();
         aceEditorBindingHandler.install();
+    }
+
+    canActivate(transformerToEditName: string) {
+        if (transformerToEditName) {
+            var canActivateResult = $.Deferred();
+            this.editExistingTransformer(transformerToEditName)
+                .done(() => canActivateResult.resolve({ can: true }))
+                .fail(() => {
+                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + transformerToEditName + " transformer", null));
+                    canActivateResult.resolve({ redirect: appUrl.forTransformers(this.activeDatabase()) });
+                });
+
+            return canActivateResult;
+        } else {
+            return $.Deferred().resolve({ can: true });
+        }
     }
 
     activate(transformerToEditName: string) {
@@ -29,7 +47,6 @@ class editTransformer extends  viewModelBase{
 
         if (transformerToEditName) {
             this.isEditingExistingTransformer(true);
-            this.editExistingTransformer(transformerToEditName);
         } else {
             this.editedTransformer(transformer.empty());
         }
@@ -37,6 +54,19 @@ class editTransformer extends  viewModelBase{
 
     attached() {
         this.addTransformerHelpPopover();
+        this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editTransformer.containerSelector);
+        this.createKeyboardShortcut("alt+shift+del", () => this.deleteTransformer(), editTransformer.containerSelector);
+
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults]);
+    }
+
+    // Called back after the entire composition has finished (parents and children included)
+    compositionComplete() {}
+
+    saveInObservable() {
+        var docEditor = ko.utils.domData.get($("#transformerAceEditor")[0], "aceEditor");
+        var docEditorText = docEditor.getSession().getValue();
+        this.editedTransformer().transformResults(docEditorText);
     }
 
     addTransformerHelpPopover() {
@@ -47,9 +77,18 @@ class editTransformer extends  viewModelBase{
         });
     }
 
-    editExistingTransformer(unescapedTransformerName: string) {
-        var indexName = decodeURIComponent(unescapedTransformerName);
-        this.fetchTransformerToEdit(indexName)
+    focusOnEditor(elements = null, data = null) {
+        var editorElement = $("#transformerAceEditor").length == 1 ? $("#transformerAceEditor")[0] : null;
+        if (editorElement) {
+            var docEditor = ko.utils.domData.get($("#transformerAceEditor")[0], "aceEditor");
+            if (docEditor) {
+                docEditor.focus();
+            }
+        }
+    }
+
+    editExistingTransformer(unescapedTransformerName: string) :JQueryPromise<any>{        var indexName = decodeURIComponent(unescapedTransformerName);
+        return this.fetchTransformerToEdit(indexName)
             .done((trans: savedTransformerDto) => this.editedTransformer(new transformer().initFromSave(trans)));
     }
     
@@ -68,13 +107,16 @@ class editTransformer extends  viewModelBase{
 
             new saveTransformerCommand(this.editedTransformer(), this.activeDatabase())
                 .execute()
-                .done((trans: transformer) => {
-                    this.editedTransformer(trans);
+                .done(() => {
+                    //this.editedTransformer(trans);
                     if (!this.isEditingExistingTransformer()) {
                         this.isEditingExistingTransformer(true);
                     }
                 });
         }
+
+        // Resync Changes
+        viewModelBase.dirtyFlag().reset();
     }
 
     deleteTransformer() {
@@ -83,14 +125,12 @@ class editTransformer extends  viewModelBase{
         if (transformer) {
             var db = this.activeDatabase();
             var deleteViewmodel = new deleteTransformerConfirm([transformer.name()], db);
-            deleteViewmodel.deleteTask.done(() => router.navigate(appUrl.forTransformers(db)));
+            deleteViewmodel.deleteTask.done(() => {
+                router.navigate(appUrl.forTransformers(db));
+            });
             dialog.show(deleteViewmodel);
         }
-    
     }
-
 }
-
-
 
 export = editTransformer;

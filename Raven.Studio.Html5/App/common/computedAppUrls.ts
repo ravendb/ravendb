@@ -1,6 +1,7 @@
 // Interface
 interface computedAppUrls {
     documents: KnockoutComputed<string>;
+    conflicts: KnockoutComputed<string>;
     patch: KnockoutComputed<string>;
     indexes: KnockoutComputed<string>;
     newIndex: KnockoutComputed<string>;
@@ -22,6 +23,7 @@ interface computedAppUrls {
     periodicBackup: KnockoutComputed<string>;
     replications: KnockoutComputed<string>;
     sqlReplications: KnockoutComputed<string>;
+    scriptedIndexes: KnockoutComputed<string>;
 
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
     databasesManagement: KnockoutComputed<string>;

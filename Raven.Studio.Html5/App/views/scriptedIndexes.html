@@ -1,0 +1,64 @@
+﻿<div id="scriptedIndex">
+    <nav class="navbar navbar-default" role="navigation">
+        <div class="collapse navbar-collapse">
+            <form class="navbar-form navbar-left">
+                <ul class="breadcrumb">
+                    <li><a>Indexes</a></li>
+                    <li>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="text: selectedIndex"></span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <!-- ko foreach: indexNames -->
+                                <li data-bind="click: $root.setSelectedIndex.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
+                                <!-- /ko -->
+                            </ul>
+                        </div>
+                    </li>
+                    <li class="active">Scripted Index</li>
+                </ul>
+            </form>
+            <form class="navbar-form navbar-right">
+                <span data-bind="visible: scrIndex() && !scrIndex().isMarkedToDelete()">
+                    <button type="button" class="btn btn-default" data-bind="click: deleteScript" ><i class="fa fa-trash-o"></i></button>
+                </span>
+                <button type="button" class="btn btn-primary  use-bootstrap-tooltip" title="Save Changes(Alt+S)" accesskey="S"><i class="fa fa-save"></i> Save Changes</button>
+            </form>
+        </div>
+    </nav>
+    <div class="alert alert-info" data-bind="visible: selectedIndex() && (!scrIndex() || scrIndex().isMarkedToDelete())">
+        There is no Script for this index. <a href="#" data-bind="click: createNewScript" class="alert-link">Create Script</a>.
+    </div>
+    <div data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" >
+        <form class="form-horizontal" role="form" data-bind="visible: scrIndex() && !scrIndex().isMarkedToDelete(), with: scrIndex">
+            <div class="form-group">
+                <label id="indexScriptLabel" style="cursor: help;" for="indexScript" class="col-md-2 control-label" data-placement="auto right" data-original-title="Index Script" data-trigger="hover">
+                    Index Script
+                    <i class="fa fa-info-circle text-info"></i>
+                </label>
+                <div class="col-md-10">
+                    <div class="row">
+                        <div class="col-md-11">
+                            <pre class="form-control map" data-bind="aceEditor: { code: indexScript }"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label id="deleteScriptLabel" style="cursor: help;" for="deleteScript" class="col-md-2 control-label" data-placement="auto right" data-original-title="Delete Script" data-trigger="hover">
+                    Delete Script
+                    <i class="fa fa-info-circle text-info"></i>
+                </label>
+                <div class="col-md-10">
+                    <div class="row">
+                        <div class="col-md-11">
+                            <pre class="form-control map" data-bind="aceEditor: { code: deleteScript }"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

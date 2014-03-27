@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Amazon.SQS.Model;
 using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -39,28 +40,44 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetMessageWithObject(dbDoc);
 		}
 
+		private string CheckInput(string databaseName)
+		{
+			string message = null;
+
+			if (databaseName == null)
+			{
+				message = "An empty name is forbidden for use!";
+			}
+			else if (databaseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+			{
+				message = string.Format("The name '{0}' contains charaters that are forbidden for use!", databaseName);
+			}
+			else if (Array.IndexOf(Constants.WindowsReservedFileNames, databaseName.ToLower()) >= 0){
+				message = string.Format("The name '{0}' is forbidden for use!", databaseName);
+			}
+			else if ((Environment.OSVersion.Platform == PlatformID.Unix) && (databaseName.Length > Constants.LinuxMaxFileNameLength) && (Database.Configuration.DataDirectory.Length + databaseName.Length > Constants.LinuxMaxPath))
+			{
+				int theoreticalMaxFileNameLength = Constants.LinuxMaxPath - Database.Configuration.DataDirectory.Length;
+				int maxfileNameLength = (theoreticalMaxFileNameLength > Constants.LinuxMaxFileNameLength) ? Constants.LinuxMaxFileNameLength : theoreticalMaxFileNameLength;
+				message = string.Format("Invalid name for a database! Databse name cannot exceed {0} characters", maxfileNameLength);
+			}
+			else if (Path.Combine(Database.Configuration.DataDirectory, databaseName).Length > Constants.WindowsMaxPath)
+			{
+				int maxfileNameLength = Constants.WindowsMaxPath - Database.Configuration.DataDirectory.Length;
+				message = string.Format("Invalid name for a database! Databse name cannot exceed {0} characters", maxfileNameLength);
+			}
+
+			return message;
+		}
+
 		[HttpPut]
 		[Route("admin/databases/{*id}")]
 		public async Task<HttpResponseMessage> DatabasesPut(string id)
 		{
-			if (id == null)
-				return GetMessageWithString(string.Format("An empty name is forbidden for use!"), HttpStatusCode.BadRequest);
-			if (id.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-				return GetMessageWithString(string.Format("The name '{0}' contains charaters that are forbidden for use!", id), HttpStatusCode.BadRequest);
-			if (Array.IndexOf(Constants.WindowsReservedFileNames, id.ToLower()) >= 0)
-				return GetMessageWithString(string.Format("The name '{0}' is forbidden for use!", id), HttpStatusCode.BadRequest);
-			if ((Environment.OSVersion.Platform == PlatformID.Unix) && (id.Length > Constants.LinuxMaxFileNameLength) && (Database.Configuration.DataDirectory.Length + id.Length > Constants.LinuxMaxPath))
+			var errorMessage = CheckInput(id);
+			if (errorMessage != null)
 			{
-				int theoreticalMaxFileNameLength = Constants.LinuxMaxPath - Database.Configuration.DataDirectory.Length;
-				int maxfileNameLength = (theoreticalMaxFileNameLength > Constants.LinuxMaxFileNameLength) ? Constants.LinuxMaxFileNameLength : theoreticalMaxFileNameLength;
-				return GetMessageWithString(string.Format("Invalid name for a database! Databse name cannot exceed {0} characters", maxfileNameLength), HttpStatusCode.BadRequest);
-			}
-			else{ //windows platform
-				if (Path.Combine(Database.Configuration.DataDirectory, id).Length > Constants.WindowsMaxPath)
-				{
-					int maxfileNameLength = Constants.WindowsMaxPath - Database.Configuration.DataDirectory.Length;
-					return GetMessageWithString(string.Format("Invalid name for a database! Databse name cannot exceed {0} characters", maxfileNameLength), HttpStatusCode.BadRequest);
-				}
+				return GetMessageWithString(errorMessage, HttpStatusCode.BadRequest);
 			}
 
 			if (IsSystemDatabase(id))
@@ -92,6 +109,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			return GetEmptyMessage();
 		}
+
 
 		[HttpDelete][Route("admin/databases/{*id}")]
 		public HttpResponseMessage DatabasesDelete(string id)
