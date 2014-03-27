@@ -20,24 +20,26 @@ class editTransformer extends viewModelBase {
     popoverOptions = ko.observable<any>();
     static containerSelector = "#editTransformerContainer";
     editorCollection = ko.observableArray<{ alias: string; controller: HTMLElement }>();
-    
+
     constructor() {
         super();
         aceEditorBindingHandler.install();
     }
 
     canActivate(transformerToEditName: string) {
-        var result = $.Deferred();
+        if (transformerToEditName) {
+            var canActivateResult = $.Deferred();
+            this.editExistingTransformer(transformerToEditName)
+                .done(() => canActivateResult.resolve({ can: true }))
+                .fail(() => {
+                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + transformerToEditName + " transformer", null));
+                    canActivateResult.resolve({ redirect: appUrl.forTransformers(this.activeDatabase()) });
+                });
 
-        this.editExistingTransformer(transformerToEditName)
-            .done(() => result.resolve({ can: true }))
-            .fail(()=> {
-                ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + transformerToEditName + " transformer", null));
-                return { redirect: appUrl.forTransformers(this.activeDatabase() )};
-        
-        });
-
-        return result;
+            return canActivateResult;
+        } else {
+            return $.Deferred().resolve({ can: true });
+        }
     }
 
     activate(transformerToEditName: string) {
@@ -59,7 +61,7 @@ class editTransformer extends viewModelBase {
     }
 
     // Called back after the entire composition has finished (parents and children included)
-    compositionComplete() {}
+    compositionComplete() { }
 
     saveInObservable() {
         var docEditor = ko.utils.domData.get($("#transformerAceEditor")[0], "aceEditor");
@@ -85,12 +87,12 @@ class editTransformer extends viewModelBase {
         }
     }
 
-    editExistingTransformer(unescapedTransformerName: string) :JQueryPromise<any>{
+    editExistingTransformer(unescapedTransformerName: string): JQueryPromise<any> {
         var indexName = decodeURIComponent(unescapedTransformerName);
         return this.fetchTransformerToEdit(indexName)
             .done((trans: savedTransformerDto) => this.editedTransformer(new transformer().initFromSave(trans)));
     }
-    
+
     fetchTransformerToEdit(transformerName: string): JQueryPromise<savedTransformerDto> {
         return new getSingleTransformerCommand(transformerName, this.activeDatabase()).execute();
     }
@@ -120,7 +122,7 @@ class editTransformer extends viewModelBase {
 
     deleteTransformer() {
         var transformer = this.editedTransformer();
-        
+
         if (transformer) {
             var db = this.activeDatabase();
             var deleteViewmodel = new deleteTransformerConfirm([transformer.name()], db);
