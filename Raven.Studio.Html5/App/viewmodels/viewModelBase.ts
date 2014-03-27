@@ -1,6 +1,7 @@
 import appUrl = require("common/appUrl");
 import database = require("models/database");
 import filesystem = require("models/filesystem");
+import resource = require("models/resource");
 import router = require("plugins/router");
 
 /*
@@ -9,6 +10,7 @@ import router = require("plugins/router");
 class viewModelBase {
     activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
+    activeView = ko.observable<string>();
 
   private keyboardShortcutDomContainers: string[] = [];
 
@@ -86,8 +88,14 @@ class viewModelBase {
   modelPollingStart() {
     this.modelPolling();
     this.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
-    this.activeDatabase.subscribe(() => this.forceModelPolling());
-    this.activeFilesystem.subscribe(() => this.forceModelPolling());
+      this.activeDatabase.subscribe(() => {
+          this.activeView('Databases');
+          this.forceModelPolling();
+      });
+      this.activeFilesystem.subscribe(() => {
+          this.activeView('Filesystems');
+          this.forceModelPolling();
+      });
   }
 
   modelPollingStop() {
