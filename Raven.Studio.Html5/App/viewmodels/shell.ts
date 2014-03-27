@@ -36,11 +36,15 @@ class shell extends viewModelBase {
     recordedErrors = ko.observableArray<alertArgs>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
+    currentRawUrl = ko.observable<string>("");
+    rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
+    
 
     constructor() {
         super();
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
+        ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
 
         this.appUrls = appUrl.forCurrentDatabase();
 

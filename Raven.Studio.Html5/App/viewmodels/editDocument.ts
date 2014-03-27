@@ -53,6 +53,7 @@ class editDocument extends viewModelBase {
 
         this.metadata.subscribe((meta: documentMetadata) => this.metadataChanged(meta));
         this.editedDocId = ko.computed(() => this.metadata() ? this.metadata().id : '');
+        this.editedDocId.subscribe((docId: string)=> ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), docId)));
 
         // When we programmatically change the document text or meta text, push it into the editor.
         this.metadataText.subscribe(() => this.updateDocEditorText());
@@ -121,7 +122,8 @@ class editDocument extends viewModelBase {
             } else {
                 editDocument.recentDocumentsInDatabases.push({ databaseName: this.databaseForEditedDoc.name, recentDocuments: ko.observableArray([navigationArgs.id]) });
             }
-            
+
+            ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), navigationArgs.id));
             return true;
         } else {
             this.editNewDocument();
