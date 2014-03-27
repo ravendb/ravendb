@@ -38,11 +38,7 @@ namespace Raven.Database.Storage.Voron.Backup
                             .OrderBy(dir=>dir)
                             .Select(dir=> Path.Combine(dir,BackupMethods.Filename))
                             .ToList();
-                        BackupMethods.Incremental.Restore(options, new IncrementalBackup.IncrementalRestorePaths
-                        {
-                            DatabaseLocation = _restoreRequest.DatabaseLocation,
-                            JournalLocation = _restoreRequest.JournalsLocation
-                        }, backupPaths);
+                        BackupMethods.Incremental.Restore(options, backupPaths);
                     }
 				}
 

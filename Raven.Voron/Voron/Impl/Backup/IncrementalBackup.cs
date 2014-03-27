@@ -57,8 +57,6 @@ namespace Voron.Impl.Backup
                         lastWrittenLogPage = env.Journal.CurrentFile.WritePagePosition;
                     }
 
-                    VoronBackupUtil.CopyHeaders(compression, package, copier, env.Options);
-
                     // txw.Commit(); intentionally not committing
                 }
 
@@ -165,7 +163,7 @@ namespace Voron.Impl.Backup
             }
         }
 
-        public void Restore(StorageEnvironmentOptions options, IncrementalRestorePaths restorePaths, IEnumerable<string> backupPaths)
+        public void Restore(StorageEnvironmentOptions options, IEnumerable<string> backupPaths)
         {
             var ownsPagers = options.OwnsPagers;
             options.OwnsPagers = false;
@@ -173,13 +171,13 @@ namespace Voron.Impl.Backup
             {
                 foreach (var backupPath in backupPaths)
                 {
-                    Restore(env, restorePaths, backupPath);
+                    Restore(env, backupPath);
                 }
             }
             options.OwnsPagers = ownsPagers;
         }
 
-        private void Restore(StorageEnvironment env, IncrementalRestorePaths restorePaths, string singleBackupFile)
+        private void Restore(StorageEnvironment env, string singleBackupFile)
         {
             using (env.Journal.Applicator.TakeFlushingLock())
             {
@@ -196,6 +194,9 @@ namespace Voron.Impl.Backup
                             return;
 
                         var toDispose = new List<IDisposable>();
+
+						var tempDir = Directory.CreateDirectory(Path.GetTempPath() + Guid.NewGuid()).FullName;
+
                         try
                         {
                             TransactionHeader* lastTxHeader = null;
@@ -206,18 +207,10 @@ namespace Voron.Impl.Backup
                             {
                                 switch (Path.GetExtension(entry.Name))
                                 {
-                                    case ".one":
-                                    case ".two":
-                                        using (var output = new FileStream(Path.Combine(restorePaths.DatabaseLocation, entry.Name), FileMode.Create))
-                                        using (var input = entry.Open())
-                                        {
-                                            input.CopyTo(output);
-                                        }
-                                        break;
                                     case ".journal":
 
-                                        var jounalFileName = Path.Combine(restorePaths.DatabaseLocation, entry.Name);
-                                        using (var output = new FileStream(jounalFileName, FileMode.OpenOrCreate))
+										var jounalFileName = Path.Combine(tempDir, entry.Name);
+                                        using (var output = new FileStream(jounalFileName, FileMode.Create))
                                         using (var input = entry.Open())
                                         {
                                             output.Position = output.Length;
@@ -232,7 +225,7 @@ namespace Voron.Impl.Backup
                                             throw new InvalidOperationException("Cannot parse journal file number");
                                         }
 
-                                        var recoveryPager = new Win32MemoryMapPager(Path.Combine(Path.GetTempPath(), StorageEnvironmentOptions.JournalRecoveryName(journalNumber)));
+										var recoveryPager = new Win32MemoryMapPager(Path.Combine(tempDir, StorageEnvironmentOptions.JournalRecoveryName(journalNumber)));
                                         toDispose.Add(recoveryPager);
 
                                         var reader = new JournalReader(pager, recoveryPager, 0, lastTxHeader);
@@ -252,8 +245,6 @@ namespace Voron.Impl.Backup
                                     default:
                                         throw new InvalidOperationException("Unknown file, cannot restore: " + entry);
                                 }
-
-
                             }
 
                             var sortedPages = pagesToWrite.OrderBy(x => x.Key)
@@ -305,6 +296,15 @@ namespace Voron.Impl.Backup
                         finally
                         {
                             toDispose.ForEach(x => x.Dispose());
+
+	                        try
+	                        {
+								Directory.Delete(tempDir, true);
+	                        }
+	                        catch (Exception)
+	                        {
+								// just temp dir - ignore it
+	                        }
                         }
                     }
                 }

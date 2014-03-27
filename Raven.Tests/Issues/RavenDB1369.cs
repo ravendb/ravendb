@@ -220,7 +220,8 @@ namespace Raven.Tests.Issues
 
                     store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), true, "DB1");
                     WaitForBackup(store.DatabaseCommands.ForDatabase("DB1"), true);
-
+					
+					Thread.Sleep(1000); // incremental tag has seconds precision
                 }
 
                 store.DatabaseCommands.GlobalAdmin.StartRestore(new RestoreRequest
