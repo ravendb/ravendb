@@ -27,17 +27,19 @@ class editTransformer extends viewModelBase {
     }
 
     canActivate(transformerToEditName: string) {
-        var result = $.Deferred();
+        if (transformerToEditName) {
+            var canActivateResult = $.Deferred();
+            this.editExistingTransformer(transformerToEditName)
+                .done(() => canActivateResult.resolve({ can: true }))
+                .fail(() => {
+                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + transformerToEditName + " transformer", null));
+                    canActivateResult.resolve({ redirect: appUrl.forTransformers(this.activeDatabase()) });
+                });
 
-        this.editExistingTransformer(transformerToEditName)
-            .done(() => result.resolve({ can: true }))
-            .fail(()=> {
-                ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + transformerToEditName + " transformer", null));
-                return { redirect: appUrl.forTransformers(this.activeDatabase() )};
-        
-        });
-
-        return result;
+            return canActivateResult;
+        } else {
+            return $.Deferred().resolve({ can: true });
+        }
     }
 
     activate(transformerToEditName: string) {
@@ -85,7 +87,7 @@ class editTransformer extends viewModelBase {
         }
     }
 
-    editExistingTransformer(unescapedTransformerName: string) :JQueryPromise{
+    editExistingTransformer(unescapedTransformerName: string) : JQueryPromise<any>{
         var indexName = decodeURIComponent(unescapedTransformerName);
         return this.fetchTransformerToEdit(indexName)
             .done((trans: savedTransformerDto) => this.editedTransformer(new transformer().initFromSave(trans)));
