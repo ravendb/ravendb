@@ -2,7 +2,7 @@
     <div class="navbar navbar-fixed-top navbar-default">
         <div class="navbar-inner">
 
-            <div id="databasesNavbar" data-bind="visible: appUrls.isActive('Databases')">
+            <div id="databasesNavbar" data-bind="visible: appUrls.isAreaActive('databases')">
 
                 <ul class=" nav navbar-nav">
                     <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
@@ -101,22 +101,22 @@
 
             </div>
 
-            <div id="filesystemsNavbar" data-bind="visible: appUrls.isActive('Filesystems')">
-                
+            <div id="filesystemsNavbar" data-bind="visible: appUrls.isAreaActive('filesystems')">
+
                 <ul class=" nav navbar-nav">
-                    
+
                     <li data-bind="css: { active: appUrls.isActive('FilesystemFiles') }">
                         <a data-bind="attr: { href: appUrls.filesystemFiles }">Files</a>
                     </li>
-                    
+
                     <li data-bind="css: { active: appUrls.isActive('FilesystemSearch') }">
                         <a data-bind="attr: { href: appUrls.filesystemSearch }">Search</a>
                     </li>
-                    
+
                     <li data-bind="css: { active: appUrls.isActive('FilesystemSynchronization') }">
                         <a data-bind="attr: { href: appUrls.filesystemSynchronization }">Synchronization</a>
                     </li>
-                    
+
                     <li data-bind="css: { active: appUrls.isActive('FilesystemConfiguration') }">
                         <a data-bind="attr: { href: appUrls.filesystemConfiguration }">Configuration</a>
                     </li>
@@ -167,9 +167,9 @@
 </div>
 
 <footer style="z-index: 999">
-    <div class="navbar navbar-fixed-bottom navbar-inverse" data-bind="with: activeDatabase">
+    <div class="navbar navbar-fixed-bottom navbar-inverse">
         <div class="navbar-inner">
-            <ul class="nav navbar-nav">
+            <ul class="nav navbar-nav" data-bind="with: activeDatabase, visible: appUrls.isAreaActive('databases')">
                 <li><a class="navbar-brand" href="#/status">Stats</a></li>
                 <!-- ko with: statistics -->
                 <li><a href="#documents" data-bind="text: CountOfDocuments + ' documents'"></a></li>
@@ -180,6 +180,14 @@
                 <li><a href="#documents" data-bind="text: ApproximateTaskCount + ' tasks'"></a></li>
                 <!-- /ko -->
             </ul>
+
+            <ul class="nav navbar-nav" data-bind="with: activeFilesystem, visible: appUrls.isAreaActive('filesystems')">
+                <li><a class="navbar-brand" href="#/status">Stats</a></li>
+                <!-- ko with: statistics -->
+                <li><a href="#filesystems" data-bind="text: FilesCount + ' files'"></a></li>
+                <!-- /ko -->
+            </ul>
+
             <ul class="nav navbar-nav pull-right" data-bind="with: $root">
                 <li data-bind="with: licenseStatus"><a data-bind="text: 'License Status: ' + Status">AGPL - Open Source</a></li>
                 <li data-bind="with: buildVersion"><a data-bind="text: 'Server Build #' + BuildVersion"></a></li>

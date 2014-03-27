@@ -4,7 +4,7 @@
     itemCount : KnockoutComputed < number>;
     isVisible = ko.observable(true);
 
-    constructor(public name: string) {
+    constructor(public name: string, public type: string) {
     }
 }
 

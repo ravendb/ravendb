@@ -25,6 +25,7 @@ interface computedAppUrls {
     sqlReplications: KnockoutComputed<string>;
     scriptedIndexes: KnockoutComputed<string>;
 
+    isAreaActive: (routeRoot: string) => KnockoutComputed<boolean>;
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
     databasesManagement: KnockoutComputed<string>;
     filesystemsManagement: KnockoutComputed<string>;
