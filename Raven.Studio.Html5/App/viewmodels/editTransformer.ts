@@ -11,6 +11,8 @@ import saveTransformerWithNewNameConfirm = require("viewmodels/saveTransformerWi
 import dialog = require("plugins/dialog");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
+import alertType = require("common/alertType");
+import alertArgs = require("common/alertArgs");
 
 class editTransformer extends viewModelBase {
     editedTransformer = ko.observable<transformer>();
@@ -24,12 +26,25 @@ class editTransformer extends viewModelBase {
         aceEditorBindingHandler.install();
     }
 
+    canActivate(transformerToEditName: string) {
+        var result = $.Deferred();
+
+        this.editExistingTransformer(transformerToEditName)
+            .done(() => result.resolve({ can: true }))
+            .fail(()=> {
+                ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + transformerToEditName + " transformer", null));
+                return { redirect: appUrl.forTransformers(this.activeDatabase() )};
+        
+        });
+
+        return result;
+    }
+
     activate(transformerToEditName: string) {
         super.activate(transformerToEditName);
 
         if (transformerToEditName) {
             this.isEditingExistingTransformer(true);
-            this.editExistingTransformer(transformerToEditName);
         } else {
             this.editedTransformer(transformer.empty());
         }
@@ -70,9 +85,9 @@ class editTransformer extends viewModelBase {
         }
     }
 
-    editExistingTransformer(unescapedTransformerName: string) {
+    editExistingTransformer(unescapedTransformerName: string) :JQueryPromise{
         var indexName = decodeURIComponent(unescapedTransformerName);
-        this.fetchTransformerToEdit(indexName)
+        return this.fetchTransformerToEdit(indexName)
             .done((trans: savedTransformerDto) => this.editedTransformer(new transformer().initFromSave(trans)));
     }
     
