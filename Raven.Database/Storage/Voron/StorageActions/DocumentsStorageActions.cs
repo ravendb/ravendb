@@ -44,7 +44,7 @@
 			OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
 			IDocumentCacher documentCacher,
 			Reference<WriteBatch> writeBatch,
-			SnapshotReader snapshot,
+			Reference<SnapshotReader> snapshot,
             TableStorage tableStorage, 
             IBufferPool bufferPool)
 			: base(snapshot, bufferPool)

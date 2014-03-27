@@ -24,7 +24,7 @@ namespace Raven.Tests.Bundles.Authorization
 		
 		protected AuthorizationTest()
 		{
-			server = GetNewServer(configureServer: configuration => configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof (AuthorizationDecisions).Assembly)));
+            server = GetNewServer(configureConfig: configuration => configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(AuthorizationDecisions).Assembly)));
             store = NewRemoteDocumentStore(ravenDbServer: server, databaseName: DatabaseName);
 			
 			foreach (DictionaryEntry de in HttpRuntime.Cache)

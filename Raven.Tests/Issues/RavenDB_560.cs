@@ -37,16 +37,16 @@ namespace Raven.Tests.Issues
 			store1 = new DocumentStore
 			{
 				DefaultDatabase = "Northwind",
-				Url = "http://" + Environment.MachineName + ":8001"
+				Url = "http://" + Environment.MachineName + ":8001",
 			};
-			store1.Initialize();
+			store1.Initialize(false);
 
 			store2 = new DocumentStore
 			{
 				DefaultDatabase = "Northwind",
 				Url = "http://" + Environment.MachineName + ":8002"
 			};
-			store2.Initialize();
+			store2.Initialize(false);
 
 
 			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument

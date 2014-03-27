@@ -34,7 +34,7 @@ namespace Raven.Server
 				try
 				{
 					LogManager.EnsureValidLogger();
-					server = new RavenDbServer(new RavenConfiguration());
+                    server = new RavenDbServer(new RavenConfiguration()) { UseEmbeddedHttpServer = true }.Initialize();
 				}
 				catch (Exception e)
 				{

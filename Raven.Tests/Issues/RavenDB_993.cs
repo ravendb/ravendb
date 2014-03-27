@@ -35,8 +35,8 @@ namespace Raven.Tests.Issues
 			server1 = CreateServer(8079, "D1");
 			server2 = CreateServer(8078, "D2");
 
-			store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false);
-			store2 = NewRemoteDocumentStore(false, server2, databaseName: "Northwind", runInMemory: false);
+            store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false);
+            store2 = NewRemoteDocumentStore(false, server2, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false);
 
 			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(
 				new DatabaseDocument
@@ -78,8 +78,8 @@ namespace Raven.Tests.Issues
 			server1 = CreateServer(8079, "D1");
 			server2 = CreateServer(8078, "D2");
 
-			store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false);
-			store2 = NewRemoteDocumentStore(false, server2, databaseName: "Northwind", runInMemory: false);
+			store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false);
+            store2 = NewRemoteDocumentStore(false, server2, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false);
 
 			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(
 				new DatabaseDocument
@@ -120,7 +120,7 @@ namespace Raven.Tests.Issues
 		{
 			server1 = CreateServer(8079, "D1");
 
-			store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false);
+			store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false);
 
 			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(
 				new DatabaseDocument
@@ -154,7 +154,7 @@ namespace Raven.Tests.Issues
 		{
 			server1 = CreateServer(8079, "D1");
 
-			store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false);
+            store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false);
 
 			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(
 				new DatabaseDocument
