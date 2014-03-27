@@ -98,6 +98,11 @@ class pagedList {
     indexOf(item: any) {
         return this.items.indexOf(item);
     }
+
+    hasIds(): boolean {
+        return this.items && this.items.length > 0 && this.items[0] && this.items[0].getId && this.items[0].getId();
+    }
+
 }
 
 export = pagedList;
