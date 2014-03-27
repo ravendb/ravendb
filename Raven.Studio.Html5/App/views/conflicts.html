@@ -16,17 +16,7 @@
     kind: 'virtualTable', documentsSource: currentConflictsPagedItems,
     selectedIndices: selectedDocumentIndices, gridSelector: '#conflictsGrid',
     showCheckboxes: false, useContextMenu: false,
-    customColumnParams: {
-        'versions': {
-            title: 'Versions',
-            template: 'versions-template',
-            width: 400
-        },
-        'conflictDetectedAt': {
-            title: 'Detected At (UTC)',
-            width: 300
-        }
-    }
+    customColumns: currentColumnsParams
     
 }"></div>
         </div>

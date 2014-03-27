@@ -8,8 +8,11 @@ import deleteCollection = require("viewmodels/deleteCollection");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import getCollectionsCommand = require("commands/getCollectionsCommand");
+import getCustomColumnsCommand = require('commands/getCustomColumnsCommand');
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
+import customColumnParams = require('models/customColumnParams');
+import customColumns = require('models/customColumns');
 
 class documents extends viewModelBase {
 
@@ -19,6 +22,7 @@ class documents extends viewModelBase {
     allDocumentsCollection: collection;
     collectionToSelectName: string;
     currentCollectionPagedItems = ko.observable<pagedList>();
+    currentColumnsParams = customColumns.empty();
     selectedDocumentIndices = ko.observableArray<number>();
     isSelectAll = ko.observable(false);
     hasAnyDocumentsSelected: KnockoutComputed<boolean>;
@@ -47,6 +51,7 @@ class documents extends viewModelBase {
         });
     }
 
+
     collectionsLoaded(collections: Array<collection>, db: database) {
         
         // Create the "All Documents" pseudo collection.
@@ -73,10 +78,24 @@ class documents extends viewModelBase {
         collectionsWithSysCollection.forEach(c => c.fetchTotalDocumentCount());
     }
 
+    //TODO: this binding has notification leak!
     selectedCollectionChanged(selected: collection) {
         if (selected) {
-            var pagedList = selected.getDocuments();
-			this.currentCollectionPagedItems(pagedList);
+
+            var customColumnsCommand = selected.isAllDocuments ?
+                getCustomColumnsCommand.forAllDocuments(this.activeDatabase()) : getCustomColumnsCommand.forCollection(selected.name, this.activeDatabase());
+
+            customColumnsCommand.execute().done((dto: customColumnsDto) => {
+                if (dto) {
+                    this.currentColumnsParams.columns($.map(dto.Columns, c => new customColumnParams(c)));
+                } else {
+                    // use default values!
+                    this.currentColumnsParams.columns.removeAll();
+                }
+
+                var pagedList = selected.getDocuments();
+                this.currentCollectionPagedItems(pagedList);
+            });
         }
     }
 

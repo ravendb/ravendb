@@ -11,6 +11,8 @@ import database = require("models/database");
 import conflictVersion = require("models/conflictVersion");
 import transformer = require("models/transformer");
 import indexDefinition = require("models/indexDefinition");
+import customColumns = require("models/customColumns");
+import customColumnParams = require('models/customColumnParams');
 
 import getConflictsCommand = require("commands/getConflictsCommand");
 import getReplicationSourcesCommand = require("commands/getReplicationSourcesCommand");
@@ -19,12 +21,15 @@ import getSingleTransformerCommand = require("commands/getSingleTransformerComma
 import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
 import saveTransformerCommand = require("commands/saveTransformerCommand");
 
+
 import viewModelBase = require("viewmodels/viewModelBase");
 
 class conflicts extends viewModelBase {
 
     displayName = "conflicts";
     sourcesLookup: dictionary<string> = {};
+
+    currentColumnsParams = customColumns.empty();
 
     //TODO: subscribe to databases and remove item from list once user delete DB.
     static performedIndexChecks: Array<string> = [];
@@ -43,11 +48,16 @@ class conflicts extends viewModelBase {
         super.activate(args);
         this.activeDatabase.subscribe((db: database) => this.databaseChanged(db));
 
+        this.currentColumnsParams.columns([
+            new customColumnParams({ Header: "Detected At (UTC)", Binding: "conflictDetectedAt", DefaultWidth: 300 }),
+            new customColumnParams({ Header: "Versions", Binding: "versions", DefaultWidth: 400, Template: 'versions-template' }),
+        ]);
+
         return this.performIndexCheck(this.activeDatabase()).then(() => {
             return this.loadReplicationSources(this.activeDatabase());
         }).done(() => {
-            this.fetchConflicts(appUrl.getDatabase());
-        });
+                this.fetchConflicts(appUrl.getDatabase());
+            });
     }
 
     fetchConflicts(database: database) {
@@ -78,6 +88,7 @@ class conflicts extends viewModelBase {
             })
             .fail( 
             function () {
+                //TODO: we should check exact result of getIndex/Transfomer commands (if it contains 404)
                 var indexTask = new saveIndexDefinitionCommand(conflicts.getConflictsIndexDefinition(), indexPriority.normal, db).execute();
                 var transformerTask = new saveTransformerCommand(conflicts.getConflictsTransformerDefinition(), db).execute();
 

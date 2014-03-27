@@ -474,4 +474,16 @@ interface smugglerOptionsDto {
     IncludeTransformers: boolean;
     IncludeAttachments: boolean;
     RemoveAnalyzers: boolean;
+
+}
+
+interface customColumnParamsDto {
+    Header?: string;
+    Binding: string;
+    DefaultWidth?: number;
+    Template?: string;
+}
+
+interface customColumnsDto {
+    Columns: Array<customColumnParamsDto>;
 }
