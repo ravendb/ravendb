@@ -186,6 +186,8 @@
                 <li><a class="navbar-brand" href="#/filesystems/status">Stats</a></li>
                 <!-- ko with: statistics -->
                 <li><a href="#filesystems" data-bind="text: FileCount + ' files'"></a></li>
+                <li><a href="#filesystems" data-bind="text: Metrics.RequestsPerSecond + ' requests per second'"></a></li>
+                <li><a href="#filesystems" data-bind="text: Metrics.RequestsDuration.Mean.toFixed(1) + 'ms mean duration'"></a></li>
                 <!-- /ko -->
             </ul>
 

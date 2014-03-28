@@ -75,13 +75,13 @@ class filesystems extends viewModelBase {
         });
     }
 
-    navigateToDocuments(fs: filesystem) {
+    navigateToFiles(fs: filesystem) {
         fs.activate();
-        router.navigate(appUrl.forFilesystem(fs));
+        router.navigate(appUrl.forFilesystemFiles(fs));
     }
 
-    getFilesystemUrl(fs: filesystem) {
-        return appUrl.forFilesystem(fs);
+    getFilesystemFilesUrl(fs: filesystem) {
+        return appUrl.forFilesystemFiles(fs);
     }
 
     filesystemsLoaded(results: Array<filesystem>) {

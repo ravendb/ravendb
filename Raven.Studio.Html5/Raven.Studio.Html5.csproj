@@ -102,6 +102,7 @@
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\createFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystems.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystemStatistics.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\backupDatabase.ts" />

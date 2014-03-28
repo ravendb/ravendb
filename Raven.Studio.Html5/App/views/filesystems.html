@@ -12,9 +12,6 @@
                 </h3>
             </li>
         </ul>
-        <!--<button class="btn btn-default systemButton" data-bind="click: goToSystemDatabase">
-            <span>System Database</span>
-        </button>-->
         <div class="btn-toolbar">
             <!--<button type="button" class="btn btn-primary" data-bind="click: newDatabase" accesskey="n" title="Create a new database. (Alt+N)"><i class="fa fa-plus"></i> New Database</button>
             <form class="form-inline" style="display: inline-block; vertical-align: middle;">
@@ -44,9 +41,9 @@
         </table>
 
         <div class="filesystems-container" data-bind="foreach: filesystems">
-            <div class="filesystem" data-bind="visible: isVisible, click: function () { $root.selectFilesystem($data); return true; }, css: { selected: isSelected}">
-                <h4><a data-bind="text: name, attr: { href: $root.getFilesystemUrl($data) }"></a></h4>
-                <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: filesCount() + ' files'"></span>
+            <div class="filesystem" data-bind="visible: isVisible, click: function () { $root.selectFilesystem($data); return true; }, css: { selected: isSelected }">
+                <h4><a data-bind="text: name, attr: { href: $root.getFilesystemFilesUrl($data) }"></a></h4>
+                <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: itemCount() + ' files'"></span>
             </div>
         </div>
         <!--<form data-bind="submit: upload()" enctype="multipart/form-data">
