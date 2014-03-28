@@ -51,8 +51,11 @@ namespace Raven.Tests.Bugs
 											DataDirectory = "HiLoData",
 											RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 											AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
-										});
-			
+										})
+			{
+				UseEmbeddedHttpServer = true
+			};
+			server.Initialize();
 
 		}
 

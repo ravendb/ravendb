@@ -9,6 +9,7 @@ import getStoredQueriesCommand = require("commands/getStoredQueriesCommand");
 import querySort = require("models/querySort");
 import app = require("durandal/app");
 import resetIndexConfirm = require("viewmodels/resetIndexConfirm");
+import router = require("plugins/router"); 
 
 class indexes extends viewModelBase {
 
@@ -34,6 +35,7 @@ class indexes extends viewModelBase {
     attached() {
         // Alt+Minus and Alt+Plus are already setup. Since laptops don't have a dedicated key for plus, we'll also use the equal sign key (co-opted for plus).
         this.createKeyboardShortcut("Alt+=", () => this.expandAll(), this.containerSelector);
+        ko.postbox.publish("SetRawJSONUrl",  appUrl.forIndexesRawData(this.activeDatabase()));
     }
 
     fetchIndexes() {

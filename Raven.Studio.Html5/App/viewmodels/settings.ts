@@ -2,12 +2,17 @@ import durandalRouter = require("plugins/router");
 import database = require("models/database");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
+import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import alertType = require("common/alertType");
+import alertArgs = require("common/alertArgs");
 
 class settings extends viewModelBase {
 
     router: DurandalRootRouter = null;
     isOnSystemDatabase: KnockoutComputed<boolean>;
     isOnUserDatabase: KnockoutComputed<boolean>;
+
+    userDatabasePages = ko.observableArray(["Periodic Backup", "Database Settings", "Scripted Index"]);
 
     constructor() {
         super();
@@ -34,7 +39,6 @@ class settings extends viewModelBase {
             ])
             .buildNavigationModel();
 
-        
         this.router.guardRoute = (instance: Object, instruction: DurandalRouteInstruction) => this.getValidRoute(instance, instruction);
     }
 
@@ -57,11 +61,35 @@ class settings extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        if (args) {
+            var canActivateResult = $.Deferred();
+            var db = this.activeDatabase();
+            var documentId = "Raven/Databases/" + db.name;
+            var systemDatabase = appUrl.getSystemDatabase();
+            var self = this;
+            new getDocumentWithMetadataCommand(documentId, systemDatabase)
+                .execute()
+                .done(document => {
+                    var arr = document.Settings["Raven/ActiveBundles"].split(';');
+                    self.userDatabasePages.remove("Replication");
+                    self.userDatabasePages.remove("SQL Replication");
+                    if (jQuery.inArray("Replication", arr) != -1) {
+                        self.userDatabasePages.push("Replication");
+                    }
+                    if (jQuery.inArray("SqlReplication", arr) != -1) {
+                        self.userDatabasePages.push("SQL Replication");
+                    }
+                    
+                    canActivateResult.resolve({ can: true });
+                });
+            return canActivateResult;
+        } else {
+            return $.Deferred().resolve({ can: true });
+        }
     }
 
     routeIsVisible(route: DurandalRouteConfiguration) {
-        var userDatabasePages = ["Periodic Backup", "Database Settings", "Replication", "SQL Replication", "Scripted Index"];
-        if (jQuery.inArray(route.title, userDatabasePages) !== -1) {
+        if (this.userDatabasePages.indexOf(route.title) !== -1) {
             // Periodic backup, database settings, and replication are visible only when we're on a user database.
             return this.isOnUserDatabase();
         } else {

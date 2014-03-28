@@ -1,24 +1,27 @@
 ﻿<section class="database-page">
     <div style="position: relative">
         <ul class="breadcrumb">
-                <li>
-                    <h3>
-                        <a href="#databases">
-                            Databases
-                        </a>
-                        <a href="#filesystems">
-                            Filesystems
-                        </a>
-                    </h3>
-                </li>
+            <li>
+                <h3>
+                    <a href="#databases">
+                        Databases
+                    </a>
+                    <a href="#filesystems">
+                        Filesystems
+                    </a>
+                </h3>
+            </li>
         </ul>
-        <button class="btn btn-default systemButton" data-bind="click: goToSystemDatabase">
-            <span>System Database</span>
-        </button>
+        <a class="btn btn-warning pull-right" data-bind="attr: { href: docsForSystemUrl }">System Database</a>
         <div class="btn-toolbar">
-            <button type="button" class="btn btn-primary" data-bind="click: newDatabase" accesskey="n" title="Create a new database. (Alt+N)"><i class="fa fa-plus"></i> New Database</button>
-            <form class="form-inline" style="display: inline-block; vertical-align: middle;">
-                <input type="text" accesskey="s" class="form-control col-md-8" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" title="Search for a database (Alt+S)">
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary" data-bind="click: newDatabase" accesskey="n" title="Create a new database. (Alt+N)"><i class="fa fa-plus"></i> New Database</button>
+            </div>
+            <form class="form-inline col-md-3">
+                <div class="input-group">
+                    <input type="text" accesskey="s" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" title="Search for a database (Alt+S)">
+                    <span class="input-group-addon"><i class="fa fa-search"></i></span>
+                </div>
             </form>
             <button type="button" class="btn btn-danger" data-bind="click: deleteSelectedDatabase, visible: selectedDatabase() != null" title="Delete selected database"><i class="fa fa-trash-o"></i></button>
         </div>

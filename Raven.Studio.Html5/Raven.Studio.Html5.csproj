@@ -176,11 +176,15 @@
     <TypeScriptCompile Include="App\models\conflictsInfo.ts" />
     <TypeScriptCompile Include="App\models\abstractQueryResult.ts" />
     <TypeScriptCompile Include="App\models\conflictVersion.ts" />
+    <TypeScriptCompile Include="App\commands\saveScriptedIndexesCommand.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\createEncryption.html" />
     <Content Include="App\views\conflicts.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
     <Content Include="App\views\filesystems.html" />
+    <Content Include="App\views\alerts.html" />
+    <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\scriptedIndexes.html" />
     <Content Include="App\views\resetIndexConfirm.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
@@ -226,9 +230,6 @@
     <Content Include="App\views\viewSystemDatabaseConfirm.html" />
     <Content Include="App\views\windowsAuth.html" />
     <TypeScriptCompile Include="App\widgets\virtualTable\customColumnParams.ts" />
-    <Content Include="Content\app.min.css">
-      <DependentUpon>app.css</DependentUpon>
-    </Content>
     <Content Include="Content\bootstrap-theme.css" />
     <Content Include="Content\bootstrap-theme.min.css" />
     <Content Include="Content\bootstrap.css" />
@@ -886,6 +887,7 @@
     <Content Include="Scripts\knockout-delegatedEvents.min.js" />
     <Content Include="Scripts\knockout-postbox.js" />
     <Content Include="Scripts\knockout-postbox.min.js" />
+    <Content Include="Scripts\knockout.dirtyFlag.js" />
     <Content Include="Scripts\moment-with-langs.js" />
     <Content Include="Scripts\moment-with-langs.min.js" />
     <Content Include="Scripts\moment.js" />

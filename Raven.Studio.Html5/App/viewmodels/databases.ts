@@ -7,7 +7,6 @@ import getDatabasesCommand = require("commands/getDatabasesCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import deleteDatabaseConfirm = require("viewmodels/deleteDatabaseConfirm");
 import createDatabase = require("viewmodels/createDatabase");
-import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
 import createDatabaseCommand = require("commands/createDatabaseCommand");
 import createEncryption = require("viewmodels/createEncryption");
 import createEncryptionConfirmation = require("viewmodels/createEncryptionConfirmation");
@@ -19,12 +18,23 @@ class databases extends viewModelBase {
     selectedDatabase = ko.observable<database>();
     systemDb: database;
     initializedStats: boolean;
+    docsForSystemUrl: string;
 
     constructor() {
         super();
 
         this.systemDb = appUrl.getSystemDatabase();
-        this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterDatabases(s));
+        this.docsForSystemUrl = appUrl.forDocuments(null, this.systemDb);
+        this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterDatabases(s));        
+    }
+
+    // Override canActivate: we can always load this page, regardless of any system db prompt.
+    canActivate(args: any): any {
+        return true;
+    }
+
+    attached() {
+        ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
     }
 
     modelPolling() {
@@ -52,14 +62,13 @@ class databases extends viewModelBase {
             var few = 20;
             if (results.length < few && !this.initializedStats) {
                 this.initializedStats = true;
-                results.forEach(db=> this.fetchStats(db));
+                results.forEach(db => this.fetchStats(db));
             }
 
-            // Judah says: Why is this commented out? It was in the old Studio.
-            /*// If we have no databases, show the "create a new database" screen.
+            // If we have no databases, show the "create a new database" screen.
             if (results.length === 0) {
                 this.newDatabase();
-            }*/
+            }
         }
     }
 
@@ -99,7 +108,7 @@ class databases extends viewModelBase {
                     savedKey = key;
                     securedSettings = {
                         'Raven/Encryption/Key': key,
-                        'Raven/Encryptijon/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
+                        'Raven/Encryption/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
                         'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
                     };
                     deferred.resolve(securedSettings);
@@ -122,7 +131,7 @@ class databases extends viewModelBase {
     }
 
     private createDB(databaseName: string, bundles: string[], securedSettings: {}) {
-        var self = this;
+        //var self = this; // Note: no reason to use self. If you want to use 'this' in a callback, put the callback in a lambda, e.g. .done(() => this.Foobar())
         return new createDatabaseCommand(databaseName, bundles, securedSettings)
             .execute()
             .fail(response=> {
@@ -179,7 +188,7 @@ class databases extends viewModelBase {
 
     deleteSelectedDatabase() {
         var db = this.selectedDatabase();
-        if (db ) {
+        if (db) {
             require(["viewmodels/deleteDatabaseConfirm"], deleteDatabaseConfirm => {
                 var confirmDeleteVm: deleteDatabaseConfirm = new deleteDatabaseConfirm(db, this.systemDb);
                 confirmDeleteVm.deleteTask.done(() => this.onDatabaseDeleted(db));
@@ -194,23 +203,6 @@ class databases extends viewModelBase {
             this.selectDatabase(this.databases().first());
         }
     }
-
-    goToSystemDatabase() {
-        if (appUrl.warnWhenUsingSystemDatabase == true) {
-            var systemDbConfirm = new viewSystemDatabaseConfirm();
-            systemDbConfirm.viewTask.done(()=> {
-                var systemDb = appUrl.getSystemDatabase();
-                systemDb.activate();
-                this.goToDocuments(systemDb);
-            });
-            app.showDialog(systemDbConfirm);
-        } else {
-            var systemDb = appUrl.getSystemDatabase();
-            systemDb.activate();
-            this.goToDocuments(systemDb);
-        }
-    }
-
 }
 
 export = databases; 

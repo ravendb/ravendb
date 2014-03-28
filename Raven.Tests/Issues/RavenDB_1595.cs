@@ -28,7 +28,7 @@ namespace Raven.Tests.Issues
                 Url = "http://localhost:8079"
             };
 
-            store1.Initialize();
+            store1.Initialize(ensureDatabaseExists: false);
 
             store1.DatabaseCommands.GlobalAdmin.CreateDatabase(
                 new DatabaseDocument
@@ -37,9 +37,11 @@ namespace Raven.Tests.Issues
                     Settings = { { "Raven/DataDir", @"~\D1\N" } }
                 });
 
+            store1.DatabaseCommands.ForDatabase("Northwind").Get("force/load/of/db");
+
             Assert.True(
                 Directory.Exists(Path.Combine(server1.SystemDatabase.Configuration.DataDirectory,
-                                              "Databases//Northwind//")));
+                                              "D1//N/")));
 
 
         }
@@ -61,7 +63,11 @@ namespace Raven.Tests.Issues
             if (removeDataDirectory)
                 IOExtensions.DeleteDirectory(serverConfiguration.DataDirectory);
 
-            var server = new RavenDbServer(serverConfiguration);
+            var server = new RavenDbServer(serverConfiguration)
+            {
+                UseEmbeddedHttpServer = true
+            };
+            server.Initialize();
             serverConfiguration.PostInit();
 
             return server;
@@ -71,7 +77,8 @@ namespace Raven.Tests.Issues
             if (server1 != null)
             {
                 server1.Dispose();
-                IOExtensions.DeleteDirectory(server1.SystemDatabase.Configuration.DataDirectory);
+                if (server1.SystemDatabase != null)
+                    IOExtensions.DeleteDirectory(server1.SystemDatabase.Configuration.DataDirectory);
             }
 
             if (store1 != null)

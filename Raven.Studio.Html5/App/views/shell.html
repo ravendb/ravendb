@@ -178,6 +178,9 @@
                 <li><a href="#documents" data-bind="text: Errors.length + ' errors'"></a></li>
                 <li><a href="#documents" data-bind="text: Triggers.length + ' triggers'"></a></li>
                 <li><a href="#documents" data-bind="text: ApproximateTaskCount + ' tasks'"></a></li>
+                <li data-bind="visible:$root.rawUrlIsVisible">
+                    <a target='_blank' data-bind="text:'Raw Url: ' + $root.currentRawUrl(), attr:{href:$root.currentRawUrl()}"></a>
+                </li>
                 <!-- /ko -->
             </ul>
 

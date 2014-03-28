@@ -33,12 +33,10 @@ class documents extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-        this.activeDatabase.subscribe((db: database) => this.databaseChanged(db));
 
         // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo&database="blahDb"
-        this.collectionToSelectName = args ? args.collection : null;
-        
-        return this.fetchCollections(appUrl.getDatabase());
+        this.collectionToSelectName = args ? args.collection : null;        
+        this.fetchCollections(appUrl.getDatabase());
     }
 
     attached(view: HTMLElement, parent: HTMLElement) {
@@ -79,14 +77,6 @@ class documents extends viewModelBase {
         if (selected) {
             var pagedList = selected.getDocuments();
 			this.currentCollectionPagedItems(pagedList);
-        }
-    }
-
-    databaseChanged(db: database) {
-        if (db) {
-            var documentsUrl = appUrl.forDocuments(null, db);
-            router.navigate(documentsUrl, false);
-            this.fetchCollections(db);
         }
     }
 

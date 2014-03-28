@@ -253,22 +253,6 @@ namespace Raven.Tests.Patching
 		}
 
 		[Fact]
-		public void PropertyAddition_WithConcurrently_NullValueOnMissingPropShouldThrow()
-		{
-			Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(
-			   new[]
-				{
-					new PatchRequest
-					{
-						Type = PatchCommandType.Set,
-						Name = "blog_id",
-						Value = new RavenJValue(1),
-						PrevVal = new RavenJValue((object)null)
-					},
-				}));
-		}
-
-		[Fact]
 		public void PropertyAddition_WithConcurrently_BadValueOnMissingPropShouldThrow()
 		{
 			Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(

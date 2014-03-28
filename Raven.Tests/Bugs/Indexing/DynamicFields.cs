@@ -25,7 +25,7 @@ namespace Raven.Tests.Bugs.Indexing
 		{
 			public string Name { get; set; }
 			public string Value { get; set; }
-			public double NumericValue { get; set; }
+			public decimal NumericValue { get; set; }
 			public int IntValue { get; set; }
 		}
 
@@ -50,7 +50,7 @@ namespace Raven.Tests.Bugs.Indexing
 					from p in products
 					select new
 					{
-						_ = p.Attributes.Select(attribute => new NumericField(attribute.Name+"_Range", Field.Store.NO, true).SetDoubleValue(attribute.NumericValue))
+						_ = p.Attributes.Select(attribute => new NumericField(attribute.Name+"_Range", Field.Store.NO, true).SetDoubleValue((double)attribute.NumericValue))
 					};
 			}
 		}

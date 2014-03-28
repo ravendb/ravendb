@@ -18,7 +18,7 @@ import alertArgs = require("common/alertArgs");
 class editIndex extends viewModelBase { 
 
     isEditingExistingIndex = ko.observable(false);
-    priority = ko.observable<indexPriority>();
+    priority = ko.observable<indexPriority>().extend({ required: true });
     priorityLabel: KnockoutComputed<string>;
     priorityFriendlyName: KnockoutComputed<string>;
     editedIndex = ko.observable<indexDefinition>();
@@ -41,13 +41,13 @@ class editIndex extends viewModelBase {
         this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
     }
 
-    canActivate(args) {
-        if (args) {
+    canActivate(indexToEditName: string) {
+        if (indexToEditName) {
             var canActivateResult = $.Deferred();
-            this.fetchIndexToEdit(args)
+            this.fetchIndexToEdit(indexToEditName)
                 .done(()=> canActivateResult.resolve({ can: true }))
                 .fail(() => {
-                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + decodeURIComponent(args) + " index", null));
+                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + decodeURIComponent(indexToEditName) + " index", null));
                     canActivateResult.resolve({ redirect: appUrl.forIndexes(this.activeDatabase() )});
                 });
 
@@ -70,18 +70,33 @@ class editIndex extends viewModelBase {
         }
     }
 
+    attached() {
+        this.addMapHelpPopover();
+        this.addReduceHelpPopover();
+        this.addTransformHelpPopover();
+
+        var indexDef = this.editedIndex();
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.fields, indexDef.transformResults, indexDef.spatialFields]);
+        //need to add more fields like: this.editedIndex().luceneFields()[0].name, this.editedIndex().luceneFields()[0].indexing()
+    }
+
+    // Called back after the entire composition has finished (parents and children included)
+    compositionComplete() {
+        super.compositionComplete();
+    }
+
+    /*saveInObservable() {
+        var docEditor = ace.edit("docEditor");
+        var docEditorText = docEditor.getSession().getValue();
+        this.editedTransformer().transformResults(docEditorText);
+    }*/
+
     editExistingIndex(unescapedIndexName: string) {
         var indexName = decodeURIComponent(unescapedIndexName);
         this.fetchIndexPriority(indexName);
         this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
         this.statsUrl(appUrl.forStatus(this.activeDatabase()));
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
-    }
-
-    attached() {
-        this.addMapHelpPopover();
-        this.addReduceHelpPopover();
-        this.addTransformHelpPopover();
     }
 
     addMapHelpPopover() {
@@ -138,12 +153,20 @@ class editIndex extends viewModelBase {
             saveCommand
                 .execute()
                 .done(() => {
+                    // Resync Changes
+                    viewModelBase.dirtyFlag().reset();
+
                     if (!this.isEditingExistingIndex()) {
                         this.isEditingExistingIndex(true);
                         this.editExistingIndex(index.Name);
                     }
-                });
+                this.updateUrl(index.Name);
+            });
         }
+    }
+
+    updateUrl(indexName: string) {
+        router.navigate(appUrl.forEditIndex(indexName, this.activeDatabase()));
     }
 
     refreshIndex() {
@@ -152,6 +175,9 @@ class editIndex extends viewModelBase {
             this.editedIndex(null);
             this.editExistingIndex(existingIndex.name());
         }
+
+        // Resync Changes
+        viewModelBase.dirtyFlag().reset();
     }
 
     deleteIndex() {

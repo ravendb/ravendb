@@ -23,7 +23,6 @@ import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
-import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 
 class shell extends viewModelBase {
@@ -39,19 +38,19 @@ class shell extends viewModelBase {
     recordedErrors = ko.observableArray<alertArgs>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
-    isFirstModelPoll: boolean;
 
     filesystems = ko.observableArray<filesystem>();
     filesystemsLoadedTask: JQueryPromise<any>;
 
-    DocumentPrefix = ko.observable<String>();
+    currentRawUrl = ko.observable<string>("");
+    rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     
     constructor() {
         super();
-        this.isFirstModelPoll = true;
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("ActivateFilesystemWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
+        ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
 
         this.appUrls = appUrl.forCurrentDatabase();
 
@@ -78,61 +77,8 @@ class shell extends viewModelBase {
         
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
-
-        this.router.guardRoute = (instance: Object, instruction: DurandalRouteInstruction) => this.getValidRoute(instance, instruction);
-        
         this.connectToRavenServer();
     }
-
-    getValidRoute(instance: Object, instruction: DurandalRouteInstruction) :any {
-        if (appUrl.warnWhenUsingSystemDatabase && !this.activeDatabase().isSystem && instruction.queryString && (instruction.queryString.indexOf("database=<system>") >= 0 || instruction.queryString.indexOf("database=%3Csystem%3E") >= 0 )) {
-            var systemDbConfirm = new viewSystemDatabaseConfirm(this.activeDatabase());
-
-            systemDbConfirm.viewTask.done(()=> {
-                var systemDb = appUrl.getSystemDatabase();
-                systemDb.activate();
-
-                var lastRoute = appUrl.forCurrentPage(systemDb);
-
-                if (!lastRoute) {
-                    if (window.location.hash.indexOf("database") < 0) {
-                        lastRoute = window.location.hash + "?database=" + encodeURIComponent(systemDb.name);
-                    } else {
-                        lastRoute = window.location.hash;
-                        lastRoute.substring(lastRoute.length - 2, lastRoute.length) == "&&" ? lastRoute = lastRoute.replace("&&", "&") : lastRoute = lastRoute + "&";
-                    }
-
-                }
-                else if (lastRoute.indexOf("database") < 0) {
-                    lastRoute = lastRoute + "?database=" + encodeURIComponent(systemDb.name);
-                }
-                
-                router.navigate(lastRoute);
-
-            }).fail((lastDb:database) => {
-                var lastRoute = appUrl.forCurrentPage(lastDb);
-
-                if (!lastRoute) {
-                    if (window.location.hash.indexOf("database") < 0) {
-                        lastRoute = window.location.hash + "?database=" + encodeURIComponent(lastDb.name);
-                    } else {
-                        lastRoute = window.location.hash.replace("database=%3Csystem%3E", "database=" + encodeURIComponent(lastDb.name));
-                    } 
-                }
-                else if (lastRoute.indexOf("database") < 0) {
-                    lastRoute = lastRoute + "?database=" + encodeURIComponent(lastDb.name);
-                }
-
-                router.navigate(lastRoute ? lastRoute : window.location.hash);
-                
-            });
-            app.showDialog(systemDbConfirm);
-            return false;
-        } else {
-            return true;
-        }
-    }
-
 
     // Called by Durandal when shell.html has been put into the DOM.
     attached() {
@@ -186,7 +132,6 @@ class shell extends viewModelBase {
         $('#goToDocInput').bind('typeahead:selected', (obj, datum, name) => {
             router.navigate(datum.editHref);
         });
-
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -232,17 +177,10 @@ class shell extends viewModelBase {
             .fail(result => this.handleRavenConnectionFailure(result))
             .done(results => {
                 this.databasesLoaded(results);
-                new getDocumentWithMetadataCommand("Raven/StudioConfig", appUrl.getSystemDatabase()).
-                    execute()
-                    .done((doc: document) => {
-                        if (!doc["WarnWhenUsingSystemDatabase"] && doc["WarnWhenUsingSystemDatabase"] == false) {
-                            appUrl.warnWhenUsingSystemDatabase = false;
-                        }
-                    }).always(() => {
-                        router.activate();
-                        this.fetchBuildVersion();
-                        this.fetchLicenseStatus();
-                    });
+                this.fetchStudioConfig();
+                this.fetchBuildVersion();
+                this.fetchLicenseStatus();
+                router.activate();
             });
 
         this.filesystemsLoadedTask = new getFilesystemsCommand()
@@ -253,6 +191,14 @@ class shell extends viewModelBase {
                 router.activate();
                 this.fetchBuildVersion();
                 this.fetchLicenseStatus();
+            });
+    }
+
+    fetchStudioConfig() {
+        new getDocumentWithMetadataCommand("Raven/StudioConfig", appUrl.getSystemDatabase())
+            .execute()
+            .done((doc: document) => {
+              appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
             });
     }
 

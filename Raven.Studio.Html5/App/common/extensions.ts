@@ -13,6 +13,10 @@ interface KnockoutObservableArray<T> {
     last(filter?: (item) => boolean): T;
 }
 
+interface KnockoutStatic {
+    DirtyFlag(any): void;
+}
+
 interface Function {
     memoize(thisArg: any): Function;
 }

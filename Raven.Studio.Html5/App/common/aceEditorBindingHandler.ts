@@ -26,7 +26,7 @@ class aceEditorBindingHandler {
     }
         
     // Called by Knockout a single time when the binding handler is setup.
-    init(element: HTMLElement, valueAccessor: () => { code: string; theme?: string; fontSize?: string; lang?: string; }, allBindings, viewModel, bindingContext: any) {
+    init(element: HTMLElement, valueAccessor: () => { code: string; theme?: string; fontSize?: string; lang?: string; getFocus?: boolean}, allBindings, viewModel, bindingContext: any) {
         var bindingValues = valueAccessor();
         var theme = bindingValues.theme || this.defaults.theme; // "ace/theme/github";
         var fontSize = bindingValues.fontSize || this.defaults.fontSize; // "16px";
@@ -51,6 +51,11 @@ class aceEditorBindingHandler {
 
         // Keep track of the editor for this element.
         ko.utils.domData.set(element, "aceEditor", aceEditor);
+
+
+        if (bindingValues.getFocus && bindingValues.getFocus == true) {
+            aceEditor.focus();
+        }
     }
 
     // Called by Knockout each time the dependent observable value changes.
