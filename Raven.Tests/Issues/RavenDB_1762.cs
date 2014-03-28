@@ -10,6 +10,7 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Client;
+using Raven.Client.Connection;
 using Raven.Client.Exceptions;
 using Raven.Database;
 using Raven.Database.Config;
@@ -22,7 +23,7 @@ using User = Raven.Tests.Linq.User;
 
 namespace Raven.Tests.Issues
 {
-    public class RavenDB_1762 : ReplicationBase
+    public class RavenDb1762 : ReplicationBase
     {
         
         [InheritedExport(typeof(AbstractDocumentReplicationConflictResolver))]
@@ -123,8 +124,7 @@ namespace Raven.Tests.Issues
             }
 
             // master - master
-            SetupReplication(store1.DatabaseCommands, store2.Url);
-
+            SetupReplication(store1.DatabaseCommands, store2.Url.ForDatabase(store2.DefaultDatabase));
             WaitForReplication(store2, docId);
 
             DeleteOnConflict.Enabled = false;
@@ -170,7 +170,6 @@ namespace Raven.Tests.Issues
         {
             CanResolveConflict(new DeleteOnConflict(), resolver => resolver.Enable(), delegate(IDocumentStore store1, IDocumentStore store2)
             {
-
                 using (var s = store2.OpenSession())
                 {
                     var user = s.Load<User>(docId);
