@@ -14,6 +14,7 @@ namespace Voron.Impl.Paging
 {
 	public unsafe class Win32PageFileBackedMemoryMappedPager : AbstractPager
 	{
+		private readonly string _name;
 		public readonly long AllocationGranularity;
 		private long _totalAllocationSize;
 		private const int MaxAllocationRetries = 100;
@@ -21,9 +22,10 @@ namespace Voron.Impl.Paging
 	    private readonly int _instanceId;
 
 
-	    public Win32PageFileBackedMemoryMappedPager()
+	    public Win32PageFileBackedMemoryMappedPager(string name)
 		{
-			NativeMethods.SYSTEM_INFO systemInfo;
+		    _name = name;
+		    NativeMethods.SYSTEM_INFO systemInfo;
 			NativeMethods.GetSystemInfo(out systemInfo);
 
 			AllocationGranularity = systemInfo.allocationGranularity;
@@ -39,7 +41,7 @@ namespace Voron.Impl.Paging
 
 		protected override string GetSourceName()
 		{
-			return "MemMapInSystemPage" + _instanceId + ", Size : " + _totalAllocationSize;
+			return "MemMapInSystemPage: " +  _name  + " " + _instanceId + ", Size : " + _totalAllocationSize;
 		}
 
 		public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)

@@ -25,7 +25,7 @@ namespace Voron.Tests.Storage
 		[Fact]	
 	    public void MemoryMapWithoutBackingReleasePagerState()
 	    {
-		    PagerReleasesPagerState(() => new Win32PageFileBackedMemoryMappedPager());
+		    PagerReleasesPagerState(() => new Win32PageFileBackedMemoryMappedPager("test"));
 	    }
 
         [Fact]

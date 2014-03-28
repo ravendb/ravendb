@@ -16,16 +16,15 @@ namespace Raven.Tryouts
 
 		private unsafe static void Main(string[] args)
 		{
-            Console.WriteLine(NumericUtils.PrefixCodedToInt(NumericUtils.IntToPrefixCoded(int.MinValue)));
-            //for (int i = 0; i < 1000; i++)
+			for (int i = 0; i < 1000; i++)
             {
-                //Console.Clear();
-                //Console.WriteLine(i);
-                //using (var x = new AsyncSetBasedOps())
-                //{
-                //    x.AwaitAsyncPatchByIndexShouldWork("voron").Wait();
-                //}
-
+				Console.Clear();
+				Console.WriteLine(i);
+				using (var x = new AsyncSetBasedOps())
+				{
+					x.AwaitAsyncPatchByIndexShouldWork("voron").Wait();
+				}
+				Console.Beep();
                 //using (var x = new DynamicFields())
                 //{
                 //    x.CanCreateCompletelyDynamicNumericFields();
