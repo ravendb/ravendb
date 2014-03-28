@@ -105,19 +105,19 @@
 
                 <ul class=" nav navbar-nav">
 
-                    <li data-bind="css: { active: appUrls.isActive('FilesystemFiles') }">
+                    <li data-bind="css: { active: appUrls.isActive('Files') }">
                         <a data-bind="attr: { href: appUrls.filesystemFiles }">Files</a>
                     </li>
 
-                    <li data-bind="css: { active: appUrls.isActive('FilesystemSearch') }">
+                    <li data-bind="css: { active: appUrls.isActive('Search') }">
                         <a data-bind="attr: { href: appUrls.filesystemSearch }">Search</a>
                     </li>
 
-                    <li data-bind="css: { active: appUrls.isActive('FilesystemSynchronization') }">
+                    <li data-bind="css: { active: appUrls.isActive('Synchronization') }">
                         <a data-bind="attr: { href: appUrls.filesystemSynchronization }">Synchronization</a>
                     </li>
 
-                    <li data-bind="css: { active: appUrls.isActive('FilesystemConfiguration') }">
+                    <li data-bind="css: { active: appUrls.isActive('Configuration') }">
                         <a data-bind="attr: { href: appUrls.filesystemConfiguration }">Configuration</a>
                     </li>
 
@@ -169,6 +169,7 @@
 <footer style="z-index: 999">
     <div class="navbar navbar-fixed-bottom navbar-inverse">
         <div class="navbar-inner">
+
             <ul class="nav navbar-nav" data-bind="with: activeDatabase, visible: appUrls.isAreaActive('databases')">
                 <li><a class="navbar-brand" href="#/status">Stats</a></li>
                 <!-- ko with: statistics -->
@@ -182,9 +183,9 @@
             </ul>
 
             <ul class="nav navbar-nav" data-bind="with: activeFilesystem, visible: appUrls.isAreaActive('filesystems')">
-                <li><a class="navbar-brand" href="#/status">Stats</a></li>
+                <li><a class="navbar-brand" href="#/filesystems/status">Stats</a></li>
                 <!-- ko with: statistics -->
-                <li><a href="#filesystems" data-bind="text: filesCount + ' files'"></a></li>
+                <li><a href="#filesystems" data-bind="text: FileCount + ' files'"></a></li>
                 <!-- /ko -->
             </ul>
 
