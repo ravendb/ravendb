@@ -66,7 +66,7 @@ namespace Raven.Tests.Issues
 					{
 						storage.Batch(accessor =>
 						{
-							accessor.Documents.GetDocumentsAfter(fromEtag, 128);
+							List<JsonDocument> jsonDocuments = accessor.Documents.GetDocumentsAfter(fromEtag, 128).ToList();
 						});
 
 						Thread.Sleep(100);
