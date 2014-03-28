@@ -10,6 +10,10 @@ import getFilesystemStatsCommand = require("commands/getFilesystemStatsCommand")
 import uploadFileToFilesystemCommand = require("commands/uploadFileToFilesystemCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 
+import createFilesystem = require("viewmodels/createFilesystem");
+import createFilesystemCommand = require("commands/createFilesystemCommand");
+
+
 class filesystems extends viewModelBase {
 
     filesystems = ko.observableArray<filesystem>();    
@@ -120,6 +124,26 @@ class filesystems extends viewModelBase {
         fs.activate();
         this.selectedFilesystem(fs);
     }
+
+    newFilesystem() {
+        // Why do an inline require here? Performance.
+        // Since the database page is the common landing page, we want it to load quickly.
+        // Since the createDatabase page isn't required up front, we pull it in on demand.
+        require(["viewmodels/createFilesystem"], createFilesystem => {
+            var createFilesystemViewModel: createFilesystem = new createFilesystem(this.filesystems);
+            createFilesystemViewModel
+                .creationTask
+                .done((filesystemName: string, filesystemPath: string) => this.showCreationAdvancedStepsIfNecessary(filesystemName, filesystemPath));
+            app.showDialog(createFilesystemViewModel);
+        });
+    }
+
+    showCreationAdvancedStepsIfNecessary(filesystemName: string, filesystemPath: string) {
+
+        new createFilesystemCommand(filesystemName, filesystemPath).execute()
+            .done(() => { this.filesystems.unshift(new filesystem(filesystemName)); });
+    }
+
 
     // Federico: If we ever implement delete filesystems (which I believe it could be needed) uncomment and implement the deleteFilesystemConfig dialog.
 

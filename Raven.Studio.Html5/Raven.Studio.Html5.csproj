@@ -183,6 +183,7 @@
     <Content Include="App\views\createEncryption.html" />
     <Content Include="App\views\conflicts.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
+    <Content Include="App\views\createFilesystem.html" />
     <Content Include="App\views\filesystems.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />

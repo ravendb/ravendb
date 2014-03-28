@@ -12,8 +12,10 @@ class createFilesystem extends dialogViewModelBase {
     public creationTask = $.Deferred();
     creationTaskStarted = false;
 
-    filesystemName = ko.observable('');
-    filesystemNameFocus = ko.observable(true);
+    public filesystemName = ko.observable('');
+    public filesystemPath = ko.observable('');
+    public filesystemLogs = ko.observable('');
+    public filesystemNameFocus = ko.observable(true);
 
     private filesystems = ko.observableArray<filesystem>();
     private newCommandBase = new commandBase();
@@ -25,6 +27,11 @@ class createFilesystem extends dialogViewModelBase {
 
     cancel() {
         dialog.close(this);
+    }
+
+    attached() {
+        super.attached();
+        this.filesystemNameFocus(true);
     }
 
     deactivate() {
@@ -48,42 +55,44 @@ class createFilesystem extends dialogViewModelBase {
     }
 
     private isClientSideInputOK(filesystemName): boolean {
-        var result = false;
-        var message = "";
+        var errorMessage = "";
 
-        if (!filesystemName) {
-            message = "Please fill out the file system name field";
+        if (filesystemName == null) {
+            errorMessage = "Please fill out the Database Name field";
         }
-        else if (this.isFilesystemNameExists(filesystemName, this.filesystems()) == true) {
-            message = "File system already exists!";
+        else if (this.isFilesystemNameExists(filesystemName, this.filesystems()) === true) {
+            errorMessage = "Database Name Already Exists!";
         }
-        else if (!this.isValidName(filesystemName)) {
-            message = "Please enter a valid file system name!";
-        } else {
-            result = true;
-        }
+        else if ((errorMessage = this.CheckInput(filesystemName)) != null) { }
 
-        if (result == false) {
-            this.newCommandBase.reportError(message);
+        if (errorMessage != null) {
+            this.newCommandBase.reportError(errorMessage);
             this.filesystemNameFocus(true);
+            return false;
         }
-
-        return result;
+        return true;
     }
 
-    private isValidName(name): boolean {
+    private CheckInput(name): string {
         var rg1 = /^[^\\/:\*\?"<>\|]+$/; // forbidden characters \ / : * ? " < > |
         var rg2 = /^\./; // cannot start with dot (.)
         var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
+        var maxLength = 260 - 30;
 
-        var maxLength;
-        if (navigator.appVersion.indexOf("Win") != -1) {
-            maxLength = 260;
-        } else {
-            maxLength = 255;
+        var message = null;
+        if (name.length > maxLength) {
+            message = "The filesystem length can't exceed " + maxLength + " characters!";
         }
-
-        return rg1.test(name) && !rg2.test(name) && !rg3.test(name) && (name.length <= maxLength);
+        else if (!rg1.test(name)) {
+            message = "The filesystem name can't contain any of the following characters: \ / : * ?" + ' " ' + "< > |";
+        }
+        else if (rg2.test(name)) {
+            message = "The filesystem name can't start with a dot!";
+        }
+        else if (rg3.test(name)) {
+            message = "The name '" + name + "' is forbidden for use!";
+        }
+        return message;       
     }
 
     private isFilesystemNameExists(filesystemName: string, filesystems: filesystem[]): boolean {
