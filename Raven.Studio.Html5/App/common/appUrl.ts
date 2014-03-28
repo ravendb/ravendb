@@ -13,7 +13,8 @@ class appUrl {
     private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
 
 	// Stores some computed values that update whenever the current database updates.
-	private static currentDbComputeds: computedAppUrls = {
+    private static currentDbComputeds: computedAppUrls = {
+        databases: ko.computed(() => appUrl.forDatabases()),
         documents: ko.computed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
         conflicts: ko.computed(() => appUrl.forConflicts(appUrl.currentDatabase())),
         patch: ko.computed(() => appUrl.forPatch(appUrl.currentDatabase())),
@@ -41,8 +42,10 @@ class appUrl {
 
         isAreaActive: (routeRoot: string) => ko.computed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
-        databasesManagement: ko.computed(() => "#databases?database=" + appUrl.getEncodedDbPart(appUrl.currentDatabase())),
-        filesystemsManagement: ko.computed(() => "#filesystems?filesystem=" + appUrl.getEncodedFsPart(appUrl.currentFilesystem())),
+        databasesManagement: ko.computed(() => appUrl.forDatabases() + "?database=" + appUrl.getEncodedDbPart(appUrl.currentDatabase())),
+
+        filesystems: ko.computed(() => appUrl.forFilesystems()),
+        filesystemsManagement: ko.computed(() => appUrl.forFilesystems() + "?filesystem=" + appUrl.getEncodedFsPart(appUrl.currentFilesystem())),
         filesystemFiles: ko.computed(() => appUrl.forFilesystemFiles(appUrl.currentFilesystem())),
         filesystemSearch: ko.computed(() => appUrl.forFilesystemSearch(appUrl.currentFilesystem())),
         filesystemSynchronization: ko.computed(() => appUrl.forFilesystemSynchronization(appUrl.currentFilesystem())),
@@ -60,6 +63,10 @@ class appUrl {
 
     static forDatabases(): string {
         return "#databases";
+    }
+
+    static forFilesystems(): string {
+        return "#filesystems";
     }
 
     /**
