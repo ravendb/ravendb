@@ -204,44 +204,37 @@
                 </div>
             </div>
         </div>
-
+        <!--<ul class="list-group" data-bind="foreach: relatedDocumentHrefs">
+                <li class="list-group-item"><a data-bind="text:$data.id, attr:{href:$data.href}"></a></li>
+            </ul>-->
         <div class="form-group">
-            <label id="indexQueryLabelContainer" class="col-sm-1 control-label">
-                Results
-            </label>
-            <div class="col-md-11">
-                <div id="queryResultsPanel" class="panel panel-default">
-                    <div class="panel-heading">
-                        <table class="table table-condensed" style="margin-bottom: 0;">
-                            <thead>
-                                <tr>
-                                    <th>Total</th>
-                                    <th>Status</th>
-                                    <th>Duration</th>
-                                    <th>Index</th>
-                                    <th>Etag</th>
-                                    <th>JSON</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr data-bind="with: queryStats">
-                                    <td data-bind="text: TotalResults"></td>
-                                    <td data-bind="text: IsStale ? 'Stale' : 'Up to date'"></td>
-                                    <td data-bind="text: DurationMilliseconds + 'ms'"></td>
-                                    <td>
-                                        <a data-bind="text: $root.selectedIndex, attr: { href: $root.selectedIndexEditUrl }"></a>
-                                    </td>
-                                    <td data-bind="text: ResultEtag"></td>
-                                    <td><a data-bind="attr: { href: $root.rawJsonUrl }">Raw JSON</a></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="panel-body">
-                        <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: false, showCheckboxes: false, maxHeight: '450px' }"></div>
+            <div class="form-group col-md-12" >
+                <label id="indexQueryLabelContainer" class="control-label col-md-1">
+                    Results
+                </label>
+                <div class="col-md-9">
+                    <div id="queryResultsPanel" class="panel panel-default">
+                        <div class="panel-body">
+                            <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px' }"></div>
+                        </div>
                     </div>
                 </div>
+                <div class="form-group panel panel-default col-md-2">
+                    <div class="panel-body"><strong>Query stats</strong></div>
+                    <ul class="list-group" data-bind="with: queryStats">
+                        <li class="list-group-item" data-bind="text: 'Total Results: ' + TotalResults"></li>
+                        <li class="list-group-item" data-bind="text: 'Status: ' + IsStale ? 'Stale' : 'Up to date'"></li>
+                        <li class="list-group-item" data-bind="text: 'Duration: ' + DurationMilliseconds + 'ms'"></li>
+                        <li class="list-group-item">
+                            Index: <a data-bind="text: $root.selectedIndex, attr: { href: $root.selectedIndexEditUrl }"></a>
+                        </li>
+                        <li class="list-group-item" data-bind="text: 'ETag: ' + ResultEtag"></li>
+                        <li class="list-group-item"><a target='_blank' data-bind="attr: { href: $root.rawJsonUrl }">Raw JSON</a></li>
+                    </ul>
+                    
+                </div>
             </div>
+            
         </div>
     </form>
 </div>

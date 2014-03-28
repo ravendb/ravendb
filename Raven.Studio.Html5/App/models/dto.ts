@@ -2,7 +2,7 @@ interface collectionInfoDto extends indexResultsDto<documentDto> {
 }
 
 interface documentDto extends metadataAwareDto {
-	
+
 }
 
 interface conflictsInfoDto extends indexResultsDto<conflictDto> {
@@ -17,14 +17,14 @@ interface metadataAwareDto {
 }
 
 interface documentMetadataDto {
-	'Raven-Entity-Name'?: string;
-	'Raven-Clr-Type'?: string;
-	'Non-Authoritative-Information'?: boolean;
-	'@id'?: string;
-	'Temp-Index-Score'?: number;
-	'Last-Modified'?: string;
-	'Raven-Last-Modified'?: string;
-	'@etag'?: string;
+    'Raven-Entity-Name'?: string;
+    'Raven-Clr-Type'?: string;
+    'Non-Authoritative-Information'?: boolean;
+    '@id'?: string;
+    'Temp-Index-Score'?: number;
+    'Last-Modified'?: string;
+    'Raven-Last-Modified'?: string;
+    '@etag'?: string;
 }
 
 interface databaseStatisticsDto {
@@ -60,8 +60,8 @@ interface indexStatisticsDto {
     ReduceIndexingSuccesses: number;
     ReduceIndexingErrors: number;
     LastReducedEtag: string;
-    LastReducedTimestamp: string; 
-    CreatedTimestamp: string; 
+    LastReducedTimestamp: string;
+    CreatedTimestamp: string;
     LastIndexingTime: string;
     IsOnRam: string; // Yep, really. Example values: "false", "true (3 KBytes)"
     LockMode: string;
@@ -258,7 +258,7 @@ interface indexResultsDto<T extends metadataAwareDto> {
 }
 
 interface indexQueryResultsDto extends indexResultsDto<documentDto> {
-   
+
 }
 
 interface replicationDestinationDto {
@@ -311,18 +311,18 @@ interface transformerDto {
 
 interface saveTransformerDto {
     'Name': string;
-    'TransformResults':string;
+    'TransformResults': string;
 }
 
 interface getTransformerResultDto {
-    'Transformer':string;
+    'Transformer': string;
 }
 
 interface savedTransformerDto {
     "Transformer":
     {
         "TransformResults": string;
-        "Name":string;
+        "Name": string;
     }
 }
 
@@ -354,39 +354,39 @@ interface bulkDocumentDto {
 }
 
 interface backupRequestDto {
-  BackupLocation: string;
-  DatabaseDocument: databaseDocumentDto;
+    BackupLocation: string;
+    DatabaseDocument: databaseDocumentDto;
 }
 
 interface backupStatusDto {
-  Started: string;
-  Completed?: string;
-  IsRunning: boolean;
-  Messages: backupMessageDto[];
+    Started: string;
+    Completed?: string;
+    IsRunning: boolean;
+    Messages: backupMessageDto[];
 }
 
 interface backupMessageDto {
-  Message: string;
-  Timestamp: string;
-  Severity: string;
+    Message: string;
+    Timestamp: string;
+    Severity: string;
 }
 
 interface databaseDocumentDto {
-  Id: string;
-  Settings: {};
-  SecuredSettings: {};
-  Disabled: boolean;
+    Id: string;
+    Settings: {};
+    SecuredSettings: {};
+    Disabled: boolean;
 }
 
 interface restoreRequestDto {
-  RestoreLocation: string;
-  DatabaseLocation: string;
-  DatabaseName: string;
+    RestoreLocation: string;
+    DatabaseLocation: string;
+    DatabaseName: string;
 }
 
 interface restoreStatusDto {
-  Messages: string[];
-  IsRunning: boolean;
+    Messages: string[];
+    IsRunning: boolean;
 }
 
 interface sqlReplicationTableDto {
@@ -470,9 +470,9 @@ interface documentBase {
 }
 
 interface smugglerOptionsDto {
-  IncludeDocuments: boolean;
-  IncludeIndexes: boolean;
-  IncludeTransformers: boolean;
-  IncludeAttachments: boolean;
-  RemoveAnalyzers: boolean;
+    IncludeDocuments: boolean;
+    IncludeIndexes: boolean;
+    IncludeTransformers: boolean;
+    IncludeAttachments: boolean;
+    RemoveAnalyzers: boolean;
 }
