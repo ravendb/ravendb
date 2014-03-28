@@ -101,9 +101,12 @@
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\createFilesystem.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystemConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystemFiles.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystems.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystemSearch.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystemStatistics.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystemSynchronization.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\backupDatabase.ts" />
@@ -184,11 +187,14 @@
     <Content Include="App\views\createEncryption.html" />
     <Content Include="App\views\conflicts.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
+    <Content Include="App\views\filesystemConfiguration.html" />
     <Content Include="App\views\filesystemFiles.html" />
     <Content Include="App\views\createFilesystem.html" />
     <Content Include="App\views\filesystems.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\filesystemSearch.html" />
+    <Content Include="App\views\filesystemSynchronization.html" />
     <Content Include="App\views\scriptedIndexes.html" />
     <Content Include="App\views\resetIndexConfirm.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />

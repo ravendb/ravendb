@@ -320,6 +320,14 @@ class shell extends viewModelBase {
         }
     }
 
+    selectFilesystem(fs: filesystem) {
+        if (fs.name != this.activeFilesystem().name) {
+            fs.activate();
+            var updatedUrl = appUrl.forCurrentPage(fs);
+            this.navigate(updatedUrl);
+        }
+    }
+
     fetchBuildVersion() {
         new getBuildVersionCommand()
             .execute()
