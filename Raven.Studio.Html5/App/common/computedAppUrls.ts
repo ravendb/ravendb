@@ -29,4 +29,8 @@ interface computedAppUrls {
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
     databasesManagement: KnockoutComputed<string>;
     filesystemsManagement: KnockoutComputed<string>;
+    filesystemFiles: KnockoutComputed<string>;
+    filesystemSearch: KnockoutComputed<string>;
+    filesystemSynchronization: KnockoutComputed<string>;
+    filesystemConfiguration: KnockoutComputed<string>;
 }

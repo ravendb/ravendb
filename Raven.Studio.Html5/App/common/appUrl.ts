@@ -42,7 +42,11 @@ class appUrl {
         isAreaActive: (routeRoot: string) => ko.computed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
         databasesManagement: ko.computed(() => "#databases?database=" + appUrl.getEncodedDbPart(appUrl.currentDatabase())),
-        filesystemsManagement: ko.computed(() => "#filesystems?filesystem=" + appUrl.getEncodedFsPart(appUrl.currentFilesystem()))
+        filesystemsManagement: ko.computed(() => "#filesystems?filesystem=" + appUrl.getEncodedFsPart(appUrl.currentFilesystem())),
+        filesystemFiles: ko.computed(() => appUrl.forFilesystemFiles(appUrl.currentFilesystem())),
+        filesystemSearch: ko.computed(() => appUrl.forFilesystemSearch(appUrl.currentFilesystem())),
+        filesystemSynchronization: ko.computed(() => appUrl.forFilesystemSynchronization(appUrl.currentFilesystem())),
+        filesystemConfiguration: ko.computed(() => appUrl.forFilesystemConfiguration(appUrl.currentFilesystem())),
     };
 
     static checkIsAreaActive(routeRoot: string): boolean {
@@ -283,7 +287,27 @@ class appUrl {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/docs/" + docId;
     }
 
-    /**
+    static forFilesystemFiles(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/files?" + filesystemPart;
+    }
+
+    static forFilesystemSearch(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/search?" + filesystemPart;
+    }
+
+    static forFilesystemSynchronization(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/synchronization?" + filesystemPart;
+    }
+
+    static forFilesystemConfiguration(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/configuration?" + filesystemPart;
+    }
+
+	/**
 	* Gets the database from the current web browser address. Returns the system database if no database name is found.
 	*/
     static getDatabase(): database {
