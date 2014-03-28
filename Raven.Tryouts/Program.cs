@@ -22,9 +22,9 @@ namespace Raven.Tryouts
 			{
 				Console.Clear();
 				Console.WriteLine(i);
-				using (var x = new RavenDB_1949())
+				using (var x = new AsyncSetBasedOps())
 				{
-					x.AttemptToReproduceAccessViolationExceptionOnVoron();
+					x.AwaitAsyncPatchByIndexShouldWork("voron").Wait();
 				}
 			}
 
