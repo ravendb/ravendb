@@ -56,7 +56,6 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 				store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
 			}, enableAuthorization: true);
 
-
 			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 			{
 				Id = "repl",

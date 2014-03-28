@@ -31,6 +31,9 @@ class ctor {
     gridViewport: JQuery;
     scrollThrottleTimeoutHandle = 0;
     firstVisibleRow: row = null;
+    documentsSourceSubscription: KnockoutSubscription = null;
+    hasId =  ko.observable<Boolean>(false);
+    
 
     settings: {
         documentsSource: KnockoutObservable<pagedList>;
@@ -44,17 +47,14 @@ class ctor {
         maxHeight: string;
         customColumnParams: { [column: string]: customColumnParams };
     }
-
-    constructor() {
-    }
-
+ 
     activate(settings: any) {
         var defaults = {
             dynamicHeightTargetSelector: "footer",
             dynamicHeightBottomMargin: 0,
             selectedIndices: ko.observableArray(),
             showCheckboxes: true,
-            showIds: true,
+            showIds: ko.observable<boolean>(true),
             useContextMenu: true,
             maxHeight: 'none',
             customColumnParams: {},
@@ -67,11 +67,8 @@ class ctor {
         if (this.settings.showCheckboxes !== false) {
             this.columns.push(new column("__IsChecked", 38));
         }
-        if (this.settings.showIds !== false) {
-            this.columns.push(new column("Id", ctor.idColumnWidth));
-        }
 
-        this.settings.documentsSource.subscribe(list => {
+        this.documentsSourceSubscription = this.settings.documentsSource.subscribe(list => {
             this.recycleRows().forEach(r => {
                 r.resetCells();
                 r.isInUse(false);
@@ -95,6 +92,7 @@ class ctor {
         this.gridViewport = this.grid.find(".ko-grid-viewport-container");
         this.gridViewport.on('DynamicHeightSet', () => this.onWindowHeightChanged());
         this.gridViewport.scroll(() => this.onGridScrolled());
+
         this.setupKeyboardShortcuts();
         if (this.settings.useContextMenu) {
             this.setupContextMenu();
@@ -103,7 +101,11 @@ class ctor {
 
     detached() {
         $(this.settings.gridSelector).unbind('keydown.jwerty');
+        
         this.gridViewport.off('DynamicHeightSet');
+        if (this.documentsSourceSubscription) {
+            this.documentsSourceSubscription.dispose();
+        }
     }
 
     calculateRecycleRowCount() {
@@ -181,10 +183,27 @@ class ctor {
 
     loadRowData() {
         if (this.items && this.firstVisibleRow) {
+            
             // The scrolling has paused for a minute. See if we have all the data needed.
             var firstVisibleIndex = this.firstVisibleRow.rowIndex();
             var fetchTask = this.items.fetch(firstVisibleIndex, this.recycleRows().length);
             fetchTask.done((resultSet: pagedResultSet) => {
+
+                var containsId = this.columns().first(x=> x.name == "Id");
+                var rowHasId = false;
+                if (resultSet.items.length > 0) {
+                    if (resultSet.items[0].getId()) {
+                        rowHasId = !!resultSet.items[0].getId();
+                    }
+                }
+
+                if (!containsId && rowHasId && this.settings.showIds) {
+                    this.columns.push(new column("Id", ctor.idColumnWidth));
+                    this.hasId(true);
+                } else if (containsId && !rowHasId && this.settings.showIds) {
+                    this.hasId(false);
+                    this.columns.remove(c => (c.name === 'Id'));
+                }
                 var firstVisibleRowIndexHasChanged = firstVisibleIndex !== this.firstVisibleRow.rowIndex();
                 if (!firstVisibleRowIndexHasChanged) {
                     this.virtualRowCount(resultSet.totalResultCount);

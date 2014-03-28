@@ -13,6 +13,7 @@ using System.Web;
 using Microsoft.VisualBasic.Logging;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Impl;
 using Raven.Database.Server.Controllers;
@@ -152,7 +153,12 @@ namespace Raven.Database.Server.WebApi
 	            }
 	            catch (Exception e)
 	            {
-	                Logger.ErrorException("Could not finalize request properly", e);
+		            var aggregateException = e as AggregateException;
+		            if (aggregateException != null)
+		            {
+			            e = aggregateException.ExtractSingleInnerException();
+		            }
+		            Logger.ErrorException("Could not finalize request properly", e);
 	            }
 	        }
 

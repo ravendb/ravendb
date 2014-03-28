@@ -46,7 +46,7 @@ namespace Raven.Client.Connection
 		internal readonly string Url;
 		internal readonly string Method;
 
-		private readonly WebRequestHandler handler;
+		private readonly HttpMessageHandler handler;
 		internal volatile HttpClient httpClient;
 
 		private readonly NameValueCollection headers = new NameValueCollection();
@@ -55,12 +55,14 @@ namespace Raven.Client.Connection
 		// avoid the potential for clearing the cache from a cached item
 		internal CachedRequest CachedRequestDetails;
 		private readonly HttpJsonRequestFactory factory;
+		private readonly Action disableAuthentication = () => { };
+		private readonly Func<HttpMessageHandler> recreateHandler; 
 		private readonly IHoldProfilingInformation owner;
 		private readonly Convention conventions;
 		private string postedData;
 		private bool isRequestSentToServer;
 
-		private Stopwatch sp = Stopwatch.StartNew();
+		private readonly Stopwatch sp = Stopwatch.StartNew();
 		internal bool ShouldCacheRequest;
 		private Stream postedStream;
 	    private RavenJToken postedToken;
@@ -94,11 +96,30 @@ namespace Raven.Client.Connection
 			owner = requestParams.Owner;
 			conventions = requestParams.Convention;
 
-			handler = new WebRequestHandler
+			if (factory.httpMessageHandler != null)
 			{
-				UseDefaultCredentials = _credentials.HasCredentials() == false,
-				Credentials = requestParams.Credentials.Credentials,
-			};
+				handler = factory.httpMessageHandler;
+				recreateHandler = () => factory.httpMessageHandler;
+			}
+			else
+			{
+				var webRequestHandler = new WebRequestHandler
+				{
+					UseDefaultCredentials = _credentials.HasCredentials() == false,
+					Credentials = requestParams.Credentials.Credentials,
+				};
+				recreateHandler = () => new WebRequestHandler
+				{
+					Credentials = webRequestHandler.Credentials
+				};
+				disableAuthentication = () =>
+				{
+					webRequestHandler.Credentials = null;
+					webRequestHandler.UseDefaultCredentials = false;
+				};
+				handler = webRequestHandler;
+			}
+
 			httpClient = new HttpClient(handler);
 
 			if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
@@ -126,8 +147,7 @@ namespace Raven.Client.Connection
 
 		public void DisableAuthentication()
 		{
-			handler.Credentials = null;
-			handler.UseDefaultCredentials = false;
+		    disableAuthentication();
 			disabledAuthRetries = true;
 		}
 
@@ -400,7 +420,7 @@ namespace Raven.Client.Connection
 			if (unauthorizedResponseAsync == null)
 				return false;
 
-			await RecreateHttpClient(await unauthorizedResponseAsync);
+			RecreateHttpClient(await unauthorizedResponseAsync);
 			return true;
 		}
 
@@ -416,30 +436,18 @@ namespace Raven.Client.Connection
 			await forbiddenResponseAsync;
 		}
 
-		private async Task RecreateHttpClient(Action<HttpClient> configureHttpClient)
+		private void RecreateHttpClient(Action<HttpClient> configureHttpClient)
 		{
-			var newHttpClient = new HttpClient(new HttpClientHandler
-			{
-				Credentials = handler.Credentials,
-			});
-			//HttpJsonRequestHelper.CopyHeaders(webRequest, newWebRequest);
+			var newHttpClient = new HttpClient(recreateHandler());
+
 			configureHttpClient(newHttpClient);
 			httpClient = newHttpClient;
 			isRequestSentToServer = false;
 
-			if (postedData != null)
+			if (postedStream != null)
 			{
-                await WriteAsync(postedData);
+				postedStream.Position = 0;
 			}
-            if (postedToken != null)
-            {
-                await WriteAsync(postedToken);
-            }
-
-            if (postedStream != null)
-            {
-                postedStream.Position = 0;
-            }
 		}
 
 		private async Task<RavenJToken> ReadJsonInternalAsync()

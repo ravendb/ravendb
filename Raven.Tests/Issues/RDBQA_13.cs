@@ -7,6 +7,8 @@ using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Threading.Tasks;
 using Raven.Client.Connection;
+using Raven.Client.Document;
+using Raven.Database;
 using Raven.Tests.Linq;
 using Xunit;
 
@@ -26,7 +28,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task CanPatchWithNullPrevVal()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = (DocumentStore)NewRemoteDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -38,7 +40,7 @@ namespace Raven.Tests.Issues
                 }
 
                 var client = new HttpClient();
-                await PatchAsJsonAsync(client, store.Url + "/docs/users/1", "[{ Type: 'Set', Name: 'Age', Value: 10, PrevVal: null}]");
+                await PatchAsJsonAsync(client, store.Url.ForDatabase(store.DefaultDatabase) + "/docs/users/1", "[{ Type: 'Set', Name: 'Age', Value: 10, PrevVal: null}]");
 
                 using (var s = store.OpenSession())
                 {

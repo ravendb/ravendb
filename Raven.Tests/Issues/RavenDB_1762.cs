@@ -9,27 +9,31 @@ using System.ComponentModel.Composition.Hosting;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Client;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Database.Config;
+using Raven.Database.Server;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Bundles.Replication;
-using Raven.Tests.Linq;
+using Raven.Tests.MailingList;
 using Xunit;
+using Xunit.Sdk;
+using User = Raven.Tests.Linq.User;
 
 namespace Raven.Tests.Issues
 {
 	public class RavenDB_1762 : ReplicationBase
 	{
 		private const string docId = "users/1";
+	    protected override void ConfigureServer(RavenDBOptions dbOptions)
+	    {
+	        dbOptions.DatabaseLandlord.SetupTenantConfiguration += configuration =>
+	            configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof (DeleteOnConflict)));
+	    }
 
-		protected override void ConfigureServer(InMemoryRavenConfiguration serverConfiguration)
-		{
-			serverConfiguration.Catalog.Catalogs.Add(new TypeCatalog(typeof (DeleteOnConflict)));
-		}
-
-		private void CanResolveConflict(Action<DeleteOnConflict> alterResolver, Action<IDocumentStore, IDocumentStore> testCallback)
+		private void CanResolveConflict(bool resolveConflict, Action<IDocumentStore, IDocumentStore> testCallback)
 		{
 			DocumentStore store1 = CreateStore();
 			DocumentStore store2 = CreateStore();
@@ -44,25 +48,26 @@ namespace Raven.Tests.Issues
 			}
 
 			// master - master
-			SetupReplication(store1.DatabaseCommands, store2.Url);
+			SetupReplication(store1.DatabaseCommands, store2.Url.ForDatabase(store2.DefaultDatabase));
 
 			WaitForReplication(store2, docId);
 
-			// get reference to custom conflict resolver
-			DeleteOnConflict resolver = DeleteOnConflict.Instance;
-			Assert.NotNull(resolver);
-			if (alterResolver != null)
-			{
-				alterResolver(resolver);
-			}
+		    DeleteOnConflict.Enabled = resolveConflict;
 
-			testCallback(store1, store2);
+		    try
+		    {
+                testCallback(store1, store2);
+		    }
+		    finally
+		    {
+		        DeleteOnConflict.Enabled = false;
+		    }
 		}
 
 		[Fact]
 		public void CanResolveConflictBetweenPutAndDelete_IncomingDelete()
 		{
-			CanResolveConflict(resolver => resolver.Enabled = true, delegate(IDocumentStore store1, IDocumentStore store2)
+			CanResolveConflict(true, delegate(IDocumentStore store1, IDocumentStore store2)
 			{
 				using (IDocumentSession s = store2.OpenSession())
 				{
@@ -88,7 +93,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanResolveConflictBetweenPutAndDelete_IncomingPut()
 		{
-			CanResolveConflict(resolver => resolver.Enabled = true, delegate(IDocumentStore store1, IDocumentStore store2)
+			CanResolveConflict(true, delegate(IDocumentStore store1, IDocumentStore store2)
 			{
 				using (IDocumentSession s = store2.OpenSession())
 				{
@@ -113,7 +118,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanResolveConflictBetweenPutAndDelete_IncomingDelete_Resolver_disabled()
 		{
-			CanResolveConflict(resolver => resolver.Enabled = false, delegate(IDocumentStore store1, IDocumentStore store2)
+			CanResolveConflict(false, delegate(IDocumentStore store1, IDocumentStore store2)
 			{
 				using (IDocumentSession s = store2.OpenSession())
 				{
@@ -139,7 +144,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanResolveConflictBetweenPutAndDelete_IncomingPut_Resolver_disabled()
 		{
-			CanResolveConflict(resolver => resolver.Enabled = false, delegate(IDocumentStore store1, IDocumentStore store2)
+			CanResolveConflict(false, delegate(IDocumentStore store1, IDocumentStore store2)
 			{
 				using (IDocumentSession s = store2.OpenSession())
 				{
@@ -164,14 +169,7 @@ namespace Raven.Tests.Issues
 		[InheritedExport(typeof (AbstractDocumentReplicationConflictResolver))]
 		public class DeleteOnConflict : AbstractDocumentReplicationConflictResolver
 		{
-			public static DeleteOnConflict Instance;
-
-			public DeleteOnConflict()
-			{
-				Instance = this;
-			}
-
-			public bool Enabled { get; set; }
+			public static bool Enabled { get; set; }
 
 
 			public override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc,

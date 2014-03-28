@@ -267,6 +267,26 @@ class appUrl {
         return "#filesystems?" + filesystemPart;
     }
 
+    static forIndexesRawData(db: database): string {
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes";
+    }
+
+    static forIndexQueryRawData(db:database,indexName:string){
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes/" + indexName;
+    }
+
+    static forTransformersRawData(db: database): string {
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/transformers";
+    }
+
+    static forDatabasesRawData(): string {
+        return window.location.protocol + "//" + window.location.host + "/databases";
+    }
+
+    static forDocumentRawData(db: database, docId:string): string {
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/docs/" + docId;
+    }
+
     static forFilesystemFiles(fs: filesystem): string {
         var filesystemPart = appUrl.getEncodedFsPart(fs);
         return "#filesystems/files?" + filesystemPart;
@@ -386,16 +406,7 @@ class appUrl {
                 var newUrlWithDatabase = existingDbQueryString ?
                     existingAddress.replace(existingDbQueryString, newDbQueryString) :
                     existingAddress + (window.location.hash.indexOf("?") >= 0 ? "&" : "?") + "database=" + encodeURIComponent(db.name);
-
-                // in case replacing fails
-                /*if (newUrlWithDatabase === existingAddress) {
-                    existingDbQueryString = dbNameInAddress ? "database=" + dbNameInAddress : null;
-                    newDbQueryString = "database=" + encodeURIComponent(db.name);
-
-                    newUrlWithDatabase = existingDbQueryString ?
-                    existingAddress.replace(existingDbQueryString, newDbQueryString) :
-                    existingAddress + (window.location.hash.indexOf("?") >= 0 ? "&" : "?") + "database=" + encodeURIComponent(db.name);
-                }*/
+              
                 return newUrlWithDatabase;
             } 
         }

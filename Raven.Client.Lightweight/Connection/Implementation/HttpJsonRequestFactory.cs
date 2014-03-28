@@ -1,4 +1,5 @@
-﻿#if !NETFX_CORE
+﻿using System.Net.Http;
+#if !NETFX_CORE
 using System;
 using System.Collections.Specialized;
 using System.Net;
@@ -9,11 +10,9 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Profiling;
-using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Json.Linq;
-using System.Linq;
 
 namespace Raven.Client.Connection
 {
@@ -44,7 +43,8 @@ namespace Raven.Client.Connection
 		}
 
 		private readonly int maxNumberOfCachedRequests;
-		private SimpleCache cache;
+	    internal readonly HttpMessageHandler httpMessageHandler;
+	    private SimpleCache cache;
 
 		internal int NumOfCachedRequests;
 
@@ -158,10 +158,11 @@ namespace Raven.Client.Connection
 		/// default ctor
 		/// </summary>
 		/// <param name="maxNumberOfCachedRequests"></param>
-		public HttpJsonRequestFactory(int maxNumberOfCachedRequests)
+		public HttpJsonRequestFactory(int maxNumberOfCachedRequests, HttpMessageHandler httpMessageHandler = null)
 		{
 			this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;
-			ResetCache();
+		    this.httpMessageHandler = httpMessageHandler;
+		    ResetCache();
 		}
 
 		///<summary>

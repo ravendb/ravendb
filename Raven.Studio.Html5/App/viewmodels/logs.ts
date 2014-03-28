@@ -120,7 +120,7 @@ class logs extends viewModelBase {
     }
 
     showContextMenu() {
-        alert("this");
+        //alert("this");
     }
 
     ensureRowVisible(row: JQuery) {

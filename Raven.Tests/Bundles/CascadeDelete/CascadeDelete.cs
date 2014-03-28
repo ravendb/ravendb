@@ -22,7 +22,7 @@ namespace Raven.Tests.Bundles.CascadeDelete
 
 		public CascadeDelete()
 		{
-			var ravenDbServer = GetNewServer(databaseName: Constants.SystemDatabase, configureServer: configuration =>
+			var ravenDbServer = GetNewServer(databaseName: Constants.SystemDatabase, configureConfig: configuration =>
 			{
 				configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof (CascadeDeleteTrigger).Assembly));
 			});

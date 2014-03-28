@@ -11,10 +11,12 @@ class databaseSettings extends viewModelBase {
    
     documentText = ko.observable('');
     docEditor: AceAjax.Editor;
+    static containerId ="#databaseSettingsContainer";
 
     attached() {
         this.initializeDbDocEditor();
         this.fetchDatabaseSettings();
+        this.createKeyboardShortcut("F2", () => this.navigateToDatabaseSettingDocument(), databaseSettings.containerId);
     }
 
     private initializeDbDocEditor() {
