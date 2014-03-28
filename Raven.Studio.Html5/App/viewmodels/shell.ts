@@ -83,7 +83,8 @@ class shell extends viewModelBase {
         ]).buildNavigationModel();
 
         router.activeInstruction.subscribe(val => {
-            this.activeArea(val.config.title);
+            if (val.config.route.split('/').length == 1) //if it's a root navigation item.
+                this.activeArea(val.config.title);
         });
 
         // Show progress whenever we navigate.
