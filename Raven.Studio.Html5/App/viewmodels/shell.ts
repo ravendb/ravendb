@@ -44,7 +44,9 @@ class shell extends viewModelBase {
 
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
-    
+
+    activeArea = ko.observable<string>("");
+
     constructor() {
         super();
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
@@ -79,7 +81,11 @@ class shell extends viewModelBase {
             { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystemConfiguration', nav: true, hash: this.appUrls.filesystemConfiguration },
 
         ]).buildNavigationModel();
-        
+
+        router.activeInstruction.subscribe(val => {
+            this.activeArea(val.config.title);
+        });
+
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
         this.connectToRavenServer();

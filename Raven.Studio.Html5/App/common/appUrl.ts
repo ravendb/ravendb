@@ -60,7 +60,6 @@ class appUrl {
         return isThereAny;
     }
 
-
     static forDatabases(): string {
         return "#databases";
     }
