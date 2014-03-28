@@ -103,6 +103,7 @@
     <TypeScriptCompile Include="App\viewmodels\createFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystemFiles.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystems.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystemStatistics.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\backupDatabase.ts" />
@@ -184,6 +185,7 @@
     <Content Include="App\views\conflicts.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
     <Content Include="App\views\filesystemFiles.html" />
+    <Content Include="App\views\createFilesystem.html" />
     <Content Include="App\views\filesystems.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />

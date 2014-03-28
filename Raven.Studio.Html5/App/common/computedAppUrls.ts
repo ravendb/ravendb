@@ -1,5 +1,6 @@
 // Interface
 interface computedAppUrls {
+    databases: KnockoutComputed<string>;
     documents: KnockoutComputed<string>;
     conflicts: KnockoutComputed<string>;
     patch: KnockoutComputed<string>;
@@ -29,6 +30,8 @@ interface computedAppUrls {
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
     databasesManagement: KnockoutComputed<string>;
     filesystemsManagement: KnockoutComputed<string>;
+
+    filesystems: KnockoutComputed<string>;
     filesystemFiles: KnockoutComputed<string>;
     filesystemSearch: KnockoutComputed<string>;
     filesystemSynchronization: KnockoutComputed<string>;

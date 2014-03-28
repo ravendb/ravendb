@@ -3,31 +3,24 @@
         <ul class="breadcrumb">
             <li>
                 <h3>
-                    <a href="#databases">
-                        Databases
-                    </a>
                     <a href="#filesystems">
                         Filesystems
                     </a>
                 </h3>
             </li>
         </ul>
-        <!--<button class="btn btn-default systemButton" data-bind="click: goToSystemDatabase">
-            <span>System Database</span>
-        </button>-->
         <div class="btn-toolbar">
-            <!--<button type="button" class="btn btn-primary" data-bind="click: newDatabase" accesskey="n" title="Create a new database. (Alt+N)"><i class="fa fa-plus"></i> New Database</button>
-            <form class="form-inline" style="display: inline-block; vertical-align: middle;">
-                <input type="text" accesskey="s" class="form-control col-md-8" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" title="Search for a database (Alt+S)">
-            </form>
-            <button type="button" class="btn btn-danger" data-bind="click: deleteSelectedDatabase, visible: selectedDatabase() != null" title="Delete selected database"><i class="fa fa-trash-o"></i></button>-->
+            <button type="button" class="btn btn-primary" data-bind="click: newFilesystem" accesskey="n" title="Create a new file system. (Alt+N)"><i class="fa fa-plus"></i> New File System</button>
+            <!--<form class="form-inline" style="display: inline-block; vertical-align: middle;">
+                <input type="text" accesskey="s" class="form-control col-md-8" placeholder="Search" data-bind="value: searchFilesystemByText, valueUpdate: 'afterkeydown'" title="Search for a file system (Alt+S)">
+            </form>-->
         </div>
         <br />
 
         <div class="filesystems-container" data-bind="foreach: filesystems">
-            <div class="filesystem" data-bind="visible: isVisible, click: function () { $root.selectFilesystem($data); return true; }, css: { selected: isSelected}">
-                <h4><a data-bind="text: name, attr: { href: $root.getFilesystemUrl($data) }"></a></h4>
-                <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: filesCount() + ' files'"></span>
+            <div class="filesystem" data-bind="visible: isVisible, click: function () { $root.selectFilesystem($data); return true; }, css: { selected: isSelected }">
+                <h4><a data-bind="text: name, attr: { href: $root.getFilesystemFilesUrl($data) }"></a></h4>
+                <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: itemCount() + ' files'"></span>
             </div>
         </div>
         <!--<form data-bind="submit: upload()" enctype="multipart/form-data">
