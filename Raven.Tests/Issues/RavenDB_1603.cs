@@ -717,7 +717,7 @@ namespace Raven.Tests.Issues
             {
                 VetoTransfer = (totalRead, buffer) =>
                 {
-                    if (alreadyReset == false && totalRead > 10000)
+                    if (alreadyReset == false && totalRead > 30000)
                     {
                         alreadyReset = true;
                         return true;
