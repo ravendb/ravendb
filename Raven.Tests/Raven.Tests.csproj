@@ -310,7 +310,6 @@
     <Compile Include="Issues\1379\RavenDB_1379_Client.cs" />
     <Compile Include="Issues\RavenDB-1847.cs" />
     <Compile Include="Issues\RavenDb-1934.cs" />
-    <Compile Include="Issues\RavenDB_1949.cs" />
     <Compile Include="Issues\RavenDB1369.cs" />
     <Compile Include="Issues\RavenDB_1538.cs" />
     <Compile Include="Issues\RavenDB_1297 .cs" />
@@ -922,6 +921,7 @@
     <Compile Include="MailingList\ConcurrencyTests2.cs" />
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
+    <Compile Include="MailingList\DayOfWeekTest.cs" />
     <Compile Include="MailingList\DictionaryOfEnum.cs" />
     <Compile Include="MailingList\DifferentKeysWithTheSameFirst127CharactersAreDifferent.cs" />
     <Compile Include="MailingList\DistinctWithPaging.cs" />

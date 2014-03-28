@@ -469,7 +469,7 @@ namespace Raven.Tests.Helpers
 			Assert.True(done);
 		}
 
-		public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true)
+		public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, int port = 8079)
 		{
 			if (debug && Debugger.IsAttached == false)
 				return;
@@ -479,8 +479,10 @@ namespace Raven.Tests.Helpers
             string url = documentStore.Url;
 		    if (embeddableDocumentStore != null)
 		    {
+		        embeddableDocumentStore.Configuration.Port = port;
                 embeddableDocumentStore.SetStudioConfigToAllowSingleDb();
                 embeddableDocumentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
+		        NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
                 server = new OwinHttpServer(embeddableDocumentStore.Configuration, embeddableDocumentStore.DocumentDatabase);
                 url = embeddableDocumentStore.Configuration.ServerUrl;
 		    }
