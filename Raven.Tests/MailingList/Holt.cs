@@ -53,7 +53,7 @@ namespace Raven.Tests.MailingList
 		}
 
 
-		public DocumentStore Store()
+		public IDocumentStore Store()
 		{
 			var store = NewDocumentStore(port: 8079, configureStore: documentStore => documentStore.Conventions.DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites);
 			store.RegisterListener(new NonStaleQueryListener());

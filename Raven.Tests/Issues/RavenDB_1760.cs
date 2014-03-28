@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
@@ -34,7 +35,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-	    private void DoTest(DocumentStore store1, DocumentStore store2)
+	    private void DoTest(IDocumentStore store1, IDocumentStore store2)
 	    {
 	        using (var session = store1.OpenSession())
 	        {

@@ -1706,10 +1706,6 @@
       <Project>{dbb6561c-6264-430d-8f3c-e11c6268981e}</Project>
       <Name>Raven.Backup</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Client.Embedded\Raven.Client.Embedded.csproj">
-      <Project>{0F5287AD-37B3-4375-BA3E-3CED64B1FC5B}</Project>
-      <Name>Raven.Client.Embedded</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
       <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
       <Name>Raven.Client.Lightweight</Name>
