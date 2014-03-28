@@ -29,8 +29,8 @@ namespace Raven.Tests.Issues
 
 		public RavenDB_1007_incremental_backup()
 		{
-			DataDir = NewDataPath("IncrementalBackup");
-			BackupDir = NewDataPath("BackupDatabase");
+			DataDir = NewDataPath("RavenDB-1007-IncrementalBackup");
+			BackupDir = NewDataPath("RavenDB-1007-BackupDatabase");
 		}
 
 		[Theory]
@@ -114,12 +114,12 @@ namespace Raven.Tests.Issues
 
 		public RavenDB_1007_standard_backup()
 		{
-			DataDir = NewDataPath("IncrementalBackup");
-			BackupDir = NewDataPath("BackupDatabase");
+			DataDir = NewDataPath("RavenDB-1007-StandardBackup");
+			BackupDir = NewDataPath("RavenDB-1007-BackupDatabase");
 		}
 
 		[Theory]
-        [PropertyData("Storages")]
+		[PropertyData("Storages")]
 		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt(string storageName)
 		{
 			using (var db = new DocumentDatabase(new RavenConfiguration
@@ -153,7 +153,7 @@ namespace Raven.Tests.Issues
 			    {
 			        BackupLocation = BackupDir,
 			        DatabaseLocation = DataDir
-			    }, s => { });
+				}, s => sb.Append(s));
 
 				Assert.Contains(
 					"could not be restored. All already copied index files was deleted." +
