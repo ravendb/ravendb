@@ -4,9 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Tests.Storage;
@@ -21,7 +25,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var storage = NewTransactionalStorage("voron", runInMemory: true))
 			{
-				AddDocumentResult lastAdded = null;
+				Etag fromEtag = Etag.Empty;
 
 				var writingTask = Task.Factory.StartNew(() =>
 				{
@@ -33,14 +37,21 @@ namespace Raven.Tests.Issues
 						{
 							for (int i = 0; i < 100; i++)
 							{
+								Etag firstInBatch = null;
+
 								for (int j = 0; j < 128; j++)
 								{
-									lastAdded = accessor.Documents.InsertDocument("items/" + index, new RavenJObject(), new RavenJObject(), false);
+									var add = accessor.Documents.InsertDocument("items/" + index, new RavenJObject(), new RavenJObject(), false);
+
+									if (firstInBatch == null)
+										firstInBatch = add.Etag;
 
 									index++;
 								}
 
 								accessor.General.PulseTransaction();
+
+								fromEtag = EtagUtil.Increment(firstInBatch, -1);
 							}
 						});
 					}
@@ -55,7 +66,7 @@ namespace Raven.Tests.Issues
 					{
 						storage.Batch(accessor =>
 						{
-							accessor.Documents.GetDocumentsAfter(lastAdded == null ? Etag.Empty : lastAdded.Etag, 100);
+							accessor.Documents.GetDocumentsAfter(fromEtag, 128);
 						});
 
 						Thread.Sleep(100);
