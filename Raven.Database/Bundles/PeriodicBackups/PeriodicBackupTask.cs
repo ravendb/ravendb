@@ -186,7 +186,11 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							}
 							finally
 							{
-								IOExtensions.DeleteDirectory(filePath);
+                                // we delete file only with some upload option was selected
+                                if (string.IsNullOrEmpty(localBackupConfigs.LocalFolderName))
+                                {
+                                    File.Delete(filePath);    
+                                }
 							}
 
 							localBackupStatus.LastAttachmentsEtag = options.LastAttachmentEtag;
