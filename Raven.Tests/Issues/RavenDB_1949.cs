@@ -7,6 +7,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Tests.Storage;
 using Xunit;
@@ -20,6 +21,8 @@ namespace Raven.Tests.Issues
 		{
 			using (var storage = NewTransactionalStorage("voron", runInMemory: true))
 			{
+				AddDocumentResult lastAdded = null;
+
 				var writingTask = Task.Factory.StartNew(() =>
 				{
 					int index = 0;
@@ -32,7 +35,7 @@ namespace Raven.Tests.Issues
 							{
 								for (int j = 0; j < 128; j++)
 								{
-									accessor.Documents.InsertDocument("items/" + index, new RavenJObject(), new RavenJObject(), false);
+									lastAdded = accessor.Documents.InsertDocument("items/" + index, new RavenJObject(), new RavenJObject(), false);
 
 									index++;
 								}
@@ -52,9 +55,10 @@ namespace Raven.Tests.Issues
 					{
 						storage.Batch(accessor =>
 						{
-							accessor.Documents.GetDocumentsAfter(Etag.Empty, 128*1024);
-							Thread.Sleep(100);
+							accessor.Documents.GetDocumentsAfter(lastAdded == null ? Etag.Empty : lastAdded.Etag, 100);
 						});
+
+						Thread.Sleep(100);
 					}
 				}, TaskCreationOptions.LongRunning);
 
