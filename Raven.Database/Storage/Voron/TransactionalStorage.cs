@@ -48,7 +48,7 @@ namespace Raven.Storage.Voron
 
 		private TableStorage tableStorage;
 
-	    private IBufferPool bufferPool;
+	    private readonly IBufferPool bufferPool;
 
 		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
 		{
@@ -66,14 +66,20 @@ namespace Raven.Storage.Voron
 			{
 				if (disposed)
 					return;
+
 				disposed = true;
-				current.Dispose();
+
+				var exceptionAggregator = new ExceptionAggregator("Could not properly dispose TransactionalStorage");
+
+				exceptionAggregator.Execute(() => current.Dispose());
 
 				if (tableStorage != null)
-					tableStorage.Dispose();
+					exceptionAggregator.Execute(() => tableStorage.Dispose());
 
-                if (bufferPool != null)
-                    bufferPool.Dispose();
+				if (bufferPool != null)
+					exceptionAggregator.Execute(() => bufferPool.Dispose());
+
+				exceptionAggregator.ThrowIfNeeded();
 			}
 			finally
 			{
@@ -104,8 +110,12 @@ namespace Raven.Storage.Voron
                     documentCacher, writeBatchReference, snapshotReference, tableStorage, this, bufferPool);
 			accessor.OnDispose += () =>
 			{
-                snapshotReference.Value.Dispose();
-                writeBatchReference.Value.Dispose();
+				var exceptionAggregator = new ExceptionAggregator("Could not properly dispose StorageActionsAccessor");
+
+				exceptionAggregator.Execute(() => snapshotReference.Value.Dispose());
+				exceptionAggregator.Execute(() => writeBatchReference.Value.Dispose());
+
+				exceptionAggregator.ThrowIfNeeded();
 			};
 
 			return accessor;
