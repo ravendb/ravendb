@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Xunit;
@@ -110,7 +111,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        private static void MetadataOnlyShouldWorkForGet(DocumentStore store)
+        private static void MetadataOnlyShouldWorkForGet(IDocumentStore store)
         {
             PrepareAndIndex(store);
 
@@ -130,7 +131,7 @@ namespace Raven.Tests.Issues
             Assert.False(metadataOnly.Results[0].ContainsKey("Nick"));
         }
 
-	    private static void MetadataOnlyShouldWorkForGetDocuments(DocumentStore store)
+	    private static void MetadataOnlyShouldWorkForGetDocuments(IDocumentStore store)
 	    {
             PrepareAndIndex(store);
 
@@ -143,7 +144,7 @@ namespace Raven.Tests.Issues
             CheckJsonDocuments(metadataOnly, false);
 	    }
 
-	    private static void MetadataOnlyShouldWorkForStartsWith(DocumentStore store)
+	    private static void MetadataOnlyShouldWorkForStartsWith(IDocumentStore store)
 	    {
 	        PrepareAndIndex(store);
 
@@ -156,7 +157,7 @@ namespace Raven.Tests.Issues
 	        CheckJsonDocuments(metadataOnly, false);
 	    }
 
-	    private static void MetadataOnlyShouldWorkForQuery(DocumentStore store)
+	    private static void MetadataOnlyShouldWorkForQuery(IDocumentStore store)
 	    {
 	        PrepareAndIndex(store);
 
@@ -174,7 +175,7 @@ namespace Raven.Tests.Issues
 	        Assert.False(metadataOnly.Results[0].ContainsKey("Nick"));
 	    }
 
-	    private static void PrepareAndIndex(DocumentStore store)
+	    private static void PrepareAndIndex(IDocumentStore store)
 	    {
 	        new DevelopersIndex().Execute(store);
 	        using (var session = store.OpenSession())

@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Config;
@@ -18,11 +17,12 @@ namespace Raven.Server
 {
 	public class RavenDbServer : IDisposable
 	{
-	    private readonly InMemoryRavenConfiguration configuration;
+	    private InMemoryRavenConfiguration configuration;
 	    private IServerThingsForTests serverThingsForTests;
 		private RavenDBOptions options;
 	    private OwinHttpServer owinHttpServer;
-        private IDocumentStore documentStore;
+        private DocumentStore documentStore;
+	    private string url;
 
 	    public RavenDbServer()
 			: this(new RavenConfiguration())
@@ -34,7 +34,13 @@ namespace Raven.Server
 		   
 		}
 
-		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
+	    public InMemoryRavenConfiguration Configuration
+	    {
+	        get { return configuration; }
+	        set { configuration = value; }
+	    }
+
+	    //TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
 		public DocumentDatabase SystemDatabase
 		{
 		    get
@@ -51,7 +57,7 @@ namespace Raven.Server
 			get { return serverThingsForTests; }
 		}
 
-	    public IDocumentStore DocumentStore
+	    public DocumentStore DocumentStore
 	    {
             get { return documentStore; }
 	    }
@@ -70,8 +76,9 @@ namespace Raven.Server
             documentStore = new DocumentStore
             {
                 HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke),
-                Url = "http://localhost"
-            }.Initialize();
+                Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url
+            };
+	        documentStore.Initialize();
 	        return this;
 	    }
 
@@ -79,6 +86,12 @@ namespace Raven.Server
 	    {
 	        get { return options; }
 	    }
+
+        public string Url
+        {
+            get { return url; }
+            set { url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value; }
+        }
 
 	    ///<summary>
         /// Whatever we should also host an HTTP endpoint for the document database
