@@ -59,8 +59,7 @@ namespace Raven.Tests.Helpers
 			if(prefix != null)
 				prefix = prefix.Replace("<", "").Replace(">", "");
 
-			var newDataDir = Path.GetFullPath(string.Format(@".\{0}-{1}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "TestDatabase", Guid.NewGuid().ToString("N")));
-			Directory.CreateDirectory(newDataDir);
+			var newDataDir = Path.GetFullPath(string.Format(@".\{1}-{0}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "TestDatabase"));
 			pathsToDelete.Add(newDataDir);
 			return newDataDir;
 		}

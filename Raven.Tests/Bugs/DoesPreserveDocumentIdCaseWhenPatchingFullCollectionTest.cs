@@ -18,7 +18,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void DoesPreserveDocumentIdCaseWhenPatchingFullCollection()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(runInMemory:false))
 			{
 				string documentId = null;
 				using (var session = store.OpenSession())

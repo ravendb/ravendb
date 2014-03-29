@@ -23,9 +23,9 @@ namespace Raven.Tryouts
 			{
 				Console.Clear();
 				Console.WriteLine(i);
-				using (var x = new RavenDB_1280())
+				using (var x = new DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest())
 				{
-					x.Referenced_Docs_Are_Indexed_During_Heavy_Writing();
+					x.DoesPreserveDocumentIdCaseWhenPatchingFullCollection();
 				}
 			}
 
