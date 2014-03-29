@@ -16,26 +16,11 @@ namespace Raven.Tryouts
 	{
 		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
-		private unsafe static void Main(string[] args)
+		private  static void Main(string[] args)
 		{
-            //Console.WriteLine(NumericUtils.PrefixCodedToInt(NumericUtils.IntToPrefixCoded(int.MinValue)));
-			for (int i = 0; i < 100; i++)
-			{
-				Console.Clear();
-				Console.WriteLine(i);
-				using (var x = new DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest())
-				{
-					x.DoesPreserveDocumentIdCaseWhenPatchingFullCollection();
-				}
-			}
-
 		}
 	}
 
-    public unsafe class My
-    {
-        public byte* B { get; set; }
-    }
 
 	public class OrderTotalResult
 	{
