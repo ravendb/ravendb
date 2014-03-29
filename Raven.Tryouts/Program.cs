@@ -7,6 +7,7 @@ using NLog;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Tests.Bugs;
 using Raven.Tests.Bugs.Indexing;
+using Raven.Tests.Bundles.Replication;
 using Raven.Tests.Indexes;
 using Raven.Tests.Issues;
 
@@ -23,9 +24,9 @@ namespace Raven.Tryouts
 			{
 				Console.Clear();
 				Console.WriteLine(i);
-				using (var x = new DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest())
+				using (var x = new ReplicationDestinationDisabled())
 				{
-					x.DoesPreserveDocumentIdCaseWhenPatchingFullCollection();
+					x.CanDisableReplicationToDestination().Wait();
 				}
 			}
 
