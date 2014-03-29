@@ -163,10 +163,18 @@ namespace Raven.Database.Indexing
 				if (dynamicNullObject.IsExplicitNull)
 				{
 					var sortOptions = indexDefinition.GetSortOption(name, query: null);
-					yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
-														Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+					if (sortOptions == null ||
+					    sortOptions.Value == SortOptions.String ||
+					    sortOptions.Value == SortOptions.None ||
+					    sortOptions.Value == SortOptions.StringVal ||
+					    sortOptions.Value == SortOptions.Custom)
 
-				    foreach (var field in CreateNumericFieldWithCaching(name, GetNullValueForSorting(sortOptions), storage, termVector))
+					{
+						yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
+							Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+					}
+
+					foreach (var field in CreateNumericFieldWithCaching(name, GetNullValueForSorting(sortOptions), storage, termVector))
                         yield return field;
                    
                  }
