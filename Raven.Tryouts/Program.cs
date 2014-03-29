@@ -10,6 +10,7 @@ using Raven.Tests.Bugs.Indexing;
 using Raven.Tests.Bundles.Replication;
 using Raven.Tests.Indexes;
 using Raven.Tests.Issues;
+using Raven.Tests.Notifications;
 
 namespace Raven.Tryouts
 {
@@ -24,9 +25,9 @@ namespace Raven.Tryouts
 			{
 				Console.Clear();
 				Console.WriteLine(i);
-				using (var x = new ReplicationDestinationDisabled())
+				using (var x = new ReplicationConflicts_Embedded())
 				{
-					x.CanDisableReplicationToDestination().Wait();
+					x.CanGetNotificationsConflictedDocumentsCausedByDelete();
 				}
 			}
 
