@@ -250,7 +250,8 @@ namespace Voron.Impl.Journal
 			if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
 				return;
 
-			_currentJournalFileSize = journalSize;
+			// this set the size of the _next_ journal file size
+			_currentJournalFileSize = Math.Min(journalSize, _env.Options.MaxLogFileSize);
 		}
 
 

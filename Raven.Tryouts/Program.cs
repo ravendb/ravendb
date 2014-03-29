@@ -7,6 +7,7 @@ using NLog;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Tests.Bugs;
 using Raven.Tests.Bugs.Indexing;
+using Raven.Tests.Indexes;
 using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
@@ -22,9 +23,9 @@ namespace Raven.Tryouts
 			{
 				Console.Clear();
 				Console.WriteLine(i);
-				using (var x = new AsyncSetBasedOps())
+				using (var x = new RavenDB_1280())
 				{
-					x.AwaitAsyncPatchByIndexShouldWork("voron").Wait();
+					x.Referenced_Docs_Are_Indexed_During_Heavy_Writing();
 				}
 			}
 

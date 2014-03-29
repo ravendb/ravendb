@@ -27,7 +27,7 @@ namespace Raven.Database.Storage
             _restoreRequest = restoreRequest;
             backupLocation = restoreRequest.BackupLocation;
             databaseLocation = _restoreRequest.DatabaseLocation.ToFullPath();
-            indexLocation = (_restoreRequest.IndexesLocation ?? _restoreRequest.DatabaseLocation).ToFullPath();
+			indexLocation = (_restoreRequest.IndexesLocation ?? Path.Combine(_restoreRequest.DatabaseLocation, "Indexes")).ToFullPath();
             journalLocation = (_restoreRequest.JournalsLocation ?? _restoreRequest.DatabaseLocation).ToFullPath();
             Configuration = configuration;
             this.output = output;			
