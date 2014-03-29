@@ -43,6 +43,8 @@ namespace Raven.Tests.Helpers
 		protected readonly List<IDocumentStore> stores = new List<IDocumentStore>();
 		private readonly HashSet<string> pathsToDelete = new HashSet<string>();
 
+		private static int pathCount;
+
 		public RavenTestBase()
 		{
             Environment.SetEnvironmentVariable(Constants.RavenDefaultQueryTimeout, "30");
@@ -59,7 +61,7 @@ namespace Raven.Tests.Helpers
 			if(prefix != null)
 				prefix = prefix.Replace("<", "").Replace(">", "");
 
-			var newDataDir = Path.GetFullPath(string.Format(@".\{1}-{0}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "TestDatabase"));
+			var newDataDir = Path.GetFullPath(string.Format(@".\{1}-{0}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "TestDatabase", pathCount++));
 			pathsToDelete.Add(newDataDir);
 			return newDataDir;
 		}
