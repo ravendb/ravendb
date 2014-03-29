@@ -100,7 +100,7 @@ namespace Raven.Bundles.Replication.Responders
                 else
                 {
                     var etag = deleted == false ? existingEtag : null;
-                    AddWithoutConflict(id, etag, metadata, incoming);
+					AddWithoutConflict(id, etag, resolvedMetadataToSave, resolvedItemToSave);
                 }
                 return;
 			}
