@@ -40,7 +40,7 @@ namespace Raven.Tests.Indexes
 				
 				new EmailIndex().Execute(documentStore);
 
-			    var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(sp.Elapsed.TotalSeconds / 2);
+			    var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : sp.Elapsed;
                 Console.WriteLine("Waiting for indexing. Timeout: " + timeout);
                 WaitForIndexing(documentStore, timeout: timeout);
 
