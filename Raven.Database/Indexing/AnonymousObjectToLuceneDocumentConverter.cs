@@ -303,6 +303,11 @@ namespace Raven.Database.Indexing
 				yield return CreateFieldWithCaching(name, s, storage,
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 			}
+			else if (value is Enum)
+			{
+				yield return CreateFieldWithCaching(name, value.ToString(), storage,
+									   indexDefinition.GetIndex(name, Field.Index.ANALYZED_NO_NORMS), termVector);
+			}
 			else if (value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
 			{
 				var convert = ((IConvertible)value);

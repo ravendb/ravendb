@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Linq;
+using Raven.Client.Document;
 using Raven.Tests.Helpers;
 using Xunit;
 
@@ -18,8 +19,6 @@ namespace Raven.Tests.MailingList
             using (var store = NewDocumentStore())
             {
                 var knownDay = DateTime.Parse("2014-03-31").Date; // This is a Monday
-
-
                 using (var session = store.OpenSession())
                 {
                     var monday = new SampleData {Date = knownDay};
@@ -62,7 +61,7 @@ namespace Raven.Tests.MailingList
 
                     var monday = session.Query<SampleData>().Where(x => x.Date.DayOfWeek == DayOfWeek.Monday).ToList();
                     var tuesday = session.Query<SampleData>().Where(x => x.Date.DayOfWeek == DayOfWeek.Tuesday).ToList();
-                    var wednesday = session.Query<SampleData>().Where(x => x.Date.DayOfWeek == DayOfWeek.Wednesday).ToList();
+	                var wednesday = session.Query<SampleData>().Where(x => x.Date.DayOfWeek == DayOfWeek.Wednesday).ToList();
                     var thursday = session.Query<SampleData>().Where(x => x.Date.DayOfWeek == DayOfWeek.Thursday).ToList();
                     var friday = session.Query<SampleData>().Where(x => x.Date.DayOfWeek == DayOfWeek.Friday).ToList();
                     var saturday = session.Query<SampleData>().Where(x => x.Date.DayOfWeek == DayOfWeek.Saturday).ToList();
