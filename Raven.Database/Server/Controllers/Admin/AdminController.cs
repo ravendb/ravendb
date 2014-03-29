@@ -129,7 +129,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			string documentDataDir;
 			ravenConfiguration.DataDirectory = ResolveTenantDataDirectory(restoreRequest.DatabaseLocation, databaseName, out documentDataDir);
-
+			restoreRequest.DatabaseLocation = ravenConfiguration.DataDirectory;
 			DatabasesLandlord.SystemDatabase.Documents.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
 		    
             bool defrag;
@@ -196,7 +196,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 documentDataDir = "~\\" + documentDataDir.Substring(2);
             }
 
-			return Path.Combine(baseDataPath, documentDataDir.Substring(2));
+			return Path.GetFullPath(Path.Combine(baseDataPath, documentDataDir.Substring(2)));
 		}
 
 		[HttpPost]
