@@ -43,7 +43,6 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
 
         this.appUrls = appUrl.forCurrentDatabase();
-
         dynamicHeightBindingHandler.install();
     }
 
