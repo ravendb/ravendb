@@ -18,21 +18,21 @@ namespace Raven.Tests.MailingList
 			{
 				using (var raven = store.OpenSession())
 				{
-					raven.Store(new User { Name = new PersonName("Slappy", "McFuzznutz"), });
+					raven.Store(new User {Name = new PersonName("Slappy", "McFuzznutz"),});
 					raven.SaveChanges();
 				}
 
 				using (var raven = store.OpenSession())
 				{
 					var results = raven.Query<User>()
-						.Customize(x=>x.WaitForNonStaleResults())
-						.Select(u => new UserSearchModel
-						{
-							FirstName = u.Name.First,
-							LastName = u.Name.Last,
-							UserId = u.Id,
-						})
-						.ToList();
+					                   .Customize(x => x.WaitForNonStaleResults())
+					                   .Select(u => new UserSearchModel
+					                   {
+						                   FirstName = u.Name.First,
+						                   LastName = u.Name.Last,
+						                   UserId = u.Id,
+					                   })
+					                   .ToList();
 
 					Assert.Equal(results[0].LastName, "McFuzznutz"); // "This succeeds"
 				}
@@ -40,39 +40,37 @@ namespace Raven.Tests.MailingList
 				using (var raven = store.OpenSession())
 				{
 					var results = raven.Query<User>()
-						.Customize(x => x.WaitForNonStaleResults())
-						.OrderBy(u => u.Name.Last)
-						.AsEnumerable()
-						.Select(u => new UserSearchModel
-						{
-							FirstName = u.Name.First,
-							LastName = u.Name.Last,
-							UserId = u.Id,
-						})
-						.ToList();
+					                   .Customize(x => x.WaitForNonStaleResults())
+					                   .OrderBy(u => u.Name.Last)
+					                   .AsEnumerable()
+					                   .Select(u => new UserSearchModel
+					                   {
+						                   FirstName = u.Name.First,
+						                   LastName = u.Name.Last,
+						                   UserId = u.Id,
+					                   })
+					                   .ToList();
 
-					Assert.Equal(results[0].LastName, "McFuzznutz");// "This succeeds"
+					Assert.Equal(results[0].LastName, "McFuzznutz"); // "This succeeds"
 				}
 
 				using (var raven = store.OpenSession())
 				{
 					var results = raven.Query<User>()
-						.Customize(x => x.WaitForNonStaleResults())
-						.OrderBy(u => u.Name.Last)
-						.Select(u => new UserSearchModel
-						{
-							FirstName = u.Name.First,
-							LastName = u.Name.Last,
-							UserId = u.Id,
-						})
-						.ToList();
+					                   .Customize(x => x.WaitForNonStaleResults())
+					                   .OrderBy(u => u.Name.Last)
+					                   .Select(u => new UserSearchModel
+					                   {
+						                   FirstName = u.Name.First,
+						                   LastName = u.Name.Last,
+						                   UserId = u.Id,
+					                   })
+					                   .ToList();
 
 					Assert.Equal(results[0].LastName, "McFuzznutz"); // "This fails. Expected: McFuzznutz But was: null"
 				}
 			}
 		}
-
-
 
 		public class UserSearchModel
 		{
@@ -89,8 +87,6 @@ namespace Raven.Tests.MailingList
 
 		public class PersonName
 		{
-			private PersonName() { }
-
 			public PersonName(string first, string last)
 			{
 				First = first;
@@ -101,5 +97,4 @@ namespace Raven.Tests.MailingList
 			public string Last { get; private set; }
 		}
 	}
-
 }

@@ -18,20 +18,12 @@ namespace Raven.Bundles.Compression.Streams
 
 		public DecompressStream(Stream underlyingStream)
 		{
-			try
-			{
-				this.underlyingStream = new StreamReaderWithUnread(underlyingStream);
-				compressed = CheckMagicNumber();
+			this.underlyingStream = new StreamReaderWithUnread(underlyingStream);
+			compressed = CheckMagicNumber();
 
-				if (compressed)
-				{
-					deflateStream = new DeflateStream(underlyingStream, CompressionMode.Decompress, leaveOpen: true);
-				}
-			}
-			catch
+			if (compressed)
 			{
-				underlyingStream.Close();
-				throw;
+				deflateStream = new DeflateStream(underlyingStream, CompressionMode.Decompress, leaveOpen: true);
 			}
 		}
 

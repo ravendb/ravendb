@@ -32,36 +32,23 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ValidReplicationSetupTest()
 		{
-			server1 = CreateServer(8111, "D1");
-			server2 = CreateServer(8112, "D2");
+			server1 = CreateServer(8079, "D1");
+			server2 = CreateServer(8078, "D2");
 
-			store1 = new DocumentStore
-			{
-				DefaultDatabase = "Northwind",
-				Url = "http://localhost:8111"
-			};
+            store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false);
+            store2 = NewRemoteDocumentStore(false, server2, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false);
 
-			store1.Initialize();
-
-			store2 = new DocumentStore
-			{
-				DefaultDatabase = "Northwind",
-				Url = "http://localhost:8112"
-			};
-
-			store2.Initialize();
-
-			store1.DatabaseCommands.CreateDatabase(
+			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(
 				new DatabaseDocument
 				{
 					Id = "Northwind",
 					Settings = { { "Raven/ActiveBundles", "replication" }, { "Raven/DataDir", @"~\D1\N" } }
 				});
 
-			store2.DatabaseCommands.CreateDatabase(
+			store2.DatabaseCommands.GlobalAdmin.CreateDatabase(
 				new DatabaseDocument
 				{
-					Id = "Northwind",
+					Id = "Northwind",					
 					Settings = { { "Raven/ActiveBundles", "replication" }, { "Raven/DataDir", @"~\D2\N" } }
 				});
 
@@ -76,7 +63,7 @@ namespace Raven.Tests.Issues
 			                                                                                db1Url + "/admin/replicationInfo",
 																							"POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
-			request.Write(replicationDocument.DataAsJson.ToString(Formatting.None));
+			request.WriteAsync(replicationDocument.DataAsJson.ToString(Formatting.None)).Wait();
 			var result = request.ReadResponseJson() as RavenJArray;
 
 			Assert.NotNull(result);
@@ -88,33 +75,20 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void DestinationServerWithReplicationDisabledTest()
 		{
-			server1 = CreateServer(8111, "D1");
-			server2 = CreateServer(8112, "D2");
+			server1 = CreateServer(8079, "D1");
+			server2 = CreateServer(8078, "D2");
 
-			store1 = new DocumentStore
-			{
-				DefaultDatabase = "Northwind",
-				Url = "http://localhost:8111"
-			};
+			store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false);
+            store2 = NewRemoteDocumentStore(false, server2, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false);
 
-			store1.Initialize();
-
-			store2 = new DocumentStore
-			{
-				DefaultDatabase = "Northwind",
-				Url = "http://localhost:8112"
-			};
-
-			store2.Initialize();
-
-			store1.DatabaseCommands.CreateDatabase(
+			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(
 				new DatabaseDocument
 				{
 					Id = "Northwind",
 					Settings = { { "Raven/ActiveBundles", "replication" }, { "Raven/DataDir", @"~\D1\N" } }
 				});
 
-			store2.DatabaseCommands.CreateDatabase(
+			store2.DatabaseCommands.GlobalAdmin.CreateDatabase(
 				new DatabaseDocument
 				{
 					Id = "Northwind",
@@ -132,7 +106,7 @@ namespace Raven.Tests.Issues
 																							db1Url + "/admin/replicationInfo",
 																							"POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
-			request.Write(replicationDocument.DataAsJson.ToString(Formatting.None));
+			request.WriteAsync(replicationDocument.DataAsJson.ToString(Formatting.None)).Wait();
 			var result = request.ReadResponseJson() as RavenJArray;
 
 			Assert.NotNull(result);
@@ -144,17 +118,11 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void DestinationServerDownTest()
 		{
-			server1 = CreateServer(8111, "D1");
+			server1 = CreateServer(8079, "D1");
 
-			store1 = new DocumentStore
-			{
-				DefaultDatabase = "Northwind",
-				Url = "http://localhost:8111"
-			};
+			store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false);
 
-			store1.Initialize();
-
-			store1.DatabaseCommands.CreateDatabase(
+			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(
 				new DatabaseDocument
 				{
 					Id = "Northwind",
@@ -163,7 +131,7 @@ namespace Raven.Tests.Issues
 
 			var db1Url = store1.Url + "/databases/Northwind";
 
-			SetupReplication(store1.DatabaseCommands, "http://localhost:8112/databases/Northwind");
+			SetupReplication(store1.DatabaseCommands, "http://localhost:8078/databases/Northwind");
 
 			var replicationDocument = store1.DatabaseCommands.Get("Raven/Replication/Destinations");
 
@@ -171,7 +139,7 @@ namespace Raven.Tests.Issues
 																							db1Url + "/admin/replicationInfo",
 																							"POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
-			request.Write(replicationDocument.DataAsJson.ToString(Formatting.None));
+			request.WriteAsync(replicationDocument.DataAsJson.ToString(Formatting.None)).Wait();
 			var result = request.ReadResponseJson() as RavenJArray;
 
 			Assert.NotNull(result);
@@ -180,20 +148,15 @@ namespace Raven.Tests.Issues
 			Assert.Equal(-2, result[0].Value<int>("Code"));
 		}
 
+		//note - this test _will_ fail if fiddler is active during the test (DNS lookup)
 		[Fact]
 		public void InvalidUrlTest()
 		{
-			server1 = CreateServer(8111, "D1");
+			server1 = CreateServer(8079, "D1");
 
-			store1 = new DocumentStore
-			{
-				DefaultDatabase = "Northwind",
-				Url = "http://localhost:8111"
-			};
+            store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false, ensureDatabaseExists: false);
 
-			store1.Initialize();
-
-			store1.DatabaseCommands.CreateDatabase(
+			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(
 				new DatabaseDocument
 				{
 					Id = "Northwind",
@@ -202,7 +165,7 @@ namespace Raven.Tests.Issues
 
 			var db1Url = store1.Url + "/databases/Northwind";
 
-			SetupReplication(store1.DatabaseCommands, "http://localhost:8112/databases/Northwind");
+			SetupReplication(store1.DatabaseCommands, "http://localhost:8078/databases/Northwind");
 
 			var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
 																							db1Url + "/admin/replicationInfo",
@@ -210,7 +173,7 @@ namespace Raven.Tests.Issues
 
 
 
-			request.Write(RavenJObject.FromObject(new ReplicationDocument
+			request.WriteAsync(RavenJObject.FromObject(new ReplicationDocument
 			{
 				Destinations = new EquatableList<ReplicationDestination>
 				{
@@ -219,7 +182,7 @@ namespace Raven.Tests.Issues
 						Url = "http://unknown.url/"
 					}
 				}
-			}).ToString(Formatting.None));
+			}).ToString(Formatting.None)).Wait();
 			var result = request.ReadResponseJson() as RavenJArray;
 
 			Assert.NotNull(result);
@@ -228,38 +191,20 @@ namespace Raven.Tests.Issues
 			Assert.Equal(-1, result[0].Value<int>("Code"));
 		}
 
-		private RavenDbServer CreateServer(int port, string dataDirectory, bool removeDataDirectory = true)
-		{
+		private RavenDbServer CreateServer(int port, string dataDirectory, bool removeDataDirectory = true,string storageType = "esent",bool runInFidler = false)
+		{			
 			Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 
-			var serverConfiguration = new Raven.Database.Config.RavenConfiguration
-			{
-				Settings = { { "Raven/ActiveBundles", "replication" } },
-                AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.Admin,
-				DataDirectory = dataDirectory,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-				RunInMemory = false,
-				Port = port,
-				DefaultStorageTypeName = "esent"
-			};
-
 			if (removeDataDirectory)
-				IOExtensions.DeleteDirectory(serverConfiguration.DataDirectory);
+				IOExtensions.DeleteDirectory(dataDirectory);
 
-			var server = new RavenDbServer(serverConfiguration);
-			serverConfiguration.PostInit();
-
+			var server = GetNewServer(port, dataDirectory, false, storageType,activeBundles: "replication");			
 			return server;
-		}
-
-		private void StopServer(RavenDbServer server)
-		{
-			server.Dispose();
 		}
 
 		private RavenDbServer StartServer(RavenDbServer server)
 		{
-			return this.CreateServer(server.Database.Configuration.Port, server.Database.Configuration.DataDirectory, false);
+			return this.CreateServer(server.SystemDatabase.Configuration.Port, server.SystemDatabase.Configuration.DataDirectory, removeDataDirectory: false);
 		}
 
 		public override void Dispose()
@@ -267,13 +212,13 @@ namespace Raven.Tests.Issues
 			if (server1 != null)
 			{
 				server1.Dispose();
-				IOExtensions.DeleteDirectory(server1.Database.Configuration.DataDirectory);
+				IOExtensions.DeleteDirectory(server1.SystemDatabase.Configuration.DataDirectory);
 			}
 
 			if (server2 != null)
 			{
 				server2.Dispose();
-				IOExtensions.DeleteDirectory(server2.Database.Configuration.DataDirectory);
+				IOExtensions.DeleteDirectory(server2.SystemDatabase.Configuration.DataDirectory);
 			}
 
 			if (store1 != null)

@@ -31,7 +31,7 @@ namespace Raven.Client
 		/// Execute the query the first time that this is called.
 		/// </summary>
 		/// <value>The query result.</value>
-		Task<QueryResult> QueryResultAsync { get; }
+		Task<QueryResult> QueryResultAsync();
 
 		/// <summary>
 		/// Gets the query result

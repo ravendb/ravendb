@@ -4,8 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -14,7 +12,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
-using Raven.Client.Util;
 
 namespace Raven.Client.Document
 {
@@ -71,18 +68,13 @@ namespace Raven.Client.Document
 		    var cts = new CancellationTokenSource();
             cts.CancelAfter(timeout ?? TimeSpan.FromSeconds(30));
 
-		    var sp = Stopwatch.StartNew();
+            var sp = Stopwatch.StartNew();
 
 			var tasks = destinationsToCheck.Select(url => WaitForReplicationFromServerAsync(url, database, etag, cts.Token)).ToArray();
 
-		
 		    try
 		    {
-#if NET45
                 await Task.WhenAll(tasks);
-#else
-		        await TaskEx.WhenAll(tasks);
-#endif
 		        return tasks.Length;
 		    }
 		    catch (Exception e)
@@ -122,11 +114,8 @@ namespace Raven.Client.Document
 
 		        if (replicated)
 		            return;
-#if NET45
-			    await Task.Delay(100, cancellationToken);
-#else
-		        await TaskEx.Delay(100, cancellationToken);
-#endif
+
+                await Task.Delay(100, cancellationToken);
 		    }
 		}
 

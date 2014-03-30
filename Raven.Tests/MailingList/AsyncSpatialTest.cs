@@ -1,38 +1,33 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Extensions;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
 using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class IndexTests : RavenTestBase
+	public class AsyncSpatialTest : RavenTest
 	{
-
 		[Fact]
 		public async Task SpatialIndexTest()
 		{
-
 			using (var db = NewDocumentStore())
 			{
-
 				new Promos_Index().Execute(db);
 
 				using (var session = db.OpenAsyncSession())
 				{
-					session.Store(new Promo
+					await session.StoreAsync(new Promo
 					{
 						Title = "IPHONES",
 						Coordinate = new Coordinate { latitude = 41.145556, longitude = -73.995 }
 					});
-					session.Store(new Promo
+                    await session.StoreAsync(new Promo
 					{
 						Title = "ANDROIDS",
 						Coordinate = new Coordinate { latitude = 41.145533, longitude = -73.999 }
 					});
-					session.Store(new Promo
+                    await session.StoreAsync(new Promo
 					{
 						Title = "BLACKBERRY",
 						Coordinate = new Coordinate { latitude = 12.233, longitude = -73.995 }

@@ -130,5 +130,29 @@ namespace Raven.Storage.Esent.StorageActions
 				};
 			}
 		}
+
+        public ListItem ReadLast(string name)
+        {
+            Api.JetSetCurrentIndex(session, Lists, "by_name_and_etag");
+            Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.MakeKey(session, Lists, Etag.InvalidEtag.TransformToValueForEsentSorting(), MakeKeyGrbit.None);
+
+            if (Api.TrySeek(session, Lists, SeekGrbit.SeekLE) == false)
+                return null;
+
+            var nameFromDb = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["name"], Encoding.Unicode);
+            if (string.Equals(name, nameFromDb, StringComparison.InvariantCultureIgnoreCase) == false) 
+                return null;
+
+            using (Stream stream = new BufferedStream(new ColumnStream(session, Lists, tableColumnsCache.ListsColumns["data"])))
+            {
+                return new ListItem
+                {
+                    Data = stream.ToJObject(),
+                    Key = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["key"], Encoding.Unicode),
+                    Etag = Etag.Parse(Api.RetrieveColumn(session, Lists, tableColumnsCache.ListsColumns["etag"]))
+                };
+            }
+        }
 	}
 }

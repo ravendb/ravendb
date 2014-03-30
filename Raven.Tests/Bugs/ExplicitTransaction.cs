@@ -14,12 +14,12 @@ namespace Raven.Tests.Bugs
 	public class ExplicitTransaction : RavenTest
 	{
 		[Theory]
-		[InlineData("munin")]
-		[InlineData("esent")]
+		[PropertyData("Storages")]
 		public void Can_use_transactions_to_isolate_saves(string storage)
 		{
 			using (var documentStore = NewDocumentStore(requestedStorage:storage))
 			{
+                EnsureDtcIsSupported(documentStore);
 				var company = new Company { Name = "Company Name" };
 				var session = documentStore.OpenSession();
 				using (RavenTransactionAccessor.StartTransaction())
@@ -41,12 +41,12 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Theory]
-		[InlineData("munin")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public void Will_process_all_different_documents_enlisted_in_a_transaction(string storage)
 		{
 			using (var documentStore = NewDocumentStore(requestedStorage:storage))
 			{
+                EnsureDtcIsSupported(documentStore);
 				using (RavenTransactionAccessor.StartTransaction())
 				{
 					using (var session = documentStore.OpenSession())

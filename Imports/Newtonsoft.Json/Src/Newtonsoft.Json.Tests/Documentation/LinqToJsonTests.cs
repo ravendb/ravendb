@@ -56,6 +56,21 @@ namespace Newtonsoft.Json.Tests.Documentation
     {
       return null;
     }
+
+    public static StreamWriter CreateText(string path)
+    {
+      return null;
+    }
+
+    public static void WriteAllText(string path, string contents)
+    {
+      Console.WriteLine(contents);
+    }
+
+    public static string ReadAllText(string path)
+    {
+      return null;
+    }
   }
 
   public class LinqToJsonTests
@@ -149,7 +164,7 @@ namespace Newtonsoft.Json.Tests.Documentation
       //    "item": [
       //      {
       //        "title": "Json.NET 1.3 + New license + Now on CodePlex",
-      //        "description": "Annoucing the release of Json.NET 1.3, the MIT license and the source being available on CodePlex",
+      //        "description": "Annoucing the release of Json.NET 1.3, the MIT license and being available on CodePlex",
       //        "link": "http://james.newtonking.com/projects/json-net.aspx",
       //        "category": [
       //          "Json.NET",
@@ -248,7 +263,7 @@ namespace Newtonsoft.Json.Tests.Documentation
           'item': [
             {
               'title': 'Json.NET 1.3 + New license + Now on CodePlex',
-              'description': 'Annoucing the release of Json.NET 1.3, the MIT license and the source being available on CodePlex',
+              'description': 'Annoucing the release of Json.NET 1.3, the MIT license and the source on CodePlex',
               'link': 'http://james.newtonking.com/projects/json-net.aspx',
               'categories': [
                 'Json.NET',
@@ -291,7 +306,7 @@ namespace Newtonsoft.Json.Tests.Documentation
 
       #region LinqToJsonQuerying
       var postTitles =
-        from p in rss["channel"]["item"].Children()
+        from p in rss["channel"]["item"]
         select (string)p["title"];
 
       foreach (var item in postTitles)

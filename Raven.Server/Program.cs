@@ -21,22 +21,25 @@ using Microsoft.Win32;
 using NDesk.Options;
 using NLog.Config;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database;
+using Raven.Database.Actions;
 using Raven.Database.Config;
+using Raven.Database.Data;
 using Raven.Database.Server;
-using Raven.Database.Server.Responders.Admin;
 using Raven.Database.Util;
 
 namespace Raven.Server
 {
+	using Raven.Abstractions.Util;
+
 	public static class Program
 	{
 		static string[] cmdLineArgs;
 		private static void Main(string[] args)
 		{
 			cmdLineArgs = args;
-			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 			if (RunningInInteractiveMode(args))
 			{
 				try
@@ -61,7 +64,7 @@ namespace Raven.Server
 				}
 				catch (Exception e)
 				{
-					
+
 					EmitWarningInRed();
 
 					WaitForUserInputAndExitWithError(e.ToString(), args);
@@ -303,7 +306,7 @@ namespace Raven.Server
 			else
 			{
 				Console.WriteLine("Error: Could not find the registry key '{0}' in order to disable '{1}' policy.", registryKey,
-				                  policyName);
+								  policyName);
 			}
 		}
 
@@ -365,15 +368,20 @@ Configuration options:
 			try
 			{
 				var ravenConfiguration = new RavenConfiguration();
-				if (File.Exists(Path.Combine(backupLocation, "Raven.ravendb")))
-				{
-					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
-				}
+				if (File.Exists(Path.Combine(backupLocation, "Raven.voron")))
+                {
+                    ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;                    
+                }
 				else if (Directory.Exists(Path.Combine(backupLocation, "new")))
 				{
 					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 				}
-				DocumentDatabase.Restore(ravenConfiguration, backupLocation, databaseLocation, Console.WriteLine, defrag);
+				MaintenanceActions.Restore(ravenConfiguration, new RestoreRequest
+				{
+				    BackupLocation = backupLocation,
+                    DatabaseLocation = databaseLocation,
+                    Defrag = defrag
+				}, Console.WriteLine);
 			}
 			catch (Exception e)
 			{
@@ -453,7 +461,7 @@ Configuration options:
 		private static bool RunServerInDebugMode(RavenConfiguration ravenConfiguration, bool launchBrowser)
 		{
 			var sp = Stopwatch.StartNew();
-			using (var server = new RavenDbServer(ravenConfiguration))
+			using (var server = new RavenDbServer(ravenConfiguration){ UseEmbeddedHttpServer = true }.Initialize())
 			{
 				sp.Stop();
 				var path = Path.Combine(Environment.CurrentDirectory, "default.raven");
@@ -468,7 +476,7 @@ Configuration options:
 				Console.WriteLine("Data directory: {0}", ravenConfiguration.RunInMemory ? "RAM" : ravenConfiguration.DataDirectory);
 				Console.WriteLine("HostName: {0} Port: {1}, Storage: {2}", ravenConfiguration.HostName ?? "<any>",
 					ravenConfiguration.Port,
-					server.Database.TransactionalStorage.FriendlyName);
+					server.SystemDatabase.TransactionalStorage.FriendlyName);
 				Console.WriteLine("Server Url: {0}", ravenConfiguration.ServerUrl);
 
 				if (launchBrowser)
@@ -490,30 +498,47 @@ Configuration options:
 		{
 			bool? done = null;
 			var actions = new Dictionary<string, Action>
-			{
-				{"cls", TryClearingConsole},
-				{
-					"reset", () =>
-					{
-						TryClearingConsole();
-						done = true;
-					}
-					},
-				{
-					"gc", () =>
-					{
-						long before = Process.GetCurrentProcess().WorkingSet64;
-						Console.WriteLine("Starting garbage collection, current memory is: {0:#,#.##;;0} MB", before / 1024d / 1024d);
-						AdminGc.CollectGarbage(server.Database);
-						var after = Process.GetCurrentProcess().WorkingSet64;
-						Console.WriteLine("Done garbage collection, current memory is: {0:#,#.##;;0} MB, saved: {1:#,#.##;;0} MB", after / 1024d / 1024d,
-											(before - after) / 1024d / 1024d);
-					}
-					},
-				{
-					"q", () => done = false
-				}
-			};
+			              {
+				              { "cls", TryClearingConsole },
+				              {
+					              "reset", () =>
+					              {
+						              TryClearingConsole();
+						              done = true;
+					              }
+				              },
+				              {
+					              "gc", () =>
+					              {
+						              long before = Process.GetCurrentProcess().WorkingSet64;
+						              Console.WriteLine(
+										  "Starting garbage collection (without LOH compaction), current memory is: {0:#,#.##;;0} MB",
+							              before / 1024d / 1024d);
+						              RavenGC.CollectGarbage(false, () => server.SystemDatabase.TransactionalStorage.ClearCaches());
+						              var after = Process.GetCurrentProcess().WorkingSet64;
+						              Console.WriteLine(
+							              "Done garbage collection, current memory is: {0:#,#.##;;0} MB, saved: {1:#,#.##;;0} MB",
+							              after / 1024d / 1024d,
+							              (before - after) / 1024d / 1024d);
+					              }
+				              },
+				              {
+					              "loh-compaction", () =>
+					              {
+						              long before = Process.GetCurrentProcess().WorkingSet64;
+						              Console.WriteLine(
+							              "Starting garbage collection (with LOH compaction), current memory is: {0:#,#.##;;0} MB",
+							              before / 1024d / 1024d);
+									  RavenGC.CollectGarbage(true, () => server.SystemDatabase.TransactionalStorage.ClearCaches());
+						              var after = Process.GetCurrentProcess().WorkingSet64;
+						              Console.WriteLine(
+							              "Done garbage collection, current memory is: {0:#,#.##;;0} MB, saved: {1:#,#.##;;0} MB",
+							              after / 1024d / 1024d,
+							              (before - after) / 1024d / 1024d);
+					              }
+				              },
+				              { "q", () => done = false }
+			              };
 
 			WriteInteractiveOptions(actions);
 			while (true)

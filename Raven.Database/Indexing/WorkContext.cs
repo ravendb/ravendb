@@ -14,8 +14,8 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
+using Raven.Database.Data;
 using Raven.Database.Plugins;
-using Raven.Database.Server.Responders.Debugging;
 using Raven.Database.Storage;
 using System.Linq;
 using Raven.Database.Util;
@@ -40,9 +40,9 @@ namespace Raven.Database.Indexing
 
 	    public WorkContext()
 	    {
-	        DoNotTouchAgainIfMissingReferences = new ConcurrentDictionary<string, ConcurrentSet<string>>(StringComparer.OrdinalIgnoreCase);
+	        DoNotTouchAgainIfMissingReferences = new ConcurrentDictionary<int, ConcurrentSet<string>>();
             CurrentlyRunningQueries = new ConcurrentDictionary<string, ConcurrentSet<ExecutingQueryInfo>>(StringComparer.OrdinalIgnoreCase);
-	        PerformanceCounters = new PerformanceCountersManager();
+            MetricsCounters = new MetricsCountersManager();
         }
 
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
@@ -182,13 +182,19 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void AddError(string index, string key, string error, string component)
+		public void AddError(int index, string indexName, string key, string error )
+		{
+            AddError(index, indexName, key, "Unknown", "Unknown");
+		}
+
+		public void AddError(int index, string indexName, string key, string error, string component)
 		{
 			serverErrors.Enqueue(new ServerError
 			{
 				Document = key,
 				Error = error,
 				Index = index,
+                IndexName = indexName,
                 Action = component,
 				Timestamp = SystemTime.UtcNow
 			});
@@ -215,7 +221,7 @@ namespace Raven.Database.Indexing
 
 			shouldNotifyOnWork.Dispose();
 
-		    PerformanceCounters.Dispose();
+            MetricsCounters.Dispose();
 			cancellationTokenSource.Dispose();
 		}
 
@@ -240,16 +246,8 @@ namespace Raven.Database.Indexing
 
 		private bool disposed;
 
-        public PerformanceCountersManager PerformanceCounters { get; private set; }
-
-		public void Init(string name)
-		{
-			if (Configuration.DisablePerformanceCounters == false && Configuration.RunInMemory == false)
-			{
-                PerformanceCounters.Setup(name ?? Constants.SystemDatabase);
-			}
-		}
-
+        public MetricsCountersManager MetricsCounters { get; private set; }
+        
 		public void ReportIndexingActualBatchSize(int size)
 		{
 			lastActualIndexingBatchSize.Add(new ActualIndexingBatchSize
@@ -270,7 +268,7 @@ namespace Raven.Database.Indexing
 		}
 
 		public DocumentDatabase Database { get; set; }
-        public ConcurrentDictionary<string, ConcurrentSet<string>> DoNotTouchAgainIfMissingReferences { get; private set; }
+        public ConcurrentDictionary<int, ConcurrentSet<string>> DoNotTouchAgainIfMissingReferences { get; private set; }
 
 	    public void AddFutureBatch(FutureBatchStats futureBatchStat)
 		{

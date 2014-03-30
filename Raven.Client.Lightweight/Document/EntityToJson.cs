@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
@@ -27,6 +28,8 @@ namespace Raven.Client.Document
 			this.documentStore = documentStore;
 			Listeners = listeners;
 		}
+
+		public Dictionary<object, Dictionary<string, JToken>> MissingDictionary = new Dictionary<object, Dictionary<string, JToken>>(ObjectReferenceEqualityComparer<object>.Default);
 
 		public RavenJObject ConvertEntityToJson(string key, object entity, RavenJObject metadata)
 		{
@@ -71,6 +74,22 @@ namespace Raven.Client.Document
 				return (RavenJObject)jObject.CreateSnapshot();
 
 			var jsonSerializer = documentStore.Conventions.CreateSerializer();
+			jsonSerializer.BeforeClosingObject += (o, writer) =>
+			{
+				Dictionary<string, JToken> value;
+				if (MissingDictionary.TryGetValue(o, out value) == false)
+					return;
+
+				foreach (var item in value)
+				{
+					writer.WritePropertyName(item.Key);
+					if (item.Value == null)
+						writer.WriteNull();
+					else
+						item.Value.WriteTo(writer);
+				}
+			};
+
 			jObject = RavenJObject.FromObject(entity, jsonSerializer);
 			if (jsonSerializer.TypeNameHandling == TypeNameHandling.Auto)// remove the default types
 			{
@@ -89,7 +108,7 @@ namespace Raven.Client.Document
 
 		private void SetClrType(Type entityType, RavenJObject metadata)
 		{
-			if (
+			if (entityType == typeof(ExpandoObject) ||
 				entityType == typeof(DynamicJsonObject) ||
 				entityType == typeof(RavenJObject)) // dynamic types
 			{
@@ -170,12 +189,12 @@ namespace Raven.Client.Document
 		}
 
 		private static Regex arrayEndRegex = new Regex(@"\[\], [\w\.-]+$",
-#if !SILVERLIGHT && !NETFX_CORE
-		                                               RegexOptions.Compiled
+#if !NETFX_CORE
+ RegexOptions.Compiled
 #else
 													   RegexOptions.None	
 #endif
-		);
+);
 		private static bool ShouldSimplifyJsonBasedOnType(string typeValue, JsonProperty jsonProperty)
 		{
 			if (jsonProperty != null && (jsonProperty.TypeNameHandling == TypeNameHandling.All || jsonProperty.TypeNameHandling == TypeNameHandling.Arrays))

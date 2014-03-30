@@ -30,12 +30,12 @@ namespace Raven.Tests.Indexes.Recovery
 
 			using (var server = GetNewServer(runInMemory: false, dataDirectory: dataDir))
 			{
-				indexFullPath = Path.Combine(server.Database.Configuration.IndexStoragePath,
-											 MonoHttpUtility.UrlEncode(index.IndexName));
-
 				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{
 					index.Execute(store);
+
+                    indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+                                             server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName).IndexId.ToString(CultureInfo.InvariantCulture));
 
 					using (var session = store.OpenSession())
 					{

@@ -4,10 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs
 {
@@ -20,10 +22,11 @@ namespace Raven.Tests.Bugs
 			public string FullName;
 		}
 
-		[Fact]
-		public async Task AwaitAsyncPatchByIndexShouldWork()
+		[Theory(Skip = "causes issues")]
+		[PropertyData("Storages")]
+		public async Task AwaitAsyncPatchByIndexShouldWork(string storageTypeName)
 		{
-			using (var store = NewRemoteDocumentStore())
+			using (var store = NewRemoteDocumentStore(fiddler:true,requestedStorage:storageTypeName,runInMemory:false))
 			{
 				string lastUserId = null;
 
@@ -38,12 +41,13 @@ namespace Raven.Tests.Bugs
 								LastName = "Last #" + i
 							}
 						);
-					}
+					}					
 				}
 
 				while (true)
 				{
 					var stats = await store.AsyncDatabaseCommands.GetStatisticsAsync();
+					
 					if (!stats.StaleIndexes.Contains("Raven/DocumentsByEntityName", StringComparer.OrdinalIgnoreCase))
 					{
 						break;
@@ -51,7 +55,7 @@ namespace Raven.Tests.Bugs
 					await Task.Delay(100);
 				}
 
-				await (await store.AsyncDatabaseCommands.UpdateByIndex(
+				await (await store.AsyncDatabaseCommands.UpdateByIndexAsync(
 					"Raven/DocumentsByEntityName",
 					new IndexQuery { Query = "Tag:Users" },
 					new ScriptedPatchRequest

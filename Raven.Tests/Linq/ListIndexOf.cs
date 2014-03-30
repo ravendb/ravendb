@@ -33,7 +33,7 @@ namespace Raven.Tests.Linq
 
 				using (var session = store.OpenSession())
 				{
-					var results = session.Advanced.LuceneQuery<Project, ProjectsIndex>()
+                    var results = session.Advanced.DocumentQuery<Project, ProjectsIndex>()
 						.OrderBy("PortfolioIndex")
 						.ToList();
 

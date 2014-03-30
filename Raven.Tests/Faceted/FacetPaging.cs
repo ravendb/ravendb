@@ -522,7 +522,7 @@ namespace Raven.Tests.Faceted
 					s.Store( new FacetSetup { Id = "facets/CameraFacets", Facets = facets } );
 					s.SaveChanges();
 
-					var facetResults = s.Advanced.LuceneQuery<Camera>( "CameraCost" )
+                    var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
 						.ToFacets( "facets/CameraFacets", 2, 2 );
 
 					var cameraCounts = from d in _data
@@ -559,7 +559,7 @@ namespace Raven.Tests.Faceted
 					s.Store( new FacetSetup { Id = "facets/CameraFacets", Facets = facets } );
 					s.SaveChanges();
 
-					var facetResults = s.Advanced.LuceneQuery<Camera>( "CameraCost" )
+                    var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
 						.ToFacets( "facets/CameraFacets", 2, 2 );
 
 					var cameraCounts = from d in _data
@@ -596,7 +596,7 @@ namespace Raven.Tests.Faceted
 					s.Store( new FacetSetup { Id = "facets/CameraFacets", Facets = facets } );
 					s.SaveChanges();
 
-					var facetResults = s.Advanced.LuceneQuery<Camera>( "CameraCost" )
+                    var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
 						.ToFacets( "facets/CameraFacets", 2, 2 );
 
 					var cameraCounts = from d in _data
@@ -633,7 +633,7 @@ namespace Raven.Tests.Faceted
 					s.Store( new FacetSetup { Id = "facets/CameraFacets", Facets = facets } );
 					s.SaveChanges();
 
-					var facetResults = s.Advanced.LuceneQuery<Camera>( "CameraCost" )
+                    var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
 						.ToFacets( "facets/CameraFacets", 2, 2 );
 
 					var cameraCounts = from d in _data
@@ -670,7 +670,7 @@ namespace Raven.Tests.Faceted
 					s.Store( new FacetSetup { Id = "facets/CameraFacets", Facets = facets } );
 					s.SaveChanges();
 
-					var facetResults = s.Advanced.LuceneQuery<Camera>( "CameraCost" )
+                    var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
 						.ToFacets( "facets/CameraFacets", 2, 2 );
 
 					var cameraCounts = from d in _data
@@ -707,7 +707,7 @@ namespace Raven.Tests.Faceted
 					s.Store( new FacetSetup { Id = "facets/CameraFacets", Facets = facets } );
 					s.SaveChanges();
 
-					var facetResults = s.Advanced.LuceneQuery<Camera>( "CameraCost" )
+                    var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
 						.ToFacets( "facets/CameraFacets", 2, 2 );
 
 					var cameraCounts = from d in _data
@@ -744,7 +744,7 @@ namespace Raven.Tests.Faceted
 					s.Store( new FacetSetup { Id = "facets/CameraFacets", Facets = facets } );
 					s.SaveChanges();
 
-					var facetResults = s.Advanced.LuceneQuery<Camera>( "CameraCost" )
+                    var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
 						.ToFacets( "facets/CameraFacets", 2, 2 );
 
 					var cameraCounts = from d in _data
@@ -781,7 +781,7 @@ namespace Raven.Tests.Faceted
 					s.Store( new FacetSetup { Id = "facets/CameraFacets", Facets = facets } );
 					s.SaveChanges();
 
-					var facetResults = s.Advanced.LuceneQuery<Camera>("CameraCost")
+                    var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
 						.ToFacets( "facets/CameraFacets", 2, 2 );
 
 					var cameraCounts = from d in _data
@@ -818,7 +818,7 @@ namespace Raven.Tests.Faceted
 					s.Store( new FacetSetup { Id = "facets/CameraFacets", Facets = facets } );
 					s.SaveChanges();
 
-					var facetResults = s.Advanced.LuceneQuery<Camera>( "CameraCost" )
+                    var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
 						.ToFacets( "facets/CameraFacets", 2 );
 
 					var cameraCounts = from d in _data
@@ -856,7 +856,7 @@ namespace Raven.Tests.Faceted
 					s.Store( new FacetSetup { Id = "facets/CameraFacets", Facets = facets } );
 					s.SaveChanges();
 
-					var facetResults = s.Advanced.LuceneQuery<Camera>( "CameraCost" )
+                    var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
 						.ToFacets( "facets/CameraFacets", 2 );
 
 					var cameraCounts = from d in _data
@@ -894,7 +894,7 @@ namespace Raven.Tests.Faceted
 					s.Store( new FacetSetup { Id = "facets/CameraFacets", Facets = facets } );
 					s.SaveChanges();
 
-					var facetResults = s.Advanced.LuceneQuery<Camera>( "CameraCost" )
+                    var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
 						.ToFacets( "facets/CameraFacets", 2 );
 
 					var cameraCounts = from d in _data
@@ -931,7 +931,7 @@ namespace Raven.Tests.Faceted
 					s.Store( new FacetSetup { Id = "facets/CameraFacets", Facets = facets } );
 					s.SaveChanges();
 
-					var facetResults = s.Advanced.LuceneQuery<Camera>( "CameraCost" )
+                    var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
 						.ToFacets( "facets/CameraFacets", 2 );
 
 					var cameraCounts = from d in _data

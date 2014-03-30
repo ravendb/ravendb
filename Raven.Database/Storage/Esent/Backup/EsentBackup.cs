@@ -26,6 +26,7 @@ namespace Raven.Storage.Esent.Backup
 
 		public void Execute()
 		{
+            // TODO work out if we can get a % done from this, at the moment in only seems to give "Begin" and "End" messages
 			Api.JetBackupInstance(instance, destination,
 								  backupOptions,
 								  StatusCallback);

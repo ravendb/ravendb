@@ -9,7 +9,7 @@ using Xunit.Extensions;
 
 namespace Raven.Tests
 {
-	public class InflectorTests
+	public class InflectorTests : NoDisposalNeeded
 	{
 		[Theory]
 		[InlineData("User", "Users")]

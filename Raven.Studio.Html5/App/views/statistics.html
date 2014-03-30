@@ -1,0 +1,156 @@
+﻿<section data-bind="with: stats, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+    <form class="form-horizontal" role="form">
+        <div class="form-group">
+            <label class="col-md-2 control-label">Last document Etag</label>
+            <div class="col-md-10">
+                <p class="form-control-static" data-bind="text: LastDocEtag"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-2 control-label">Last attachment etag</label>
+            <div class="col-md-10">
+                <p class="form-control-static" data-bind="text: LastAttachmentEtag"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-2 control-label">Index count</label>
+            <div class="col-md-10">
+                <p class="form-control-static" data-bind="text: CountOfIndexes"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-2 control-label">Document count</label>
+            <div class="col-md-10">
+                <p class="form-control-static" data-bind="text: CountOfDocuments"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-2 control-label">Stale indexes</label>
+            <div class="col-md-10">
+                <p class="form-control-static" data-bind="text: StaleIndexes"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-2 control-label">Index batch size</label>
+            <div class="col-md-10">
+                <p class="form-control-static" data-bind="text: CurrentNumberOfItemsToIndexInSingleBatch"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-2 control-label">Reduce batch size</label>
+            <div class="col-md-10">
+                <p class="form-control-static" data-bind="text: CurrentNumberOfItemsToReduceInSingleBatch"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-2 control-label">Indexes</label>
+            <div class="col-md-10">
+                <div class="panel-group" id="indexStatsAccordion" data-bind="foreach: Indexes">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a data-toggle="collapse" href="#collapseOne" data-bind="text: PublicName, attr: { href: '#statsIndexCollapse' + $index() }"></a>
+                            </h4>
+                        </div>
+                        <div class="panel-collapse collapse" data-bind="attr: { id: 'statsIndexCollapse' + $index() }">
+                            <div class="panel-body">
+                                <div class="form-horizontal" role="form">
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Created</label>
+                                        <div class="col-md-8">
+                                            <p class="form-control-static" data-bind="text: CreatedTimestampText"></p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Documents</label>
+                                        <div class="col-md-8">
+                                            <p class="form-control-static" data-bind="text: DocsCount"></p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group" data-bind="if: IndexingAttempts !== null">
+                                        <label class="col-md-2 control-label">Runs</label>
+                                        <div class="col-md-8">
+                                            <p class="form-control-static" data-bind="css: { 'text-success': IndexingAttempts === IndexingSuccesses, 'text-warning': IndexingSuccesses > 0 && IndexingSuccesses < IndexingAttempts, 'text-danger': IndexingAttempts > 0 && IndexingSuccesses === 0 }">
+                                                <span data-bind="visible: IndexingAttempts > 0, text: IndexingAttempts"></span>
+                                                <span data-bind="visible: IndexingAttempts === 0" class="text-muted">Never run</span>
+                                                <span data-bind="visible: IndexingAttempts === IndexingSuccesses && IndexingAttempts > 0">- all successful</span>
+                                                <span data-bind="visible: IndexingSuccesses > 0 && IndexingSuccesses < IndexingAttempts, text: 'attempts ' + (IndexingAttempts - IndexingSuccesses) + ' failed'"></span>
+                                                <span data-bind="visible: IndexingAttempts > 0 && IndexingSuccesses === 0">- all failed</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Last run</label>
+                                        <div class="col-md-8">
+                                            <p class="form-control-static" data-bind="text: LastIndexedTimestampText"></p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group" data-bind="if: IndexingAttempts !== null">
+                                        <label class="col-md-2 control-label">Reduce runs</label>
+                                        <div class="col-md-8">
+                                            <p class="form-control-static" data-bind="css: { 'text-success': ReduceIndexingAttempts === ReduceIndexingSuccesses, 'text-warning': ReduceIndexingSuccesses > 0 && ReduceIndexingSuccesses < ReduceIndexingAttempts, 'text-danger': ReduceIndexingAttempts > 0 && ReduceIndexingSuccesses === 0 }">
+                                                <span data-bind="visible: ReduceIndexingAttempts > 0, text: ReduceIndexingAttempts"></span>
+                                                <span data-bind="visible: !ReduceIndexingAttempts" class="text-muted">Never run</span>
+                                                <span data-bind="visible: ReduceIndexingAttempts === ReduceIndexingSuccesses && ReduceIndexingAttempts > 0">- all successful</span>
+                                                <span data-bind="visible: ReduceIndexingSuccesses > 0 && ReduceIndexingSuccesses < ReduceIndexingAttempts, text: 'attempts, ' + (ReduceIndexingAttempts - ReduceIndexingSuccesses) + ' failed'"></span>
+                                                <span data-bind="visible: ReduceIndexingAttempts > 0 && ReduceIndexingSuccesses === 0">- all failed</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Last reduce</label>
+                                        <div class="col-md-8">
+                                            <p class="form-control-static" data-bind="text: LastReducedTimestampText"></p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Last query</label>
+                                        <div class="col-md-8">
+                                            <p class="form-control-static" data-bind="text: LastQueryTimestampText"></p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Priority</label>
+                                        <div class="col-md-8">
+                                            <p class="form-control-static" data-bind="text: Priority, css: { 'text-muted': Priority === 'Idle', 'text-warning': Priority === 'Disabled', 'text-danger': Priority === 'Abandoned' }"></p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Last indexed Etag</label>
+                                        <div class="col-md-8">
+                                            <p class="form-control-static" data-bind="text: LastIndexedEtag"></p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Last reduced Etag</label>
+                                        <div class="col-md-8">
+                                            <p class="form-control-static" data-bind="text: LastReducedEtag"></p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Is on RAM:</label>
+                                        <div class="col-md-8">
+                                            <p class="form-control-static" data-bind="text: IsOnRam"></p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Lock</label>
+                                        <div class="col-md-8">
+                                            <p class="form-control-static" data-bind="text: LockMode"></p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="col-md-2 control-label">Entities</label>
+                                        <div class="col-md-8" data-bind="with: ForEntityName">
+                                            <p class="form-control-static" data-bind="text: $data.join(', ')"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</section>

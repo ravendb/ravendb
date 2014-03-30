@@ -89,6 +89,8 @@ namespace Raven.Abstractions.Util
 
 		public int CompareTo(Etag obj)
 		{
+		    if (obj == null)
+		        return -1;
 			return CompareTo(obj.ToByteArray());
 		}
 

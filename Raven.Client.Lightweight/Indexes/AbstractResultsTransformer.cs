@@ -38,6 +38,11 @@ namespace Raven.Client.Indexes
             throw new NotSupportedException("This can only be run on the server side");
         }
 
+        protected RavenJToken QueryOrDefault(string key, object defaultVal)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
 		/// <summary>
 		/// Gets or sets the document store.
 		/// </summary>
@@ -50,12 +55,17 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public abstract TransformerDefinition CreateTransformerDefinition();
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 
 		public void Execute(IDocumentStore store)
 		{
 			store.ExecuteTransformer(this);
 		}
+
+        public Task ExecuteAsync(IDocumentStore store)
+        {
+            return store.ExecuteTransformerAsync(this);
+        }
 
 		/// <summary>
 		/// Executes the index creation against the specified document database using the specified conventions
@@ -70,7 +80,7 @@ namespace Raven.Client.Indexes
 			databaseCommands.PutTransformer(TransformerName, transformerDefinition);
 
 			UpdateIndexInReplication(databaseCommands, documentConvention, (commands, url) =>
-				commands.DirectPutTransformer(TransformerName, url, transformerDefinition));
+				commands.PutTransformer(TransformerName, transformerDefinition));
 		}
 #endif
 

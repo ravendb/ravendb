@@ -4,12 +4,12 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class EmbeddableDocumentStoreUsingUrlWithConnectionString
+	public class EmbeddableDocumentStoreUsingUrlWithConnectionString : RavenTest
 	{
 		[Fact]
 		public void ShouldWork()
 		{
-			using(var store = new EmbeddableDocumentStore
+			using (var store = new EmbeddableDocumentStore
 			{
 				ConnectionStringName = "Server"
 			})

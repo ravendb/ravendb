@@ -13,7 +13,7 @@ namespace Raven.Client.Exceptions
 	/// This exception occurs when a (replication) conflict is encountered.
 	/// Usually this required a user to manually resolve the conflict.
 	/// </summary>
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 	[Serializable]
 #endif
 	public class ConflictException : Exception
@@ -41,6 +41,7 @@ namespace Raven.Client.Exceptions
 		/// Initializes a new instance of the <see cref="ConflictException"/> class.
 		/// </summary>
 		/// <param name="message">The message.</param>
+		/// <param name="properlyHandlesClientSideResolution"></param>
 		public ConflictException(string message, bool properlyHandlesClientSideResolution)
 			: base(message)
 		{
@@ -56,7 +57,7 @@ namespace Raven.Client.Exceptions
 		{
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ConflictException"/> class.
 		/// </summary>

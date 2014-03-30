@@ -87,7 +87,8 @@ namespace Raven.Client.Linq
 	    private void SetFacet(Expression<Func<T, object>> path, FacetAggregation facetAggregation)
 		{
 			var last = facets.Last();
-			last.AggregationField = path.ToPropertyPath('_');
+			last.AggregationField = path.ToPropertyPath();
+		    last.AggregationType = path.ExtractTypeFromPath().FullName;
 			last.Aggregation |= facetAggregation;
 		}
 
@@ -126,7 +127,7 @@ namespace Raven.Client.Linq
 			return this;
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		public FacetResults ToList()
 		{
 			return HandlRenames(queryable.ToFacets(AggregationQuery<T>.GetFacets(facets)));

@@ -66,7 +66,7 @@ namespace Raven.Client.Indexes
 		/// <value>The sort options.</value>
 		public IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> SortOptions { get; set; }
 
-        /// <summary>
+		/// <summary>
         /// Gets or sets the sort options.
         /// </summary>
         /// <value>The sort options.</value>
@@ -117,7 +117,12 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		public bool DisableInMemoryIndexing { get; set; }
 
-	    /// <summary>
+		/// <summary>
+		/// Max number of allowed indexing outputs per one source document
+		/// </summary>
+		public int? MaxIndexOutputsPerDocument { get; set; }
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
 		/// </summary>
 		public IndexDefinitionBuilder()
@@ -128,7 +133,7 @@ namespace Raven.Client.Indexes
 			IndexesStrings = new Dictionary<string, FieldIndexing>();
 			SortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
             SortOptionsStrings = new Dictionary<string, SortOptions>();
-            Suggestions = new Dictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions>();
+			Suggestions = new Dictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions>();
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 			AnalyzersStrings = new Dictionary<string, string>();
 			TermVectors = new Dictionary<Expression<Func<TReduceResult, object>>, FieldTermVector>();
@@ -164,6 +169,7 @@ namespace Raven.Client.Indexes
 				TermVectors =  ConvertToStringDictionary(TermVectors),
 				SpatialIndexes = ConvertToStringDictionary(SpatialIndexes),
 				DisableInMemoryIndexing = DisableInMemoryIndexing,
+				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
 			};
 
 			foreach (var indexesString in IndexesStrings)

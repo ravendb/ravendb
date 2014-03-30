@@ -26,6 +26,8 @@ namespace Raven.Database.Indexing
 		static readonly Regex untokenizedQuery = new Regex( FieldRegexVal + @"[\s\(]*(\[\[.+?\]\])|(?<=,)\s*(\[\[.+?\]\])(?=\s*[,\)])", RegexOptions.Compiled);
 		static readonly Regex searchQuery = new Regex(FieldRegexVal + @"\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
 		static readonly Regex dateQuery = new Regex(FieldRegexVal + @"\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)", RegexOptions.Compiled);
+		static readonly Regex rightOpenRangeQuery = new Regex(FieldRegexVal + @"\[(\S+)\sTO\s(\S+)\}", RegexOptions.Compiled);
+		static readonly Regex leftOpenRangeQuery = new Regex(FieldRegexVal + @"\{(\S+)\sTO\s(\S+)\]", RegexOptions.Compiled);
 
 		/* The reason that we use @emptyIn<PermittedUsers>:(no-results)
 		 * instead of using @in<PermittedUsers>:()
@@ -54,6 +56,7 @@ namespace Raven.Database.Indexing
 										: QueryParser.Operator.AND,
 					AllowLeadingWildcard = true
 				};
+				query = PreProcessMixedInclusiveExclusiveRangeQueries(query);
 				query = PreProcessUntokenizedTerms(query, queryParser);
 				query = PreProcessSearchTerms(query);
 				query = PreProcessDateTerms(query, queryParser);
@@ -100,12 +103,13 @@ namespace Raven.Database.Indexing
 				}
 				if (booleanQuery.Clauses.Count == 0)
 					return booleanQuery;
-
-				//merge only query members that have "OR" operator between them
-				var mergeGroups = booleanQuery.Clauses
-											  .Where(clause => clause.Occur == Occur.SHOULD)
-											  .Select(x => x.Query).OfType<IRavenLuceneMethodQuery>().GroupBy(x => x.Field).ToArray(); 
-				
+			
+				//merge only clauses that have "OR" operator between them
+				var mergeGroups = booleanQuery.Clauses.Where(clause => clause.Occur == Occur.SHOULD)
+													  .Select(x=>x.Query)													  
+													  .OfType<IRavenLuceneMethodQuery>()
+													  .GroupBy(x => x.Field)
+													  .ToArray();
 				if (mergeGroups.Length == 0)
 					return booleanQuery;
 
@@ -376,6 +380,72 @@ namespace Raven.Database.Indexing
 			}
 
 			return buffer.ToString();
+		}
+
+		public static string PreProcessMixedInclusiveExclusiveRangeQueries(string query)
+		{
+			// we need this method to support queries like [x, y} and {x, y]
+			// Lucene 4 will have a built-in support for this
+
+			StringBuilder queryStringBuilder = null;
+
+			var rightOpenRanges = rightOpenRangeQuery.Matches(query);
+			if (rightOpenRanges.Count > 0) // // field:[x, y} - right-open interval convert to (field: [x, y] AND NOT field:y)
+			{
+				queryStringBuilder = new StringBuilder(query);
+
+				for (var i = rightOpenRanges.Count - 1; i >= 0; i--) // reversing the scan so we won't affect positions of later items
+				{
+					var range = rightOpenRanges[i];
+					var field = range.Groups[1].Value;
+					var rangeStart = range.Groups[2].Value;
+					var rangeEnd = range.Groups[3].Value;
+
+					queryStringBuilder.Remove(range.Index, range.Length)
+					                  .Insert(range.Index, "(")
+					                  .Insert(range.Index + 1, field)
+					                  .Insert(range.Index + 1 + field.Length, ":[")
+					                  .Insert(range.Index + 1 + field.Length + 2, rangeStart)
+					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length, " TO ")
+					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4, rangeEnd)
+					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length, "] AND NOT ")
+					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10, field)
+					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length, ":")
+					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length + 1, rangeEnd)
+					                  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length + 1 + rangeEnd.Length, ")");
+				}
+			}
+
+			var leftOpenRanges = leftOpenRangeQuery.Matches(queryStringBuilder != null ? queryStringBuilder.ToString() : query);
+
+			if (leftOpenRanges.Count > 0) // field:{x, y] - left-open interval convert to (field: [x, y] AND NOT field:x)
+			{
+				if(queryStringBuilder == null)
+					queryStringBuilder = new StringBuilder(query);
+
+				for (var i = leftOpenRanges.Count - 1; i >= 0; i--) // reversing the scan so we won't affect positions of later items
+				{
+					var range = leftOpenRanges[i];
+					var field = range.Groups[1].Value;
+					var rangeStart = range.Groups[2].Value;
+					var rangeEnd = range.Groups[3].Value;
+
+					queryStringBuilder.Remove(range.Index, range.Length)
+									  .Insert(range.Index, "(")
+									  .Insert(range.Index + 1, field)
+									  .Insert(range.Index + 1 + field.Length, ":[")
+									  .Insert(range.Index + 1 + field.Length + 2, rangeStart)
+									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length, " TO ")
+									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4, rangeEnd)
+									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length, "] AND NOT ")
+									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10, field)
+									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length, ":")
+									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length + 1, rangeStart)
+									  .Insert(range.Index + 1 + field.Length + 2 + rangeStart.Length + 4 + rangeEnd.Length + 10 + field.Length + 1 + rangeStart.Length, ")");
+				}
+			}
+
+			return queryStringBuilder != null ? queryStringBuilder.ToString() : query;
 		}
 	}
 }

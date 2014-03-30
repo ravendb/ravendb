@@ -28,7 +28,7 @@ namespace Raven.Tests.Bugs
 					session.SaveChanges();
 				}
 
-				server.Database.Configuration.MaxPageSize = 20000;
+				server.SystemDatabase.Configuration.MaxPageSize = 20000;
 
 				using (var session = store.OpenSession())
 				{

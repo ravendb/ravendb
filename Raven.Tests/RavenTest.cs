@@ -4,52 +4,71 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
+using Raven.Client.Embedded;
+using Raven.Database;
 using Raven.Database.Util;
+using Raven.Server;
 using Raven.Tests.Helpers;
 using System.Diagnostics;
+using Xunit;
 
 namespace Raven.Tests
 {
-	using System.Collections.Generic;
+    public class RavenTest : RavenTestBase
+    {
+        static RavenTest()
+        {
+            LogManager.RegisterTarget<DatabaseMemoryTarget>();
+        }
 
-	public class RavenTest : RavenTestBase
-	{
-		static RavenTest()
-		{
-			LogManager.RegisterTarget<DatabaseMemoryTarget>();
-		}
+        public RavenTest()
+        {
+            SystemTime.UtcDateTime = () => DateTime.UtcNow;
+        }
 
-		public RavenTest()
-		{
-			SystemTime.UtcDateTime = () => DateTime.UtcNow;
-		}
+        protected void Consume(object o)
+        {
 
-		protected void Consume(object o)
-		{
-			
-		}
+        }
 
-		public double Timer(Action action)
-		{
-			var timer = Stopwatch.StartNew();
-			action.Invoke();
+        protected static void EnsureDtcIsSupported(EmbeddableDocumentStore documentStore)
+        {
+            EnsureDtcIsSupported(documentStore.DocumentDatabase);
+        }
+
+        protected static void EnsureDtcIsSupported(DocumentDatabase documentDatabase)
+        {
+            if (documentDatabase.TransactionalStorage.SupportsDtc == false)
+                throw new SkipException("This test requires DTC but the storage engine " + documentDatabase.TransactionalStorage.FriendlyName + " does not support it");
+        }
+
+        protected static void EnsureDtcIsSupported(RavenDbServer server)
+        {
+            EnsureDtcIsSupported(server.SystemDatabase);
+        }
+
+        public double Timer(Action action)
+        {
+            var timer = Stopwatch.StartNew();
+            action.Invoke();
             timer.Stop();
             Console.WriteLine("Time take (ms)- " + timer.Elapsed.TotalMilliseconds);
             return timer.Elapsed.TotalMilliseconds;
-		}
+        }
 
-		public static IEnumerable<object[]> Storages
-		{
-			get
-			{
-				return new[]
-                                       {
-                                                   new object[] { "munin" }, 
-                                                   new object[] { "esent" }
-                                       };
-			}
-		}
-	}
+        public static IEnumerable<object[]> Storages
+        {
+            get
+            {
+                return new[]
+				{
+					new object[] {"voron"},
+					new object[] {"esent"}
+				};
+            }
+        }
+    }
 }

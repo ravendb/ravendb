@@ -49,7 +49,7 @@ namespace Raven.Tests.Indexes
 
 				using (var s = store.OpenSession())
 				{
-					var items = s.Advanced.LuceneQuery<Item, WithDynamicIndex>()
+                    var items = s.Advanced.DocumentQuery<Item, WithDynamicIndex>()
 						.WaitForNonStaleResults()
 						.WhereEquals("Name", "Fitzchak")
 						.ToList();
@@ -82,7 +82,7 @@ namespace Raven.Tests.Indexes
 
 				using (var s = store.OpenSession())
 				{
-					var items = s.Advanced.LuceneQuery<Item, WithDynamicIndex>()
+                    var items = s.Advanced.DocumentQuery<Item, WithDynamicIndex>()
 						.WaitForNonStaleResults()
 						.WhereEquals("First Name", "Fitzchak")
 						.ToList();

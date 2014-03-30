@@ -34,7 +34,7 @@ namespace Raven.Tests.Bugs
 			using (var store = GetDocumentStore())
 			{
 				store.Initialize();
-				store.DatabaseCommands.EnsureDatabaseExists(_ravenDatabaseName);
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists(_ravenDatabaseName);
 			}
 		}
 

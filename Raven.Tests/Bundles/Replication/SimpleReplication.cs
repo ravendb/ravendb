@@ -3,16 +3,11 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Collections.Generic;
-using System.Net;
 using System.Threading;
-using Raven.Abstractions.Connection;
+
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Database.Server.Responders;
 using Raven.Json.Linq;
-using Raven.Server;
-using Raven.Tests.Bundles.Versioning;
+
 using Xunit;
 
 namespace Raven.Tests.Bundles.Replication
@@ -277,7 +272,7 @@ namespace Raven.Tests.Bundles.Replication
 
 			foreach (var ravenDbServer in servers)
 			{
-				ravenDbServer.Database.TransactionalStorage.Batch(
+				ravenDbServer.SystemDatabase.TransactionalStorage.Batch(
 					accessor => Assert.Null(accessor.Lists.Read("Raven/Replication/Docs/Tombstones", "companies/1")));
 			}
 		}

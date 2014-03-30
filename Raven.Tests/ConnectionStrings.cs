@@ -103,5 +103,27 @@ namespace Raven.Tests
 				Assert.Equal("d5723e19-92ad-4531-adad-8611e6e05c8a", store.ApiKey);
 			}
 		}
+
+		[Fact]
+		public void Can_get_failover_servers()
+		{
+			using (var store = new DocumentStore())
+			{
+				store.ParseConnectionString("Url=http://localhost:8079/;Failover={Url:'http://localhost:8078/'};Failover={Url:'http://localhost:8077', Database:'test'};Failover=Northwind|{Url:'http://localhost:8076/'};Failover={Url:'http://localhost:8075', Username:'user', Password:'secret'};Failover={Url:'http://localhost:8074', ApiKey:'d5723e19-92ad-4531-adad-8611e6e05c8a'}");
+
+				Assert.Equal("http://localhost:8079", store.Url);
+				Assert.Equal(4, store.FailoverServers.ForDefaultDatabase.Length);
+				Assert.Equal("http://localhost:8078", store.FailoverServers.ForDefaultDatabase[0].Url);
+				Assert.Equal("http://localhost:8077", store.FailoverServers.ForDefaultDatabase[1].Url);
+				Assert.Equal("test", store.FailoverServers.ForDefaultDatabase[1].Database);
+				Assert.Equal(1, store.FailoverServers.GetForDatabase("Northwind").Length);
+				Assert.Equal("http://localhost:8076", store.FailoverServers.GetForDatabase("Northwind")[0].Url);
+				Assert.Equal("http://localhost:8075", store.FailoverServers.ForDefaultDatabase[2].Url);
+				Assert.Equal("user", store.FailoverServers.ForDefaultDatabase[2].Username);
+				Assert.Equal("secret", store.FailoverServers.ForDefaultDatabase[2].Password);
+				Assert.Equal("http://localhost:8074", store.FailoverServers.ForDefaultDatabase[3].Url);
+				Assert.Equal("d5723e19-92ad-4531-adad-8611e6e05c8a", store.FailoverServers.ForDefaultDatabase[3].ApiKey);
+			}
+		}
 	}
 }

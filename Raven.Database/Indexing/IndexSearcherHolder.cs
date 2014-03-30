@@ -1,31 +1,30 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Lucene.Net.Index;
-using Lucene.Net.Search;
 using Raven.Abstractions;
-using Raven.Abstractions.Logging;
-using Raven.Database.Tasks;
-using Raven.Json.Linq;
+using Lucene.Net.Search;
 using Task = System.Threading.Tasks.Task;
+using Raven.Abstractions.Logging;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
 {
     public class IndexSearcherHolder
     {
-        private readonly string index;
+        private readonly int indexId;
         private readonly WorkContext context;
         private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         private volatile IndexSearcherHoldingState current;
 
-        public IndexSearcherHolder(string index, WorkContext context)
+        public IndexSearcherHolder(int indexId, WorkContext context)
         {
-            this.index = index;
+            this.indexId = indexId;
             this.context = context;
         }
 
@@ -55,12 +54,12 @@ namespace Raven.Database.Indexing
                         catch (Exception e)
                         {
                             Log.WarnException(
-                                string.Format("Failed to properly pre-warm the facets cache ({1}) for index {0}", index,
+                                string.Format("Failed to properly pre-warm the facets cache ({1}) for index {0}", indexId,
                                     string.Join(",", usedFacets)), e);
                         }
                         finally
                         {
-                            Log.Debug("Pre-warming the facet cache for {0} took {2}. Facets: {1}", index, string.Join(",", usedFacets), sp.Elapsed);
+                            Log.Debug("Pre-warming the facet cache for {0} took {2}. Facets: {1}", indexId, string.Join(",", usedFacets), sp.Elapsed);
                         }
                     });
                     preFillCache.Wait(context.Configuration.PrewarmFacetsSyncronousWaitTime);
@@ -136,13 +135,12 @@ namespace Raven.Database.Indexing
             private RavenJObject[] readEntriesFromIndex;
             private readonly Lazy<ManualResetEvent> disposed = new Lazy<ManualResetEvent>(() => new ManualResetEvent(false));
 
-
             private readonly ConcurrentDictionary<string, DateTime> lastFacetQuery = new ConcurrentDictionary<string, DateTime>();
 
             private readonly ReaderWriterLockSlim rwls = new ReaderWriterLockSlim();
 	        private readonly Dictionary<string, LinkedList<CacheVal>[]> cache = new Dictionary<string, LinkedList<CacheVal>[]>();
 
-            public ReaderWriterLockSlim Lock
+	        public ReaderWriterLockSlim Lock
             {
                 get { return rwls; }
             }
@@ -172,7 +170,7 @@ namespace Raven.Database.Indexing
                 }
             }
 
-            public IEnumerable<Term> GetTermsFromCache(string field, int doc)
+	        public IEnumerable<Term> GetTermsFromCache(string field, int doc)
             {
                 return GetFromCache(field, doc).Select(cacheVal => cacheVal.Term);
             }

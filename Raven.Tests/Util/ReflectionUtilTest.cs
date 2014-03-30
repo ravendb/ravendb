@@ -5,13 +5,12 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using Lucene.Net.Util;
 using Raven.Client.Document;
 using Xunit;
 
 namespace Raven.Tests.Util
 {
-	public class ReflectionUtilTest
+	public class ReflectionUtilTest : NoDisposalNeeded
 	{
 		[Fact]
 		public void Can_generate_simple_type_name_for_simple_type()

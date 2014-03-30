@@ -17,11 +17,8 @@ namespace Raven.Tests.Notifications
 		[Fact]
 		public void CanGetNotificationAboutIndexUpdate()
 		{
-			using (GetNewServer())
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			}.Initialize())
+			using (var server = GetNewServer())
+			using (var store = NewRemoteDocumentStore(ravenDbServer: server))
 			{
 				var list = new BlockingCollection<IndexChangeNotification>();
 				var taskObservable = store.Changes();
@@ -47,11 +44,8 @@ namespace Raven.Tests.Notifications
 		[Fact]
 		public void CanGetById()
 		{
-			using (GetNewServer())
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			}.Initialize())
+			using (var server = GetNewServer())
+			using (var store = NewRemoteDocumentStore(ravenDbServer: server))
 			{
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();

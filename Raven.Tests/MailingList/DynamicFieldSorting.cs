@@ -15,6 +15,11 @@ namespace Raven.Tests.MailingList
 {
 	public class DynamicIndexSort3Specs : RavenTest
 	{
+
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        {
+            configuration.MaxIndexOutputsPerDocument = 100;
+        }
 		public class DataSet
 		{
 			public string Id { get; set; }
@@ -98,7 +103,7 @@ namespace Raven.Tests.MailingList
 
 				using (var s = store.OpenSession())
 				{
-					var items = s.Advanced.LuceneQuery<WithDynamicIndex.ProjectionItem, WithDynamicIndex>()
+                    var items = s.Advanced.DocumentQuery<WithDynamicIndex.ProjectionItem, WithDynamicIndex>()
 						.WaitForNonStaleResults()
 						.OrderBy("+TixP|N1_Range")
 						.SelectFields<WithDynamicIndex.ProjectionItem>("SongId", "NumericAttributes")
@@ -140,7 +145,7 @@ namespace Raven.Tests.MailingList
 
 				using (var s = Store.OpenSession())
 				{
-					var items = s.Advanced.LuceneQuery<WithDynamicIndex.ProjectionItem, WithDynamicIndex>()
+                    var items = s.Advanced.DocumentQuery<WithDynamicIndex.ProjectionItem, WithDynamicIndex>()
 						.WaitForNonStaleResults()
 						.AddOrder("N1_Range", true, typeof(double))
 						.SelectFields<WithDynamicIndex.ProjectionItem>("SongId", "NumericAttributes")

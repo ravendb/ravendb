@@ -20,7 +20,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void Test()
 		{
-			using (var documentStore = NewDocumentStore(requestedStorage: "munin"))
+			using (var documentStore = NewDocumentStore(requestedStorage: "voron"))
 			{
 				documentStore.Initialize();
 				var ordersTotalByCustomerFor30Days = new Orders_TotalByCustomerFor30Days();
@@ -45,7 +45,7 @@ namespace Raven.Tests.Issues
 
 				// It should be less, but at 20 seconds, there's definitely something wrong
 				Assert.InRange(stopwatch.ElapsedMilliseconds, 0, 20000);
-				
+
 				//using (var session = documentStore.OpenSession())
 				//{
 				//	// example of how to query the index as of today to get the top customers over the last 30 days.

@@ -75,7 +75,7 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					var registration = session.Advanced.LuceneQuery<ProjectingDates.Registration>()
+                    var registration = session.Advanced.DocumentQuery<ProjectingDates.Registration>()
 						.WaitForNonStaleResults()
 						.Single();
 					Assert.False(session.Advanced.HasChanges);
@@ -112,7 +112,7 @@ namespace Raven.Tests.Bugs
 				{
 					for (int i = 0; i < 15; i++)
 					{
-						session.Advanced.LuceneQuery<ProjectingDates.Registration>().WaitForNonStaleResults().ToArray();
+						session.Advanced.DocumentQuery<ProjectingDates.Registration>().WaitForNonStaleResults().ToArray();
 
 						session.SaveChanges();
 					}
@@ -120,7 +120,7 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					Assert.Equal(2, session.Advanced.LuceneQuery<ProjectingDates.Registration>().WaitForNonStaleResults().ToList().Count());
+					Assert.Equal(2, session.Advanced.DocumentQuery<ProjectingDates.Registration>().WaitForNonStaleResults().ToList().Count());
 				}
 			}
 		}

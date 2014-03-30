@@ -21,6 +21,20 @@ namespace Raven.Database.Json
 {
 	public class ScriptedJsonPatcher
 	{
+		public enum OperationType
+		{
+			None,
+			Put,
+			Delete
+		}
+
+		public class Operation
+		{
+			public OperationType Type { get; set; }
+			public string DocumentKey { get; set; }
+			public JsonDocument Document { get; set; }
+		}
+
 		private static readonly ScriptsCache scriptsCache = new ScriptsCache();
 		private readonly Func<string, RavenJObject> loadDocument;
 
@@ -28,11 +42,13 @@ namespace Raven.Database.Json
 		private static Func<string, RavenJObject> loadDocumentStatic;
 
 		public List<string> Debug = new List<string>();
-		public IList<JsonDocument> CreatedDocs = new List<JsonDocument>();
 		private readonly int maxSteps;
 		private readonly int additionalStepsPerSize;
 
 		private readonly Dictionary<JsInstance, KeyValuePair<RavenJValue, object>> propertiesByValue = new Dictionary<JsInstance, KeyValuePair<RavenJValue, object>>();
+
+        private readonly Dictionary<string, JsonDocument> documentKeyContext = new Dictionary<string, JsonDocument>(); 
+		private readonly List<JsonDocument> incompleteDocumentKeyContext = new List<JsonDocument>();
 
 		public ScriptedJsonPatcher(DocumentDatabase database = null)
 		{
@@ -52,13 +68,49 @@ namespace Raven.Database.Json
 				additionalStepsPerSize = database.Configuration.AdditionalStepsForScriptBasedOnDocumentSize;
 				loadDocument = id =>
 				{
-					var jsonDocument = database.Get(id, null);
-					return jsonDocument == null ? null : jsonDocument.ToJson();
+				    JsonDocument document;
+                    if (documentKeyContext.TryGetValue(id, out document) == false)
+                        document = database.Documents.Get(id, null);
+
+                    return document == null ? null : document.ToJson();
 				};
 			}
 		}
 
-		public RavenJObject Apply(RavenJObject document, ScriptedPatchRequest patch, int size = 0, string docId = null)
+        protected void AddToContext(string key, JsonDocument document)
+        {
+			if(string.IsNullOrEmpty(key) || key.EndsWith("/"))
+				incompleteDocumentKeyContext.Add(document);
+			else
+				documentKeyContext[key] = document;
+        }
+
+        protected void DeleteFromContext(string key)
+        {
+            documentKeyContext[key] = null;
+        }
+
+        public IEnumerable<Operation> GetOperations()
+        {
+            return documentKeyContext.Select(x => new Operation()
+            {
+	            Type = x.Value != null ? OperationType.Put : OperationType.Delete,
+				DocumentKey = x.Key,
+				Document = x.Value
+            }).Union(incompleteDocumentKeyContext.Select(x => new Operation()
+            {
+	            Type = OperationType.Put,
+				DocumentKey = x.Key,
+				Document = x
+            }));
+        }
+
+		public IEnumerable<JsonDocument> GetPutOperations()
+		{
+			return GetOperations().Where(x => x.Type == OperationType.Put).Select(x => x.Document);
+		}
+
+	    public RavenJObject Apply(RavenJObject document, ScriptedPatchRequest patch, int size = 0, string docId = null)
 		{
 			if (document == null)
 				return null;
@@ -189,22 +241,22 @@ namespace Raven.Database.Json
 		{
 			switch (v.Class)
 			{
-			    case JsInstance.TYPE_OBJECT:
-			    case JsInstance.CLASS_OBJECT:
-			        return ToRavenJObject((JsObject) v);
-			    case JsInstance.CLASS_DATE:
-			        var dt = (DateTime) v.Value;
-			        return new RavenJValue(dt);
-			    case JsInstance.TYPE_NUMBER:
-			    case JsInstance.CLASS_NUMBER:
-			        var num = (double) v.Value;
+				case JsInstance.TYPE_OBJECT:
+				case JsInstance.CLASS_OBJECT:
+					return ToRavenJObject((JsObject)v);
+				case JsInstance.CLASS_DATE:
+					var dt = (DateTime)v.Value;
+					return new RavenJValue(dt);
+				case JsInstance.TYPE_NUMBER:
+				case JsInstance.CLASS_NUMBER:
+					var num = (double)v.Value;
 
 					KeyValuePair<RavenJValue, object> property;
 					if (propertiesByValue.TryGetValue(v, out property))
 					{
 						var originalValue = property.Key;
 						if (originalValue.Type == JTokenType.Float)
-			                return new RavenJValue(num);
+							return new RavenJValue(num);
 						if (originalValue.Type == JTokenType.Integer)
 				        {
 							// If the current value is exactly as the original value, we can return the original value before we made the JS conversion, 
@@ -214,15 +266,15 @@ namespace Raven.Database.Json
 								return originalValue;
 					        
 							return new RavenJValue((long) num);
-				        }
+					}
 			        }
 
-			        // If we don't have the type, assume that if the number ending with ".0" it actually an integer.
-			        var integer = Math.Truncate(num);
-			        if (Math.Abs(num - integer) < double.Epsilon)
-			            return new RavenJValue((long) integer);
-			        return new RavenJValue(num);
-			    case JsInstance.TYPE_STRING:
+					// If we don't have the type, assume that if the number ending with ".0" it actually an integer.
+					var integer = Math.Truncate(num);
+					if (Math.Abs(num - integer) < double.Epsilon)
+						return new RavenJValue((long)integer);
+					return new RavenJValue(num);
+				case JsInstance.TYPE_STRING:
 			    case JsInstance.CLASS_STRING:
 			    {
 			        const string ravenDataByteArrayToBase64 = "raven-data:byte[];base64,";
@@ -235,36 +287,36 @@ namespace Raven.Database.Json
 			        }
                     return new RavenJValue(v.Value);
 			    }
-			    case JsInstance.TYPE_BOOLEAN:
-			    case JsInstance.CLASS_BOOLEAN:
-			        return new RavenJValue(v.Value);
-			    case JsInstance.CLASS_NULL:
-			    case JsInstance.TYPE_NULL:
-			        return RavenJValue.Null;
-			    case JsInstance.CLASS_UNDEFINED:
-			    case JsInstance.TYPE_UNDEFINED:
-			        return RavenJValue.Null;
-			    case JsInstance.CLASS_ARRAY:
-			        var jsArray = ((JsArray) v);
-			        var rja = new RavenJArray();
+				case JsInstance.TYPE_BOOLEAN:
+				case JsInstance.CLASS_BOOLEAN:
+					return new RavenJValue(v.Value);
+				case JsInstance.CLASS_NULL:
+				case JsInstance.TYPE_NULL:
+					return RavenJValue.Null;
+				case JsInstance.CLASS_UNDEFINED:
+				case JsInstance.TYPE_UNDEFINED:
+					return RavenJValue.Null;
+				case JsInstance.CLASS_ARRAY:
+					var jsArray = ((JsArray)v);
+					var rja = new RavenJArray();
 
-			        for (int i = 0; i < jsArray.Length; i++)
-			        {
-			            var jsInstance = jsArray.get(i);
+					for (int i = 0; i < jsArray.Length; i++)
+					{
+						var jsInstance = jsArray.get(i);
 			            var ravenJToken = ToRavenJToken(jsInstance);
-			            if (ravenJToken == null)
-			                continue;
-			            rja.Add(ravenJToken);
-			        }
-			        return rja;
-			    case JsInstance.CLASS_REGEXP:
-			    case JsInstance.CLASS_ERROR:
-			    case JsInstance.CLASS_ARGUMENTS:
-			    case JsInstance.CLASS_DESCRIPTOR:
-			    case JsInstance.CLASS_FUNCTION:
-			        return null;
-			    default:
-			        throw new NotSupportedException(v.Class);
+						if (ravenJToken == null)
+							continue;
+						rja.Add(ravenJToken);
+					}
+					return rja;
+				case JsInstance.CLASS_REGEXP:
+				case JsInstance.CLASS_ERROR:
+				case JsInstance.CLASS_ARGUMENTS:
+				case JsInstance.CLASS_DESCRIPTOR:
+				case JsInstance.CLASS_FUNCTION:
+					return null;
+				default:
+					throw new NotSupportedException(v.Class);
 			}
 		}
 
@@ -353,14 +405,15 @@ function ExecutePatchScript(docInner){{
 #if DEBUG
 				.SetDebugMode(true)
 #else
-                .SetDebugMode(false)
+				.SetDebugMode(false)
 #endif
-                .SetMaxRecursions(50)
+				.SetMaxRecursions(50)
 				.SetMaxSteps(maxSteps);
 
             AddScript(jintEngine, "Raven.Database.Json.lodash.js");
-			AddScript(jintEngine, "Raven.Database.Json.ToJson.js");
-			AddScript(jintEngine, "Raven.Database.Json.RavenDB.js");
+            AddScript(jintEngine, "Raven.Database.Json.ToJson.js");
+            AddScript(jintEngine, "Raven.Database.Json.RavenDB.js");
+            AddScript(jintEngine, "Raven.Database.Json.ECMAScript5.js");
 
 			jintEngine.SetFunction("LoadDocument", ((Func<string, object>)(value =>
 			{
@@ -429,7 +482,7 @@ function ExecutePatchScript(docInner){{
 	            newDocument.Metadata = ToRavenJObject(meta);
 	        }
 	        ValidateDocument(newDocument);
-            CreatedDocs.Add(newDocument);
+            AddToContext(key, newDocument);
 	    }
 
 	    protected virtual void ValidateDocument(JsonDocument newDocument)

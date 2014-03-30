@@ -10,17 +10,22 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Client;
+using Raven.Client.Connection;
 using Raven.Client.Exceptions;
+using Raven.Database;
 using Raven.Database.Config;
+using Raven.Database.Server;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.Replication;
-using Raven.Tests.Linq;
+using Raven.Tests.MailingList;
 using Xunit;
+using User = Raven.Tests.Linq.User;
 
 namespace Raven.Tests.Issues
 {
-    public class RavenDB_1762 : ReplicationBase
+    public class RavenDb1762 : ReplicationBase
     {
+        
         [InheritedExport(typeof(AbstractDocumentReplicationConflictResolver))]
         public class DeleteOnConflict : AbstractDocumentReplicationConflictResolver
         {
@@ -36,12 +41,16 @@ namespace Raven.Tests.Issues
                 Enabled = false;
             }
 
-            public override bool TryResolve(string id, Raven.Json.Linq.RavenJObject metadata, Raven.Json.Linq.RavenJObject document, Raven.Abstractions.Data.JsonDocument existingDoc, Func<string, Raven.Abstractions.Data.JsonDocument> getDocument)
+            public override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc, Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave, out RavenJObject documentToSave)
             {
                 if (Enabled)
                 {
                     metadata.Add("Raven-Remove-Document-Marker", true);
                 }
+
+                metadataToSave = metadata;
+                documentToSave = document;
+
                 return Enabled;
             }
         }
@@ -72,7 +81,7 @@ namespace Raven.Tests.Issues
                     target.Add(key, source[key]);
             }
 
-            public override bool TryResolve(string id, Raven.Json.Linq.RavenJObject metadata, Raven.Json.Linq.RavenJObject document, Raven.Abstractions.Data.JsonDocument existingDoc, Func<string, Raven.Abstractions.Data.JsonDocument> getDocument)
+            public override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc, Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave, out RavenJObject documentToSave)
             {
                 if (Enabled)
                 {
@@ -83,14 +92,20 @@ namespace Raven.Tests.Issues
                     }
                 }
 
+                metadataToSave = metadata;
+                documentToSave = document;
+
                 return Enabled;
             }
         }
-
-        protected override void ConfigureServer(RavenConfiguration serverConfiguration)
-        {
-            serverConfiguration.Catalog.Catalogs.Add(new TypeCatalog(typeof(DeleteOnConflict), typeof(PutOnConflict)));
-        }
+	    protected override void ConfigureServer(RavenDBOptions dbOptions)
+	    {
+	        dbOptions.DatabaseLandlord.SetupTenantConfiguration += configuration =>
+	        {
+                configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(DeleteOnConflict)));
+                configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(PutOnConflict)));
+	        };
+	    }
 
         const string docId = "users/1";
 
@@ -109,8 +124,7 @@ namespace Raven.Tests.Issues
             }
 
             // master - master
-            SetupReplication(store1.DatabaseCommands, store2.Url);
-
+            SetupReplication(store1.DatabaseCommands, store2.Url.ForDatabase(store2.DefaultDatabase));
             WaitForReplication(store2, docId);
 
             DeleteOnConflict.Enabled = false;
@@ -156,7 +170,6 @@ namespace Raven.Tests.Issues
         {
             CanResolveConflict(new DeleteOnConflict(), resolver => resolver.Enable(), delegate(IDocumentStore store1, IDocumentStore store2)
             {
-
                 using (var s = store2.OpenSession())
                 {
                     var user = s.Load<User>(docId);
@@ -240,7 +253,6 @@ namespace Raven.Tests.Issues
         {
             CanResolveConflict(new DeleteOnConflict(), resolver => resolver.Disable(), delegate(IDocumentStore store1, IDocumentStore store2)
             {
-
                 using (var s = store2.OpenSession())
                 {
                     var user = s.Load<User>(docId);

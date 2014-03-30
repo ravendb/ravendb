@@ -32,7 +32,7 @@ namespace Raven.Database.Extensions
 		static readonly Regex findCharset = new Regex(@"charset=([\w-]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
 		private static readonly string EmbeddedLastChangedDate =
-			File.GetLastWriteTime(typeof(HttpExtensions).Assembly.Location).Ticks.ToString("G");
+			File.GetLastWriteTime(AssemblyHelper.GetAssemblyLocationFor(typeof(HttpExtensions))).Ticks.ToString("G");
 
 		private static readonly Encoding defaultEncoding = new UTF8Encoding(false);
 
@@ -115,7 +115,6 @@ namespace Raven.Database.Extensions
 			else
 			{
 				context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
-
 			}
 
 			if (minimal)
@@ -196,7 +195,7 @@ namespace Raven.Database.Extensions
 			context.Response.OutputStream.Write(data, 0, data.Length);
 		}
 
-		public static void WriteHeaders(this IHttpContext context, RavenJObject headers, Etag etag)
+		public static void WriteHeaders(this IHttpContext context, RavenJObject headers, Etag etag = null)
 		{
 			foreach (var header in headers)
 			{
@@ -232,7 +231,9 @@ namespace Raven.Database.Extensions
 				context.Response.StatusCode = headers.Value<int>("@Http-Status-Code");
 				context.Response.StatusDescription = headers.Value<string>("@Http-Status-Description");
 			}
-			context.WriteETag(etag);
+
+			if (etag != null)
+				context.WriteETag(etag);
 		}
 
 		private static string GetDateString(RavenJToken token, string format)
@@ -269,14 +270,6 @@ namespace Raven.Database.Extensions
 			context.Response.StatusCode = 204;
 			context.Response.StatusDescription = "No Content";
 		}
-
-		public static void SetStatusToCreated(this IHttpContext context, string location)
-		{
-			context.Response.StatusCode = 201;
-			context.Response.StatusDescription = "Created";
-			context.Response.AddHeader("Location", context.Configuration.GetFullUrl(location));
-		}
-
 
 		public static void SetStatusToWriteConflict(this IHttpContext context)
 		{
@@ -346,6 +339,15 @@ namespace Raven.Database.Extensions
 			return Math.Max(0, start);
 		}
 
+        public static int GetNextPageStart(this IHttpContext context)
+        {
+            bool isNextPage;
+            if (bool.TryParse(context.Request.QueryString["next-page"], out isNextPage) && isNextPage)
+                return GetStart(context);
+
+            return 0;
+        }
+
 		public static bool GetAllowStale(this IHttpContext context)
 		{
 			bool stale;
@@ -379,6 +381,13 @@ namespace Raven.Database.Extensions
 			}
 		}
 
+        public static bool GetWaitForNonStaleResultsAsOfNow(this IHttpContext context)
+        {
+            bool result;
+            bool.TryParse(context.Request.QueryString["waitForNonStaleResultsAsOfNow"], out result);
+            return result;
+        }
+
 		public static bool GetSkipTransformResults(this IHttpContext context)
 		{
 			bool result;
@@ -386,10 +395,10 @@ namespace Raven.Database.Extensions
 			return result;
 		}
 
-		public static bool GetCheckForUpdates(this IHttpContext context)
+		public static bool GetOverwriteExisting(this IHttpContext context)
 		{
 			bool result;
-			bool.TryParse(context.Request.QueryString["checkForUpdates"], out result);
+			bool.TryParse(context.Request.QueryString["overwriteExisting"], out result);
 			return result;
 		}
 
@@ -410,15 +419,22 @@ namespace Raven.Database.Extensions
 			return pageSize;
 		}
 
-		public static AggregationOperation GetAggregationOperation(this IHttpContext context)
+		public static bool IsDistinct(this IHttpContext context)
 		{
-			var aggAsString = context.Request.QueryString["aggregation"];
+			var distinct = context.Request.QueryString["distinct"];
+			if (string.Equals("true", distinct, StringComparison.OrdinalIgnoreCase))
+				return true;
+			var aggAsString = context.Request.QueryString["aggregation"]; // 2.x legacy support
 			if (aggAsString == null)
-			{
-				return AggregationOperation.None;
-			}
+				return false;
 
-			return (AggregationOperation)Enum.Parse(typeof(AggregationOperation), aggAsString, true);
+			if (string.Equals("Distinct", aggAsString, StringComparison.OrdinalIgnoreCase))
+				return true;
+
+			if (string.Equals("None", aggAsString, StringComparison.OrdinalIgnoreCase))
+				return false;
+
+			throw new NotSupportedException("AggregationOperation (except Distinct) is no longer supported");
 		}
 
 		public static DateTime? GetCutOff(this IHttpContext context)
@@ -505,6 +521,13 @@ namespace Raven.Database.Extensions
 					throw new BadRequestException(
 						"Could not parse hightlight query parameter as field highlight options");
 			}
+		}
+
+		public static bool GetExplainScores(this IHttpContext context)
+		{
+			bool result;
+			bool.TryParse(context.Request.QueryString["explainScores"], out result);
+			return result;
 		}
 
 		public static Etag GetEtagFromQueryString(this IHttpContext context)

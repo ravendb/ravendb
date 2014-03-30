@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Abstractions.Logging
 {
-	public class LoggerExecutionWrapperTests
+	public class LoggerExecutionWrapperTests : NoDisposalNeeded
 	{
 		private readonly LoggerExecutionWrapper sut;
 		private readonly FakeLogger fakeLogger;
@@ -67,11 +67,11 @@ namespace Raven.Tests.Abstractions.Logging
 
 			public void Log<TException>(LogLevel logLevel, Func<string> messageFunc, TException exception) where TException : Exception
 			{
-				string message = messageFunc();
-				if (message != null)
+				string messageResult = messageFunc();
+				if (messageResult != null)
 				{
 					this.logLevel = logLevel;
-					this.message = messageFunc() ?? this.message;
+					this.message = messageResult;
 					this.exception = exception;
 				}
 			}

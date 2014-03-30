@@ -3,12 +3,11 @@ using System.Text.RegularExpressions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
 using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class HighlightTesting : RavenTestBase
+	public class HighlightTesting : RavenTest
 	{
 		[Fact]
 		public void HighlightText()
@@ -27,7 +26,7 @@ namespace Raven.Tests.Indexes
 				store.DatabaseCommands.PutIndex(new ContentSearchIndex().IndexName, new ContentSearchIndex().CreateIndexDefinition());
 				session.SaveChanges();
 				FieldHighlightings nameHighlighting;
-				var results = session.Advanced.LuceneQuery<SearchItem>("ContentSearchIndex")
+                var results = session.Advanced.DocumentQuery<SearchItem>("ContentSearchIndex")
 				                     .WaitForNonStaleResults()
 				                     .Highlight("Name", 128, 1, out nameHighlighting)
 									 .Search("Name", searchFor)
@@ -55,7 +54,7 @@ namespace Raven.Tests.Indexes
 				store.DatabaseCommands.PutIndex(new ContentSearchIndex().IndexName, new ContentSearchIndex().CreateIndexDefinition());
 				session.SaveChanges();
 				FieldHighlightings nameHighlighting;
-				var results = session.Advanced.LuceneQuery<SearchItem>("ContentSearchIndex")
+                var results = session.Advanced.DocumentQuery<SearchItem>("ContentSearchIndex")
 									 .WaitForNonStaleResults()
 									 .Highlight("Name", 128, 1, out nameHighlighting)
 									 .Search("Name", searchFor)
@@ -67,7 +66,7 @@ namespace Raven.Tests.Indexes
 		}
 
 		[Fact]
-		public void HighlightText_LineRerturnedShorterThenOriginal()
+		public void HighlightText_LineReturnedShorterThenOriginal()
 		{
 			var item = new SearchItem
 			{
@@ -83,7 +82,7 @@ namespace Raven.Tests.Indexes
 				store.DatabaseCommands.PutIndex(new ContentSearchIndex().IndexName, new ContentSearchIndex().CreateIndexDefinition());
 				session.SaveChanges();
 				FieldHighlightings nameHighlighting;
-				var results = session.Advanced.LuceneQuery<SearchItem>("ContentSearchIndex")
+                var results = session.Advanced.DocumentQuery<SearchItem>("ContentSearchIndex")
 									 .WaitForNonStaleResults()
 									 .Highlight("Name", 20, 1, out nameHighlighting)
 									 .Search("Name", searchFor)
@@ -110,7 +109,7 @@ namespace Raven.Tests.Indexes
 				store.DatabaseCommands.PutIndex(new ContentSearchIndex().IndexName, new ContentSearchIndex().CreateIndexDefinition());
 				session.SaveChanges();
 				FieldHighlightings nameHighlighting;
-				var results = session.Advanced.LuceneQuery<SearchItem>("ContentSearchIndex")
+                var results = session.Advanced.DocumentQuery<SearchItem>("ContentSearchIndex")
 									 .WaitForNonStaleResults()
 									 .Highlight("Name", 20, 1, out nameHighlighting)
 									 .Search("Name", searchFor)
@@ -141,7 +140,7 @@ So, the greedy dog looked at his reflection and growled. The reflection growled 
 				store.DatabaseCommands.PutIndex(new ContentSearchIndex().IndexName, new ContentSearchIndex().CreateIndexDefinition());
 				session.SaveChanges();
 				FieldHighlightings nameHighlighting;
-				var results = session.Advanced.LuceneQuery<SearchItem>("ContentSearchIndex")
+                var results = session.Advanced.DocumentQuery<SearchItem>("ContentSearchIndex")
 									 .WaitForNonStaleResults()
 									 .Highlight("Name", 128, 20, out nameHighlighting)
 									 .Search("Name", searchFor)
@@ -181,7 +180,7 @@ So, the greedy dog looked at his reflection and growled. The reflection growled 
 				store.DatabaseCommands.PutIndex(new ContentSearchIndex().IndexName, new ContentSearchIndex().CreateIndexDefinition());
 				session.SaveChanges();
 				FieldHighlightings nameHighlighting;
-				var results = session.Advanced.LuceneQuery<SearchItem>("ContentSearchIndex")
+                var results = session.Advanced.DocumentQuery<SearchItem>("ContentSearchIndex")
 				                     .WaitForNonStaleResults()
 				                     .Highlight("Name", 128, 20, out nameHighlighting)
 				                     .Search("Name", searchFor)

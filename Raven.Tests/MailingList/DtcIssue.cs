@@ -28,9 +28,10 @@ namespace Raven.Tests.MailingList
 		public void StandaloneTestForPostingOnStackOverflow()
 		{
 			var testDocument = new Cart { Email = "test@abc.com" };
-			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true })
-			{
-				documentStore.Initialize();
+			using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
+            {
+
+                EnsureDtcIsSupported(documentStore);
 
 				using (var session = documentStore.OpenSession())
 				{

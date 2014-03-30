@@ -39,7 +39,7 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					var registration = session.Advanced.LuceneQuery<Registration>("Regs")
+                    var registration = session.Advanced.DocumentQuery<Registration>("Regs")
 						.SelectFields<Registration>("RegisteredAt")
 						.WaitForNonStaleResults()
 						.First();

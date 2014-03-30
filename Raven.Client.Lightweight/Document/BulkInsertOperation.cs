@@ -1,13 +1,10 @@
-﻿#if !SILVERLIGHT && !NETFX_CORE
+﻿using Raven.Client.Connection.Async;
+#if !NETFX_CORE
 using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-#if !SILVERLIGHT
 using Raven.Client.Changes;
 using Raven.Client.Connection;
-#else
-using Raven.Client.Connection.Async;
-#endif
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
@@ -26,11 +23,7 @@ namespace Raven.Client.Document
 		private readonly IDocumentStore documentStore;
 		private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
 		private readonly ILowLevelBulkInsertOperation operation;
-#if !SILVERLIGHT
-		public IDatabaseCommands DatabaseCommands { get; private set; }
-#else
 		public IAsyncDatabaseCommands DatabaseCommands { get; private set; }
-#endif
 		private readonly EntityToJson entityToJson;
 
 		public delegate void BeforeEntityInsert(string id, RavenJObject data, RavenJObject metadata);
@@ -49,20 +42,12 @@ namespace Raven.Client.Document
 
 			database = database ?? MultiDatabase.GetDatabaseName(documentStore.Url);
 
-#if !SILVERLIGHT
 			// Fitzchak: Should not be ever null because of the above code, please refactor this.
 			DatabaseCommands = database == null
-								   ? documentStore.DatabaseCommands.ForSystemDatabase()
-								   : documentStore.DatabaseCommands.ForDatabase(database);
+				? documentStore.AsyncDatabaseCommands.ForSystemDatabase()
+				: documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
-			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKey(database, DatabaseCommands, entity));
-#else
-			DatabaseCommands = database == null
-								   ? documentStore.AsyncDatabaseCommands.ForSystemDatabase()
-								   : documentStore.AsyncDatabaseCommands.ForDatabase(database);
-
-			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity).Result);
-#endif
+			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity).ResultUnwrap());
 			operation = DatabaseCommands.GetBulkInsertOperation(options, changes);
 			entityToJson = new EntityToJson(documentStore, listeners);
 		}

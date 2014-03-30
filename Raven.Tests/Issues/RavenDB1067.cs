@@ -19,9 +19,12 @@ namespace Raven.Tests.Issues
         [Fact]
         public void DocumentsNotCommitedIfTransactionIsPromotedToDistributedTx()
         {
-            using (var documentStore = NewRemoteDocumentStore())
+            using (var documentStore = NewRemoteDocumentStore(requestedStorage: "esent"))
             {
-                var enlistment = new ManyDocumentsViaDTC.DummyEnlistmentNotification();
+                if (documentStore.DatabaseCommands.GetStatistics().SupportsDtc == false)
+                    return;
+
+                var enlistment = new DummyEnlistmentNotification();
                 using (var tx = new TransactionScope())
                 {
                     using (var session = documentStore.OpenSession())

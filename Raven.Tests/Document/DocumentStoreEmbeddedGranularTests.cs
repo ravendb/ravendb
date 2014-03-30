@@ -32,7 +32,7 @@ namespace Raven.Tests.Document
 
 				session1.SaveChanges();
 				var session2 = documentStore.OpenSession();
-				var companyFound = session2.Advanced.LuceneQuery<Company>()
+                var companyFound = session2.Advanced.DocumentQuery<Company>()
 					.WaitForNonStaleResults()
 					.ToArray();
 

@@ -7,13 +7,13 @@ namespace Raven.Tests.Bugs.DTC
 {
 	public class UsingRemoteDTC : RemoteClientTest
 	{
-		[Theory]
-		[InlineData(true)]
-		[InlineData(false)]
-		public void CanUseRemoteDTC(bool runinmemory)
+		[Fact]
+		public void CanUseRemoteDTC()
 		{
-			using (GetNewServer(runInMemory: runinmemory))
+            using (var server = GetNewServer(requestedStorage: "esent"))
 			{
+                EnsureDtcIsSupported(server);
+			    
 				using(var store = new DocumentStore{ Url = "http://localhost:8079"}.Initialize())
 				{
 					User u2;

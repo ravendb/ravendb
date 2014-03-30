@@ -16,8 +16,8 @@ namespace Raven.Tests.Bundles.Replication
 			store1 = CreateStore();
 			store2 = CreateStore();
 
-			store1.DatabaseCommands.EnsureDatabaseExists("FailoverTest");
-			store2.DatabaseCommands.EnsureDatabaseExists("FailoverTest");
+			store1.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
+			store2.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
 
 			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"),
 							 store2.Url + "/databases/FailoverTest");

@@ -102,7 +102,7 @@ namespace Raven.Tests.Bugs
 
 				// Create index
 				new Wod_Search().Execute(store);
-
+				WaitForIndexing(store);
                 WaitForIndexing(store);
 
 				for (int i = 1; i <= 5; i++)
@@ -110,7 +110,7 @@ namespace Raven.Tests.Bugs
 					using (var session = store.OpenSession())
 					{
 						RavenQueryStatistics stats;
-						var query = session.Advanced.LuceneQuery<WodBase, Wod_Search>()
+                        var query = session.Advanced.DocumentQuery<WodBase, Wod_Search>()
 										   .WaitForNonStaleResults()
 										   .Statistics(out stats)
 										   .SelectFields<WodsProjection>();

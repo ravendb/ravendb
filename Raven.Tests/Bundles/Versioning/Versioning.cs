@@ -3,14 +3,13 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.IO;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client.Bundles.Versioning;
-using Raven.Json.Linq;
 using Raven.Smuggler;
 using Xunit;
 
@@ -255,7 +254,7 @@ namespace Raven.Tests.Bundles.Versioning
 					TransactionInformation = new TransactionInformation()
 				});
 
-				Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
+				Assert.Throws<ErrorResponseException>(() => session.SaveChanges());
 			}
 		}
 
@@ -454,24 +453,24 @@ namespace Raven.Tests.Bundles.Versioning
 				session.SaveChanges();
 			}
 
-			var options = new SmugglerOptions { BackupPath = Path.GetTempFileName() };
-			try
+            var file = Path.GetTempFileName();
+		    try
 			{
-				var exportSmuggler = new SmugglerApi(options, new RavenConnectionStringOptions { Url = documentStore.Url });
-				using (var file = File.Create(options.BackupPath))
-				{
-					exportSmuggler.ExportData(file, options, false).Wait();
-				}
+				new SmugglerApi().ExportData(new SmugglerExportOptions { ToFile = file, From = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }, new SmugglerOptions()).Wait();
 
-				using (CreateRavenDbServer(port: 8078))
 				using (var documentStore2 = CreateDocumentStore(port: 8078))
 				{
-					var importSmuggler = new SmugglerApi(options, new RavenConnectionStringOptions
+					var importSmuggler = new SmugglerApi();
+					importSmuggler.ImportData(new SmugglerImportOptions
 					{
-						Url = documentStore2.Url,
-						Credentials = documentStore2.Credentials
-					});
-					importSmuggler.ImportData(options).Wait();
+						FromFile = file,
+						To = new RavenConnectionStringOptions
+						{
+							Url = documentStore2.Url,
+							Credentials = documentStore2.Credentials,
+							DefaultDatabase = documentStore2.DefaultDatabase
+						}
+					}, new SmugglerOptions()).Wait();
 
 					using (var session = documentStore2.OpenSession())
 					{
@@ -491,14 +490,12 @@ namespace Raven.Tests.Bundles.Versioning
 			}
 			finally
 			{
-				if (File.Exists(options.BackupPath))
+                if (File.Exists(file))
 				{
-					File.Delete(options.BackupPath);
+                    File.Delete(file);
 				}
 			}
 		}
-
-		#region Nested type: Comment
 
 		public class Comment
 		{
@@ -506,17 +503,11 @@ namespace Raven.Tests.Bundles.Versioning
 			public string Name { get; set; }
 		}
 
-		#endregion
-
-		#region Nested type: User
-
 		public class User
 		{
 			public string Id { get; set; }
 			public string Name { get; set; }
 		}
-
-		#endregion
 
 		#region Nested type: Product
 

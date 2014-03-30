@@ -23,9 +23,12 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void Several_SaveChanges_for_the_same_document_in_single_transaction_and_the_same_session_should_work()
 		{
-			using (var documentStore = NewRemoteDocumentStore(runInMemory:false,requestedStorage:"esent"))
+            using (var documentStore = NewRemoteDocumentStore(runInMemory: false, requestedStorage: "esent"))
 			using (var session = documentStore.OpenSession())
 			{
+                if(documentStore.DatabaseCommands.GetStatistics().SupportsDtc == false)
+                    return;
+
 				session.Advanced.UseOptimisticConcurrency = true;
 				session.Advanced.AllowNonAuthoritativeInformation = false;
 
@@ -36,7 +39,7 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 
 					newDoc.Data = "Bar";
-					session.SaveChanges(); 
+					session.SaveChanges();
 
 					newDoc.Data = "Foo-Bar!";
 					Assert.DoesNotThrow(session.SaveChanges); //should not throw concurrency exception
@@ -49,9 +52,12 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void Several_SaveChanges_for_the_same_document_in_single_transaction_should_allow_commit_without_concurrency_exception()
 		{
-			using (var documentStore = NewRemoteDocumentStore(runInMemory: false, requestedStorage: "esent"))
+            using (var documentStore = NewRemoteDocumentStore(runInMemory: false, requestedStorage: "esent"))
 			using (var session = documentStore.OpenSession())
 			{
+                if (documentStore.DatabaseCommands.GetStatistics().SupportsDtc == false)
+                    return;
+
 				session.Advanced.UseOptimisticConcurrency = true;
 				session.Advanced.AllowNonAuthoritativeInformation = false;
 
@@ -59,7 +65,7 @@ namespace Raven.Tests.Issues
 				{
 					using (var transaction = new TransactionScope())
 					{
-						var newDoc = new TestDoc {Data = "Foo"};
+						var newDoc = new TestDoc { Data = "Foo" };
 						session.Store(newDoc);
 						session.SaveChanges();
 
@@ -78,9 +84,12 @@ namespace Raven.Tests.Issues
 		{
 			var input = GenerateEditable();
 
-			using (var documentStore = NewRemoteDocumentStore(runInMemory:false,requestedStorage:"esent"))
+			using (var documentStore = NewRemoteDocumentStore(runInMemory: false, requestedStorage: "voron"))
 			using (var session = documentStore.OpenSession())
-			{				
+			{
+                if (documentStore.DatabaseCommands.GetStatistics().SupportsDtc == false)
+                    return;
+
 				session.Advanced.UseOptimisticConcurrency = true;
 				session.Advanced.AllowNonAuthoritativeInformation = false;
 
@@ -116,7 +125,7 @@ namespace Raven.Tests.Issues
 
 					session.Store(updatedCourse);
 					session.SaveChanges();
-					
+
 					students.ForEach(x =>
 					{
 						x.CourseId = updatedCourse.Id;

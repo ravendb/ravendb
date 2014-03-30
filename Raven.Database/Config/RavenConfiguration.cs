@@ -29,7 +29,6 @@ namespace Raven.Database.Config
 			Initialize();
 		}
 
-
 		public void LoadFrom(string path)
 		{
 			var configuration = XDocument.Load(path);

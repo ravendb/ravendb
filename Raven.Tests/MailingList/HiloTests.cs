@@ -90,7 +90,7 @@ namespace Raven.Tests.MailingList
 									  Url = "http://localhost:8079"
 								  }.Initialize())
 			{
-				server.Database.TransactionalStorage.Batch(accessor =>
+				server.SystemDatabase.TransactionalStorage.Batch(accessor =>
 				{
 					accessor.Documents.AddDocument(
 						"Raven/Hilo/Users/Conflict/1", null,

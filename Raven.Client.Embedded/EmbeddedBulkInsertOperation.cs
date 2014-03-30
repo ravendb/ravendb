@@ -3,10 +3,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
+using Raven.Client.Util;
 using Raven.Database;
 using Raven.Json.Linq;
 using Task = System.Threading.Tasks.Task;
@@ -24,8 +26,9 @@ namespace Raven.Client.Embedded
 		BlockingCollection<JsonDocument> queue;
 		private Task doBulkInsert;
 	    private IDisposable subscription;
+		private bool disposed;
 
-	    /// <summary>
+		/// <summary>
 		/// Create new instance of this class
 		/// </summary>
 		public EmbeddedBulkInsertOperation(DocumentDatabase database,BulkInsertOptions options, IDatabaseChanges changes)
@@ -39,7 +42,7 @@ namespace Raven.Client.Embedded
 
 			doBulkInsert = Task.Factory.StartNew(() =>
 			{
-				database.BulkInsert(options, YieldDocuments(cancellationToken), OperationId);
+				database.Documents.BulkInsert(options, YieldDocuments(cancellationToken), OperationId);
 			});
 
 			SubscribeToBulkInsertNotifications(changes);
@@ -104,29 +107,43 @@ namespace Raven.Client.Embedded
 		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
 		/// </summary>
 		/// <returns></returns>
-		public Task DisposeAsync()
+		public async Task DisposeAsync()
 		{
-			Dispose();
-			return new CompletedTask();
+			if (disposed)
+				return;
+			disposed = true;
+			queue.Add(null);
+
+			await doBulkInsert.ConfigureAwait(false);
+			doBulkInsert.AssertNotFailed();
+
+			ReportInternal("Done with bulk insert");
+		}
+
+		private void ReportInternal(string format, params object[] args)
+		{
+			var onReport = Report;
+			if (onReport != null)
+				onReport(string.Format(format, args));
 		}
 
 		/// <summary>
 		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
 		/// </summary>
-		public void Dispose()
-		{
-			queue.Add(null);
-            
-            if(subscription != null)
+        public void Dispose()
+        {
+            if (disposed)
+                return;
+
+            if (subscription != null)
                 subscription.Dispose();
 
-			doBulkInsert.Wait();
-
-
-			var onReport = Report;
-			if (onReport != null)
-				onReport("Done with bulk insert");
-		}
+            using (NoSynchronizationContext.Scope())
+            {
+                var disposeAsync = DisposeAsync().ConfigureAwait(false);
+                disposeAsync.GetAwaiter().GetResult();
+            }
+        }
 
 		/// <summary>
 		/// Operation Id

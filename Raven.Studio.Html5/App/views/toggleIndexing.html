@@ -1,0 +1,27 @@
+﻿<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">Toggle Indexing</h3>
+    </div>
+    <div class="panel-body">
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                <div class="glyphicon glyphicon-info-sign"></div>
+                Enable and disable indexing
+            </div>
+        </div>
+
+        <button class="btn btn-primary" data-bind="click: disableIndexing, visible: indexingStatus() != 'Paused'">
+            <span class="glyphicon glyphicon-stop"></span>
+            <span>Disable Indexing</span>
+        </button>
+
+        <button class="btn btn-primary" data-bind="click: enableIndexing, visible: indexingStatus() != 'Indexing'">
+            <span class="glyphicon glyphicon-play"></span>
+            <span>Enable Indexing</span>
+        </button>
+
+        <div>
+            Current Status: <span data-bind="text: indexingStatus"></span>
+        </div>
+    </div>
+</div>

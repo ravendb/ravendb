@@ -29,7 +29,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 
 	        const string database = "MoreLikeThisTenant";
 
-	        store.DatabaseCommands.EnsureDatabaseExists(database);
+			store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists(database);
 
             using (var session = store.OpenSession(database))
             {

@@ -1,4 +1,7 @@
-﻿using Raven.Abstractions.Indexing;
+﻿using System.Threading;
+using System.Threading.Tasks;
+
+using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
@@ -17,7 +20,7 @@ namespace Raven.Tests.Bundles.Replication
 			var store2 = CreateStore();
 			var store3 = CreateStore();
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
+            SetupReplication(store1.DatabaseCommands, store2, store3);
 
 			var index = new IndexSample();
 			index.Execute(store1.DatabaseCommands, new DocumentConvention());
@@ -27,20 +30,19 @@ namespace Raven.Tests.Bundles.Replication
 		}
 
 		[Fact]
-		public void When_storing_index_replicate_to_all_stores_async()
+		public async Task When_storing_index_replicate_to_all_stores_async()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 			var store3 = CreateStore();
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
+            SetupReplication(store1.DatabaseCommands, store2, store3);
 
 			var index = new IndexSample();
-			index.ExecuteAsync(store1.AsyncDatabaseCommands, new DocumentConvention()).ContinueWith(task =>
-			{
-				Assert.True(store2.DatabaseCommands.GetIndexNames(0, 10).ToList().Contains(index.IndexName));
-				Assert.True(store3.DatabaseCommands.GetIndexNames(0, 10).ToList().Contains(index.IndexName));
-			}).Wait();
+		    await index.ExecuteAsync(store1.AsyncDatabaseCommands, new DocumentConvention());
+
+		    Assert.True(store2.DatabaseCommands.GetIndexNames(0, 10).ToList().Contains(index.IndexName));
+		    Assert.True(store3.DatabaseCommands.GetIndexNames(0, 10).ToList().Contains(index.IndexName));
 		}
 
         [Fact]

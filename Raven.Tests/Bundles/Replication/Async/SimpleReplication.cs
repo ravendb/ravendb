@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Threading;
-using Raven.Client.Extensions;
+using System.Threading.Tasks;
 using Raven.Tests.Bundles.Versioning;
 using Xunit;
 
@@ -13,7 +13,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 	public class SimpleReplication : ReplicationBase
 	{
 		[Fact]
-		public void Can_replicate_between_two_instances()
+		public async Task Can_replicate_between_two_instances()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
@@ -22,8 +22,8 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 			using (var session = store1.OpenAsyncSession())
 			{
-				session.Store(new Company { Name = "Hibernating Rhinos" });
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(new Company { Name = "Hibernating Rhinos" });
+				await session.SaveChangesAsync();
 			}
 
 			Company company = WaitForDocument<Company>(store2, "companies/1");
@@ -31,7 +31,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 		}
 
 		[Fact]
-		public void Can_replicate_large_number_of_documents_between_two_instances()
+		public async Task Can_replicate_large_number_of_documents_between_two_instances()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
@@ -42,9 +42,9 @@ namespace Raven.Tests.Bundles.Replication.Async
 			{
 				for (int i = 0; i < 150; i++)
 				{
-					session.Store(new Company { Name = "Hibernating Rhinos" });
+					await session.StoreAsync(new Company { Name = "Hibernating Rhinos" });
 				}
-				session.SaveChangesAsync().Wait();
+				await session.SaveChangesAsync();
 			}
 
 
@@ -58,7 +58,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 					var countFound = 0;
 					for (int j = 0; j < 150; j++)
 					{
-						var company = session.LoadAsync<Company>("companies/" + (i + 1)).Result;
+						var company = await session.LoadAsync<Company>("companies/" + (i + 1));
 						if (company == null)
 							break;
 						countFound++;
@@ -73,7 +73,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 		}
 
 		[Fact]
-		public void Will_not_replicate_replicated_documents()
+		public async Task Will_not_replicate_replicated_documents()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
@@ -88,11 +88,11 @@ namespace Raven.Tests.Bundles.Replication.Async
 			using (var session = store1.OpenAsyncSession())
 			{
 				 company = new Company { Name = "Hibernating Rhinos" };
-				session.Store(company);
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(company);
+				await session.SaveChangesAsync();
 				id = company.Id;
 				session.Advanced.Clear();
-				company = session.LoadAsync<Company>(id).Result;
+				company = await session.LoadAsync<Company>(id);
 				etag = session.Advanced.GetMetadataFor(company).Value<string>("@etag");
 			}
 
@@ -102,7 +102,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 			{
 				using (var session = store2.OpenAsyncSession()) // waiting for document to show up.
 				{
-					company = session.LoadAsync<Company>(id).Result;
+					company = await session.LoadAsync<Company>(id);
 					if (company != null)
 						break;
 					Thread.Sleep(100);
@@ -117,7 +117,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 			{
 				using (var session = store1.OpenAsyncSession())
 				{
-					company = session.LoadAsync<Company>(id).Result;
+					company = await session.LoadAsync<Company>(id);
 					Assert.Equal(etag, session.Advanced.GetMetadataFor(company).Value<string>("@etag"));
 				}
 				Thread.Sleep(100);
@@ -125,7 +125,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 		}
 
 		[Fact]
-		public void Can_replicate_delete_between_two_instances()
+		public async Task Can_replicate_delete_between_two_instances()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
@@ -134,8 +134,8 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 			using (var session = store1.OpenAsyncSession())
 			{
-				session.Store(new Company { Name = "Hibernating Rhinos" });
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(new Company { Name = "Hibernating Rhinos" });
+				await session.SaveChangesAsync();
 			}
 
 			Company company = null;
@@ -143,7 +143,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 			{
 				using (var session = store2.OpenAsyncSession())
 				{
-					company = session.LoadAsync<Company>("companies/1").Result;
+					company = await session.LoadAsync<Company>("companies/1");
 					if (company != null)
 						break;
 					Thread.Sleep(100);
@@ -154,8 +154,8 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 			using (var session = store1.OpenAsyncSession())
 			{
-				session.Delete(session.LoadAsync<Company>("companies/1").Result);
-				session.SaveChangesAsync().Wait();
+				session.Delete(await session.LoadAsync<Company>("companies/1"));
+				await session.SaveChangesAsync();
 			}
 
 
@@ -163,7 +163,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 			for (int i = 0; i < RetriesCount; i++)
 			{
 				using (var session = store2.OpenAsyncSession())
-					deletedCompany = session.LoadAsync<Company>("companies/1").Result;
+					deletedCompany = await session.LoadAsync<Company>("companies/1");
 				if (deletedCompany == null)
 					break;
 				Thread.Sleep(100);

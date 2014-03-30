@@ -11,6 +11,7 @@ using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Bundles.Versioning;
@@ -19,46 +20,25 @@ using System.Linq;
 
 namespace Raven.Tests.Bundles.Expiration
 {
-	public class Expiration : IDisposable
+	public class Expiration : RavenTest
 	{
-		private readonly string path;
 		private readonly DocumentStore documentStore;
 		private readonly RavenDbServer ravenDbServer;
 
 		public Expiration()
 		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
-			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-			var ravenConfiguration = new Raven.Database.Config.RavenConfiguration
-			{
-				Port = 8079,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-				DataDirectory = path,
-				Settings =
-					{
-						{"Raven/Expiration/DeleteFrequencySeconds", "1"},
-						{"Raven/ActiveBundles", "DocumentExpiration"}
-					}
-			};
-			ravenConfiguration.PostInit();
-			ravenDbServer = new RavenDbServer(
-				ravenConfiguration);
 			SystemTime.UtcDateTime = () => DateTime.UtcNow;
-			documentStore = new DocumentStore
+            ravenDbServer = GetNewServer(activeBundles: "DocumentExpiration", configureConfig: configuration =>
 			{
-				Url = "http://localhost:8079"
-			};
-			documentStore.Initialize();
+				configuration.Settings["Raven/Expiration/DeleteFrequencySeconds"] = "1";
+			});
+			documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer);
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			SystemTime.UtcDateTime = null;
-
-			documentStore.Dispose();
-			ravenDbServer.Dispose();
-			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+			base.Dispose();
 		}
 
 		[Fact]
@@ -80,7 +60,7 @@ namespace Raven.Tests.Bundles.Expiration
 				var metadata = session.Advanced.GetMetadataFor(company2);
 				var expirationDate = metadata["Raven-Expiration-Date"];
 				Assert.NotNull(expirationDate);
-				DateTime dateTime = expirationDate.Value<DateTime>();
+				var dateTime = expirationDate.Value<DateTime>();
 				Assert.Equal(DateTimeKind.Utc, dateTime.Kind);
 				Assert.Equal(expiry, expirationDate);
 			}
@@ -121,7 +101,7 @@ namespace Raven.Tests.Bundles.Expiration
 				session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new RavenJValue(expiry);
 				session.SaveChanges();
 
-				session.Advanced.LuceneQuery<Company>("Raven/DocumentsByExpirationDate")
+                session.Advanced.DocumentQuery<Company>("Raven/DocumentsByExpirationDate")
 					.WaitForNonStaleResults()
 					.ToList();
 			}
@@ -138,9 +118,9 @@ namespace Raven.Tests.Bundles.Expiration
 			}
 
 			JsonDocument documentByKey = null;
-			for (int i = 0; i < 100; i++)
+			for (var i = 0; i < 100; i++)
 			{
-				ravenDbServer.Database.TransactionalStorage.Batch(accessor =>
+				ravenDbServer.SystemDatabase.TransactionalStorage.Batch(accessor =>
 				{
 					documentByKey = accessor.Documents.DocumentByKey("companies/1", null);
 				});

@@ -7,7 +7,6 @@ namespace Raven.Tests.Bugs
 {
 	using System.Linq;
 	using Client.Indexes;
-	using Raven.Storage.Managed;
 	using Xunit;
 
 	public class NotUpdatedReduceKeyStatsIssue : RavenTest
@@ -78,15 +77,16 @@ namespace Raven.Tests.Bugs
 					session.Query<UsersByName.Result, UsersByName>().Customize(x => x.WaitForNonStaleResults()).ToList();
 				}
 
+                var indexId = store.DocumentDatabase.Indexes.GetIndexDefinition(index.IndexName).IndexId;
 				storage.Batch(accessor =>
 				{
-					var stats = accessor.MapReduce.GetKeysStats(index.IndexName, 0, 10).ToList();
+					var stats = accessor.MapReduce.GetKeysStats(indexId, 0, 10).ToList();
 					Assert.Equal(2, stats.Count);
 					Assert.Equal(2, stats.First(x => x.Key == "Adam").Count);
 					Assert.Equal(1, stats.First(x => x.Key == "John").Count);
 				});
 
-				store.DocumentDatabase.Delete("Users/1", null, null); // delete "Adam" reduce key
+				store.DocumentDatabase.Documents.Delete("Users/1", null, null); // delete "Adam" reduce key
 
 				using (var session = store.OpenSession())
 				{
@@ -95,7 +95,7 @@ namespace Raven.Tests.Bugs
 
 				storage.Batch(accessor =>
 				{
-					var stats = accessor.MapReduce.GetKeysStats(index.IndexName, 0, 10).ToList();
+					var stats = accessor.MapReduce.GetKeysStats(indexId, 0, 10).ToList();
 					Assert.Equal(2, stats.Count);
 					Assert.Equal(1, stats.First(x => x.Key == "Adam").Count);
 					Assert.Equal(1, stats.First(x => x.Key == "John").Count);

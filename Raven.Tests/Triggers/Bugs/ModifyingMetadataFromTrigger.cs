@@ -1,5 +1,7 @@
 using System;
 using System.ComponentModel.Composition.Hosting;
+
+using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -14,7 +16,7 @@ namespace Raven.Tests.Triggers.Bugs
 
 		public ModifyingMetadataFromTrigger()
 		{
-			store = NewRemoteDocumentStore();
+			store = NewRemoteDocumentStore(databaseName: Constants.SystemDatabase);
 		}
 
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)

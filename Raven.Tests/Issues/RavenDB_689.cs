@@ -41,12 +41,12 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void TwoMastersOneSlaveAttachmentReplicationIssue()
 		{
-			var store1 = CreateStore(requestedStorage: "esent");
-			var store2 = CreateStore(requestedStorage: "esent");
-			var store3 = CreateStore(requestedStorage: "esent");
+			var store1 = CreateStore();
+			var store2 = CreateStore();
+			var store3 = CreateStore();
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
-			SetupReplication(store2.DatabaseCommands, store1.Url, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store2, store3);
+			SetupReplication(store2.DatabaseCommands, store1, store3);
 
 			store1.DatabaseCommands.PutAttachment("users/1", null, new MemoryStream(new byte[] { 1 }), new RavenJObject());
 
@@ -56,7 +56,9 @@ namespace Raven.Tests.Issues
 			RemoveReplication(store1.DatabaseCommands);
 			RemoveReplication(store2.DatabaseCommands);
 
-			SetupReplication(store2.DatabaseCommands, store3.Url);
+			SetupReplication(store2.DatabaseCommands, store3);
+
+			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
 			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
@@ -71,7 +73,7 @@ namespace Raven.Tests.Issues
 			store1.DatabaseCommands.PutAttachment("users/1", attachment.Etag, new MemoryStream(new byte[] { 3 }), attachment.Metadata);
 
 			RemoveReplication(store2.DatabaseCommands);
-			SetupReplication(store1.DatabaseCommands, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store3);
 
 			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
@@ -88,8 +90,10 @@ namespace Raven.Tests.Issues
 
 			RemoveReplication(store1.DatabaseCommands);
 			RemoveReplication(store2.DatabaseCommands);
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
-			SetupReplication(store2.DatabaseCommands, store1.Url, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store2, store3);
+			SetupReplication(store2.DatabaseCommands, store1, store3);
+
+			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
 			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
@@ -148,12 +152,12 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void TwoMastersOneSlaveDocumentReplicationIssue()
 		{
-			var store1 = CreateStore(requestedStorage:"esent");
-			var store2 = CreateStore(requestedStorage: "esent");
-			var store3 = CreateStore(requestedStorage: "esent");
+			var store1 = CreateStore();
+			var store2 = CreateStore();
+			var store3 = CreateStore();
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
-			SetupReplication(store2.DatabaseCommands, store1.Url, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store2, store3);
+			SetupReplication(store2.DatabaseCommands, store1, store3);
 
 			using (var session = store1.OpenSession())
 			{
@@ -167,7 +171,9 @@ namespace Raven.Tests.Issues
 			RemoveReplication(store1.DatabaseCommands);
 			RemoveReplication(store2.DatabaseCommands);
 
-			SetupReplication(store2.DatabaseCommands, store3.Url);
+			SetupReplication(store2.DatabaseCommands, store3);
+
+			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
 			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
@@ -210,7 +216,7 @@ namespace Raven.Tests.Issues
 			}
 
 			RemoveReplication(store2.DatabaseCommands);
-			SetupReplication(store1.DatabaseCommands, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store3);
 
 			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
@@ -230,8 +236,10 @@ namespace Raven.Tests.Issues
 
 			RemoveReplication(store1.DatabaseCommands);
 			RemoveReplication(store2.DatabaseCommands);
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
-			SetupReplication(store2.DatabaseCommands, store1.Url, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store2, store3);
+			SetupReplication(store2.DatabaseCommands, store1, store3);
+
+			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 
 			Thread.Sleep(1000); // give the replication task more time to get new destinations setup
 

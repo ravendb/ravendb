@@ -92,12 +92,6 @@ namespace Raven.StressTests.Races
 		{
 			Run<OverwriteDocuments>(x => x.WillThrowWhenOptimisticConcurrencyIsOn(), 10);
 		}
-		
-		[Fact]
-		public void MultiGetProfiling()
-		{
-			Run<MultiGetProfiling>(x => x.CanProfileFullyAggressivelyCached(), 100);
-		}
 
 		[Fact]
 		public void AggressiveCacheShouldUseNotificationsToInvalidateOutdatedItemsInCache()
@@ -106,6 +100,12 @@ namespace Raven.StressTests.Races
 			Run<RavenDB_406>(x => x.QueryResultShouldBeUpToDateEvenIfAggressiveCacheIsEnabled(), 10);
 			Run<RavenDB_406>(x => x.CacheClearingShouldTakeIntoAccountTenantDatabases(), 10);
 			Run<RavenDB_406>(x => x.ShouldServeFromCacheIfThereWasNoChange(), 10);
+		}
+		
+		[Fact]
+		public void MultiGetProfiling()
+		{
+			Run<MultiGetProfiling>(x => x.CanProfileFullyAggressivelyCached(), 100);
 		}
 	}
 }

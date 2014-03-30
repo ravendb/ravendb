@@ -30,17 +30,17 @@ namespace Raven.Tests.Security.OAuth
 
 		private int storeCounter, databaseCounter;
 
-		protected override void ConfigureStore(DocumentStore store)
+		protected override void ModifyStore(DocumentStore store)
 		{
 			store.Conventions.FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			store.Credentials = null;
 			store.ApiKey = apiKeys[storeCounter++];
 		}
 
-		protected override void ConfigureDatabase(Database.DocumentDatabase database)
+        protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)
 		{
 			var apiKey = apiKeys[databaseCounter++];
-			database.Put("Raven/ApiKeys/" + apiKey.Split('/')[0], null, RavenJObject.FromObject(new ApiKeyDefinition
+			database.Documents.Put("Raven/ApiKeys/" + apiKey.Split('/')[0], null, RavenJObject.FromObject(new ApiKeyDefinition
 			{
 				Name = apiKey.Split('/')[0],
 				Secret = apiKey.Split('/')[1],
@@ -49,6 +49,7 @@ namespace Raven.Tests.Security.OAuth
 				{
 					new DatabaseAccess {TenantId = "*"},
 					new DatabaseAccess {TenantId = Constants.SystemDatabase},
+                    new DatabaseAccess {TenantId = databaseName}
 				}
 			}), new RavenJObject(), null);
 		}

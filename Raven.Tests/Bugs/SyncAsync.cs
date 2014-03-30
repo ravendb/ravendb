@@ -19,8 +19,8 @@ namespace Raven.Tests.Bugs
                 using (var session = store.OpenSession())
                 using (var asyncSession = store.OpenAsyncSession())
                 {
-                    var query = session.Advanced.LuceneQuery<Foo>().WhereLessThanOrEqual(x => x.Expiry, now);
-                    var asyncQuery = asyncSession.Advanced.AsyncLuceneQuery<Foo>().WhereLessThanOrEqual(x => x.Expiry, now);
+                    var query = session.Advanced.DocumentQuery<Foo>().WhereLessThanOrEqual(x => x.Expiry, now);
+                    var asyncQuery = asyncSession.Advanced.AsyncDocumentQuery<Foo>().WhereLessThanOrEqual(x => x.Expiry, now);
 
                     Assert.Equal(query.GetIndexQuery(false).ToString(), asyncQuery.GetIndexQuery(false).ToString());
                 }

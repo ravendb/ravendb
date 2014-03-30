@@ -33,10 +33,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void SmugglerWithoutExcludeExpiredDocumentsShouldWork()
         {
-            var options = new SmugglerOptions
-            {
-                BackupPath = Path.GetTempFileName()
-            };
+            var path = Path.GetTempFileName();
 
             try
             {
@@ -44,16 +41,16 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerApi(options, new RavenConnectionStringOptions { Url = store.Url });
+                    var smuggler = new SmugglerApi();
 
-                    smuggler.ExportData(null, options, false).Wait(TimeSpan.FromSeconds(15));
+					smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
-                    var smuggler = new SmugglerApi(options, new RavenConnectionStringOptions { Url = store.Url });
+                    var smuggler = new SmugglerApi();
 
-                    smuggler.ImportData(options).Wait(TimeSpan.FromSeconds(15));
+					smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {
@@ -69,16 +66,17 @@ namespace Raven.Tests.Issues
             }
             finally
             {
-                IOExtensions.DeleteDirectory(options.BackupPath);
+                IOExtensions.DeleteDirectory(path);
             }
         }
 
         [Fact]
         public void SmugglerWithExcludeExpiredDocumentsShouldWork1()
         {
+            var path = Path.GetTempFileName();
+
             var options = new SmugglerOptions
             {
-                BackupPath = Path.GetTempFileName(),
                 ShouldExcludeExpired = true
             };
 
@@ -88,16 +86,16 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerApi(options, new RavenConnectionStringOptions { Url = store.Url });
+                    var smuggler = new SmugglerApi();
 
-                    smuggler.ExportData(null, options, false).Wait(TimeSpan.FromSeconds(15));
+					smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }, options).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
-                    var smuggler = new SmugglerApi(options, new RavenConnectionStringOptions { Url = store.Url });
+                    var smuggler = new SmugglerApi();
 
-                    smuggler.ImportData(options).Wait(TimeSpan.FromSeconds(15));
+					smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }, options).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {
@@ -113,16 +111,17 @@ namespace Raven.Tests.Issues
             }
             finally
             {
-                IOExtensions.DeleteDirectory(options.BackupPath);
+                IOExtensions.DeleteDirectory(path);
             }
         }
 
         [Fact]
         public void SmugglerWithExcludeExpiredDocumentsShouldWork2()
         {
+            var path = Path.GetTempFileName();
+
             var options = new SmugglerOptions
             {
-                BackupPath = Path.GetTempFileName(),
                 ShouldExcludeExpired = true
             };
 
@@ -132,18 +131,18 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerApi(options, new RavenConnectionStringOptions { Url = store.Url });
+                    var smuggler = new SmugglerApi();
 
-                    smuggler.ExportData(null, options, false).Wait(TimeSpan.FromSeconds(15));
+					smuggler.ExportData(new SmugglerExportOptions { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }, options).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
                     SystemTime.UtcDateTime = () => DateTime.Now.AddMinutes(10);
 
-                    var smuggler = new SmugglerApi(options, new RavenConnectionStringOptions { Url = store.Url });
+                    var smuggler = new SmugglerApi();
 
-                    smuggler.ImportData(options).Wait(TimeSpan.FromSeconds(15));
+					smuggler.ImportData(new SmugglerImportOptions { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }, options).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {
@@ -159,7 +158,7 @@ namespace Raven.Tests.Issues
             }
             finally
             {
-                IOExtensions.DeleteDirectory(options.BackupPath);
+                IOExtensions.DeleteDirectory(path);
             }
         }
 

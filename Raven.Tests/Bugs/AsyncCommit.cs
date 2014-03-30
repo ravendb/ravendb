@@ -18,8 +18,10 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void DtcCommitWillGiveNewResultIfNonAuthoritativeIsSetToFalse()
 		{
-			using (var documentStore = NewDocumentStore())
+			using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
 			{
+                EnsureDtcIsSupported(documentStore);
+
 				using (var s = documentStore.OpenSession())
 				{
 					s.Store(new AccurateCount.User { Name = "Ayende" });
@@ -47,8 +49,10 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void DtcCommitWillGiveNewResultIfNonAuthoritativeIsSetToFalseWhenQuerying()
 		{
-			using (var documentStore = NewDocumentStore())
+            using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
 			{
+                EnsureDtcIsSupported(documentStore);
+
 				documentStore.DatabaseCommands.PutIndex("test",
 														new IndexDefinition
 														{
@@ -60,7 +64,7 @@ namespace Raven.Tests.Bugs
 					s.Store(new AccurateCount.User { Name = "Ayende" });
 					s.SaveChanges();
 
-					s.Advanced.LuceneQuery<AccurateCount.User>("test")
+					s.Advanced.DocumentQuery<AccurateCount.User>("test")
 						.WaitForNonStaleResults()
 						.FirstOrDefault();
 				}
@@ -70,7 +74,7 @@ namespace Raven.Tests.Bugs
 					using (var s = documentStore.OpenSession())
 					{
 						s.Advanced.AllowNonAuthoritativeInformation = false;
-						var user = s.Advanced.LuceneQuery<AccurateCount.User>("test")
+						var user = s.Advanced.DocumentQuery<AccurateCount.User>("test")
 							.FirstOrDefault();
 						Assert.Equal("Rahien", user.Name);
 					}

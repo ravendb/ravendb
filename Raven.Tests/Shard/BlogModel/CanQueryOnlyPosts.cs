@@ -96,7 +96,7 @@ namespace Raven.Tests.Shard.BlogModel
 				.ForEach(server =>
 				         	{
 				         		Assert.Equal(1, server.Value.Server.NumberOfRequests);
-				         		Assert.Equal(2, server.Value.Database.Statistics.CountOfDocuments);
+				         		Assert.Equal(2, server.Value.SystemDatabase.Statistics.CountOfDocuments);
 				         	});
 			Servers.Where(server => server.Key.StartsWith("Posts") == false)
 				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
@@ -140,7 +140,7 @@ namespace Raven.Tests.Shard.BlogModel
 				.ForEach(server =>
 				{
 					Assert.Equal(1, server.Value.Server.NumberOfRequests);
-					Assert.Equal(2, server.Value.Database.Statistics.CountOfDocuments);
+					Assert.Equal(2, server.Value.SystemDatabase.Statistics.CountOfDocuments);
 				});
 			Servers.Where(server => server.Key.StartsWith("Posts") == false)
 				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));

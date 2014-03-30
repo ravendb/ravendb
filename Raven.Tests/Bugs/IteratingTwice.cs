@@ -1,6 +1,6 @@
+using System.Threading.Tasks;
 using Raven.Client.Document;
 using Xunit;
-using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
@@ -55,7 +55,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-					var query = s.Advanced.LuceneQuery<User>();
+                    var query = s.Advanced.DocumentQuery<User>();
 
 					for (int i = 0; i < 5; i++)
 					{
@@ -67,8 +67,9 @@ namespace Raven.Tests.Bugs
 				}
 			}
 		}
+
 		[Fact]
-		public void WillResultInTheSameResults_Lucene_Async()
+		public async Task WillResultInTheSameResults_Lucene_Async()
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore
@@ -85,13 +86,12 @@ namespace Raven.Tests.Bugs
 
 				using (var s = store.OpenAsyncSession())
 				{
-					var query = s.Advanced.AsyncLuceneQuery<User>();
+                    var query = s.Advanced.AsyncDocumentQuery<User>();
 
 					for (int i = 0; i < 5; i++)
 					{
-						var listAsync = query.ToListAsync();
-						listAsync.Wait();
-						foreach (var user in listAsync.Result)
+						var list = await query.ToListAsync();
+						foreach (var user in list)
 						{
 							Assert.NotNull(user.Id);
 						}

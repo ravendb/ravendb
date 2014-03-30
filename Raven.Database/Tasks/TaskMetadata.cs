@@ -11,7 +11,9 @@ namespace Raven.Database.Tasks
 	{
 		public object Id { get; set; }
 
-		public string Index { get; set; }
+		public int IndexId { get; set; }
+
+		public string IndexName { get; set; }
 
 		public DateTime AddedTime { get; set; }
 

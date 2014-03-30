@@ -20,7 +20,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override void DeleteItem(string id, Etag etag)
 		{
-			Database.Delete(id, etag, null);
+			Database.Documents.Delete(id, etag, null);
 		}
 
 		protected override void MarkAsDeleted(string id, RavenJObject metadata)
@@ -30,7 +30,7 @@ namespace Raven.Bundles.Replication.Responders
 
 		protected override void AddWithoutConflict(string id, Etag etag, RavenJObject metadata, RavenJObject incoming)
 		{
-			Database.Put(id, etag, incoming, metadata, null);
+			Database.Documents.Put(id, etag, incoming, metadata, null);
 			Actions.Lists.Remove(Constants.RavenReplicationDocsTombstones, id);
 		}
 
@@ -109,10 +109,20 @@ namespace Raven.Bundles.Replication.Responders
 
 		}
 
-		protected override bool TryResolveConflict(string id, RavenJObject metadata, RavenJObject document, JsonDocument existing)
+		protected override bool TryResolveConflict(string id, RavenJObject metadata, RavenJObject document, JsonDocument existing, out RavenJObject metadataToSave,
+										out RavenJObject documentToSave)
 		{
-			return ReplicationConflictResolvers.Any(
-					replicationConflictResolver => replicationConflictResolver.TryResolve(id, metadata, document, existing, key => Actions.Documents.DocumentByKey(key, null)));
+			foreach (var replicationConflictResolver in ReplicationConflictResolvers)
+			{
+				if (replicationConflictResolver.TryResolve(id, metadata, document, existing, key => Actions.Documents.DocumentByKey(key, null),
+														   out metadataToSave, out documentToSave))
+					return true;
+			}
+
+			metadataToSave = null;
+			documentToSave = null;
+
+			return false;
 		}
 	}
 }

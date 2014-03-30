@@ -11,6 +11,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Database;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Tests.Views
 {
@@ -37,9 +38,9 @@ select new {
 
 		public MapReduce()
 		{
-			store = NewDocumentStore();
+			store = NewDocumentStore(runInMemory: true);
 			db = store.DocumentDatabase;
-			db.PutIndex("CommentsCountPerBlog", new IndexDefinition{Map = map, Reduce = reduce, Indexes = {{"blog_id", FieldIndexing.NotAnalyzed}}});
+			db.Indexes.PutIndex("CommentsCountPerBlog", new IndexDefinition{Map = map, Reduce = reduce, Indexes = {{"blog_id", FieldIndexing.NotAnalyzed}}});
 		}
 
 		public override void Dispose()
@@ -67,26 +68,27 @@ select new {
 		    };
 		    for (int i = 0; i < values.Length; i++)
 		    {
-		        db.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
+		        db.Documents.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
 		    }
 
 		    var q = GetUnstableQueryResult("blog_id:3");
 		    Assert.Equal(@"{""blog_id"":3,""comments_length"":14}", q.Results[0].ToString(Formatting.None));
 		}
 
+		//issue --> indice name : scheduled_reductions_by_view -->multi-tree key commentscountperblog
 		[Fact]
 		public void DoesNotOverReduce() 
 		{
 			db.Configuration.MaxNumberOfItemsToReduceInSingleBatch = 512;
 			for (int i = 0; i < 1024; i++) {
-				db.Put("docs/" + i, null, RavenJObject.Parse("{blog_id: " + i + ", comments: [{},{},{}]}"), new RavenJObject(), null);
+				db.Documents.Put("docs/" + i, null, RavenJObject.Parse("{blog_id: " + i + ", comments: [{},{},{}]}"), new RavenJObject(), null);
 			}
 
 			var q = GetUnstableQueryResult("blog_id:3");
 			Assert.False(q.IsStale);
 			Assert.Equal(@"{""blog_id"":3,""comments_length"":3}", q.Results[0].ToString(Formatting.None));
 
-			var index = db.Statistics.Indexes[0];
+            var index = db.Statistics.Indexes.First(x => x.PublicName == "CommentsCountPerBlog");
 			// we add 100 because we might have reduces running in the middle of the operation
 			Assert.True((1024 + 100) >= index.ReduceIndexingAttempts,
 				"1024 + 100 >= " + index.ReduceIndexingAttempts + " failed");
@@ -98,7 +100,7 @@ select new {
 	        QueryResult q = null;
 	        do
 	        {
-	            q = db.Query("CommentsCountPerBlog", new IndexQuery
+	            q = db.Queries.Query("CommentsCountPerBlog", new IndexQuery
 	            {
 	                Query = query,
 	                Start = 0,
@@ -133,14 +135,14 @@ select new {
 			};
 			for (int i = 0; i < values.Length; i++)
 			{
-				db.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
+				db.Documents.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
 			}
 
 			var q = GetUnstableQueryResult("blog_id:3");
 
 			Assert.Equal(@"{""blog_id"":3,""comments_length"":14}", q.Results[0].ToString(Formatting.None));
 			
-			db.Put("docs/0", null, RavenJObject.Parse("{blog_id: 3, comments: [{}]}"), new RavenJObject(), null);
+			db.Documents.Put("docs/0", null, RavenJObject.Parse("{blog_id: 3, comments: [{}]}"), new RavenJObject(), null);
 
 			q = GetUnstableQueryResult("blog_id:3");
 		    
@@ -167,13 +169,13 @@ select new {
 			};
 			for (int i = 0; i < values.Length; i++)
 			{
-				db.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
+				db.Documents.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
 			}
 
 			GetUnstableQueryResult("blog_id:3");
 		    
 
-			db.Delete("docs/0", null, null);
+			db.Documents.Delete("docs/0", null, null);
 
 			var q = GetUnstableQueryResult("blog_id:3");
 		    
@@ -199,12 +201,12 @@ select new {
 			};
 			for (int i = 0; i < values.Length; i++)
 			{
-				db.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
+				db.Documents.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
 			}
 
 			GetUnstableQueryResult("blog_id:3");
 		    
-			db.Put("docs/0", null, RavenJObject.Parse("{blog_id: 7, comments: [{}]}"), new RavenJObject(), null);
+			db.Documents.Put("docs/0", null, RavenJObject.Parse("{blog_id: 7, comments: [{}]}"), new RavenJObject(), null);
 
 			var q = GetUnstableQueryResult("blog_id:3");
 			Assert.Equal(@"{""blog_id"":3,""comments_length"":11}", q.Results[0].ToString(Formatting.None));

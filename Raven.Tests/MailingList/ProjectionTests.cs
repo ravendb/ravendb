@@ -3,7 +3,6 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
@@ -13,27 +12,22 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class ProjectionTests : IDisposable
+	public class ProjectionTests : RavenTest
 	{
-		protected DateTimeOffset Now { get; private set; }
-		protected EmbeddableDocumentStore DocumentStore { get; private set; }
-		protected IDocumentSession Session { get; private set; }
+		private readonly EmbeddableDocumentStore documentStore;
+		private readonly IDocumentSession session;
 
 		public ProjectionTests()
 		{
-			Now = DateTimeOffset.Now;
-
-			DocumentStore = new EmbeddableDocumentStore { RunInMemory = true };
-			DocumentStore.RegisterListener(new NoStaleQueriesAllowed());
-			DocumentStore.Initialize();
-			Session = DocumentStore.OpenSession();
+			documentStore = NewDocumentStore(configureStore: store => store.RegisterListener(new NoStaleQueriesAllowed()));
+			session = documentStore.OpenSession();
 
 			Setup();
 		}
 
 		private void Setup()
 		{
-			var list = new List<Foo>()
+			var list = new List<Foo>
 			{
 				new Foo {Data = 1},
 				new Foo {Data = 2},
@@ -41,30 +35,22 @@ namespace Raven.Tests.MailingList
 				new Foo {Data = 4},
 			};
 
-			list.ForEach(foo => Session.Store(foo));
-			Session.SaveChanges();
-		}
-
-		public void Dispose()
-		{
-			Session.Dispose();
-			DocumentStore.Dispose();
+			list.ForEach(foo => session.Store(foo));
+			session.SaveChanges();
 		}
 
 		//This works as expected
 		[Fact]
 		public void ActuallyGetData()
 		{
-			var foos =
-				Session
-					.Query<Foo>()
-					.Where(foo => foo.Data > 1)
-					.Select(foo => new FooWithId
-					{
-						Id = foo.Id,
-						Data = foo.Data
-					})
-					.ToList();
+			var foos = session.Query<Foo>()
+			                  .Where(foo => foo.Data > 1)
+			                  .Select(foo => new FooWithId
+			                  {
+				                  Id = foo.Id,
+				                  Data = foo.Data
+			                  })
+			                  .ToList();
 
 			Assert.True(foos.Count == 3);
 		}
@@ -73,52 +59,47 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void ShouldBeAbleToProjectIdOntoAnotherFieldCalledId()
 		{
-			var foos =
-				Session
-					.Query<Foo>()
-					.Where(foo => foo.Data > 1)
-					.Select(foo => new FooWithId
-					{
-						Id = foo.Id,
-						Data = foo.Data
-					})
-					.ToList();
+			var foos = session.Query<Foo>()
+			                  .Where(foo => foo.Data > 1)
+			                  .Select(foo => new FooWithId
+			                  {
+				                  Id = foo.Id,
+				                  Data = foo.Data
+			                  })
+			                  .ToList();
 
-			Xunit.Assert.NotNull(foos[0].Id);
+			Assert.NotNull(foos[0].Id);
 		}
 
 		//Fails
 		[Fact]
 		public void ShouldBeAbleToProjectIdOntoAnotherName()
 		{
-			var foos =
-				Session
-					.Query<Foo>()
-					.Customize(x=>x.WaitForNonStaleResults())
-					.Where(foo => foo.Data > 1)
-					.Select(foo => new FooWithFooId
-					{
-						FooId = foo.Id,
-						Data = foo.Data
-					})
-					.ToList();
+			var foos = session.Query<Foo>()
+			                  .Customize(x => x.WaitForNonStaleResults())
+			                  .Where(foo => foo.Data > 1)
+			                  .Select(foo => new FooWithFooId
+			                  {
+				                  FooId = foo.Id,
+				                  Data = foo.Data
+			                  })
+			                  .ToList();
 
-			Xunit.Assert.NotNull(foos[0].FooId);
+			Assert.NotNull(foos[0].FooId);
 		}
 
 		[Fact]
 		public void ShouldBeAbleToProjectIdOntoAnotherName_AndAnotherFieldNamedIdShouldNotBeAffected()
 		{
-			var foos =
-				Session.Query<Foo>()
-				.Customize(x=>x.WaitForNonStaleResults())
-					.Where(foo => foo.Data > 1)
-					.Select(foo => new FooWithFooIdAndId
-					{
-						FooId = foo.Id,
-						Data2 = foo.Data
-					})
-					.ToList();
+			var foos = session.Query<Foo>()
+			                  .Customize(x => x.WaitForNonStaleResults())
+			                  .Where(foo => foo.Data > 1)
+			                  .Select(foo => new FooWithFooIdAndId
+			                  {
+				                  FooId = foo.Id,
+				                  Data2 = foo.Data
+			                  })
+			                  .ToList();
 
 			Assert.Null(foos[0].Id);
 			Assert.NotNull(foos[0].FooId);
@@ -157,5 +138,4 @@ namespace Raven.Tests.MailingList
 			}
 		}
 	}
-
 }

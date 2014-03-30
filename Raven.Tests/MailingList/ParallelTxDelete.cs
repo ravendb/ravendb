@@ -15,8 +15,10 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void ParallelDelete()
 		{
-			using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
+                EnsureDtcIsSupported(store);
+
 				var ids = new List<string>();
 
 				for (int i = 0; i < 500; i++)

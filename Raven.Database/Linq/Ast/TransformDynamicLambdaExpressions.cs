@@ -69,9 +69,29 @@ namespace Raven.Database.Linq.Ast
 			if(parentInvocation != null)
 			{
 				var parentTarget = parentInvocation.Target as MemberReferenceExpression;
-				if(parentTarget != null && parentTarget.MemberName == "GroupBy")
+				if(parentTarget != null)
 				{
-					return new CastExpression(new SimpleType("Func<IGrouping<dynamic,dynamic>, dynamic>"), parenthesizedlambdaExpression.Clone());
+                    if(parentTarget.MemberName == "GroupBy")
+					    return new CastExpression(new SimpleType("Func<IGrouping<dynamic,dynamic>, dynamic>"), parenthesizedlambdaExpression.Clone());
+                    
+                    if (parentTarget.MemberName == "Range")
+                    {
+                         var identifierExpression = parentTarget.Target as IdentifierExpression;
+                         if (identifierExpression != null && identifierExpression.Identifier == "Enumerable")
+                         {
+                             // support for Enumerable.Range(x, y).Select()
+
+                             // convert Enumerable.Range(x, y) to Enumerable.Range(x, y).Cast<dynamic>()
+
+                             var enumerableRange = parentInvocation.Clone();
+
+                             var castToDynamic = new MemberReferenceExpression(enumerableRange, "Cast", new AstType[] { new SimpleType("dynamic") });
+
+                            var dynamicEnumerableRange = new InvocationExpression(castToDynamic);
+
+                             parentInvocation.ReplaceWith(dynamicEnumerableRange);
+                         }
+                    }
 				}
 			}
 			return new CastExpression(new SimpleType("Func<dynamic, dynamic>"), parenthesizedlambdaExpression.Clone());

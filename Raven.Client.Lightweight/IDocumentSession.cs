@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
@@ -34,6 +33,21 @@ namespace Raven.Client
 		/// <typeparam name="T"></typeparam>
 		/// <param name="entity">The entity.</param>
 		void Delete<T>(T entity);
+
+        /// <summary>
+        /// Marks the specified entity for deletion. The entity will be deleted when <see cref="IDocumentSession.SaveChanges"/> is called.
+        /// WARNING: This method will not call beforeDelete listener!
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id">The entity.</param>
+	    void Delete<T>(ValueType id);
+
+        /// <summary>
+        /// Marks the specified entity for deletion. The entity will be deleted when <see cref="IDocumentSession.SaveChanges"/> is called.
+        /// WARNING: This method will not call beforeDelete listener!
+        /// </summary>
+        /// <param name="id"></param>
+	    void Delete(string id);
 
 		/// <summary>
 		/// Loads the specified entity with the specified id.
@@ -198,4 +212,3 @@ namespace Raven.Client
 	}
 }
 
-#endif

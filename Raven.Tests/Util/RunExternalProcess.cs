@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -24,7 +23,7 @@ namespace Raven.Tests.Util
 			{
 				driver.Start();
 
-				using (var store = new DocumentStore()
+				using (var store = new DocumentStore
 				{
 					Url = driver.Url,
 					Conventions = documentConvention
@@ -46,7 +45,6 @@ namespace Raven.Tests.Util
 			}
 		}
 
-
 		[Fact]
 		public void can_use_RavenDB_in_a_remote_process_for_batch_operations()
 		{
@@ -56,7 +54,7 @@ namespace Raven.Tests.Util
 			{
 				driver.Start();
 
-				using (var store = new DocumentStore()
+				using (var store = new DocumentStore
 				{
 					Url = driver.Url,
 					Conventions = documentConvention
@@ -77,7 +75,6 @@ namespace Raven.Tests.Util
 				}
 			}
 		}
-
 
 		[Fact]
 		public void can_use_RavenDB_in_a_remote_process_to_post_batch_operations()
@@ -124,7 +121,7 @@ namespace Raven.Tests.Util
 
 		PutCommandData GetPutCommand()
 		{
-			return new PutCommandData()
+			return new PutCommandData
 			{
 				Document = RavenJObject.FromObject(new Tuple<string, string>("hello", "world")),
 				Metadata = new RavenJObject

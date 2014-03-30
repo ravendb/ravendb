@@ -33,7 +33,7 @@ namespace Raven.Tests.MailingList
 				{
 					RavenQueryStatistics stats;
 
-					var tst = session.Advanced.LuceneQuery<Data_Search.ReduceResult, Data_Search>()
+                    var tst = session.Advanced.DocumentQuery<Data_Search.ReduceResult, Data_Search>()
 						.WaitForNonStaleResults()
 						.Statistics(out stats)
 						.WhereEquals(x => x.Optional, null)
@@ -51,7 +51,7 @@ namespace Raven.Tests.MailingList
 					Assert.False(stats.IsStale, "Index is stale.");
 					Assert.True(tst1.Count > 0, "Regular query for projection failed.");
 
-					var tst2 = session.Advanced.LuceneQuery<Data_Search.ReduceResult, Data_Search>()
+                    var tst2 = session.Advanced.DocumentQuery<Data_Search.ReduceResult, Data_Search>()
 						.Statistics(out stats)
 						.WhereEquals(x => x.Optional, null)
 						.SelectFields<Data_Search.ProjectionResult>(new string[0])

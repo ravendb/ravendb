@@ -46,10 +46,10 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 
 		private void CreateRdbmsSchema()
 		{
-			var providerFactory = DbProviderFactories.GetFactory(FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
+			var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
 			using (var con = providerFactory.CreateConnection())
 			{
-				con.ConnectionString = FactIfSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
+				con.ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
 				con.Open();
 
 				using (var dbCommand = con.CreateCommand())
@@ -84,10 +84,10 @@ CREATE TABLE [dbo].[Orders]
 			}
 		}
 
-		[FactIfSqlServerIsAvailable]
+		[Fact]
 		public void SimpleTransformation()
 		{
-			CreateRdbmsSchema();
+            CreateRdbmsSchema();
 			using (var store = NewDocumentStore())
 			{
 				var eventSlim = new ManualResetEventSlim(false);
@@ -115,10 +115,10 @@ CREATE TABLE [dbo].[Orders]
 
 				eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-				var providerFactory = DbProviderFactories.GetFactory(FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
+				var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
 				using (var con = providerFactory.CreateConnection())
 				{
-					con.ConnectionString = FactIfSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
+					con.ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
 					con.Open();
 
 					using (var dbCommand = con.CreateCommand())
@@ -133,10 +133,10 @@ CREATE TABLE [dbo].[Orders]
 			}
 		}
 
-		[FactIfSqlServerIsAvailable]
+		[Fact]
 		public void ReplicateMultipleBatches()
 		{
-			CreateRdbmsSchema();
+            CreateRdbmsSchema();
 			using (var store = NewDocumentStore())
 			{
 				var eventSlim = new ManualResetEventSlim(false);
@@ -177,10 +177,10 @@ CREATE TABLE [dbo].[Orders]
 		private static int GetOrdersCount()
 		{
 			var providerFactory =
-					DbProviderFactories.GetFactory(FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
+					DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
 			using (var con = providerFactory.CreateConnection())
 			{
-				con.ConnectionString = FactIfSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
+				con.ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
 				con.Open();
 
 				using (var dbCommand = con.CreateCommand())
@@ -196,10 +196,10 @@ CREATE TABLE [dbo].[Orders]
 
 		}
 
-		[FactIfSqlServerIsAvailable]
+		[Fact]
 		public void CanUpdateToBeNoItemsInChildTable()
 		{
-			CreateRdbmsSchema();
+            CreateRdbmsSchema();
 			using (var store = NewDocumentStore())
 			{
 				var eventSlim = new ManualResetEventSlim(false);
@@ -244,10 +244,10 @@ CREATE TABLE [dbo].[Orders]
 			}
 		}
 
-		[FactIfSqlServerIsAvailable]
+		[Fact]
 		public void CanDelete()
 		{
-			CreateRdbmsSchema();
+            CreateRdbmsSchema();
 			using (var store = NewDocumentStore())
 			{
 				var eventSlim = new ManualResetEventSlim(false);
@@ -288,10 +288,10 @@ CREATE TABLE [dbo].[Orders]
 			}
 		}
 
-		[FactIfSqlServerIsAvailable]
+		[Fact]
 		public void WillLog()
 		{
-			LogManager.RegisterTarget<DatabaseMemoryTarget>();
+            LogManager.RegisterTarget<DatabaseMemoryTarget>();
 
 			CreateRdbmsSchema();
 			using (var store = NewDocumentStore())
@@ -323,10 +323,10 @@ var nameArr = this.StepName.split('.');");
 
 		private static void AssertCounts(int ordersCount, int orderLineCounts)
 		{
-			var providerFactory = DbProviderFactories.GetFactory(FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
+			var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
 			using (var con = providerFactory.CreateConnection())
 			{
-				con.ConnectionString = FactIfSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
+				con.ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
 				con.Open();
 
 				using (var dbCommand = con.CreateCommand())
@@ -347,8 +347,8 @@ var nameArr = this.StepName.split('.');");
 				{
 					Id = "Raven/SqlReplication/Configuration/OrdersAndLines",
 					Name = "OrdersAndLines",
-					ConnectionString = FactIfSqlServerIsAvailable.ConnectionStringSettings.ConnectionString,
-					FactoryName = FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName,
+					ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString,
+					FactoryName = MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName,
 					RavenEntityName = "Orders",
 					SqlReplicationTables =
 					{

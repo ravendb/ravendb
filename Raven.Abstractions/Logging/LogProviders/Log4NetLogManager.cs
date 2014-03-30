@@ -72,7 +72,14 @@ namespace Raven.Abstractions.Logging.LogProviders
 #if !SL_4 && !NETFX_CORE
 		private static Assembly GetLog4NetAssembly()
 		{
-			return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(assembly => assembly.FullName.StartsWith("log4net,"));
+            try
+            {
+                return Assembly.Load("log4net");
+            }
+            catch (Exception)
+            {
+                return null;
+            }
 		}
 #endif
 

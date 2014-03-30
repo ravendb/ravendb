@@ -3,17 +3,22 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Database;
+using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
+using Raven.Tests.Bundles.MoreLikeThis;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
@@ -24,39 +29,43 @@ namespace Raven.Tests.Issues
 
 		public RavenDB_1007_incremental_backup()
 		{
-			DataDir = NewDataPath("IncrementalBackup");
-			BackupDir = NewDataPath("BackupDatabase");
+			DataDir = NewDataPath("RavenDB-1007-IncrementalBackup");
+			BackupDir = NewDataPath("RavenDB-1007-BackupDatabase");
 		}
 
-		[Fact]
-		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt()
+		[Theory]
+        [PropertyData("Storages")]
+		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt(string storageName)
 		{
 			using (var db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = DataDir,
+				DataDirectory = DataDir,				
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
+				DefaultStorageTypeName = storageName,
 				Settings =
 				{
-					{"Raven/Esent/CircularLog", "false"}
+					{"Raven/Esent/CircularLog", "false"},
+					{"Raven/Voron/AllowIncrementalBackups", "true"}
 				}
 			}))
 			{
 				db.SpinBackgroundWorkers();
-				db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
+				db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 
-				db.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
-				db.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.Documents.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.Documents.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
 				WaitForIndexing(db);
 
-				db.StartBackup(BackupDir, false, new DatabaseDocument());
+				var databaseDocument = new DatabaseDocument();
+				db.Maintenance.StartBackup(BackupDir, false, databaseDocument);
 				WaitForBackup(db, true);
 
-				db.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.Documents.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
 				WaitForIndexing(db);
 
-				db.StartBackup(BackupDir, true, new DatabaseDocument());
+				db.Maintenance.StartBackup(BackupDir, true, databaseDocument);
 				WaitForBackup(db, true);
 
 			}
@@ -65,25 +74,29 @@ namespace Raven.Tests.Issues
 			var incrementalDirectories = Directory.GetDirectories(BackupDir, "Inc*");
 
 			// delete 'index-files.required-for-index-restore' to make backup corrupted according to the reported error
-			File.Delete(Path.Combine(incrementalDirectories.First(),
-			                         "Indexes\\Raven%2fDocumentsByEntityName\\index-files.required-for-index-restore"));
+			var combine = Directory.GetFiles(incrementalDirectories.First(), "index-files.required-for-index-restore",SearchOption.AllDirectories).First();
+			File.Delete(combine);
 
 			var sb = new StringBuilder();
 
-			DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir, s => sb.Append(s), defrag: true);
+		    MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
+		    {
+		        BackupLocation = BackupDir,
+		        DatabaseLocation = DataDir
+		    }, s => sb.Append(s));
 
 			Assert.Contains(
-				"Error: Index Raven%2fDocumentsByEntityName could not be restored. All already copied index files was deleted." +
+				"could not be restored. All already copied index files was deleted." +
 				" Index will be recreated after launching Raven instance",
 				sb.ToString());
 
 			using (var db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir}))
-			{
+			{				
 				db.SpinBackgroundWorkers();
 				QueryResult queryResult;
 				do
-				{
-					queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+				{					
+					queryResult = db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 					{
 						Query = "Tag:[[Users]]",
 						PageSize = 10
@@ -101,43 +114,49 @@ namespace Raven.Tests.Issues
 
 		public RavenDB_1007_standard_backup()
 		{
-			DataDir = NewDataPath("IncrementalBackup");
-			BackupDir = NewDataPath("BackupDatabase");
+			DataDir = NewDataPath("RavenDB-1007-StandardBackup");
+			BackupDir = NewDataPath("RavenDB-1007-BackupDatabase");
 		}
 
-		[Fact]
-		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt()
+		[Theory]
+		[PropertyData("Storages")]
+		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt(string storageName)
 		{
 			using (var db = new DocumentDatabase(new RavenConfiguration
 			{
+				DefaultStorageTypeName = storageName,
 				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 			}))
 			{
 				db.SpinBackgroundWorkers();
-				db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
+				db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 
-				db.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
-				db.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
-				db.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.Documents.Put("users/1", null, RavenJObject.Parse("{'Name':'Arek'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.Documents.Put("users/2", null, RavenJObject.Parse("{'Name':'David'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
+				db.Documents.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
 				WaitForIndexing(db);
 
-				db.StartBackup(BackupDir, false, new DatabaseDocument());
+				db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
 				WaitForBackup(db, true);
 			}
 			IOExtensions.DeleteDirectory(DataDir);
 
+			var path = Directory.GetFiles(BackupDir, "index-files.required-for-index-restore", SearchOption.AllDirectories).First();
 			// lock file to simulate IOException when restore operation will try to copy this file
-			using (var file = File.Open(Path.Combine(BackupDir, "Indexes\\Raven%2fDocumentsByEntityName\\segments.gen"),
-				                     FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+			using (var file = File.Open(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
 			{
 				var sb = new StringBuilder();
 
-				DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir, s => sb.Append(s), defrag: true);
+			    MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
+			    {
+			        BackupLocation = BackupDir,
+			        DatabaseLocation = DataDir
+				}, s => sb.Append(s));
 
 				Assert.Contains(
-					"Error: Index Raven%2fDocumentsByEntityName could not be restored. All already copied index files was deleted." +
+					"could not be restored. All already copied index files was deleted." +
 					" Index will be recreated after launching Raven instance",
 					sb.ToString());
 			}
@@ -148,7 +167,7 @@ namespace Raven.Tests.Issues
 				QueryResult queryResult;
 				do
 				{
-					queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+					queryResult = db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 					{
 						Query = "Tag:[[Users]]",
 						PageSize = 10

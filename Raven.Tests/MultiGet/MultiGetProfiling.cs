@@ -81,8 +81,8 @@ namespace Raven.Tests.MultiGet
 					session.Query<User>().Where(x => x.Name == "oren").Lazily();
 					session.Query<User>().Where(x => x.Name == "ayende").Lazily();
 					session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
-
 				}
+
 				var profilingInformation = store.GetProfilingInformationFor(id);
 				Assert.Equal(1, profilingInformation.Requests.Count);
 
@@ -191,10 +191,9 @@ namespace Raven.Tests.MultiGet
 		[Fact]
 		public void CanProfileFullyAggressivelyCached()
 		{
-			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" })
+			using (var server = GetNewServer())
+			using (var store = NewRemoteDocumentStore(ravenDbServer:server,fiddler:true))
 			{
-				store.Initialize();
 				store.InitializeProfiling();
 
 				using (var session = store.OpenSession())
@@ -243,8 +242,8 @@ namespace Raven.Tests.MultiGet
 		[Fact]
 		public void CanProfileErrors()
 		{
-			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" })
+			using (var server = GetNewServer())
+            using (var store = NewRemoteDocumentStore(ravenDbServer: server))
 			{
 				store.Initialize();
 				store.InitializeProfiling(); 
@@ -261,7 +260,7 @@ namespace Raven.Tests.MultiGet
 				using (var session = store.OpenSession())
 				{
 					id = ((DocumentSession)session).DatabaseCommands.ProfilingInformation.Id;
-					session.Advanced.LuceneQuery<object, RavenDocumentsByEntityName>().WhereEquals("Not", "There").Lazily();
+                    session.Advanced.DocumentQuery<object, RavenDocumentsByEntityName>().WhereEquals("Not", "There").Lazily();
 					Assert.Throws<InvalidOperationException>(() => session.Advanced.Eagerly.ExecuteAllPendingLazyOperations());
 				}
 				var profilingInformation = store.GetProfilingInformationFor(id);

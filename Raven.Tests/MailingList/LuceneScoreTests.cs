@@ -73,7 +73,7 @@ namespace Raven.Tests.MailingList
 				using (var session = store.OpenSession())
 				{
 					var results =
-						session.Advanced.LuceneQuery<Book, BooksSearch>().Where("Text: wire each time").WaitForNonStaleResultsAsOfNow().
+                        session.Advanced.DocumentQuery<Book, BooksSearch>().Where("Text: wire each time").WaitForNonStaleResultsAsOfNow().
 							Select(b => new BookSummary() { Author = b.Author, Description = b.Description, Id = b.Id }).ToList();
 
 
@@ -105,7 +105,7 @@ namespace Raven.Tests.MailingList
 				using (var session = store.OpenSession())
 				{
 					var results =
-						session.Advanced.LuceneQuery<Book, BooksSearch>().Where("Text: wire each time").WaitForNonStaleResultsAsOfNow().
+                        session.Advanced.DocumentQuery<Book, BooksSearch>().Where("Text: wire each time").WaitForNonStaleResultsAsOfNow().
 							ToList();
 					var scores = from result in results
 								 select session.Advanced.GetMetadataFor(result).Value<string>("Temp-Index-Score");

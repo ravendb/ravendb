@@ -103,7 +103,7 @@ namespace Raven.Tests.Synchronization
 
 				Task.WaitAll(tasks.ToArray());
 
-				WaitForIndexing(store);
+				WaitForIndexing(store, timeout: TimeSpan.FromMinutes(1));
 
 				Assert.Equal(20000, store.DatabaseCommands.GetStatistics().CountOfDocuments);
 
@@ -119,6 +119,9 @@ namespace Raven.Tests.Synchronization
 										 .Customize(customization => customization.WaitForNonStaleResults())
 										 .Take(1001)
 										 .ToList();
+
+
+					WaitForUserToContinueTheTest(store);
 
 					Assert.Equal(1000, results.Count);
 

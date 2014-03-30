@@ -60,7 +60,7 @@ namespace Raven.Tests.MailingList
                 {
                     //WaitForUserToContinueTheTest(store);
 
-                    var results2 = session.Advanced.LuceneQuery<Person, Person_IdCopy_Index>()
+                    var results2 = session.Advanced.DocumentQuery<Person, Person_IdCopy_Index>()
                                           .WaitForNonStaleResultsAsOfNow()
                                           .SelectFields<PersonIndexItem>()
                                           .ToArray();
@@ -79,7 +79,7 @@ namespace Raven.Tests.MailingList
                 {
                     //WaitForUserToContinueTheTest(store);
 
-                    var results = session.Advanced.LuceneQuery<Person, Person_IdCopy_Index>()
+                    var results = session.Advanced.DocumentQuery<Person, Person_IdCopy_Index>()
                                          .WaitForNonStaleResultsAsOfNow()
                                          .WhereEquals("Family_Dad_Id", "people/Dad")
                                          .ToArray();
@@ -139,7 +139,7 @@ namespace Raven.Tests.MailingList
                 {
                     //WaitForUserToContinueTheTest(store);
 
-                    var results2 = session.Advanced.LuceneQuery<Person, Person_Id_Index>()
+                    var results2 = session.Advanced.DocumentQuery<Person, Person_Id_Index>()
                                           .WaitForNonStaleResultsAsOfNow()
                                           .SelectFields<PersonIndexItem>()
                                           .ToArray();
@@ -158,7 +158,7 @@ namespace Raven.Tests.MailingList
                 {
                     //WaitForUserToContinueTheTest(store);
 
-                    var results = session.Advanced.LuceneQuery<Person, Person_Id_Index>()
+                    var results = session.Advanced.DocumentQuery<Person, Person_Id_Index>()
                                          .WaitForNonStaleResultsAsOfNow()
                                          .WhereEquals("Family_Dad_Id", "people/Dad")
                                          .ToArray();

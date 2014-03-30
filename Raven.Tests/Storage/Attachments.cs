@@ -37,7 +37,7 @@ namespace Raven.Tests.Storage
 		{
 			using (var store = NewDocumentStore())
 			{
-				await store.AsyncDatabaseCommands.PutAttachmentAsync("Ayende", null, new byte[] { 1, 2, 3 }, new RavenJObject());
+                await store.AsyncDatabaseCommands.PutAttachmentAsync("Ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 
 				Attachment attachment = await store.AsyncDatabaseCommands.GetAttachmentAsync("Ayende");
 				Assert.Equal(new byte[] {1, 2, 3}, attachment.Data().ReadData());

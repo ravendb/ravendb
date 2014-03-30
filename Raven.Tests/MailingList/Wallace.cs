@@ -27,7 +27,9 @@ namespace Raven.Tests.MailingList
 				{
 					var argumentException = Assert.Throws<ArgumentException>(() => session.Query<LinqIndexesFromClient.Order>().OrderBy(x => x.OrderLines.Last().Quantity).ToList());
 
-					Assert.Equal("Invalid computation: x.OrderLines.Last().Quantity. You cannot use computation (only simple member expression are allowed) in RavenDB queries.", argumentException.InnerException.Message);
+                    Assert.Equal("Could not understand expression: .OrderBy(x => x.OrderLines.Last().Quantity)", argumentException.Message);
+                    Assert.Equal("Not supported computation: x.OrderLines.Last().Quantity. You cannot use computation in RavenDB queries (only simple member expressions are allowed).",
+                        argumentException.InnerException.Message);
 				}
 			}
 		}

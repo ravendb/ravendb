@@ -7,7 +7,7 @@
 			BatchSize = 512;
 		}
 
-		public bool CheckForUpdates { get; set; }
+		public bool OverwriteExisting { get; set; }
 		public bool CheckReferencesInIndexes { get; set; }
 		public int BatchSize { get; set; }
 	}

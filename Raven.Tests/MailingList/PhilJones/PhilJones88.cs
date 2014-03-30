@@ -2,15 +2,13 @@
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Linq;
 using Raven.Client.Document;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Xunit;
 
 namespace Raven.Tests.MailingList.PhilJones
 {
-	public class PhilJones88
+	public class PhilJones88 : RavenTest
 	{
 		public class Admin
 		{
@@ -127,17 +125,10 @@ namespace Raven.Tests.MailingList.PhilJones
 		[Fact]
 		public void OrderByDescending_is_ignored_when_using_multimap_index()
 		{
-			using (var store = new EmbeddableDocumentStore
+			using (var store = NewDocumentStore(configureStore: documentStore =>
 			{
-				Configuration =
-				{
-					RunInMemory = true
-				},
-				Conventions =
-				{
-					DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites
-				}
-			}.Initialize())
+				documentStore.Conventions.DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites;
+			}))
 			{
 				new Proposals_ListProjection().Execute(store);
 

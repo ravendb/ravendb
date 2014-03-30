@@ -30,7 +30,7 @@ namespace Raven.Tests.Security.OAuth
 
 		protected override void ModifyServer(Server.RavenDbServer ravenDbServer)
 		{
-			ravenDbServer.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+			ravenDbServer.SystemDatabase.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 			{
 				Name = "test",
 				Secret = "ThisIsMySecret",
@@ -77,7 +77,7 @@ namespace Raven.Tests.Security.OAuth
 			using (var server = GetNewServer(enableAuthentication: true))
 			{
 
-				server.Database.Put("Raven/ApiKeys/sysadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
+				server.SystemDatabase.Documents.Put("Raven/ApiKeys/sysadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
 					Name = "sysadmin",
 					Secret = "ThisIsMySecret",
@@ -88,7 +88,7 @@ namespace Raven.Tests.Security.OAuth
 				}
 				}), new RavenJObject(), null);
 
-				server.Database.Put("Raven/ApiKeys/dbadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
+				server.SystemDatabase.Documents.Put("Raven/ApiKeys/dbadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
 					Name = "dbadmin",
 					Secret = "ThisIsMySecret",
@@ -100,19 +100,20 @@ namespace Raven.Tests.Security.OAuth
 				}
 				}), new RavenJObject(), null);
 
+				var serverUrl = server.SystemDatabase.ServerUrl;
 				using (var store = new DocumentStore
 				{
-					Url = server.Database.ServerUrl,
+					Url = serverUrl,
 					ApiKey = "sysadmin/ThisIsMySecret",
 					Conventions = {FailoverBehavior = FailoverBehavior.FailImmediately}
 				}.Initialize())
 				{
-					store.DatabaseCommands.EnsureDatabaseExists("test");
+					store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("test");
 				}
 
 				using (var store = new DocumentStore
 				{
-					Url = server.Database.ServerUrl,
+					Url = serverUrl,
 					ApiKey = "dbadmin/ThisIsMySecret"
 				}.Initialize())
 				{

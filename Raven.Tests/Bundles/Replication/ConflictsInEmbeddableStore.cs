@@ -158,7 +158,7 @@ namespace Raven.Tests.Bundles.Replication
 		}
 
 		[Fact]
-		public void ShouldThrowConflictExceptionForMultiLoadResultComtainsConflictedDocument()
+		public void ShouldThrowConflictExceptionForMultiLoadResultContainsConflictedDocument()
 		{
 			using (var store1 = CreateEmbeddableStore())
 			using (var store2 = CreateEmbeddableStore())
@@ -196,7 +196,7 @@ namespace Raven.Tests.Bundles.Replication
 		}
 
 		[Fact]
-		public void ShouldThrowConflictExceptionForGettingConflictedAttachement()
+		public void ShouldThrowConflictExceptionForGettingConflictedAttachment()
 		{
 			using (var store1 = CreateEmbeddableStore())
 			using (var store2 = CreateEmbeddableStore())
@@ -215,13 +215,13 @@ namespace Raven.Tests.Bundles.Replication
 					store2.DatabaseCommands.GetAttachment("a/1");
 				});
 
-				Assert.Equal("Conflict detected on a/1, conflict must be resolved before the attachement will be accessible",
+				Assert.Equal("Conflict detected on a/1, conflict must be resolved before the attachment will be accessible",
 							 conflictException.Message);
 			}
 		}
 
 		[Fact]
-		public void ShouldThrowConflictExceptionForGettingInfoAboutConflictedAttachement()
+		public void ShouldThrowConflictExceptionForGettingInfoAboutConflictedAttachment()
 		{
 			using (var store1 = CreateEmbeddableStore())
 			using (var store2 = CreateEmbeddableStore())

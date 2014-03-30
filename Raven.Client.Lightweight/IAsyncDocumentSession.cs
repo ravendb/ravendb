@@ -10,11 +10,10 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Client.Linq;
 
 namespace Raven.Client
 {
-	using Linq;
-
 	/// <summary>
 	/// Interface for document session using async approaches
 	/// </summary>
@@ -78,6 +77,21 @@ namespace Raven.Client
 		/// <param name="entity">The entity.</param>
 		void Delete<T>(T entity);
 
+        /// <summary>
+        /// Marks the specified entity for deletion. The entity will be deleted when <see cref="SaveChangesAsync"/> is called.
+        /// WARNING: This method will not call beforeDelete listener!
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id">The entity.</param>
+        void Delete<T>(ValueType id);
+
+        /// <summary>
+        /// Marks the specified entity for deletion. The entity will be deleted when <see cref="SaveChangesAsync"/> is called.
+        /// WARNING: This method will not call beforeDelete listener!
+        /// </summary>
+        /// <param name="id"></param>
+        void Delete(string id);
+
 		/// <summary>
 		/// Begins the a load that will use the specified results transformer against the specified id
 		/// </summary>
@@ -100,7 +114,6 @@ namespace Raven.Client
 		/// <param name="id">The id.</param>
 		/// <returns></returns>
 		Task<T> LoadAsync<T>(string id);
-
 
 		/// <summary>
 		/// Begins the async multi-load operation

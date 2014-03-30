@@ -15,12 +15,14 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanQueryDtcForUncommittedItem()
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
+                EnsureDtcIsSupported(store);
+
                 using (var tx = new TransactionScope())
                 {
-                    Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-                                                      new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+                    Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id,
+                                                      new DummyEnlistmentNotification(),
                                                       EnlistmentOptions.None);
 
                     using (var session = store.OpenSession())
@@ -29,9 +31,9 @@ namespace Raven.Tests.Bugs
                         session.SaveChanges();
                     }
 
-
                     tx.Complete();
                 }
+
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.AllowNonAuthoritativeInformation = false;
@@ -44,8 +46,10 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void NothingToDo_ButCommitIsCAlled()
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
+                EnsureDtcIsSupported(store);
+
                 using (var tx = new TransactionScope())
                 using (var session = store.OpenSession())
                 {
@@ -61,16 +65,19 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanQueryDtcForUncommittedItem()
         {
-            using (GetNewServer())
+            using (var server = GetNewServer())
             using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
             {
+
+                EnsureDtcIsSupported(server);
+
                 for (int i = 0; i < 150; i++)
                 {
                     string id;
                     using (var tx = new TransactionScope())
                     {
-                        Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-                                                          new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+                        Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id,
+                                                          new DummyEnlistmentNotification(),
                                                           EnlistmentOptions.None);
 
                         using (var session = store.OpenSession())
@@ -81,9 +88,9 @@ namespace Raven.Tests.Bugs
                             id = entity.Id;
                         }
 
-
                         tx.Complete();
                     }
+
                     using (var session = store.OpenSession())
                     {
                         session.Advanced.AllowNonAuthoritativeInformation = false;
@@ -98,24 +105,22 @@ namespace Raven.Tests.Bugs
 
     public class DtcBluesRemoteAndTouchingTheDisk : RemoteClientTest
     {
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration ravenConfiguration)
-        {
-            ravenConfiguration.RunInMemory = false;
-        }
-
         [Fact]
         public void CanQueryDtcForUncommittedItem()
         {
-            using (GetNewServer())
+            using (var server = GetNewServer(runInMemory: false))
             using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
             {
+
+                EnsureDtcIsSupported(server);
+
                 for (int i = 0; i < 150; i++)
                 {
                     string id;
                     using (var tx = new TransactionScope())
                     {
-                        Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-                                                          new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+                        Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id,
+                                                          new DummyEnlistmentNotification(),
                                                           EnlistmentOptions.None);
 
                         using (var session = store.OpenSession())
@@ -128,6 +133,7 @@ namespace Raven.Tests.Bugs
 
                         tx.Complete();
                     }
+
                     using (var session = store.OpenSession())
                     {
                         session.Advanced.AllowNonAuthoritativeInformation = false;
@@ -137,6 +143,5 @@ namespace Raven.Tests.Bugs
                 }
             }
         }
-
     }
 }

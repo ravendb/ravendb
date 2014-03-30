@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Tests.Bundles.Versioning;
@@ -8,7 +9,7 @@ namespace Raven.Tests.Bundles.Replication
 {
 	public class WritesDuringFailover2 : ReplicationBase
 	{
-		protected override void ConfigureStore(DocumentStore documentStore)
+		protected override void ModifyStore(DocumentStore documentStore)
 		{
 			documentStore.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
 		}
@@ -36,7 +37,7 @@ namespace Raven.Tests.Bundles.Replication
 
 			using (var session = store1.OpenSession())
 			{
-				Assert.Throws<WebException>(() => session.Load<Company>("companies/1"));
+				Assert.Throws<HttpRequestException>(() => session.Load<Company>("companies/1"));
 			}
 		}
 	}

@@ -3,17 +3,13 @@ using System.Collections.Generic;
 using System.Net;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
-#if SILVERLIGHT
-using System.Windows.Browser;
-#endif
-#if SILVERLIGHT
-using Raven.Client.Silverlight.Connection;
-#elif NETFX_CORE
+#if NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #endif
 
 namespace Raven.Client.Connection
 {
+    using System.Collections.Specialized;
 	using Raven.Abstractions.Connection;
 
 	public static class RavenUrlExtensions
@@ -82,9 +78,9 @@ namespace Raven.Client.Connection
 			return url + "/terms/" + index + "?field=" + field + "&fromValue=" + fromValue + "&pageSize=" + pageSize;
 		}
 
-		public static string Document(this string url, string key)
+		public static string Doc(this string url, string key)
 		{
-			return url + "/docs/" + Uri.EscapeUriString(key);
+			return url + "/docs/" + key;
 		}
 
 		public static string Docs(this string url, int start, int pageSize)
@@ -104,13 +100,7 @@ namespace Raven.Client.Connection
 
 		public static string NoCache(this string url)
 		{
-#if !SILVERLIGHT 
 			return url;
-#else
-			return (url.Contains("?"))
-				? url + "&noCache=" + Guid.NewGuid().GetHashCode()
-				: url + "?noCache=" + Guid.NewGuid().GetHashCode();
-#endif
 		}
 
 		public static Uri ToUri(this string url)
@@ -123,12 +113,14 @@ namespace Raven.Client.Connection
 			return requestor.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(requestor, url, "GET", credentials, convention));
 		}
 
-		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, OperationCredentials credentials, DocumentConvention convention, IDictionary<string, string> operationsHeaders, string method)
+		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor,
+												 OperationCredentials credentials, DocumentConvention convention,
+												 NameValueCollection operationsHeaders, string method)
 		{
 			var httpJsonRequest = requestor.jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(requestor, url, method, credentials, convention)
-					.AddOperationHeaders(operationsHeaders));
-			
+					new CreateHttpJsonRequestParams(requestor, url, method, credentials, convention)
+							.AddOperationHeaders(operationsHeaders));
+
 			return httpJsonRequest;
 		}
 	}

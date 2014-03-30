@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Issues.Ravendb718
 {
-	public class DateTime_QueryMapReduceTests
+	public class DateTime_QueryMapReduceTests : RavenTest
 	{
 		[Fact]
 		public void DateTime_SavedAs_Local_OnMapReduceIndex_QueriesAs_Unspecified()
@@ -30,13 +30,12 @@ namespace Raven.Tests.Issues.Ravendb718
 			DoTest(DateTime.UtcNow, DateTimeKind.Utc, DateTimeKind.Utc);
 		}
 
-		private static void DoTest(DateTime dt, DateTimeKind inKind, DateTimeKind outKind)
+		private void DoTest(DateTime dt, DateTimeKind inKind, DateTimeKind outKind)
 		{
 			Assert.Equal(inKind, dt.Kind);
 
-			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true })
+			using (var documentStore = NewDocumentStore())
 			{
-				documentStore.Initialize();
 				new Foos_MinAndMaxDateTime().Execute(documentStore);
 
 				using (var session = documentStore.OpenSession())

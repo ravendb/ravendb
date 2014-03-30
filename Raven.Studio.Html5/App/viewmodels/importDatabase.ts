@@ -1,0 +1,4 @@
+﻿class importDatabase {
+}
+
+export = importDatabase; 

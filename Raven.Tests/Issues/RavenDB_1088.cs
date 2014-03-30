@@ -66,8 +66,8 @@ namespace Raven.Tests.Issues
 				}
 				catch (Exception e)
 				{
-					Assert.True(e.GetBaseException().Message.StartsWith("Cannot insert") || // munin
-						e.GetBaseException().Message.StartsWith("Illegal duplicate key")); // esent
+					Assert.True(e.GetBaseException().Message.StartsWith("Illegal duplicate key") || //esent
+                        e.GetBaseException().Message.StartsWith("InsertDocument() - overwriteExisting is false")); 
 				}
 			}
 

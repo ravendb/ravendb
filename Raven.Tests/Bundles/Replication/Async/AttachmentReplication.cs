@@ -11,6 +11,7 @@ using Raven.Json.Linq;
 using Xunit;
 using Raven.Abstractions.Extensions;
 using System;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bundles.Replication.Async
 {
@@ -103,17 +104,19 @@ namespace Raven.Tests.Bundles.Replication.Async
 			Assert.Null(store2.DatabaseCommands.GetAttachment("ayende"));
 		}
 
-		[Fact]
-		public void When_replicating_and_an_attachment_is_already_there_will_result_in_conflict()
+		[Theory]
+        [PropertyData("Storages")]
+		public void When_replicating_and_an_attachment_is_already_there_will_result_in_conflict(string storageType)
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
+			var store1 = CreateStore(requestedStorageType:storageType);
+			var store2 = CreateStore(requestedStorageType: storageType);
 
 			store1.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
 			store2.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
+			store1.DatabaseCommands.PutAttachment("ayende2", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
 		  
 			TellFirstInstanceToReplicateToSecondInstance();
-
+			WaitForAttachment(store2, "ayende2");
 			var aggregateException = Assert.Throws<AggregateException>(() =>
 			{
 				for (int i = 0; i < RetriesCount; i++)
@@ -121,6 +124,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 					store2.AsyncDatabaseCommands.GetAttachmentAsync("ayende").Wait();
 				}
 			});
+
 			var conflictException = Assert.IsType<ConflictException>(aggregateException.Flatten().InnerException);
 
 			Assert.Equal("Conflict detected on ayende, conflict must be resolved before the attachment will be accessible", conflictException.Message);
@@ -133,10 +137,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 			var store2 = CreateStore();
 
 			store1.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
-
-
 			store2.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
-
 
 			TellFirstInstanceToReplicateToSecondInstance();
 

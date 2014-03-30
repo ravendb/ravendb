@@ -11,7 +11,8 @@ namespace Raven.Abstractions.Data
 {
 	public class IndexStats
 	{
-		public string Name { get; set; }
+		public int Id { get; set; }
+        public string PublicName { get; set; }
 		public int IndexingAttempts { get; set; }
 		public int IndexingSuccesses { get; set; }
 		public int IndexingErrors { get; set; }
@@ -36,7 +37,7 @@ namespace Raven.Abstractions.Data
 
 		public override string ToString()
 		{
-			return Name;
+		    return Id.ToString();
 		}
 	}
 
@@ -52,6 +53,8 @@ namespace Raven.Abstractions.Data
 		Idle = 4,
 		
 		Abandoned = 8,
+
+        Error = 16,
 
         Forced = 512,
     }

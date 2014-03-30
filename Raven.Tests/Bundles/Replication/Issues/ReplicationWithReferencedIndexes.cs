@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
+using Raven.Database.Config;
 using Xunit;
 
 namespace Raven.Tests.Bundles.Replication.Issues
@@ -30,7 +31,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 			}
 		}
 
-		protected override void ConfigureServer(Database.Config.RavenConfiguration serverConfiguration)
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
 		{
 			serverConfiguration.RunInMemory = false;
 			serverConfiguration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true;
@@ -59,7 +60,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 
 			using (var s2 = two.OpenSession())
 			{
-				var result = s2.Advanced.LuceneQuery<Item, Index>()
+                var result = s2.Advanced.DocumentQuery<Item, Index>()
 					.WaitForNonStaleResults()
 					.WhereEquals("RefName", "rahien")
 					.SingleOrDefault();
@@ -74,7 +75,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 			WaitForReplication(two, "items/2");
 			using (var s2 = two.OpenSession())
 			{
-				var result = s2.Advanced.LuceneQuery<Item,Index>()
+                var result = s2.Advanced.DocumentQuery<Item, Index>()
 					.WaitForNonStaleResults()
 					.WhereEquals("RefName", "rahien")
 					.SingleOrDefault();

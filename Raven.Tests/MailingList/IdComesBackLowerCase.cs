@@ -3,34 +3,31 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class IdComesBackLowerCase : IDisposable
+	public class IdComesBackLowerCase : RavenTest
 	{
 		private readonly IDocumentStore store;
 
 		public IdComesBackLowerCase()
 		{
-			store = new EmbeddableDocumentStore { RunInMemory = true };
-			((EmbeddableDocumentStore)store).RegisterListener(new NoStaleQueriesListener());
-			store.Initialize();
+			store = NewDocumentStore(configureStore: documentStore => documentStore.RegisterListener(new NoStaleQueriesListener()));
 
 			new Product_AvailableForSale3().Execute(store);
 
-			Product product1 = new Product("MyName1", "MyBrand1");
+			var product1 = new Product("MyName1", "MyBrand1");
 			product1.Id = "Products/100";
 
-			Product product2 = new Product("MyName2", "MyBrand2");
+			var product2 = new Product("MyName2", "MyBrand2");
 			product2.Id = "Products/101";
 
-			FacetSetup facetSetup = new FacetSetup { Id = "facets/ProductFacets", Facets = new List<Facet> { new Facet { Name = "Brand" } } };
+			var facetSetup = new FacetSetup { Id = "facets/ProductFacets", Facets = new List<Facet> { new Facet { Name = "Brand" } } };
 
-			using (IDocumentSession docSession = store.OpenSession())
+			using (var docSession = store.OpenSession())
 			{
 				foreach (var productDoc in docSession.Query<Product>())
 				{
@@ -51,17 +48,12 @@ namespace Raven.Tests.MailingList
 			}
 		}
 
-		public void Dispose()
-		{
-			store.Dispose();
-		}
-
 		[Fact]
 		public void ShouldReturnMatchingProductWithGivenIdWhenSelectingAllFields()
 		{
 			using (var session = store.OpenSession())
 			{
-				var products = session.Advanced.LuceneQuery<Product, Product_AvailableForSale3>()
+                var products = session.Advanced.DocumentQuery<Product, Product_AvailableForSale3>()
 					.SelectFields<Product>()
 					.UsingDefaultField("Any")
 					.Where("MyName1").ToList();
@@ -75,14 +67,13 @@ namespace Raven.Tests.MailingList
 		{
 			using (var session = store.OpenSession())
 			{
-				var products = session.Advanced.LuceneQuery<Product, Product_AvailableForSale3>()
+                var products = session.Advanced.DocumentQuery<Product, Product_AvailableForSale3>()
 					.UsingDefaultField("Any")
 					.Where("MyName1").ToList();
 
 				Assert.Equal("Products/100", products.First().Id);
 			}
 		}
-
 
 		public class Product
 		{

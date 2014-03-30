@@ -40,7 +40,7 @@ namespace Raven.Tests.Bundles.Compression
 
 			using (var session = documentStore.OpenSession())
 			{
-				session.Advanced.LuceneQuery<Company>(IndexName)
+                session.Advanced.DocumentQuery<Company>(IndexName)
 					.WaitForNonStaleResults()
 					.SelectFields<Company>("Name")
 					.ToList();
@@ -64,25 +64,18 @@ namespace Raven.Tests.Bundles.Compression
 							from c in docs.Companies
 							select new 
 							{
-								Name = c.Name,
-								Count = 1
+								Names = new[]{c.Name}
 							}
 						",
 					Reduce = 
 						@"
 							from doc in results
-							group doc by doc.Name into g
+							group doc by 1 into g
 							select new
 							{
-								Name = g.Key,
-								Count = g.Sum(x => x.Count)
+								Names = g.SelectMany(x=>x.Names).Distinct()
 							}
-						",
-					Stores =
-					{
-						{ "Name", FieldStorage.Yes },
-						{ "Count", FieldStorage.Yes },
-					}
+						"
 				});
 
 			using (var session = documentStore.OpenSession())
@@ -95,19 +88,12 @@ namespace Raven.Tests.Bundles.Compression
 
 			using (var session = documentStore.OpenSession())
 			{
-				session.Advanced.LuceneQuery<Company>(IndexName)
+                session.Advanced.DocumentQuery<Company>(IndexName)
 					.WaitForNonStaleResults()
-					.SelectFields<CompanyCount>("Name", "Count")
 					.ToList();
 			}
 
 			AssertPlainTextIsNotSavedInDatabase_ExceptIndexes(FirstCompany, SecondCompany);
 		}
-	}
-
-	class CompanyCount
-	{
-		public string Name { get; set; }
-		public int Count { get; set; }
 	}
 }

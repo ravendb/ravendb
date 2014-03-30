@@ -21,11 +21,13 @@ using Raven.Abstractions.Util;
 using Raven.Database;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
+using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Impl.DTC;
 using Raven.Database.Plugins;
 using System.Linq;
 using Raven.Database.Storage;
+using Raven.Database.Storage.Esent.Backup;
 using Raven.Database.Storage.Esent.Debug;
 using Raven.Database.Util;
 using Raven.Json.Linq;
@@ -58,6 +60,8 @@ namespace Raven.Storage.Esent
 
         [ImportMany]
         public OrderedPartCollection<ISchemaUpdate> Updaters { get; set; }
+
+        private static readonly object UpdateLocker = new object();
 
         static TransactionalStorage()
         {
@@ -158,30 +162,37 @@ namespace Raven.Storage.Esent
         public void StartBackupOperation(DocumentDatabase docDb, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase)
         {
             if (new InstanceParameters(instance).Recovery == false)
-                throw new InvalidOperationException("Cannot start backup operation since the recovery option is disabled. In order to enable the recovery please set the RunInUnreliableYetFastModeThatIsNotSuitableForProduction configuration parameter value to true.");
+                throw new InvalidOperationException("Cannot start backup operation since the recovery option is disabled. In order to enable the recovery please set the RunInUnreliableYetFastModeThatIsNotSuitableForProduction configuration parameter value to false.");
 
             var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, documentDatabase);
             Task.Factory.StartNew(backupOperation.Execute);
         }
 
-        public void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
+        public void Restore(RestoreRequest  restoreRequest, Action<string> output)
         {
-            new RestoreOperation(backupLocation, configuration, output, defrag).Execute();
+            new RestoreOperation(restoreRequest, configuration, output).Execute();
         }
 
-        public long GetDatabaseSizeInBytes()
+        public DatabaseSizeInformation GetDatabaseSize()
         {
-            long sizeInBytes;
+            long allocatedSizeInBytes;
+            long usedSizeInBytes;
 
             using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, null, this))
             {
-                int sizeInPages, pageSize;
+                int sizeInPages, pageSize, spaceOwnedInPages;
                 Api.JetGetDatabaseInfo(pht.Session, pht.Dbid, out sizeInPages, JET_DbInfo.Filesize);
+                Api.JetGetDatabaseInfo(pht.Session, pht.Dbid, out spaceOwnedInPages, JET_DbInfo.SpaceOwned);
                 Api.JetGetDatabaseInfo(pht.Session, pht.Dbid, out pageSize, JET_DbInfo.PageSize);
-                sizeInBytes = ((long)sizeInPages) * pageSize;
+                allocatedSizeInBytes = ((long)sizeInPages) * pageSize;
+                usedSizeInBytes = ((long)spaceOwnedInPages) * pageSize;
             }
 
-            return sizeInBytes;
+            return new DatabaseSizeInformation
+                   {
+                       AllocatedSizeInBytes = allocatedSizeInBytes,
+                       UsedSizeInBytes = usedSizeInBytes
+                   };
         }
 
         public long GetDatabaseCacheSizeInBytes()
@@ -195,8 +206,6 @@ namespace Raven.Storage.Esent
 
         public long GetDatabaseTransactionVersionSizeInBytes()
         {
-            if (configuration.DisablePerformanceCounters)
-                return -4;
             if (getDatabaseTransactionVersionSizeInBytesErrorValue != 0)
                 return getDatabaseTransactionVersionSizeInBytesErrorValue;
 
@@ -244,6 +253,8 @@ namespace Raven.Storage.Esent
             // after the database was already shut down.
             return e.Error == JET_err.InvalidInstance;
         }
+
+        public bool SupportsDtc { get { return true; } }
 
         void ITransactionalStorage.Compact(InMemoryRavenConfiguration cfg)
         {
@@ -379,7 +390,7 @@ namespace Raven.Storage.Esent
             SystemParameters.CacheSizeMax = cacheSizeMax;
         }
 
-        public bool Initialize(IUuidGenerator uuidGenerator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
+        public void Initialize(IUuidGenerator uuidGenerator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
         {
             try
             {
@@ -399,13 +410,11 @@ namespace Raven.Storage.Esent
 
                 Api.JetInit(ref instance);
 
-                var newDb = EnsureDatabaseIsCreatedAndAttachToDatabase();
+                EnsureDatabaseIsCreatedAndAttachToDatabase();
 
                 SetIdFromDb();
 
                 tableColumnsCache.InitColumDictionaries(instance, database);
-
-                return newDb;
             }
             catch (Exception e)
             {
@@ -448,27 +457,40 @@ namespace Raven.Storage.Esent
                             Console.WriteLine();
                         }))
                         {
-                            do
+                            bool lockTaken = false;
+                            try
                             {
-                                var updater = Updaters.FirstOrDefault(update => update.Value.FromSchemaVersion == schemaVersion);
-                                if (updater == null)
-                                    throw new InvalidOperationException(
-                                        string.Format(
-                                            "The version on disk ({0}) is different that the version supported by this library: {1}{2}You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.",
-                                            schemaVersion, SchemaCreator.SchemaVersion, Environment.NewLine));
+                                Monitor.TryEnter(UpdateLocker, TimeSpan.FromSeconds(15), ref lockTaken);
+                                if (lockTaken == false)
+                                    throw new TimeoutException("Could not take upgrade lock after 15 seconds, probably another database is upgrading itself and we can't interupt it midway. Please try again later");
 
-                                log.Info("Updating schema from version {0}: ", schemaVersion);
-                                Console.WriteLine("Updating schema from version {0}: ", schemaVersion);
+                                do
+                                {
+                                    var updater = Updaters.FirstOrDefault(update => update.Value.FromSchemaVersion == schemaVersion);
+                                    if (updater == null)
+                                        throw new InvalidOperationException(
+                                            string.Format(
+                                                "The version on disk ({0}) is different that the version supported by this library: {1}{2}You need to migrate the disk version to the library version, alternatively, if the data isn't important, you can delete the file and it will be re-created (with no data) with the library version.",
+                                                schemaVersion, SchemaCreator.SchemaVersion, Environment.NewLine));
 
-                                ticker.Start();
+                                    log.Info("Updating schema from version {0}: ", schemaVersion);
+                                    Console.WriteLine("Updating schema from version {0}: ", schemaVersion);
 
-                                updater.Value.Init(generator);
-                                updater.Value.Update(session, dbid, Output);
-                                schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
+                                    ticker.Start();
 
-                                ticker.Stop();
+                                    updater.Value.Init(generator, configuration);
+                                    updater.Value.Update(session, dbid, Output);
+                                    schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
 
-                            } while (schemaVersion != SchemaCreator.SchemaVersion);
+                                    ticker.Stop();
+
+                                } while (schemaVersion != SchemaCreator.SchemaVersion);
+                            }
+                            finally
+                            {
+                                if(lockTaken)
+                                    Monitor.Exit(UpdateLocker);
+                            }
                         }
                     }
                 });
@@ -674,7 +696,19 @@ namespace Raven.Storage.Esent
             }
         }
 
-        public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
+	    public IStorageActionsAccessor CreateAccessor()
+	    {
+		    var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator,
+			    documentCacher, null, this);
+
+		    var accessor = new StorageActionsAccessor(pht);
+
+		    accessor.OnDispose += pht.Dispose;
+
+			return accessor;
+	    }
+
+	    public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
         {
             if (current.Value == null)
             {

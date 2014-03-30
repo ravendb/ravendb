@@ -53,7 +53,7 @@ namespace Raven.Tests.MailingList
 				{
 					var result = session
 					 .Advanced
-					 .LuceneQuery<Blog, Blog_Search>()
+                     .DocumentQuery<Blog, Blog_Search>()
 					 .WaitForNonStaleResults()
 					 .OrderBy(x=>x.Price)
 					 .ToArray();

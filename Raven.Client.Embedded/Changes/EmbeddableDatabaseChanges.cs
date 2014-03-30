@@ -10,6 +10,8 @@ using Raven.Client.Changes;
 
 namespace Raven.Client.Embedded.Changes
 {
+	using Raven.Client.Document;
+
 	internal class EmbeddableDatabaseChanges : IDatabaseChanges, IDisposable
 	{
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
@@ -24,10 +26,13 @@ namespace Raven.Client.Embedded.Changes
 		private readonly BlockingCollection<Action> enqueuedActions = new BlockingCollection<Action>();
 		private readonly Task enqueuedTask;
 
+		private readonly DocumentConvention conventions;
+
 		public EmbeddableDatabaseChanges(EmbeddableDocumentStore embeddableDocumentStore, Action onDispose, Func<string, Etag, string[], bool> tryResolveConflictByUsingRegisteredConflictListeners)
 		{
 			this.onDispose = onDispose;
 			this.tryResolveConflictByUsingRegisteredConflictListeners = tryResolveConflictByUsingRegisteredConflictListeners;
+			conventions = embeddableDocumentStore.Conventions;
 			Task = new CompletedTask<IDatabaseChanges>(this);
 			indexesObservable = new EmbeddableObservableWithTask<IndexChangeNotification>();
 			documentsObservable = new EmbeddableObservableWithTask<DocumentChangeNotification>();
@@ -114,6 +119,42 @@ namespace Raven.Client.Embedded.Changes
 
 			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable,
 				notification => notification.Id.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection(string collectionName)
+		{
+			if (collectionName == null) throw new ArgumentNullException("collectionName");
+
+			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable,
+				notification => string.Equals(collectionName, notification.CollectionName, StringComparison.OrdinalIgnoreCase));
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection<TEntity>()
+		{
+			var collectionName = conventions.GetTypeTagName(typeof(TEntity));
+			return ForDocumentsInCollection(collectionName);
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(string typeName)
+		{
+			if (typeName == null) throw new ArgumentNullException("typeName");
+
+			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable,
+				notification => string.Equals(typeName, notification.TypeName, StringComparison.OrdinalIgnoreCase));
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(Type type)
+		{
+			if (type == null) throw new ArgumentNullException("type");
+
+			var typeName = ReflectionUtil.GetFullNameWithoutVersionInformation(type);
+			return ForDocumentsOfType(typeName);
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType<TEntity>()
+		{
+			var typeName = ReflectionUtil.GetFullNameWithoutVersionInformation(typeof(TEntity));
+			return ForDocumentsOfType(typeName);
 		}
 
 		public IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts()

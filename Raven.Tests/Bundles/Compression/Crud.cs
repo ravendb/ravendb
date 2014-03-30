@@ -1,5 +1,6 @@
 using System;
 using Raven.Abstractions.Data;
+using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.Versioning;
 using Xunit;
@@ -8,6 +9,7 @@ namespace Raven.Tests.Bundles.Compression
 {
 	public class Crud : Compression
 	{
+		
 		[Fact]
 		public void StoreAndLoad()
 		{
@@ -47,7 +49,6 @@ namespace Raven.Tests.Bundles.Compression
 
 			var jsonDocument = documentStore.DatabaseCommands.Get("docs/1");
 			Assert.True(jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
-
 
 			AssertPlainTextIsNotSavedInDatabase_ExceptIndexes(FirstCompany);
 		}

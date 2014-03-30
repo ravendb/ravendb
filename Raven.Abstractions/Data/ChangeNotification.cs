@@ -16,6 +16,8 @@ namespace Raven.Abstractions.Data
 	{
 		public DocumentChangeTypes Type { get; set; }
 		public string Id { get; set; }
+		public string CollectionName { get; set; }
+		public string TypeName { get; set; }
 		public Etag Etag { get; set; }
 		public string Message { get; set; }
 
@@ -55,6 +57,10 @@ namespace Raven.Abstractions.Data
         IndexPromotedFromIdle = 64,
 
 		IndexDemotedToAbandoned = 128,
+
+		IndexDemotedToDisabled = 256,
+
+        IndexMarkedAsErrored = 512
 	}
 
 	public class IndexChangeNotification : EventArgs

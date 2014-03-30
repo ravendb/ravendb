@@ -9,6 +9,7 @@ using System.ComponentModel.Composition;
 using Lucene.Net.Documents;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Abstractions.Extensions;
@@ -24,17 +25,20 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
     {
         private static ILog log = LogManager.GetCurrentClassLogger();
 
-        public override AbstractIndexUpdateTriggerBatcher CreateBatcher(string indexName)
+        public override AbstractIndexUpdateTriggerBatcher CreateBatcher(int indexId)
         {
             //Only apply the trigger if there is a setup doc for this particular index
-            var jsonSetupDoc = Database.Get(Abstractions.Data.ScriptedIndexResults.IdPrefix + indexName, null);
+            Index indexInstance = this.Database.IndexStorage.GetIndexInstance(indexId);
+            if (indexInstance == null)
+                return null;
+            var jsonSetupDoc = Database.Documents.Get(Abstractions.Data.ScriptedIndexResults.IdPrefix + indexInstance.PublicName, null);
             if (jsonSetupDoc == null)
                 return null;
             var scriptedIndexResults = jsonSetupDoc.DataAsJson.JsonDeserialization<Abstractions.Data.ScriptedIndexResults>();
-            scriptedIndexResults.Id = indexName;
-            var abstractViewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(indexName);
+            var abstractViewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(indexId);
             if (abstractViewGenerator == null)
-                throw new InvalidOperationException("Could not find view generator for: " + indexName);
+                throw new InvalidOperationException("Could not find view generator for: " + indexInstance.PublicName);
+            scriptedIndexResults.Id = indexInstance.PublicName;
             return new Batcher(Database, scriptedIndexResults, abstractViewGenerator.ForEntityNames);
         }
 
@@ -43,9 +47,9 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
             private readonly DocumentDatabase database;
             private readonly Abstractions.Data.ScriptedIndexResults scriptedIndexResults;
             private readonly HashSet<string> forEntityNames;
-
-            private readonly Dictionary<string, RavenJObject> created = new Dictionary<string, RavenJObject>(StringComparer.InvariantCultureIgnoreCase);
-            private readonly HashSet<string> removed = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+            
+            private readonly Dictionary<string, List<RavenJObject>> created = new Dictionary<string, List<RavenJObject>>(StringComparer.InvariantCultureIgnoreCase);
+            private readonly Dictionary<string, List<RavenJObject>> removed = new Dictionary<string, List<RavenJObject>>(StringComparer.InvariantCultureIgnoreCase);
 
             public Batcher(DocumentDatabase database, Abstractions.Data.ScriptedIndexResults scriptedIndexResults, HashSet<string> forEntityNames)
             {
@@ -54,15 +58,24 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                 this.forEntityNames = forEntityNames;
             }
 
+            public override bool RequiresDocumentOnIndexEntryDeleted { get { return true;  } }
+
             public override void OnIndexEntryCreated(string entryKey, Document document)
             {
-                created.Add(entryKey, CreateJsonDocumentFromLuceneDocument(document));
-                removed.Remove(entryKey);
+                if (created.ContainsKey(entryKey) == false)
+                {
+                    created[entryKey] = new List<RavenJObject>();
+                }
+                created[entryKey].Add(CreateJsonDocumentFromLuceneDocument(document));
             }
 
-            public override void OnIndexEntryDeleted(string entryKey)
+            public override void OnIndexEntryDeleted(string entryKey, Document document = null)
             {
-                removed.Add(entryKey);
+                if (removed.ContainsKey(entryKey) == false)
+                {
+                    removed[entryKey] = new List<RavenJObject>();
+                }
+                removed[entryKey].Add(document != null ? CreateJsonDocumentFromLuceneDocument(document) : new RavenJObject());
             }
 
             public override void Dispose()
@@ -71,22 +84,26 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
                 if (string.IsNullOrEmpty(scriptedIndexResults.DeleteScript) == false)
                 {
-                    foreach (var removeKey in removed)
+                    foreach (var kvp in removed)
                     {
-                        patcher.Apply(new RavenJObject(), new ScriptedPatchRequest
+                        foreach (var entry in kvp.Value)
                         {
-                            Script = scriptedIndexResults.DeleteScript,
-                            Values =
-							{
-								{"key", removeKey}
-							}
-                        });
+                            patcher.Apply(entry, new ScriptedPatchRequest
+                            {
+                                Script = scriptedIndexResults.DeleteScript,
+                                Values =
+                                {
+                                    {"key", kvp.Key}
+                                }
+                            });
 
-                        if (log.IsDebugEnabled && patcher.Debug.Count > 0)
-                        {
-                            log.Debug("Debug output for doc: {0} for index {1} (delete):\r\n.{2}", removeKey, scriptedIndexResults.Id, string.Join("\r\n", patcher.Debug));
+                            if (log.IsDebugEnabled && patcher.Debug.Count > 0)
+                            {
+                                log.Debug("Debug output for doc: {0} for index {1} (delete):\r\n.{2}", kvp.Key,
+                                          scriptedIndexResults.Id, string.Join("\r\n", patcher.Debug));
 
-                            patcher.Debug.Clear();
+                                patcher.Debug.Clear();
+                            }
                         }
 
                     }
@@ -98,14 +115,18 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                     {
                         try
                         {
-                            patcher.Apply(kvp.Value, new ScriptedPatchRequest
+                            foreach (var entry in kvp.Value)
                             {
-                                Script = scriptedIndexResults.IndexScript,
-                                Values =
+                                patcher.Apply(entry, new ScriptedPatchRequest
+                                {
+                                    Script = scriptedIndexResults.IndexScript,
+                                    Values =
                                 {
                                     {"key", kvp.Key}
                                 }
-                            });
+                                });
+                            }
+                           
                         }
                         catch (Exception e)
                         {
@@ -127,18 +148,20 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
                 database.TransactionalStorage.Batch(accessor =>
                 {
-                    if (patcher.CreatedDocs != null)
+                    foreach (var operation in patcher.GetOperations())
                     {
-                        foreach (var jsonDocument in patcher.CreatedDocs)
-                        {
-                            patcher.DocumentsToDelete.Remove(jsonDocument.Key);
-                            database.Put(jsonDocument.Key, jsonDocument.Etag, jsonDocument.DataAsJson, jsonDocument.Metadata, null);
-                        }
-                    }
-
-                    foreach (var doc in patcher.DocumentsToDelete)
-                    {
-                        database.Delete(doc, null, null);
+	                    switch (operation.Type)
+	                    {
+							case ScriptedJsonPatcher.OperationType.Put:
+			                    database.Documents.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson,
+			                                 operation.Document.Metadata, null);
+								break;
+							case ScriptedJsonPatcher.OperationType.Delete:
+								database.Documents.Delete(operation.DocumentKey, null, null);
+								break;
+							default:
+								throw new ArgumentOutOfRangeException("operation.Type");
+	                    }    
                     }
                 });
             }
@@ -153,11 +176,9 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                     this.entityNames = entityNames;
                 }
 
-                public HashSet<string> DocumentsToDelete = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
-
                 protected override void CustomizeEngine(Jint.JintEngine jintEngine)
                 {
-                    jintEngine.SetFunction("DeleteDocument", ((Action<string>)(document => DocumentsToDelete.Add(document))));
+                    jintEngine.SetFunction("DeleteDocument", ((Action<string>)(DeleteFromContext)));
                 }
 
                 protected override void RemoveEngineCustomizations(Jint.JintEngine jintEngine)

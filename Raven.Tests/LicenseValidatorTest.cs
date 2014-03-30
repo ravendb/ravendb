@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests
 {
-    public class LicenseValidatorTest
+    public class LicenseValidatorTest : NoDisposalNeeded
     {
         [Fact]
         public void An_expired_OEM_license_is_still_valid()

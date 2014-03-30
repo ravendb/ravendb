@@ -1,6 +1,6 @@
+using System.Threading.Tasks;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Tests.Bundles.Versioning;
 using Xunit;
 
@@ -9,59 +9,64 @@ namespace Raven.Tests.Bundles.Replication.Async
 	public class ReadStriping : ReplicationBase
 	{
 		[Fact]
-		public void When_replicating_can_do_read_striping()
+		public async Task When_replicating_can_do_read_striping()
 		{
 			var store1 = CreateStore();
-			var store2 = CreateStore();
-			var store3 = CreateStore();
+            var store2 = CreateStore();
+            var store3 = CreateStore();
 
 			using (var session = store1.OpenAsyncSession())
 			{
-				session.Store(new Company());
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(new Company());
+				await session.SaveChangesAsync();
 			}
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store2, store3);
 
 			WaitForDocument(store2.DatabaseCommands, "companies/1");
 			WaitForDocument(store3.DatabaseCommands, "companies/1");
 
-			using(var store = new DocumentStore
+		    await PauseReplicationAsync(0, store1.DefaultDatabase);
+            await PauseReplicationAsync(1, store2.DefaultDatabase);
+            await PauseReplicationAsync(2, store3.DefaultDatabase);
+
+		    using(var store = new DocumentStore
 			{
 				Url = store1.Url,
 				Conventions =
 					{
 						FailoverBehavior = FailoverBehavior.ReadFromAllServers
-					}
+					},
+                    DefaultDatabase = store1.DefaultDatabase
 			})
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands)
-					.Wait();
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands);
 				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinationsUrls.Count);
 
 				foreach (var ravenDbServer in servers)
 				{
 					ravenDbServer.Server.ResetNumberOfRequests();
+                    Assert.Equal(0, ravenDbServer.Server.NumberOfRequests);
 				}
 
 				for (int i = 0; i < 6; i++)
 				{
 					using(var session = store.OpenAsyncSession())
 					{
-						Assert.NotNull(session.LoadAsync<Company>("companies/1").Result);
+						Assert.NotNull(await session.LoadAsync<Company>("companies/1"));
 					}
 				}
 			}
 			foreach (var ravenDbServer in servers)
 			{
-				Assert.Equal(2, ravenDbServer.Server.NumberOfRequests);
+                Assert.True(2 == ravenDbServer.Server.NumberOfRequests, string.Format("Server at port: {0}. Requests: #{1}", ravenDbServer.SystemDatabase.Configuration.Port, ravenDbServer.Server.NumberOfRequests));
 			}
 		}
 
 		[Fact]
-		public void Can_avoid_read_striping()
+		public async Task Can_avoid_read_striping()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
@@ -69,14 +74,18 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 			using (var session = store1.OpenAsyncSession())
 			{
-				session.Store(new Company());
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(new Company());
+				await session.SaveChangesAsync();
 			}
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store2, store3);
 
 			WaitForDocument(store2.DatabaseCommands, "companies/1");
 			WaitForDocument(store3.DatabaseCommands, "companies/1");
+
+            await PauseReplicationAsync(0, store1.DefaultDatabase);
+            await PauseReplicationAsync(1, store2.DefaultDatabase);
+            await PauseReplicationAsync(2, store3.DefaultDatabase);
 
 			using (var store = new DocumentStore
 			{
@@ -84,13 +93,13 @@ namespace Raven.Tests.Bundles.Replication.Async
 				Conventions =
 				{
 					FailoverBehavior = FailoverBehavior.ReadFromAllServers
-				}
+				},
+                DefaultDatabase = store1.DefaultDatabase
 			})
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient)store.DatabaseCommands)
-					.Wait();
+				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient)store.DatabaseCommands);
 				Assert.Equal(2, replicationInformerForDatabase.ReplicationDestinations.Count);
 
 				foreach (var ravenDbServer in servers)
@@ -105,7 +114,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 						ForceReadFromMaster = true
 					}))
 					{
-						Assert.NotNull(session.LoadAsync<Company>("companies/1").Result);
+						Assert.NotNull(await session.LoadAsync<Company>("companies/1"));
 					}
 				}
 			}

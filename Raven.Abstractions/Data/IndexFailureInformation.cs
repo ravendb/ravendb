@@ -37,10 +37,10 @@ namespace Raven.Abstractions.Data
 		}
 
 		/// <summary>
-		/// Gets or sets the name.
+		/// Gets or sets the id
 		/// </summary>
 		/// <value>The name.</value>
-		public string Name { get; set; }
+		public int Id { get; set; }
 		/// <summary>
 		/// Gets or sets the number of indexing attempts.
 		/// </summary>
@@ -90,7 +90,7 @@ namespace Raven.Abstractions.Data
 			const string msg =
 				"Index {0} is invalid, out of {1} indexing attempts, {2} has failed.\r\nError rate of {3:#.##%} exceeds allowed 15% error rate";
 			return string.Format(msg,
-			                     Name, Attempts, Errors, FailureRate);
+			                     Id, Attempts, Errors, FailureRate);
 		}
 	}
 }

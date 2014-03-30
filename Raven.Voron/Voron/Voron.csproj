@@ -1,0 +1,170 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Voron</RootNamespace>
+    <AssemblyName>Voron</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;DEBUG_PAGER_STATE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Debugging\DebugActionType.cs" />
+    <Compile Include="Debugging\DebugJournal.cs" />
+    <Compile Include="Debugging\EnvironmentStats.cs" />
+    <Compile Include="Exceptions\ConcurrencyException.cs" />
+    <Compile Include="Exceptions\DiskFullException.cs" />
+    <Compile Include="Exceptions\QuotaException.cs" />
+    <Compile Include="Impl\Backup\FullBackup.cs" />
+    <Compile Include="Impl\Backup\IncrementalBackupInfo.cs" />
+    <Compile Include="Impl\Backup\VoronBackupUtil.cs" />
+    <Compile Include="Impl\Constants.cs" />
+    <Compile Include="Impl\Extensions\ConcurrentQueueExtensions.cs" />
+    <Compile Include="Impl\Backup\IncrementalBackup.cs" />
+    <Compile Include="Impl\MemoryMapNativeMethods.cs" />
+    <Compile Include="Impl\Paging\Win32PageFileBackedMemoryMappedPager.cs" />
+    <Compile Include="Util\ConcurrentSet.cs" />
+    <Compile Include="Util\EndOfDiskSpaceEvent.cs" />
+    <Compile Include="Util\GenericUtil.cs" />
+    <Compile Include="Impl\FileHeaders\FileHeader.cs" />
+    <Compile Include="Impl\FileHeaders\HeaderAccessor.cs" />
+    <Compile Include="Impl\FileHeaders\TreeFlags.cs" />
+    <Compile Include="Impl\FileHeaders\TreeRootHeader.cs" />
+    <Compile Include="Impl\FreeSpace\StreamBitArray.cs" />
+    <Compile Include="Impl\FreeSpace\FreeSpaceHandling.cs" />
+    <Compile Include="Impl\FreeSpace\IFreeSpaceHandling.cs" />
+    <Compile Include="Impl\FreeSpace\NoFreeSpaceHandling.cs" />
+    <Compile Include="Impl\Journal\IJournalWriter.cs" />
+    <Compile Include="Impl\Journal\JournalFile.cs" />
+    <Compile Include="Impl\Journal\JournalReader.cs" />
+    <Compile Include="Impl\Journal\JournalInfo.cs" />
+    <Compile Include="Impl\Journal\JournalSnapshot.cs" />
+    <Compile Include="Impl\Journal\PureMemoryJournalWriter.cs" />
+    <Compile Include="Impl\Journal\TransactionHeader.cs" />
+    <Compile Include="Impl\Journal\TransactionMarker.cs" />
+    <Compile Include="Impl\Journal\Win32JournalWriter.cs" />
+    <Compile Include="Impl\Journal\WriteAheadJournal.cs" />
+    <Compile Include="Impl\PagerState.cs" />
+    <Compile Include="Impl\Paging\AbstractPager.cs" />
+    <Compile Include="Impl\Paging\FragmentedPureMemoryPager.cs" />
+    <Compile Include="Impl\Paging\FilePager.cs" />
+    <Compile Include="Impl\Paging\IVirtualPager.cs" />
+    <Compile Include="Impl\Paging\Win32MemoryMapPager.cs" />
+    <Compile Include="Impl\Paging\Win32PureMemoryPager.cs" />
+    <Compile Include="Impl\Paging\TemporaryPage.cs" />
+    <Compile Include="Impl\ScratchBufferPool.cs" />
+    <Compile Include="Impl\SliceEqualityComparer.cs" />
+    <Compile Include="Impl\SnapshotReader.cs" />
+    <Compile Include="Impl\TransactionMergingWriter.cs" />
+    <Compile Include="Impl\TreeAndSliceComparer.cs" />
+    <Compile Include="Impl\WriteBatch.cs" />
+    <Compile Include="ReadResult.cs" />
+    <Compile Include="RecoveryErrorEventArgs.cs" />
+    <Compile Include="StorageEnvironmentOptions.cs" />
+    <Compile Include="Impl\StorageEnvironmentState.cs" />
+    <Compile Include="TransactionFlags.cs" />
+    <Compile Include="Trees\Cursor.cs" />
+    <Compile Include="Debugging\DebugStuff.cs" />
+    <Compile Include="Impl\NativeMethods.cs" />
+    <Compile Include="Trees\EmptyIterator.cs" />
+    <Compile Include="Trees\IIterator.cs" />
+    <Compile Include="Trees\SingleEntryIterator.cs" />
+    <Compile Include="Trees\TreeIterator.cs" />
+    <Compile Include="Trees\NodeFlags.cs" />
+    <Compile Include="Trees\NodeHeader.cs" />
+    <Compile Include="Trees\Page.cs" />
+    <Compile Include="Trees\PageFlags.cs" />
+    <Compile Include="Trees\PageHeader.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Slice.cs" />
+    <Compile Include="Impl\SliceComparer.cs" />
+    <Compile Include="SliceOptions.cs" />
+    <Compile Include="StorageEnvironment.cs" />
+    <Compile Include="Impl\Transaction.cs" />
+    <Compile Include="Trees\PageSplitter.cs" />
+    <Compile Include="Trees\Tree.cs" />
+    <Compile Include="Debugging\TreeDumper.cs" />
+    <Compile Include="Impl\SizeOf.cs" />
+    <Compile Include="Trees\TreeDataInTransaction.cs" />
+    <Compile Include="Trees\TreeMutableState.cs" />
+    <Compile Include="Trees\TreeRebalancer.cs" />
+    <Compile Include="Util\AsyncManualResetEvent.cs" />
+    <Compile Include="Trees\RecentlyFoundPages.cs" />
+    <Compile Include="Util\Conversion\Endianness.cs" />
+    <Compile Include="Util\Crc.cs" />
+    <Compile Include="Util\DisposableAction.cs" />
+    <Compile Include="Util\ImmutableAppendOnlyList.cs" />
+    <Compile Include="Util\LZ4.cs" />
+    <Compile Include="Util\NativeFileMethods.cs" />
+    <Compile Include="Impl\Backup\BackupMethods.cs" />
+    <Compile Include="Util\DataCopier.cs" />
+    <Compile Include="Util\Conversion\BigEndianBitConverter.cs" />
+    <Compile Include="Util\Conversion\LittleEndianBitConverter.cs" />
+    <Compile Include="Util\Conversion\EndianBitConverter.cs" />
+    <Compile Include="Util\SkipList.cs" />
+    <Compile Include="Util\TreeExtensions.cs" />
+    <Compile Include="Util\Utils.cs" />
+    <Compile Include="Util\PageTable.cs" />
+    <Compile Include="ValueReader.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Util\Conversion\readme.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="RavenDB.snk" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

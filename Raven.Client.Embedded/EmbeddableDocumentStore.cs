@@ -13,6 +13,7 @@ using Raven.Client.Embedded.Changes;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded
@@ -31,7 +32,7 @@ namespace Raven.Client.Embedded
 		}
 
 		private RavenConfiguration configuration;
-		private HttpServer httpServer;
+		private OwinHttpServer httpServer;
 		private bool wasDisposed;
 
 		/// <summary>
@@ -54,9 +55,14 @@ namespace Raven.Client.Embedded
 		///</summary>
 		public RavenConfiguration Configuration
 		{
-			get { return configuration ?? (configuration = new RavenConfiguration()); }
+			get
+			{
+				return configuration ?? (configuration = new RavenConfiguration
+				{
+					Port = PortUtil.DefaultPort, // Do not use the default "*" value, in embedded mode.
+				});
+			}
 		}
-
 
 		/// <summary>
 		/// Run RavenDB in an embedded mode, using in memory only storage.
@@ -192,7 +198,6 @@ namespace Raven.Client.Embedded
 				DataDirectory = embeddedRavenConnectionStringOptions.DataDirectory;
 
 			RunInMemory = embeddedRavenConnectionStringOptions.RunInMemory;
-
 		}
 
 
@@ -207,6 +212,8 @@ namespace Raven.Client.Embedded
 			if (string.IsNullOrEmpty(DataDirectory) == false && string.IsNullOrEmpty(DefaultDatabase) == false)
 				throw new InvalidOperationException("You cannot specify DefaultDatabase value when the DataDirectory has been set, running in Embedded mode, the Default Database is not a valid option.");
 
+            AssemblyExtractor.ExtractEmbeddedAssemblies();
+
 			if (configuration != null && Url == null)
 			{
 				configuration.PostInit();
@@ -217,28 +224,28 @@ namespace Raven.Client.Embedded
 				configuration.SetSystemDatabase();
 				DocumentDatabase = new DocumentDatabase(configuration);
 				DocumentDatabase.SpinBackgroundWorkers();
+
 				if (UseEmbeddedHttpServer)
 				{
 					SetStudioConfigToAllowSingleDb();
-					httpServer = new HttpServer(configuration, DocumentDatabase);
-					httpServer.StartListening();
+					httpServer = new OwinHttpServer(configuration, DocumentDatabase);
 				}
-				else // we need to setup our own idle timer
-				{
-					idleTimer = new Timer(state =>
-					{
-						try
-						{
-							DocumentDatabase.RunIdleOperations();
-						}
-						catch (Exception e)
-						{
-							log.WarnException("Error during database idle operations", e);
-						}
-					},null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
-				}
-				databaseCommandsGenerator = () => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId, listeners.ConflictListeners);
-				asyncDatabaseCommandsGenerator = () => new EmbeddedAsyncServerClient(DatabaseCommands);
+
+				// need to set out own idle timer
+                idleTimer = new Timer(state =>
+                {
+                    try
+                    {
+                        DocumentDatabase.RunIdleOperations();
+                    }
+                    catch (Exception e)
+                    {
+                        log.WarnException("Error during database idle operations", e);
+                    }
+                }, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+				
+                databaseCommandsGenerator = () => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId, listeners.ConflictListeners);
+				asyncDatabaseCommandsGenerator = () => new EmbeddedAsyncServerClient(DocumentDatabase, DatabaseCommands);
 			}
 			else
 			{
@@ -253,7 +260,7 @@ namespace Raven.Client.Embedded
 		{
 			if (DocumentDatabase == null)
 				return;
-			var jsonDocument = DocumentDatabase.Get("Raven/StudioConfig", null);
+			var jsonDocument = DocumentDatabase.Documents.Get("Raven/StudioConfig", null);
 			RavenJObject doc;
 			RavenJObject metadata;
 			if(jsonDocument == null)
@@ -269,7 +276,7 @@ namespace Raven.Client.Embedded
 
 			doc["WarnWhenUsingSystemDatabase"] = false;
 
-			DocumentDatabase.Put("Raven/StudioConfig", null, doc, metadata, null);
+			DocumentDatabase.Documents.Put("Raven/StudioConfig", null, doc, metadata, null);
 		}
 
 
@@ -285,11 +292,10 @@ namespace Raven.Client.Embedded
 
 		}
 
-
 		/// <summary>
 		/// Expose the internal http server, if used
 		/// </summary>
-		public HttpServer HttpServer
+		public OwinHttpServer HttpServer
 		{
 			get { return httpServer; }
 		}

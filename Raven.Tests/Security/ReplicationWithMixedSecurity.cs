@@ -33,7 +33,7 @@ namespace Raven.Tests.Security
 
 		private int _storeCounter, _databaseCounter;
 
-		protected override void ConfigureStore(DocumentStore store)
+		protected override void ModifyStore(DocumentStore store)
 		{
 			var isApiStore = _storeCounter % 2 == 0;
 
@@ -53,13 +53,13 @@ namespace Raven.Tests.Security
 			_storeCounter++;
 		}
 
-		protected override void ConfigureDatabase(Database.DocumentDatabase database)
+        protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)
 		{
 			var isApiDatabase = _databaseCounter % 2 == 0;
 
 			if (isApiDatabase)
 			{
-				database.Put(
+				database.Documents.Put(
 					"Raven/ApiKeys/" + apiKey.Split('/')[0],
 					null,
 					RavenJObject.FromObject(
@@ -73,6 +73,7 @@ namespace Raven.Tests.Security
 								{
 									new DatabaseAccess { TenantId = "*" },
 									new DatabaseAccess { TenantId = Constants.SystemDatabase },
+                                    new DatabaseAccess {TenantId = databaseName}
 								}
 						}),
 					new RavenJObject(),
@@ -80,7 +81,7 @@ namespace Raven.Tests.Security
 			}
 			else
 			{
-				database.Put("Raven/Authorization/WindowsSettings", null,
+				database.Documents.Put("Raven/Authorization/WindowsSettings", null,
 												   RavenJObject.FromObject(new WindowsAuthDocument
 												   {
 													   RequiredUsers = new List<WindowsAuthData>
@@ -93,6 +94,7 @@ namespace Raven.Tests.Security
 						                                   {
 							                                   new DatabaseAccess {TenantId = "*"},
 															   new DatabaseAccess {TenantId = Constants.SystemDatabase},
+                                                               new DatabaseAccess {TenantId = databaseName}
 						                                   }
 					                                   }
 				                                   }

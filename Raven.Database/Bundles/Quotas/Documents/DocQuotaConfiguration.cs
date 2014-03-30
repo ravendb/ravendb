@@ -64,7 +64,7 @@ namespace Raven.Bundles.Quotas.Documents
 			var countOfDocuments = database.Statistics.CountOfDocuments;
 			if (countOfDocuments <= softLimit)
 			{
-				database.Delete("Raven/Quotas/Documents", null, null);
+				database.Documents.Delete("Raven/Quotas/Documents", null, null);
 				skipCheck = VetoResult.Allowed;
 				recheckOnDelete = false;
 				return;
@@ -78,7 +78,7 @@ namespace Raven.Bundles.Quotas.Documents
 				msg = string.Format("Database doc count is {0:#,#}, which is over the allowed quota of {1:#,#}. No more documents are allowed in.",
 					countOfDocuments, hardLimit);
 
-				database.Put("Raven/Quotas/Documents", null, new RavenJObject
+				database.Documents.Put("Raven/Quotas/Documents", null, new RavenJObject
 				{
 					{"Message", msg}
 				}, new RavenJObject(), null);
@@ -90,7 +90,7 @@ namespace Raven.Bundles.Quotas.Documents
 				msg = string.Format("Database doc count is {0:#,#}, which is close to the allowed quota of {1:#,#}.",
 					countOfDocuments, softLimit);
 
-				database.Put("Raven/Quotas/Documents", null, new RavenJObject
+				database.Documents.Put("Raven/Quotas/Documents", null, new RavenJObject
 				{
 					{"Message", msg}
 				}, new RavenJObject(), null);

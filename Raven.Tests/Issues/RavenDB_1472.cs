@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq;
 using Raven.Client.Linq;
 using Xunit;
 
 namespace Raven.Tests.Issues
 {
+	//https://groups.google.com/forum/#!topic/ravendb/srfAG3vrmCk
 	public class RavenDB_1472 : RavenTest
 	{
 		public class Cat
@@ -64,8 +60,8 @@ namespace Raven.Tests.Issues
 						.Where(cat => cat.Id.In("cats/1", "cats/2") && cat.Id.In("cats/2", "cats/3"))
 						.ToList();
 
-					Assert.Equal(1,cats.Count);
-					Assert.Equal("cats/2",cats.First().Id);
+					Assert.Equal(1, cats.Count);
+					Assert.Equal("cats/2", cats.First().Id);
 				}
 			}
 		}

@@ -24,16 +24,9 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
 		/// </summary>
-		public AsyncDocumentQuery(InMemoryDocumentSessionOperations session,
-#if !SILVERLIGHT
-			IDatabaseCommands databaseCommands,
-#endif
+		public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, IDatabaseCommands databaseCommands,
 			IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool  isMapReduce)
-			: base(session, 
-#if !SILVERLIGHT
-			databaseCommands, 
-#endif
-			asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
+			: base(session, databaseCommands, asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
 		{
 		}
 
@@ -158,7 +151,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// 	Matches exact value
+		/// Matches exact value
 		/// </summary>
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals(WhereParams whereParams)
 		{
@@ -697,9 +690,7 @@ namespace Raven.Client.Document
 		public virtual IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
 		{
 			var asyncDocumentQuery = new AsyncDocumentQuery<TProjection>(theSession,
-#if !SILVERLIGHT
 																		 theDatabaseCommands,
-#endif
 																		 theAsyncDatabaseCommands,
 																		 indexName, fields, projections, queryListeners,
 																		 isMapReduce)
@@ -712,10 +703,10 @@ namespace Raven.Client.Document
 											cutoffEtag = cutoffEtag,
 											queryStats = queryStats,
 											theWaitForNonStaleResults = theWaitForNonStaleResults,
+                                            theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
 											sortByHints = sortByHints,
 											orderByFields = orderByFields,
-											groupByFields = groupByFields,
-											aggregationOp = aggregationOp,
+											isDistinct = isDistinct,
 											negate = negate,
 											transformResultsFunc = transformResultsFunc,
 											includes = new HashSet<string>(includes),
@@ -736,7 +727,8 @@ namespace Raven.Client.Document
 											queryInputs = queryInputs,
 											disableEntitiesTracking = disableEntitiesTracking,
 											disableCaching = disableCaching,
-											lastEquality = lastEquality
+											lastEquality = lastEquality,
+											shouldExplainScores = shouldExplainScores
 										};
 			asyncDocumentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return asyncDocumentQuery;
@@ -864,18 +856,6 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		///<summary>
-		///  Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		///<remarks>
-		///  This is only valid on dynamic indexes queries
-		///</remarks>
-		public IAsyncDocumentQuery<T> GroupBy<TValue>(AggregationOperation aggregationOperation, params Expression<Func<T, TValue>>[] groupPropertySelectors)
-		{
-			GroupBy(aggregationOperation, groupPropertySelectors.Select(GetMemberQueryPath).ToArray());
-			return this;
-		}
-
 		/// <summary>
 		/// Partition the query so we can intersect different parts of the query
 		/// across different index entries.
@@ -886,15 +866,39 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		///<summary>
-		/// Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		/// <remarks>
-		/// This is only valid on dynamic indexes queries
-		/// </remarks>
-		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.GroupBy(AggregationOperation aggregationOperation, params string[] fieldsToGroupBy)
+		/// <summary>
+		/// Performs a query matching ANY of the provided values against the given field (OR)
+		/// </summary>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ContainsAny(string fieldName, IEnumerable<object> values)
 		{
-			GroupBy(aggregationOperation, fieldsToGroupBy);
+			ContainsAny(fieldName, values);
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ANY of the provided values against the given field (OR)
+		/// </summary>
+		public IAsyncDocumentQuery<T> ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+		{
+			ContainsAny(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ALL of the provided values against the given field (AND)
+		/// </summary>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ContainsAll(string fieldName, IEnumerable<object> values)
+		{
+			ContainsAll(fieldName, values);
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ALL of the provided values against the given field (AND)
+		/// </summary>
+		public IAsyncDocumentQuery<T> ContainsAll<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+		{
+			ContainsAll(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
 			return this;
 		}
 
@@ -931,6 +935,12 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		IAsyncDocumentQuery<T>  IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Distinct()
+		{
+			Distinct();
+			return this;
+		}
+
 		/// <summary>
 		/// Sets a transformer to use after executing a query
 		/// </summary>
@@ -939,6 +949,12 @@ namespace Raven.Client.Document
 		{
 		    base.SetResultTransformer(resultsTransformer);
 	        return this;
+		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ExplainScores()
+		{
+			shouldExplainScores = true;
+			return this;
 		}
 	}
 }

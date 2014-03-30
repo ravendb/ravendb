@@ -33,15 +33,11 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task CanWaitForReplication()
 		{
-			var store1 = CreateStore(requestedStorage: "esent");
-			var store2 = CreateStore(requestedStorage: "esent");
-			var store3 = CreateStore(requestedStorage: "esent");
+			var store1 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName);
+            var store2 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName);
+            var store3 = CreateStore(requestedStorageType: "esent", databaseName: DatabaseName);
 
-		    store1.DatabaseCommands.EnsureDatabaseExists(DatabaseName);
-            store2.DatabaseCommands.EnsureDatabaseExists(DatabaseName);
-            store3.DatabaseCommands.EnsureDatabaseExists(DatabaseName);
-
-			SetupReplication(store1.DatabaseCommands.ForDatabase(DatabaseName), store2.Url.ForDatabase(DatabaseName), store3.Url.ForDatabase(DatabaseName));
+			SetupReplication(store1.DatabaseCommands, store2, store3);
 
 			using (var session = store1.OpenSession(DatabaseName))
 			{
@@ -59,11 +55,11 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task CanWaitForReplicationOfParticularEtag()
 		{
-			var store1 = CreateStore(requestedStorage:"esent");
-			var store2 = CreateStore(requestedStorage: "esent");
-			var store3 = CreateStore(requestedStorage: "esent");
+			var store1 = CreateStore(requestedStorageType:"esent");
+            var store2 = CreateStore(requestedStorageType: "esent");
+            var store3 = CreateStore(requestedStorageType: "esent");
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store2, store3);
 
 			var putResult = store1.DatabaseCommands.Put("Replicated/1", null, new RavenJObject(), new RavenJObject());
 			var putResult2 = store1.DatabaseCommands.Put("Replicated/2", null, new RavenJObject(), new RavenJObject());
@@ -86,7 +82,7 @@ namespace Raven.Tests.Issues
 			var store2 = CreateStore();
 			var store3 = CreateStore();
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, store3.Url);
+			SetupReplication(store1.DatabaseCommands, store2, store3);
 
 			using (var session = store1.OpenSession())
 			{
@@ -95,7 +91,7 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-		    await ((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(10));
+		    await store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(10));
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 			Assert.NotNull(store3.DatabaseCommands.Get("Replicated/1"));
@@ -107,7 +103,7 @@ namespace Raven.Tests.Issues
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 
-			SetupReplication(store1.DatabaseCommands, store2.Url);
+			SetupReplication(store1.DatabaseCommands, store2);
 
 			using (var session = store1.OpenSession())
 			{
@@ -123,10 +119,10 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task ShouldThrowTimeoutException()
 		{
-			var store1 = CreateStore(requestedStorage: "esent");
-			var store2 = CreateStore(requestedStorage: "esent");
+            var store1 = CreateStore(requestedStorageType: "esent");
+            var store2 = CreateStore(requestedStorageType: "esent");
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, "http://localhost:1234"); // the last one is not running
+			SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
 
 			using (var session = store1.OpenSession())
 			{
@@ -134,8 +130,19 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-			var exception = await AssertAsync.Throws<TimeoutException>(async () => await ((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2));
-			Assert.Contains("was replicated to 1 of 2 servers", exception.Message);
+			TimeoutException timeoutException = null;
+
+			try
+			{
+				await ((DocumentStore) store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2);
+			}
+			catch (TimeoutException ex)
+			{
+				timeoutException = ex;
+			}
+
+			Assert.NotNull(timeoutException);
+			Assert.Contains("was replicated to 1 of 2 servers", timeoutException.Message);
 		}
 
 		[Fact]
@@ -144,7 +151,7 @@ namespace Raven.Tests.Issues
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 
-			SetupReplication(store1.DatabaseCommands, store2.Url, "http://localhost:1234", "http://localhost:1235"); // non of them is running
+			SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234", "http://localhost:1235"); // non of them is running
 
 			using (var session = store1.OpenSession())
 			{
@@ -163,7 +170,7 @@ namespace Raven.Tests.Issues
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 
-            SetupReplication(store1.DatabaseCommands, store2.Url, "http://localhost:1234"); // the last one is not running
+            SetupReplication(store1.DatabaseCommands, store2.Url + "/databases/" + store2.DefaultDatabase, "http://localhost:1234"); // the last one is not running
 
 			using (var session = store1.OpenSession())
 			{
@@ -172,7 +179,7 @@ namespace Raven.Tests.Issues
 				session.SaveChanges();
 			}
 
-			await ((DocumentStore)store1).Replication.WaitAsync(replicas: 1);
+			await ((DocumentStore) store1).Replication.WaitAsync(replicas: 1);
 
 			Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
 		}

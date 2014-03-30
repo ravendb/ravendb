@@ -1,0 +1,61 @@
+﻿<section id="indexErrorsContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+    <div class="text-center" data-bind="visible: hasFetchedErrors && allIndexErrors().length === 0">
+        <h3 class="page-header text-success">Ahhh...no errors :-)</h3>
+    </div>
+    <div style="height: 65%; position: relative;" data-bind="visible: hasFetchedErrors && allIndexErrors().length > 0">
+        <div id="indexErrorsTableContainer" style="overflow-y: auto; position: absolute; bottom: 10px; top: 80px; width: 100%;">
+            <table class="table table-condensed single-line-row-table" data-bind="event: { keydown: tableKeyDown }" tabindex="1">
+                <thead>
+                    <tr>
+                        <th style="width: 10%">Index</th>
+                        <th style="width: 10%">Action</th>
+                        <th style="width: 10%">Timestamp</th>
+                        <th style="width: 60%">Error</th>
+                        <th style="width: 10%">Document</th>
+                    </tr>
+                </thead>
+                <tbody data-bind="foreach: allIndexErrors, delegatedHandler: 'click'">
+                    <tr data-click="selectIndexError" data-bind="css: { 'selected': $data === $parent.selectedIndexError() }">
+                        <td data-bind="text: IndexName, attr: { title: IndexName }"></td>
+                        <td data-bind="text: Action, attr: { title: Action }"></td>
+                        <td data-bind="text: TimestampHumanized, attr: { title: TimestampHumanized }"></td>
+                        <td data-bind="text: Error, attr: { title: Error }"></td>
+                        <td data-bind="text: Document, attr: { title: Document }"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="index-errors-details panel panel-default" style="height: 30%;" data-bind="visible: hasFetchedErrors && allIndexErrors().length > 0">
+        <div class="row">
+            <label class="col-md-1 text-right control-label">Index</label>
+            <div class="col-md-10" data-bind="with: selectedIndexError">
+                <p class="form-control-static" data-bind="text: IndexName"></p>
+            </div>
+        </div>
+        <div class="row">
+            <label class="col-md-1 text-right control-label">Error</label>
+            <div class="col-md-10" data-bind="with: selectedIndexError">
+                <p class="form-control-static" data-bind="text: Error"></p>
+            </div>
+        </div>
+        <div class="row">
+            <label class="col-md-1 text-right control-label">Timestamp</label>
+            <div class="col-md-10" data-bind="with: selectedIndexError">
+                <p class="form-control-static" data-bind="text: TimestampHumanized"></p>
+            </div>
+        </div>
+        <div class="row">
+            <label class="col-md-1 text-right control-label">Index</label>
+            <div class="col-md-10" data-bind="with: selectedIndexError">
+                <p class="form-control-static" data-bind="text: IndexName"></p>
+            </div>
+        </div>
+        <div class="row">
+            <label class="col-md-1 text-right control-label">Document</label>
+            <div class="col-md-10" data-bind="with: selectedIndexError">
+                <p class="form-control-static" data-bind="text: Document"></p>
+            </div>
+        </div>
+    </div>
+</section>

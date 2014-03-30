@@ -200,8 +200,8 @@ namespace Raven.Tests.Bundles.Replication
 		[Fact]
 		public void Tombstone_deleted_after_conflict_resolved()
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
+			var store1 = CreateStore(databaseName: Constants.SystemDatabase);
+            var store2 = CreateStore(databaseName: Constants.SystemDatabase);
 			using (var session = store1.OpenSession())
 			{
 				session.Store(new Company());
@@ -238,7 +238,7 @@ namespace Raven.Tests.Bundles.Replication
 				session.Delete(session.Load<Company>("companies/1"));
 				session.SaveChanges();
 			}
-			servers[1].Database.TransactionalStorage.Batch(
+			servers[1].SystemDatabase.TransactionalStorage.Batch(
 			accessor => Assert.NotNull(accessor.Lists.Read("Raven/Replication/Docs/Tombstones", "companies/1")));
 	
 			TellFirstInstanceToReplicateToSecondInstance();
@@ -260,7 +260,7 @@ namespace Raven.Tests.Bundles.Replication
 				session.Store(new Company(), "companies/1");
 				session.SaveChanges();
 			}
-			servers[1].Database.TransactionalStorage.Batch(
+			servers[1].SystemDatabase.TransactionalStorage.Batch(
 				accessor => Assert.Null(accessor.Lists.Read("Raven/Replication/Docs/Tombstones", "companies/1")));
 		}
 	}

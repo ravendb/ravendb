@@ -22,14 +22,14 @@ namespace Raven.Tests.Issues
 			                  		Url = "http://localhost:8079"
 			                  	}.Initialize())
 			{
-				store.DatabaseCommands.CreateDatabase(new DatabaseDocument
-				                                      	{
-															Id = "mydb",
-				                                      		Settings =
-				                                      			{
-				                                      				{"Raven/DataDir", @"~\Databases\Mine"}
-				                                      			}
-				                                      	});
+				store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+				{
+					Id = "mydb",
+					Settings =
+					{
+						{"Raven/DataDir", @"~\Databases\Mine"}
+					}
+				});
 
 				Assert.DoesNotThrow(() => store.DatabaseCommands.ForDatabase("mydb").Get("test"));
 			}
@@ -44,7 +44,7 @@ namespace Raven.Tests.Issues
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				store.DatabaseCommands.CreateDatabase(new DatabaseDocument
+				store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 				                                      	{
 				                                      		Id = "mydb",
 				                                      		Settings =
@@ -72,7 +72,7 @@ namespace Raven.Tests.Issues
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				store.DatabaseCommands.CreateDatabase(new DatabaseDocument
+				store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 				{
 					Id = "mydb",
 					Settings =

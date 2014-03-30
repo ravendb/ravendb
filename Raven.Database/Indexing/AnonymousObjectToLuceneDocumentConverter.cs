@@ -124,7 +124,7 @@ namespace Raven.Database.Indexing
 					throw new InvalidOperationException(
 						"Cannot use attachment for indexing if the database parameter is null. This is probably a RavenDB bug");
 
-				var attachment = database.GetStatic(attachmentFoIndexing.Key);
+				var attachment = database.Attachments.GetStatic(attachmentFoIndexing.Key);
 				if (attachment == null)
 				{
 					yield break;
@@ -162,11 +162,19 @@ namespace Raven.Database.Indexing
 			{
 				if (dynamicNullObject.IsExplicitNull)
 				{
-					var sortOptions = indexDefinition.GetSortOption(name);
-					yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
-														Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+					var sortOptions = indexDefinition.GetSortOption(name, query: null);
+					if (sortOptions == null ||
+					    sortOptions.Value == SortOptions.String ||
+					    sortOptions.Value == SortOptions.None ||
+					    sortOptions.Value == SortOptions.StringVal ||
+					    sortOptions.Value == SortOptions.Custom)
 
-				    foreach (var field in CreateNumericFieldWithCaching(name, GetNullValueForSorting(sortOptions), storage, termVector))
+					{
+						yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
+							Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+					}
+
+					foreach (var field in CreateNumericFieldWithCaching(name, GetNullValueForSorting(sortOptions), storage, termVector))
                         yield return field;
                    
                  }
@@ -295,6 +303,11 @@ namespace Raven.Database.Indexing
 				yield return CreateFieldWithCaching(name, s, storage,
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 			}
+			else if (value is Enum)
+			{
+				yield return CreateFieldWithCaching(name, value.ToString(), storage,
+									   indexDefinition.GetIndex(name, Field.Index.ANALYZED_NO_NORMS), termVector);
+			}
 			else if (value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
 			{
 				var convert = ((IConvertible)value);
@@ -368,57 +381,57 @@ namespace Raven.Database.Indexing
 			{
 				yield return numericField.SetLongValue(((TimeSpan)value).Ticks);
 			}
-			else if (value is int)
-			{
-				if (indexDefinition.GetSortOption(name) == SortOptions.Long)
-					yield return numericField.SetLongValue((int)value);
-                else if (indexDefinition.GetSortOption(name) == SortOptions.Float)
+            else if (value is int)
+            {
+                if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Long)
+                    yield return numericField.SetLongValue((int)value);
+                else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Float)
                     yield return numericField.SetFloatValue((int)value);
-                else if (indexDefinition.GetSortOption(name) == SortOptions.Double)
-					yield return numericField.SetDoubleValue((int)value);
-				else
-					yield return numericField.SetIntValue((int)value);
-			}
-			else if (value is long)
+                else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Double)
+                    yield return numericField.SetDoubleValue((int)value);
+                else
+                    yield return numericField.SetIntValue((int)value);
+            }
+            else if (value is long)
 			{
-				if (indexDefinition.GetSortOption(name) == SortOptions.Double)
+				if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Double)
 					yield return numericField.SetDoubleValue((long)value);
-                else if (indexDefinition.GetSortOption(name) == SortOptions.Float)
+				else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Float)
                     yield return numericField.SetFloatValue((long)value);
-                else if (indexDefinition.GetSortOption(name) == SortOptions.Int)
+				else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Int)
                     yield return numericField.SetIntValue(Convert.ToInt32((long)value));
                 else
 					yield return numericField.SetLongValue((long)value);
 			}
 			else if (value is decimal)
 			{
-                if (indexDefinition.GetSortOption(name) == SortOptions.Float)
+				if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Float)
                     yield return numericField.SetFloatValue(Convert.ToSingle((decimal)value));
-                else if (indexDefinition.GetSortOption(name) == SortOptions.Int)
+				else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Int)
                     yield return numericField.SetIntValue(Convert.ToInt32((decimal)value));
-                else if (indexDefinition.GetSortOption(name) == SortOptions.Long)
+				else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Long)
                     yield return numericField.SetLongValue(Convert.ToInt64((decimal) value));
                 else
                     yield return numericField.SetDoubleValue((double)(decimal)value);
 			}
 			else if (value is float)
 			{
-				if (indexDefinition.GetSortOption(name) == SortOptions.Double)
+				if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Double)
 					yield return numericField.SetDoubleValue((float)value);
-                else if (indexDefinition.GetSortOption(name) == SortOptions.Int)
+				else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Int)
                     yield return numericField.SetIntValue(Convert.ToInt32((float)value));
-                else if (indexDefinition.GetSortOption(name) == SortOptions.Long)
+				else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Long)
                     yield return numericField.SetLongValue(Convert.ToInt64((float)value));
                 else
 					yield return numericField.SetFloatValue((float)value);
 			}
 			else if (value is double)
 			{
-                if (indexDefinition.GetSortOption(name) == SortOptions.Float)
+				if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Float)
                     yield return numericField.SetFloatValue(Convert.ToSingle((double)value));
-                else if (indexDefinition.GetSortOption(name) == SortOptions.Int)
+				else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Int)
                     yield return numericField.SetIntValue(Convert.ToInt32((double)value));
-                else if (indexDefinition.GetSortOption(name) == SortOptions.Long)
+				else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Long)
                     yield return numericField.SetLongValue(Convert.ToInt64((double)value));
                 else
     			    yield return numericField.SetDoubleValue((double)value);

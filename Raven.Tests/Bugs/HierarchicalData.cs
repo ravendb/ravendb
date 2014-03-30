@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Threading;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
@@ -35,7 +36,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanCreateHierarchicalIndexes()
 		{
-			db.PutIndex("test", new IndexDefinition
+			db.Indexes.PutIndex("test", new IndexDefinition
 			{
 				Map = @"
 from post in docs.Posts
@@ -43,7 +44,7 @@ from comment in Recurse(post, ((Func<dynamic,dynamic>)(x=>x.Comments)))
 select new { comment.Text }"
 			});
 
-			db.Put("abc", null, RavenJObject.Parse(@"
+			db.Documents.Put("abc", null, RavenJObject.Parse(@"
 {
 	'Name': 'Hello Raven',
 	'Comments': [
@@ -55,10 +56,10 @@ select new { comment.Text }"
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("test", new IndexQuery
+				queryResult = db.Queries.Query("test", new IndexQuery
 				{
 					Query = "Text:abc"
-				}, CancellationToken.None);
+                }, CancellationToken.None);
 			} while (queryResult.IsStale);
 
 			Assert.Equal(1, queryResult.Results.Count);

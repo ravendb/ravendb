@@ -59,18 +59,34 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Convert the Linq query to a Lucene query
 		/// </summary>
+		[Obsolete("Use ToAsyncDocumentQuery instead.")]
 		IAsyncDocumentQuery<T> ToAsyncLuceneQuery<T>(Expression expression);
+
+        /// <summary>
+        /// Convert the Linq query to a Lucene query
+        /// </summary>
+        IAsyncDocumentQuery<T> ToAsyncDocumentQuery<T>(Expression expression);
+
+	    /// <summary>
+	    /// Convert the linq query to a Lucene query
+	    /// </summary>
+        [Obsolete("Use ToDocumentQuery instead.")]
+	    IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression);
 
         /// <summary>
         /// Convert the linq query to a Lucene query
         /// </summary>
-	    IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression);
+	    IDocumentQuery<TResult> ToDocumentQuery<TResult>(Expression expression);
 
 		/// <summary>
-		/// Convert the Linq query to a lazy Lucene query and provide a function to execute when it is being evaluate
+		/// Convert the Linq query to a lazy Lucene query and provide a function to execute when it is being evaluated
 		/// </summary>
 		Lazy<IEnumerable<T>> Lazily<T>(Expression expression, Action<IEnumerable<T>> onEval);
 
+		/// <summary>
+		/// Convert the Linq query to a lazy-count Lucene query and provide a function to execute when it is being evaluated
+		/// </summary>
+		Lazy<int> CountLazily<T>(Expression expression);
 
 		/// <summary>
 		/// Move the registered after query actions
@@ -86,7 +102,6 @@ namespace Raven.Client.Linq
         /// The result transformer to use
         /// </summary>
 	    string ResultTransformer { get; }
-        
 
         /// <summary>
         /// Gets the query inputs being supplied to

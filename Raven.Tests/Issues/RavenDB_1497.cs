@@ -11,9 +11,11 @@ using Raven.Abstractions.Data;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database;
+using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
@@ -40,6 +42,7 @@ namespace Raven.Tests.Issues
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
 			configuration.Settings["Raven/Esent/CircularLog"] = "false";
+			configuration.Settings["Raven/Voron/AllowIncrementalBackups"] = "true"; //for now all tests run under Voron - so this is needed
 			configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
 		}
 
@@ -74,7 +77,7 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-				store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument());
+				store.DocumentDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
 				WaitForBackup(store.DocumentDatabase, true);
 
 				Thread.Sleep(1000); // incremental tag has seconds precision
@@ -87,7 +90,7 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(store);
 
-				store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument());
+				store.DocumentDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
 				WaitForBackup(store.DocumentDatabase, true);
 
 				Thread.Sleep(1000); // incremental tag has seconds precision
@@ -96,19 +99,25 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(store);
 
-				store.DocumentDatabase.StartBackup(BackupDir, true, new DatabaseDocument());
+				store.DocumentDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
 				WaitForBackup(store.DocumentDatabase, true);
 
 				var output = new StringBuilder();
 
-				DocumentDatabase.Restore(new RavenConfiguration
+				MaintenanceActions.Restore(new RavenConfiguration
 				{
 					Settings =
 				{
-					{"Raven/Esent/CircularLog", "false"}
+					{"Raven/Esent/CircularLog", "false"},
+					{"Raven/Voron/AllowIncrementalBackups", "true"}
 				}
 
-				}, BackupDir, DataDir, s => output.Append(s), defrag: true);
+				}, new RestoreRequest
+				{
+				    BackupLocation = BackupDir,
+                    Defrag = true,
+                    DatabaseLocation = DataDir
+				}, s => output.Append(s));
 
 				Assert.DoesNotContain("error", output.ToString().ToLower());
 
@@ -125,7 +134,7 @@ namespace Raven.Tests.Issues
 
 					Assert.Equal(3, indexStats.Length); // Users/* and Raven/DocumentsByEntityName 
 
-					QueryResult docs = db.Query("Users/ByName", new IndexQuery
+					QueryResult docs = db.Queries.Query("Users/ByName", new IndexQuery
 					{
 						Query = "Name:*",
 						Start = 0,
@@ -134,7 +143,7 @@ namespace Raven.Tests.Issues
 
 					Assert.Equal(2, docs.Results.Count);
 
-					docs = db.Query("Users/ByNameAndCountry", new IndexQuery
+					docs = db.Queries.Query("Users/ByNameAndCountry", new IndexQuery
 					{
 						Query = "Name:*",
 						Start = 0,
@@ -144,29 +153,6 @@ namespace Raven.Tests.Issues
 					Assert.Equal(2, docs.Results.Count);
 
 				}
-				//QueryResult docs = null;
-
-				//for (int i = 0; i < 500; i++)
-				//{
-				//	docs = db.Query("Users/ByName", new IndexQuery
-				//	{
-				//		Query = "Name:*",
-				//		Start = 0,
-				//		PageSize = 10
-				//	});
-				//	if (docs.IsStale == false)
-				//		break;
-
-				//	Thread.Sleep(100);
-				//}
-
-				//Assert.NotNull(docs);
-				//Assert.Equal(2, docs.Results.Count);
-
-				//var jObject = db.Get("ayende", null).ToJson();
-				//Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
-				//jObject = db.Get("itamar", null).ToJson();
-				//Assert.Equal("itamar@ayende.com", jObject.Value<string>("email"));
 			}
 		}
 	}

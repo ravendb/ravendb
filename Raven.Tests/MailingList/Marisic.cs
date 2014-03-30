@@ -11,7 +11,7 @@ namespace Raven.Tests.MailingList
 	public class Marisic : RavenTest
 	{
 		[Fact]
-		public void StartsWith_Munin_Embedded()
+		public void StartsWith_Embedded()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -47,7 +47,7 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void StartsWith_Munin_Remote()
+		public void StartsWith_Remote()
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
@@ -155,7 +155,7 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void StartsWith_Munin_Embedded_Async()
+		public void StartsWith_Embedded_Async()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -184,14 +184,14 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenAsyncSession())
 				{
-					var objects = session.Advanced.LoadStartingWithAsync<object>(keyPrefix: "user/").Result;
+					var objects = session.Advanced.LoadStartingWithAsync<object>(keyPrefix: "user/", matches: null).Result;
 					Assert.Equal(objects.Count(), names.Length);
 				}
 			}
 		}
 
 		[Fact]
-		public void StartsWith_Munin_Remote_Async()
+		public void StartsWith_Remote_Async()
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
@@ -220,7 +220,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenAsyncSession())
 				{
-					var objects = session.Advanced.LoadStartingWithAsync<object>(keyPrefix: "user/").Result;
+					var objects = session.Advanced.LoadStartingWithAsync<object>(keyPrefix: "user/", matches: null).Result;
 					Assert.Equal(objects.Count(), names.Length);
 				}
 			}
@@ -256,7 +256,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenAsyncSession())
 				{
-					var objects = session.Advanced.LoadStartingWithAsync<object>(keyPrefix: "user/").Result;
+					var objects = session.Advanced.LoadStartingWithAsync<object>(keyPrefix: "user/", matches: null).Result;
 					Assert.Equal(objects.Count(), names.Length);
 				}
 			}
@@ -292,7 +292,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenAsyncSession())
 				{
-					var objects = session.Advanced.LoadStartingWithAsync<object>(keyPrefix: "user/").Result;
+					var objects = session.Advanced.LoadStartingWithAsync<object>(keyPrefix: "user/", matches: null).Result;
 					Assert.Equal(objects.Count(), names.Length);
 				}
 			}

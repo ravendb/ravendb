@@ -13,17 +13,20 @@ using System.Configuration;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Mono.CSharp;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Server;
+using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -33,10 +36,14 @@ namespace Raven.Database.Config
 {
 	public class InMemoryRavenConfiguration
 	{
-		private CompositionContainer container;
+	    public const string VoronTypeName = "voron";
+	    private const string EsentTypeName = "esent";
+	    private CompositionContainer container;
 		private bool containerExternallySet;
 		private string dataDirectory;
 		private string pluginsDirectory;
+		private string fileSystemDataDirectory;
+
 
 		public InMemoryRavenConfiguration()
 		{
@@ -50,20 +57,22 @@ namespace Raven.Database.Config
 
 			IndexingScheduler = new FairIndexingSchedulerWithNewIndexesBias();
 
-			Catalog = new AggregateCatalog(
-				new AssemblyCatalog(typeof(DocumentDatabase).Assembly)
-				);
+			Catalog = new AggregateCatalog(new AssemblyCatalog(typeof(DocumentDatabase).Assembly));
 
 			Catalog.Changed += (sender, args) => ResetContainer();
 		}
 
 		public string DatabaseName { get; set; }
 
+        public string FileSystemName { get { return DatabaseName; } }
+
 		public void PostInit()
 		{
 			FilterActiveBundles();
 
 			SetupOAuth();
+
+			SetupGC();
 		}
 
 		public void Initialize()
@@ -89,9 +98,6 @@ namespace Raven.Database.Config
 			// Discovery
 			DisableClusterDiscovery = ravenSettings.DisableClusterDiscovery.Value;
 
-			// TODO: Validate the cluster name. Valid names are only valid chars in documents IDs.
-			ClusterName = ravenSettings.ClusterName.Value;
-
 			ServerName = ravenSettings.ServerName.Value;
 
 			MaxStepsForScript = ravenSettings.MaxStepsForScript.Value;
@@ -100,10 +106,8 @@ namespace Raven.Database.Config
 			// Index settings
 			MaxIndexingRunLatency = ravenSettings.MaxIndexingRunLatency.Value;
 			MaxIndexWritesBeforeRecreate = ravenSettings.MaxIndexWritesBeforeRecreate.Value;
+			MaxIndexOutputsPerDocument = ravenSettings.MaxIndexOutputsPerDocument.Value;
 
-			PreventAutomaticSuggestionCreation = ravenSettings.PreventAutomaticSuggestionCreation.Value;
-
-			DisablePerformanceCounters = ravenSettings.DisablePerformanceCounters.Value;
 
 		    PrewarmFacetsOnIndexingMaxAge = ravenSettings.PrewarmFacetsOnIndexingMaxAge.Value;
 		    PrewarmFacetsSyncronousWaitTime = ravenSettings.PrewarmFacetsSyncronousWaitTime.Value;
@@ -153,8 +157,13 @@ namespace Raven.Database.Config
 
 			if (string.IsNullOrEmpty(DefaultStorageTypeName))
 			{
-				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
+				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? VoronTypeName;
 			}
+
+            if (string.IsNullOrEmpty(DefaultFileSystemStorageTypeName))
+            {
+                DefaultFileSystemStorageTypeName = Settings["Raven/FileSystem/Storage"] ?? VoronTypeName;
+            }
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
 
@@ -173,11 +182,17 @@ namespace Raven.Database.Config
 
 			DataDirectory = ravenSettings.DataDir.Value;
 
+			FileSystemDataDirectory = ravenSettings.FileSystemDataDir.Value;
+
+			FileSystemIndexStoragePath = ravenSettings.FileSystemIndexStoragePath.Value;
+
 			var indexStoragePathSettingValue = ravenSettings.IndexStoragePath.Value;
 			if (string.IsNullOrEmpty(indexStoragePathSettingValue) == false)
 			{
 				IndexStoragePath = indexStoragePathSettingValue;
 			}
+
+		    JournalsStoragePath = Settings["Raven/Esent/LogsPath"] ?? Settings[Constants.RavenTxJournalPath];
 
 			// HTTP settings
 			HostName = ravenSettings.HostName.Value;
@@ -220,6 +235,8 @@ namespace Raven.Database.Config
 			}
 
 			AllowLocalAccessWithoutAuthorization = ravenSettings.AllowLocalAccessWithoutAuthorization.Value;
+
+		    VoronMaxBufferPoolSize = Math.Max(2, ravenSettings.VoronMaxBufferPoolSize.Value);
 
 			PostInit();
 		}
@@ -266,20 +283,15 @@ namespace Raven.Database.Config
 			Catalog.Catalogs.Clear();
 
 			Catalog.Catalogs.Add(new BundlesFilteredCatalog(catalog, bundles));
-
-			var exportedValues = Container.GetExportedValues<IStartupTask>().ToArray();
 		}
 
 		public List<string> ActiveBundles
 		{
 			get
 			{
-				var activeBundles = Settings["Raven/ActiveBundles"] ?? "";
+				var activeBundles = Settings[Constants.ActiveBundles] ?? "";
 
-				return activeBundles.Split(new[] {';'}, StringSplitOptions.RemoveEmptyEntries)
-				                    .Select(x => x.Trim())
-				                    .ToList();
-
+				return activeBundles.GetSemicolonSeparatedValues();
 			}
 		} 
 
@@ -342,9 +354,14 @@ namespace Raven.Database.Config
 			OAuthTokenKey = GetOAuthKey();
 		}
 
+		private void SetupGC()
+		{
+			//GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
+		}
+
 		private static readonly Lazy<byte[]> defaultOauthKey = new Lazy<byte[]>(() =>
 		{
-			using (var rsa = new RSACryptoServiceProvider())
+			using (var rsa = Encryptor.Current.CreateAsymmetrical())
 			{
 				return rsa.ExportCspBlob(true);
 			}
@@ -505,6 +522,11 @@ namespace Raven.Database.Config
 		public bool UseSsl { get; set; }
 
 		/// <summary>
+		/// Whatever we should use FIPS compliant encryption algorithms
+		/// </summary>
+		public bool UseFips { get; set; }
+
+		/// <summary>
 		/// The port to use when creating the http listener. 
 		/// Default: 8080. You can set it to *, in which case it will find the first available port from 8080 and upward.
 		/// </summary>
@@ -603,12 +625,23 @@ namespace Raven.Database.Config
 		public string DataDirectory
 		{
 			get { return dataDirectory; }
-			set { dataDirectory = value == null ? null : value.ToFullPath(); }
+			set { dataDirectory = value == null ? null : FilePathTools.MakeSureEndsWithSlash(value.ToFullPath()); }
+		}
+
+		/// <summary>
+		/// The directory for the RavenDB file system. 
+		/// You can use the ~\ prefix to refer to RavenDB's base directory. 
+		/// Default: ~\Data
+		/// </summary>
+		public string FileSystemDataDirectory
+		{
+			get { return fileSystemDataDirectory; }
+			set { fileSystemDataDirectory = value == null ? null : FilePathTools.MakeSureEndsWithSlash(value.ToFullPath()); }
 		}
 
 		/// <summary>
 		/// What storage type to use (see: RavenDB Storage engines)
-		/// Allowed values: esent, munin
+		/// Allowed values: esent, voron
 		/// Default: esent
 		/// </summary>
 		public string DefaultStorageTypeName
@@ -618,10 +651,22 @@ namespace Raven.Database.Config
 		}
 		private string defaultStorageTypeName;
 
+        /// <summary>
+        /// What storage type to use in RavenFS (see: RavenFS Storage engines)
+        /// Allowed values: esent, voron
+        /// Default: esent
+        /// </summary>
+        public string DefaultFileSystemStorageTypeName
+        {
+            get { return defaultFileSystemStorageTypeName; }
+            set { if (!string.IsNullOrEmpty(value)) defaultFileSystemStorageTypeName = value; }
+        }
+        private string defaultFileSystemStorageTypeName;
+
 		private bool runInMemory;
 
 		/// <summary>
-		/// Should RavenDB's storage be in-memory. If set to true, Munin would be used as the
+		/// Should RavenDB's storage be in-memory. If set to true, Voron would be used as the
 		/// storage engine, regardless of what was specified for StorageTypeName
 		/// Allowed values: true/false
 		/// Default: false
@@ -731,7 +776,8 @@ namespace Raven.Database.Config
 
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
-		private string indexStoragePath;
+		private string indexStoragePath, journalStoragePath;
+		private string fileSystemIndexStoragePath;
 		private int? maxNumberOfParallelIndexTasks;
 		private int initialNumberOfItemsToIndexInSingleBatch;
 		private AnonymousUserAccessMode anonymousUserAccessMode;
@@ -776,27 +822,44 @@ namespace Raven.Database.Config
 			set { indexStoragePath = value.ToFullPath(); }
 		}
 
+        public string JournalsStoragePath
+        {
+            get
+            {
+                return journalStoragePath;
+            }
+            set {
+                journalStoragePath = value != null ? value.ToFullPath() : null;
+            }
+        }
+
+		public string FileSystemIndexStoragePath
+		{
+			get
+			{
+				if (string.IsNullOrEmpty(fileSystemIndexStoragePath))
+					fileSystemIndexStoragePath = Path.Combine(FileSystemDataDirectory, "Indexes");
+				return fileSystemIndexStoragePath;
+			}
+			set { fileSystemIndexStoragePath = value.ToFullPath(); }
+		}
+
 		public int AvailableMemoryForRaisingIndexBatchSizeLimit { get; set; }
 
 		public TimeSpan MaxIndexingRunLatency { get; set; }
 
 		internal bool IsTenantDatabase { get; set; }
-		
+
 		/// <summary>
 		/// If True, cluster discovery will be disabled. Default is False
 		/// </summary>
 		public bool DisableClusterDiscovery { get; set; }
 
 		/// <summary>
-		/// The cluster name
-		/// </summary>
-		public string ClusterName { get; set; }
-
-		/// <summary>
 		/// The server name
 		/// </summary>
 		public string ServerName { get; set; }
-		
+
 		/// <summary>
 		/// The maximum number of steps (instructions) to give a script before timing out.
 		/// Default: 10,000
@@ -813,27 +876,32 @@ namespace Raven.Database.Config
 		public int MaxIndexWritesBeforeRecreate { get; set; }
 
 		/// <summary>
-		/// If True the server will not create suggestions automatically based on the suggestion query. Default: false.
+		/// Limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to the one document
+		/// produces more outputs than this number then an index definition will be considered as a suspicious and the index will be marked as errored.
+		/// Default value: 15. In order to disable this check set value to -1.
 		/// </summary>
-		public bool PreventAutomaticSuggestionCreation { get; set; }
+		public int MaxIndexOutputsPerDocument { get; set; }
 
-		/// <summary>
-		/// If True then no PerformanceCounters will be used. Default: false
-		/// </summary>
-		public bool DisablePerformanceCounters { get; set; }
-
+		[Browsable(false)]
         /// <summary>
         /// What is the maximum age of a facet query that we should consider when prewarming
         /// the facet cache when finishing an indexing batch
         /// </summary>
 	    public TimeSpan PrewarmFacetsOnIndexingMaxAge { get; set; }
-	    
+
         /// <summary>
         /// The time we should wait for pre-warming the facet cache from existing query after an indexing batch
         /// in a syncronous manner (after that, the pre warm still runs, but it will do so in a background thread).
         /// Facet queries that will try to use it will have to wait until it is over
         /// </summary>
         public TimeSpan PrewarmFacetsSyncronousWaitTime { get; set; }
+
+        /// <summary>
+        /// You can use this setting to specify a maximum buffer pool size that can be used for transactional storage (in gigabytes). 
+        /// By default it is 4.
+        /// Minimum value is 2.
+        /// </summary>
+        public int VoronMaxBufferPoolSize { get; set; }
 
 	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
@@ -868,13 +936,15 @@ namespace Raven.Database.Config
 			return AnonymousUserAccessMode.Admin;
 		}
 
-		public string GetFullUrl(string baseUrl)
+		public Uri GetFullUrl(string baseUrl)
 		{
+			baseUrl = Uri.EscapeUriString(baseUrl);
+
 			if (baseUrl.StartsWith("/"))
 				baseUrl = baseUrl.Substring(1);
-			if (VirtualDirectory.EndsWith("/"))
-				return VirtualDirectory + baseUrl;
-			return VirtualDirectory + "/" + baseUrl;
+
+			var url = VirtualDirectory.EndsWith("/") ? VirtualDirectory + baseUrl : VirtualDirectory + "/" + baseUrl;
+			return new Uri(url, UriKind.RelativeOrAbsolute);
 		}
 
 		public T? GetConfigurationValue<T>(string configName) where T : struct
@@ -885,18 +955,9 @@ namespace Raven.Database.Config
 			return null;
 		}
 
-		public ITransactionalStorage CreateTransactionalStorage(Action notifyAboutWork)
+		public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork)
 		{
-			var storageEngine = SelectStorageEngine();
-			switch (storageEngine.ToLowerInvariant())
-			{
-				case "esent":
-					storageEngine = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
-					break;
-				case "munin":
-					storageEngine = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
-					break;
-			}
+			storageEngine = StorageEngineAssemblyNameByTypeName(storageEngine);
 			var type = Type.GetType(storageEngine);
 
 			if (type == null)
@@ -905,21 +966,46 @@ namespace Raven.Database.Config
 			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork);
 		}
 
-		private string SelectStorageEngine()
+
+        //TODO : perhaps refactor with enums?
+	    public static string StorageEngineAssemblyNameByTypeName(string typeName)
+	    {
+	        switch (typeName.ToLowerInvariant())
+	        {
+	            case EsentTypeName:
+	                typeName = typeof (Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
+	                break;
+	            case VoronTypeName:
+	                typeName = typeof (Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+	                break;
+                default:
+                    throw new ArgumentException("Invalid storage engine type name");
+	        }
+	        return typeName;
+	    }	  
+
+	    public string SelectStorageEngineAndFetchTypeName()
 		{
 			if (RunInMemory)
-				return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
-
-			if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
 			{
-				if (File.Exists(Path.Combine(DataDirectory, "Raven.ravendb")))
-				{
-					return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
-				}
-				if (File.Exists(Path.Combine(DataDirectory, "Data")))
-					return typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
+			    if (!string.IsNullOrWhiteSpace(DefaultStorageTypeName) &&
+			        DefaultStorageTypeName.Equals(EsentTypeName, StringComparison.InvariantCultureIgnoreCase))
+			        return EsentTypeName;
+
+                return VoronTypeName;                
 			}
-			return DefaultStorageTypeName;
+
+            if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
+			{
+				if (File.Exists(Path.Combine(DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
+                {
+                    return VoronTypeName;
+                }
+				if (File.Exists(Path.Combine(DataDirectory, "Data")))
+					return EsentTypeName;
+			}
+
+	        return DefaultStorageTypeName ?? VoronTypeName;
 		}
 
 		public void Dispose()

@@ -37,6 +37,7 @@ namespace Raven.Database.Commercial
 		{
 			{"periodicBackup", "false"},
 			{"encryption", "false"},
+			{"fips", "false"},
 			{"compression", "false"},
 			{"quotas","false"},
 
@@ -192,7 +193,7 @@ namespace Raven.Database.Commercial
 			if (licenseAttributes.TryGetValue("version", out version) == false)
 			{
 				if (licenseValidator.LicenseType != LicenseType.Subscription)
-					throw new LicenseExpiredException("This is not a license for RavenDB 2.0");
+				throw new LicenseExpiredException("This is not a license for RavenDB 2.0");
 
 				// Add backward compatibility for the subscription licenses of v1
 				licenseAttributes["version"]= "2.5";

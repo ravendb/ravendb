@@ -8,6 +8,7 @@ using System.Reflection;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database;
+using Raven.Database.Actions;
 using Raven.Database.Storage;
 using Xunit;
 
@@ -49,8 +50,8 @@ namespace Raven.Tests.MailingList
 				{
 					Conventions = new DocumentConvention()
 				}.CreateIndexDefinition();
-				var findIndexCreationOptions = typeof(DocumentDatabase).GetMethod("FindIndexCreationOptions", BindingFlags.Instance | BindingFlags.NonPublic);
-				var result = findIndexCreationOptions.Invoke(store.DocumentDatabase, new object[] { index, "Audio/Index" });
+				var findIndexCreationOptions = typeof(IndexActions).GetMethod("FindIndexCreationOptions", BindingFlags.Instance | BindingFlags.NonPublic);
+				var result = findIndexCreationOptions.Invoke(store.DocumentDatabase.Indexes, new object[] { index, "Audio/Index" });
 				Assert.Equal(IndexCreationOptions.Noop, result);
 			}
 		}

@@ -211,40 +211,9 @@ namespace Raven.Tests.Suggestions
 						Field = "Name",
 						Term = "Oern", // intentional typo
 						MaxSuggestions = 10,
-						Accuracy = 1f,						  // The index should overwrite this value with 0.2f
-						Distance = StringDistanceTypes.NGram  // Should be overwrite by the value in the index, which is StringDistanceTypes.Levenshtein
+						Accuracy = 0.1f,						  
+						Distance = StringDistanceTypes.NGram  
 					});
-
-					Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
-					Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
-				}
-			}
-		}
-
-		[Fact]
-		public void ExactMatchDynamic()
-		{
-			using (var documentStore = NewDocumentStore())
-			{
-				documentStore.ExecuteIndex(new DefaultSuggestionIndex());
-
-				using (var s = documentStore.OpenSession())
-				{
-					s.Store(new User {Name = "Ayende"});
-					s.Store(new User {Name = "Oren"});
-					s.SaveChanges();
-
-					s.Query<User, DefaultSuggestionIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
-				}
-
-				using (var session = documentStore.OpenSession())
-				{
-					var query = session.Query<User>()
-					               .Where(user => user.Name == "Oren")
-					               .Customize(x => x.WaitForNonStaleResults());
-
-					GC.KeepAlive(query.FirstOrDefault());
-					var suggestionQueryResult = query.Suggest();
 
 					Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
 					Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);

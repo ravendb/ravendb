@@ -12,7 +12,7 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.MailingList
 {
-	public class Holt
+	public class Holt : RavenTest
 	{
 		[Theory]
 		[InlineValue(100.0, 100.0, 0)]
@@ -53,18 +53,10 @@ namespace Raven.Tests.MailingList
 		}
 
 
-		public static DocumentStore Store()
+		public DocumentStore Store()
 		{
-			var store = new EmbeddableDocumentStore
-			{
-				RunInMemory = true,
-				UseEmbeddedHttpServer = false,
-				Conventions = { DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites }
-			};
-			store.Initialize();
+			var store = NewDocumentStore(port: 8079, configureStore: documentStore => documentStore.Conventions.DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites);
 			store.RegisterListener(new NonStaleQueryListener());
-
-
 			new TransactionBalances_ByYear().Execute(store);
 			return store;
 		}

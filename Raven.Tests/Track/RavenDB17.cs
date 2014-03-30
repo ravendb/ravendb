@@ -10,14 +10,17 @@ namespace Raven.Tests.Track
 		[Fact]
 		public void CacheRespectInFlightTransaction()
 		{
-			using (var store = NewRemoteDocumentStore())
+            using (var store = NewRemoteDocumentStore(requestedStorage: "esent"))
 			{
+                if(store.DatabaseCommands.GetStatistics().SupportsDtc == false)
+                    return;
+
 				// Session #1
 				using (var scope = new TransactionScope())
 				using (var session = store.OpenSession())
 				{
-					Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-					                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+					Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id,
+					                                  new DummyEnlistmentNotification(),
 					                                  EnlistmentOptions.None);
 
 					session.Advanced.UseOptimisticConcurrency = true;
@@ -33,8 +36,8 @@ namespace Raven.Tests.Track
 				using (var scope = new TransactionScope())
 				using (var session = store.OpenSession())
 				{
-					Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-					                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+					Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id,
+					                                  new DummyEnlistmentNotification(),
 					                                  EnlistmentOptions.None);
 
 					session.Advanced.UseOptimisticConcurrency = true;
@@ -55,8 +58,8 @@ namespace Raven.Tests.Track
 				using (var scope = new TransactionScope())
 				using (var session = store.OpenSession())
 				{
-					Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-					                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+					Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id,
+					                                  new DummyEnlistmentNotification(),
 					                                  EnlistmentOptions.None);
 
 					session.Advanced.UseOptimisticConcurrency = true;

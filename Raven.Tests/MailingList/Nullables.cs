@@ -58,7 +58,7 @@ namespace Raven.Tests.MailingList
 
 				// Everything works fine.
 				var sortedResults = session.Advanced
-					.LuceneQuery<Doc>("test")
+                    .DocumentQuery<Doc>("test")
 					.AddOrder("X", true)
 					.WaitForNonStaleResults()
 					.ToList();
@@ -78,7 +78,7 @@ namespace Raven.Tests.MailingList
 				{
 					// Invalid shift value in prefixCoded string (is encoded value really an INT?)
 					var throwsExceptions = session.Advanced
-						.LuceneQuery<Doc>("test")
+                        .DocumentQuery<Doc>("test")
 						.AddOrder("X", true)
 						.WaitForNonStaleResults()
 						.ToList();
@@ -106,7 +106,7 @@ namespace Raven.Tests.MailingList
 					at Raven.Database.DocumentDatabase.<>c__DisplayClass88.<Query>b__7e(IStorageActionsAccessor actions) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\DocumentDatabase.cs:line 946
 					at Raven.Storage.Esent.TransactionalStorage.ExecuteBatch(Action`1 action) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\Storage\Esent\TransactionalStorage.cs:line 437
 					at Raven.Storage.Esent.TransactionalStorage.Batch(Action`1 action) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\Storage\Esent\TransactionalStorage.cs:line 397
-					at Raven.Database.DocumentDatabase.Query(String index, IndexQuery query) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\DocumentDatabase.cs:line 951
+					at Raven.Database.DocumentDatabase.Queries.Query(String index, IndexQuery query) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\DocumentDatabase.cs:line 951
 					at Raven.Database.Server.Responders.Index.PerformQueryAgainstExistingIndex(IHttpContext context, String index, IndexQuery indexQuery, Guid& indexEtag) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\Server\Responders\Index.cs:line 386
 					at Raven.Database.Server.Responders.Index.ExecuteQuery(IHttpContext context, String index, Guid& indexEtag) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\Server\Responders\Index.cs:line 323
 					at Raven.Database.Server.Responders.Index.GetIndexQueryResult(IHttpContext context, String index) in c:\Builds\RavenDB-Unstable-v1.2\Raven.Database\Server\Responders\Index.cs:line 262

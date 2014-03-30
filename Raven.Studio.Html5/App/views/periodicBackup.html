@@ -1,0 +1,80 @@
+﻿<section data-bind="with: backupSetup" >
+    <div data-bind="slideVisible: unsupported">
+        <div class="alert alert-danger">Too many periodic backup types found. This isn't a supported scenario for the UI.</div>
+    </div>
+    <div data-bind="slideVisible: !unsupported()" id="periodicBackupContainer">
+        <div data-bind="slideVisible: !activated()">
+            <nav class="navbar navbar-default" role="navigation">
+                <div class="collapse navbar-collapse">
+                    <p class="navbar-text">There is no Periodic Backup set for this database.</p>
+                    <form class="navbar-form navbar-right">
+                        <button type="button" class="btn btn-primary use-bootstrap-tooltip" title="Activate Periodic Backup" data-bind="click: $root.activatePeriodicBackup.bind($root)"><i class="fa fa-unlock"></i> Activate Periodic Backup</button>
+                    </form>
+                </div>
+            </nav>
+        </div>
+        <form class="form-horizontal" role="form" data-bind="slideVisible: activated">
+            <div class="form-group">
+                <div class="col-sm-3">
+                    <select class="form-control" data-bind="options: availablePeriodicBackups, optionsText: 'label', optionsValue: 'value', value: type"></select>
+                </div>
+                <div class="col-sm-3">
+                    <input type="text" class="form-control" data-bind="value: mainValue" />
+                </div>
+            </div>
+            <div class="form-group" data-bind="slideVisible: additionalAwsInfoRequired">
+                <label for="awsAccessKey" class="col-sm-3 control-label">AWS Access Key:</label>
+                <div class="col-sm-3">
+                    <input id="awsAccessKey" type="text" class="form-control" data-bind="value: awsAccessKey" />
+                </div>
+            </div>
+            <div class="form-group" data-bind="slideVisible: additionalAwsInfoRequired">
+                <label for="awsSecretKey" class="col-sm-3 control-label">AWS Secret Key:</label>
+                <div class="col-sm-3">
+                    <input id="awsSecretKey" type="password" autocomplete="off" class="form-control" data-bind="value: awsSecretKey" />
+                </div>
+            </div>
+            <div class="form-group" data-bind="slideVisible: additionalAwsInfoRequired">
+                <label for="awsRegionEndpoint" class="col-sm-3 control-label">AWS Region Endpoint:</label>
+                <div class="col-sm-3">
+                    <select id="awsRegionEndpoint" class="form-control" data-bind="options: availableAwsRegionEndpoints, optionsText: 'label', optionsValue: 'value', optionsCaption: '', value: awsRegionEndpoint"></select>
+                </div>
+            </div>
+            <div class="form-group" data-bind="slideVisible: additionalAzureInfoRequired">
+                <label for="azureStorageAccount" class="col-sm-3 control-label">Azure Storage Account:</label>
+                <div class="col-sm-3">
+                    <input id="azureStorageAccount" type="text" class="form-control" data-bind="value: azureStorageAccount" />
+                </div>
+            </div>
+            <div class="form-group" data-bind="slideVisible: additionalAzureInfoRequired">
+                <label for="azureStorageKey" class="col-sm-3 control-label">Azure Storage Key:</label>
+                <div class="col-sm-3">
+                    <input id="azureStorageKey" type="password" autocomplete="off" class="form-control" data-bind="value: azureStorageKey" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="incrementalBackupInterval" class="col-sm-3 control-label">Incremental Backup Interval:</label>
+                <div class="col-sm-1">
+                    <input id="incrementalBackupInterval" type="number" class="form-control" min="0" data-bind="value: incrementalBackupInterval" />
+                </div>
+                <div class="col-sm-2">
+                    <select class="form-control" data-bind="options: availableIntervalUnits, value: incrementalBackupIntervalUnit"></select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="fullBackupInterval" class="col-sm-3 control-label">Full Backup Interval:</label>
+                <div class="col-sm-1">
+                    <input id="fullBackupInterval" type="number" class="form-control" min="0" data-bind="value: fullBackupInterval" />
+                </div>
+                <div class="col-sm-2">
+                    <select class="form-control" data-bind="options: availableIntervalUnits, value: fullBackupIntervalUnit"></select>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-offset-3 col-sm-6">
+                    <button type="submit" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: $root.saveChanges.bind($root)" title="Save Changes(Alt+S)" accesskey="S"><i class="fa fa-save"></i> Save Changes</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>

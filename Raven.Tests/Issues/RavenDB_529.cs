@@ -11,8 +11,10 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ReadsWillRespectTxLockExpiry()
 		{
-			using(var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
+                EnsureDtcIsSupported(store);
+
 				using(var session = store.OpenSession())
 				{
 					session.Store(new{Name = "test"}, "test");

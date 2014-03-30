@@ -1,5 +1,4 @@
-﻿#if !SILVERLIGHT
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
@@ -27,24 +26,24 @@ namespace Raven.Client.Document.SessionOperations
 			{
 			    var arrayOfArrays = multiLoadResult.Results
 			                                       .Select(x =>
-			                                       {
+					{
 			                                           if (x == null)
 			                                               return null;
 
 			                                           var values = x.Value<RavenJArray>("$values").Cast<RavenJObject>();
 
-			                                           var elementType = typeof (T).GetElementType();
+						var elementType = typeof (T).GetElementType();
 			                                           var array = values.Select(value =>
-			                                           {
+						{
                                                            EnsureNotReadVetoed(value);
 			                                               return documentSession.ProjectionToInstance(value, elementType);
-			                                           }).ToArray();
-			                                           var newArray = Array.CreateInstance(elementType, array.Length);
-			                                           Array.Copy(array, newArray, array.Length);
-			                                           return newArray;
-			                                       })
-			                                       .Cast<T>()
-			                                       .ToArray();
+						}).ToArray();
+						var newArray = Array.CreateInstance(elementType, array.Length);
+						Array.Copy(array, newArray, array.Length);
+						return newArray;
+					})
+					.Cast<T>()
+					.ToArray();
 
 				return arrayOfArrays;
 			}
@@ -94,4 +93,3 @@ namespace Raven.Client.Document.SessionOperations
 	    }
 	}
 }
-#endif

@@ -116,7 +116,7 @@ namespace Raven.Imports.Newtonsoft.Json.Converters
         reader.Read();
       }
 
-      return ReflectionUtils.CreateInstance(t, key, value);
+      return Activator.CreateInstance(t, key, value);
     }
 
     /// <summary>

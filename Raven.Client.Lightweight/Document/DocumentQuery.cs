@@ -1,4 +1,4 @@
-﻿#if !SILVERLIGHT && !NETFX_CORE
+﻿#if !NETFX_CORE
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -24,20 +24,14 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>
 	{
-
-
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
 		/// </summary>
 		public DocumentQuery(InMemoryDocumentSessionOperations session
-#if !SILVERLIGHT
 			, IDatabaseCommands databaseCommands
-#endif 
 			, IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool isMapReduce)
 			: base(session
-#if !SILVERLIGHT
 			, databaseCommands
-#endif
 			, asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
 		{
 		}
@@ -64,7 +58,13 @@ namespace Raven.Client.Document
 			return SelectFields<TProjection>(fields, projections);
 		}
 
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Distinct()
+		{
+			Distinct();
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
 	    {
 	        base.SetResultTransformer(resultsTransformer);
 	        return this;
@@ -82,10 +82,18 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		public IDocumentQuery<T> ExplainScores()
+		{
+			shouldExplainScores = true;
+			return this;
+		}
+
 		public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
 	    {
 	        this.queryInputs = queryInputs;
 	    }
+
+		public bool IsDistinct { get { return isDistinct; } }
 
 		/// <summary>
 		/// Selects the specified fields directly from the index
@@ -103,9 +111,7 @@ namespace Raven.Client.Document
 		public virtual IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
 		{
 			var documentQuery = new DocumentQuery<TProjection>(theSession,
-#if !SILVERLIGHT
 															   theDatabaseCommands,
-#endif
 															   theAsyncDatabaseCommands,
 															   indexName, 
 															   fields,
@@ -121,10 +127,10 @@ namespace Raven.Client.Document
 				cutoffEtag = cutoffEtag,
 				queryStats = queryStats,
 				theWaitForNonStaleResults = theWaitForNonStaleResults,
+                theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
 				sortByHints = sortByHints,
 				orderByFields = orderByFields,
-				groupByFields = groupByFields,
-				aggregationOp = aggregationOp,
+				isDistinct = isDistinct,
 				negate = negate,
 				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
@@ -146,7 +152,8 @@ namespace Raven.Client.Document
 				disableEntitiesTracking = disableEntitiesTracking,
 				disableCaching = disableCaching,
                 lastEquality = lastEquality,
-                defaultOperator = defaultOperator
+                defaultOperator = defaultOperator,
+				shouldExplainScores = shouldExplainScores
 			};
 			return documentQuery;
 		}
@@ -255,30 +262,6 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		///<summary>
-		/// Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		/// <remarks>
-		/// This is only valid on dynamic indexes queries
-		/// </remarks>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.GroupBy(AggregationOperation aggregationOperation, params string[] fieldsToGroupBy)
-		{
-			GroupBy(aggregationOperation, fieldsToGroupBy);
-			return this;
-		}
-
-		///<summary>
-		///  Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		///<remarks>
-		///  This is only valid on dynamic indexes queries
-		///</remarks>
-		public IDocumentQuery<T> GroupBy<TValue>(AggregationOperation aggregationOperation, params Expression<Func<T, TValue>>[] groupPropertySelectors)
-		{
-			GroupBy(aggregationOperation, groupPropertySelectors.Select(GetMemberQueryPath).ToArray());
-			return this;
-		}
-
 		/// <summary>
 		/// Partition the query so we can intersect different parts of the query
 		/// across different index entries.
@@ -286,6 +269,42 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Intersect()
 		{
 			Intersect();
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ANY of the provided values against the given field (OR)
+		/// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.ContainsAny(string fieldName, IEnumerable<object> values)
+		{
+			ContainsAny(fieldName, values);
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ANY of the provided values against the given field (OR)
+		/// </summary>
+		public IDocumentQuery<T> ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+		{
+			ContainsAny(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ALL of the provided values against the given field (AND)
+		/// </summary>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.ContainsAll(string fieldName, IEnumerable<object> values)
+		{
+			ContainsAll(fieldName, values);
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ALL of the provided values against the given field (AND)
+		/// </summary>
+		public IDocumentQuery<T> ContainsAll<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+		{
+			ContainsAll(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
 			return this;
 		}
 
@@ -846,7 +865,7 @@ namespace Raven.Client.Document
 			this.SetHighlighterTags(preTags, postTags);
 			return this;
 		}
-
+        
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of now.
 		/// </summary>

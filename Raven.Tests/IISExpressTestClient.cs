@@ -22,7 +22,6 @@ namespace Raven.Tests
 			IOExtensions.DeleteDirectory(Path.GetFullPath(WebDirectory));
 
 			IOExtensions.CopyDirectory(GetRavenWebSource(), WebDirectory);
-			IOExtensions.CopyDirectory(@".\web\", Path.Combine(WebDirectory, @".\bin\"));
 
 			if (Directory.Exists(Path.Combine(WebDirectory, "Data")))
 			{
@@ -34,12 +33,16 @@ namespace Raven.Tests
 
 		private static string GetRavenWebSource()
 		{
-			foreach (var path in new[] { @".\..\Raven.Web", @".\_PublishedWebsites\Raven.Web" })
+			foreach (var path in new[] { @".\..\..\..\Raven.Web", @".\_PublishedWebsites\Raven.Web" })
 			{
 				var fullPath = Path.GetFullPath(path);
 
 				if (Directory.Exists(fullPath) && File.Exists(Path.Combine(fullPath, "web.config")))
 				{
+					var combine = Path.Combine(fullPath, "bin");
+					if (!Directory.Exists(combine) || Directory.GetFiles(combine, "Raven.Web.dll").Length == 0)
+						throw new Exception("Raven.Web\\bin at " + fullPath + " was nonexistent or empty, you need to build Raven.Web.");
+
 					return fullPath;
 				}
 			}

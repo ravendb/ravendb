@@ -6,6 +6,7 @@
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
@@ -19,15 +20,15 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 	{
 		private const string apikey = "test/ThisIsMySecret";
 
-		protected override void ConfigureServer(Database.Config.RavenConfiguration serverConfiguration)
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
 		{
 			serverConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();
 		}
 
-		protected override void ConfigureDatabase(Database.DocumentDatabase database)
+        protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)
 		{
-			database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+			database.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 			{
 				Name = "test",
 				Secret = "ThisIsMySecret",
@@ -36,6 +37,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 				{
 					new DatabaseAccess {TenantId = "*", Admin = true},
 					new DatabaseAccess {TenantId = Constants.SystemDatabase, Admin = true},
+                    new DatabaseAccess {TenantId = databaseName, Admin = true}
 				}
 			}), new RavenJObject(), null);
 		}
@@ -54,8 +56,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 				store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
 			}, enableAuthorization: true);
 
-
-			store1.DatabaseCommands.CreateDatabase(new DatabaseDocument
+			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 			{
 				Id = "repl",
 				Settings =
@@ -65,7 +66,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 					{"Raven/ActiveBundles", "Replication"}
 				}
 			});
-			store2.DatabaseCommands.CreateDatabase(new DatabaseDocument
+			store2.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 			{
 				Id = "repl",
 				Settings =

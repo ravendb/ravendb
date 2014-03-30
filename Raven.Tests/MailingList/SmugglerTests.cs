@@ -18,7 +18,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void DateTimePreserved()
         {
-            var options = new SmugglerOptions {BackupPath = Path.GetTempFileName()};
+            var file = Path.GetTempFileName();
 
             try
             {
@@ -33,14 +33,14 @@ namespace Raven.Tests.MailingList
                         docId = foo.Id;
                         session.SaveChanges();
                     }
-                    var smugglerApi = new SmugglerApi(options, new RavenConnectionStringOptions() {Url = documentStore.Url});
-                    smugglerApi.ExportData(null, options, false).Wait(TimeSpan.FromSeconds(15));
+                    var smugglerApi = new SmugglerApi();
+					smugglerApi.ExportData(new SmugglerExportOptions { ToFile = file, From = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var documentStore = NewRemoteDocumentStore())
                 {
-                    var smugglerApi = new SmugglerApi(options, new RavenConnectionStringOptions() {Url = documentStore.Url});
-                    smugglerApi.ImportData(options).Wait(TimeSpan.FromSeconds(15));
+                    var smugglerApi = new SmugglerApi();
+					smugglerApi.ImportData(new SmugglerImportOptions { FromFile = file, To = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
                     
                     using (var session = documentStore.OpenSession())
                     {
@@ -51,9 +51,9 @@ namespace Raven.Tests.MailingList
             }
             finally
             {
-                if (File.Exists(options.BackupPath))
+                if (File.Exists(file))
                 {
-                    File.Delete(options.BackupPath);
+                    File.Delete(file);
                 }
             }
         }

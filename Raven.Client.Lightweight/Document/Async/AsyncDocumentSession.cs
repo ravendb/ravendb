@@ -14,14 +14,14 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.SessionOperations;
+using Raven.Client.Extensions;
+using Raven.Client.Linq;
 using Raven.Client.Indexes;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Async
 {
-	using Linq;
-
 	/// <summary>
 	/// Implementation for async document session 
 	/// </summary>
@@ -52,10 +52,29 @@ namespace Raven.Client.Document.Async
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
-		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25, string exclude = null)
+		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null)
 		{
-			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, start, pageSize, exclude: exclude)
+			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude, pagingInformation: pagingInformation)
 										.ContinueWith(task => (IEnumerable<T>)task.Result.Select(TrackEntity<T>).ToList());
+		}
+
+		public Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25,
+		                                                    string exclude = null, RavenPagingInformation pagingInformation = null,
+		                                                    Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			var transformer = new TTransformer().TransformerName;
+
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+			{
+				configure(configuration);
+			}
+
+			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude,
+			                                             pagingInformation: pagingInformation, transformer: transformer,
+			                                             queryInputs: configuration.QueryInputs)
+			                            .ContinueWith(
+				                            task => (IEnumerable<TResult>) task.Result.Select(TrackEntity<TResult>).ToList());
 		}
 
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query)
@@ -72,7 +91,7 @@ namespace Raven.Client.Document.Async
 		public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
 		{
 			var queryInspector = (IRavenQueryProvider)query.Provider;
-			var indexQuery = queryInspector.ToAsyncLuceneQuery<T>(query.Expression);
+			var indexQuery = queryInspector.ToAsyncDocumentQuery<T>(query.Expression);
             return await StreamAsync(indexQuery, queryHeaderInformation).ConfigureAwait(false);
 		}
 
@@ -80,6 +99,12 @@ namespace Raven.Client.Document.Async
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)query);
 			var indexQuery = ravenQueryInspector.GetIndexQuery(true);
+
+            if (indexQuery.WaitForNonStaleResults || indexQuery.WaitForNonStaleResultsAsOfNow)
+                throw new NotSupportedException(
+                    "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
+
+
             var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery, queryHeaderInformation).ConfigureAwait(false);
 			var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation(null);
 			queryOperation.DisableEntitiesTracking = true;
@@ -88,20 +113,20 @@ namespace Raven.Client.Document.Async
 		}
 
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0,
-																	 int pageSize = Int32.MaxValue)
+																	 int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
 		{
-			return StreamAsync<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize);
+			return StreamAsync<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation);
 		}
 
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0,
-																	 int pageSize = Int32.MaxValue)
+								   int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
 		{
-			return StreamAsync<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize);
+			return StreamAsync<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation);
 		}
 
-		private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize)
+		private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null)
 		{
-            var enumerator = await AsyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize).ConfigureAwait(false);
+			var enumerator = await AsyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, pagingInformation: pagingInformation).ConfigureAwait(false);
 			return new DocsYieldStream<T>(this, enumerator);
 		}
 
@@ -182,7 +207,7 @@ namespace Raven.Client.Document.Async
 
 				Current = new StreamResult<T>
 				{
-					Document = (T)parent.ConvertToEntity<T>(document.Key, document.DataAsJson, document.Metadata),
+					Document = (T)parent.ConvertToEntity(typeof(T),document.Key, document.DataAsJson, document.Metadata),
 					Etag = document.Etag,
 					Key = document.Key,
 					Metadata = document.Metadata
@@ -196,40 +221,62 @@ namespace Raven.Client.Document.Async
 		/// <typeparam name="T">The result of the query</typeparam>
 		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
 		/// <returns></returns>
+		[Obsolete("Use AsyncDocumentQuery instead")]
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
-			var index = new TIndexCreator();
-
-			return AsyncLuceneQuery<T>(index.IndexName, index.IsMapReduce);
+		    return AsyncDocumentQuery<T, TIndexCreator>();
 		}
+
+        /// <summary>
+        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+        /// <returns></returns>
+        public IAsyncDocumentQuery<T> AsyncDocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            var index = new TIndexCreator();
+
+            return AsyncDocumentQuery<T>(index.IndexName, index.IsMapReduce);
+        }
+
+        /// <summary>
+        /// Query the specified index using Lucene syntax
+        /// </summary>
+        [Obsolete("Use AsyncDocumentQuery instead.")]
+        public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce)
+        {
+            return AsyncDocumentQuery<T>(index, isMapReduce);
+        }
 
 		/// <summary>
 		/// Query the specified index using Lucene syntax
 		/// </summary>
-		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce)
+		public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string index, bool isMapReduce)
 		{
-			return new AsyncDocumentQuery<T>(this,
-#if !SILVERLIGHT
- null,
-#endif
- AsyncDatabaseCommands, index, new string[0], new string[0], listeners.QueryListeners, isMapReduce);
+			return new AsyncDocumentQuery<T>(this,null,AsyncDatabaseCommands, index, new string[0], new string[0], theListeners.QueryListeners, isMapReduce);
 		}
+
+        /// <summary>
+        /// Dynamically query RavenDB using Lucene syntax
+        /// </summary>
+        [Obsolete("Use AsyncDocumentQuery instead.")]
+        public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
+        {
+            return AsyncDocumentQuery<T>();
+        }
 
 		/// <summary>
 		/// Dynamically query RavenDB using Lucene syntax
 		/// </summary>
-		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()
+		public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>()
 		{
 			var indexName = "dynamic";
 			if (typeof(T).IsEntityType())
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
-			return new AsyncDocumentQuery<T>(this,
-#if !SILVERLIGHT
- null,
-#endif
- AsyncDatabaseCommands, indexName, new string[0], new string[0], listeners.QueryListeners, false);
+			return new AsyncDocumentQuery<T>(this, null, AsyncDatabaseCommands, indexName, new string[0], new string[0], theListeners.QueryListeners, false);
 		}
 
 		/// <summary>
@@ -330,19 +377,26 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		/// <param name="id">The id.</param>
 		/// <returns></returns>
-		public Task<T> LoadAsync<T>(string id)
+		public async Task<T> LoadAsync<T>(string id)
 		{
 			if (id == null) throw new ArgumentNullException("id", "The document id cannot be null");
 			object entity;
 			if (entitiesByKey.TryGetValue(id, out entity))
 			{
-				var tcs = new TaskCompletionSource<T>();
-				tcs.TrySetResult((T)entity);
-				return tcs.Task;
+			    return (T) entity;
 			}
+		    JsonDocument value;
+		    if (includedDocumentsByKey.TryGetValue(id, out value))
+		    {
+		        includedDocumentsByKey.Remove(id);
+		        return TrackEntity<T>(value);
+		    }
+		    if (IsDeleted(id))
+		        return default(T);
+
 			IncrementRequestCount();
 			var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
-			return CompleteLoadAsync<T>(id, loadOperation);
+			return await CompleteLoadAsync<T>(id, loadOperation);
 		}
 
 		private async Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation)
@@ -423,7 +477,7 @@ namespace Raven.Client.Document.Async
 												var array = values.Select(y =>
 												{
 													HandleInternalMetadata(y);
-													return ConvertToEntity<T>(null, y, new RavenJObject());
+													return ConvertToEntity(typeof(T),null, y, new RavenJObject());
 												}).ToArray();
 												var newArray = Array.CreateInstance(typeof(T).GetElementType(), array.Length);
 												Array.Copy(array, newArray, array.Length);
@@ -436,28 +490,28 @@ namespace Raven.Client.Document.Async
 			}
 
             var getResponse = (await this.AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, queryInputs).ConfigureAwait(false));
-		    var items = new List<T>();
-		    foreach (var result in getResponse.Results)
-		    {
-                if (result == null)
-                {
-                    items.Add(default(T));
-                    continue;
-                }
-		        var transformedResults = result.Value<RavenJArray>("$values").ToArray()
-		              .Select(JsonExtensions.ToJObject)
-		              .Select(x =>
-		              {
-		                  this.HandleInternalMetadata(x);
-		                  return this.ConvertToEntity<T>(null, x, new RavenJObject());
-		              })
-		              .Cast<T>();
+			var items = new List<T>();
+			foreach (var result in getResponse.Results)
+			{
+				if (result == null)
+				{
+					items.Add(default(T));
+					continue;
+				}
+				var transformedResults = result.Value<RavenJArray>("$values").ToArray()
+					  .Select(JsonExtensions.ToJObject)
+					  .Select(x =>
+					  {
+						  this.HandleInternalMetadata(x);
+						  return this.ConvertToEntity(typeof(T),null, x, new RavenJObject());
+					  })
+					  .Cast<T>();
 
 
-                items.AddRange(transformedResults);
+				items.AddRange(transformedResults);
 
-		    }
-				
+			}
+
 			if (items.Count > ids.Length)
 			{
 				throw new InvalidOperationException(String.Format("A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
@@ -563,21 +617,12 @@ namespace Raven.Client.Document.Async
 			var ravenQueryStatistics = new RavenQueryStatistics();
 			var highlightings = new RavenQueryHighlightings();
 			return new RavenQueryInspector<T>(
-				new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings,
-#if !SILVERLIGHT
- null,
-#endif
- AsyncDatabaseCommands, isMapReduce),
+				new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, AsyncDatabaseCommands, isMapReduce),
 				ravenQueryStatistics,
 				highlightings,
 				indexName,
 				null,
-				this,
-#if !SILVERLIGHT
- null,
-#endif
- AsyncDatabaseCommands,
-				isMapReduce);
+				this, null, AsyncDatabaseCommands, isMapReduce);
 		}
 
 		/// <summary>
@@ -593,7 +638,7 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		public IAsyncDocumentQuery<T> AsyncQuery<T>(string indexName, bool isMapReduce = false)
 		{
-			return AsyncLuceneQuery<T>(indexName, isMapReduce);
+			return AsyncDocumentQuery<T>(indexName, isMapReduce);
 		}
 
 		protected override string GenerateKey(object entity)

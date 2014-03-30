@@ -31,9 +31,7 @@ namespace Raven.Client.Linq
 		private readonly RavenQueryStatistics queryStats;
 		private readonly RavenQueryHighlightings highlightings;
 		private readonly string indexName;
-#if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
-#endif
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private InMemoryDocumentSessionOperations session;
 		private readonly bool isMapReduce;
@@ -48,9 +46,7 @@ namespace Raven.Client.Linq
 			string indexName,
 			Expression expression,
 			InMemoryDocumentSessionOperations session
-#if !SILVERLIGHT
 			, IDatabaseCommands databaseCommands
-#endif
 			, IAsyncDatabaseCommands asyncDatabaseCommands,
 			bool isMapReduce
 			)
@@ -64,9 +60,7 @@ namespace Raven.Client.Linq
 			this.highlightings = highlightings;
 			this.indexName = indexName;
 			this.session = session;
-#if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
-#endif
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 			this.isMapReduce = isMapReduce;
 			this.provider.AfterQueryExecuted(this.AfterQueryExecuted);
@@ -140,6 +134,12 @@ namespace Raven.Client.Linq
 	        return (IRavenQueryable<TResult>)this.As<TResult>();
 	    }
 
+        public IRavenQueryable<TResult> TransformWith<TResult>(string transformerName)
+        {
+            provider.TransformWith(transformerName);
+            return (IRavenQueryable<TResult>)this.As<TResult>();
+        }
+
 	    public IRavenQueryable<T> AddQueryInput(string input, RavenJToken foo)
 	    {
 	        provider.AddQueryInput(input, foo);
@@ -160,11 +160,11 @@ namespace Raven.Client.Linq
 		public override string ToString()
 		{
 			RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
-			var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
+			var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
 			string fields = "";
 			if (ravenQueryProvider.FieldsToFetch.Count > 0)
 				fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";
-			return fields + luceneQuery;
+			return fields + documentQuery;
 		}
 
 		public IndexQuery GetIndexQuery(bool isAsync = true)
@@ -172,14 +172,13 @@ namespace Raven.Client.Linq
 			RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
 			if (isAsync == false)
 			{
-				var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
-				return luceneQuery.GetIndexQuery(false);
+				var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
+				return documentQuery.GetIndexQuery(false);
 			}
-			var asyncLuceneQuery = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
-			return asyncLuceneQuery.GetIndexQuery(true);
+			var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
+			return asyncDocumentQuery.GetIndexQuery(true);
 		}
 
-#if !SILVERLIGHT
 		public virtual FacetResults GetFacets(string facetSetupDoc, int start, int? pageSize)
 		{
 			return databaseCommands.GetFacets(indexName, GetIndexQuery(false), facetSetupDoc, start, pageSize);
@@ -189,7 +188,6 @@ namespace Raven.Client.Linq
 		{
 			return databaseCommands.GetFacets(indexName, GetIndexQuery(false), facets, start, pageSize);
 		}
-#endif
 
 		public virtual Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize)
 		{
@@ -217,8 +215,8 @@ namespace Raven.Client.Linq
 			{
 				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce, 
                     provider.ResultTransformer, provider.QueryInputs);
-				var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
-				return ((IRavenQueryInspector)luceneQuery).IndexQueried;
+				var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
+				return ((IRavenQueryInspector)documentQuery).IndexQueried;
 			}
 		}
 
@@ -231,12 +229,11 @@ namespace Raven.Client.Linq
 			{
 				var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce,
                     provider.ResultTransformer, provider.QueryInputs);
-				var luceneQuery = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
-				return ((IRavenQueryInspector)luceneQuery).IndexQueried;
+				var documentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
+				return ((IRavenQueryInspector)documentQuery).IndexQueried;
 			}
 		}
 
-#if !SILVERLIGHT
 		/// <summary>
 		/// Grant access to the database commands
 		/// </summary>
@@ -249,9 +246,6 @@ namespace Raven.Client.Linq
 				return databaseCommands;
 			}
 		}
-
-		
-#endif
 
 		/// <summary>
 		/// Grant access to the async database commands
@@ -282,33 +276,13 @@ namespace Raven.Client.Linq
             var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new List<RenamedField>(), isMapReduce, provider.ResultTransformer, provider.QueryInputs);
 			if (isAsync)
 			{
-				var luceneQueryAsync = ravenQueryProvider.GetAsyncLuceneQueryFor(expression);
-				return ((IRavenQueryInspector)luceneQueryAsync).GetLastEqualityTerm(true);
+				var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
+				return ((IRavenQueryInspector)asyncDocumentQuery).GetLastEqualityTerm(true);
 			}
 
-			var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
-			return ((IRavenQueryInspector) luceneQuery).GetLastEqualityTerm();
+			var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
+			return ((IRavenQueryInspector) documentQuery).GetLastEqualityTerm();
 		}
-
-#if SILVERLIGHT
-		/// <summary>
-		///   This function exists solely to forbid calling ToList() on a queryable in Silverlight.
-		/// </summary>
-		[Obsolete("You cannot execute a query synchronously from the Silverlight client. Instead, use queryable.ToListAsync().", true)]
-		public static IList<TOther> ToList<TOther>()
-		{
-			throw new NotSupportedException();
-		}
-
-		/// <summary>
-		///   This function exists solely to forbid calling ToArray() on a queryable in Silverlight.
-		/// </summary>
-		[Obsolete("You cannot execute a query synchronously from the Silverlight client. Instead, use queryable.ToListAsync().", true)]
-		public static TOther[] ToArray<TOther>()
-		{
-			throw new NotSupportedException();
-		}
-#endif
 
 		/// <summary>
 		/// Set the fields to fetch

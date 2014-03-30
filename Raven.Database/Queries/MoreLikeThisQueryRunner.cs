@@ -4,19 +4,17 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
-using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Bundles.MoreLikeThis;
+using Raven.Database.Data;
 using Raven.Database.Indexing;
-using Raven.Database.Server.Responders;
 using Index = Raven.Database.Indexing.Index;
 
 namespace Raven.Database.Queries
@@ -42,7 +40,7 @@ namespace Raven.Database.Queries
 				throw new InvalidOperationException("The document id or map group fields are mandatory");
 
 			IndexSearcher searcher;
-			using (database.IndexStorage.GetCurrentIndexSearcher(query.IndexName, out searcher))
+			using (database.IndexStorage.GetCurrentIndexSearcher(index.indexId, out searcher))
 			{
 				var documentQuery = new BooleanQuery();
 
@@ -69,7 +67,7 @@ namespace Raven.Database.Queries
 
 				if (string.IsNullOrWhiteSpace(query.StopWordsDocumentId) == false)
 				{
-					var stopWordsDoc = database.Get(query.StopWordsDocumentId, null);
+					var stopWordsDoc = database.Documents.Get(query.StopWordsDocumentId, null);
 					if (stopWordsDoc == null)
 						throw new InvalidOperationException("Stop words document " + query.StopWordsDocumentId + " could not be found");
 
@@ -105,7 +103,7 @@ namespace Raven.Database.Queries
 					var result = new MultiLoadResult();
 
 					var includedEtags = new List<byte>(jsonDocuments.SelectMany(x => x.Etag.ToByteArray()));
-					includedEtags.AddRange(database.GetIndexEtag(query.IndexName, null).ToByteArray());
+					includedEtags.AddRange(database.Indexes.GetIndexEtag(query.IndexName, null).ToByteArray());
 					var loadedIds = new HashSet<string>(jsonDocuments.Select(x => x.Key));
 					var addIncludesCommand = new AddIncludesCommand(database, transactionInformation, (etag, includedDoc) =>
 					{
@@ -155,19 +153,19 @@ namespace Raven.Database.Queries
 					.Distinct();
 
 				return documentIds
-					.Select(docId => database.Get(docId, null))
+					.Select(docId => database.Documents.Get(docId, null))
 					.Where(it => it != null)
 					.ToArray();
 			}
 
 			var fields = searcher.Doc(baseDocId).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct().ToArray();
-			var etag = database.GetIndexEtag(indexName, null);
+			var etag = database.Indexes.GetIndexEtag(indexName, null);
 			return hits
 				.Where(hit => hit.Doc != baseDocId)
 				.Select(hit => new JsonDocument
 				{
 					DataAsJson = Index.CreateDocumentFromFields(searcher.Doc(hit.Doc),
-					                                            new FieldsToFetch(fields, AggregationOperation.None, index.IsMapReduce ? Constants.ReduceKeyFieldName : Constants.DocumentIdFieldName)),
+					                                            new FieldsToFetch(fields, false, index.IsMapReduce ? Constants.ReduceKeyFieldName : Constants.DocumentIdFieldName)),
 					Etag = etag
 				})
 				.ToArray();

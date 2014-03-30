@@ -5,7 +5,7 @@ namespace Raven.Database.Indexing
 {
 	public class IndexToWorkOn
 	{
-		public string IndexName { get; set; }
+		public int IndexId { get; set; }
 		public Etag LastIndexedEtag { get; set; }
 		public DateTime LastIndexedTimestamp { get; set; }
 
@@ -13,7 +13,7 @@ namespace Raven.Database.Indexing
 
 		public override string ToString()
 		{
-			return string.Format("IndexName: {0}, LastIndexedEtag: {1}", IndexName, LastIndexedEtag);
+			return string.Format("IndexId: {0}, LastIndexedEtag: {1}", IndexId, LastIndexedEtag);
 		}
 	}
 }

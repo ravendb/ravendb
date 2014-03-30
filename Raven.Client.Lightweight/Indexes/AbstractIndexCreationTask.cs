@@ -117,6 +117,7 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
 
+		[Obsolete]
 		protected class SpatialIndex
 		{
 			/// <summary>
@@ -125,6 +126,7 @@ namespace Raven.Client.Indexes
 			/// <param name="fieldName">The field name, will be used for querying</param>
 			/// <param name="lat">Latitude</param>
 			/// <param name="lng">Longitude</param>
+			[Obsolete("Use SpatialGenerate instead.")]
 			public static object Generate(string fieldName, double? lat, double? lng)
 			{
 				throw new NotSupportedException("This method is provided solely to allow query translation on the server");
@@ -135,6 +137,7 @@ namespace Raven.Client.Indexes
 			/// </summary>
 			/// <param name="lat">Latitude</param>
 			/// <param name="lng">Longitude</param>
+			[Obsolete("Use SpatialGenerate instead.")]
 			public static object Generate(double? lat, double? lng)
 			{
 				throw new NotSupportedException("This method is provided solely to allow query translation on the server");
@@ -177,7 +180,7 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 
 		/// <summary>
 		/// Executes the index creation against the specified document store.
@@ -208,17 +211,16 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Executes the index creation against the specified document store.
 		/// </summary>
-		public virtual Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention)
+		public virtual async Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention)
 		{
 			Conventions = documentConvention;
 			var indexDefinition = CreateIndexDefinition();
+			
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
-			return asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true)
-				.ContinueWith(task => UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, url) =>
-					client.DirectPutIndexAsync(IndexName, indexDefinition, true, url)))
-				.Unwrap();
+			await asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true);
+			await UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, operationMetadata) => client.DirectPutIndexAsync(IndexName, indexDefinition, true, operationMetadata));				
 		}
 	}
 
@@ -278,11 +280,17 @@ namespace Raven.Client.Indexes
 				TermVectorsStrings = TermVectorsStrings,
 				SpatialIndexes = SpatialIndexes,
 				SpatialIndexesStrings = SpatialIndexesStrings,
-				DisableInMemoryIndexing = DisableInMemoryIndexing
+                DisableInMemoryIndexing = DisableInMemoryIndexing,
+				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
 			}.ToIndexDefinition(Conventions);
 		}
 
-	    public override bool IsMapReduce
+		/// <summary>
+		/// Max number of allowed indexing outputs per one source document
+		/// </summary>
+		public int? MaxIndexOutputsPerDocument { get; set; }
+
+		public override bool IsMapReduce
 		{
 			get { return Reduce != null; }
 		}
@@ -338,7 +346,6 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 
-#if !SILVERLIGHT
 		/// <summary>
 		/// Allows to use lambdas recursively
 		/// </summary>
@@ -346,7 +353,6 @@ namespace Raven.Client.Indexes
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
-#endif
 
 		/// <summary>
 		/// Loads the specifed document during the indexing process
@@ -454,7 +460,7 @@ namespace Raven.Client.Indexes
 			return new OperationMetadata(url, replicationDestination.Username, replicationDestination.Password, replicationDestination.Domain, replicationDestination.ApiKey);
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		internal void UpdateIndexInReplication(IDatabaseCommands databaseCommands, DocumentConvention documentConvention,
 			Action<ServerClient, OperationMetadata> action)
 		{

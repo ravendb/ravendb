@@ -34,7 +34,7 @@ namespace Raven.Tests.Bugs
 					}
 				}), new RavenJObject());
 
-				store.OpenSession().Advanced.LuceneQuery<object>("MyIndex").WaitForNonStaleResults().ToList();
+                store.OpenSession().Advanced.DocumentQuery<object>("MyIndex").WaitForNonStaleResults().ToList();
 
 				store.DatabaseCommands.UpdateByIndex("MyIndex",
 				   new IndexQuery

@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Net.Http;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Tests.Bundles.Versioning;
@@ -40,7 +41,7 @@ namespace Raven.Tests.Bundles.Replication
 		[Fact]
 		public void Can_disallow_failover()
 		{
-			var store1 = CreateStore(false, true, store => store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately);
+			var store1 = CreateStore(false, store => store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately);
 			var store2 = CreateStore();
 
 			TellFirstInstanceToReplicateToSecondInstance();
@@ -60,7 +61,7 @@ namespace Raven.Tests.Bundles.Replication
 
 			using (var session = store1.OpenSession())
 			{
-				Assert.Throws<WebException>(() => session.Load<Company>("companies/1"));
+				Assert.Throws<HttpRequestException>(() => session.Load<Company>("companies/1"));
 			}
 		}
 

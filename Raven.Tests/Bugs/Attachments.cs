@@ -21,7 +21,7 @@ namespace Raven.Tests.Bugs
 
 			using (var server = GetNewServer())
 			{
-				using (var documentStore = new DocumentStore { Url = server.Database.Configuration.ServerUrl }.Initialize())
+				using (var documentStore = new DocumentStore { Url = server.SystemDatabase.Configuration.ServerUrl }.Initialize())
 				{
 					documentStore.DatabaseCommands.PutAttachment("test", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
 					attachment = documentStore.DatabaseCommands.HeadAttachment("test");
@@ -29,7 +29,8 @@ namespace Raven.Tests.Bugs
 			}
 
 			Assert.NotNull(attachment);
-			Assert.Throws<InvalidOperationException>(() => attachment.Data());
+			var exception = Assert.Throws<InvalidOperationException>(() => attachment.Data());
+			Assert.Equal("Cannot get attachment data because it was loaded using: HEAD", exception.Message);
 		}
 
 		[Fact]
@@ -39,7 +40,7 @@ namespace Raven.Tests.Bugs
 
 			using (var server = GetNewServer())
 			{
-				using (var documentStore = new DocumentStore { Url = server.Database.Configuration.ServerUrl }.Initialize())
+				using (var documentStore = new DocumentStore { Url = server.SystemDatabase.Configuration.ServerUrl }.Initialize())
 				{
 					attachment = documentStore.DatabaseCommands.HeadAttachment("test");
 				}
@@ -55,7 +56,7 @@ namespace Raven.Tests.Bugs
 
 			using (var server = GetNewServer())
 			{
-				using (var documentStore = new DocumentStore { Url = server.Database.Configuration.ServerUrl }.Initialize())
+				using (var documentStore = new DocumentStore { Url = server.SystemDatabase.Configuration.ServerUrl }.Initialize())
 				{
 					documentStore.DatabaseCommands.PutAttachment("test", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
 					attachment = await documentStore.AsyncDatabaseCommands.HeadAttachmentAsync("test");
@@ -73,7 +74,7 @@ namespace Raven.Tests.Bugs
 
 			using (var server = GetNewServer())
 			{
-				using (var documentStore = new DocumentStore { Url = server.Database.Configuration.ServerUrl }.Initialize())
+				using (var documentStore = new DocumentStore { Url = server.SystemDatabase.Configuration.ServerUrl }.Initialize())
 				{
 					attachment = await documentStore.AsyncDatabaseCommands.HeadAttachmentAsync("test");
 				}
@@ -87,7 +88,7 @@ namespace Raven.Tests.Bugs
 		{
 			using (var server = GetNewServer())
 			{
-				using (var documentStore = new DocumentStore { Url = server.Database.Configuration.ServerUrl }.Initialize())
+				using (var documentStore = new DocumentStore { Url = server.SystemDatabase.Configuration.ServerUrl }.Initialize())
 				{
 					documentStore.DatabaseCommands.PutAttachment("test", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
 					documentStore.DatabaseCommands.PutAttachment("test2", Raven.Abstractions.Data.Etag.InvalidEtag, new MemoryStream(new byte[] { 1, 2, 3, 5 }), new RavenJObject());
@@ -109,7 +110,7 @@ namespace Raven.Tests.Bugs
 					while (true)
 					{
 						var attachmentInfo =
-							GetString(webClient.DownloadData(server.Database.Configuration.ServerUrl + "/static/?pageSize=2&etag=" + lastEtag));
+							GetString(webClient.DownloadData(server.SystemDatabase.Configuration.ServerUrl + "/static/?pageSize=2&etag=" + lastEtag));
 						var array = RavenJArray.Parse(attachmentInfo);
 
 						if (array.Length == 0) break;

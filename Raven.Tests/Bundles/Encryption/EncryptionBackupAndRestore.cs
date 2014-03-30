@@ -3,20 +3,28 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Extensions;
 using Xunit;
+using Raven.Database.Extensions;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bundles.Encryption
 {
 	public class EncryptionBackupAndRestore : RavenTest
 	{
-		[Fact]
-		public async Task CanRestoreAnEncryptedDatabase()
-		{
-			using (var store = NewRemoteDocumentStore(requestedStorage: "esent"))
+		[Theory]
+        [PropertyData("Storages")]
+		public async Task CanRestoreAnEncryptedDatabase(string storageEngineTypeName)
+		{			
+			IOExtensions.DeleteDirectory(@"~\Databases\Db1".ToFullPath());
+			IOExtensions.DeleteDirectory(@"~\Databases\Db2".ToFullPath());
+
+			using (var store = NewRemoteDocumentStore(requestedStorage: storageEngineTypeName, runInMemory: false))
 			{
 				var db1 = new DatabaseDocument
 				{
@@ -29,7 +37,7 @@ namespace Raven.Tests.Bundles.Encryption
 						{"Raven/Encryption/EncryptIndexes", "True"}
 					},
 				};
-				await store.AsyncDatabaseCommands.CreateDatabaseAsync(db1);
+				await store.AsyncDatabaseCommands.GlobalAdmin.CreateDatabaseAsync(db1);
 
 				using (var session = store.OpenAsyncSession("Db1"))
 				{
@@ -42,14 +50,19 @@ namespace Raven.Tests.Bundles.Encryption
 				}
 
 				var backupFolderDb1 = NewDataPath("BackupFolderDb1");
-				await store.AsyncDatabaseCommands.ForDatabase("Db1").StartBackupAsync(backupFolderDb1, db1);
+				await store.AsyncDatabaseCommands.ForDatabase("Db1").GlobalAdmin.StartBackupAsync(backupFolderDb1, db1,false ,"Db1");
 				WaitForBackup(store.DatabaseCommands.ForDatabase("Db1"), true);
 
-				await store.AsyncDatabaseCommands.StartRestoreAsync(backupFolderDb1, @"~\Databases\Db2", "Db2");
-				WaitForRestore(store.DatabaseCommands);
-				WaitForDocument(store.DatabaseCommands, "Raven/Databases/Db2");
+			    await store.AsyncDatabaseCommands.GlobalAdmin.StartRestoreAsync(new RestoreRequest
+			    {
+			        BackupLocation = backupFolderDb1, 
+                    DatabaseLocation = @"~\Databases\Db2", 
+                    DatabaseName = "Db2"
+			    });
+				WaitForRestore(store.DatabaseCommands.ForSystemDatabase());
+				WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), "Raven/Databases/Db2");
 
-				using (var session = store.OpenAsyncSession())
+				using (var session = store.OpenAsyncSession(Constants.SystemDatabase))
 				{
 					var db2Settings = await session.LoadAsync<DatabaseDocument>("Raven/Databases/Db2");
 					Assert.NotEqual(db1.SecuredSettings["Raven/Encryption/Key"], db2Settings.SecuredSettings["Raven/Encryption/Key"]);

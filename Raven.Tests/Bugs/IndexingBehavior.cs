@@ -26,7 +26,7 @@ namespace Raven.Tests.Bugs
 		{
 			store = NewDocumentStore();
 			db = store.DocumentDatabase;
-			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
+			db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		}
 
 		public override void Dispose()
@@ -38,27 +38,28 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanDeleteIndex()
 		{
-			db.PutIndex("test", new IndexDefinition
+			db.Indexes.PutIndex("test", new IndexDefinition
 			{
 				Map = "from doc in docs select new { doc.Name}"
 			});
 
-			db.DeleteIndex("test");
-			Assert.Null(db.GetIndexDefinition("test"));
+			db.Indexes.DeleteIndex("test");
+			Assert.Null(db.Indexes.GetIndexDefinition("test"));
 		}
 
 
 		[Fact]
 		public void CanGetIndexingErrorsInStats()
 		{
-			db.PutIndex("test", new IndexDefinition
+			db.Indexes.PutIndex("test", new IndexDefinition
 			{
 				Map = "from doc in docs select new { User = ((string)null).ToString() }"
 			});
+		    var test = db.IndexDefinitionStorage.GetIndexDefinition("test").IndexId;
 
 			for (int i = 0; i < 15; i++)
 			{
-				db.Put("a" + i, null, new RavenJObject(), new RavenJObject(), null);
+				db.Documents.Put("a" + i, null, new RavenJObject(), new RavenJObject(), null);
 			}
 
 			bool isIndexStale = false;
@@ -66,7 +67,7 @@ namespace Raven.Tests.Bugs
 			{
 				db.TransactionalStorage.Batch(actions =>
 				{
-					isIndexStale = actions.Staleness.IsIndexStale("test", null, null);
+					isIndexStale = actions.Staleness.IsIndexStale(test, null, null);
 				});
 				if (isIndexStale == false)
 					break;
@@ -79,14 +80,15 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void AfterEnoughFailuresIndexWillBeDisabled()
 		{
-			db.PutIndex("test", new IndexDefinition
+			db.Indexes.PutIndex("test", new IndexDefinition
 			{
 				Map = "from doc in docs select new { User = ((string)null).ToString() }"
 			});
+		    var test = db.IndexDefinitionStorage.GetIndexDefinition("test").IndexId;
 
 			for (int i = 0; i < 150; i++)
 			{
-				db.Put("a"+i, null, new RavenJObject(), new RavenJObject(),null);
+				db.Documents.Put("a"+i, null, new RavenJObject(), new RavenJObject(),null);
 			}
 
 			for (int i = 0; i < 50; i++)
@@ -94,7 +96,7 @@ namespace Raven.Tests.Bugs
 				bool isIndexStale = false;
 				db.TransactionalStorage.Batch(actions =>
 				{
-					isIndexStale = actions.Staleness.IsIndexStale("test", null, null);
+					isIndexStale = actions.Staleness.IsIndexStale(test, null, null);
 				});
 				if (isIndexStale == false)
 					break;
@@ -103,31 +105,31 @@ namespace Raven.Tests.Bugs
 
 			Assert.Throws<IndexDisabledException>(() =>
 			{
-				var queryResult = db.Query("test", new IndexQuery { Query = "User:Ayende" }, CancellationToken.None);
+				var queryResult = db.Queries.Query("test", new IndexQuery { Query = "User:Ayende" }, CancellationToken.None);
 			});
 		}
 
 		[Fact]
 		public void AfterDeletingAndStoringTheDocumentIsIndexed()
 		{
-			db.PutIndex(@"DocsByProject", new IndexDefinition
+			db.Indexes.PutIndex(@"DocsByProject", new IndexDefinition
 			{
 				Map = @"from doc in docs select new{ doc.Something}"
 			});
 
-			db.Put("foos/1", null, RavenJObject.Parse("{'Something':'something'}"),
+			db.Documents.Put("foos/1", null, RavenJObject.Parse("{'Something':'something'}"),
 			  RavenJObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
 
-			var document = db.Get("foos/1", null);
-			db.Delete("foos/1", document.Etag, null);
+			var document = db.Documents.Get("foos/1", null);
+			db.Documents.Delete("foos/1", document.Etag, null);
 
-			db.Put("foos/1", null, RavenJObject.Parse("{'Something':'something'}"),
+			db.Documents.Put("foos/1", null, RavenJObject.Parse("{'Something':'something'}"),
 			RavenJObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
 
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
+				queryResult = db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
 				{
 					Query = "Tag:[[Foos]]",
 					PageSize = 10

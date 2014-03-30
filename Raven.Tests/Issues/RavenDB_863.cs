@@ -17,29 +17,30 @@ namespace Raven.Tests.Issues
 {
 	public class RavenDB_863 : RavenTest
 	{
+	    private int test = 100;
+
 		[Theory]
-		[InlineData("munin")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public void NumberOfLoadedItemsToReduceShouldBeLimited(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
 				storage.Batch(accessor =>
 				{
-					accessor.Indexing.AddIndex("test", true);
+					accessor.Indexing.AddIndex(test, true);
 
-					accessor.MapReduce.PutMappedResult("test", "a/1", "a", new RavenJObject() { { "A", "a" } });
-					accessor.MapReduce.PutMappedResult("test", "a/1", "a", new RavenJObject() { { "B", "b" } });
-					accessor.MapReduce.PutMappedResult("test", "b/1", "b", new RavenJObject() { { "C", "c" } });
-					accessor.MapReduce.PutMappedResult("test", "b/1", "b", new RavenJObject() { { "D", "d" } });
+					accessor.MapReduce.PutMappedResult(test, "a/1", "a", new RavenJObject() { { "A", "a" } });
+					accessor.MapReduce.PutMappedResult(test, "a/1", "a", new RavenJObject() { { "B", "b" } });
+					accessor.MapReduce.PutMappedResult(test, "b/1", "b", new RavenJObject() { { "C", "c" } });
+					accessor.MapReduce.PutMappedResult(test, "b/1", "b", new RavenJObject() { { "D", "d" } });
 
-					accessor.MapReduce.ScheduleReductions("test", 0,new ReduceKeyAndBucket(IndexingUtil.MapBucket("a/1"), "a"));
-					accessor.MapReduce.ScheduleReductions("test", 0, new ReduceKeyAndBucket(IndexingUtil.MapBucket("b/1"), "b"));
+					accessor.MapReduce.ScheduleReductions(test, 0,new ReduceKeyAndBucket(IndexingUtil.MapBucket("a/1"), "a"));
+					accessor.MapReduce.ScheduleReductions(test, 0, new ReduceKeyAndBucket(IndexingUtil.MapBucket("b/1"), "b"));
 				});
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams("test", new[] { "a", "b" }, 0, true, new ConcurrentSet<object>()){Take = 2}).ToList();
+					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams(test, new[] { "a", "b" }, 0, true, new ConcurrentSet<object>()) { Take = 2 }).ToList();
 					Assert.Equal(2, results.Count);
 					Assert.Equal(results[0].Bucket, results[1].Bucket);
 				});
@@ -47,28 +48,27 @@ namespace Raven.Tests.Issues
 		}
 
 		[Theory]
-		[InlineData("munin")]
-		[InlineData("esent")]
+        [PropertyData("Storages")]
 		public void LimitOfLoadedItemsShouldNotBreakInTheMiddleOfBucket(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
 			{
 				storage.Batch(accessor =>
 				{
-					accessor.Indexing.AddIndex("test", true);
+					accessor.Indexing.AddIndex(test, true);
 
-					accessor.MapReduce.PutMappedResult("test", "a/1", "a", new RavenJObject() { { "A", "a" } });
-					accessor.MapReduce.PutMappedResult("test", "a/1", "a", new RavenJObject() { { "B", "b" } });
-					accessor.MapReduce.PutMappedResult("test", "b/1", "b", new RavenJObject() { { "C", "c" } });
-					accessor.MapReduce.PutMappedResult("test", "b/1", "b", new RavenJObject() { { "D", "d" } });
+					accessor.MapReduce.PutMappedResult(test, "a/1", "a", new RavenJObject() { { "A", "a" } });
+					accessor.MapReduce.PutMappedResult(test, "a/1", "a", new RavenJObject() { { "B", "b" } });
+					accessor.MapReduce.PutMappedResult(test, "b/1", "b", new RavenJObject() { { "C", "c" } });
+					accessor.MapReduce.PutMappedResult(test, "b/1", "b", new RavenJObject() { { "D", "d" } });
 
-					accessor.MapReduce.ScheduleReductions("test", 0, new ReduceKeyAndBucket(IndexingUtil.MapBucket("a/1"), "a"));
-					accessor.MapReduce.ScheduleReductions("test", 0, new ReduceKeyAndBucket(IndexingUtil.MapBucket("b/1"), "b"));
+					accessor.MapReduce.ScheduleReductions(test, 0, new ReduceKeyAndBucket(IndexingUtil.MapBucket("a/1"), "a"));
+					accessor.MapReduce.ScheduleReductions(test, 0, new ReduceKeyAndBucket(IndexingUtil.MapBucket("b/1"), "b"));
 				});
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams("test", new[] { "a", "b" }, 0, true, new ConcurrentSet<object>()) { Take = 3 }).ToList();
+					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams(test, new[] { "a", "b" }, 0, true, new ConcurrentSet<object>()) { Take = 3 }).ToList();
 					Assert.Equal(4, results.Count);
 				});
 			}

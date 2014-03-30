@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +10,7 @@ using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Client.Document;
-#if NETFX_CORE || SILVERLIGHT
+#if NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
 using Raven.Client.WinRT.MissingFromWinRT;
 #else
@@ -65,9 +64,7 @@ namespace Raven.Client.Shard
 		{
 			var buffer = queryResults.SelectMany(x => x.IndexEtag.ToByteArray()).ToArray();
 			Etag indexEtag;
-#if SILVERLIGHT
-			indexEtag = new Etag(Convert.ToBase64String(MD5Core.GetHash(buffer)));
-#elif  NETFX_CORE
+#if  NETFX_CORE
 			indexEtag = new Etag(Convert.ToBase64String(MD5.HashCore(buffer)));			
 #else
 			using (var md5 = MD5.Create())
@@ -202,4 +199,3 @@ namespace Raven.Client.Shard
 		}
 	}
 }
-#endif

@@ -70,7 +70,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenSession())
 				{
-					var prods = session.Advanced.LuceneQuery<Product>("someIndex")
+                    var prods = session.Advanced.DocumentQuery<Product>("someIndex")
 						.WaitForNonStaleResults()
 						.WhereStartsWith(x => x.Query, "Q9HT180-Z-K")
 						.ToList();

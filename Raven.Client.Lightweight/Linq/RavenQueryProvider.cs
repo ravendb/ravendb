@@ -10,12 +10,10 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
-#if !Silverlight
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 
-#endif
 
 namespace Raven.Client.Linq
 {
@@ -30,9 +28,7 @@ namespace Raven.Client.Linq
 		private readonly IDocumentQueryGenerator queryGenerator;
 		private readonly RavenQueryStatistics ravenQueryStatistics;
 		private readonly RavenQueryHighlightings highlightings;
-#if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
-#endif
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		
         private readonly bool isMapReduce;
@@ -46,10 +42,8 @@ namespace Raven.Client.Linq
 			string indexName,
 			RavenQueryStatistics ravenQueryStatistics,
 			RavenQueryHighlightings highlightings
-#if !SILVERLIGHT
-, IDatabaseCommands databaseCommands
-#endif
-, IAsyncDatabaseCommands asyncDatabaseCommands,
+            , IDatabaseCommands databaseCommands
+            , IAsyncDatabaseCommands asyncDatabaseCommands,
 			bool isMapReduce
 )
 		{
@@ -60,9 +54,7 @@ namespace Raven.Client.Linq
 			this.indexName = indexName;
 			this.ravenQueryStatistics = ravenQueryStatistics;
 			this.highlightings = highlightings;
-#if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
-#endif
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 			this.isMapReduce = isMapReduce;
 		}
@@ -128,9 +120,7 @@ namespace Raven.Client.Linq
 				return this;
 
 			var ravenQueryProvider = new RavenQueryProvider<S>(queryGenerator, indexName, ravenQueryStatistics, highlightings
-#if !SILVERLIGHT
 				, databaseCommands
-#endif
 				, asyncDatabaseCommands,
 				isMapReduce
 			);
@@ -158,9 +148,7 @@ namespace Raven.Client.Linq
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
 		{
 			return new RavenQueryInspector<S>(this, ravenQueryStatistics, highlightings, indexName, expression, (InMemoryDocumentSessionOperations) queryGenerator
-#if !SILVERLIGHT
 											  , databaseCommands
-#endif
 											  , asyncDatabaseCommands, isMapReduce);
 		}
 
@@ -173,9 +161,7 @@ namespace Raven.Client.Linq
 				var args = new object[]
 				{
 					this, ravenQueryStatistics, highlightings, indexName, expression, queryGenerator
-#if !SILVERLIGHT
 					, databaseCommands
-#endif
 					, asyncDatabaseCommands,
 					isMapReduce
 				};
@@ -246,25 +232,34 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Convert the expression to a Lucene query
 		/// </summary>
+        [Obsolete("Use ToAsyncDocumentQuery instead.")]
 		public IAsyncDocumentQuery<TResult> ToAsyncLuceneQuery<TResult>(Expression expression)
 		{
-			var processor = GetQueryProviderProcessor<T>();
-			var luceneQuery = (IAsyncDocumentQuery<TResult>)processor.GetAsyncLuceneQueryFor(expression);
-
-			if (FieldsToRename.Count > 0)
-				luceneQuery.AfterQueryExecuted(processor.RenameResults);
-
-			return luceneQuery;
+		    return ToAsyncDocumentQuery<TResult>(expression);
 		}
+
+        /// <summary>
+        /// Convert the expression to a Lucene query
+        /// </summary>
+        public IAsyncDocumentQuery<TResult> ToAsyncDocumentQuery<TResult>(Expression expression)
+        {
+            var processor = GetQueryProviderProcessor<T>();
+            var documentQuery = (IAsyncDocumentQuery<TResult>)processor.GetAsyncDocumentQueryFor(expression);
+
+            if (FieldsToRename.Count > 0)
+                documentQuery.AfterQueryExecuted(processor.RenameResults);
+
+            return documentQuery;
+        }
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
 		/// </summary>
-		public Lazy<IEnumerable<S>> Lazily<S>(Expression expression, Action<IEnumerable<S>> onEval )
+		public Lazy<IEnumerable<S>> Lazily<S>(Expression expression, Action<IEnumerable<S>> onEval)
 		{
 			var processor = GetQueryProviderProcessor<S>();
-			var query = processor.GetLuceneQueryFor(expression);
+			var query = processor.GetDocumentQueryFor(expression);
 			if (afterQueryExecuted != null)
 				query.AfterQueryExecuted(afterQueryExecuted);
 
@@ -285,6 +280,17 @@ namespace Raven.Client.Linq
 			return query.Lazily(onEval);
 		}
 
+		/// <summary>
+		/// Register the query as a lazy-count query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public Lazy<int> CountLazily<S>(Expression expression)
+		{
+			var processor = GetQueryProviderProcessor<S>();
+			var query = processor.GetDocumentQueryFor(expression);
+			return query.CountLazily();
+		}
+
 		protected virtual RavenQueryProviderProcessor<S> GetQueryProviderProcessor<S>()
 		{
 			return new RavenQueryProviderProcessor<S>(queryGenerator, customizeQuery, afterQueryExecuted, indexName,
@@ -296,12 +302,21 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Convert the expression to a Lucene query
 		/// </summary>
+        [Obsolete("Use ToDocumentQuery instead.")]
 		public IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression)
 		{
-			var processor = GetQueryProviderProcessor<T>();
-			var result = (IDocumentQuery<TResult>)processor.GetLuceneQueryFor(expression);
-			result.SetResultTransformer(ResultTransformer);
-			return result;
+		    return ToDocumentQuery<TResult>(expression);
 		}
+
+        /// <summary>
+        /// Convert the expression to a Lucene query
+        /// </summary>
+        public IDocumentQuery<TResult> ToDocumentQuery<TResult>(Expression expression)
+        {
+            var processor = GetQueryProviderProcessor<T>();
+            var result = (IDocumentQuery<TResult>)processor.GetDocumentQueryFor(expression);
+            result.SetResultTransformer(ResultTransformer);
+            return result;
+        }
 	}
 }

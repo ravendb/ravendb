@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -203,7 +204,7 @@ namespace Raven.Storage.Esent.StorageActions
 				if (untilEtag != null && count > 0)
 				{
 					var docEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
-					if (EtagUtil.IsGreaterThanOrEqual(docEtag, untilEtag))
+					if (EtagUtil.IsGreaterThan(docEtag, untilEtag))
 						yield break;
 				}
 				var readCurrentDocument = ReadCurrentDocument();
@@ -339,7 +340,6 @@ namespace Raven.Storage.Esent.StorageActions
 
 			try
 			{
-
 				Api.JetSetCurrentIndex(session, Documents, "by_key");
 				Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 				var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
@@ -383,6 +383,7 @@ namespace Raven.Storage.Esent.StorageActions
 						}
 						Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"],
 									  newEtag.TransformToValueForEsentSorting());
+
 						savedAt = SystemTime.UtcNow;
 						Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
 
@@ -408,6 +409,7 @@ namespace Raven.Storage.Esent.StorageActions
 					throw;
 				}
 
+
 				logger.Debug("Inserted a new document with key '{0}', update: {1}, ",
 							   key, isUpdate);
 
@@ -424,15 +426,16 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				throw new ConcurrencyException("Illegal duplicate key " + key, e);
 			}
-		}
+	}
 
-		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
+
+		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool overwriteExisting)
 		{
 			var prep = JET_prep.Insert;
 			bool isUpdate = false;
 
 			Etag existingETag = null;
-			if (checkForUpdates)
+			if (overwriteExisting)
 			{
 				Api.JetSetCurrentIndex(session, Documents, "by_key");
 				Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -443,46 +446,54 @@ namespace Raven.Storage.Esent.StorageActions
 					prep = JET_prep.Replace;
 				}
 			}
-			using (var update = new Update(session, Documents, prep))
-			{
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
-				using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
-				{
-					if (isUpdate)
-						columnStream.SetLength(0);
-					using (Stream stream = new BufferedStream(columnStream))
-					using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
-					{
-						data.WriteTo(finalStream);
-						finalStream.Flush();
-					}
-				}
-				Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
-				DateTime savedAt = SystemTime.UtcNow;
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
 
-				using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
-				{
-					if (isUpdate)
-						columnStream.SetLength(0);
-					using (Stream stream = new BufferedStream(columnStream))
-					{
-						metadata.WriteTo(stream);
-						stream.Flush();
-					}
-				}
+            try 
+            {
+			    using (var update = new Update(session, Documents, prep))
+			    {
+				    Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
+				    using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
+				    {
+					    if (isUpdate)
+						    columnStream.SetLength(0);
+					    using (Stream stream = new BufferedStream(columnStream))
+					    using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
+					    {
+						    data.WriteTo(finalStream);
+						    finalStream.Flush();
+					    }
+				    }
+				    Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
+				    Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
+				    DateTime savedAt = SystemTime.UtcNow;
+				    Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
 
-				update.Save();
+				    using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
+				    {
+					    if (isUpdate)
+						    columnStream.SetLength(0);
+					    using (Stream stream = new BufferedStream(columnStream))
+					    {
+						    metadata.WriteTo(stream);
+						    stream.Flush();
+					    }
+				    }
 
-				return new AddDocumentResult
-				{
-					Etag = newEtag,
-					PrevEtag = existingETag,
-					SavedAt = savedAt,
-					Updated = isUpdate
-				};
-			}
+				    update.Save();
+
+				    return new AddDocumentResult
+				    {
+					    Etag = newEtag,
+					    PrevEtag = existingETag,
+					    SavedAt = savedAt,
+					    Updated = isUpdate
+				    };
+			    }
+            }
+            catch (EsentKeyDuplicateException e)
+            {
+                throw new ConcurrencyException("Illegal duplicate key " + key, e);
+            }
 		}
 
 		public bool DeleteDocument(string key, Etag etag, out RavenJObject metadata, out Etag deletedETag)

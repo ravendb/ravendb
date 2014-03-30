@@ -13,17 +13,20 @@ using Xunit;
 
 namespace Raven.Tests.Suggestions
 {
+	using System.Collections.Generic;
+
 	public class SuggestionsLazy : RavenTest
 	{
 		[Fact]
 		public void UsingLinq()
 		{
-			using(GetNewServer())
-			using (var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				store.DatabaseCommands.PutIndex("Test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.Name }",
+					Suggestions = new Dictionary<string, SuggestionOptions> { { "Name", new SuggestionOptions() } }
 				});
 				using (var s = store.OpenSession())
 				{

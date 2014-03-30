@@ -6,9 +6,8 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_626
+	public class RavenDB_626 : NoDisposalNeeded
 	{
-
 		[Fact]
 		public void Mixed()
 		{

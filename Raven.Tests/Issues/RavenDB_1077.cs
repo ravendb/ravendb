@@ -97,7 +97,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void ShouldSetupOAuthSuccesfully_WithoutValidCommercialLicense()
+		public void ShouldSetupOAuthSuccessfully_WithoutValidCommercialLicense()
 		{
 			using (var documentStore = NewDocumentStore())
 			{

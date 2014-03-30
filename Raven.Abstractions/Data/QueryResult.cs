@@ -89,6 +89,11 @@ namespace Raven.Abstractions.Data
 		public long DurationMilliseconds { get; set; }
 
 		/// <summary>
+		/// Gets or sets explanations of document scores 
+		/// </summary>
+		public Dictionary<string, string> ScoreExplanations { get; set; }
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="QueryResult"/> class.
 		/// </summary>
 		public QueryResult()
@@ -96,6 +101,7 @@ namespace Raven.Abstractions.Data
 			Results = new List<RavenJObject>();
 			Includes = new List<RavenJObject>();
 		    Highlightings = new Dictionary<string, Dictionary<string, string[]>>();
+			ScoreExplanations = new Dictionary<string, string>();
 		}
 
 		/// <summary>
@@ -118,20 +124,21 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public QueryResult CreateSnapshot()
 		{
-		    return new QueryResult
-		    {
-		        Results = new List<RavenJObject>(this.Results.Select(x => (RavenJObject)x.CreateSnapshot())),
-		        Includes = new List<RavenJObject>(this.Includes.Select(x => (RavenJObject)x.CreateSnapshot())),
-		        IndexEtag = this.IndexEtag,
-		        IndexName = this.IndexName,
-		        IndexTimestamp = this.IndexTimestamp,
-		        IsStale = this.IsStale,
-		        SkippedResults = this.SkippedResults,
-		        TotalResults = this.TotalResults,
-		        Highlightings = this.Highlightings.ToDictionary(
-		            pair => pair.Key,
-		            x => new Dictionary<string, string[]>(x.Value))
-		    };
+			return new QueryResult
+			{
+				Results = new List<RavenJObject>(this.Results.Select(x => (RavenJObject)x.CreateSnapshot())),
+				Includes = new List<RavenJObject>(this.Includes.Select(x => (RavenJObject)x.CreateSnapshot())),
+				IndexEtag = this.IndexEtag,
+				IndexName = this.IndexName,
+				IndexTimestamp = this.IndexTimestamp,
+				IsStale = this.IsStale,
+				SkippedResults = this.SkippedResults,
+				TotalResults = this.TotalResults,
+				Highlightings = this.Highlightings.ToDictionary(
+					pair => pair.Key,
+					x => new Dictionary<string, string[]>(x.Value)),
+				ScoreExplanations = this.ScoreExplanations.ToDictionary(x => x.Key, x => x.Value)
+			};
 		}
 	}
 }

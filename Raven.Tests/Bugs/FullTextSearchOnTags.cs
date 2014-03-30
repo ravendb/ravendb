@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Xunit;
@@ -381,7 +382,8 @@ namespace Raven.Tests.Bugs
 				store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs.Images select new { doc.Tags, doc.Users }",
-					Indexes = { { "Tags", FieldIndexing.Analyzed } }
+					Indexes = { { "Tags", FieldIndexing.Analyzed } },
+					Suggestions = {{"Tags", new SuggestionOptions{Distance = StringDistanceTypes.Default, Accuracy = 0.5f}}}
 				});
 
 				using (var session = store.OpenSession())

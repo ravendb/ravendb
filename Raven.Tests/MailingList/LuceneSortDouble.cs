@@ -123,7 +123,7 @@ namespace Raven.Tests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Advanced.LuceneQuery<ClassWithDouble, ClassWithDouble_Index>()
+                    var results = session.Advanced.DocumentQuery<ClassWithDouble, ClassWithDouble_Index>()
                         .WaitForNonStaleResultsAsOfNow()
                         .OrderByDescending(x => x.Rating)
                         .ToList();
@@ -176,7 +176,7 @@ namespace Raven.Tests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Advanced.LuceneQuery<ClassWithDouble, ClassWithDouble_Index>()
+                    var results = session.Advanced.DocumentQuery<ClassWithDouble, ClassWithDouble_Index>()
                         .WaitForNonStaleResultsAsOfNow()
                         .OrderBy(x => x.Rating)
                         .ToList();

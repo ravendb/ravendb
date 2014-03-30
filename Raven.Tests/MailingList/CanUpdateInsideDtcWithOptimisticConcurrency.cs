@@ -13,8 +13,10 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void ShouldWork()
 		{
-			using(var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
+                EnsureDtcIsSupported(store);
+
 				using(var tx = new TransactionScope())
 				using (var s = store.OpenSession())
 				{

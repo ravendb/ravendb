@@ -1,15 +1,13 @@
-﻿using Raven.Client.Extensions;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
+using Raven.Client;
+using Raven.Client.Document;
+using Raven.Client.Shard;
+using Raven.Server;
+using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	using System.Collections.Generic;
-	using Raven.Client;
-	using Raven.Client.Document;
-	using Raven.Client.Shard;
-	using Raven.Server;
-
-	using Xunit;
-
 	public class RavenDB_579 : RavenTest
 	{
 		private readonly RavenDbServer[] servers;
@@ -25,11 +23,8 @@ namespace Raven.Tests.Issues
 		public class Person
 		{
 			public string Id { get; set; }
-
 			public string FirstName { get; set; }
-
 			public string LastName { get; set; }
-
 			public string MiddleName { get; set; }
 		}
 
@@ -109,7 +104,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void OneShardPerSessionStrategyAsync()
+		public async Task OneShardPerSessionStrategyAsync()
 		{
 			using (var session = documentStore.OpenAsyncSession())
 			{
@@ -118,16 +113,16 @@ namespace Raven.Tests.Issues
 				var expectedShard = shardNames[sessionMetadata.GetHashCode() % shardNames.Count];
 
 				var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-				session.Store(entity1);
+				await session.StoreAsync(entity1);
 				var entity2 = new Person { Id = "2", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-				session.Store(entity2);
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(entity2);
+				await session.SaveChangesAsync();
 
 				var entity3 = new Person { Id = "3", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-				session.Store(entity3);
+				await session.StoreAsync(entity3);
 				var entity4 = new Person { Id = "4", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-				session.Store(entity4);
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(entity4);
+				await session.SaveChangesAsync();
 
 				Assert.Equal(expectedShard + "/1", entity1.Id);
 				Assert.Equal(expectedShard + "/2", entity2.Id);
@@ -142,10 +137,10 @@ namespace Raven.Tests.Issues
 				var expectedShard = shardNames[sessionMetadata.GetHashCode() % shardNames.Count];
 
 				var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-				session.Store(entity1);
+				await session.StoreAsync(entity1);
 				var entity2 = new Person { Id = "2", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-				session.Store(entity2);
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(entity2);
+				await session.SaveChangesAsync();
 
 				Assert.Equal(expectedShard + "/1", entity1.Id);
 				Assert.Equal(expectedShard + "/2", entity2.Id);

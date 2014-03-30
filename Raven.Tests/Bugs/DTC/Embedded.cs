@@ -10,16 +10,16 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.DTC
 {
-	public class Embedded
+	public class Embedded : RavenTest
 	{
 		[Fact]
-		public void AllowNonAuthoratativeInformationAlwaysWorks()
+		public void AllowNonAuthoritativeInformationAlwaysWorks()
 		{
 			const int callCount = 10000;
 
-			using (IDocumentStore documentStore = new EmbeddableDocumentStore { RunInMemory = true })
-			{
-				documentStore.Initialize();
+            using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
+            {
+                EnsureDtcIsSupported(documentStore);
 
 				int documentId;
 
@@ -55,7 +55,8 @@ namespace Raven.Tests.Bugs.DTC
 			}
 		}
 
-		#region Nested type: TestDocument
+
+	    #region Nested type: TestDocument
 
 		private class TestDocument
 		{

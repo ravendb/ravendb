@@ -5,40 +5,44 @@ using Xunit;
 
 namespace Raven.Tests.MultiGet
 {
-	public class MultiGetDTC: RemoteClientTest
-	{
-		[Fact]
-		public void CanUseMultiGetToBatchGetDocumentRequests()
-		{
-			using (GetNewServer())
-			using (var docStore = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
-			{
-				for (int i = 0; i < 10; i++)
-				{
-					string id;
-					using (var tx = new TransactionScope())
-					using (var session = docStore.OpenSession())
-					{
+    public class MultiGetDTC : RemoteClientTest
+    {
+        [Fact]
+        public void CanUseMultiGetToBatchGetDocumentRequests()
+        {
+            using (var server = GetNewServer(requestedStorage: "esent"))
+            {
+                EnsureDtcIsSupported(server);
 
-						Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-						                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(), EnlistmentOptions.None);
+                using (var docStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        string id;
+                        using (var tx = new TransactionScope())
+                        using (var session = docStore.OpenSession())
+                        {
 
-						var entity = new User { Name = "Ayende" };
-						session.Store(entity);
-						session.SaveChanges();
-						id = entity.Id;
-						tx.Complete();
-					}
+                            Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id,
+                                                              new DummyEnlistmentNotification(), EnlistmentOptions.None);
 
-					using (var session = docStore.OpenSession())
-					{
-						session.Advanced.AllowNonAuthoritativeInformation = false;
-						var user = session.Advanced.Lazily.Load<User>(id);
-						Assert.NotNull(user.Value);
-					}
-				}
+                            var entity = new User { Name = "Ayende" };
+                            session.Store(entity);
+                            session.SaveChanges();
+                            id = entity.Id;
+                            tx.Complete();
+                        }
 
-			}
-		}
-	}
+                        using (var session = docStore.OpenSession())
+                        {
+                            session.Advanced.AllowNonAuthoritativeInformation = false;
+                            var user = session.Advanced.Lazily.Load<User>(id);
+                            Assert.NotNull(user.Value);
+                        }
+                    }
+
+                }
+            }
+        }
+    }
 }

@@ -31,8 +31,11 @@ namespace Raven.Tests.MailingList
 			var documentIds = new[] { "1", "2", "3", "4", "5" };
 
 			string dataDir = NewDataPath();
-			using (var store = NewRemoteDocumentStore(runInMemory: false, dataDirectory: dataDir))
+            using (var store = NewRemoteDocumentStore(runInMemory: false, dataDirectory: dataDir, requestedStorage: "esent"))
 			{
+                if(store.DatabaseCommands.GetStatistics().SupportsDtc == false)
+                    return;
+
 				// First we add the documents to the store
 				foreach (var id in documentIds)
 				{
@@ -50,8 +53,8 @@ namespace Raven.Tests.MailingList
 				// a restart of the service
 				using (var tx = new TransactionScope())
 				{
-					Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-						new ManyDocumentsViaDTC.DummyEnlistmentNotification(), EnlistmentOptions.None);
+					Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id,
+						new DummyEnlistmentNotification(), EnlistmentOptions.None);
 
 					using (var session = store.OpenSession())
 					{

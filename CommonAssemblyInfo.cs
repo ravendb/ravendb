@@ -9,20 +9,21 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTrademark("")]
 [assembly: ComVisible(false)]
 
-[assembly: AssemblyTitle("RavenDB")]
-[assembly: AssemblyVersion("2.5.0")]
-[assembly: AssemblyFileVersion("2.5.13.0")]
-[assembly: AssemblyInformationalVersion("2.5.0 / 6dce79a")]
-[assembly: AssemblyProduct("RavenDB")]
-[assembly: AssemblyDescription("A second generation LINQ enabled document database for .NET")]
-
-#if SILVERLIGHT
-[assembly: CLSCompliant(false)]
+#if NETFX_CORE
+[assembly: AssemblyTitle("RavenDB (for WinRT)")]
 #else
-[assembly: CLSCompliant(true)]
+[assembly: AssemblyTitle("RavenDB (for .NET 4.5)")]
 #endif
 
-#if !SILVERLIGHT && !NETFX_CORE
+[assembly: AssemblyVersion("3.0.0")]
+[assembly: AssemblyFileVersion("3.0.13.0")]
+[assembly: AssemblyInformationalVersion("3.0.0 / 6dce79a")]
+[assembly: AssemblyProduct("RavenDB")]
+[assembly: AssemblyDescription("RavenDB is a second generation LINQ enabled document database for .NET")]
+
+[assembly: CLSCompliant(true)]
+
+#if !NETFX_CORE
 [assembly: SuppressIldasm()]
 #endif
 

@@ -71,7 +71,7 @@ namespace Raven.Tests.Bugs
 				{
 					//Removing this list and using .WhereEquals("FirstName_en", "Bob") works.
 
-					var results = session.Advanced.LuceneQuery<SampleData>(typeof (SampleDataIndex).Name)
+                    var results = session.Advanced.DocumentQuery<SampleData>(typeof(SampleDataIndex).Name)
 					                     .WaitForNonStaleResults()
 					                     .WhereEquals("FirstName_en", "Bob")
 					                     .OrElse()
@@ -117,7 +117,7 @@ namespace Raven.Tests.Bugs
 
 					//Removing this list and using .WhereEquals("FirstName_en", "Bob") works.
 
-					var results = session.Advanced.LuceneQuery<SampleData>(typeof (SampleDataIndex).Name)
+                    var results = session.Advanced.DocumentQuery<SampleData>(typeof(SampleDataIndex).Name)
 					                     .WaitForNonStaleResults()
 					                     .WhereIn("FirstName_en", list)
 					                     .OrElse()
