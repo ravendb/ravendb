@@ -11,11 +11,14 @@ class settings extends viewModelBase {
     router: DurandalRootRouter = null;
     isOnSystemDatabase: KnockoutComputed<boolean>;
     isOnUserDatabase: KnockoutComputed<boolean>;
+    appUrls: computedAppUrls;
 
     userDatabasePages = ko.observableArray(["Periodic Backup", "Database Settings", "Scripted Index"]);
 
     constructor() {
         super();
+
+        this.appUrls = appUrl.forCurrentDatabase();
 
         this.isOnSystemDatabase = ko.computed(() => this.activeDatabase() && this.activeDatabase().isSystem);
         this.isOnUserDatabase = ko.computed(() => this.activeDatabase() && !this.isOnSystemDatabase());

@@ -47,7 +47,6 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
 
         this.appUrls = appUrl.forCurrentDatabase();
-
         dynamicHeightBindingHandler.install();
     }
 
