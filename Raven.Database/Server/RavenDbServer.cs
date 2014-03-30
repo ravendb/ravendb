@@ -31,7 +31,7 @@ namespace Raven.Server
 		public RavenDbServer(InMemoryRavenConfiguration configuration)
 		{
 		    this.configuration = configuration;
-		   
+		    documentStore = new DocumentStore();
 		}
 
 	    public InMemoryRavenConfiguration Configuration
@@ -73,11 +73,8 @@ namespace Raven.Server
             owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer, configure: configur);
             options = owinHttpServer.Options;
             serverThingsForTests = new ServerThingsForTests(options);
-            documentStore = new DocumentStore
-            {
-                HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke),
-                Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url
-            };
+	        documentStore.HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke);
+	        documentStore.Url = string.IsNullOrWhiteSpace(Url) ? "http://localhost" : Url;
 	        documentStore.Initialize();
 	        return this;
 	    }
