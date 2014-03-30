@@ -336,7 +336,7 @@ task CopyInstaller {
 	  return
 	}
 
-	Copy-Item $build_dir\RavenDB.Setup.exe "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
+	Copy-Item $base_dir\Raven.Setup\bin\$global:configuration\RavenDB.Setup.exe "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
 }
 
 task SignInstaller {
