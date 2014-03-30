@@ -43,6 +43,8 @@ namespace Raven.Tests.Helpers
 		protected readonly List<IDocumentStore> stores = new List<IDocumentStore>();
 		private readonly HashSet<string> pathsToDelete = new HashSet<string>();
 
+		private static int pathCount;
+
 		public RavenTestBase()
 		{
             Environment.SetEnvironmentVariable(Constants.RavenDefaultQueryTimeout, "30");
@@ -59,8 +61,7 @@ namespace Raven.Tests.Helpers
 			if(prefix != null)
 				prefix = prefix.Replace("<", "").Replace(">", "");
 
-			var newDataDir = Path.GetFullPath(string.Format(@".\{0}-{1}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "TestDatabase", Guid.NewGuid().ToString("N")));
-			Directory.CreateDirectory(newDataDir);
+			var newDataDir = Path.GetFullPath(string.Format(@".\{1}-{0}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "TestDatabase", pathCount++));
 			pathsToDelete.Add(newDataDir);
 			return newDataDir;
 		}
@@ -222,7 +223,7 @@ namespace Raven.Tests.Helpers
 				Port = port,
 				DataDirectory = directory,
 				FileSystemDataDirectory = Path.Combine(directory, "FileSystem"),
-				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
+				RunInMemory = runInMemory,
 #if DEBUG
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
 #endif
@@ -249,7 +250,7 @@ namespace Raven.Tests.Helpers
             {
 	            UseEmbeddedHttpServer = true,
             };
-            ravenDbServer.Initialize();
+            ravenDbServer.Initialize(configureServer);
 			servers.Add(ravenDbServer);
 
 			try
@@ -469,7 +470,7 @@ namespace Raven.Tests.Helpers
 			Assert.True(done);
 		}
 
-		public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true)
+		public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, int port = 8079)
 		{
 			if (debug && Debugger.IsAttached == false)
 				return;
@@ -479,8 +480,10 @@ namespace Raven.Tests.Helpers
             string url = documentStore.Url;
 		    if (embeddableDocumentStore != null)
 		    {
+		        embeddableDocumentStore.Configuration.Port = port;
                 embeddableDocumentStore.SetStudioConfigToAllowSingleDb();
                 embeddableDocumentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
+		        NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
                 server = new OwinHttpServer(embeddableDocumentStore.Configuration, embeddableDocumentStore.DocumentDatabase);
                 url = embeddableDocumentStore.Configuration.ServerUrl;
 		    }
@@ -504,7 +507,7 @@ namespace Raven.Tests.Helpers
 			using (var documentStore = new DocumentStore
 			{
 				Url = url ?? "http://localhost:8079"
-			})
+			}.Initialize())
 			{
 			
 				Process.Start(documentStore.Url); // start the server

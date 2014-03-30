@@ -5,9 +5,11 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using Microsoft.WindowsAzure.Storage;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
+using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Impl.DTC;
 using Raven.Database.Plugins;
@@ -22,16 +24,15 @@ namespace Raven.Database.Storage
 		/// </summary>
 		Guid Id { get; }
 
-	    IDisposable WriteLock();
 		IDisposable DisableBatchNesting();
 
 		IStorageActionsAccessor CreateAccessor();
 
 		void Batch(Action<IStorageActionsAccessor> action);
 		void ExecuteImmediatelyOrRegisterForSynchronization(Action action);
-		bool Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs);
+		void Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs);
 		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase);
-		void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag);
+		void Restore(RestoreRequest restoreRequest, Action<string> output);
 		DatabaseSizeInformation GetDatabaseSize();
 		long GetDatabaseCacheSizeInBytes();
 		long GetDatabaseTransactionVersionSizeInBytes();

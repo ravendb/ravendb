@@ -259,6 +259,7 @@
     <Compile Include="Bugs\CaseSensitiveDeletes.cs" />
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
+    <Compile Include="Bugs\DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest.cs" />
     <Compile Include="Bugs\EntityWithStack.cs" />
     <Compile Include="IndexMerging\SimpleIndexMerging.cs" />
     <Compile Include="Embedded\EmbeddedTests.cs" />
@@ -309,6 +310,8 @@
     <Compile Include="Issues\1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client.cs" />
     <Compile Include="Issues\RavenDB-1847.cs" />
+    <Compile Include="Issues\RavenDb-1934.cs" />
+    <Compile Include="Issues\RavenDB1369.cs" />
     <Compile Include="Issues\RavenDB_1538.cs" />
     <Compile Include="Issues\RavenDB_1297 .cs" />
     <Compile Include="Issues\RavenDB_1285.cs" />
@@ -324,6 +327,7 @@
     <Compile Include="Issues\RavenDB_1443 .cs" />
     <Compile Include="Bugs\CanPatchADocumentThatContainsBytes.cs" />
     <Compile Include="Bugs\DefaultOperatorTest.cs" />
+    <Compile Include="Bugs\DyanmicId.cs" />
     <Compile Include="Bugs\DynamicId.cs" />
     <Compile Include="Bugs\EtagIssue.cs" />
     <Compile Include="Bugs\RavenDB_1532.cs" />
@@ -332,7 +336,9 @@
     <Compile Include="Bugs\RawQueryShouldGoThroughAnalysis.cs" />
     <Compile Include="Bugs\SyncAsync.cs" />
     <Compile Include="Bugs\TransformationsUnitTest.cs" />
+    <Compile Include="Bundles\Encryption\Crud.cs" />
     <Compile Include="Faceted\LazyFacets.cs" />
+    <Compile Include="Issues\RavenDB_1829.cs" />
     <Compile Include="Issues\WaitForStaleOnAbandonedIndexShouldWork.cs" />
     <Compile Include="Issues\RavenDB_1761.cs" />
     <Compile Include="Issues\RavenDB1508.cs" />
@@ -916,6 +922,7 @@
     <Compile Include="MailingList\ConcurrencyTests2.cs" />
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
+    <Compile Include="MailingList\DayOfWeekTest.cs" />
     <Compile Include="MailingList\DictionaryOfEnum.cs" />
     <Compile Include="MailingList\DifferentKeysWithTheSameFirst127CharactersAreDifferent.cs" />
     <Compile Include="MailingList\DistinctWithPaging.cs" />
@@ -1178,7 +1185,6 @@
     <Compile Include="Bundles\Compression\Compression.cs" />
     <Compile Include="Bundles\Compression\Crud.cs" />
     <Compile Include="Bundles\Compression\Indexes.cs" />
-    <Compile Include="Bundles\Encryption\Crud.cs" />
     <Compile Include="Bundles\Encryption\Encryption.cs" />
     <Compile Include="Bundles\Encryption\Indexes.cs" />
     <Compile Include="Bundles\Encryption\WithoutEncryption.cs" />
@@ -1435,7 +1441,6 @@
     <Compile Include="Stress\InlineValueAttribute.cs" />
     <Compile Include="Suggestions\SuggestionsUsingAnIndex.cs" />
     <Compile Include="Synchronization\ConcurrentJsonDocumentSortedListTests.cs" />
-    <Compile Include="Synchronization\EtagSynchronizerTests.cs" />
     <Compile Include="Synchronization\IndexationTests.cs" />
     <Compile Include="T1.cs" />
     <Compile Include="TemporaryCulture.cs" />

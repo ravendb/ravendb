@@ -38,6 +38,11 @@ namespace Raven.Client.Indexes
             throw new NotSupportedException("This can only be run on the server side");
         }
 
+        protected RavenJToken QueryOrDefault(string key, object defaultVal)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
 		/// <summary>
 		/// Gets or sets the document store.
 		/// </summary>

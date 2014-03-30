@@ -34,9 +34,7 @@ namespace Raven.Database.Server
             var assemblyLocation = Path.Combine(Path.GetDirectoryName(assembly.Location), Constants.AssembliesDirectoryName + "\\");
             var assembliesToExtract = FindAssembliesToExtract(assembly, assemblies);
 
-            if (!Directory.Exists(assemblyLocation))
-                Directory.CreateDirectory(assemblyLocation);
-
+          
             Extract(assembly, assembliesToExtract, assemblyLocation);
 
             foreach (var assemblyToExtract in assembliesToExtract)
@@ -79,6 +77,9 @@ namespace Raven.Database.Server
         {
             foreach (var assemblyToExtract in assembliesToExtract)
             {
+				if (!Directory.Exists(location))
+					Directory.CreateDirectory(location);
+
                 using (var stream = assemblyToExtractFrom.GetManifestResourceStream(assemblyToExtract.Key))
                 {
                     if (stream == null)

@@ -28,6 +28,7 @@ class Transformers extends viewModelBase {
 
     attached() {
         this.createKeyboardShortcut("Alt+N", () => this.navigate(this.newTransformerUrl()), this.containerSelector);
+        ko.postbox.publish("SetRawJSONUrl", appUrl.forTransformersRawData(this.activeDatabase()));
     }
 
     modelPolling() {
@@ -97,8 +98,6 @@ class Transformers extends viewModelBase {
         this.transformersGroups().forEach(transGroup => transGroup.transformers.removeAll(transformers));
         this.transformersGroups.remove((item: { entityName: string; transformers: KnockoutObservableArray<transformer> }) => item.transformers().length === 0);
     }
-
-
 }
 
 export = Transformers;

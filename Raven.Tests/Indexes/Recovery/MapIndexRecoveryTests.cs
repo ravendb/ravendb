@@ -32,7 +32,12 @@ namespace Raven.Tests.Indexes.Recovery
 			configuration.MaxIndexCommitPointStoreTimeInterval = TimeSpan.MaxValue;
 		}
 
-		[Fact]
+	    protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+	    {
+	        configuration.DefaultStorageTypeName = "esent";
+	    }
+
+	    [Fact]
 		public void ShouldCreateCommitPointsForMapIndexes()
 		{
 			var index = new MapRecoveryTestIndex();

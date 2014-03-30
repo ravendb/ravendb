@@ -357,7 +357,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
 			var scheduledReductionsByViewAndLevelAndReduceKey = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
-			var scheduledReductionsByViewAndLevel = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevel);
 
 			var id = generator.CreateSequentialUuid(UuidType.ScheduledReductions);
 			var idAsString = id.ToString();
@@ -375,7 +374,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			scheduledReductionsByView.MultiAdd(writeBatch.Value, CreateKey(view), idAsString);
 			scheduledReductionsByViewAndLevelAndReduceKey.MultiAdd(writeBatch.Value, CreateKey(view, level, reduceKeysAndBuckets.ReduceKey, reduceHashKey), idAsString);
-			scheduledReductionsByViewAndLevel.MultiAdd(writeBatch.Value, CreateKey(view, level), idAsString);
 		}
 
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams)
@@ -670,12 +668,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			var allKeysToReduce = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-			var viewAndLevel = CreateKey(view, 0);
-			var scheduledReductionsByViewAndLevel = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevel);
-			using (var iterator = scheduledReductionsByViewAndLevel.MultiRead(Snapshot, viewAndLevel))
+			var key = CreateKey(view);
+			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
+            using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, key))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
-					return Enumerable.Empty<ReduceTypePerKey>();
+					yield break;
+
+                var processedItems = 0;
 
 				do
 				{
@@ -683,24 +683,17 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					var value = LoadJson(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
 
 					allKeysToReduce.Add(value.Value<string>("reduceKey"));
+                    processedItems++;
 				}
-				while (iterator.MoveNext());
+				while (iterator.MoveNext() && processedItems < take);
 			}
 
-			var reduceTypesPerKeys = allKeysToReduce.ToDictionary(x => x, x => ReduceType.SingleStep);
-
-			foreach (var reduceKey in allKeysToReduce)
-			{
-				var count = GetNumberOfMappedItemsPerReduceKey(view, reduceKey);
-				if (count >= limitOfItemsToReduceInSingleStep)
-				{
-					reduceTypesPerKeys[reduceKey] = ReduceType.MultiStep;
-				}
-			}
-
-			return reduceTypesPerKeys
-				.Select(x => new ReduceTypePerKey(x.Key, x.Value))
-				.Take(take);
+            foreach (var reduceKey in allKeysToReduce)
+            {
+                var count = GetNumberOfMappedItemsPerReduceKey(view, reduceKey);
+                var reduceType = count >= limitOfItemsToReduceInSingleStep ? ReduceType.MultiStep : ReduceType.SingleStep;
+                yield return new ReduceTypePerKey(reduceKey, reduceType);
+            }
 		}
 
 		private int GetNumberOfMappedItemsPerReduceKey(int view, string reduceKey)
@@ -936,12 +929,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
 			var scheduledReductionsByViewAndLevelAndReduceKey = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
-			var scheduledReductionsByViewAndLevel = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevel);
 
 			tableStorage.ScheduledReductions.Delete(writeBatch.Value, id);
 			scheduledReductionsByView.MultiDelete(writeBatch.Value, CreateKey(view), id);
 			scheduledReductionsByViewAndLevelAndReduceKey.MultiDelete(writeBatch.Value, CreateKey(view, level, reduceKey, reduceKeyHash), id);
-			scheduledReductionsByViewAndLevel.MultiDelete(writeBatch.Value, CreateKey(view, level), id);
 		}
 
 		private void DeleteMappedResult(Slice id, int view, string documentId, string reduceKey, string bucket)

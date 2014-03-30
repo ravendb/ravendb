@@ -22,11 +22,11 @@ namespace Raven.Tests.Bugs
 			public string FullName;
 		}
 
-		[Theory]
+		[Theory(Skip = "causes issues")]
 		[PropertyData("Storages")]
 		public async Task AwaitAsyncPatchByIndexShouldWork(string storageTypeName)
 		{
-			using (var store = NewRemoteDocumentStore(fiddler:true,requestedStorage:storageTypeName))
+			using (var store = NewRemoteDocumentStore(fiddler:true,requestedStorage:storageTypeName,runInMemory:false))
 			{
 				string lastUserId = null;
 

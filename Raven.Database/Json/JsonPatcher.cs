@@ -36,7 +36,7 @@ namespace Raven.Database.Json
 		{
 			if (patchCmd.Name == null)
 				throw new InvalidOperationException("Patch property must have a name property");
-			foreach (var result in document.SelectTokenWithRavenSyntaxReturningFlatStructure( patchCmd.Name ))
+			foreach (var result in document.SelectTokenWithRavenSyntaxReturningFlatStructure( patchCmd.Name, true))
 			{
 			    var token = result.Item1;
 			    var parent = result.Item2;
@@ -58,10 +58,6 @@ namespace Raven.Database.Json
 						RemoveValue(patchCmd, patchCmd.Name, token);
 						break;
 					case PatchCommandType.Modify:
-                        // create snapshot of property 
-                        token.EnsureCannotBeChangeAndEnableSnapshotting();    
-				        token = token.CreateSnapshot();
-				        document[patchCmd.Name] = token;
 						ModifyValue(patchCmd, patchCmd.Name, token);
 						break;
 					case PatchCommandType.Inc:

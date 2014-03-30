@@ -205,14 +205,8 @@ namespace Raven.Database.Indexing
 
         protected abstract void FlushAllIndexes();
 
-        protected abstract Etag GetSynchronizationEtag();
-
-        protected abstract Etag CalculateSynchronizationEtag(Etag currentEtag, Etag lastProcessedEtag);
-
         protected bool ExecuteIndexing(bool isIdle, out bool onlyFoundIdleWork)
         {
-            Etag synchronizationEtag = null;
-
             var indexesToWorkOn = new List<IndexToWorkOn>();
             var localFoundOnlyIdleWork = new Reference<bool> { Value = true };
             transactionalStorage.Batch(actions =>
@@ -227,9 +221,7 @@ namespace Raven.Database.Indexing
                                        failureRate.FailureRate);
                         continue;
                     }
-                    synchronizationEtag = synchronizationEtag ?? GetSynchronizationEtag();
-
-                    if (IsIndexStale(indexesStat, synchronizationEtag, actions, isIdle, localFoundOnlyIdleWork) == false)
+                    if (IsIndexStale(indexesStat, actions, isIdle, localFoundOnlyIdleWork) == false)
                         continue;
                     var indexToWorkOn = GetIndexToWorkOn(indexesStat);
                     var index = context.IndexStorage.GetIndexInstance(indexesStat.Id);
@@ -249,7 +241,7 @@ namespace Raven.Database.Indexing
 
             using (context.IndexDefinitionStorage.CurrentlyIndexing())
             {
-                ExecuteIndexingWork(indexesToWorkOn, synchronizationEtag);
+               ExecuteIndexingWork(indexesToWorkOn);
             }
 
             return true;
@@ -262,9 +254,9 @@ namespace Raven.Database.Indexing
 
         protected abstract IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat);
 
-        protected abstract bool IsIndexStale(IndexStats indexesStat, Etag synchronizationEtag, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork);
+        protected abstract bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork);
 
-        protected abstract void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag synchronizationEtag);
+        protected abstract void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn);
 
         protected abstract bool IsValidIndex(IndexStats indexesStat);
     }

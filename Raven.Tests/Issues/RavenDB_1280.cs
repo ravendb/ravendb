@@ -17,7 +17,8 @@ namespace Raven.Tests.Indexes
 
 			using (var documentStore = NewRemoteDocumentStore(requestedStorage:"esent"))
 			{
-				Trace.Write("Making parallel inserts...");
+				Console.WriteLine("Making parallel inserts...");
+                var sp = Stopwatch.StartNew();
 				Parallel.For(0, iterations, i =>
 				{
 // ReSharper disable once AccessToDisposedClosure
@@ -34,9 +35,14 @@ namespace Raven.Tests.Indexes
 						session.SaveChanges();
 					}
 				});
+
+                Console.WriteLine("Finished parallel inserts. Time: {0}.", sp.Elapsed);
 				
 				new EmailIndex().Execute(documentStore);
-				WaitForIndexing(documentStore,null,TimeSpan.FromMinutes(1));
+
+			    var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : sp.Elapsed;
+                Console.WriteLine("Waiting for indexing. Timeout: " + timeout);
+                WaitForIndexing(documentStore, timeout: timeout);
 
 				using (var session = documentStore.OpenSession())
 				{
@@ -58,7 +64,7 @@ namespace Raven.Tests.Indexes
 			}
 		}
 
-        [Fact]
+     [TimeBombedFact(2014, 4, 30, "Performance issue, Pawel investigating this")]
         public void CanHandleMultipleMissingDocumentsInMultipleIndexes()
         {
             using (var store = NewDocumentStore())

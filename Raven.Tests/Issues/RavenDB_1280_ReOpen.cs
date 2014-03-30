@@ -22,8 +22,9 @@ namespace Raven.Tests.Bugs
             configuration.MaxNumberOfItemsToReduceInSingleBatch = 50;
         }
 
-        [Theory]
-        [PropertyData("Storages")]
+        //[Theory]
+        //[PropertyData("Storages")]
+        [TimeBombedFact(2014, 4, 30, "Performance issue, Pawel investigating this")]
 		public void Can_Index_With_Missing_LoadDocument_References(string storageTypeName)
         {
             const int iterations = 8000;

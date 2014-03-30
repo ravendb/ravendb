@@ -23,10 +23,10 @@ namespace Raven.Bundles.Encryption.Settings
 			var result = (EncryptionSettings)database.ExtensionsState.GetOrAdd(EncryptionSettingsKeyInExtensionsState, _ =>
 			{
 				var type = GetTypeFromName(database.Configuration.Settings[Constants.AlgorithmTypeSetting]);
-				var key = GetKeyFromBase64(database.Configuration.Settings[Constants.EncryptionKeySetting]);
+				var key = GetKeyFromBase64(database.Configuration.Settings[Constants.EncryptionKeySetting], database.Configuration.EncryptionKeyBitsPreference);
 				var encryptIndexes = GetEncryptIndexesFromString(database.Configuration.Settings[Constants.EncryptIndexes], true);
 
-				return new EncryptionSettings(key, type, encryptIndexes);
+				return new EncryptionSettings(key, type, encryptIndexes,database.Configuration.EncryptionKeyBitsPreference);
 			});
 
 
@@ -36,7 +36,7 @@ namespace Raven.Bundles.Encryption.Settings
 		/// <summary>
 		/// A wrapper around Convert.FromBase64String, with extra validation and relevant exception messages.
 		/// </summary>
-		private static byte[] GetKeyFromBase64(string base64)
+		private static byte[] GetKeyFromBase64(string base64, int defaultEncryptionKeySize)
 		{
 			if (string.IsNullOrWhiteSpace(base64))
 				throw new ConfigurationErrorsException("The " + Constants.EncryptionKeySetting + " setting must be set to an encryption key. "
@@ -44,7 +44,7 @@ namespace Raven.Bundles.Encryption.Settings
 					+ " bytes long. You may use EncryptionSettings.GenerateRandomEncryptionKey() to generate a key.\n"
 					+ "If you'd like, here's a key that was randomly generated:\n"
 					+ "<add key=\"Raven/Encryption/Key\" value=\""
-					+ Convert.ToBase64String(EncryptionSettings.GenerateRandomEncryptionKey())
+					+ Convert.ToBase64String(EncryptionSettings.GenerateRandomEncryptionKey(defaultEncryptionKeySize))
 					+ "\" />");
 
 			try

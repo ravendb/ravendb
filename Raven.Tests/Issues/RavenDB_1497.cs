@@ -11,6 +11,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database;
+using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Xunit;
@@ -103,7 +104,7 @@ namespace Raven.Tests.Issues
 
 				var output = new StringBuilder();
 
-				DocumentDatabase.Restore(new RavenConfiguration
+				MaintenanceActions.Restore(new RavenConfiguration
 				{
 					Settings =
 				{
@@ -111,7 +112,12 @@ namespace Raven.Tests.Issues
 					{"Raven/Voron/AllowIncrementalBackups", "true"}
 				}
 
-				}, BackupDir, DataDir, s => output.Append(s), defrag: true);
+				}, new RestoreRequest
+				{
+				    BackupLocation = BackupDir,
+                    Defrag = true,
+                    DatabaseLocation = DataDir
+				}, s => output.Append(s));
 
 				Assert.DoesNotContain("error", output.ToString().ToLower());
 

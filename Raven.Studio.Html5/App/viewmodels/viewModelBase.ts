@@ -63,6 +63,8 @@ class viewModelBase {
             }
             return null;
         };
+
+        ko.postbox.publish("SetRawJSONUrl", "");
     }
 
     // Called back after the entire composition has finished (parents and children included)

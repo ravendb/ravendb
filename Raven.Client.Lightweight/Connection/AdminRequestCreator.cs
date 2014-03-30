@@ -64,32 +64,19 @@ namespace Raven.Client.Connection
 			return createRequestForSystemDatabase("/admin/stats", "GET");
 		}
 
-		public HttpJsonRequest StartBackup(string backupLocation, DatabaseDocument databaseDocument, string databaseName, out  RavenJObject backupSettings)
+		public HttpJsonRequest StartBackup(string backupLocation, DatabaseDocument databaseDocument, string databaseName, bool incremental)
 		{
-			backupSettings = new RavenJObject
-			{
-				{"BackupLocation", backupLocation},
-				{"DatabaseDocument", RavenJObject.FromObject(databaseDocument)}
-			};
-
             if (databaseName == Constants.SystemDatabase)
             {
                 return createRequestForSystemDatabase("/admin/backup", "POST");
             }
-            return createRequestForSystemDatabase("/databases/" + databaseName + "/admin/backup", "POST");
+            return createRequestForSystemDatabase("/databases/" + databaseName + "/admin/backup?incremental=" + incremental, "POST");
             
 		}
 
-		public HttpJsonRequest StartRestore(string restoreLocation, string databaseLocation, string databaseName, bool defrag, out RavenJObject restoreSettings)
+		public HttpJsonRequest CreateRestoreRequest()
 		{
-			restoreSettings = new RavenJObject
-			{
-				{"RestoreLocation", restoreLocation},
-				{"DatabaseLocation", databaseLocation},
-				{"DatabaseName", databaseName}
-			};
-
-			return createRequest("/admin/restore?defrag=" + defrag, "POST");
+			return createRequest("/admin/restore", "POST");
 		}
 
 		public HttpJsonRequest IndexingStatus(string serverUrl)

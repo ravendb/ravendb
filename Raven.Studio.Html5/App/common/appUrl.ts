@@ -241,7 +241,27 @@ class appUrl {
         return "#tasks/csvImport?" + databasePart;
     }
 
-	/**
+    static forIndexesRawData(db: database): string {
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes";
+    }
+
+    static forIndexQueryRawData(db:database,indexName:string){
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes/" + indexName;
+    }
+
+    static forTransformersRawData(db: database): string {
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/transformers";
+    }
+
+    static forDatabasesRawData(): string {
+        return window.location.protocol + "//" + window.location.host + "/databases";
+    }
+
+    static forDocumentRawData(db: database, docId:string): string {
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/docs/" + docId;
+    }
+
+    /**
 	* Gets the database from the current web browser address. Returns the system database if no database name is found.
 	*/
     static getDatabase(): database {

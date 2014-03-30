@@ -19,7 +19,7 @@ namespace Raven.Tests.Bundles.Compression
 		{
 			// This will be disposed by the RavenTestBase.Dispose method
 			path = NewDataPath("Compression");
-			ravenDbServer = GetNewServer(activeBundles: "Compression", dataDirectory: path);
+			ravenDbServer = GetNewServer(activeBundles: "Compression", dataDirectory: path, runInMemory:false);
 			documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer);
 		}
 
