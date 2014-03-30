@@ -343,7 +343,6 @@
     <Compile Include="Issues\RavenDB_1761.cs" />
     <Compile Include="Issues\RavenDB1508.cs" />
     <Compile Include="Issues\RavenDB1519.cs" />
-    <Compile Include="Issues\RavenDB_1280_ReOpen.cs" />
     <Compile Include="Bugs\LoDash.cs" />
     <Compile Include="Bugs\Errors\QueryIssues.cs" />
     <Compile Include="Bugs\Facets\FacetErrors.cs" />
@@ -450,7 +449,6 @@
     <Compile Include="Bugs\LiveProjections\Indexes\TaskSummaryIndex.cs" />
     <Compile Include="Bugs\LiveProjections\LiveProjectionOnTasks.cs" />
     <Compile Include="Bugs\LoadAllStartingWith.cs" />
-    <Compile Include="Bugs\ManyDocumentWithMapReduce.cs" />
     <Compile Include="Bugs\MapReduceWithDifferentFieldNames.cs" />
     <Compile Include="Bugs\MapReduceWithDifferentFieldNamesFromTheStronglyTypedType.cs" />
     <Compile Include="Bugs\MapRedue\Chris.cs" />
@@ -523,7 +521,6 @@
     <Compile Include="Bugs\LinqOnDictionary.cs" />
     <Compile Include="Bugs\LuceneIndexing.cs" />
     <Compile Include="Bugs\LuceneQueryShouldNotModifyDynamicDocument.cs" />
-    <Compile Include="Bugs\ManyDocumentsViaDTC.cs" />
     <Compile Include="Bugs\MassivelyMultiTenant.cs" />
     <Compile Include="Bugs\MixingIdentityAndAssignedIds.cs" />
     <Compile Include="Bugs\MultipleRangeQueries.cs" />
@@ -825,7 +822,6 @@
     <Compile Include="Issues\RavenDB_895.cs" />
     <Compile Include="Issues\RavenDB_967.cs" />
     <Compile Include="Issues\RavenDB_993.cs" />
-    <Compile Include="Issues\RavenDB_1280.cs" />
     <Compile Include="Issues\SlowIndex.cs" />
     <Compile Include="Issues\RavenDB_1493.cs" />
     <Compile Include="Json\SupportForJsonPropertyAttribute.cs" />
@@ -1618,6 +1614,7 @@
     <Compile Include="Suggestions\SuggestionsHelper.cs" />
     <Compile Include="TimeBombedFactAttribute.cs" />
     <Compile Include="Track\AsyncProjectionShouldWork.cs" />
+    <Compile Include="Bugs\DummyEnlistmentNotification.cs" />
     <Compile Include="Track\RavenDB053.cs" />
     <Compile Include="Track\RavenDB17.cs" />
     <Compile Include="Transactions\Deletes.cs" />

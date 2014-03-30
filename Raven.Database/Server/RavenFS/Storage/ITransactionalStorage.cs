@@ -7,7 +7,7 @@ namespace Raven.Database.Server.RavenFS.Storage
     {
         Guid Id { get; }
 
-        bool Initialize();
+        void Initialize();
 
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         void Batch(Action<IStorageActionsAccessor> action);
