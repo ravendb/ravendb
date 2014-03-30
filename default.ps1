@@ -11,7 +11,7 @@ properties {
 	$base_dir  = resolve-path .
 	$lib_dir = "$base_dir\SharedLibs"
 	$packages_dir = "$base_dir\packages"
-	$buildartifacts_dir = "$base_dir\build"
+	$build_dir = "$base_dir\build"
 	$sln_file = "$base_dir\zzz_RavenDB_Release.sln"
 	$version = "2.5"
 	$tools_dir = "$base_dir\Tools"
@@ -30,7 +30,7 @@ task Verify40 {
 
 
 task Clean {
-	Remove-Item -force -recurse $buildartifacts_dir -ErrorAction SilentlyContinue
+	Remove-Item -force -recurse $build_dir -ErrorAction SilentlyContinue
 	Remove-Item -force -recurse $release_dir -ErrorAction SilentlyContinue
 }
 
@@ -43,7 +43,7 @@ task Init -depends Verify40, Clean {
 		Set-Content "$base_dir\CommonAssemblyInfo.cs" -Encoding UTF8
 	
 	New-Item $release_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
-	New-Item $buildartifacts_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
+	New-Item $build_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
 }
 
 task Compile -depends Init {
@@ -52,7 +52,7 @@ task Compile -depends Init {
 	
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
-	# exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Utilities\Raven.ProjectRewriter\Raven.ProjectRewriter.csproj" /p:OutDir="$buildartifacts_dir\" }
+	# exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Utilities\Raven.ProjectRewriter\Raven.ProjectRewriter.csproj" /p:OutDir="$build_dir\" }
 	# exec { &"$build_dir\Raven.ProjectRewriter.exe" }
 	
 	$dat = "$base_dir\..\BuildsInfo\RavenDB\Settings.dat"
@@ -208,27 +208,27 @@ task RunAllTests -depends FullStorageTest,RunTests,StressTest
 
 
 task CreateOutpuDirectories -depends CleanOutputDirectory {
-	New-Item $buildartifacts_dir\Output -Type directory -ErrorAction SilentlyContinue | Out-Null
-	New-Item $buildartifacts_dir\Output\Server -Type directory | Out-Null
-	New-Item $buildartifacts_dir\Output\Web -Type directory | Out-Null
-	New-Item $buildartifacts_dir\Output\Web\bin -Type directory | Out-Null
-	New-Item $buildartifacts_dir\Output\EmbeddedClient -Type directory | Out-Null
-	New-Item $buildartifacts_dir\Output\Client -Type directory | Out-Null
-	New-Item $buildartifacts_dir\Output\Silverlight -Type directory | Out-Null
-	New-Item $buildartifacts_dir\Output\Bundles -Type directory | Out-Null
-	New-Item $buildartifacts_dir\Output\Smuggler -Type directory | Out-Null
-	New-Item $buildartifacts_dir\Output\Backup -Type directory | Out-Null
+	New-Item $build_dir\Output -Type directory -ErrorAction SilentlyContinue | Out-Null
+	New-Item $build_dir\Output\Server -Type directory | Out-Null
+	New-Item $build_dir\Output\Web -Type directory | Out-Null
+	New-Item $build_dir\Output\Web\bin -Type directory | Out-Null
+	New-Item $build_dir\Output\EmbeddedClient -Type directory | Out-Null
+	New-Item $build_dir\Output\Client -Type directory | Out-Null
+	New-Item $build_dir\Output\Silverlight -Type directory | Out-Null
+	New-Item $build_dir\Output\Bundles -Type directory | Out-Null
+	New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
+	New-Item $build_dir\Output\Backup -Type directory | Out-Null
 }
 
 task CleanOutputDirectory { 
-	Remove-Item $buildartifacts_dir\Output -Recurse -Force -ErrorAction SilentlyContinue
+	Remove-Item $build_dir\Output -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 task CopyEmbeddedClient {
 	$all_client_dlls = @( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
 	"$base_dir\Raven.Client.Embedded\bin\$global:configuration\Raven.Client.Embedded.???")
 
-	$all_client_dlls | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\EmbeddedClient }
+	$all_client_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\EmbeddedClient }
 }
 
 task CopySilverlight {
@@ -238,50 +238,50 @@ task CopySilverlight {
 		"$base_dir\Raven.Client.Silverlight\bin\$global:configuration\Microsoft.CompilerServices.AsyncTargetingPack.Silverlight5.???")
 
 	$silverlight_dlls + @((Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl5)) | 
-		ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Silverlight }
+		ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight }
 }
 
 task CopySmuggler {
-	Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Abstractions.??? $buildartifacts_dir\Output\Smuggler
-	Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Client.Lightweight.??? $buildartifacts_dir\Output\Smuggler
-	Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Jint.Raven.??? $buildartifacts_dir\Output\Smuggler
-	Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\System.Reactive.Core.??? $buildartifacts_dir\Output\Smuggler
-	Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Smuggler.??? $buildartifacts_dir\Output\Smuggler
+	Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Smuggler
+	Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Client.Lightweight.??? $build_dir\Output\Smuggler
+	Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Jint.Raven.??? $build_dir\Output\Smuggler
+	Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\System.Reactive.Core.??? $build_dir\Output\Smuggler
+	Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Smuggler.??? $build_dir\Output\Smuggler
 }
 
 task CopyBackup {
-	Copy-Item $base_dir\Raven.Backup\bin\$global:configuration\Raven.Abstractions.??? $buildartifacts_dir\Output\Backup
-	Copy-Item $base_dir\Raven.Backup\bin\$global:configuration\Raven.Backup.??? $buildartifacts_dir\Output\Backup
+	Copy-Item $base_dir\Raven.Backup\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Backup
+	Copy-Item $base_dir\Raven.Backup\bin\$global:configuration\Raven.Backup.??? $build_dir\Output\Backup
 	Copy-Item $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\Backup
 }
 
 task CopyClient {
 	$client_dlls = @( "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\Raven.Client.Lightweight.???")
-	$client_dlls | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Client }
+	$client_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\Client }
 }
 
 task CopyWeb {
 	@( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
-		"$base_dir\Raven.Web\bin\Raven.Web.???"  ) | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Web\bin }
+		"$base_dir\Raven.Web\bin\Raven.Web.???"  ) | ForEach-Object { Copy-Item "$_" $build_dir\Output\Web\bin }
 	@("$base_dir\DefaultConfigs\web.config", 
-		"$base_dir\DefaultConfigs\NLog.Ignored.config" ) | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Web }
+		"$base_dir\DefaultConfigs\NLog.Ignored.config" ) | ForEach-Object { Copy-Item "$_" $build_dir\Output\Web }
 }
 
 task CopyBundles {
-	Copy-Item $base_dir\Bundles\Raven.Bundles.Authorization\bin\$global:configuration\Raven.Bundles.Authorization.??? $buildartifacts_dir\Output\Bundles
-	Copy-Item $base_dir\Bundles\Raven.Bundles.CascadeDelete\bin\$global:configuration\Raven.Bundles.CascadeDelete.??? $buildartifacts_dir\Output\Bundles
-	Copy-Item $base_dir\Bundles\Raven.Bundles.Encryption.IndexFileCodec\bin\$global:configuration\Raven.Bundles.Encryption.IndexFileCodec.??? $buildartifacts_dir\Output\Bundles
-	Copy-Item $base_dir\Bundles\Raven.Bundles.UniqueConstraints\bin\$global:configuration\Raven.Bundles.UniqueConstraints.??? $buildartifacts_dir\Output\Bundles
-	Copy-Item $base_dir\Bundles\Raven.Client.Authorization\bin\$global:configuration\Raven.Client.Authorization.??? $buildartifacts_dir\Output\Bundles
-	Copy-Item $base_dir\Bundles\Raven.Client.UniqueConstraints\bin\$global:configuration\Raven.Client.UniqueConstraints.??? $buildartifacts_dir\Output\Bundles
+	Copy-Item $base_dir\Bundles\Raven.Bundles.Authorization\bin\$global:configuration\Raven.Bundles.Authorization.??? $build_dir\Output\Bundles
+	Copy-Item $base_dir\Bundles\Raven.Bundles.CascadeDelete\bin\$global:configuration\Raven.Bundles.CascadeDelete.??? $build_dir\Output\Bundles
+	Copy-Item $base_dir\Bundles\Raven.Bundles.Encryption.IndexFileCodec\bin\$global:configuration\Raven.Bundles.Encryption.IndexFileCodec.??? $build_dir\Output\Bundles
+	Copy-Item $base_dir\Bundles\Raven.Bundles.UniqueConstraints\bin\$global:configuration\Raven.Bundles.UniqueConstraints.??? $build_dir\Output\Bundles
+	Copy-Item $base_dir\Bundles\Raven.Client.Authorization\bin\$global:configuration\Raven.Client.Authorization.??? $build_dir\Output\Bundles
+	Copy-Item $base_dir\Bundles\Raven.Client.UniqueConstraints\bin\$global:configuration\Raven.Client.UniqueConstraints.??? $build_dir\Output\Bundles
 }
 
 task CopyServer -depends CreateOutpuDirectories {
 	$server_files = @( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
 		"$base_dir\Raven.Server\bin\$global:configuration\Raven.Server.???",
 		"$base_dir\DefaultConfigs\NLog.Ignored.config")
-	$server_files | ForEach-Object { Copy-Item "$_" $buildartifacts_dir\Output\Server }
-	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $buildartifacts_dir\Output\Server\Raven.Server.exe.config
+	$server_files | ForEach-Object { Copy-Item "$_" $build_dir\Output\Server }
+	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 }
 
 function SignFile($filePath){
@@ -320,6 +320,7 @@ function SignFile($filePath){
 		throw "Certificate password must be provided"
 	}
     
+    Write-Host "Signing the following file: $filePath"
 	Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "http://timestamp.verisign.com/scripts/timstamp.dll" "$filePath" }
 }
 
@@ -335,7 +336,7 @@ task CopyInstaller {
 	  return
 	}
 
-	Copy-Item $build_dir\RavenDB.Setup.exe "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
+	Copy-Item $base_dir\Raven.Setup\bin\$global:configuration\RavenDB.Setup.exe "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
 }
 
 task SignInstaller {
@@ -357,18 +358,18 @@ task CreateDocs {
 	}
 	 
 	# we expliclty allows this to fail
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.Docs.shfbproj" /p:OutDir="$buildartifacts_dir\" }
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.Docs.shfbproj" /p:OutDir="$build_dir\" }
 }
 
 task CopyRootFiles -depends CreateDocs {
-	cp $base_dir\license.txt $buildartifacts_dir\Output\license.txt
-	cp $base_dir\Scripts\Start.cmd $buildartifacts_dir\Output\Start.cmd
-	cp $base_dir\Scripts\Raven-UpdateBundles.ps1 $buildartifacts_dir\Output\Raven-UpdateBundles.ps1
-	cp $base_dir\Scripts\Raven-GetBundles.ps1 $buildartifacts_dir\Output\Raven-GetBundles.ps1
-	cp $base_dir\readme.md $buildartifacts_dir\Output\readme.txt
-	cp $base_dir\Help\Documentation.chm $buildartifacts_dir\Output\Documentation.chm  -ErrorAction SilentlyContinue
-	cp $base_dir\acknowledgments.txt $buildartifacts_dir\Output\acknowledgments.txt
-	cp $base_dir\CommonAssemblyInfo.cs $buildartifacts_dir\Output\CommonAssemblyInfo.cs
+	cp $base_dir\license.txt $build_dir\Output\license.txt
+	cp $base_dir\Scripts\Start.cmd $build_dir\Output\Start.cmd
+	cp $base_dir\Scripts\Raven-UpdateBundles.ps1 $build_dir\Output\Raven-UpdateBundles.ps1
+	cp $base_dir\Scripts\Raven-GetBundles.ps1 $build_dir\Output\Raven-GetBundles.ps1
+	cp $base_dir\readme.md $build_dir\Output\readme.txt
+	cp $base_dir\Help\Documentation.chm $build_dir\Output\Documentation.chm  -ErrorAction SilentlyContinue
+	cp $base_dir\acknowledgments.txt $build_dir\Output\acknowledgments.txt
+	cp $base_dir\CommonAssemblyInfo.cs $build_dir\Output\CommonAssemblyInfo.cs
 }
 
 task ZipOutput {
@@ -379,7 +380,7 @@ task ZipOutput {
 	}
 
 	$old = pwd
-	cd $buildartifacts_dir\Output
+	cd $build_dir\Output
 	
 	$file = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
 		
@@ -530,7 +531,7 @@ task CreateNugetPackages -depends Compile, InitNuget {
 
 	Remove-Item $base_dir\RavenDB*.nupkg
 	
-	$nuget_dir = "$buildartifacts_dir\NuGet"
+	$nuget_dir = "$build_dir\NuGet"
 	Remove-Item $nuget_dir -Force -Recurse -ErrorAction SilentlyContinue
 	New-Item $nuget_dir -Type directory | Out-Null
 	
@@ -648,7 +649,7 @@ task CreateSymbolSources -depends CreateNugetPackages {
 		return; # this takes 20 minutes to run
 	}
 
-	$nuget_dir = "$buildartifacts_dir\NuGet"
+	$nuget_dir = "$build_dir\NuGet"
 	
 	$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
 	
