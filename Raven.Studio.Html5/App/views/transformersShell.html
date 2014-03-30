@@ -7,12 +7,12 @@
         </h3>
     </li>
     <li data-bind="with: activeDatabase">
-        <a data-bind="text: name"></a>
+        <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
     </li>
     <li>
-        <a>Transformers</a>
+        <a data-bind="attr: { href: appUrls.transformers }">Transformers</a>
     </li>
-    <li>
+    <li class="active">
         <span data-bind="text: currentBreadcrumbTitle"></span>
     </li>
 </ul>

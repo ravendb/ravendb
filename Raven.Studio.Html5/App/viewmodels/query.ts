@@ -44,12 +44,14 @@ class query extends viewModelBase {
     rawJsonUrl = ko.observable<string>();
     collectionNames = ko.observableArray<string>();
     selectedIndexLabel: KnockoutComputed<string>;
+    appUrls: computedAppUrls;
 
     static containerSelector = "#queryContainer";
 
     constructor() {
         super();
 
+        this.appUrls = appUrl.forCurrentDatabase();
         this.editIndexUrl = ko.computed(() => this.selectedIndex() ? appUrl.forEditIndex(this.selectedIndex(), this.activeDatabase()) : null);
         this.termsUrl = ko.computed(() => this.selectedIndex() ? appUrl.forTerms(this.selectedIndex(), this.activeDatabase()) : null);
         this.statsUrl = ko.computed(() => appUrl.forStatus(this.activeDatabase()));

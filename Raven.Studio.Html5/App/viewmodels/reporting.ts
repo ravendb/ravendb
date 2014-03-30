@@ -23,7 +23,13 @@ class reporting extends viewModelBase {
     reportResults = ko.observable<pagedList>();
     totalQueryResults = ko.computed(() => this.reportResults() ? this.reportResults().totalResultCount() : null);
     queryDuration = ko.observable<string>();
+    appUrls: computedAppUrls;
     
+    constructor() {
+        super();
+        this.appUrls = appUrl.forCurrentDatabase();
+    }
+
     activate(indexToActivateOrNull: string) {
         super.activate(indexToActivateOrNull);
 
