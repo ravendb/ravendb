@@ -22,7 +22,7 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			var docPath = GetRequestUrl().Replace("/raven/", "");
-			return WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.WebDir, "Raven.Database.Server.WebUI", docPath);
+			return WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.WebDir, "Raven.Database.Server.WebUI", null, docPath);
 		}
 
 		[HttpGet]
@@ -38,7 +38,7 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			var docPath = GetRequestUrl().Replace("/studio/", "");
-			return WriteEmbeddedFile("~/Server/Html5Studio", "Raven.Database.Server.Html5Studio", docPath);
+			return WriteEmbeddedFile("~/Server/Html5Studio", "Raven.Database.Server.Html5Studio", "Raven.Studio.Html5", docPath);
 		}
 	}
 }

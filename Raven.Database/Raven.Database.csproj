@@ -99,6 +99,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
     </Reference>
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
     <Reference Include="Jint.Raven">
       <HintPath>..\SharedLibs\Jint.Raven.dll</HintPath>
     </Reference>
@@ -1090,7 +1093,7 @@
     <EmbeddedResource Include="Json\lodash.js" />
     <EmbeddedResource Include="Json\ECMAScript5.js" />
     <Content Include="FodyWeavers.xml" />
-	</ItemGroup>
+  </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Commercial\RavenDB.public" />
     <None Include="App.config">

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -25,6 +26,8 @@ namespace Raven.Client.Connection
 			{
 				Headers.ContentEncoding.Add("gzip");
 			}
+
+			Disposables = new List<IDisposable>();
 		}
 
 		protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
@@ -54,7 +57,16 @@ namespace Raven.Client.Connection
 		{
 			if (disposeStream && data != null)
 				data.Dispose();
+
+			if (Disposables != null)
+			foreach (var dispose in Disposables)
+			{
+				dispose.Dispose();
+			}
+
 			base.Dispose(disposing);
 		}
+
+		public List<IDisposable> Disposables { get; private set; }
 	}
 }
