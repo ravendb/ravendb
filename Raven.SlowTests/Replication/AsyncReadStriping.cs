@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Bundles.Replication.Async
 {
-	public class ReadStriping : ReplicationBase
+	public class AsyncReadStriping : ReplicationBase
 	{
 		[Fact]
 		public async Task When_replicating_can_do_read_striping()

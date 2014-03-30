@@ -321,7 +321,6 @@
     <Compile Include="Issues\RavenDB_1302.cs" />
     <Compile Include="Issues\RavenDB_1289.cs" />
     <Compile Include="Issues\RaveDB-1279.cs" />
-    <Compile Include="Issues\RavenDB_1411.cs" />
     <Compile Include="Issues\RavenDB_1466.cs" />
     <Compile Include="Issues\RavenDB_1305.cs" />
     <Compile Include="Issues\RavenDB_1443 .cs" />
@@ -338,7 +337,6 @@
     <Compile Include="Bugs\TransformationsUnitTest.cs" />
     <Compile Include="Bundles\Encryption\Crud.cs" />
     <Compile Include="Faceted\LazyFacets.cs" />
-    <Compile Include="Issues\RavenDB_1829.cs" />
     <Compile Include="Issues\WaitForStaleOnAbandonedIndexShouldWork.cs" />
     <Compile Include="Issues\RavenDB_1761.cs" />
     <Compile Include="Issues\RavenDB1508.cs" />
@@ -383,9 +381,7 @@
     <Compile Include="Issues\RavenDB_1598_MappingComplexProperties.cs" />
     <Compile Include="Issues\RavenDB_1600.cs" />
     <Compile Include="Issues\RavenDB_1601.cs" />
-    <Compile Include="Issues\RavenDB_1603.cs" />
     <Compile Include="Issues\RavenDB_1733.cs" />
-    <Compile Include="Issues\RavenDB_1754.cs" />
     <Compile Include="Issues\RDBQA_11.cs" />
     <Compile Include="Issues\RDBQA_6.cs" />
     <Compile Include="Issues\RDBQA_7.cs" />
@@ -798,7 +794,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Issues\RavenDB_1374 .cs" />
-    <Compile Include="Issues\RavenDB_1359 .cs" />
     <Compile Include="Issues\RavenDB_1377.cs" />
     <Compile Include="Issues\RavenDB_1410.cs" />
     <Compile Include="Issues\RavenDB_1380.cs" />
@@ -867,7 +862,6 @@
     <Compile Include="Issues\RavenDB_659.cs" />
     <Compile Include="Issues\RavenDB_689.cs" />
     <Compile Include="Issues\RavenDB_576.cs" />
-    <Compile Include="Issues\RavenDB_560.cs" />
     <Compile Include="Issues\RavenDB_714.cs" />
     <Compile Include="Issues\RavenDB_726.cs" />
     <Compile Include="Issues\RavenDB_772.cs" />
@@ -934,7 +928,6 @@
     <Compile Include="MailingList\DataSetIndexTest.cs" />
     <Compile Include="MailingList\DeanWard.cs" />
     <Compile Include="MailingList\Edin.cs" />
-    <Compile Include="MailingList\FailingBulkInsertTest.cs" />
     <Compile Include="MailingList\FailingChangesApiTests.cs" />
     <Compile Include="MailingList\FailingIndex.cs" />
     <Compile Include="MailingList\FailingProjection.cs" />
@@ -959,7 +952,6 @@
     <Compile Include="MailingList\InQueries.cs" />
     <Compile Include="MailingList\IssueTest.cs" />
     <Compile Include="MailingList\ItemsBySetIdIndexTests.cs" />
-    <Compile Include="MailingList\Jalchr.cs" />
     <Compile Include="MailingList\jbartruf.cs" />
     <Compile Include="MailingList\JsonComarision.cs" />
     <Compile Include="MailingList\Kushnir.cs" />
@@ -1137,7 +1129,6 @@
     <Compile Include="Bugs\TransformResults\Question.cs" />
     <Compile Include="Bugs\TransformResults\QuestionVote.cs" />
     <Compile Include="Bugs\TransformResults\QuestionWithVoteTotalIndex.cs" />
-    <Compile Include="Bugs\TransformResults\TimeoutTester.cs" />
     <Compile Include="Bugs\TransformResults\User.cs" />
     <Compile Include="Bugs\TransformResults\QuestionView.cs" />
     <Compile Include="Bugs\TransformResults\Thor.cs" />
@@ -1158,8 +1149,6 @@
     <Compile Include="Bugs\UsingStartsWith.cs" />
     <Compile Include="Bugs\UsingSwedishCollation.cs" />
     <Compile Include="Bugs\MapRedue\VersionedDocuments.cs" />
-    <Compile Include="Bugs\VeryBigResultSet.cs" />
-    <Compile Include="Bugs\VeryBigResultSetRemote.cs" />
     <Compile Include="Bugs\Vlad.cs" />
     <Compile Include="Bugs\Vlko\QueryWithMultipleWhere.cs" />
     <Compile Include="Bugs\Vlko\RelationIdIndex.cs" />
@@ -1193,7 +1182,6 @@
     <Compile Include="Bundles\Replication\Async\FailoverBetweenTwoMultiTenantDatabases.cs" />
     <Compile Include="Bundles\Replication\Async\FailureHandling.cs" />
     <Compile Include="Bundles\Replication\Async\MultihopReplication.cs" />
-    <Compile Include="Bundles\Replication\Async\ReadStriping.cs" />
     <Compile Include="Bundles\Replication\Async\SimpleReplication.cs" />
     <Compile Include="Bundles\Replication\Async\WritesDuringFailover.cs" />
     <Compile Include="Bundles\Replication\AttachmentReplication.cs" />
@@ -1207,7 +1195,6 @@
     <Compile Include="Bundles\Replication\FailoverBetweenTwoMultiTenantDatabases.cs" />
     <Compile Include="Bundles\Replication\FailureHandling.cs" />
     <Compile Include="Bundles\Replication\MultihopReplication.cs" />
-    <Compile Include="Bundles\Replication\ReadStriping.cs" />
     <Compile Include="Bundles\Replication\ReplicationBase.cs" />
     <Compile Include="Bundles\Replication\SimpleReplication.cs" />
     <Compile Include="Bundles\Replication\StoreIndex.cs" />
@@ -1437,7 +1424,6 @@
     <Compile Include="Stress\InlineValueAttribute.cs" />
     <Compile Include="Suggestions\SuggestionsUsingAnIndex.cs" />
     <Compile Include="Synchronization\ConcurrentJsonDocumentSortedListTests.cs" />
-    <Compile Include="Synchronization\IndexationTests.cs" />
     <Compile Include="T1.cs" />
     <Compile Include="TemporaryCulture.cs" />
     <Compile Include="MailingList\Thor\JoinedChildTransport.cs" />
