@@ -14,7 +14,7 @@
             <div class="ko-grid-row" data-bind="foreach: $parent.columns, visible: isInUse, style: { height: $parent.rowHeight + 'px', top: top() + 'px' }, css: { even: rowIndex() % 2 === 0, checked: isChecked}">
                 <div class="ko-grid-cell" data-bind="style: { width: width() + 'px' }, attr: { title: ($parent.getCellTemplate(name) !== 'customTemplate') ? $parent.getCellData(name) : '' }">
                     <!-- ko if: $parent.getCellTemplate(name) === 'defaultTemplate' -->
-                    <span><a data-bind="text: $parent.cellMap[name].data, attr:{href:$parent.editUrl}"></a></span> 
+                    <span data-bind="text: $parent.cellMap[name].data"></span> 
                     <!-- /ko -->
                     <!-- ko if: $parent.getCellTemplate(name) === null -->
                     <span></span>
@@ -26,13 +26,17 @@
                     <span class="collection-color-strip" data-bind="css: $parent.collectionClass"></span>
                     <a href="#" data-bind="attr: { href: $parent.editUrl }"><span data-bind="text: $parent.cellMap[name].data"></span></a>
                     <!-- /ko -->
+                    <!-- ko if: $parent.getCellTemplate(name) === 'externalIdTemplate' -->
+                    <span class="collection-color-strip" data-bind="css: $parent.collectionClass"></span>
+                    <a href="#" data-bind="attr: { href: $parents[1].getDocumentHref($parent.cellMap[name].data())}"><span data-bind="text: $parent.cellMap[name].data"></span></a>
+                    <!-- /ko -->
                     <!-- ko if: $parent.getCellTemplate(name) === 'customTemplate' -->
                     <span  data-bind="template: { name: $parents[1].getTemplateFor(name), data: $parent.cellMap[name].data }"></span>
                     <!-- /ko -->
                 </div>
             </div>
         </div>
-    </div>
+    </div> 
 </div>
 
 <div id="gridContextMenu">

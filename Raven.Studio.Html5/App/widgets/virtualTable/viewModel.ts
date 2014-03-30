@@ -46,7 +46,7 @@ class ctor {
         useContextMenu: boolean;
         maxHeight: string;
         customColumnParams: { [column: string]: customColumnParams };
-        isIndexMapReduce:KnockoutObservable<boolean>;
+        isIndexMapReduce: KnockoutObservable<boolean>;
     }
  
     activate(settings: any) {
@@ -223,6 +223,8 @@ class ctor {
                     this.virtualRowCount(resultSet.totalResultCount);
                     resultSet.items.forEach((r, i) => this.fillRow(r, i + firstVisibleIndex));
                     this.ensureColumnsForRows(resultSet.items);
+                    this.recycleRows.valueHasMutated();
+                    this.columns.valueHasMutated();
                 }
 
                 this.recycleRows.valueHasMutated();
@@ -484,6 +486,14 @@ class ctor {
         });
 
         app.showDialog(deleteDocsVm);
+    }
+
+    getDocumentHref(documentId): string {
+        if (typeof documentId == "string"){
+            return appUrl.forEditDoc(documentId, null, null, appUrl.getDatabase());
+        } else {
+            return "#";
+        }
     }
 }
 
