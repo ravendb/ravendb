@@ -9,6 +9,8 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
+using System.Configuration;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -80,7 +82,8 @@ namespace Raven.Database.Config
 
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
 			ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
-
+			
+			EncryptionKeyBitsPreference = ravenSettings.EncryptionKeyBitsPreference.Value;
 			// Core settings
 			MaxPageSize = ravenSettings.MaxPageSize.Value;
 
@@ -124,8 +127,6 @@ namespace Raven.Database.Config
 				 Math.Max(16, Math.Min(MaxNumberOfItemsToIndexInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch));
 			}
 			AvailableMemoryForRaisingIndexBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingIndexBatchSizeLimit.Value;
-
-
 
 			MaxNumberOfItemsToReduceInSingleBatch = ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Value;
 			InitialNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default ?
@@ -191,6 +192,8 @@ namespace Raven.Database.Config
 				IndexStoragePath = indexStoragePathSettingValue;
 			}
 
+		    JournalsStoragePath = Settings["Raven/Esent/LogsPath"] ?? Settings[Constants.RavenTxJournalPath];
+
 			// HTTP settings
 			HostName = ravenSettings.HostName.Value;
 
@@ -216,7 +219,7 @@ namespace Raven.Database.Config
 			DisableDocumentPreFetchingForIndexing = ravenSettings.DisableDocumentPreFetchingForIndexing.Value;
 
 			MaxNumberOfItemsToPreFetchForIndexing = ravenSettings.MaxNumberOfItemsToPreFetchForIndexing.Value;
-
+			
 			// Misc settings
 			WebDir = ravenSettings.WebDir.Value;
 
@@ -238,7 +241,12 @@ namespace Raven.Database.Config
 			PostInit();
 		}
 
-        /// <summary>
+		public int EncryptionKeyBitsPreference
+		{
+		    get; set;
+		}
+
+		/// <summary>
         /// This limits the number of concurrent multi get requests,
         /// Note that this plays with the max number of requests allowed as well as the max number
         /// of sessions
@@ -768,7 +776,7 @@ namespace Raven.Database.Config
 
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
-		private string indexStoragePath;
+		private string indexStoragePath, journalStoragePath;
 		private string fileSystemIndexStoragePath;
 		private int? maxNumberOfParallelIndexTasks;
 		private int initialNumberOfItemsToIndexInSingleBatch;
@@ -813,6 +821,17 @@ namespace Raven.Database.Config
 			}
 			set { indexStoragePath = value.ToFullPath(); }
 		}
+
+        public string JournalsStoragePath
+        {
+            get
+            {
+                return journalStoragePath;
+            }
+            set {
+                journalStoragePath = value != null ? value.ToFullPath() : null;
+            }
+        }
 
 		public string FileSystemIndexStoragePath
 		{

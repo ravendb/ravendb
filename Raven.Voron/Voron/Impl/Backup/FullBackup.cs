@@ -39,21 +39,7 @@ namespace Voron.Impl.Backup
 
 						Debug.Assert(HeaderAccessor.HeaderFileNames.Length == 2);
 
-						foreach (var headerFileName in HeaderAccessor.HeaderFileNames)
-						{
-							var header = stackalloc FileHeader[1];
-
-							if (env.Options.ReadHeader(headerFileName, header))
-							{
-								var headerPart = package.CreateEntry(headerFileName, compression);
-								Debug.Assert(headerPart != null);
-
-								using (var headerStream = headerPart.Open())
-								{
-									copier.ToStream((byte*) header, sizeof (FileHeader), headerStream);
-								}
-							}
-						}
+                        VoronBackupUtil.CopyHeaders(compression, package, copier, env.Options);
 
 						// journal files snapshot
 						files = env.Journal.Files;
@@ -121,9 +107,22 @@ namespace Voron.Impl.Backup
 			}
 		}
 
-		public void Restore(string backupPath, string voronDataDir)
+	    public void Restore(string backupPath, string voronDataDir, string journalDir = null)
 		{
-			ZipFile.ExtractToDirectory(backupPath, voronDataDir);
+		    journalDir = journalDir ?? voronDataDir;
+
+		    using (var zip = ZipFile.OpenRead(backupPath))
+		    {
+		        foreach (var entry in zip.Entries)
+		        {
+		            var dst = Path.GetExtension(entry.Name) == ".journal" ? journalDir : voronDataDir;
+		            using (var input = entry.Open())
+                    using(var output = new FileStream(Path.Combine(dst, entry.Name), FileMode.CreateNew))
+		            {
+		                input.CopyTo(output);
+		            }
+		        }
+		    }
 		}
 	}
 }

@@ -80,14 +80,6 @@ namespace Raven.Database.Server.RavenFS.Extensions
 			}
 		}
 
-		public static string ToFullPath(this string path)
-		{
-			path = Environment.ExpandEnvironmentVariables(path);
-			if (path.StartsWith(@"~\") || path.StartsWith(@"~/"))
-				path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path.Substring(2));
-
-			return Path.IsPathRooted(path) ? path : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
-		}
 
 		public static string GetMD5Hash(this Stream stream)
 		{

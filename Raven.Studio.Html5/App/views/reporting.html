@@ -8,10 +8,10 @@
         </h3>
     </li>
     <li data-bind="with: activeDatabase">
-        <a data-bind="text: name"></a>
+        <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
     </li>
     <li>
-        <a>Indexes</a>
+        <a data-bind="attr: { href: appUrls.reporting }">Reporting</a>
     </li>
     <li>
         <div class="btn-group">
@@ -23,9 +23,6 @@
                 <li data-bind="click: $root.setSelectedIndex.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
             </ul>
         </div>
-    </li>
-    <li class="active">
-        <a>Reporting</a>
     </li>
 </ul>
 

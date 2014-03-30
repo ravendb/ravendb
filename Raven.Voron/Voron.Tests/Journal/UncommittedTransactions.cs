@@ -38,7 +38,7 @@ namespace Voron.Tests.Journal
 			using (var tx2 = Env.NewTransaction(TransactionFlags.Read))
 			{
 				// tx was not committed so in the log should not apply
-				var readPage = Env.Journal.ReadPage(tx2,pageAllocatedInUncommittedTransaction);
+				var readPage = Env.Journal.ReadPage(tx2,pageAllocatedInUncommittedTransaction, scratchPagerState: null);
 
 				Assert.Null(readPage);
 			}

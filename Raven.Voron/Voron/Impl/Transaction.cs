@@ -55,6 +55,7 @@ namespace Voron.Impl
 		private TransactionHeader* _txHeader;
 		private readonly List<PageFromScratchBuffer> _transactionPages = new List<PageFromScratchBuffer>();
 	    private readonly Dictionary<string, Tree> _trees = new Dictionary<string, Tree>();
+	    private readonly PagerState _scratchPagerState;
 
 	    public bool Committed { get; private set; }
 
@@ -77,13 +78,15 @@ namespace Voron.Impl
 			_id = id;
 			_freeSpaceHandling = freeSpaceHandling;
 			Flags = flags;
-
             var scratchPagerState = env.ScratchBufferPool.PagerState;
             scratchPagerState.AddRef();
             _pagerStates.Add(scratchPagerState);
-
 			if (flags.HasFlag(TransactionFlags.ReadWrite) == false)
 			{
+                // for read transactions, we need to keep the pager state frozen
+                // for write transactions, we can use the current one (which == null)
+			    _scratchPagerState = scratchPagerState;
+
 				_state = env.State;
 				_journal.GetSnapshots().ForEach(AddJournalSnapshot);
 				return;
@@ -99,7 +102,7 @@ namespace Voron.Impl
 		private void InitTransactionHeader()
 		{
 			var allocation = _env.ScratchBufferPool.Allocate(this, 1);
-			var page = _env.ScratchBufferPool.ReadPage(allocation.PositionInScratchBuffer);
+			var page = _env.ScratchBufferPool.ReadPage(allocation.PositionInScratchBuffer, _scratchPagerState);
 			_transactionPages.Add(allocation);
 			NativeMethods.memset(page.Base, 0, AbstractPager.PageSize);
 			_txHeader = (TransactionHeader*)page.Base;
@@ -185,11 +188,11 @@ namespace Voron.Impl
 		    Page p;
 			if (_scratchPagesTable.TryGetValue(pageNumber, out value))
 			{
-			    p = _env.ScratchBufferPool.ReadPage(value.PositionInScratchBuffer);
+			    p = _env.ScratchBufferPool.ReadPage(value.PositionInScratchBuffer, _scratchPagerState);
 			}
 			else
 			{
-			    p =  _journal.ReadPage(this, pageNumber) ?? _dataPager.Read(pageNumber);
+			    p =  _journal.ReadPage(this, pageNumber, _scratchPagerState) ?? _dataPager.Read(pageNumber);
 			}
 
             Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from {2}", pageNumber, p.PageNumber, p.Source));

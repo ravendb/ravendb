@@ -12,6 +12,7 @@ using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Database;
+using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
@@ -28,8 +29,8 @@ namespace Raven.Tests.Issues
 
 		public RavenDB_1007_incremental_backup()
 		{
-			DataDir = NewDataPath("IncrementalBackup");
-			BackupDir = NewDataPath("BackupDatabase");
+			DataDir = NewDataPath("RavenDB-1007-IncrementalBackup");
+			BackupDir = NewDataPath("RavenDB-1007-BackupDatabase");
 		}
 
 		[Theory]
@@ -78,7 +79,11 @@ namespace Raven.Tests.Issues
 
 			var sb = new StringBuilder();
 
-			DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir, s => sb.Append(s), defrag: true);
+		    MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
+		    {
+		        BackupLocation = BackupDir,
+		        DatabaseLocation = DataDir
+		    }, s => sb.Append(s));
 
 			Assert.Contains(
 				"could not be restored. All already copied index files was deleted." +
@@ -109,12 +114,12 @@ namespace Raven.Tests.Issues
 
 		public RavenDB_1007_standard_backup()
 		{
-			DataDir = NewDataPath("IncrementalBackup");
-			BackupDir = NewDataPath("BackupDatabase");
+			DataDir = NewDataPath("RavenDB-1007-StandardBackup");
+			BackupDir = NewDataPath("RavenDB-1007-BackupDatabase");
 		}
 
 		[Theory]
-        [PropertyData("Storages")]
+		[PropertyData("Storages")]
 		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt(string storageName)
 		{
 			using (var db = new DocumentDatabase(new RavenConfiguration
@@ -144,7 +149,11 @@ namespace Raven.Tests.Issues
 			{
 				var sb = new StringBuilder();
 
-				DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir, s => sb.Append(s), defrag: true);
+			    MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
+			    {
+			        BackupLocation = BackupDir,
+			        DatabaseLocation = DataDir
+				}, s => sb.Append(s));
 
 				Assert.Contains(
 					"could not be restored. All already copied index files was deleted." +

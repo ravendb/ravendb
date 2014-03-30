@@ -97,7 +97,6 @@ namespace Raven.Database.Indexing
 
 		private IEnumerable<AbstractField> CreateRegularFields(string name, object value, Field.Store defaultStorage, bool nestedArray = false, Field.TermVector defaultTermVector = Field.TermVector.NO, Field.Index? analyzed = null)
 		{
-
             var fieldIndexingOptions = analyzed ?? indexDefinition.GetIndex(name, null);
 			var storage = indexDefinition.GetStorage(name, defaultStorage);
 			var termVector = indexDefinition.GetTermVector(name, defaultTermVector);
@@ -111,7 +110,6 @@ namespace Raven.Database.Indexing
 			{
 				fieldIndexingOptions = Field.Index.ANALYZED; // we have some sort of term vector, forcing index to be analyzed, then.
 			}
-
 
 			if (value == null)
 			{
@@ -165,17 +163,21 @@ namespace Raven.Database.Indexing
 				if (dynamicNullObject.IsExplicitNull)
 				{
 					var sortOptions = indexDefinition.GetSortOption(name, query: null);
-					if (sortOptions != null && 
-                        sortOptions.Value != SortOptions.None && 
-                        sortOptions.Value != SortOptions.String && 
-                        sortOptions.Value != SortOptions.StringVal && 
-                        sortOptions.Value != SortOptions.Custom)
+					if (sortOptions == null ||
+					    sortOptions.Value == SortOptions.String ||
+					    sortOptions.Value == SortOptions.None ||
+					    sortOptions.Value == SortOptions.StringVal ||
+					    sortOptions.Value == SortOptions.Custom)
+
 					{
-						yield break; // we don't emit null for sorting	
+						yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
+							Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 					}
-					yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
-														Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
-				}
+
+					foreach (var field in CreateNumericFieldWithCaching(name, GetNullValueForSorting(sortOptions), storage, termVector))
+                        yield return field;
+                   
+                 }
 				yield break;
 			}
 			var boostedValue = value as BoostedValue;
@@ -301,6 +303,11 @@ namespace Raven.Database.Indexing
 				yield return CreateFieldWithCaching(name, s, storage,
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS), termVector);
 			}
+			else if (value is Enum)
+			{
+				yield return CreateFieldWithCaching(name, value.ToString(), storage,
+									   indexDefinition.GetIndex(name, Field.Index.ANALYZED_NO_NORMS), termVector);
+			}
 			else if (value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
 			{
 				var convert = ((IConvertible)value);
@@ -330,7 +337,34 @@ namespace Raven.Database.Indexing
 				yield return numericField;
 		}
 
-		private IEnumerable<AbstractField> CreateNumericFieldWithCaching(string name, object value,
+	    private static object GetNullValueForSorting(SortOptions? sortOptions)
+	    {
+	        switch (sortOptions)
+	        {
+	            case SortOptions.Short:
+	            case SortOptions.Int:
+	                return int.MinValue;
+	            case SortOptions.Double:
+	                return double.MinValue;
+	                break;
+	            case SortOptions.Float:
+	                return float.MinValue;
+
+// ReSharper disable RedundantCaseLabel
+	            case SortOptions.Long:
+
+	            // to be able to sort on timestamps
+	            case SortOptions.String:
+	            case SortOptions.StringVal:
+	            case SortOptions.None:
+	            case SortOptions.Custom:
+// ReSharper restore RedundantCaseLabel
+	            default:
+	                return long.MinValue;
+	        }
+	    }
+
+	    private IEnumerable<AbstractField> CreateNumericFieldWithCaching(string name, object value,
 			Field.Store defaultStorage, Field.TermVector termVector)
 		{
 
@@ -346,20 +380,19 @@ namespace Raven.Database.Indexing
 			if (value is TimeSpan)
 			{
 				yield return numericField.SetLongValue(((TimeSpan)value).Ticks);
-
 			}
-			else if (value is int)
-			{
-				if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Long)
-					yield return numericField.SetLongValue((int)value);
-				else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Float)
+            else if (value is int)
+            {
+                if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Long)
+                    yield return numericField.SetLongValue((int)value);
+                else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Float)
                     yield return numericField.SetFloatValue((int)value);
-				else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Double)
-					yield return numericField.SetDoubleValue((int)value);
-				else
-					yield return numericField.SetIntValue((int)value);
-			}
-			else if (value is long)
+                else if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Double)
+                    yield return numericField.SetDoubleValue((int)value);
+                else
+                    yield return numericField.SetIntValue((int)value);
+            }
+            else if (value is long)
 			{
 				if (indexDefinition.GetSortOption(name, query: null) == SortOptions.Double)
 					yield return numericField.SetDoubleValue((long)value);

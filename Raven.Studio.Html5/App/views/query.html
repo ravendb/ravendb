@@ -8,10 +8,10 @@
             </h3>
         </li>
         <li data-bind="with: activeDatabase">
-            <a data-bind="text: name"></a>
+            <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
         </li>
         <li>
-            <a>Indexes</a>
+            <a data-bind="attr: { href: appUrls.indexes }">Indexes</a>
         </li>
         <li>
             <div class="btn-group">
@@ -42,9 +42,7 @@
                 </ul>
             </div>
         </li>
-        <li class="active">
-            <a>Query</a>
-        </li>
+        <li class="active">Query</li>
     </ul>
 
     <div class="btn-toolbar" role="toolbar">

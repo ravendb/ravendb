@@ -17,6 +17,7 @@ namespace Raven.Tests.Indexes.Recovery
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.NumberOfItemsToExecuteReduceInSingleStep = 10;
+		    configuration.DefaultStorageTypeName = "esent";
 		}
 
 		[Fact]

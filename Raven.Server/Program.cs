@@ -21,10 +21,12 @@ using Microsoft.Win32;
 using NDesk.Options;
 using NLog.Config;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Actions;
 using Raven.Database.Config;
+using Raven.Database.Data;
 using Raven.Database.Server;
 using Raven.Database.Util;
 
@@ -374,7 +376,12 @@ Configuration options:
 				{
 					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 				}
-				DocumentDatabase.Restore(ravenConfiguration, backupLocation, databaseLocation, Console.WriteLine, defrag);
+				MaintenanceActions.Restore(ravenConfiguration, new RestoreRequest
+				{
+				    BackupLocation = backupLocation,
+                    DatabaseLocation = databaseLocation,
+                    Defrag = defrag
+				}, Console.WriteLine);
 			}
 			catch (Exception e)
 			{

@@ -132,13 +132,13 @@ namespace Raven.Database.Extensions
 			Thread.Sleep(100);
 		}
 
-		public static string ToFullPath(this string path)
+		public static string ToFullPath(this string path, string basePath = null)
 		{
 			if (String.IsNullOrWhiteSpace(path))
 				return String.Empty;
 			path = Environment.ExpandEnvironmentVariables(path);
 			if (path.StartsWith(@"~\") || path.StartsWith(@"~/"))
-				path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path.Substring(2));
+				path = Path.Combine(basePath  ?? AppDomain.CurrentDomain.BaseDirectory, path.Substring(2));
 
 			return Path.IsPathRooted(path) ? path : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
 		}

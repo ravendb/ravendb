@@ -361,6 +361,13 @@ namespace Raven.Tests.Bundles.Replication
                     break;
                 }
             }
+
+
+			using (var session = store.OpenSession(db))
+			{
+				var e = session.Load<object>(id);
+				Assert.NotNull(e);
+			}
         }
 
         protected void WaitForReplication(IDocumentStore store, Func<IDocumentSession, bool> predicate, string db = null)

@@ -25,8 +25,6 @@ using Raven.Bundles.Replication.Data;
 using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Impl;
-using Raven.Database.Impl.Synchronization;
-using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
 using Raven.Database.Server;
@@ -77,12 +75,10 @@ namespace Raven.Bundles.Replication.Tasks
 		private int workCounter;
 		private HttpRavenRequestFactory httpRavenRequestFactory;
 
-		private EtagSynchronizer etagSynchronizer;
 		private PrefetchingBehavior prefetchingBehavior;
 
 		public void Execute(DocumentDatabase database)
 		{
-			etagSynchronizer = database.EtagSynchronizer.GetSynchronizer(EtagSynchronizerType.Replicator);
 			prefetchingBehavior = database.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.Replicator, null);
 
 			docDb = database;
@@ -686,11 +682,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
-					var synchronizationEtag = etagSynchronizer.GetSynchronizationEtag();
-
-					var lastEtag = etagSynchronizer.CalculateSynchronizationEtag(
-						synchronizationEtag,
-						destinationsReplicationInformationForSource.LastDocumentEtag);
+				    var lastEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
 
 					int docsSinceLastReplEtag = 0;
 					List<JsonDocument> docsToReplicate;
@@ -708,9 +700,9 @@ namespace Raven.Bundles.Replication.Tasks
 									var info = docDb.Documents.GetRecentTouchesFor(document.Key);
 									if (info != null)
 									{
-										if (info.PreTouchEtag.CompareTo(result.LastEtag) <= 0)
+										if (info.TouchedEtag.CompareTo(result.LastEtag) > 0)
 										{
-										    log.Debug("Will not replicate document '{0}' to '{1}' because the updates after etag {2} are related document touches", document.Key, destinationId, info.PreTouchEtag);
+                                            log.Debug("Will not replicate document '{0}' to '{1}' because the updates after etag {2} are related document touches", document.Key, destinationId, info.TouchedEtag);
 											return false;
 										}
 									}

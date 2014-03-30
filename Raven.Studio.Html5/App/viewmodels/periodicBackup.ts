@@ -38,7 +38,6 @@ class periodicBackup extends viewModelBase {
     }
 
     activatePeriodicBackup() {
-        debugger;
         this.backupSetup().activated(true);
     }
 

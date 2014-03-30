@@ -322,7 +322,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		protected override bool IsIndexStale(IndexStats indexesStat, Etag synchronizationEtag, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
+		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
 		{
 			onlyFoundIdleWork.Value = false;
 		    return actions.Staleness.IsReduceStale(indexesStat.Id);
@@ -338,16 +338,6 @@ namespace Raven.Database.Indexing
 			context.IndexStorage.FlushReduceIndexes();
 		}
 
-		protected override Etag GetSynchronizationEtag()
-		{
-			return Etag.Empty;
-		}
-
-		protected override Etag CalculateSynchronizationEtag(Etag currentEtag, Etag lastProcessedEtag)
-		{
-			return lastProcessedEtag;
-		}
-
 		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)
 		{
 			return new IndexToWorkOn
@@ -357,7 +347,7 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-        protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag synchronizationEtag)
+        protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
 		{
 			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, indexesToWorkOn,
 				HandleReduceForIndex);

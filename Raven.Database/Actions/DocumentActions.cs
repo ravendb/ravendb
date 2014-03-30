@@ -253,72 +253,76 @@ namespace Raven.Database.Actions
                 {
                     WorkContext.CancellationToken.ThrowIfCancellationRequested();
 
-                    var inserts = 0;
-                    var batch = 0;
-                    var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                    var docsToInsert = docs.ToArray();
-
-                    foreach (var doc in docsToInsert)
+                    using (Database.DocumentLock.Lock())
                     {
-                        try
-                        {
-                            RemoveReservedProperties(doc.DataAsJson);
-                            RemoveMetadataReservedProperties(doc.Metadata);
+                        var inserts = 0;
+                        var batch = 0;
+                        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                            if (options.CheckReferencesInIndexes)
-                                keys.Add(doc.Key);
-                            documents++;
-                            batch++;
-                            AssertPutOperationNotVetoed(doc.Key, doc.Metadata, doc.DataAsJson, null);
-                            foreach (var trigger in Database.PutTriggers)
+                        var docsToInsert = docs.ToArray();
+
+                        foreach (var doc in docsToInsert)
+                        {
+                            try
                             {
-                                trigger.Value.OnPut(doc.Key, doc.DataAsJson, doc.Metadata, null);
+                                RemoveReservedProperties(doc.DataAsJson);
+                                RemoveMetadataReservedProperties(doc.Metadata);
+
+                                if (options.CheckReferencesInIndexes)
+                                    keys.Add(doc.Key);
+                                documents++;
+                                batch++;
+                                AssertPutOperationNotVetoed(doc.Key, doc.Metadata, doc.DataAsJson, null);
+                                foreach (var trigger in Database.PutTriggers)
+                                {
+                                    trigger.Value.OnPut(doc.Key, doc.DataAsJson, doc.Metadata, null);
+                                }
+                                var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.OverwriteExisting);
+                                if (result.Updated == false)
+                                    inserts++;
+
+                                doc.Etag = result.Etag;
+
+                                doc.Metadata.EnsureSnapshot(
+                                "Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+                                doc.DataAsJson.EnsureSnapshot(
+                                "Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+
+
+                                foreach (var trigger in Database.PutTriggers)
+                                {
+                                    trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, result.Etag, null);
+                                }
                             }
-                            var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.OverwriteExisting);
-                            if (result.Updated == false)
-                                inserts++;
-
-                            doc.Etag = result.Etag;
-
-                            doc.Metadata.EnsureSnapshot(
-                            "Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
-                            doc.DataAsJson.EnsureSnapshot(
-                            "Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
-
-
-                            foreach (var trigger in Database.PutTriggers)
+                            catch (Exception e)
                             {
-                                trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, result.Etag, null);
+                                Database.Notifications.RaiseNotifications(new BulkInsertChangeNotification
+                                {
+                                    OperationId = operationId,
+                                    Message = e.Message,
+                                    Etag = doc.Etag,
+                                    Id = doc.Key,
+                                    Type = DocumentChangeTypes.BulkInsertError
+                                });
+
+                                throw;
                             }
                         }
-                        catch (Exception e)
+
+                        if (options.CheckReferencesInIndexes)
                         {
-                            Database.Notifications.RaiseNotifications(new BulkInsertChangeNotification
+                            foreach (var key in keys)
                             {
-                                OperationId = operationId,
-                                Message = e.Message,
-                                Etag = doc.Etag,
-                                Id = doc.Key,
-                                Type = DocumentChangeTypes.BulkInsertError
-                            });
-
-                            throw;
+                                Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, accessor);
+                            }
                         }
-                    }
-                    if (options.CheckReferencesInIndexes)
-                    {
-                        foreach (var key in keys)
-                        {
-                            Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, accessor);
-                        }
-                    }
-                    accessor.Documents.IncrementDocumentCount(inserts);
-                    accessor.General.PulseTransaction();
-                    Database.EtagSynchronizer.UpdateSynchronizationState(docsToInsert);
 
-                    WorkContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
-                    WorkContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
+                        accessor.Documents.IncrementDocumentCount(inserts);
+                        accessor.General.PulseTransaction();
+
+                        WorkContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
+                        WorkContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
+                    }
                 }
 
                 Database.Notifications.RaiseNotifications(new BulkInsertChangeNotification
@@ -501,7 +505,7 @@ namespace Raven.Database.Actions
             RemoveMetadataReservedProperties(metadata);
             Etag newEtag = Etag.Empty;
 
-            using (TransactionalStorage.WriteLock())
+            using (Database.DocumentLock.Lock())
             {
                 TransactionalStorage.Batch(actions =>
                 {
@@ -540,7 +544,6 @@ namespace Raven.Database.Actions
                         }, documents =>
                         {
                             Database.LastCollectionEtags.UpdatePerCollectionEtags(documents);
-                            Database.EtagSynchronizer.UpdateSynchronizationState(documents);
                             Database.Prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents);
                         });
 
@@ -601,7 +604,7 @@ namespace Raven.Database.Actions
             var deleted = false;
             Log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
             RavenJObject metadataVar = null;
-            using (TransactionalStorage.WriteLock())
+            using (Database.DocumentLock.Lock())
             {
                 TransactionalStorage.Batch(actions =>
                 {

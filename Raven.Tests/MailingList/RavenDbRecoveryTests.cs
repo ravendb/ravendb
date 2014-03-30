@@ -53,8 +53,8 @@ namespace Raven.Tests.MailingList
 				// a restart of the service
 				using (var tx = new TransactionScope())
 				{
-					Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-						new ManyDocumentsViaDTC.DummyEnlistmentNotification(), EnlistmentOptions.None);
+					Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id,
+						new DummyEnlistmentNotification(), EnlistmentOptions.None);
 
 					using (var session = store.OpenSession())
 					{
