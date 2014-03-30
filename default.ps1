@@ -320,6 +320,7 @@ function SignFile($filePath){
 		throw "Certificate password must be provided"
 	}
     
+    Write-Host "Signing the following file: $filePath"
 	Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "http://timestamp.verisign.com/scripts/timstamp.dll" "$filePath" }
 }
 
