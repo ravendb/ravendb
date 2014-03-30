@@ -61,9 +61,11 @@ class query extends viewModelBase {
         this.selectedIndex.subscribe((indexName:string)=> ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexQueryRawData(this.activeDatabase(), indexName)));
         this.selectedIndexLabel = ko.computed(() => this.selectedIndex() === "dynamic" ? "All Documents" : this.selectedIndex());
         this.selectedIndexEditUrl = ko.computed(() => {
-            var index = this.selectedIndex();
-            if (index && index.indexOf("dynamic/") !== 0) {
-                return appUrl.forEditIndex(this.selectedIndex(), this.activeDatabase());
+            if (this.queryStats()){
+                var index = this.queryStats().IndexName;
+                if (index && index.indexOf("dynamic/") !== 0) {
+                    return appUrl.forEditIndex(index, this.activeDatabase());
+                }
             }
 
             return "";
