@@ -69,6 +69,26 @@ task Compile -depends Init {
 	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
 }
 
+task CompileHtml5 {
+	
+	Remove-Item $build_dir\Html5 -Force -Recurse -ErrorAction SilentlyContinue | Out-Null
+	Remove-Item $build_dir\Raven.Studio.Html5.zip -Force -ErrorAction SilentlyContinue | Out-Null
+	Copy-Item $base_dir\Raven.Studio.Html5 $build_dir\Html5 -Recurse
+
+	Remove-Item $build_dir\Html5\web*.config -Force -Recurse
+	Remove-Item $build_dir\Html5\packages.config -Force -Recurse
+	Remove-Item $build_dir\Html5\Raven.Studio.Html5.csproj* -Force -Recurse
+	Remove-Item $build_dir\Html5\App_Readme -Force -Recurse
+	Remove-Item $build_dir\Html5\bin -Force -Recurse
+	Remove-Item $build_dir\Html5\obj -Force -Recurse
+	Remove-Item $build_dir\Html5\Properties -Force -Recurse
+	Remove-Item $build_dir\Html5\build -Force -Recurse
+
+	Set-Location $build_dir\Html5
+	exec { & $tools_dir\zip.exe -9 -A -r $build_dir\Raven.Studio.Html5.zip *.* }
+	Set-Location $base_dir
+}
+
 task Java {
 
 $v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
@@ -403,6 +423,7 @@ task ZipOutput {
 
 
 task DoReleasePart1 -depends Compile, `
+	CompileHtml5, `
 	CleanOutputDirectory, `
 	CreateOutpuDirectories, `
 	CopyEmbeddedClient, `

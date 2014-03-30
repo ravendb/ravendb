@@ -1090,9 +1090,6 @@
     <EmbeddedResource Include="Json\lodash.js" />
     <EmbeddedResource Include="Json\ECMAScript5.js" />
     <Content Include="FodyWeavers.xml" />
-		<EmbeddedResource Include="..\Raven.Studio.Html5\**" Exclude="*.dll.config">
-			<Link>Server\Html5Studio\%(RecursiveDir)%(Filename)%(Extension)</Link>
-		</EmbeddedResource>
 	</ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Commercial\RavenDB.public" />
