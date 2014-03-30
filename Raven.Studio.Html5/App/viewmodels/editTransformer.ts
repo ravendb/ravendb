@@ -101,7 +101,7 @@ class editTransformer extends viewModelBase {
         if (this.isEditingExistingTransformer() && this.editedTransformer().wasNameChanged()) {
             var db = this.activeDatabase();
             var saveTransformerWithNewNameViewModel = new saveTransformerWithNewNameConfirm(this.editedTransformer(), db);
-            saveTransformerWithNewNameViewModel.saveTask.done((trans: transformer) => this.editedTransformer(trans));
+            saveTransformerWithNewNameViewModel.saveTask.done((trans: transformer) => this.updateUrl(this.editedTransformer().name()));
             dialog.show(saveTransformerWithNewNameViewModel);
 
         } else {
@@ -109,15 +109,19 @@ class editTransformer extends viewModelBase {
             new saveTransformerCommand(this.editedTransformer(), this.activeDatabase())
                 .execute()
                 .done(() => {
-                    //this.editedTransformer(trans);
                     if (!this.isEditingExistingTransformer()) {
                         this.isEditingExistingTransformer(true);
+                        this.updateUrl(this.editedTransformer().name());
                     }
                 });
         }
 
         // Resync Changes
         viewModelBase.dirtyFlag().reset();
+    }
+
+    updateUrl(transformerName:string) {
+        router.navigate(appUrl.forEditTransformer(transformerName, this.activeDatabase()));
     }
 
     deleteTransformer() {
