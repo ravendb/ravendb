@@ -32,7 +32,7 @@ class ctor {
     scrollThrottleTimeoutHandle = 0;
     firstVisibleRow: row = null;
     documentsSourceSubscription: KnockoutSubscription = null;
-    hasId =  ko.observable<Boolean>(false);
+    isIndexMapReduce :KnockoutObservable<boolean>;
     
 
     settings: {
@@ -46,6 +46,7 @@ class ctor {
         useContextMenu: boolean;
         maxHeight: string;
         customColumnParams: { [column: string]: customColumnParams };
+        isIndexMapReduce:KnockoutObservable<boolean>;
     }
  
     activate(settings: any) {
@@ -54,19 +55,26 @@ class ctor {
             dynamicHeightBottomMargin: 0,
             selectedIndices: ko.observableArray(),
             showCheckboxes: true,
-            showIds: ko.observable<boolean>(true),
+            showIds: true,
             useContextMenu: true,
             maxHeight: 'none',
             customColumnParams: {},
+            isIndexMapReduce: ko.observable<boolean>(true)
         };
         this.settings = $.extend(defaults, settings);
+
+
+        if (!!settings.isIndexMapReduce) {
+            this.isIndexMapReduce = settings.isIndexMapReduce;
+        } else {
+            this.isIndexMapReduce = ko.observable<boolean>(false);
+        }
 
         this.items = this.settings.documentsSource();
         this.focusableGridSelector = this.settings.gridSelector + " .ko-grid";
         this.virtualHeight = ko.computed(() => this.rowHeight * this.virtualRowCount());
-        if (this.settings.showCheckboxes !== false) {
-            this.columns.push(new column("__IsChecked", 38));
-        }
+
+        this.refreshIdAndCheckboxColumn();
 
         this.documentsSourceSubscription = this.settings.documentsSource.subscribe(list => {
             this.recycleRows().forEach(r => {
@@ -78,8 +86,12 @@ class ctor {
             this.columns.remove(c => (c.name !== 'Id' && c.name !== '__IsChecked'));
             this.gridViewport.scrollTop(0);
             this.onGridScrolled();
+
+            this.refreshIdAndCheckboxColumn();
         });
     }
+
+
 
     // Attached is called by Durandal when the view is attached to the DOM.
     // We use this to setup some UI-specific things like context menus, row creation, keyboard shortcuts, etc.
@@ -167,18 +179,36 @@ class ctor {
         var untypedGrid: any = this.grid;
         untypedGrid.contextmenu({
             target: '#gridContextMenu',
-            before: (e: MouseEvent) => { 
+            before: (e: MouseEvent) => {
 
-                // Select any right-clicked row.
-                var parentRow = $(e.target).parent(".ko-grid-row");
-                var rightClickedElement: row = parentRow.length ? ko.dataFor(parentRow[0]) : null;
-                if (rightClickedElement && rightClickedElement.isChecked != null && !rightClickedElement.isChecked()) {
-                    this.toggleRowChecked(rightClickedElement, e.shiftKey);
+                if (this.settings.showCheckboxes == true && !this.isIndexMapReduce()) {
+                    // Select any right-clicked row.
+                    var parentRow = $(e.target).parent(".ko-grid-row");
+                    var rightClickedElement: row = parentRow.length ? ko.dataFor(parentRow[0]) : null;
+                    if (rightClickedElement && rightClickedElement.isChecked != null && !rightClickedElement.isChecked()) {
+                        this.toggleRowChecked(rightClickedElement, e.shiftKey);
+                    }
                 }
-
                 return true;
             }
         });
+    }
+
+    refreshIdAndCheckboxColumn() {
+        var containsId = this.columns().first(x=> x.name == "Id");
+
+        if (!containsId && !this.isIndexMapReduce()) {
+            if (this.settings.showCheckboxes !== false) {
+                this.columns.push(new column("__IsChecked", 38));
+            }
+            if (this.settings.showIds !== false) {
+                this.columns.push(new column("Id", ctor.idColumnWidth));
+            }
+            this.columns.valueHasMutated();
+        } else if (containsId && this.isIndexMapReduce()) {
+            this.columns.remove(c => c.name === 'Id' || c.name === "__IsChecked");
+            this.columns.valueHasMutated();
+        }
     }
 
     loadRowData() {
@@ -188,28 +218,14 @@ class ctor {
             var firstVisibleIndex = this.firstVisibleRow.rowIndex();
             var fetchTask = this.items.fetch(firstVisibleIndex, this.recycleRows().length);
             fetchTask.done((resultSet: pagedResultSet) => {
-
-                var containsId = this.columns().first(x=> x.name == "Id");
-                var rowHasId = false;
-                if (resultSet.items.length > 0) {
-                    if (resultSet.items[0].getId()) {
-                        rowHasId = !!resultSet.items[0].getId();
-                    }
-                }
-
-                if (!containsId && rowHasId && this.settings.showIds) {
-                    this.columns.push(new column("Id", ctor.idColumnWidth));
-                    this.hasId(true);
-                } else if (containsId && !rowHasId && this.settings.showIds) {
-                    this.hasId(false);
-                    this.columns.remove(c => (c.name === 'Id'));
-                }
                 var firstVisibleRowIndexHasChanged = firstVisibleIndex !== this.firstVisibleRow.rowIndex();
                 if (!firstVisibleRowIndexHasChanged) {
                     this.virtualRowCount(resultSet.totalResultCount);
                     resultSet.items.forEach((r, i) => this.fillRow(r, i + firstVisibleIndex));
                     this.ensureColumnsForRows(resultSet.items);
                 }
+
+                this.recycleRows.valueHasMutated();
             });
         }
     }

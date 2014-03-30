@@ -22,7 +22,7 @@ import document = require("models/document");
 class query extends viewModelBase {
 
     selectedIndex = ko.observable<string>();
-    indexNames = ko.observableArray<string>();
+    indexes = ko.observableArray<{name:string;hasReduce:boolean}>();
     editIndexUrl: KnockoutComputed<string>;
     termsUrl: KnockoutComputed<string>;
     statsUrl: KnockoutComputed<string>;
@@ -44,6 +44,10 @@ class query extends viewModelBase {
     rawJsonUrl = ko.observable<string>();
     collectionNames = ko.observableArray<string>();
     selectedIndexLabel: KnockoutComputed<string>;
+    isIndexMapReduce = ko.computed(() => {
+        var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
+        return !!currentIndex && currentIndex.hasReduce == true;
+    });
 
     static containerSelector = "#queryContainer";
 
@@ -80,9 +84,9 @@ class query extends viewModelBase {
     }
 
     selectInitialQuery(indexNameOrRecentQueryHash: string) {
-        if (!indexNameOrRecentQueryHash && this.indexNames().length > 0) {
-            this.setSelectedIndex(this.indexNames.first());
-        } else if (this.indexNames.contains(indexNameOrRecentQueryHash) || indexNameOrRecentQueryHash.indexOf("dynamic/") === 0 || indexNameOrRecentQueryHash === "dynamic") {
+        if (!indexNameOrRecentQueryHash && this.indexes().length > 0) {
+            this.setSelectedIndex(this.indexes.first().name);
+        } else if (this.indexes.first( i => i.name == indexNameOrRecentQueryHash) || indexNameOrRecentQueryHash.indexOf("dynamic/") === 0 || indexNameOrRecentQueryHash === "dynamic") {
             this.setSelectedIndex(indexNameOrRecentQueryHash);
         }
         else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
@@ -113,7 +117,12 @@ class query extends viewModelBase {
     fetchAllIndexes(): JQueryPromise<any> {
         return new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
-            .done((results: databaseStatisticsDto) => this.indexNames(results.Indexes.map(i => i.PublicName)));
+            .done((results: databaseStatisticsDto) => this.indexes(results.Indexes.map(i=> {
+            return {
+                name: i.PublicName,
+                hasReduce: !!i.LastReducedTimestamp
+            };
+        })));
     }
 
     fetchAllCollections(): JQueryPromise<any> {
