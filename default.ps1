@@ -80,7 +80,7 @@ task CompileHtml5 {
 	Remove-Item $build_dir\Html5\bin -Force -Recurse
 	Remove-Item $build_dir\Html5\obj -Force -Recurse
 	Remove-Item $build_dir\Html5\Properties -Force -Recurse
-	Remove-Item $build_dir\Html5\build -Force -Recurse
+	Remove-Item $build_dir\Html5\build -Force -Recurse -ErrorAction SilentlyContinue | Out-Null
 
 	Set-Location $build_dir\Html5
 	exec { & $tools_dir\zip.exe -9 -A -r $build_dir\Raven.Studio.Html5.zip *.* }
