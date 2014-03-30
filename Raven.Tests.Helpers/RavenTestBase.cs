@@ -56,12 +56,14 @@ namespace Raven.Tests.Helpers
 			pathsToDelete.Add(dataFolder);
 		}
 
-		protected string NewDataPath(string prefix = null)
+		protected string NewDataPath(string prefix = null, bool forceCreateDir = false)
 		{
 			if(prefix != null)
 				prefix = prefix.Replace("<", "").Replace(">", "");
 
 			var newDataDir = Path.GetFullPath(string.Format(@".\{1}-{0}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "TestDatabase", pathCount++));
+		    if (forceCreateDir && Directory.Exists(newDataDir) == false)
+		        Directory.CreateDirectory(newDataDir);
 			pathsToDelete.Add(newDataDir);
 			return newDataDir;
 		}

@@ -431,9 +431,6 @@
     <Compile Include="Server\RavenFS\Storage\Esent\TransactionalStorage.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\IdGenerator.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\Index.cs" />
-    <Compile Include="Server\RavenFS\Storage\Voron\Impl\IPersistenceSource.cs" />
-    <Compile Include="Server\RavenFS\Storage\Voron\Impl\MemoryMapPersistanceSource.cs" />
-    <Compile Include="Server\RavenFS\Storage\Voron\Impl\MemoryPersistanceSource.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\Table.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\TableBase.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\Tables.cs" />
