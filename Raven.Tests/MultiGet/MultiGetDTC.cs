@@ -23,8 +23,8 @@ namespace Raven.Tests.MultiGet
                         using (var session = docStore.OpenSession())
                         {
 
-                            Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-                                                              new ManyDocumentsViaDTC.DummyEnlistmentNotification(), EnlistmentOptions.None);
+                            Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id,
+                                                              new DummyEnlistmentNotification(), EnlistmentOptions.None);
 
                             var entity = new User { Name = "Ayende" };
                             session.Store(entity);

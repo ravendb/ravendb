@@ -4,9 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Tests;
 using Xunit;
 
-namespace Raven.Tests.Indexes
+namespace Raven.SlowTests.Issues
 {
 	public class RavenDB_1280 : RavenTest
 	{

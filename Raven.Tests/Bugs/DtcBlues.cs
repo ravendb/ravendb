@@ -21,8 +21,8 @@ namespace Raven.Tests.Bugs
 
                 using (var tx = new TransactionScope())
                 {
-                    Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-                                                      new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+                    Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id,
+                                                      new DummyEnlistmentNotification(),
                                                       EnlistmentOptions.None);
 
                     using (var session = store.OpenSession())
@@ -76,8 +76,8 @@ namespace Raven.Tests.Bugs
                     string id;
                     using (var tx = new TransactionScope())
                     {
-                        Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-                                                          new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+                        Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id,
+                                                          new DummyEnlistmentNotification(),
                                                           EnlistmentOptions.None);
 
                         using (var session = store.OpenSession())
@@ -119,8 +119,8 @@ namespace Raven.Tests.Bugs
                     string id;
                     using (var tx = new TransactionScope())
                     {
-                        Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-                                                          new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+                        Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id,
+                                                          new DummyEnlistmentNotification(),
                                                           EnlistmentOptions.None);
 
                         using (var session = store.OpenSession())

@@ -140,7 +140,7 @@ namespace Raven.Tests.MailingList
 		/// </summary>
 		private void ForceDistributedTransaction()
 		{
-			Transaction.Current.EnlistDurable(Guid.NewGuid(), new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+			Transaction.Current.EnlistDurable(Guid.NewGuid(), new DummyEnlistmentNotification(),
 											  EnlistmentOptions.None);
 		}
 	}
