@@ -48,8 +48,6 @@ task Init -depends Verify40, Clean {
 
 task Compile -depends Init {
 	
-	"Dummy file so msbuild knows there is one here before embedding as resource." | Out-File "$base_dir\Raven.Database\Server\WebUI\Raven.Studio.xap"
-	
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
 	# exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Utilities\Raven.ProjectRewriter\Raven.ProjectRewriter.csproj" /p:OutDir="$build_dir\" }
@@ -246,7 +244,8 @@ task CleanOutputDirectory {
 
 task CopyEmbeddedClient {
 	$all_client_dlls = @( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
-	"$base_dir\Raven.Client.Embedded\bin\$global:configuration\Raven.Client.Embedded.???")
+		"$build_dir\Raven.Studio.Html5.zip", 
+		"$base_dir\Raven.Client.Embedded\bin\$global:configuration\Raven.Client.Embedded.???")
 
 	$all_client_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\EmbeddedClient }
 }
@@ -282,6 +281,7 @@ task CopyClient {
 
 task CopyWeb {
 	@( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
+		"$build_dir\Raven.Studio.Html5.zip",
 		"$base_dir\Raven.Web\bin\Raven.Web.???"  ) | ForEach-Object { Copy-Item "$_" $build_dir\Output\Web\bin }
 	@("$base_dir\DefaultConfigs\web.config", 
 		"$base_dir\DefaultConfigs\NLog.Ignored.config" ) | ForEach-Object { Copy-Item "$_" $build_dir\Output\Web }
@@ -298,6 +298,7 @@ task CopyBundles {
 
 task CopyServer -depends CreateOutpuDirectories {
 	$server_files = @( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
+		"$build_dir\Raven.Studio.Html5.zip",
 		"$base_dir\Raven.Server\bin\$global:configuration\Raven.Server.???",
 		"$base_dir\DefaultConfigs\NLog.Ignored.config")
 	$server_files | ForEach-Object { Copy-Item "$_" $build_dir\Output\Server }
@@ -571,11 +572,13 @@ task CreateNugetPackages -depends Compile, InitNuget {
 	Copy-Item $base_dir\NuGet\RavenDB.Database.nuspec $nuget_dir\RavenDB.Database\RavenDB.Database.nuspec
 	@("Raven.Database.???") `
 		 |% { Copy-Item "$base_dir\Raven.Database\bin\$global:configuration\$_" $nuget_dir\RavenDB.Database\lib\net45 }
+	Copy-Item "$build_dir\Raven.Studio.Html5.zip" $nuget_dir\RavenDB.Database\lib\net45
 	
 	New-Item $nuget_dir\RavenDB.Server -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Server.nuspec $nuget_dir\RavenDB.Server\RavenDB.Server.nuspec
 	New-Item $nuget_dir\RavenDB.Server\tools -Type directory | Out-Null
 	@("Raven.Database.???", "Raven.Server.???") |% { Copy-Item "$base_dir\Raven.Server\bin\$global:configuration\$_" $nuget_dir\RavenDB.Server\tools }
+	Copy-Item "$build_dir\Raven.Studio.Html5.zip" $nuget_dir\RavenDB.Server\tools
 	@("Raven.Smuggler.???") |% { Copy-Item "$base_dir\Raven.Smuggler\bin\$global:configuration\$_" $nuget_dir\RavenDB.Server\tools }
 	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $nuget_dir\RavenDB.Server\tools\Raven.Server.exe.config
 
