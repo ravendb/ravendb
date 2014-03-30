@@ -428,9 +428,6 @@
     <Compile Include="Server\RavenFS\Storage\Esent\TransactionalStorage.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\IdGenerator.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\Index.cs" />
-    <Compile Include="Server\RavenFS\Storage\Voron\Impl\IPersistenceSource.cs" />
-    <Compile Include="Server\RavenFS\Storage\Voron\Impl\MemoryMapPersistanceSource.cs" />
-    <Compile Include="Server\RavenFS\Storage\Voron\Impl\MemoryPersistanceSource.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\Table.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\TableBase.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\Tables.cs" />
@@ -1090,10 +1087,7 @@
     <EmbeddedResource Include="Json\lodash.js" />
     <EmbeddedResource Include="Json\ECMAScript5.js" />
     <Content Include="FodyWeavers.xml" />
-		<EmbeddedResource Include="..\Raven.Studio.Html5\**" Exclude="*.dll.config">
-			<Link>Server\Html5Studio\%(RecursiveDir)%(Filename)%(Extension)</Link>
-		</EmbeddedResource>
-	</ItemGroup>
+  </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Commercial\RavenDB.public" />
     <None Include="App.config">
