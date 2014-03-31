@@ -260,7 +260,8 @@
     <Compile Include="Bundles\PeriodicBackups\Controllers\AdminPeriodicBackupController.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\AncestryPutTrigger.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualDeleteTrigger.cs" />
-    <Compile Include="EmbeddableDocumentStore.cs" />
+    <Compile Include="Client\EmbeddableDocumentStore.cs" />
+    <Compile Include="Client\EmbeddedDocumentStore.cs" />
     <Compile Include="Embedded\ResponseStream.cs" />
     <Compile Include="Impl\DTC\DtcNotSupportedTransactionalState.cs" />
     <Compile Include="Indexing\IndexMerging\ChangeRootReferenceVisitor.cs" />
@@ -322,7 +323,7 @@
     <Compile Include="Impl\PutSerialLock.cs" />
     <Compile Include="Indexing\IndependentBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
-    <Compile Include="LastCollectionEtags.cs" />
+    <Compile Include="Actions\LastCollectionEtags.cs" />
     <Compile Include="Linq\AttachmentForIndexing.cs" />
     <Compile Include="Plugins\AbstractIndexReaderWarmer.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsInReduce.cs" />

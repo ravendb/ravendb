@@ -7,7 +7,7 @@ using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 
-namespace Raven.Database
+namespace Raven.Database.Actions
 {
     public class LastCollectionEtags
     {
