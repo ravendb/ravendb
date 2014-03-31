@@ -7,6 +7,9 @@ import saveSqlReplicationsCommand = require("commands/saveSqlReplicationsCommand
 class sqlReplications extends viewModelBase {
 
     replications = ko.observableArray<sqlReplication>();
+    lastIndex = ko.computed(function() {
+        return this.replications().length - 1;
+    }, this);
 
     constructor() {
         super();
@@ -56,14 +59,15 @@ class sqlReplications extends viewModelBase {
     }
 
     addNewSqlReplication() {
-        $('.panel-collapse').each(function () {
-           $(this).attr('class', 'panel-collapse collapse');
-        });
         this.replications.push(sqlReplication.empty());
     }
 
     removeSqlReplication(repl: sqlReplication) {
         this.replications.remove(repl);
+    }
+
+    itemNumber = function(index) {
+        return index + 1;
     }
 }
 
