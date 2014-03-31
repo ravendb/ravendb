@@ -82,6 +82,15 @@ class appUrl {
         return "#databases/edit?" + docIdUrlPart + databaseUrlPart + pagedListInfo;
     }
 
+    static forEditItem(itemId: string, res: resource, itemIndex: number, collectionName?: string): string {
+        var databaseUrlPart = appUrl.getEncodedResourcePart(res);
+        var itemIdUrlPart = itemId ? "&id=" + encodeURIComponent(itemId) : "";
+
+        var pagedListInfo = collectionName && itemIndex != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + itemIndex : "";
+        var resourceTag = res instanceof filesystem ? "#filesystems" : "#databases";       
+        return resourceTag+"/edit?" + itemIdUrlPart + databaseUrlPart + pagedListInfo;
+    } 
+
     static forNewDoc(db: database): string {
         var databaseUrlPart = appUrl.getEncodedDbPart(db);
         return "#databases/edit?" + databaseUrlPart;
@@ -313,6 +322,24 @@ class appUrl {
         return "#filesystems/configuration?" + filesystemPart;
     }
 
+    static forFilesystemUploadFile(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/upload?" + filesystemPart;
+    }
+
+    /**
+    * Gets the resource from the current web browser address. Returns the system database if no resource name is found.
+    */
+    static getResource(): resource {
+        var appFilesystem = appUrl.getFilesystem()
+        if (appFilesystem != appUrl.getDefaultFilesystem()) {
+            return appFilesystem;
+        }
+        else {
+            return appUrl.getDefaultFilesystem();
+        }
+    }
+
 	/**
 	* Gets the database from the current web browser address. Returns the system database if no database name is found.
 	*/
@@ -424,6 +451,17 @@ class appUrl {
 	static forCurrentDatabase(): computedAppUrls {
 		return appUrl.currentDbComputeds;
 	}
+
+    private static getEncodedResourcePart(res?: resource) {
+        if (!res)
+            return "";
+        if (res instanceof filesystem) {
+            return appUrl.getEncodedFsPart(<filesystem>res);
+        }
+        else {
+            return appUrl.getEncodedDbPart(<database>res);
+        }
+    }
 
 	private static getEncodedDbPart(db?: database) {
 		return db ? "&database=" + encodeURIComponent(db.name) : "";
