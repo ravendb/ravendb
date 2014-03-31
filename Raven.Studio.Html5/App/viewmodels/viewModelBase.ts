@@ -146,7 +146,6 @@ class viewModelBase {
 
     private modelPollingStart() {
         this.modelPolling();
-        this.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
         this.activeDatabase.subscribe(() => this.forceModelPolling());
     }
 
