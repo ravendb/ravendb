@@ -1,9 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
-using Amazon.SimpleEmail.Model;
-using ICSharpCode.NRefactory.CSharp.Refactoring.ExtractMethod;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Linq;
