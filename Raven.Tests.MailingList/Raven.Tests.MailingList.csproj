@@ -79,6 +79,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Tests\Properties\TestAssemblyInfo.cs">
+      <Link>Properties\TestAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="AaronSt.cs" />
     <Compile Include="AccessControlHeaders.cs" />
     <Compile Include="Accounts.cs" />
@@ -298,7 +304,6 @@
     <Compile Include="ProjectingIdFromNestedClass.cs" />
     <Compile Include="ProjectionShouldNotLoadDocument.cs" />
     <Compile Include="ProjectionTests.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QueryExplanation.cs" />
     <Compile Include="QueryIn.cs" />
     <Compile Include="QueryingIntArray.cs" />

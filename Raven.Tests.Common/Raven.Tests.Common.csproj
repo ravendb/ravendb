@@ -75,6 +75,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Tests\Properties\TestAssemblyInfo.cs">
+      <Link>Properties\TestAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Attributes\AdminOnlyWithIIS7Installed.cs" />
     <Compile Include="Analyzers\NGramTokenFilter.cs" />
     <Compile Include="Analyzers\NGramAnalyzer.cs" />
@@ -100,7 +106,6 @@
     <Compile Include="Util\IISExpressTestClient.cs" />
     <Compile Include="Attributes\InlineValueAttribute.cs" />
     <Compile Include="NoDisposalNeeded.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RavenTest.cs" />
     <Compile Include="RavenTestBase.cs" />
     <Compile Include="ReplicationBase.cs" />
