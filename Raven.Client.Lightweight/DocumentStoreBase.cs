@@ -43,6 +43,11 @@ namespace Raven.Client
 	    {
 	        get { return listeners; }
 	    }
+	    public void SetListeners(DocumentSessionListeners newListeners)
+	    {
+            this.listeners = newListeners;
+	    }
+
 	    public abstract void Dispose();
 		
 		/// <summary>
@@ -195,7 +200,7 @@ namespace Raven.Client
 				throw new InvalidOperationException("You cannot open a session or access the database commands before initializing the document store. Did you forget calling Initialize()?");
 		}
 
-		private readonly DocumentSessionListeners listeners = new DocumentSessionListeners();
+		private DocumentSessionListeners listeners = new DocumentSessionListeners();
 
 		/// <summary>
 		/// Registers the conversion listener.

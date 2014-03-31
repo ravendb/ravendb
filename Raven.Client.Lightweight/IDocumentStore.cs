@@ -184,5 +184,6 @@ namespace Raven.Client
 
         DocumentSessionListeners Listeners { get; }
 
+	    void SetListeners(DocumentSessionListeners listeners);
 	}
 }

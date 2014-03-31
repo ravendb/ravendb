@@ -95,6 +95,8 @@ namespace Raven.Client.Embedded
 
         public IDocumentStore Initialize()
         {
+            if (_inner != null)
+                return this;
             if (string.IsNullOrEmpty(Url) == false)
             {
                 _inner = new DocumentStore
@@ -123,7 +125,7 @@ namespace Raven.Client.Embedded
                 };
             }
 
-            _inner.Listeners.SetFrom(Listeners);
+            _inner.SetListeners(Listeners);
             _inner.Initialize();
             return this;
         }
@@ -268,6 +270,10 @@ namespace Raven.Client.Embedded
         }
 
         public DocumentSessionListeners Listeners { get; private set; }
+        public void SetListeners(DocumentSessionListeners listeners)
+        {
+            this.Listeners = listeners;
+        }
 
         ///<summary>
         /// Whatever we should also host an HTTP endpoint for the document database

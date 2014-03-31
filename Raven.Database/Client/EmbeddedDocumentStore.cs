@@ -322,6 +322,11 @@ namespace Raven.Database.Client
         }
 
         public DocumentSessionListeners Listeners { get { return server.DocumentStore.Listeners; } }
+        public void SetListeners(DocumentSessionListeners listeners)
+        {
+            server.DocumentStore.SetListeners(listeners);
+        }
+
         public string DefaultDatabase
         {
             get { return server.DocumentStore.DefaultDatabase; }
