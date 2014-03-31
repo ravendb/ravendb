@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.Client.Document;
 using Raven.Tests.Common;
+using Raven.Tests.Common.Dto;
 
 using Xunit;
 
