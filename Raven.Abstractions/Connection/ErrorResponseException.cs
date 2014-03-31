@@ -33,10 +33,11 @@ namespace Raven.Abstractions.Connection
             Response = response;
         }
 
-        public ErrorResponseException(HttpResponseMessage response, string msg)
+        public ErrorResponseException(HttpResponseMessage response, string msg, string responseString= null)
             : base(msg)
         {
             Response = response;
+            ResponseString = responseString;
         }
 
         public static ErrorResponseException FromResponseMessage(HttpResponseMessage response, bool readErrorString = true)

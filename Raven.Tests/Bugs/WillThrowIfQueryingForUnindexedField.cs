@@ -73,13 +73,13 @@ namespace Raven.Tests.Bugs
 					Map = "from u in docs select new { u.Name }",
 				});
 
-				var argumentException = Assert.Throws<ArgumentException>(() => store.DatabaseCommands.Query("test", new IndexQuery
+                var argumentException = Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.Query("test", new IndexQuery
 				{
 					Query = "Name:Oren",
 					SortedFields = new[]{new SortedField("User"), }
 				}, new string[0]));
 
-				Assert.Equal("The field 'User' is not indexed, cannot sort on fields that are not indexed", argumentException.Message);
+				Assert.Contains("The field 'User' is not indexed, cannot sort on fields that are not indexed", argumentException.InnerException.Message);
 			}
 		}
 	}
