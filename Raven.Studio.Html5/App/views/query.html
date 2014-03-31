@@ -20,8 +20,8 @@
                     <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
-                    <!-- ko foreach: indexNames -->
-                    <li data-bind="click: $root.setSelectedIndex.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
+                    <!-- ko foreach: indexes -->
+                    <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
                     <!-- /ko -->
                     <li class="divider"></li>
                     <!-- ko foreach: collectionNames -->
@@ -213,7 +213,7 @@
                 <div class="col-md-9">
                     <div id="queryResultsPanel" class="panel panel-default">
                         <div class="panel-body">
-                            <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px' }"></div>
+                            <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px', isIndexMapReduce:isIndexMapReduce }"></div>
                         </div>
                     </div>
                 </div>
@@ -224,7 +224,7 @@
                         <li class="list-group-item" data-bind="text: 'Status: ' + IsStale ? 'Stale' : 'Up to date'"></li>
                         <li class="list-group-item" data-bind="text: 'Duration: ' + DurationMilliseconds + 'ms'"></li>
                         <li class="list-group-item">
-                            Index: <a data-bind="text: $root.selectedIndex, attr: { href: $root.selectedIndexEditUrl }"></a>
+                            Index: <a data-bind="text: IndexName, attr: { href: $root.selectedIndexEditUrl }"></a>
                         </li>
                         <li class="list-group-item" data-bind="text: 'ETag: ' + ResultEtag"></li>
                         <li class="list-group-item"><a target='_blank' data-bind="attr: { href: $root.rawJsonUrl }">Raw JSON</a></li>
