@@ -13,6 +13,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import customColumnParams = require('models/customColumnParams');
 import customColumns = require('models/customColumns');
+import selectColumns = require('viewmodels/selectColumns');
 
 class documents extends viewModelBase {
 
@@ -22,10 +23,12 @@ class documents extends viewModelBase {
     allDocumentsCollection: collection;
     collectionToSelectName: string;
     currentCollectionPagedItems = ko.observable<pagedList>();
-    currentColumnsParams = customColumns.empty();
+    currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
     selectedDocumentIndices = ko.observableArray<number>();
     isSelectAll = ko.observable(false);
     hasAnyDocumentsSelected: KnockoutComputed<boolean>;
+    contextName = ko.observable<string>('');
+    currentCollection = ko.observable <collection>();
 
     static gridSelector = "#documentsGrid";
 
@@ -85,16 +88,21 @@ class documents extends viewModelBase {
             var customColumnsCommand = selected.isAllDocuments ?
                 getCustomColumnsCommand.forAllDocuments(this.activeDatabase()) : getCustomColumnsCommand.forCollection(selected.name, this.activeDatabase());
 
+            this.contextName(customColumnsCommand.docName);
+
             customColumnsCommand.execute().done((dto: customColumnsDto) => {
                 if (dto) {
-                    this.currentColumnsParams.columns($.map(dto.Columns, c => new customColumnParams(c)));
+                    this.currentColumnsParams().columns($.map(dto.Columns, c => new customColumnParams(c)));
+                    this.currentColumnsParams().customMode(true);
                 } else {
                     // use default values!
-                    this.currentColumnsParams.columns.removeAll();
+                    this.currentColumnsParams().columns.removeAll();
+                    this.currentColumnsParams().customMode(false);
                 }
 
                 var pagedList = selected.getDocuments();
                 this.currentCollectionPagedItems(pagedList);
+                this.currentCollection(selected);
             });
         }
     }
@@ -115,6 +123,17 @@ class documents extends viewModelBase {
         collection.activate();
         var documentsWithCollectionUrl = appUrl.forDocuments(collection.name, this.activeDatabase());
         router.navigate(documentsWithCollectionUrl, false);
+    }
+
+    selectColumns() {
+        var selectColumnsViewModel: selectColumns = new selectColumns(this.currentColumnsParams().clone(), this.contextName(), this.activeDatabase());
+        app.showDialog(selectColumnsViewModel);
+        selectColumnsViewModel.nextTask.done((cols) => {
+            this.currentColumnsParams(cols);
+
+            var pagedList = this.currentCollection().getDocuments();
+            this.currentCollectionPagedItems(pagedList);
+        });
     }
 
     fetchCollections(db: database): JQueryPromise<Array<collection>> {

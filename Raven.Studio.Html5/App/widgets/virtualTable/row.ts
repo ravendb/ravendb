@@ -90,7 +90,7 @@ class row {
             }
         }
 
-        var colParam = this.viewModel.settings.customColumns.findConfigFor(propertyName);
+        var colParam = this.viewModel.settings.customColumns().findConfigFor(propertyName);
         // note: we just inform here about custom template - without specific name of this template.
         if (colParam && colParam.template() !== cell.defaultTemplate) {
             return cell.customTemplate;

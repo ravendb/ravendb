@@ -12,6 +12,18 @@ class customColumnParams {
         this.width(dto.DefaultWidth);
     }
 
+    static empty() {
+        return new customColumnParams({ Header: '', Binding: '', DefaultWidth: 200 });
+    }
+
+    toDto() {
+        return {
+            'Header': this.header(),
+            'Binding': this.binding(),
+            'DefaultWidth': this.width(),
+        };
+    }
+
 }
 
 export = customColumnParams;

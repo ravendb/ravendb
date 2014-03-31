@@ -170,8 +170,10 @@
     <TypeScriptCompile Include="App\commands\saveScriptedIndexesCommand.ts" />
     <TypeScriptCompile Include="App\models\customColumnParams.ts" />
     <TypeScriptCompile Include="App\models\customColumns.ts" />
+    <TypeScriptCompile Include="App\viewmodels\selectColumns.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\selectColumns.html" />
     <Content Include="App\views\createEncryption.html" />
     <Content Include="App\views\conflicts.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />

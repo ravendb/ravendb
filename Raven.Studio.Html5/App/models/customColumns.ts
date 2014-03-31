@@ -1,19 +1,39 @@
 import customColumnParams = require("models/customColumnParams");
+import document = require("models/document");
 
 class customColumns {
 
     columns = ko.observableArray<customColumnParams>();
+    customMode = ko.observable(false);
 
     constructor(dto: customColumnsDto) {
         this.columns($.map(dto.Columns, c => new customColumnParams(c)));
+        this.customMode(true);
     }
 
     static empty() {
         return new customColumns({ Columns: [] });
     }
 
+    copyFrom(src: customColumns) {
+        this.columns(src.columns());
+        this.customMode(src.customMode());
+    }
+
+    clone(): customColumns {
+        var copy = new customColumns(this.toDto());
+        copy.customMode(this.customMode());
+        return copy;
+    }
+
     hasOverrides() {
-        return this.columns().length > 0;
+        return this.customMode() && this.columns().length > 0;
+    }
+
+    toDto(): customColumnsDto {
+        return {
+            'Columns': $.map(this.columns(), c => c.toDto())
+        };
     }
 
     findConfigFor(binding: string): customColumnParams {

@@ -6,8 +6,8 @@ class getCustomColumnsCommand extends getDocumentWithMetadataCommand {
 
     static docsPrefix = "Raven/Studio/Columns/";
 
-    constructor(db: database, docName: string) {
-        super(getCustomColumnsCommand.docsPrefix + docName, db, true);
+    constructor(db: database, public docName: string) {
+        super(docName, db, true);
     }
 
     execute(): JQueryPromise<alertContainerDto> {
@@ -15,16 +15,17 @@ class getCustomColumnsCommand extends getDocumentWithMetadataCommand {
     }
 
     static forIndex(indexName: string, db: database): getCustomColumnsCommand {
-        return new getCustomColumnsCommand(db, "Index/" + indexName);
+        return new getCustomColumnsCommand(db, getCustomColumnsCommand.docsPrefix + "Index/" + indexName);
     }
 
     static forCollection(collection: string, db: database): getCustomColumnsCommand {
-        return new getCustomColumnsCommand(db, "Collection/" + collection);
+        return new getCustomColumnsCommand(db, getCustomColumnsCommand.docsPrefix + "Collection/" + collection);
     }
 
     static forAllDocuments(db: database) :getCustomColumnsCommand {
-        return new getCustomColumnsCommand(db, "AllDocuments");
+        return new getCustomColumnsCommand(db, getCustomColumnsCommand.docsPrefix + "AllDocuments");
     }
+
 
 
 }

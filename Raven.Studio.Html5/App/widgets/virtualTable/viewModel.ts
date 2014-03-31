@@ -48,7 +48,7 @@ class ctor {
         useContextMenu: boolean;
         maxHeight: string;
         isIndexMapReduce: KnockoutObservable<boolean>;
-        customColumns: customColumns;
+        customColumns: KnockoutObservable<customColumns>;
     }
 
     constructor() {
@@ -64,8 +64,8 @@ class ctor {
             showIds: true,
             useContextMenu: true,
             maxHeight: 'none',
-            customColumns: customColumns.empty()
             isIndexMapReduce: ko.observable<boolean>(true)
+            customColumns: ko.observable(customColumns.empty())
         };
         this.settings = $.extend(defaults, settings);
 
@@ -274,7 +274,7 @@ class ctor {
 
     getColumnWidth(binding: string): number {
 
-        var customConfig = this.settings.customColumns.findConfigFor(binding);
+        var customConfig = this.settings.customColumns().findConfigFor(binding);
         if (customConfig) {
             return customConfig.width();
         }
@@ -288,8 +288,8 @@ class ctor {
     }
 
     getColumnName(binding: string): string {
-        if (this.settings.customColumns.hasOverrides()) {
-            var customConfig = this.settings.customColumns.findConfigFor(binding);
+        if (this.settings.customColumns().hasOverrides()) {
+            var customConfig = this.settings.customColumns().findConfigFor(binding);
             if (customConfig) {
                 return customConfig.header();
             }
@@ -310,9 +310,9 @@ class ctor {
 
         var columnsNeeded = {};
 
-        if (this.settings.customColumns.hasOverrides()) {
+        if (this.settings.customColumns().hasOverrides()) {
 
-            var colParams = this.settings.customColumns.columns();
+            var colParams = this.settings.customColumns().columns();
             for (var i = 0; i < colParams.length; i++) {
                 var colParam = colParams[i];
                 columnsNeeded[colParam.binding()] = null;
@@ -411,8 +411,8 @@ class ctor {
     }
 
     getTemplateFor(columnName: string): string {
-        if (this.settings.customColumns.hasOverrides()) {
-            var customConfig = this.settings.customColumns.findConfigFor(columnName);
+        if (this.settings.customColumns().hasOverrides()) {
+            var customConfig = this.settings.customColumns().findConfigFor(columnName);
             if (customConfig) {
                 return customConfig.template();
             }
