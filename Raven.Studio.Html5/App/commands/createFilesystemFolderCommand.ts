@@ -4,10 +4,7 @@ import collection = require("models/collection");
 
 class createFilesystemFolderCommand extends commandBase {
 
-    /**
-    * @param ownerDb The database the collections will belong to.
-    */
-    constructor() {
+    constructor(private fs: filesystem) {
         super();
 
         throw new Error("Not Implemented");

@@ -90,9 +90,6 @@ class filesystems extends viewModelBase {
     }
 
     newFilesystem() {
-        // Why do an inline require here? Performance.
-        // Since the database page is the common landing page, we want it to load quickly.
-        // Since the createDatabase page isn't required up front, we pull it in on demand.
         require(["viewmodels/createFilesystem"], createFilesystem => {
             var createFilesystemViewModel: createFilesystem = new createFilesystem(this.filesystems);
             createFilesystemViewModel
