@@ -18,6 +18,10 @@ import deleteDocumentsMatchingQueryConfirm = require("viewmodels/deleteDocuments
 import getStoredQueriesCommand = require("commands/getStoredQueriesCommand");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
 import document = require("models/document");
+import customColumnParams = require('models/customColumnParams');
+import customColumns = require('models/customColumns');
+import selectColumns = require('viewmodels/selectColumns');
+import getCustomColumnsCommand = require('commands/getCustomColumnsCommand');
 
 class query extends viewModelBase {
 
@@ -49,6 +53,10 @@ class query extends viewModelBase {
         var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
         return !!currentIndex && currentIndex.hasReduce == true;
     });
+    contextName = ko.observable<string>();
+
+    currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
+
     static containerSelector = "#queryContainer";
 
     constructor() {
@@ -83,6 +91,25 @@ class query extends viewModelBase {
             this.fetchAllIndexes(),
             this.fetchRecentQueries()
             ).done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
+
+        this.selectedIndex.subscribe(index => this.onIndexChanged(index));
+    }
+
+    onIndexChanged(newIndexName: string) {
+        var command = getCustomColumnsCommand.forIndex(newIndexName, this.activeDatabase());
+        this.contextName(command.docName);
+
+        command.execute().done((dto: customColumnsDto) => {
+            if (dto) {
+                this.currentColumnsParams().columns($.map(dto.Columns, c => new customColumnParams(c)));
+                this.currentColumnsParams().customMode(true);
+            } else {
+                // use default values!
+                this.currentColumnsParams().columns.removeAll();
+                this.currentColumnsParams().customMode(false);
+            }
+            
+        });
     }
 
     selectInitialQuery(indexNameOrRecentQueryHash: string) {
@@ -349,6 +376,18 @@ class query extends viewModelBase {
             .showDialog(viewModel)
             .done(() => this.runQuery());
     }
+
+    selectColumns() {
+        var selectColumnsViewModel: selectColumns = new selectColumns(this.currentColumnsParams().clone(), this.contextName(), this.activeDatabase());
+        app.showDialog(selectColumnsViewModel);
+        selectColumnsViewModel.nextTask.done((cols) => {
+            this.currentColumnsParams(cols);
+
+            this.runQuery();
+            
+        });
+    }
+
 }
 
 export = query;

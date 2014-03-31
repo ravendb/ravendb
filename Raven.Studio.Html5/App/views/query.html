@@ -73,6 +73,9 @@
                 </ul>
             </div>
             <a class="btn btn-default use-bootstrap-tooltip" data-bind="attr: { href: editIndexUrl }, enable: hasSelectedIndex" title="Edit the index (F2)"><i class="fa fa-pencil"></i></a>
+            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: selectColumns" title="Choose columns...">
+                <i class="fa fa-table"></i>
+            </button>
         </div>
         <div class="btn-group">
             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
@@ -213,7 +216,7 @@
                 <div class="col-md-9">
                     <div id="queryResultsPanel" class="panel panel-default">
                         <div class="panel-body">
-                            <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px', isIndexMapReduce:isIndexMapReduce }"></div>
+                            <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, documentsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px', isIndexMapReduce: isIndexMapReduce }"></div>
                         </div>
                     </div>
                 </div>
