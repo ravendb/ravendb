@@ -223,7 +223,6 @@
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />
     <Content Include="App\views\viewSystemDatabaseConfirm.html" />
     <Content Include="App\views\windowsAuth.html" />
-    <TypeScriptCompile Include="App\widgets\virtualTable\customColumnParams.ts" />
     <Content Include="Content\app.min.css">
       <DependentUpon>app.css</DependentUpon>
     </Content>

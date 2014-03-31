@@ -64,8 +64,8 @@ class ctor {
             showIds: true,
             useContextMenu: true,
             maxHeight: 'none',
-            isIndexMapReduce: ko.observable<boolean>(true)
-            customColumns: ko.observable(customColumns.empty())
+            isIndexMapReduce: ko.observable<boolean>(true),
+            customColumns: ko.observable(customColumns.empty()),
         };
         this.settings = $.extend(defaults, settings);
 
@@ -202,7 +202,7 @@ class ctor {
     }
 
     refreshIdAndCheckboxColumn() {
-        var containsId = this.columns().first(x=> x.name == "Id");
+        var containsId = this.columns().first(x=> x.binding == "Id");
 
         if (!containsId && !this.isIndexMapReduce()) {
             if (this.settings.showCheckboxes !== false) {
@@ -213,7 +213,7 @@ class ctor {
             }
             this.columns.valueHasMutated();
         } else if (containsId && this.isIndexMapReduce()) {
-            this.columns.remove(c => c.name === 'Id' || c.name === "__IsChecked");
+            this.columns.remove(c => c.binding === 'Id' || c.binding === "__IsChecked");
             this.columns.valueHasMutated();
         }
     }
