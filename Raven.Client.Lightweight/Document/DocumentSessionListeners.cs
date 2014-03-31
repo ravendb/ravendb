@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Raven.Client.Listeners;
 
@@ -8,6 +9,8 @@ namespace Raven.Client.Document
     /// </summary>
     public class DocumentSessionListeners
     {
+        private bool closed;
+
         /// <summary>
         ///     Create a new instance of this class
         /// </summary>
@@ -49,41 +52,54 @@ namespace Raven.Client.Document
 
         public void RegisterListener(IDocumentConversionListener conversionListener)
         {
+            if(closed)
+                throw new InvalidOperationException("Cannot modify after listeners were closed");
             ConversionListeners = ConversionListeners.Concat(new[] {conversionListener}).ToArray();
         }
 
 
         public void RegisterListener(IExtendedDocumentConversionListener conversionListener)
         {
-            ExtendedConversionListeners = ExtendedConversionListeners.Concat(new[] {conversionListener}).ToArray();
+            if (closed)
+                throw new InvalidOperationException("Cannot modify after listeners were closed");
+            ExtendedConversionListeners = ExtendedConversionListeners.Concat(new[] { conversionListener }).ToArray();
         }
 
 
         public void RegisterListener(IDocumentQueryListener conversionListener)
         {
-            QueryListeners = QueryListeners.Concat(new[] {conversionListener}).ToArray();
+            if (closed)
+                throw new InvalidOperationException("Cannot modify after listeners were closed");
+            QueryListeners = QueryListeners.Concat(new[] { conversionListener }).ToArray();
         }
 
 
         public void RegisterListener(IDocumentStoreListener conversionListener)
         {
-            StoreListeners = StoreListeners.Concat(new[] {conversionListener}).ToArray();
+            if (closed)
+                throw new InvalidOperationException("Cannot modify after listeners were closed");
+            StoreListeners = StoreListeners.Concat(new[] { conversionListener }).ToArray();
         }
 
 
         public void RegisterListener(IDocumentDeleteListener conversionListener)
         {
-            DeleteListeners = DeleteListeners.Concat(new[] {conversionListener}).ToArray();
+            if (closed)
+                throw new InvalidOperationException("Cannot modify after listeners were closed");
+            DeleteListeners = DeleteListeners.Concat(new[] { conversionListener }).ToArray();
         }
 
 
         public void RegisterListener(IDocumentConflictListener conversionListener)
         {
-            ConflictListeners = ConflictListeners.Concat(new[] {conversionListener}).ToArray();
+            if (closed)
+                throw new InvalidOperationException("Cannot modify after listeners were closed");
+            ConflictListeners = ConflictListeners.Concat(new[] { conversionListener }).ToArray();
         }
 
         public void SetFrom(DocumentSessionListeners other)
         {
+            other.closed = true;
             DeleteListeners = other.DeleteListeners;
             QueryListeners = other.QueryListeners;
             ConversionListeners = other.ConversionListeners;
