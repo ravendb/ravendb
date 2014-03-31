@@ -9,11 +9,13 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class WillNotFailSystemIfServerIsNotAvailableOnStartup : RemoteClientTest
+	public class WillNotFailSystemIfServerIsNotAvailableOnStartup : RavenTest
 	{
 		[Fact]
 		public void CanStartWithoutServer()

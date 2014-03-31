@@ -3,11 +3,13 @@ using System.Linq;
 using Raven.Abstractions;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class RacielrodTest : RemoteClientTest
+	public class RacielrodTest : RavenTest
 	{
 		[Fact]
 		public void WhenNoQuery_CanOrderByNestedProperty()

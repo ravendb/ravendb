@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Linq;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class VeryBigResultSetRemote : RemoteClientTest
+	public class VeryBigResultSetRemote : RavenTest
 	{
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{

@@ -9,11 +9,13 @@ using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Database.Indexing;
 using Raven.Server;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Queries
 {
-	public class TermsRemote : RemoteClientTest
+	public class TermsRemote : RavenTest
 	{
 		[Fact]
 		public void CanGetTermsForIndex()

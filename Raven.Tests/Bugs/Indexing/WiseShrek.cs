@@ -13,6 +13,7 @@ using Lucene.Net.Store;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Config;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
 using Raven.Tests.Indexes;
 using Xunit;
 using Version = Lucene.Net.Util.Version;

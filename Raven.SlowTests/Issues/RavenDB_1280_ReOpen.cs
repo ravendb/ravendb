@@ -9,6 +9,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Attributes;
+
 using Xunit;
 using Xunit.Extensions;
 

@@ -1,11 +1,13 @@
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Queries
 {
-	public class QueryingWithDynamicRavenQueryInspector : RemoteClientTest
+	public class QueryingWithDynamicRavenQueryInspector : RavenTest
 	{
 		[Fact()]
 		public void CanInitializeDynamicRavenQueryInspector()

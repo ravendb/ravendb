@@ -1,5 +1,7 @@
 ﻿using System;
 using Raven.Client.Extensions;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Embedded

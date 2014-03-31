@@ -5,11 +5,13 @@
 //-----------------------------------------------------------------------
 using System;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Document
 {
-	public class WhenUsingMultipleUnshardedServers : RemoteClientTest
+	public class WhenUsingMultipleUnshardedServers : RavenTest
 	{
 		private readonly int port1;
 		private readonly int port2;

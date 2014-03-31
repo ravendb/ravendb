@@ -3,11 +3,13 @@ using System.Globalization;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Queries
 {
-	public class Includes : RemoteClientTest
+	public class Includes : RavenTest
 	{
 		private readonly IDocumentStore store;
 

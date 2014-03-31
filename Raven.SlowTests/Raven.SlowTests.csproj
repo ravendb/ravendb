@@ -34,11 +34,6 @@
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
     <Reference Include="System.Transactions" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
     <Reference Include="xunit">
       <HintPath>..\SharedLibs\xunit\xunit.dll</HintPath>
     </Reference>
@@ -70,17 +65,9 @@
       <Project>{212823cd-25e1-41ac-92d1-d6df4d53fc85}</Project>
       <Name>Raven.Database</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Tests.Core\Raven.Tests.Core.csproj">
-      <Project>{93287fba-732a-4603-9bbe-9cfdc82fc8be}</Project>
-      <Name>Raven.Tests.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
-      <Project>{14F2D508-8E06-407B-9451-97E99538E26B}</Project>
-      <Name>Raven.Tests.Helpers</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
-      <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>
-      <Name>Raven.Tests</Name>
+    <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
+      <Project>{381234cc-8aa7-41ff-8cad-22330e15f993}</Project>
+      <Name>Raven.Tests.Common</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -14,6 +14,8 @@ using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 using Raven.Smuggler;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Smuggler

@@ -12,6 +12,8 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Indexes.Recovery

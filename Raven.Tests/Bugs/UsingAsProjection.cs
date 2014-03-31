@@ -6,11 +6,14 @@ using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Database.Indexing;
 using System.Linq;
+
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class UsingAsProjection : RemoteClientTest
+	public class UsingAsProjection : RavenTest
 	{
 		[Fact]
 		public void ShouldWork()

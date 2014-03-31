@@ -1,9 +1,12 @@
 ﻿using System.Linq;
+
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Iulian
 {
-	public class CanReadEntityWithUrlId : RemoteClientTest
+	public class CanReadEntityWithUrlId : RavenTest
 	{
 		public class Event
 		{

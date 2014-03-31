@@ -7,12 +7,13 @@ using System;
 using System.Collections.Generic;
 using Raven.Client.Document;
 using Raven.Client.Shard;
+using Raven.Tests.Common;
 using Raven.Tests.Document;
 using Xunit;
 
 namespace Raven.Tests.Shard
 {
-	public class WhenUsingParallelAccessStrategy  : RemoteClientTest
+	public class WhenUsingParallelAccessStrategy  : RavenTest
 	{
 		[Fact]
 		public void NullResultIsNotAnException()

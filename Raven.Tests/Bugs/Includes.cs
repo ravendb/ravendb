@@ -7,11 +7,13 @@ using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Tests.Bugs.TransformResults;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class Includes : RemoteClientTest
+	public class Includes : RavenTest
 	{
 		private readonly IDocumentStore store;
 

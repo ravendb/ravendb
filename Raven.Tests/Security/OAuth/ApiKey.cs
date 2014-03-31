@@ -9,6 +9,8 @@ using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Extensions;
 
@@ -16,7 +18,7 @@ namespace Raven.Tests.Security.OAuth
 {
 	using Raven.Abstractions.Connection;
 
-	public class ApiKey : RemoteClientTest
+	public class ApiKey : RavenTest
 	{
 		private const string apiKey = "test/ThisIsMySecret";
 

@@ -3,11 +3,13 @@ using Raven.Client.Extensions;
 using Raven.Client.Extensions;
 using System.Threading.Tasks;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Async
 {
-	public class Querying : RemoteClientTest
+	public class Querying : RavenTest
 	{
 		[Fact]
 		public async Task Can_query_using_async_session()

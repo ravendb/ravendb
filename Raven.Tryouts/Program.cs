@@ -1,15 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Runtime.InteropServices;
-using Lucene.Net.Util;
+
 using NLog;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Tests.Bugs;
-using Raven.Tests.Bugs.Indexing;
-using Raven.Tests.Bundles.Replication;
-using Raven.Tests.Indexes;
-using Raven.Tests.Issues;
+
 using Raven.Tests.Notifications;
 
 namespace Raven.Tryouts

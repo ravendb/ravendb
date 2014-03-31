@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Tests.Common;
 
 namespace Raven.Tests.Bugs.LiveProjections
 {

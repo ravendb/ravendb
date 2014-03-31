@@ -6,12 +6,14 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Server;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Linq;
 
 namespace Raven.Tests.Bugs.TransformResults
 {
-	public class TimeoutTester : RemoteClientTest
+	public class TimeoutTester : RavenTest
 	{
 		[Fact]
 		public void will_timeout_query_after_some_time()

@@ -5,6 +5,9 @@ using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Tests.Common.Attributes;
+using Raven.Tests.Common.Dto.Faceted;
+
 using Xunit;
 
 namespace Raven.Tests.Faceted

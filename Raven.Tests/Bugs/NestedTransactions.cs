@@ -4,6 +4,8 @@ using System.Linq;
 using System.Transactions;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs

@@ -12,8 +12,9 @@ using Raven.Client.Indexes;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
-using Raven.Tests.Bundles.Replication;
-using Raven.Tests.Bundles.Versioning;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Dto;
+
 using Xunit;
 
 namespace Raven.Tests.Security.OAuth

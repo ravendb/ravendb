@@ -3,6 +3,8 @@ using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Json;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Patching

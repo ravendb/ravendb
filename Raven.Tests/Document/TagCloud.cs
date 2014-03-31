@@ -7,12 +7,15 @@ using System;
 using System.Collections.Generic;
 using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Dto.TagCloud;
+
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.Document
 {
-	public class TagCloud : RemoteClientTest
+	public class TagCloud : RavenTest
 	{
 		[Fact]
 		public void CanQueryMapReduceIndex()
@@ -234,42 +237,6 @@ select new
 			}
 		}
 		
-		public class ActivityAndCharacterCountAmount
-		{
-			public string Activity { get; set; }
-			public string Character { get; set; }
-			public long Amount { get; set; }
-		}
-
-		public class TagAndCount
-		{
-			public string Tag { get; set; }
-			public long Count { get; set; }
-
-			public override string ToString()
-			{
-				return string.Format("Tag: {0}, Count: {1}", Tag, Count);
-			}
-		}
-
-
-		public class Post
-		{
-			public string Id { get; set; }
-			public string Title { get; set; }
-			public DateTime PostedAt { get; set; }
-			public List<string> Tags { get; set; }
-
-			public string Content { get; set; }
-		}
-
-		public class Event
-		{
-			public string Id { get; set; }
-			public string Activity { get; set;}
-			public string Character{ get; set;}
-			public long Amount { get; set; }
-
-		}
+		
 	}
 }

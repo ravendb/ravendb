@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Linq;
 using System.Linq;

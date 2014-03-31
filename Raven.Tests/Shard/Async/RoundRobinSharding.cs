@@ -10,6 +10,8 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
 using Raven.Server;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Linq;
 

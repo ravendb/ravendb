@@ -3,11 +3,13 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class RavenDbNestedPatchTesting : RemoteClientTest
+	public class RavenDbNestedPatchTesting : RavenTest
 	{
 		[Fact]
 		public void RavenTestArrayPatchingRemove()

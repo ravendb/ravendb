@@ -10,6 +10,8 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Json.Linq;
 using Raven.Database.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Views
