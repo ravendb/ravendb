@@ -1,20 +1,17 @@
 ﻿import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem");
+import getFilesystemConfigurationByKeyCommand = require("commands/getFilesystemConfigurationByKeyCommand");
 
 class getFilesystemDestinationsCommand extends commandBase {
 
-    /**
-    * @param ownerDb The database the collections will belong to.
-    */
-    constructor() {
+    constructor(private fs: filesystem) {
         super();
-
-        throw new Error("Not Implemented");
     }
 
     execute(): JQueryPromise<any> {
 
-        throw new Error("Not Implemented");
+        var command = new getFilesystemConfigurationByKeyCommand(this.fs, "Raven/Synchronization/Destinations");
+        return command.execute();
     }
 }
 
