@@ -109,7 +109,6 @@ namespace Raven.Client.Embedded
             }
             else
             {
-                Configuration = new RavenConfiguration();
                 _inner = new EmbeddedDocumentStore
                 {
                     DataDirectory = DataDirectory,

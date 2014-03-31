@@ -115,7 +115,7 @@ namespace Raven.Tests.Helpers
 					configureStore(documentStore);
 				ModifyStore(documentStore);
 				ModifyConfiguration(documentStore.Configuration);
-
+                documentStore.Configuration.PostInit();
 				documentStore.Initialize();
 
 				if (enableAuthentication)
@@ -281,6 +281,7 @@ namespace Raven.Tests.Helpers
 			{
 				EnableAuthentication(ravenDbServer.SystemDatabase);
 				ModifyConfiguration(ravenConfiguration);
+                ravenConfiguration.PostInit();
 			}
 
 			return ravenDbServer;

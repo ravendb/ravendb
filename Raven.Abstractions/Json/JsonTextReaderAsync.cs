@@ -1330,7 +1330,7 @@ namespace Raven.Imports.Newtonsoft.Json
 					// it's faster to do 3 indexof with single characters than an indexofany
 					if (number.IndexOf('.') != -1 || number.IndexOf('E') != -1 || number.IndexOf('e') != -1)
 					{
-						numberValue = Convert.ToDouble(number, CultureInfo.InvariantCulture);
+						numberValue = Convert.ToDecimal(number, CultureInfo.InvariantCulture);
 						numberType = JsonToken.Float;
 					}
 					else
