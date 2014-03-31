@@ -51,7 +51,7 @@
                         <li class="use-bootstrap-tooltip" accesskey="d" data-bind="click: activateDoc, css: { active: isEditingMetadata() === false }" title="Edit document data (Alt+D)"><a style="cursor: pointer;">Data</a></li>
                         <li class="use-bootstrap-tooltip" accesskey="m" data-bind="click: activateMeta, css: { active: isEditingMetadata }" title="Edit document metadata (Alt+M)"><a style="cursor: pointer;">Metadata</a></li>
                     </ul>
-                    <pre id="docEditor" class="form-control use-bootstrap-tooltip" title="Edit document (Alt+C)" data-bind="attr: { disabled: isBusy }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 20 }"></pre>
+                    <pre id="docEditor" class="form-control use-bootstrap-tooltip" data-bind="attr: { disabled: isBusy }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 20 }"></pre>
                 </div>
             </div>
         </div>
