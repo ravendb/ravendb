@@ -39,7 +39,11 @@ namespace Raven.Client
 			TransactionRecoveryStorage = new VolatileOnlyTransactionRecoveryStorage();
 		}
 
-		public abstract void Dispose();
+	    public DocumentSessionListeners Listeners
+	    {
+	        get { return listeners; }
+	    }
+	    public abstract void Dispose();
 		
 		/// <summary>
 		/// 
@@ -191,7 +195,7 @@ namespace Raven.Client
 				throw new InvalidOperationException("You cannot open a session or access the database commands before initializing the document store. Did you forget calling Initialize()?");
 		}
 
-		protected readonly DocumentSessionListeners listeners = new DocumentSessionListeners();
+		private readonly DocumentSessionListeners listeners = new DocumentSessionListeners();
 
 		/// <summary>
 		/// Registers the conversion listener.
@@ -342,11 +346,5 @@ namespace Raven.Client
 		}
 #endif
 
-
-        IDocumentStore IDocumentStore.RegisterListener(IDocumentConversionListener conversionListener)
-        {
-            listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] { conversionListener, }).ToArray();
-            return this;
-        }
     }
 }

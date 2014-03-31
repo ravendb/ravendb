@@ -321,6 +321,23 @@ namespace Raven.Database.Client
             return server.DocumentStore.BulkInsert(database, options);
         }
 
+        public DocumentSessionListeners Listeners { get { return server.DocumentStore.Listeners; } }
+        public string DefaultDatabase
+        {
+            get { return server.DocumentStore.DefaultDatabase; }
+            set { server.DocumentStore.DefaultDatabase = value; }
+        }
+        public Guid ResourceManagerId
+        {
+            get { return server.DocumentStore.ResourceManagerId; }
+            set { server.DocumentStore.ResourceManagerId = value; }
+        }
+        public bool EnlistInDistributedTransactions
+        {
+            get { return server.DocumentStore.EnlistInDistributedTransactions; }
+            set { server.DocumentStore.EnlistInDistributedTransactions = value; }
+        }
+
         /// <summary>
         ///     Registers the store listener.
         /// </summary>

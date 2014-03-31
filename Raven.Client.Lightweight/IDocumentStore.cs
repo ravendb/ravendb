@@ -182,6 +182,7 @@ namespace Raven.Client
 		BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
 #endif
 
-        IDocumentStore RegisterListener(IDocumentConversionListener conversionListener);
+        DocumentSessionListeners Listeners { get; }
+
 	}
 }
