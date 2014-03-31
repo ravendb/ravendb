@@ -14,7 +14,7 @@ namespace Raven.Tests
 
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 
-			using (var stream = typeof(RavenTest).Assembly.GetManifestResourceStream("Raven.Tests.DefaultLogging.config"))
+            using (var stream = typeof(WithNLog).Assembly.GetManifestResourceStream("Raven.Tests.DefaultLogging.config"))
 			using (var reader = XmlReader.Create(stream))
 			{
 				NLog.LogManager.Configuration = new XmlLoggingConfiguration(reader, "default-config");

@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Bugs.Identifiers;
 using Raven.Tests.Common.Attributes;
 using Raven.Tests.Common.Util;
 

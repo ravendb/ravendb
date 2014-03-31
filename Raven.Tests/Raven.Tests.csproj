@@ -599,7 +599,6 @@
     <Compile Include="Faceted\Aggregation.cs" />
     <Compile Include="Faceted\ConditionalGetHelper.cs" />
     <Compile Include="Faceted\DynamicFacets.cs" />
-    <Compile Include="Faceted\FacetPaging.cs" />
     <Compile Include="Indexes\CustomExtensionMethod.cs" />
     <Compile Include="Indexes\HighlightTesting.cs" />
     <Compile Include="Indexes\IndexLocking.cs" />
@@ -629,6 +628,7 @@
     <Compile Include="Linq\SelectDictionaryItem.cs" />
     <Compile Include="Linq\SelectManyShouldWork.cs" />
     <Compile Include="Linq\WhereStringEquals.cs" />
+    <Compile Include="MailingList\Everett\CanReadBytes.cs" />
     <Compile Include="NestedIndexing\CanIndexReferencedEntity.cs" />
     <Compile Include="NestedIndexing\CanTrackWhatCameFromWhat.cs" />
     <Compile Include="NestedIndexing\Item.cs" />
@@ -641,14 +641,12 @@
     <Compile Include="PreFetching.cs" />
     <Compile Include="Properties\TestAssemblyInfo.cs" />
     <Compile Include="Querying\SkipDuplicates.cs" />
-    <Compile Include="RavenDB_1033.cs" />
     <Compile Include="ResultsTransformer\AsyncTransformWith.cs" />
     <Compile Include="ResultsTransformer\QueryInputsToResultTransformer.cs" />
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Querying\HighlightesTests.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
     <Compile Include="Smuggler\SmugglerBetweenTests.cs" />
-    <Compile Include="Security\OAuth\ReplicationWithOAuthMultipleKeys.cs" />
     <Compile Include="Security\ReplicationWithMixedSecurity.cs" />
     <Compile Include="Spatial\BoundingBoxIndexTests.cs" />
     <Compile Include="Spatial\CartesianTests.cs" />
@@ -698,7 +696,6 @@
     <Compile Include="Bugs\TransformResults\Question.cs" />
     <Compile Include="Bugs\TransformResults\QuestionVote.cs" />
     <Compile Include="Bugs\TransformResults\QuestionWithVoteTotalIndex.cs" />
-    <Compile Include="Bugs\TransformResults\TimeoutTester.cs" />
     <Compile Include="Bugs\TransformResults\User.cs" />
     <Compile Include="Bugs\TransformResults\QuestionView.cs" />
     <Compile Include="Bugs\TransformResults\Thor.cs" />
@@ -807,7 +804,6 @@
     <Compile Include="Notifications\WithIIS.cs" />
     <Compile Include="Queries\CanQueryOnCustomClass.cs" />
     <Compile Include="Queries\CanQueryOnLargeXml.cs" />
-    <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
     <Compile Include="Querying\UsingStronglyTypedDocumentQuery.cs" />
     <Compile Include="Security\OAuth\ApiKey.cs" />
     <Compile Include="Shard\ShardingFailure.cs" />
@@ -1041,6 +1037,9 @@
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />

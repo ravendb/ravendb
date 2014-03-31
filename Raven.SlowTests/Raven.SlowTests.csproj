@@ -61,12 +61,15 @@
   <ItemGroup>
     <Compile Include="Bugs\ManyDocumentsViaDTC.cs" />
     <Compile Include="Bugs\ManyDocumentWithMapReduce.cs" />
+    <Compile Include="Bugs\TimeoutTester.cs" />
     <Compile Include="Bugs\VeryBigResultSet.cs" />
     <Compile Include="Bugs\VeryBigResultSetRemote.cs" />
     <Compile Include="Bundles\Replication\Async\ConflictWhenReplicating.cs" />
     <Compile Include="Bundles\Replication\Async\ReadStriping.cs" />
     <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />
     <Compile Include="Bundles\Replication\ReadStriping.cs" />
+    <Compile Include="Faceted\FacetPaging.cs" />
+    <Compile Include="Issues\RavenDB_1033.cs" />
     <Compile Include="Issues\RavenDB_1280.cs" />
     <Compile Include="Issues\RavenDB_1280_ReOpen.cs" />
     <Compile Include="Issues\RavenDB_1359 .cs" />
@@ -75,7 +78,11 @@
     <Compile Include="Issues\RavenDB_1603.cs" />
     <Compile Include="Issues\RavenDB_1754.cs" />
     <Compile Include="Issues\RavenDB_560.cs" />
+    <Compile Include="MailingList\Jalchr2.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
+    <Compile Include="Security\OAuth\ReplicationWithOAuthMultipleKeys.cs" />
+    <Compile Include="Storage\Voron\DocumentsStorageActionsTests.cs" />
     <Compile Include="Synchronization\IndexationTests.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -106,6 +113,10 @@
     <ProjectReference Include="..\Raven.Tests.Issues\Raven.Tests.Issues.csproj">
       <Project>{d8bdd718-6e21-41b7-9c41-d0fbe0532df4}</Project>
       <Name>Raven.Tests.Issues</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
+      <Project>{267ac60c-751e-42e9-aa18-66035deff63a}</Project>
+      <Name>Raven.Tests</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
