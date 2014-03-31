@@ -39,7 +39,7 @@ class row {
             var prop = rowProperties[i];
             var cellValue = rowData[prop];
             // pass json object when not custom template!
-            if (typeof cellValue === "object" && this.getCellTemplateName(prop) !== cell.customTemplate) {
+            if (typeof cellValue === "object" && this.getCellTemplateName(prop, rowData) !== cell.customTemplate) {
                 cellValue = JSON.stringify(cellValue, null, 4);
             }
             this.addOrUpdateCellMap(prop, cellValue);
@@ -52,7 +52,7 @@ class row {
 
     addOrUpdateCellMap(propertyName: string, data: any) {
         if (!this.cellMap[propertyName]) {            
-            this.cellMap[propertyName] = new cell(data, this.getCellTemplateName(propertyName));
+            this.cellMap[propertyName] = new cell(data, this.getCellTemplateName(propertyName, data));
         } else {
             var cellVal: cell = this.cellMap[propertyName];
             cellVal.data(data);
@@ -77,13 +77,17 @@ class row {
         return null;
     }
 
-    getCellTemplateName(propertyName: string): string {
+    getCellTemplateName(propertyName: string, data:any): string {
         if (propertyName === "Id") {
             return cell.idTemplate;
-        }
-
-        if (propertyName === "__IsChecked") {
+        }else if (propertyName === "__IsChecked") {
             return cell.checkboxTemplate;
+        }
+        else if (!!data) {
+            if (!!data[propertyName] && typeof data[propertyName] == "string" && data[propertyName].indexOf('/')>0  ||
+                typeof data == "string" && data.indexOf('/') >0) {
+                return cell.externalIdTemplate;
+            }
         }
 
         var customProps = this.viewModel.settings.customColumnParams[propertyName];

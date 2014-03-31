@@ -78,8 +78,7 @@
                                 <thead>
                                     <tr>
                                         <td width="50%">Name</td>
-                                        <td>Admin</td>
-                                        <td>Read Only</td>
+                                        <td>Type</td>
                                         <td></td>
                                     </tr>
                                 </thead>
@@ -101,11 +100,17 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <input type="checkbox" data-bind="checked: admin">
-                                        </td>
-                                        <td>
-                                            <input type="checkbox" data-bind="checked: readOnly">
-                                        </td>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                    <span data-bind="text: currentAccessType"></span> <span class="caret"></span>
+                                                </button>
+                                                <ul class="dropdown-menu" role="menu">
+                                                    <!-- ko foreach:getTypes() -->
+                                                    <li><a href="#" data-bind="text: $data, click:  $parent.currentAccessType.bind($parent)"></a></li>
+                                                    <!-- /ko -->
+                                                </ul>
+                                            </div>
+                                    </td>
                                         <td>
                                             <button type="button" class="close use-bootstrap-tooltip" style="display:inline-block; font-size: 14px;" data-bind="click: $parent.removeApiKeyDatabase.bind($parent, $data)" title="Remove this database">
                                                 <span class="glyphicon glyphicon-remove remove"></span>

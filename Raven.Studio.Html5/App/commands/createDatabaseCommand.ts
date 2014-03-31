@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 
 class createDatabaseCommand extends commandBase {
 
-    constructor(private databaseName: string, private activeBundles: string[], private securedSettings: {}) {
+    constructor(private databaseName: string, private settings: {}, private securedSettings: {}) {
         super();
 
         if (!databaseName) {
@@ -14,12 +14,8 @@ class createDatabaseCommand extends commandBase {
     execute(): JQueryPromise<any> {
 
         this.reportInfo("Creating " + this.databaseName);
-
         var databaseDoc = {
-            "Settings": {
-                "Raven/DataDir": "~\\Databases\\" + this.databaseName,
-                "Raven/ActiveBundles": this.activeBundles.join(";")
-            },
+            "Settings": this.settings,
             "SecuredSettings": this.securedSettings, // TODO: based on the selected bundles, we may need to include additional settings here
             "Disabled": false
         };
