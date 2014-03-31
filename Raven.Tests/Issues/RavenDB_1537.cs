@@ -42,7 +42,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanFullBackupToDirectory()
         {
-            var backupPath = NewDataPath("BackupFolder");
+            var backupPath = NewDataPath("BackupFolder", forceCreateDir: true);
             try
             {
                 using (var store = NewDocumentStore())
@@ -96,7 +96,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanFullBackupToDirectory_MultipleBackups()
         {
-            var backupPath = NewDataPath("BackupFolder");
+            var backupPath = NewDataPath("BackupFolder", forceCreateDir:true);
             try
             {
                 using (var store = NewDocumentStore())
@@ -600,7 +600,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanProperlyReadLastEtagUsingPreviousFormat()
         {
-            var backupPath = NewDataPath("BackupFolder");
+            var backupPath = NewDataPath("BackupFolder", forceCreateDir:true);
 
             var etagFileLocation = Path.Combine(Path.GetDirectoryName(backupPath), "IncrementalExport.state.json");
             using (var streamWriter = new StreamWriter(File.Create(etagFileLocation)))

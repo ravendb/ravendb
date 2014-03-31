@@ -85,9 +85,12 @@ namespace Raven.Database.Tasks
 
                     try
                     {
-                        Etag preTouchEtag;
-                        Etag afterTouchEtag;
-                        accessor.Documents.TouchDocument(docWithMissingRef.Key, out preTouchEtag, out afterTouchEtag);
+                        using (context.Database.DocumentLock.Lock())
+                        {
+                            Etag preTouchEtag;
+                            Etag afterTouchEtag;
+                            accessor.Documents.TouchDocument(docWithMissingRef.Key, out preTouchEtag, out afterTouchEtag);
+                        }
                     }
                     catch (ConcurrencyException)
                     {

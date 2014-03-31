@@ -337,7 +337,7 @@ class appUrl {
             return db;
         } else {
             // No database is specified in the URL. Assume it's the system database.
-            return this.getSystemDatabase();
+            return null;
         } 
     }
 

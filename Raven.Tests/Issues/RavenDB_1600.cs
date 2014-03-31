@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Threading;
+using Raven.Database.Actions;
 
 namespace Raven.Tests.Issues
 {
@@ -80,7 +81,12 @@ namespace Raven.Tests.Issues
 			}
 			IOExtensions.DeleteDirectory(DataDir);
 
-			DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir, s => { }, defrag: true);
+		    MaintenanceActions.Restore(new RavenConfiguration(), new RestoreRequest
+		    {
+		        BackupLocation = BackupDir,
+		        DatabaseLocation = DataDir,
+                Defrag = true
+		    },s => { });
 
 			using (var db = new DocumentDatabase(new RavenConfiguration
 			{

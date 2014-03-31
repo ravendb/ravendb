@@ -33,7 +33,7 @@ namespace Raven.Bundles.Expiration
 			{
 				dateTime = property.Value<DateTime>();
 			}
-			catch (FormatException)
+			catch (Exception)
 			{
 				// if we can't process the value, ignore it.
 				return ReadVetoResult.Allowed;

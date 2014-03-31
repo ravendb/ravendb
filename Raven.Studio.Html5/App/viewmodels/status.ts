@@ -7,10 +7,13 @@ class status extends viewModelBase {
 
     router: DurandalRootRouter;
     currentRouteTitle: KnockoutComputed<string>;
+    appUrls: computedAppUrls;
 
 	constructor() {
         super();
         
+        this.appUrls = appUrl.forCurrentDatabase();
+
         this.router = durandalRouter.createChildRouter()
             .map([
                 { route: 'databases/status',                  moduleId: 'viewmodels/statistics',          title: 'Stats',             nav: true, hash: appUrl.forCurrentDatabase().status },

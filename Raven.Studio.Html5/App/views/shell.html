@@ -219,12 +219,11 @@
             <ul class="nav navbar-nav" data-bind="with: activeDatabase, visible: appUrls.isAreaActive('databases')">
                 <li><a class="navbar-brand" href="#/status">Stats</a></li>
                 <!-- ko with: statistics -->
-                <li><a href="#documents" data-bind="text: CountOfDocuments + ' documents'"></a></li>
-                <li><a href="#documents" data-bind="text: CountOfIndexes + ' indexes'"></a></li>
-                <li><a href="#documents" data-bind="text: StaleIndexes.length + ' stale'"></a></li>
-                <li><a href="#documents" data-bind="text: Errors.length + ' errors'"></a></li>
-                <li><a href="#documents" data-bind="text: Triggers.length + ' triggers'"></a></li>
-                <li><a href="#documents" data-bind="text: ApproximateTaskCount + ' tasks'"></a></li>
+                <li><a data-bind="text: CountOfDocuments + ' documents', attr: { href: $parents[1].appUrls.documents }"></a></li>
+                <li><a data-bind="text: CountOfIndexes + ' indexes', attr: { href: $parents[1].appUrls.indexes }"></a></li>
+                <li><a data-bind="text: StaleIndexes.length + ' stale', attr: { href: $parents[1].appUrls.status }"></a></li>
+                <li><a data-bind="text: Errors.length + ' errors', attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
+                <li><a data-bind="text: ApproximateTaskCount + ' tasks', attr: { href: $parents[1].appUrls.status }"></a></li>
                 <li data-bind="visible:$root.rawUrlIsVisible">
                     <a target='_blank' data-bind="text:'Raw Url: ' + $root.currentRawUrl(), attr:{href:$root.currentRawUrl()}"></a>
                 </li>

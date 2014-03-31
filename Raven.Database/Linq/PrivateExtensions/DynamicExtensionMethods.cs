@@ -13,12 +13,12 @@ namespace Raven.Database.Linq.PrivateExtensions
 	/// </summary>
 	public class DynamicExtensionMethods
 	{
-		public static BoostedValue Boost(dynamic o, float value)
+		public static BoostedValue Boost(dynamic o, object value)
 		{
 			return new BoostedValue
 			{
 				Value = o,
-				Boost = value
+				Boost = Convert.ToSingle(value)
 			};
 		}
 

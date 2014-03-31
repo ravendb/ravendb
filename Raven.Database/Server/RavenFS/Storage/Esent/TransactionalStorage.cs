@@ -84,7 +84,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			}
 		}
 
-		public bool Initialize()
+		public void Initialize()
 		{
 			try
 			{
@@ -92,13 +92,11 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 
 				Api.JetInit(ref instance);
 
-				var newDb = EnsureDatabaseIsCreatedAndAttachToDatabase();
+				EnsureDatabaseIsCreatedAndAttachToDatabase();
 
 				SetIdFromDb();
 
 				tableColumnsCache.InitColumDictionaries(instance, database);
-
-				return newDb;
 			}
 			catch (Exception e)
 			{

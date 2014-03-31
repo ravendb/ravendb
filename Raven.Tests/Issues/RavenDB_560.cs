@@ -212,7 +212,7 @@ namespace Raven.Tests.Issues
 
 		private RavenDbServer CreateServer(int port, string dataDirectory)
 		{
-			return GetNewServer(port, dataDirectory, activeBundles: "replication", requestedStorage: "esent");
+			return GetNewServer(port, dataDirectory, activeBundles: "replication", requestedStorage: "esent", runInMemory: false);
 		}
 
         private void StopServer(RavenDbServer server)

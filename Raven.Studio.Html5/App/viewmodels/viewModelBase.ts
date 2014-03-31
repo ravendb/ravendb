@@ -46,7 +46,7 @@ class viewModelBase {
 
         var db = appUrl.getDatabase();
         var currentDb = this.activeDatabase();
-        if (!currentDb || currentDb.name !== db.name) {
+        if (!!db && db !== null && (!currentDb || currentDb.name !== db.name)) {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
         }
 

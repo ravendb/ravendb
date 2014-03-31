@@ -298,9 +298,10 @@ namespace Raven.Client.Document.SessionOperations
 				if (sortByHint.Value == null)
 					continue;
 
-				setOperationHeaders(
+			    var nonNullableType = (Nullable.GetUnderlyingType(sortByHint.Value) ?? sortByHint.Value);
+			    setOperationHeaders(
 					string.Format("SortHint-{0}", Uri.EscapeDataString(sortByHint.Key.Trim('-'))),
-					sessionOperations.Conventions.GetDefaultSortOption(sortByHint.Value.Name).ToString());
+                    sessionOperations.Conventions.GetDefaultSortOption(nonNullableType.Name).ToString());
 			}
 		}
 	}

@@ -24,12 +24,17 @@ namespace Raven.Tests.Issues
             {
                 store.DatabaseCommands.Put("keys/1", null, new RavenJObject { { "Key", 1 } }, new RavenJObject());
 
-                await store.AsyncDatabaseCommands.GlobalAdmin.StartBackupAsync(backupDir, new DatabaseDocument(), Constants.SystemDatabase);
+                await store.AsyncDatabaseCommands.GlobalAdmin.StartBackupAsync(backupDir, new DatabaseDocument(), false, Constants.SystemDatabase);
 
                 WaitForBackup(store.DatabaseCommands, true);
 
                 // restore as a new database
-                await store.AsyncDatabaseCommands.GlobalAdmin.StartRestoreAsync(backupDir, restoreDir, "db1");
+                await store.AsyncDatabaseCommands.GlobalAdmin.StartRestoreAsync(new RestoreRequest
+                {
+                    BackupLocation = backupDir,
+                    DatabaseLocation = restoreDir,
+                    DatabaseName = "db1"
+                });
 
                 // get restore status and wait for finish
                 WaitForRestore(store.DatabaseCommands);

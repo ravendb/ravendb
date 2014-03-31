@@ -7,9 +7,12 @@ class indexesShell extends viewModelBase {
     router: DurandalRootRouter;
     currentBreadcrumbTitle: KnockoutComputed<string>;
     indexesUrl = appUrl.forCurrentDatabase().indexes;
+    appUrls: computedAppUrls;
 
     constructor() {
         super();
+
+        this.appUrls = appUrl.forCurrentDatabase();
 
         this.router = durandalRouter.createChildRouter()
             .map([

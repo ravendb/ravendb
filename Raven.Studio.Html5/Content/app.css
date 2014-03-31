@@ -356,6 +356,18 @@ body {
 #editDocumentContainer #docEditor {
   height: 500px;
 }
+#editDocumentContainer .document-addition-data {
+  margin-top: 95px;
+  padding-top: 10px;
+  padding-bottom: 40px;
+}
+#editDocumentContainer hr {
+  border-color: red;
+  margin-top: 5px;
+}
+#editDocumentContainer .query-metadata {
+  padding-top: 20px;
+}
 .keyboard-shortcut {
   margin-left: 20px;
 }
@@ -553,6 +565,7 @@ footer ul {
 #scriptedIndex .map {
   height: 160px;
 }
+
 .filesystem-page .btn-toolbar {
   margin-bottom: 20px;
 }

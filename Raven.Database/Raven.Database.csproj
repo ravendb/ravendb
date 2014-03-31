@@ -99,6 +99,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
     </Reference>
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
     <Reference Include="Jint.Raven">
       <HintPath>..\SharedLibs\Jint.Raven.dll</HintPath>
     </Reference>
@@ -318,6 +321,7 @@
     <Compile Include="Extensions\CancellationTokenSource.cs" />
     <Compile Include="Impl\DTC\EsentInFlightTransactionalState.cs" />
     <Compile Include="Impl\DTC\EsentTransactionContext.cs" />
+    <Compile Include="Impl\PutSerialLock.cs" />
     <Compile Include="Indexing\IndependentBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
     <Compile Include="LastCollectionEtags.cs" />
@@ -430,9 +434,6 @@
     <Compile Include="Server\RavenFS\Storage\Esent\TransactionalStorage.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\IdGenerator.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\Index.cs" />
-    <Compile Include="Server\RavenFS\Storage\Voron\Impl\IPersistenceSource.cs" />
-    <Compile Include="Server\RavenFS\Storage\Voron\Impl\MemoryMapPersistanceSource.cs" />
-    <Compile Include="Server\RavenFS\Storage\Voron\Impl\MemoryPersistanceSource.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\Table.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\TableBase.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\Tables.cs" />
@@ -519,10 +520,7 @@
     <Compile Include="Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Extensions\DocDbExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
-    <Compile Include="Impl\Synchronization\DatabaseEtagSynchronizer.cs" />
     <Compile Include="Impl\DTC\InFlightTransactionalState.cs" />
-    <Compile Include="Impl\Synchronization\EtagSynchronizer.cs" />
-    <Compile Include="Impl\Synchronization\EtagSynchronizerType.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\BaseFragmentsBuilder.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FastVectorHighlighter.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FieldFragList.cs" />
@@ -566,7 +564,6 @@
     <Compile Include="Config\Settings\StringSetting.cs" />
     <Compile Include="Config\Settings\TimeSpanSetting.cs" />
     <Compile Include="Data\TouchedDocumentInfo.cs" />
-    <Compile Include="Data\RestoreRequest.cs" />
     <Compile Include="Extensions\RoleFinder.cs" />
     <Compile Include="Extensions\WhoIsLocking.cs" />
     <Compile Include="Indexing\CurrentIndexingScope.cs" />
@@ -734,7 +731,6 @@
     <Compile Include="Server\Security\Windows\WindowsRequestAuthorizer.cs" />
     <Compile Include="Impl\CachedDocument.cs" />
     <Compile Include="Impl\DatabaseBulkOperations.cs" />
-    <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Data\DynamicQueryMapping.cs" />
     <Compile Include="Data\DynamicQueryMappingItem.cs" />
     <Compile Include="Impl\DocumentCacher.cs" />
@@ -1034,9 +1030,6 @@
     <Compile Include="Storage\Voron\StorageActions\GeneralStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActions\IndexingStorageActions.cs" />
     <Compile Include="Storage\Voron\Impl\Table.cs" />
-    <Compile Include="Storage\Voron\Impl\IPersistenceSource.cs" />
-    <Compile Include="Storage\Voron\Impl\MemoryMapPersistanceSource.cs" />
-    <Compile Include="Storage\Voron\Impl\MemoryPersistanceSource.cs" />
     <Compile Include="Storage\Voron\StorageActions\ListsStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActions\MappedResultsStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActions\QueueStorageActions.cs" />
@@ -1091,100 +1084,15 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Server\WebUI\raven-data.ico" />
+    <Content Include="Server\WebUI\studio.html" />
+    <Content Include="Server\WebUI\studio_not_found.html" />
     <EmbeddedResource Include="Server\WebUI\Raven.Studio.xap" />
     <EmbeddedResource Include="Json\ToJson.js" />
     <EmbeddedResource Include="Json\RavenDB.js" />
     <EmbeddedResource Include="Json\lodash.js" />
     <EmbeddedResource Include="Json\ECMAScript5.js" />
     <Content Include="FodyWeavers.xml" />
-    <EmbeddedResource Include="Server\WebUI\css\smoothness\images\ui-anim_basic_16x16.gif" />
-    <EmbeddedResource Include="Server\WebUI\studio_not_found.html" />
-    <EmbeddedResource Include="Server\WebUI\studio.html" />
-    <EmbeddedResource Include="Server\WebUI\raven-data.ico" />
-    <EmbeddedResource Include="Server\WebUI\css\Pager.css" />
-    <EmbeddedResource Include="Server\WebUI\css\rdb.css" />
-    <EmbeddedResource Include="Server\WebUI\css\rdb.jsonEditor.css" />
-    <EmbeddedResource Include="Server\WebUI\css\smoothness\images\ui-bg_flat_0_aaaaaa_40x100.png" />
-    <EmbeddedResource Include="Server\WebUI\css\smoothness\images\ui-bg_flat_75_ffffff_40x100.png" />
-    <EmbeddedResource Include="Server\WebUI\css\smoothness\images\ui-bg_glass_55_fbf9ee_1x400.png" />
-    <EmbeddedResource Include="Server\WebUI\css\smoothness\images\ui-bg_glass_65_ffffff_1x400.png" />
-    <EmbeddedResource Include="Server\WebUI\css\smoothness\images\ui-bg_glass_75_dadada_1x400.png" />
-    <EmbeddedResource Include="Server\WebUI\css\smoothness\images\ui-bg_glass_75_e6e6e6_1x400.png" />
-    <EmbeddedResource Include="Server\WebUI\css\smoothness\images\ui-bg_glass_95_fef1ec_1x400.png" />
-    <EmbeddedResource Include="Server\WebUI\css\smoothness\images\ui-bg_highlight-soft_75_cccccc_1x100.png" />
-    <EmbeddedResource Include="Server\WebUI\css\smoothness\images\ui-icons_222222_256x240.png" />
-    <EmbeddedResource Include="Server\WebUI\css\smoothness\images\ui-icons_2e83ff_256x240.png" />
-    <EmbeddedResource Include="Server\WebUI\css\smoothness\images\ui-icons_454545_256x240.png" />
-    <EmbeddedResource Include="Server\WebUI\css\smoothness\images\ui-icons_888888_256x240.png" />
-    <EmbeddedResource Include="Server\WebUI\css\smoothness\images\ui-icons_cd0a0a_256x240.png" />
-    <EmbeddedResource Include="Server\WebUI\css\smoothness\jquery-ui-1.8rc2.custom.css" />
-    <EmbeddedResource Include="Server\WebUI\documents.html" />
-    <EmbeddedResource Include="Server\WebUI\favicon.ico" />
-    <EmbeddedResource Include="Server\WebUI\images\ajax-loader.gif" />
-    <EmbeddedResource Include="Server\WebUI\images\bgR.png" />
-    <EmbeddedResource Include="Server\WebUI\images\c1_i1.png" />
-    <EmbeddedResource Include="Server\WebUI\images\c2_i2.png" />
-    <EmbeddedResource Include="Server\WebUI\images\c2_i3.png" />
-    <EmbeddedResource Include="Server\WebUI\images\c2_i4.png" />
-    <EmbeddedResource Include="Server\WebUI\images\c2_i5.png" />
-    <EmbeddedResource Include="Server\WebUI\images\c2_i6.png" />
-    <EmbeddedResource Include="Server\WebUI\images\c3_i7.png" />
-    <EmbeddedResource Include="Server\WebUI\images\footerContainerBgR.png" />
-    <EmbeddedResource Include="Server\WebUI\images\footer_bg.png" />
-    <EmbeddedResource Include="Server\WebUI\images\header_bg.png" />
-    <EmbeddedResource Include="Server\WebUI\images\jsonEditor\doc.gif" />
-    <EmbeddedResource Include="Server\WebUI\images\jsonEditor\docNode.gif" />
-    <EmbeddedResource Include="Server\WebUI\images\jsonEditor\docNodeLast.gif" />
-    <EmbeddedResource Include="Server\WebUI\images\jsonEditor\docNodeLastFirst.gif" />
-    <EmbeddedResource Include="Server\WebUI\images\jsonEditor\folder.gif" />
-    <EmbeddedResource Include="Server\WebUI\images\jsonEditor\folderNode.gif" />
-    <EmbeddedResource Include="Server\WebUI\images\jsonEditor\folderNodeFirst.gif" />
-    <EmbeddedResource Include="Server\WebUI\images\jsonEditor\folderNodeLast.gif" />
-    <EmbeddedResource Include="Server\WebUI\images\jsonEditor\folderNodeLastFirst.gif" />
-    <EmbeddedResource Include="Server\WebUI\images\jsonEditor\folderNodeOpen.gif" />
-    <EmbeddedResource Include="Server\WebUI\images\jsonEditor\folderNodeOpenFirst.gif" />
-    <EmbeddedResource Include="Server\WebUI\images\jsonEditor\folderNodeOpenLast.gif" />
-    <EmbeddedResource Include="Server\WebUI\images\jsonEditor\folderNodeOpenLastFirst.gif" />
-    <EmbeddedResource Include="Server\WebUI\images\jsonEditor\folderOpen.gif" />
-    <EmbeddedResource Include="Server\WebUI\images\jsonEditor\vertLine.gif" />
-    <EmbeddedResource Include="Server\WebUI\images\logo.png" />
-    <EmbeddedResource Include="Server\WebUI\images\midBox1.png" />
-    <EmbeddedResource Include="Server\WebUI\images\midBox2Arrow.png" />
-    <EmbeddedResource Include="Server\WebUI\images\sideBarArrow.png" />
-    <EmbeddedResource Include="Server\WebUI\images\sideBarListBoxBottom.png" />
-    <EmbeddedResource Include="Server\WebUI\images\sideBarListBoxTop.png" />
-    <EmbeddedResource Include="Server\WebUI\images\submit.png" />
-    <EmbeddedResource Include="Server\WebUI\images\topNavSep.png" />
-    <EmbeddedResource Include="Server\WebUI\index.html" />
-    <EmbeddedResource Include="Server\WebUI\indexes.html" />
-    <EmbeddedResource Include="Server\WebUI\JSONTemplates\errorsMsgs.html" />
-    <EmbeddedResource Include="Server\WebUI\JSONTemplates\warningMsgs.html" />
-    <EmbeddedResource Include="Server\WebUI\JSONTemplates\documentation.html" />
-    <EmbeddedResource Include="Server\WebUI\JSONTemplates\globalStats.html" />
-    <EmbeddedResource Include="Server\WebUI\JSONTemplates\indexPage.html" />
-    <EmbeddedResource Include="Server\WebUI\JSONTemplates\quickStats.html" />
-    <EmbeddedResource Include="Server\WebUI\js\jquery-1.4.2.min.js" />
-    <EmbeddedResource Include="Server\WebUI\js\jquery-jtemplates.js" />
-    <EmbeddedResource Include="Server\WebUI\js\jquery-ui.js" />
-    <EmbeddedResource Include="Server\WebUI\js\jquery.pager.js" />
-    <EmbeddedResource Include="Server\WebUI\js\jquery.query-2.1.7.js" />
-    <EmbeddedResource Include="Server\WebUI\js\jquery.RavenDB.js" />
-    <EmbeddedResource Include="Server\WebUI\js\json2.js" />
-    <EmbeddedResource Include="Server\WebUI\js\jstree\jquery.tree.js" />
-    <EmbeddedResource Include="Server\WebUI\js\jstree\themes\default\dot_for_ie.gif" />
-    <EmbeddedResource Include="Server\WebUI\js\jstree\themes\default\icons.png" />
-    <EmbeddedResource Include="Server\WebUI\js\jstree\themes\default\style.css" />
-    <EmbeddedResource Include="Server\WebUI\js\jstree\themes\default\throbber.gif" />
-    <EmbeddedResource Include="Server\WebUI\js\jstree\themes\icons\txt.png" />
-    <EmbeddedResource Include="Server\WebUI\js\raven-ui.documents.js" />
-    <EmbeddedResource Include="Server\WebUI\js\raven-ui.js" />
-    <EmbeddedResource Include="Server\WebUI\js\rdb.jsonEditor\editor.html" />
-    <EmbeddedResource Include="Server\WebUI\js\rdb.jsonEditor\rdb.jsonEditor.js" />
-    <EmbeddedResource Include="Server\WebUI\statistics.html" />
-    <EmbeddedResource Include="Server\WebUI\view.html" />
-    <EmbeddedResource Include="..\Raven.Studio.Html5\**"  Exclude="*.dll.config">
-      <Link>Server\Html5Studio\%(RecursiveDir)%(Filename)%(Extension)</Link>
-    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Commercial\RavenDB.public" />

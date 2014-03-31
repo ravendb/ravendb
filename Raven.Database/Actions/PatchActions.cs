@@ -33,7 +33,7 @@ namespace Raven.Database.Actions
             if (docId == null)
                 throw new ArgumentNullException("docId");
             return ApplyPatchInternal(docId, etag, transactionInformation,
-                                      (jsonDoc, size) => new JsonPatcher(jsonDoc).Apply(patchDoc),
+                                      jsonDoc => new JsonPatcher(jsonDoc.ToJson()).Apply(patchDoc),
                                       () => null, () => null, debugMode);
         }
 
@@ -44,7 +44,7 @@ namespace Raven.Database.Actions
             if (docId == null)
                 throw new ArgumentNullException("docId");
             return ApplyPatchInternal(docId, etag, transactionInformation,
-                                      (jsonDoc, size) => new JsonPatcher(jsonDoc).Apply(patchExistingDoc),
+                                      jsonDoc => new JsonPatcher(jsonDoc.ToJson()).Apply(patchExistingDoc),
                                       () =>
                                       {
                                           if (patchDefaultDoc == null || patchDefaultDoc.Length == 0)
@@ -59,7 +59,7 @@ namespace Raven.Database.Actions
 
         private PatchResultData ApplyPatchInternal(string docId, Etag etag,
                                        TransactionInformation transactionInformation,
-                                       Func<RavenJObject, int, RavenJObject> patcher,
+                                       Func<JsonDocument, RavenJObject> patcher,
                                        Func<RavenJObject> patcherIfMissing,
                                        Func<IList<JsonDocument>> getDocsCreatedInPatch,
                                        bool debugMode)
@@ -90,7 +90,7 @@ namespace Raven.Database.Actions
                     };
                 }
 
-                var jsonDoc = (doc != null ? patcher(doc.ToJson(), doc.SerializedSizeOnDisk) : patcherIfMissing());
+                var jsonDoc = (doc != null ? patcher(doc) : patcherIfMissing());
                 if (jsonDoc == null)
                 {
                     Log.Debug(() => string.Format("Preparing to apply patch on ({0}). DocumentDoesNotExists.", docId));
@@ -152,10 +152,10 @@ namespace Raven.Database.Actions
         {
             ScriptedJsonPatcher scriptedJsonPatcher = null;
             var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
-                (jsonDoc, size) =>
+                jsonDoc =>
                 {
                     scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
-                    return scriptedJsonPatcher.Apply(jsonDoc, patch, size, docId);
+                    return scriptedJsonPatcher.Apply(jsonDoc.ToJson(), patch, jsonDoc.SerializedSizeOnDisk, jsonDoc.Key);
                 },
                 () => null,
                 () =>
@@ -175,10 +175,10 @@ namespace Raven.Database.Actions
         {
             ScriptedJsonPatcher scriptedJsonPatcher = null;
             var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
-                (jsonDoc, size) =>
+                jsonDoc =>
                 {
                     scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
-                    return scriptedJsonPatcher.Apply(jsonDoc, patchExisting, size, docId);
+                    return scriptedJsonPatcher.Apply(jsonDoc.ToJson(), patchExisting, jsonDoc.SerializedSizeOnDisk, jsonDoc.Key);
                 },
                 () =>
                 {

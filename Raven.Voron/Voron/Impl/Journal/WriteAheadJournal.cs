@@ -250,10 +250,12 @@ namespace Voron.Impl.Journal
 			if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
 				return;
 
-			_currentJournalFileSize = journalSize;
+			// this set the size of the _next_ journal file size
+			_currentJournalFileSize = Math.Min(journalSize, _env.Options.MaxLogFileSize);
 		}
 
-		public Page ReadPage(Transaction tx, long pageNumber)
+
+		public Page ReadPage(Transaction tx, long pageNumber, PagerState scratchPagerState)
 		{
 			// read transactions have to read from journal snapshots
 			if (tx.Flags == TransactionFlags.Read)
@@ -264,7 +266,7 @@ namespace Voron.Impl.Journal
 					JournalFile.PagePosition value;
 					if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
 					{
-						var page = _env.ScratchBufferPool.ReadPage(value.ScratchPos);
+                        var page = _env.ScratchBufferPool.ReadPage(value.ScratchPos, scratchPagerState);
 
 						Debug.Assert(page.PageNumber == pageNumber);
 
@@ -282,7 +284,7 @@ namespace Voron.Impl.Journal
 				JournalFile.PagePosition value;
 				if (files[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
 				{
-					var page = _env.ScratchBufferPool.ReadPage(value.ScratchPos);
+                    var page = _env.ScratchBufferPool.ReadPage(value.ScratchPos, scratchPagerState);
 
 					Debug.Assert(page.PageNumber == pageNumber);
 

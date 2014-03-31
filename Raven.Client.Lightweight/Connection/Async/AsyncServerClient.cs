@@ -1146,27 +1146,24 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, string databaseName)
+		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (MultiDatabase.GetDatabaseUrl(url, databaseName) + "/admin/backup").NoCache(), "POST", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
+		    var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+		        (MultiDatabase.GetDatabaseUrl(url, databaseName) + "/admin/backup?incremental=" + incremental).NoCache(),
+		        "POST", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
 			request.AddOperationHeaders(OperationsHeaders);
-			return request.WriteAsync(new RavenJObject
+			return request.WriteAsync(RavenJObject.FromObject(new BackupRequest
 			{
-				{"BackupLocation", backupLocation},
-				{"DatabaseDocument", RavenJObject.FromObject(databaseDocument)}
-			}.ToString(Formatting.None));
+			    BackupLocation = backupLocation,
+                DatabaseDocument = databaseDocument
+			}));
 		}
 
-		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string name = null, bool defrag = false)
+		public Task StartRestoreAsync(RestoreRequest restoreRequest)
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/restore?defrag=" + defrag).NoCache(), "POST", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/restore").NoCache(), "POST", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
 			request.AddOperationHeaders(OperationsHeaders);
-			return request.WriteAsync(new RavenJObject
-			{
-				{"RestoreLocation", restoreLocation},
-				{"DatabaseLocation", databaseLocation},
-				{"DatabaseName", name}
-			}.ToString(Formatting.None));
+			return request.WriteAsync(RavenJObject.FromObject(restoreRequest));
 		}
 
 		public Task<string> GetIndexingStatusAsync()
@@ -1761,77 +1758,79 @@ namespace Raven.Client.Connection.Async
                 }
 
 #else
-		public async Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
+		public Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
 		{
-			var method = query.Query != null && query.Query.Length > 32760 ? "POST" : "GET";
-
-			EnsureIsNotNullOrEmpty(index, "index");
-			string path = query.GetIndexQueryUrl(url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: method == "GET");
-
-			if (method == "POST")
-				path += "&postQuery=true";
-
-			var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, path.NoCache(), method, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
-							.AddOperationHeaders(OperationsHeaders))
-																			.AddReplicationStatusHeaders(Url, url, replicationInformer,
-																																	 convention.FailoverBehavior,
-																																	 HandleReplicationStatusChanges);
-
-			
-			request.RemoveAuthorizationHeader();
-            var token = await GetSingleAuthToken().ConfigureAwait(false);
-			try
-			{
-                token = await ValidateThatWeCanUseAuthenticateTokens(token).ConfigureAwait(false);
-			}
-			catch (Exception e)
-			{
-				throw new InvalidOperationException(
-					"Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
-					e);
-			}
-			request.AddOperationHeader("Single-Use-Auth-Token", token);
-
-			HttpResponseMessage response;
-			try
-			{
-				if (method == "POST")
-				{
-					response = await request.ExecuteRawResponseAsync(query.Query).ConfigureAwait(false);
-				}
-				else
-				{
-					response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
-				}
-			}
-			catch (Exception e)
-			{
-				if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) && request.ResponseStatusCode == HttpStatusCode.NotFound)
-				{
-					throw new InvalidOperationException(
-						@"StreamQuery does not support querying dynamic indexes. It is designed to be used with large data-sets and is unlikely to return all data-set after 15 sec of indexing, like Query() does.",
-						e);
-				}
-
-				throw;
-			}
-			
-			queryHeaderInfo.Value = new QueryHeaderInformation
-			{
-				Index = response.Headers.GetFirstValue("Raven-Index"),
-				IndexTimestamp = DateTime.ParseExact(response.Headers.GetFirstValue("Raven-Index-Timestamp"), Default.DateTimeFormatsToRead,
-																CultureInfo.InvariantCulture, DateTimeStyles.None),
-				IndexEtag = Etag.Parse(response.Headers.GetFirstValue("Raven-Index-Etag")),
-				ResultEtag = Etag.Parse(response.Headers.GetFirstValue("Raven-Result-Etag")),
-				IsStale = bool.Parse(response.Headers.GetFirstValue("Raven-Is-Stale")),
-				TotalResults = int.Parse(response.Headers.GetFirstValue("Raven-Total-Results"))
-			};
-
-			return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression());
+		    return ExecuteWithReplication("GET", operationMetadata => DirectStreamQueryAsync(index, query, queryHeaderInfo, operationMetadata));
 		}
 
-        public class YieldStreamResults : IAsyncEnumerator<RavenJObject>
+        private async Task<IAsyncEnumerator<RavenJObject>> DirectStreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo, OperationMetadata operationMetadata)
+	    {
+            var method = query.Query != null && query.Query.Length > 32760 ? "POST" : "GET";
+
+            EnsureIsNotNullOrEmpty(index, "index");
+            string path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: method == "GET");
+
+            if (method == "POST")
+                path += "&postQuery=true";
+
+            var request = jsonRequestFactory
+                .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), method, operationMetadata.Credentials, convention)
+                .AddOperationHeaders(OperationsHeaders))
+                .AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+            request.RemoveAuthorizationHeader();
+            var token = await GetSingleAuthToken(operationMetadata).ConfigureAwait(false);
+            try
+            {
+                token = await ValidateThatWeCanUseAuthenticateTokens(operationMetadata, token).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException(
+                    "Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+                    e);
+            }
+            request.AddOperationHeader("Single-Use-Auth-Token", token);
+
+            HttpResponseMessage response;
+            try
+            {
+                if (method == "POST")
+                {
+                    response = await request.ExecuteRawResponseAsync(query.Query).ConfigureAwait(false);
+                }
+                else
+                {
+                    response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
+                }
+            }
+            catch (Exception e)
+            {
+                if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) && request.ResponseStatusCode == HttpStatusCode.NotFound)
+                {
+                    throw new InvalidOperationException(
+                        @"StreamQuery does not support querying dynamic indexes. It is designed to be used with large data-sets and is unlikely to return all data-set after 15 sec of indexing, like Query() does.",
+                        e);
+                }
+
+                throw;
+            }
+
+            queryHeaderInfo.Value = new QueryHeaderInformation
+            {
+                Index = response.Headers.GetFirstValue("Raven-Index"),
+                IndexTimestamp = DateTime.ParseExact(response.Headers.GetFirstValue("Raven-Index-Timestamp"), Default.DateTimeFormatsToRead,
+                                                                CultureInfo.InvariantCulture, DateTimeStyles.None),
+                IndexEtag = Etag.Parse(response.Headers.GetFirstValue("Raven-Index-Etag")),
+                ResultEtag = Etag.Parse(response.Headers.GetFirstValue("Raven-Result-Etag")),
+                IsStale = bool.Parse(response.Headers.GetFirstValue("Raven-Is-Stale")),
+                TotalResults = int.Parse(response.Headers.GetFirstValue("Raven-Total-Results"))
+            };
+
+            return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression());
+	    }
+
+	    public class YieldStreamResults : IAsyncEnumerator<RavenJObject>
         {
             private readonly int start;
 
@@ -1928,76 +1927,81 @@ namespace Raven.Client.Connection.Async
 						string exclude = null,
                         RavenPagingInformation pagingInformation = null)
 		{
-			if (fromEtag != null && startsWith != null)
-				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
+            if (fromEtag != null && startsWith != null)
+                throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
 
-			var sb = new StringBuilder(url).Append("/streams/docs?");
+            if (fromEtag != null) // etags does not match between servers
+                return await DirectStreamDocsAsync(fromEtag, null, matches, start, pageSize, exclude, pagingInformation, new OperationMetadata(url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication));
 
-			if (fromEtag != null)
-			{
-				sb.Append("etag=")
-						.Append(fromEtag)
-						.Append("&");
-			}
-			else
-			{
-				if (startsWith != null)
-				{
-					sb.Append("startsWith=").Append(Uri.EscapeDataString(startsWith)).Append("&");
-				}
-				if (matches != null)
-				{
-					sb.Append("matches=").Append(Uri.EscapeDataString(matches)).Append("&");
-				}
-				if (exclude != null)
-				{
-					sb.Append("exclude=").Append(Uri.EscapeDataString(exclude)).Append("&");
-				}
-			}
-
-            var actualStart = start;
-
-            var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
-            if (nextPage)
-                actualStart = pagingInformation.NextPageStart;
-
-            if (actualStart != 0)
-                sb.Append("start=").Append(actualStart).Append("&");
-            if (pageSize != int.MaxValue)
-                sb.Append("pageSize=").Append(pageSize).Append("&");
-
-            if (nextPage)
-                sb.Append("next-page=true").Append("&");
-
-			var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, sb.ToString().NoCache(), "GET", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
-							.AddOperationHeaders(OperationsHeaders))
-																			.AddReplicationStatusHeaders(Url, url, replicationInformer,
-																																	 convention.FailoverBehavior,
-																																	 HandleReplicationStatusChanges);
-
-			request.RemoveAuthorizationHeader();
-
-            var token = await GetSingleAuthToken().ConfigureAwait(false);
-
-			try
-			{
-                token = await ValidateThatWeCanUseAuthenticateTokens(token).ConfigureAwait(false);
-			}
-			catch (Exception e)
-			{
-				throw new InvalidOperationException(
-					"Could not authenticate token for docs streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
-					e);
-			}
-
-			request.AddOperationHeader("Single-Use-Auth-Token", token);
-
-			var response = await request.ExecuteRawResponseAsync();
-            return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression(), start, pageSize, pagingInformation);
+            return await ExecuteWithReplication("GET", operationMetadata => DirectStreamDocsAsync(null, startsWith, matches, start, pageSize, exclude, pagingInformation, operationMetadata));
 		}
 
-		public Task DeleteAsync(string key, Etag etag)
+	    private async Task<IAsyncEnumerator<RavenJObject>> DirectStreamDocsAsync(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, OperationMetadata operationMetadata)
+	    {
+	        if (fromEtag != null && startsWith != null)
+	            throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
+
+	        var sb = new StringBuilder(operationMetadata.Url).Append("/streams/docs?");
+
+	        if (fromEtag != null)
+	        {
+	            sb.Append("etag=").Append(fromEtag).Append("&");
+	        }
+	        else
+	        {
+	            if (startsWith != null)
+	            {
+	                sb.Append("startsWith=").Append(Uri.EscapeDataString(startsWith)).Append("&");
+	            }
+	            if (matches != null)
+	            {
+	                sb.Append("matches=").Append(Uri.EscapeDataString(matches)).Append("&");
+	            }
+	            if (exclude != null)
+	            {
+	                sb.Append("exclude=").Append(Uri.EscapeDataString(exclude)).Append("&");
+	            }
+	        }
+
+	        var actualStart = start;
+
+	        var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
+	        if (nextPage)
+	            actualStart = pagingInformation.NextPageStart;
+
+	        if (actualStart != 0)
+	            sb.Append("start=").Append(actualStart).Append("&");
+
+	        if (pageSize != int.MaxValue)
+	            sb.Append("pageSize=").Append(pageSize).Append("&");
+
+	        if (nextPage)
+	            sb.Append("next-page=true").Append("&");
+
+	        var request = jsonRequestFactory
+                .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString().NoCache(), "GET", operationMetadata.Credentials, convention)
+                .AddOperationHeaders(OperationsHeaders))
+                .AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+	        request.RemoveAuthorizationHeader();
+
+	        var token = await GetSingleAuthToken(operationMetadata).ConfigureAwait(false);
+	        try
+	        {
+	            token = await ValidateThatWeCanUseAuthenticateTokens(operationMetadata, token).ConfigureAwait(false);
+	        }
+	        catch (Exception e)
+	        {
+	            throw new InvalidOperationException("Could not authenticate token for docs streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration", e);
+	        }
+
+	        request.AddOperationHeader("Single-Use-Auth-Token", token);
+
+	        var response = await request.ExecuteRawResponseAsync();
+	        return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression(), start, pageSize, pagingInformation);
+	    }
+
+	    public Task DeleteAsync(string key, Etag etag)
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
 			return ExecuteWithReplication("DELETE", operationMetadata => operationMetadata.Url.Doc(key)
@@ -2081,6 +2085,16 @@ namespace Raven.Client.Connection.Async
 			createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
 			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 		}
+
+        public HttpJsonRequest CreateRequest(OperationMetadata operationMetadata, string requestUrl, string method, bool disableRequestCompression = false)
+        {
+            var metadata = new RavenJObject();
+            AddTransactionInformation(metadata);
+            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (operationMetadata.Url + requestUrl).NoCache(), method, metadata, operationMetadata.Credentials, convention)
+                .AddOperationHeaders(OperationsHeaders);
+            createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
+            return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
+        }
 
 		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false)
 		{
@@ -2395,17 +2409,17 @@ namespace Raven.Client.Connection.Async
 
 		#endregion
 
-		public async Task<string> GetSingleAuthToken()
-		{
-			var tokenRequest = CreateRequest("/singleAuthToken".NoCache(), "GET", disableRequestCompression: true);
+        private async Task<string> GetSingleAuthToken(OperationMetadata operationMetadata)
+        {
+            var tokenRequest = CreateRequest(operationMetadata, "/singleAuthToken", "GET", disableRequestCompression: true);
 
             var response = await tokenRequest.ReadResponseJsonAsync().ConfigureAwait(false);
-			return response.Value<string>("Token");
-		}
+            return response.Value<string>("Token");
+        }
 
-		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
+		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(OperationMetadata operationMetadata, string token)
 		{
-			var request = CreateRequest("/singleAuthToken".NoCache(), "GET", disableRequestCompression: true);
+			var request = CreateRequest(operationMetadata, "/singleAuthToken", "GET", disableRequestCompression: true);
 
 			request.DisableAuthentication();
 			request.AddOperationHeader("Single-Use-Auth-Token", token);

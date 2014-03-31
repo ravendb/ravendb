@@ -61,7 +61,7 @@ class sqlReplication extends document {
 
     static empty(): sqlReplication {
         return new sqlReplication({
-            Name: "[new SQL replication]",
+            Name: "",
             Disabled: true,
             ParameterizeDeletesDisabled: false,
             RavenEntityName: null,

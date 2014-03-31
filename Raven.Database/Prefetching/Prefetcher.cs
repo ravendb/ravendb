@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
-using Raven.Database.Impl.Synchronization;
 using Raven.Database.Indexing;
 
 namespace Raven.Database.Prefetching

@@ -24,7 +24,7 @@ namespace Raven.Tests.Issues
                 if (documentStore.DatabaseCommands.GetStatistics().SupportsDtc == false)
                     return;
 
-                var enlistment = new ManyDocumentsViaDTC.DummyEnlistmentNotification();
+                var enlistment = new DummyEnlistmentNotification();
                 using (var tx = new TransactionScope())
                 {
                     using (var session = documentStore.OpenSession())

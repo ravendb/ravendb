@@ -1459,7 +1459,7 @@ namespace Raven.Tests.Storage.Voron
 
 		[Theory]
 		[PropertyData("Storages")]
-		public void GetReduceTypesPerKeys(string requestedStorage)
+		public void GetReduceTypesPerKeys1(string requestedStorage)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
@@ -1519,6 +1519,38 @@ namespace Raven.Tests.Storage.Voron
 				});
 			}
 		}
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void GetReduceTypesPerKeys2(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => Assert.Equal(0, accessor.MapReduce.GetReduceTypesPerKeys(303, 10, 10).Count()));
+
+                storage.Batch(accessor =>
+                {
+                    accessor.MapReduce.ScheduleReductions(303, 0, new ReduceKeyAndBucket(1, "reduceKey1"));
+                    accessor.MapReduce.ScheduleReductions(303, 0, new ReduceKeyAndBucket(2, "reduceKey1"));
+                    accessor.MapReduce.ScheduleReductions(303, 0, new ReduceKeyAndBucket(1, "reduceKey2"));
+                    accessor.MapReduce.ScheduleReductions(303, 1, new ReduceKeyAndBucket(1, "reduceKey3"));
+                    accessor.MapReduce.ScheduleReductions(404, 0, new ReduceKeyAndBucket(1, "reduceKey1"));
+                });
+
+                storage.Batch(accessor =>
+                {
+                    var results = accessor.MapReduce
+                        .GetReduceTypesPerKeys(303, 10, 10)
+                        .ToList();
+
+                    Assert.Equal(3, results.Count);
+                    Assert.True(results.Any(x => x.ReduceKey == "reduceKey1"));
+                    Assert.True(results.Any(x => x.ReduceKey == "reduceKey2"));
+                    Assert.True(results.Any(x => x.ReduceKey == "reduceKey3"));
+                    Assert.True(results.All(x => x.OperationTypeToPerform == ReduceType.SingleStep));
+                });
+            }
+        }
 
 		[Theory]
 		[PropertyData("Storages")]

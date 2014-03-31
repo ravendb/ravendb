@@ -110,7 +110,7 @@ namespace Raven.Json.Linq
 			Parts.Add(Convert.ToInt32(indexer, CultureInfo.InvariantCulture));
 		}
 
-		internal RavenJToken Evaluate(RavenJToken root, bool errorWhenNoMatch)
+		internal RavenJToken Evaluate(RavenJToken root, bool errorWhenNoMatch, bool createSnapshots = false)
 		{
 			var current = root;
 
@@ -122,7 +122,24 @@ namespace Raven.Json.Linq
 					var o = current as RavenJObject;
 					if (o != null)
 					{
-						current = o[propertyName];
+                        if (createSnapshots)
+                        {
+                            var newProp = o[propertyName];
+                            if (newProp != null)
+                            {
+                                newProp.EnsureCannotBeChangeAndEnableSnapshotting();
+                                newProp = newProp.CreateSnapshot();
+                                current = o[propertyName] = newProp;
+                            }
+                            else
+                            {
+                                current = null;
+                            }
+                        }
+                        else
+                        {
+                            current = o[propertyName];    
+                        }
 
 						if (current == null && errorWhenNoMatch)
 							throw new Exception("Property '{0}' does not exist on RavenJObject.".FormatWith(CultureInfo.InvariantCulture, propertyName));
