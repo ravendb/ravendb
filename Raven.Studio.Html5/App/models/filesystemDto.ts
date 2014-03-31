@@ -55,3 +55,30 @@ interface filesystemFileHeaderDto {
 
     Metadata: any;
 }
+
+interface filesystemSynchronizationReportDto{
+
+    FileName: string;
+    FileETag: string;
+    Type: filesystemSynchronizationType;
+
+    BytesTransfered: number;
+    BytesCopied: number;
+    NeedListLength: number;
+
+    Exception: any;
+}
+
+interface filesystemSearchResultsDto {
+    Files: filesystemFileHeaderDto[];
+    FileCount: number;
+    Start: number;
+    PageSize: number;
+}
+
+interface filesystemConfigSearchResultsDto{
+    ConfigNames: string[];
+    TotalCount: number;
+    Start: number;
+    PageSize: number;
+}

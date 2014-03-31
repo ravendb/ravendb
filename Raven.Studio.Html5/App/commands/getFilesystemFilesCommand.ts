@@ -7,8 +7,10 @@ class getFilesystemFilesCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<any> {
+    execute(): JQueryPromise<filesystemFileHeaderDto> {
+
         var url = "/stats";
+
         return this.query<filesystemFileHeaderDto>(url, null, this.fs);
     }
 }
