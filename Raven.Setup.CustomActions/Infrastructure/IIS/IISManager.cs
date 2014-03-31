@@ -14,5 +14,6 @@ namespace Raven.Setup.CustomActions.Infrastructure.IIS
 		IList<string> GetAppPools();
 
 		void DisallowOverlappingRotation(string applicationPoolName);
+		void SetLoadUserProfile(string applicationPoolName);
 	}
 }
