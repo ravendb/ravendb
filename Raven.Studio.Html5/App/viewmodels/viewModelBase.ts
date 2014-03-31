@@ -26,8 +26,8 @@ class viewModelBase {
      */
     canActivate(args: any): any {
         var database = appUrl.getDatabase();
-
-        if (database.isSystem) {
+                
+        if (database != null && database.isSystem) {
             if (viewModelBase.isConfirmedUsingSystemDatabase) {
                 return true;
             }
