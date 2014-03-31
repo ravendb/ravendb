@@ -29,6 +29,7 @@
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\downloadFileFromFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
+    <TypeScriptCompile Include="App\commands\addFilesystemDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\getFilesystemDestinationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getFilesystemFilesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getFilesystemsCommand.ts" />
@@ -101,6 +102,7 @@
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\createFilesystem.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystemAddDestination.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystemConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystemFiles.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystems.ts" />
@@ -186,6 +188,7 @@
     <Content Include="App\views\createEncryption.html" />
     <Content Include="App\views\conflicts.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
+    <Content Include="App\views\filesystemAddDestination.html" />
     <Content Include="App\views\filesystemConfiguration.html" />
     <Content Include="App\views\filesystemFiles.html" />
     <Content Include="App\views\createFilesystem.html" />

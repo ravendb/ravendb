@@ -1,0 +1,18 @@
+﻿<div class="messageBox" tabindex="-1">
+    <form data-bind="submit: add">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">&times;</button>
+            <h4 class="modal-title">Add Replication Destination</h4>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="destinationUrl">Url</label>
+                <input required type="text" class="form-control" id="destinationUrl" placeholder="Destination Url" data-bind="value: destinationUrl, hasfocus: destinationUrlFocus">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">OK</button>
+        </div>
+    </form>
+</div>
