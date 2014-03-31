@@ -7,4 +7,15 @@ import viewModelBase = require("viewmodels/viewModelBase");
 
 class filesystemSearch extends viewModelBase {
 
+    private router = router;
+
+    searchUrl = appUrl.forCurrentDatabase().filesystemSearch;
+
+    constructor() {
+        super();
+
+    }
+
 }
+
+export = filesystemSearch;

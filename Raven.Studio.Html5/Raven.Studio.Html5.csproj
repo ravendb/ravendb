@@ -175,7 +175,6 @@
     <TypeScriptCompile Include="App\commands\getScriptedIndexesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getReplicationSourcesCommand.ts" />
-    <Content Include="App\commands\getNewEncryptionKey.js" />
     <TypeScriptCompile Include="App\viewmodels\conflicts.ts" />
     <TypeScriptCompile Include="App\models\conflict.ts" />
     <TypeScriptCompile Include="App\models\conflictsInfo.ts" />
@@ -191,13 +190,10 @@
     <Content Include="App\views\filesystemFiles.html" />
     <Content Include="App\views\createFilesystem.html" />
     <Content Include="App\views\filesystems.html" />
-    <Content Include="App\views\alerts.html" />
-    <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\filesystemSearch.html" />
     <Content Include="App\views\filesystemSynchronization.html" />
     <Content Include="App\views\scriptedIndexes.html" />
     <Content Include="App\views\resetIndexConfirm.html" />
-    <Content Include="App\views\createEncryptionConfirmation.html" />
     <Content Include="App\views\restoreDatabase.html" />
     <Content Include="App\views\backupDatabase.html" />
     <Content Include="App\views\deleteTransformerConfirm.html" />

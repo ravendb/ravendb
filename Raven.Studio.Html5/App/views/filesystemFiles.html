@@ -1,4 +1,23 @@
-﻿<div class="documents-page">
+﻿<div class="filesystems-page">
+
+    <ul class="breadcrumb">
+        <li>
+            <h3>
+                <a href="#filesystems">
+                    File Systems
+                </a>
+            </h3>
+        </li>
+        <li data-bind="with: activeFilesystem">
+            <a data-bind="text: name"></a>
+        </li>
+        <li>
+            <a>Files</a>
+        </li>
+        <!--<li class="active">
+            <span data-bind="text: currentBreadcrumbTitle"></span>
+        </li>-->
+    </ul>
 
     <form>
         <label for="upload">Upload</label>

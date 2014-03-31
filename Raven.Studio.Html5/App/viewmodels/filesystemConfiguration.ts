@@ -7,4 +7,13 @@ import viewModelBase = require("viewmodels/viewModelBase");
 
 class filesystemConfiguration extends viewModelBase {
 
+    private router = router;
+
+    configurationUrl = appUrl.forCurrentDatabase().filesystemConfiguration;
+
+    constructor() {
+        super();
+    }
 } 
+
+export = filesystemConfiguration;

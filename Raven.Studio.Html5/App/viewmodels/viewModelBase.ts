@@ -9,9 +9,9 @@ import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
 class viewModelBase {
-    activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
-    activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
-
+    public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
+    public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
+               
     private keyboardShortcutDomContainers: string[] = [];
     private modelPollingHandle: number;
     static dirtyFlag = new ko.DirtyFlag([]);
@@ -107,7 +107,7 @@ class viewModelBase {
     /*
      * Creates a keyboard shortcut local to the specified element and its children.
      * The shortcut will be removed as soon as the view model is deactivated.
-     * Also defines shortcut for ace edito, if ace editor was recieved
+     * Also defines shortcut for ace editor, if ace editor was received
      */
     createKeyboardShortcut(keys: string, handler: () => void, elementSelector: string) {
         jwerty.key(keys, e => {
@@ -121,7 +121,7 @@ class viewModelBase {
     }
 
     //A method to save the current value in the observables from text boxes and inputs before a refresh/page close.
-    //Should be implemented on the inhereting class.
+    //Should be implemented on the inheriting class.
     saveInObservable() {
 
     }

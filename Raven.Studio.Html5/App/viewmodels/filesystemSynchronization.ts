@@ -7,4 +7,14 @@ import viewModelBase = require("viewmodels/viewModelBase");
 
 class filesystemSynchronization extends viewModelBase {
 
+    private router = router;
+
+    synchronizationUrl = appUrl.forCurrentDatabase().filesystemSynchronization;
+
+    constructor() {
+        super();
+    }
+
 }
+
+export = filesystemSynchronization;

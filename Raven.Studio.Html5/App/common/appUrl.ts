@@ -348,7 +348,7 @@ class appUrl {
     }
 
     /**
-    * Gets the filesystem from the current web browser address. Returns the no database if no database name is found.
+    * Gets the filesystem from the current web browser address. Returns the no filesystem if no name is found.
     */
     static getFilesystem(): filesystem {
 
@@ -370,7 +370,7 @@ class appUrl {
             fs.isDefault = unescapedDatabaseName === "<default>";
             return fs;
         } else {
-            // No database is specified in the URL. Assume it's the system database.
+            // No filesystem is specified in the URL. Assume it's the system database.
             return this.getDefaultFilesystem();
         }
     }
