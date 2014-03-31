@@ -86,7 +86,7 @@ namespace Raven.Client
 		public abstract IDocumentSession OpenSession(string database);
 		public abstract IDocumentSession OpenSession(OpenSessionOptions sessionOptions);
 		public abstract IDatabaseCommands DatabaseCommands { get; }
-
+        
 		/// <summary>
 		/// Executes the index creation.
 		/// </summary>
@@ -341,5 +341,12 @@ namespace Raven.Client
 			Encryptor.Initialize(UseFipsEncryptionAlgorithms);
 		}
 #endif
-	}
+
+
+        IDocumentStore IDocumentStore.RegisterListener(IDocumentConversionListener conversionListener)
+        {
+            listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] { conversionListener, }).ToArray();
+            return this;
+        }
+    }
 }

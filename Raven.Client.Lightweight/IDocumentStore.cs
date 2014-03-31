@@ -12,6 +12,7 @@ using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
+using Raven.Client.Listeners;
 #if NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #else
@@ -180,5 +181,7 @@ namespace Raven.Client
 #if !NETFX_CORE
 		BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
 #endif
+
+        IDocumentStore RegisterListener(IDocumentConversionListener conversionListener);
 	}
 }

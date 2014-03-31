@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
@@ -15,6 +16,8 @@ using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Client;
 using Raven.Database.Config;
+using Raven.Database.Server;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded
 {
@@ -22,6 +25,10 @@ namespace Raven.Client.Embedded
     {
         private IDocumentStore _inner;
         public RavenConfiguration Configuration { get; set; }
+
+        private OwinHttpServer httpServer;
+
+        readonly DocumentSessionListeners listeners = new DocumentSessionListeners();
 
         public EmbeddableDocumentStore()
         {
@@ -57,6 +64,12 @@ namespace Raven.Client.Embedded
                     Conventions = Conventions,
                     Configuration = Configuration
                 };
+
+                if (UseEmbeddedHttpServer)
+                {
+                    SetStudioConfigToAllowSingleDb();
+                    httpServer = new OwinHttpServer(Configuration, DocumentDatabase);
+                }
             }
             return this;
         }
@@ -196,6 +209,54 @@ namespace Raven.Client.Embedded
         public BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
         {
             return Inner.BulkInsert(database, options);
+        }
+
+        /// <summary>
+        ///     Let the studio knows that it shouldn't display the warning about sys db access
+        /// </summary>
+        public void SetStudioConfigToAllowSingleDb()
+        {
+            if (DocumentDatabase == null)
+                return;
+            JsonDocument jsonDocument = DocumentDatabase.Documents.Get("Raven/StudioConfig", null);
+            RavenJObject doc;
+            RavenJObject metadata;
+            if (jsonDocument == null)
+            {
+                doc = new RavenJObject();
+                metadata = new RavenJObject();
+            }
+            else
+            {
+                doc = jsonDocument.DataAsJson;
+                metadata = jsonDocument.Metadata;
+            }
+
+            doc["WarnWhenUsingSystemDatabase"] = false;
+
+            DocumentDatabase.Documents.Put("Raven/StudioConfig", null, doc, metadata, null);
+        }
+
+
+        /// <summary>
+        /// Expose the internal http server, if used
+        /// </summary>
+        public OwinHttpServer HttpServer
+        {
+            get { return httpServer; }
+        }
+        
+        ///<summary>
+        /// Whatever we should also host an HTTP endpoint for the document database
+        ///</summary>
+        public bool UseEmbeddedHttpServer { get; set; }
+
+
+
+        public IDocumentStore RegisterListener(Listeners.IDocumentConversionListener conversionListener)
+        {
+            listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] { conversionListener, }).ToArray();
+            return this;
         }
     }
 }
