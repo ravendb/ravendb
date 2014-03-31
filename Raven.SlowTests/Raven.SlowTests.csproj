@@ -44,6 +44,8 @@
   <ItemGroup>
     <Compile Include="Bugs\ManyDocumentsViaDTC.cs" />
     <Compile Include="Bugs\ManyDocumentWithMapReduce.cs" />
+    <Compile Include="Bugs\VeryBigResultSet.cs" />
+    <Compile Include="Bugs\VeryBigResultSetRemote.cs" />
     <Compile Include="Issues\RavenDB_1280.cs" />
     <Compile Include="Issues\RavenDB_1280_ReOpen.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

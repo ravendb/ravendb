@@ -719,8 +719,6 @@
     <Compile Include="Bugs\UsingStartsWith.cs" />
     <Compile Include="Bugs\UsingSwedishCollation.cs" />
     <Compile Include="Bugs\MapRedue\VersionedDocuments.cs" />
-    <Compile Include="Bugs\VeryBigResultSet.cs" />
-    <Compile Include="Bugs\VeryBigResultSetRemote.cs" />
     <Compile Include="Bugs\Vlad.cs" />
     <Compile Include="Bugs\Vlko\QueryWithMultipleWhere.cs" />
     <Compile Include="Bugs\Vlko\RelationIdIndex.cs" />
@@ -959,6 +957,8 @@
     <Compile Include="Utils\SettingsDat.cs" />
     <Compile Include="Utils\SortedEtagsListTests.cs" />
     <Compile Include="Util\ReflectionUtilTest.cs" />
+    <Compile Include="Util\RunExternalProcess.cs" />
+    <Compile Include="Util\WildcardMatching.cs" />
     <Compile Include="Views\MapReduce.cs" />
     <Compile Include="Views\MapReduce_IndependentSteps.cs" />
     <Compile Include="Views\ViewCompilation.cs" />
