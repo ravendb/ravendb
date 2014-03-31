@@ -120,12 +120,10 @@
     <Compile Include="Replication\Async\FailoverBetweenTwoMultiTenantDatabases.cs" />
     <Compile Include="Replication\Async\FailureHandling.cs" />
     <Compile Include="Replication\Async\MultihopReplication.cs" />
-    <Compile Include="Replication\Async\ReadStriping.cs" />
     <Compile Include="Replication\Async\SimpleReplication.cs" />
     <Compile Include="Replication\Async\WritesDuringFailover.cs" />
     <Compile Include="Replication\AttachmentReplication.cs" />
     <Compile Include="Replication\AttachmentReplicationBugs.cs" />
-    <Compile Include="Replication\Bugs\AddingAndDeletingRemote.cs" />
     <Compile Include="Replication\Bugs\ApiKeysWithMultiTenancy.cs" />
     <Compile Include="Replication\Bugs\David.cs" />
     <Compile Include="Replication\Bugs\HiLoHanging.cs" />
@@ -144,7 +142,6 @@
     <Compile Include="Replication\Issues\RavenDB_677.cs" />
     <Compile Include="Replication\Issues\ReplicationWithReferencedIndexes.cs" />
     <Compile Include="Replication\MultihopReplication.cs" />
-    <Compile Include="Replication\ReadStriping.cs" />
     <Compile Include="Replication\ReplicationDestinationDisabled.cs" />
     <Compile Include="Replication\ReplicationWithOAuth.cs" />
     <Compile Include="Replication\SimpleReplication.cs" />

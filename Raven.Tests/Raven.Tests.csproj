@@ -827,7 +827,6 @@
     <Compile Include="Storage\Voron\DocumentsStorageActionsTests.cs" />
     <Compile Include="Suggestions\SuggestionsUsingAnIndex.cs" />
     <Compile Include="Synchronization\ConcurrentJsonDocumentSortedListTests.cs" />
-    <Compile Include="Synchronization\IndexationTests.cs" />
     <Compile Include="T1.cs" />
     <Compile Include="Spatial\BrainV.cs" />
     <Compile Include="Storage\Attachments.cs">

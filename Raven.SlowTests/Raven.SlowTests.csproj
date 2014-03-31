@@ -63,9 +63,20 @@
     <Compile Include="Bugs\ManyDocumentWithMapReduce.cs" />
     <Compile Include="Bugs\VeryBigResultSet.cs" />
     <Compile Include="Bugs\VeryBigResultSetRemote.cs" />
+    <Compile Include="Bundles\Replication\Async\ConflictWhenReplicating.cs" />
+    <Compile Include="Bundles\Replication\Async\ReadStriping.cs" />
+    <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />
+    <Compile Include="Bundles\Replication\ReadStriping.cs" />
     <Compile Include="Issues\RavenDB_1280.cs" />
     <Compile Include="Issues\RavenDB_1280_ReOpen.cs" />
+    <Compile Include="Issues\RavenDB_1359 .cs" />
+    <Compile Include="Issues\RavenDB_1411.cs" />
+    <Compile Include="Issues\RavenDB_1594.cs" />
+    <Compile Include="Issues\RavenDB_1603.cs" />
+    <Compile Include="Issues\RavenDB_1754.cs" />
+    <Compile Include="Issues\RavenDB_560.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Synchronization\IndexationTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
@@ -84,9 +95,17 @@
       <Project>{212823cd-25e1-41ac-92d1-d6df4d53fc85}</Project>
       <Name>Raven.Database</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
+      <Project>{3e6401ac-3e33-4b61-a460-49953654a207}</Project>
+      <Name>Raven.Smuggler</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
       <Project>{381234cc-8aa7-41ff-8cad-22330e15f993}</Project>
       <Name>Raven.Tests.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Issues\Raven.Tests.Issues.csproj">
+      <Project>{d8bdd718-6e21-41b7-9c41-d0fbe0532df4}</Project>
+      <Name>Raven.Tests.Issues</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

@@ -6,23 +6,20 @@ using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Server;
 using Raven.Smuggler;
-using Raven.Tests.Bundles.Versioning;
 
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Tests.Common;
 
 using Xunit;
-using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_1594 : RavenTestBase
+	public class RavenDB_1594 : RavenTest
 	{
 		protected readonly string path;
 		protected readonly DocumentStore documentStore;
@@ -31,8 +28,7 @@ namespace Raven.Tests.Issues
 
 		public RavenDB_1594()
 		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
+		    path = NewDataPath();
 			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
 			var config = new Raven.Database.Config.RavenConfiguration
 			             	{

@@ -3,7 +3,6 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Lucene.Net.Util;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 
