@@ -224,10 +224,13 @@
                         <li class="list-group-item" data-bind="text: 'Status: ' + IsStale ? 'Stale' : 'Up to date'"></li>
                         <li class="list-group-item" data-bind="text: 'Duration: ' + DurationMilliseconds + 'ms'"></li>
                         <li class="list-group-item">
-                            Index: <a data-bind="text: IndexName, attr: { href: $root.selectedIndexEditUrl }"></a>
+                            Index:
+                            <a data-bind="text: IndexName, attr: { href: $root.selectedIndexEditUrl }"></a>
+                        </li>
+                        <li class="list-group-item">
+                            <a target='_blank' data-bind="attr: { href: $root.rawJsonUrl()  + '&explain=true'}">Index Explain</a>
                         </li>
                         <li class="list-group-item" data-bind="text: 'ETag: ' + ResultEtag"></li>
-                        <li class="list-group-item"><a target='_blank' data-bind="attr: { href: $root.rawJsonUrl }">Raw JSON</a></li>
                     </ul>
                     
                 </div>
