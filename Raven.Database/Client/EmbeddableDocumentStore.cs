@@ -80,6 +80,7 @@ namespace Raven.Client.Embedded
             Conventions = new DocumentConvention();
             Listeners = new DocumentSessionListeners();
             Configuration = new RavenConfiguration();
+            EnlistInDistributedTransactions = true;
         }
 
         private IDocumentStore Inner

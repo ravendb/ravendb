@@ -713,7 +713,7 @@ namespace Raven.Tests.Document
 			documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
 			{
 				Query = "Tag:[[Companies]]"
-			}, allowStale: false);
+			}, allowStale: false).WaitForCompletion();
 
 			using (var session = documentStore.OpenSession())
 			{
@@ -744,7 +744,7 @@ namespace Raven.Tests.Document
 					Name = "Name",
 					Value = RavenJToken.FromObject("Another Company")
 				},
-			}, allowStale: false);
+			}, allowStale: false).WaitForCompletion();
 
 			using (var session = documentStore.OpenSession())
 			{
