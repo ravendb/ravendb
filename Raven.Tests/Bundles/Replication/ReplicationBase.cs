@@ -126,7 +126,11 @@ namespace Raven.Tests.Bundles.Replication
 			ModifyConfiguration(serverConfiguration);
 
             serverConfiguration.PostInit();
-            var ravenDbServer = new RavenDbServer(serverConfiguration);
+            var ravenDbServer = new RavenDbServer(serverConfiguration)
+            {
+                UseEmbeddedHttpServer = true
+            };
+            ravenDbServer.Initialize(ConfigureServer);
 
             servers[index] = ravenDbServer;
         }

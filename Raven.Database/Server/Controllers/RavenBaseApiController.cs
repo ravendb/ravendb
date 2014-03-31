@@ -435,13 +435,14 @@ namespace Raven.Database.Server.Controllers
 
 			if (string.IsNullOrEmpty(zipPath) == false)
 			{
-				if (File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, zipPath + ".zip")))
+			    var fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, zipPath + ".zip");
+			    if (File.Exists(zipPath))
 				{
-					return WriteFileFromZip(zipPath, docPath);
+                    return WriteFileFromZip(fullZipPath, docPath);
 				}
 			}
 
-			return WriteEmbeddedFileOfType(embeddedPath, docPath);
+		    return WriteEmbeddedFileOfType(embeddedPath, docPath);
 		}
 
 		private HttpResponseMessage WriteFileFromZip(string zipPath, string docPath)
