@@ -3,7 +3,7 @@ import filesystem = require("models/filesystem");
 
 class saveFilesystemConfigurationCommand extends commandBase {
 
-    constructor(private fs: filesystem, private name: string) {
+    constructor(private fs: filesystem, private name: string, private content: any) {
         super();
     }
 
@@ -12,8 +12,9 @@ class saveFilesystemConfigurationCommand extends commandBase {
         var url = "/config";
         var args = {
             name: this.name
-        }
+        };
 
+        // TODO: Send the content to the server.
         return this.put(url, args, this.fs);
     }
 }

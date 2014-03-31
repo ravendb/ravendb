@@ -5,7 +5,7 @@ import dialog = require("plugins/dialog");
 import commandBase = require("commands/commandBase");
 
 //import filesystem = require("models/filesystem");
-import addFilesystemDestinationCommand = require("commands/addFilesystemDestinationCommand");
+import createFilesystemDestinationCommand = require("commands/createFilesystemDestinationCommand");
 
 class filesystemAddDestination extends dialogViewModelBase {
 
@@ -15,12 +15,12 @@ class filesystemAddDestination extends dialogViewModelBase {
     public destinationUrl = ko.observable('');
     public destinationUrlFocus = ko.observable(true);
 
-    //private filesystems = ko.observableArray<filesystem>();
+    private destinations = ko.observableArray<string>();
     private newCommandBase = new commandBase();
 
-    constructor(filesystems) {
+    constructor(destinations) {
         super();
-        //this.filesystems = filesystems;
+        this.destinations = destinations;
     }
 
     cancel() {
@@ -42,55 +42,45 @@ class filesystemAddDestination extends dialogViewModelBase {
     }
 
     add() {
-        // For now we're just creating the filesystem.
+       
+        var destinationUrl = this.destinationUrl();
 
-        //var filesystemName = this.filesystemName();
-
-        //if (this.isClientSideInputOK(filesystemName)) {
-        //    this.creationTaskStarted = true;
-        //    this.creationTask.resolve(filesystemName);
-        //    dialog.close(this);
-        //}
+        if (this.isClientSideInputOK(destinationUrl)) {
+            this.creationTaskStarted = true;
+            this.creationTask.resolve(destinationUrl);
+            dialog.close(this);
+        }
     }
 
-    //private isClientSideInputOK(filesystemName): boolean {
-    //    var errorMessage = "";
+    private isClientSideInputOK(destinationUrl): boolean {
+        var errorMessage = "";
 
-    //    if (filesystemName == null) {
-    //        errorMessage = "Please fill out the Database Name field";
-    //    }
-    //    else if (this.isFilesystemNameExists(filesystemName, this.filesystems()) === true) {
-    //        errorMessage = "Database Name Already Exists!";
-    //    }
-    //    else if ((errorMessage = this.CheckInput(filesystemName)) != null) { }
+        if (destinationUrl == null) {
+            errorMessage = "Please fill out the Destination url field";
+        }
+        //else if (this.isFilesystemNameExists(filesystemName, this.filesystems()) === true) {
+        //    errorMessage = "Database Name Already Exists!";
+        //}
+        else if ((errorMessage = this.CheckInput(destinationUrl)) != null) { }
 
-    //    if (errorMessage != null) {
-    //        this.newCommandBase.reportError(errorMessage);
-    //        this.destinationUrlFocus(true);
-    //        return false;
-    //    }
-    //    return true;
-    //}
+        if (errorMessage != null) {
+            this.newCommandBase.reportError(errorMessage);
+            this.destinationUrlFocus(true);
+            return false;
+        }
+        return true;
+    }
 
-    private CheckInput(name): string {
-        var rg1 = /^[^\\/:\*\?"<>\|]+$/; // forbidden characters \ / : * ? " < > |
-        var rg2 = /^\./; // cannot start with dot (.)
-        var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
-        var maxLength = 260 - 30;
+    private CheckInput(url): string {
+
+        //hveiras: I took the uri regex from http://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
+        var uriRegex = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi;
 
         var message = null;
-        if (name.length > maxLength) {
-            message = "The filesystem length can't exceed " + maxLength + " characters!";
+        if (!uriRegex.test(url)) {
+            message = "The destination url is not valid";
         }
-        else if (!rg1.test(name)) {
-            message = "The filesystem name can't contain any of the following characters: \ / : * ?" + ' " ' + "< > |";
-        }
-        else if (rg2.test(name)) {
-            message = "The filesystem name can't start with a dot!";
-        }
-        else if (rg3.test(name)) {
-            message = "The name '" + name + "' is forbidden for use!";
-        }
+
         return message;
     }
 

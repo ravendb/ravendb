@@ -24,13 +24,13 @@
     <TypeScriptCompile Include="App\commands\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\createFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\createFilesystemDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\createFilesystemFolderCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteFilesystemConfigurationKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\downloadFileFromFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
-    <TypeScriptCompile Include="App\commands\addFilesystemDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\getFilesystemConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\getFilesystemConfigurationByKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\getFilesystemDestinationsCommand.ts" />

@@ -12,7 +12,7 @@ class getFilesystemConfigurationByKeyCommand extends commandBase {
         var url = "/config";
         var args = {
             name: this.name
-        }
+        };
 
         return this.query<any>(url, args, this.fs);
     }
