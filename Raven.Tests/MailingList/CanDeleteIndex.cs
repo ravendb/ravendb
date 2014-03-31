@@ -13,7 +13,7 @@ namespace Raven.Tests.MailingList
 		{
 			public AllDocs() { Map = docs => from doc in docs select new { }; }
 		}
-
+            
 		[Fact]
 		public void WithNoErrors()
 		{
