@@ -23,4 +23,27 @@
         </li>-->
     </ul>
 
+    <div class="row">
+
+        <div class="col-md-2">
+            <ul class="nav nav-pills">
+                <li>All Configuration Keys</li>
+            </ul>
+            <ul class="nav nav-pills nav-stacked document-collections" data-bind="foreach: keys">
+                <li data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedKeys() }, visible: keysCount() > 0 || isAllKeys">
+                    <a href="javascript:void(0)">
+                        <div class="collection-color-strip" data-bind="css: colorClass"></div>
+                        <span data-bind="text: name"></span>
+                        <span class="text-muted" data-bind="visible: keysCount() > 0, css: { 'text-muted': $data !== $parent.selectedKeys() }, text: '(' + keysCount() + ')'"></span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="col-md-10">
+            <div class="alert alert-danger">
+                TODO: Implement this row.
+            </div>
+        </div>
+    </div>
 </div>

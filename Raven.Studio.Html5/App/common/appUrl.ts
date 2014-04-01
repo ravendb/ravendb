@@ -313,6 +313,11 @@ class appUrl {
         return "#filesystems/configuration?" + filesystemPart;
     }
 
+    static forFilesystemConfigurationWithKey(fs: filesystem, key: string): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs) + "&key=" + key;
+        return "#filesystems/configuration?" + filesystemPart;
+    }
+
 	/**
 	* Gets the database from the current web browser address. Returns the system database if no database name is found.
 	*/

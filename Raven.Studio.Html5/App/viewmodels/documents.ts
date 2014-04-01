@@ -35,7 +35,7 @@ class documents extends viewModelBase {
         super.activate(args);
 
         // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo&database="blahDb"
-        this.collectionToSelectName = args ? args.collection : null;        
+        this.collectionToSelectName = args ? args.collection : null;
         this.fetchCollections(appUrl.getDatabase());
     }
 
