@@ -39,8 +39,8 @@
                 </div>
             </div>
         </div>
-        <div class="row">            
-            <pre id="dbDocEditor" data-bind="css: { height: 250 }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 25 }"></pre>
+        <div class="row">
+            <div id="keyDetailsGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allPagedKeyDetails, gridSelector: '#keyDetailsGrid', isCopyAllowed: 'false' }"></div>            
         </div>
     </div>
 
