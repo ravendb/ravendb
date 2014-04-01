@@ -23,27 +23,26 @@
         </li>-->
     </ul>
 
-    <div class="row">
+    <div class="col-md-3">
+        <ul class="nav nav-pills nav-stacked files-collections" data-bind="foreach: keys">
+            <li data-bind="css: { active: $root.isActive($data) }">
+                <a href="javascript:void(0)" data-bind="attr: { href: $root.getEditorUrl($data) }, text: $data"></a>
+            </li>
+        </ul>
+    </div>
 
-        <div class="col-md-2">
-            <ul class="nav nav-pills">
-                <li>All Configuration Keys</li>
-            </ul>
-            <ul class="nav nav-pills nav-stacked document-collections" data-bind="foreach: keys">
-                <li data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedKeys() }, visible: keysCount() > 0 || isAllKeys">
-                    <a href="javascript:void(0)">
-                        <div class="collection-color-strip" data-bind="css: colorClass"></div>
-                        <span data-bind="text: name"></span>
-                        <span class="text-muted" data-bind="visible: keysCount() > 0, css: { 'text-muted': $data !== $parent.selectedKeys() }, text: '(' + keysCount() + ')'"></span>
-                    </a>
-                </li>
-            </ul>
-        </div>
-
-        <div class="col-md-10">
-            <div class="alert alert-danger">
-                TODO: Implement this row.
+    <div id="settingsContainer" class="col-md-9" >
+        <div class="row">
+            <div class="btn-toolbar" role="toolbar">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default" data-bind="click: navigateToEditSettingsDocument" title="Navigate to setting document(F2)"><i class="fa fa-edit"></i> Edit</button>
+                </div>
             </div>
         </div>
+        <div class="row">
+            <!--<pre id="dbDocEditor" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 25 }"></pre>-->
+            <pre id="dbDocEditor"></pre>
+        </div>
     </div>
+
 </div>

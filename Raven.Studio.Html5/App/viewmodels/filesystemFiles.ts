@@ -11,7 +11,7 @@ import file = require("models/file");
 class filesystemFiles extends viewModelBase {
 
    
-    fileName = ko.observable<File>();
+    fileName = ko.observable<file>();
     allFilesPagedItems = ko.observable<pagedList>();
     selectedFilesIndices = ko.observableArray<number>();
     isSelectAll = ko.observable(false);

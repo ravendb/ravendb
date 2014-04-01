@@ -323,7 +323,7 @@ class appUrl {
     }
 
     static forFilesystemConfigurationWithKey(fs: filesystem, key: string): string {
-        var filesystemPart = appUrl.getEncodedFsPart(fs) + "&key=" + key;
+        var filesystemPart = appUrl.getEncodedFsPart(fs) + "&key=" + encodeURIComponent(key);
         return "#filesystems/configuration?" + filesystemPart;
     }
 
