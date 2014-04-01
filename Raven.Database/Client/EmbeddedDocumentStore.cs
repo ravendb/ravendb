@@ -194,7 +194,6 @@ namespace Raven.Database.Client
         public IDocumentStore Initialize()
         {
             server.Initialize();
-			SetStudioConfigToAllowSingleDb();
             return this;
         }
 
@@ -386,32 +385,6 @@ namespace Raven.Database.Client
         public DocumentStoreBase RegisterListener(IDocumentConflictListener conflictListener)
         {
             return server.DocumentStore.RegisterListener(conflictListener);
-        }
-
-        /// <summary>
-        ///     Let the studio knows that it shouldn't display the warning about sys db access
-        /// </summary>
-        public void SetStudioConfigToAllowSingleDb()
-        {
-            if (DocumentDatabase == null)
-                return;
-            JsonDocument jsonDocument = DocumentDatabase.Documents.Get("Raven/StudioConfig", null);
-            RavenJObject doc;
-            RavenJObject metadata;
-            if (jsonDocument == null)
-            {
-                doc = new RavenJObject();
-                metadata = new RavenJObject();
-            }
-            else
-            {
-                doc = jsonDocument.DataAsJson;
-                metadata = jsonDocument.Metadata;
-            }
-
-            doc["WarnWhenUsingSystemDatabase"] = false;
-
-            DocumentDatabase.Documents.Put("Raven/StudioConfig", null, doc, metadata, null);
         }
     }
 }

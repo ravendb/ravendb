@@ -615,7 +615,6 @@
     <Compile Include="Linq\ListIndexOf.cs" />
     <Compile Include="Linq\FlagsEnum.cs" />
     <Compile Include="DatabaseMemoryTargetTests.cs" />
-    <Compile Include="Document\EmbeddedDocStoreWithHttpServer.cs" />
     <Compile Include="IncrementalBackupTest.cs" />
     <Compile Include="Indexes\CastingInIndexDefinition.cs" />
     <Compile Include="Linq\Contains.cs" />
