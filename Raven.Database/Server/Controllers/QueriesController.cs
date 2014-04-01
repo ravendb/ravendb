@@ -69,7 +69,8 @@ namespace Raven.Database.Server.Controllers
 										: Database.Documents.GetWithTransformer(value, transformer, transactionInformation, queryInputs);
 				    if (documentByKey == null)
 				    {
-                        result.Results.Add(null); 
+                        if(ClientIsV3OrHigher)
+                            result.Results.Add(null); 
                         continue;
 				    }
 					result.Results.Add(documentByKey.ToJson());
@@ -112,5 +113,6 @@ namespace Raven.Database.Server.Controllers
 
 			return msg;
 		}
+        
 	}
 }

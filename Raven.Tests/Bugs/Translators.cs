@@ -109,7 +109,7 @@ namespace Raven.Tests.Bugs
 
 					var expectedError = Assert.Throws<IndexOutOfRangeException>(() => string.Empty[1]);
 
-					Assert.Equal("The transform results function failed.\r\nDoc 'users/1', Error: " + expectedError.Message, exception.Message);
+					Assert.Contains("The transform results function failed.\r\nDoc 'users/1', Error: " + expectedError.Message, exception.InnerException.Message);
 				}
 			}
 		}

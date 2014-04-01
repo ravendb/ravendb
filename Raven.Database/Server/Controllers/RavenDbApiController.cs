@@ -570,5 +570,18 @@ namespace Raven.Database.Server.Controllers
 	            return;
 	        Database.WorkContext.MetricsCounters.RequestDuationMetric.Update(duration);
 	    }
+
+	    public bool ClientIsV3OrHigher
+	    {
+	        get
+	        {
+	            var qsv = GetQueryStringValue("Raven-Client-Version");
+	            if (string.IsNullOrEmpty(qsv))
+	                return false; // probably 1.0 client?
+	            if (qsv[0] == '1' || qsv[0] == '2')
+	                return false;
+	            return true;
+	        }
+	    }
 	}
 }
