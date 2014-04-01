@@ -1,4 +1,4 @@
-﻿<div>
+﻿<div >
     <div class="navbar navbar-fixed-top navbar-default">
         <div class="navbar-inner">
             <ul class="nav navbar-nav">
@@ -135,27 +135,31 @@
     <div class="page-host" data-bind="router: { cacheViews: false }"></div>
 </div>
 
-<footer style="z-index: 999">
+<footer style="z-index: 999" id="shellFooter">
     <div class="navbar navbar-fixed-bottom navbar-inverse" data-bind="with: activeDatabase">
         <div class="navbar-inner">
-            <ul class="nav navbar-nav">
-                <li><a class="navbar-brand" href="#/status">Stats</a></li>
+            <ul class="nav navbar-nav col-md-8">
+                <li><a data-bind="text:'Status'" class="navbar-link" href="#/status"></a></li>
                 <!-- ko with: statistics -->
-                <li><a data-bind="text: CountOfDocuments + ' documents', attr: { href: $parents[1].appUrls.documents }"></a></li>
-                <li><a data-bind="text: CountOfIndexes + ' indexes', attr: { href: $parents[1].appUrls.indexes }"></a></li>
-                <li><a data-bind="text: StaleIndexes.length + ' stale', attr: { href: $parents[1].appUrls.status }"></a></li>
-                <li><a data-bind="text: Errors.length + ' errors', attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
-                <li><a data-bind="text: ApproximateTaskCount + ' tasks', attr: { href: $parents[1].appUrls.status }"></a></li>
-                <li data-bind="visible:$root.rawUrlIsVisible">
-                    <a target='_blank' data-bind="text:'Raw Url: ' + $root.currentRawUrl(), attr:{href:$root.currentRawUrl()}"></a>
+                <li><a class="navbar-link" data-bind="text: CountOfDocuments + ' documents', attr: { href: $parents[1].appUrls.documents }"></a></li>
+                <li><a class="navbar-link" data-bind="text: CountOfIndexes + ' indexes', attr: { href: $parents[1].appUrls.indexes }"></a></li>
+                <li><a class="navbar-link" data-bind="text: StaleIndexes.length + ' stale', attr: { href: $parents[1].appUrls.status }"></a></li>
+                <li><a class="navbar-link" data-bind="text: Errors.length + ' errors', attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
+                <li><a class="navbar-link" data-bind="text: ApproximateTaskCount + ' tasks', attr: { href: $parents[1].appUrls.status }"></a></li>
+                <li class="raw-url" data-bind="visible:$root.rawUrlIsVisible">
+                    <a class="navbar-link" target='_blank' data-bind="text:$root.currentRawUrl(), attr:{href:$root.currentRawUrl()}"></a>
                 </li>
                 <!-- /ko -->
             </ul>
-            <ul class="nav navbar-nav pull-right" data-bind="with: $root">
-                <li data-bind="with: licenseStatus"><a data-bind="text: 'License Status: ' + Status">AGPL - Open Source</a></li>
-                <li data-bind="with: buildVersion"><a data-bind="text: 'Server Build #' + BuildVersion"></a></li>
-                <li><a>Client Build #30</a></li>
+            <ul class="nav navbar-nav navbar-right col-md-4">
+                <!-- ko with: $root -->
+                <li data-bind="with: licenseStatus" class="navbar-right"><a class="navbar-link " data-bind="text: 'License Status: ' + Status">AGPL - Open Source</a></li>
+                <li data-bind="with: buildVersion" class="navbar-right"><a class="navbar-link " data-bind="text: 'Server Build #' + BuildVersion"></a></li>
+                <li class="navbar-right"><a class="navbar-link">Client Build #30</a></li>
+
+                <!-- /ko -->
             </ul>
+
         </div>
     </div>
 </footer>
