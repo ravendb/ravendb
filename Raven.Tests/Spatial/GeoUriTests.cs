@@ -25,7 +25,7 @@ namespace Raven.Tests.Spatial
 		[Fact]
 		public void PointTest()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewRemoteDocumentStore())
 			{
 				store.Initialize();
 				store.ExecuteIndex(new PointIndex());

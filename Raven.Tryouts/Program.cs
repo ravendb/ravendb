@@ -4,6 +4,8 @@ using System.IO;
 using System.Runtime.InteropServices;
 using Lucene.Net.Util;
 using NLog;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Tests.Bugs;
 using Raven.Tests.Bugs.Indexing;
@@ -14,6 +16,7 @@ using Raven.Tests.Notifications;
 
 namespace Raven.Tryouts
 {
+
 	class Program
 	{
 		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
