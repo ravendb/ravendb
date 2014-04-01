@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Client.Connection;
-using Raven.Tests.Bugs;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
 

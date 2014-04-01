@@ -3,13 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
-using Constants = Raven.Abstractions.Data.Constants;
 
-namespace Raven.Tests.Bundles.Replication.Bugs
+namespace Raven.SlowTests.Bundles.Replication.Bugs
 {
 	public class AddingAndDeletingRemote : ReplicationBase
 	{

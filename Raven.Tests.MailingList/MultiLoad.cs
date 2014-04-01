@@ -1,7 +1,6 @@
 using System.Runtime.Serialization;
 
 using Raven.Client.Document;
-using Raven.Tests.Bugs;
 using Raven.Tests.Common;
 
 using Xunit;

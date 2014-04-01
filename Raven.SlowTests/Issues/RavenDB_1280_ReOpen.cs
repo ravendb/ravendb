@@ -3,19 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+
 using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Attributes;
 
-using Xunit;
-using Xunit.Extensions;
-
-namespace Raven.Tests.Bugs
+namespace Raven.SlowTests.Issues
 {
     public class RavenDB_1280_ReOpen : RavenTest
     {

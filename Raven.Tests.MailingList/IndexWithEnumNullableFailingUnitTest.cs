@@ -1,11 +1,11 @@
 ﻿using System.Linq;
-using Raven.Client;
+
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
 
 using Xunit;
 
-namespace RavenDbTests.Test1
+namespace Raven.Tests.MailingList
 {
 
     public class IndexWithEnumNullableFailingUnitTest : RavenTestBase

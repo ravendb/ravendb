@@ -6,7 +6,6 @@
 using System;
 using System.Transactions;
 using Raven.Abstractions;
-using Raven.Tests.Bugs;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Util;
 

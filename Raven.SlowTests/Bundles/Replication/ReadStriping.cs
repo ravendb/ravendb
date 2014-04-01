@@ -1,11 +1,12 @@
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
 
 using Xunit;
 
-namespace Raven.Tests.Bundles.Replication
+using Company = Raven.Tests.Bundles.Company;
+
+namespace Raven.SlowTests.Bundles.Replication
 {
 	public class ReadStriping : ReplicationBase
 	{

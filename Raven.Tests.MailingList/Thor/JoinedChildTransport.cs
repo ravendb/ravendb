@@ -1,7 +1,4 @@
-using System.Collections.Generic;
-using Raven.Client.Embedded;
-
-namespace LinQTests
+namespace Raven.Tests.MailingList.Thor
 {
 	public class JoinedChildTransport
 	{

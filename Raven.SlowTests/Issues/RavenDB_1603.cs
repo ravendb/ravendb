@@ -4,6 +4,15 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.Composition.Hosting;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -18,21 +27,11 @@ using Raven.Json.Linq;
 using Raven.Smuggler;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Triggers;
-
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.Composition.Hosting;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
 using Raven.Tests.Common.Util;
 
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace Raven.SlowTests.Issues
 {
 
     public class RavenDB_1603 : RavenTest

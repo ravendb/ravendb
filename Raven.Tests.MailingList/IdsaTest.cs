@@ -3,9 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
@@ -14,7 +16,7 @@ using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Raven.Tests.MailingList.Idsa
+namespace Raven.Tests.MailingList
 {
 	public class IdsaTest : RavenTest
 	{

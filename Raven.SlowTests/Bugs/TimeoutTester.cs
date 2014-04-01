@@ -1,17 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Server;
+using Raven.Client.Linq;
+using Raven.Tests.Bugs.TransformResults;
 using Raven.Tests.Common;
 
 using Xunit;
-using Raven.Client.Linq;
 
-namespace Raven.Tests.Bugs.TransformResults
+namespace Raven.SlowTests.Bugs
 {
 	public class TimeoutTester : RavenTest
 	{

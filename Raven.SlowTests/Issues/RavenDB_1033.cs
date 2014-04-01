@@ -3,7 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
+
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
@@ -12,7 +14,7 @@ using Raven.Tests.Common.Util;
 
 using Xunit;
 
-namespace Raven.Tests
+namespace Raven.SlowTests.Issues
 {
 	public class RavenDB_1033 : IisExpressTestClient
 	{

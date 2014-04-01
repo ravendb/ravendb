@@ -3,10 +3,13 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Server;
@@ -17,10 +20,8 @@ using Raven.Tests.Common.Dto;
 
 using Xunit;
 
-namespace Raven.Tests.Security.OAuth
+namespace Raven.SlowTests.Security.OAuth
 {
-	using Raven.Client.Connection;
-
 	public class ReplicationWithOAuthMultipleKeys : ReplicationBase
 	{
 		private string[] apiKeys = new string[]

@@ -1,7 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
@@ -10,7 +9,7 @@ using Raven.Tests.Common.Dto.Faceted;
 
 using Xunit;
 
-namespace Raven.Tests.Faceted
+namespace Raven.SlowTests.Faceted
 {
 	public class FacetPaging : FacetTestBase
 	{

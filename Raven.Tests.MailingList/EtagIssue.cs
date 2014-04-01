@@ -1,16 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
-using Raven.Tests.MailingList;
+
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace Raven.Tests.MailingList
 {
 	public class EtagIssue : RavenTest
 	{

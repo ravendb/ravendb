@@ -1,11 +1,8 @@
-﻿using System;
-
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
+﻿using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace Raven.Tests.MailingList
 {
     public class KeyLength : RavenTest
     {
@@ -19,7 +16,7 @@ namespace Raven.Tests.Bugs
             {
                 using (var session = s.OpenSession())
                 {
-                    session.Store(new User
+                    session.Store(new Common.Dto.User
                     {
                         Id = aId,
                         Name = "a"
@@ -29,7 +26,7 @@ namespace Raven.Tests.Bugs
                 }
                 using (var session = s.OpenSession())
                 {
-                    session.Store(new User
+                    session.Store(new Common.Dto.User
                     {
                         Id = bId,
                         Name = "b"

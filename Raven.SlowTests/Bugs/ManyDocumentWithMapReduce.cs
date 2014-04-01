@@ -6,11 +6,10 @@ using System.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
-namespace Raven.Tests.Bugs
+namespace Raven.SlowTests.Bugs
 {
-	using Xunit.Extensions;
-
 	public class ManyDocumentBeingIndexed : RavenTest
 	{
 		public class TestDocument

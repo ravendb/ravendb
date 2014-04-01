@@ -1,22 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.MEF;
-using Raven.Abstractions.Util;
-using Raven.Bundles.Compression.Plugin;
-using Raven.Database.Plugins;
-using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
 using Xunit.Extensions;
 
-namespace Raven.Tests.Storage.Voron
+namespace Raven.SlowTests.Storage.Voron
 {
 	[Trait("VoronTest", "StorageActionsTests")]
 	[Trait("VoronTest", "DocumentStorage")]

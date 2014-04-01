@@ -1,4 +1,9 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
@@ -6,18 +11,11 @@ using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Server;
 using Raven.Smuggler;
-
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-
 using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace Raven.SlowTests.Issues
 {
 	public class RavenDB_1594 : RavenTest
 	{

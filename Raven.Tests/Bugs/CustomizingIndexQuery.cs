@@ -3,14 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
-using Raven.Tests.Bugs;
+using System.Linq;
+
 using Raven.Tests.Common;
 
 using Xunit;
-using System.Linq;
 
-namespace Raven.Tests.MailingList
+namespace Raven.Tests.Bugs
 {
 	public class CustomizingIndexQuery : RavenTest
 	{

@@ -11,7 +11,7 @@ using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace Raven.SlowTests.MailingList
 {
     public class Jalchr2 : RavenTest
     {

@@ -1,4 +1,4 @@
-﻿namespace LinQTests
+﻿namespace Raven.Tests.MailingList.Thor
 {
 	public class Child
 	{

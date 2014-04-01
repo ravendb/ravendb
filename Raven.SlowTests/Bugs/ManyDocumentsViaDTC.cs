@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +9,7 @@ using Raven.Tests.Common.Util;
 
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace Raven.SlowTests.Bugs
 {
 	public class ManyDocumentsViaDTC : RavenTest
 	{

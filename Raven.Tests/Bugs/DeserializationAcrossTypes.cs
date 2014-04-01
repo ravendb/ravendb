@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Raven.Json.Linq;
+﻿using Raven.Json.Linq;
 using Raven.Tests.Common;
 
 using Xunit;

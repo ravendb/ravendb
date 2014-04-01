@@ -2,7 +2,6 @@
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Tests.Bugs;
 using Raven.Tests.Common;
 
 using Xunit;

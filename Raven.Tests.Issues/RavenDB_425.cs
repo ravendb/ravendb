@@ -4,7 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using Raven.Tests.Bugs;
+
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
 

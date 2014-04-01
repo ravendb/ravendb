@@ -1,8 +1,9 @@
 ﻿using System.Linq;
+
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 
-namespace LinQTests
+namespace Raven.Tests.MailingList.Thor
 {
 	public class TransportsIndex : AbstractMultiMapIndexCreationTask<JoinedChildTransport>
 	{

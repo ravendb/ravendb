@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Linq;
+
 using Raven.Client.Document;
 using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
 
 using Xunit;
 
-namespace Raven.Tests.Bugs
+using User = Raven.Tests.Bugs.User;
+
+namespace Raven.SlowTests.Bugs
 {
 	public class VeryBigResultSetRemote : RavenTest
 	{

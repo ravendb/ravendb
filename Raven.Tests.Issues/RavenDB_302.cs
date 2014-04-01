@@ -10,7 +10,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Bugs;
 using Raven.Tests.Common;
 
 using Xunit;

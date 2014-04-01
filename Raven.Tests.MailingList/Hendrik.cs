@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Tests.Bugs;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Util;
 

@@ -2,7 +2,6 @@
 using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
-using Raven.Tests.Bugs;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
 

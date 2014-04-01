@@ -1,6 +1,5 @@
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
-using Raven.Tests.Bugs;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
 

@@ -1,16 +1,15 @@
-﻿using Raven.Abstractions.Indexing;
+﻿using System.Linq;
+
+using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Bugs;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Analyzers;
 
-using System;
-using System.Linq;
 using Xunit;
 using Xunit.Extensions;
 
-namespace RavenDB.Tests
+namespace Raven.Tests.MailingList
 {
 	public class LuceneQueryHighlightTest : RavenTestBase
 	{

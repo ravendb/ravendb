@@ -1,12 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Indexing;
+
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
 
 using Xunit;
 
-namespace RavenTests
+namespace Raven.Tests.MailingList
 {
 	public class MapLongTests : RavenTestBase
 	{

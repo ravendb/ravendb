@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Tests.Bugs;
 using Raven.Tests.Common.Analyzers;
 
 namespace Raven.Tests.MailingList.Stacey

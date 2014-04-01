@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Transactions;
-using Raven.Tests.Bugs;
+
 using Raven.Tests.Common;
 using Raven.Tests.Common.Util;
 

@@ -9,10 +9,11 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
+using Raven.Tests.Common.Util;
 
 using Xunit;
 
-namespace Raven.Tests.Common.Util
+namespace Raven.Tests.Util
 {
 	public class RunExternalProcess : IDisposable
 	{

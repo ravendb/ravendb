@@ -1,11 +1,11 @@
-﻿
-using System;
+﻿using System;
+
 using Raven.Abstractions.Data;
 using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace Raven.Tests.Issues
 {
 	public class RavenDB_1470 : NoDisposalNeeded
 	{

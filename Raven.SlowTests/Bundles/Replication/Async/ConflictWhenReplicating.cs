@@ -3,16 +3,18 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
+
 using System.Threading;
 using System.Threading.Tasks;
+
 using Raven.Client.Exceptions;
 using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
 
 using Xunit;
 
-namespace Raven.Tests.Bundles.Replication.Async
+using Company = Raven.Tests.Bundles.Company;
+
+namespace Raven.SlowTests.Bundles.Replication.Async
 {
 	public class ConflictWhenReplicating : ReplicationBase
 	{

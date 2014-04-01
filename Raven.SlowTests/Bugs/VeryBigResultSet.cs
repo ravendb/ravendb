@@ -6,7 +6,7 @@ using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace Raven.SlowTests.Bugs
 {
 	public class VeryBigResultSet : RavenTest
 	{
