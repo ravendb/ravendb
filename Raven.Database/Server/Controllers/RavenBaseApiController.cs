@@ -459,7 +459,7 @@ namespace Raven.Database.Server.Controllers
 			var zipEntry = zipFile.GetEntry(docPath);
 
 			if (zipEntry == null || zipEntry.IsFile == false)
-				return GetEmptyMessage(HttpStatusCode.NotFound);
+				return EmbeddedFileNotFount(docPath);
 
 			var entry = zipFile.GetInputStream(zipEntry);
 			var msg = new HttpResponseMessage
@@ -513,12 +513,12 @@ namespace Raven.Database.Server.Controllers
 			var lowercasedResourceName = resourceNames.FirstOrDefault(s => string.Equals(s, resourceName, StringComparison.OrdinalIgnoreCase));
 		    if (lowercasedResourceName == null)
 		    {
-		        return GetEmptyMessage(HttpStatusCode.NotFound);
+				return EmbeddedFileNotFount(docPath);
 		    }
 			using (var resource = resourceAssembly.GetManifestResourceStream(lowercasedResourceName))
 			{
 				if (resource == null)
-					return GetEmptyMessage(HttpStatusCode.NotFound);
+					return EmbeddedFileNotFount(docPath);
 
 				bytes = resource.ReadData();
 			}
@@ -533,6 +533,13 @@ namespace Raven.Database.Server.Controllers
 			msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
 
 			return msg;
+		}
+
+		private HttpResponseMessage EmbeddedFileNotFount(string docPath)
+		{
+			var message = "The following embedded file was not available: " + docPath +
+			              ". Please make sure that the Raven.Studio.Html.zip file exist in the main directory (near to the Raven.Database.dll).";
+			return GetMessageWithObject(new {Message = message}, HttpStatusCode.NotFound);
 		}
 
 		private static readonly string EmbeddedLastChangedDate =
