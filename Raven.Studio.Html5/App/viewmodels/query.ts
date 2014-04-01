@@ -22,7 +22,7 @@ import document = require("models/document");
 class query extends viewModelBase {
 
     selectedIndex = ko.observable<string>();
-    indexes = ko.observableArray<{name:string;hasReduce:boolean}>();
+    indexes = ko.observableArray<{name:string; hasReduce:boolean}>();
     editIndexUrl: KnockoutComputed<string>;
     termsUrl: KnockoutComputed<string>;
     statsUrl: KnockoutComputed<string>;
@@ -53,7 +53,6 @@ class query extends viewModelBase {
 
     constructor() {
         super();
-
         this.appUrls = appUrl.forCurrentDatabase();
         this.editIndexUrl = ko.computed(() => this.selectedIndex() ? appUrl.forEditIndex(this.selectedIndex(), this.activeDatabase()) : null);
         this.termsUrl = ko.computed(() => this.selectedIndex() ? appUrl.forTerms(this.selectedIndex(), this.activeDatabase()) : null);

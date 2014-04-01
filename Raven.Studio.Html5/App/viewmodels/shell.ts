@@ -120,8 +120,7 @@ class shell extends viewModelBase {
 
             });
 
-
-        $('#goToDocInput').bind('typeahead:selected', (obj, datum, name) => {
+        (<any>$('#goToDocInput')).bind('typeahead:selected', (obj, datum, name) => {
             router.navigate(datum.editHref);
         });
     }
@@ -135,7 +134,6 @@ class shell extends viewModelBase {
             NProgress.set(newProgress);
         } else {
             NProgress.done();
-            $('.use-bootstrap-tooltip').tooltip('hide');
         }
     }
 

@@ -16,7 +16,7 @@ class getDocumentWithMetadataCommand extends commandBase {
         }
     }
 
-    execute(): JQueryPromise<document> {
+    execute(): JQueryPromise<any> {
 
         // Executing /queries will return the doc with the metadata. 
         // We can do a GET call to /docs/<id>, however, it returns the metadata only as headers, 

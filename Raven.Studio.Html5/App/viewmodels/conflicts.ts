@@ -60,14 +60,14 @@ class conflicts extends viewModelBase {
             .done(results => this.replicationSourcesLoaded(results, db));
     }
 
-    performIndexCheck(db: database): JQueryPromise<void> {
+    performIndexCheck(db: database): JQueryPromise<any> {
 
         // first look in cache
         if (conflicts.performedIndexChecks.contains(db.name)) {
-            return $.Deferred().resolve();
+            return $.Deferred<any>().resolve();
         }
 
-        var performCheckTask = $.Deferred();
+        var performCheckTask = $.Deferred<any>();
 
         // perform index check against DB
         $.when(new getIndexDefinitionCommand(conflicts.conflictsIndexName, db).execute(),

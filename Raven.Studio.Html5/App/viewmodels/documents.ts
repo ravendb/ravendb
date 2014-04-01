@@ -39,7 +39,7 @@ class documents extends viewModelBase {
         this.fetchCollections(appUrl.getDatabase());
     }
 
-    attached(view: HTMLElement, parent: HTMLElement) {
+    attached() {
         // Initialize the context menu (using Bootstrap-ContextMenu library).
         // TypeScript doesn't know about Bootstrap-Context menu, so we cast jQuery as any.
         (<any>$('.document-collections')).contextmenu({

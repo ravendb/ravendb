@@ -9,7 +9,7 @@ class getStoredQueriesCommand extends getDocumentWithMetadataCommand {
     }
 
     execute(): JQueryPromise<storedQueryContainerDto> {
-        return super.execute();
+        return <any>super.execute();
     }
 }
 

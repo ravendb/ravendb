@@ -143,8 +143,7 @@ interface queryResultDto {
     Includes: any[];
 }
 
-interface alertContainerDto {
-    '@metadata': documentMetadataDto;
+interface alertContainerDto extends documentDto {
     Alerts: alertDto[];
 }
 
