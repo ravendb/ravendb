@@ -5,6 +5,8 @@ using Raven.Abstractions.Linq;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Client;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Queries

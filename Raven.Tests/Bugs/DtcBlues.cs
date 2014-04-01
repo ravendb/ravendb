@@ -4,6 +4,9 @@ using System.Transactions;
 using NLog;
 using NLog.Targets;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Util;
+
 using Xunit;
 using log4net.Appender;
 using log4net.Layout;
@@ -60,7 +63,7 @@ namespace Raven.Tests.Bugs
         }
     }
 
-    public class DtcBluesRemote : RemoteClientTest
+    public class DtcBluesRemote : RavenTest
     {
         [Fact]
         public void CanQueryDtcForUncommittedItem()
@@ -103,7 +106,7 @@ namespace Raven.Tests.Bugs
 
     }
 
-    public class DtcBluesRemoteAndTouchingTheDisk : RemoteClientTest
+    public class DtcBluesRemoteAndTouchingTheDisk : RavenTest
     {
         [Fact]
         public void CanQueryDtcForUncommittedItem()

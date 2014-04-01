@@ -3,6 +3,8 @@ using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Linq;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing

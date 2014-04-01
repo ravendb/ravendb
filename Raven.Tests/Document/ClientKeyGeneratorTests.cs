@@ -6,11 +6,13 @@
 using System;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Document
 {
-	public class ClientKeyGeneratorTests : RemoteClientTest
+	public class ClientKeyGeneratorTests : RavenTest
 	{
 		[Fact]
 		public void IdIsSetFromGeneratorOnStore()

@@ -14,6 +14,9 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Triggers;
+
 using Xunit;
 
 namespace Raven.Tests.Triggers
@@ -281,58 +284,6 @@ namespace Raven.Tests.Triggers
 			Assert.Equal("ABC", queryResult.Results[0].Value<string>("name"));
 		}
 
-		public class HiddenDocumentsTrigger : AbstractReadTrigger
-		{
-			public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
-			{
-				if (operation == ReadOperation.Index)
-					return ReadVetoResult.Allowed;
-				var name = metadata["hidden"];
-				if (name != null && name.Value<bool>())
-				{
-					return ReadVetoResult.Ignore;
-				}
-				return ReadVetoResult.Allowed;
-			}
-		}
-
-		public class VetoReadsOnCapitalNamesTrigger : AbstractReadTrigger
-		{
-			public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
-			{
-				if (operation == ReadOperation.Index)
-					return ReadVetoResult.Allowed;
-				var name = metadata["name"];
-				if (name != null && name.Value<string>().Any(char.IsUpper))
-				{
-					return ReadVetoResult.Deny("Upper case characters in the 'name' property means the document is a secret!");
-				}
-				return ReadVetoResult.Allowed;
-			}
-		}
-
-		public class HideVirtuallyDeletedDocument : AbstractReadTrigger
-		{
-			public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
-			{
-				if (operation != ReadOperation.Index)
-					return ReadVetoResult.Allowed;
-				if (metadata.ContainsKey("Deleted") == false)
-					return ReadVetoResult.Allowed;
-				return ReadVetoResult.Ignore;
-			}
-		}
-
-		public class UpperCaseNamesTrigger : AbstractReadTrigger
-		{
-			public override void OnRead(string key, RavenJObject document, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
-			{
-				var name = document["name"];
-				if (name != null)
-				{
-					document["name"] = new RavenJValue(name.Value<string>().ToUpper());
-				}
-			}
-		}
+		
 	}
 }

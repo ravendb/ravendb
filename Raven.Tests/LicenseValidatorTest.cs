@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+
+using Raven.Tests.Common;
+
 using Rhino.Licensing;
 using Xunit;
 

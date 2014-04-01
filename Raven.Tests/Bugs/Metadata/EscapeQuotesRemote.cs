@@ -4,11 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Metadata
 {
-	public class EscapeQuotesRemote : RemoteClientTest
+	public class EscapeQuotesRemote : RavenTest
 	{
 		[Fact]
 		public void CanProperlyEscapeQuotesInMetadata_Remote_1()

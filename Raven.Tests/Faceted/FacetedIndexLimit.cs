@@ -9,6 +9,9 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Linq;
+using Raven.Tests.Common.Attributes;
+using Raven.Tests.Common.Dto.Faceted;
+
 using Xunit;
 using Raven.Abstractions.Indexing;
 

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Security.Principal;
@@ -116,15 +117,32 @@ namespace Raven.Database.Server.Controllers
 			Database.TransactionalStorage.Batch(accessor =>
 			{
 				listItem = accessor.Lists.Read(listName, key);
-				if (listItem == null)
-					throw new HttpException(400, "Not found");
 			});
 
-			if (listItem == null)
-				throw new HttpException(400, "Not found");
+		    if (listItem == null)
+		        return GetEmptyMessage(HttpStatusCode.NotFound);
 
 			return GetMessageWithObject(listItem);
 		}
+
+        [HttpGet]
+        [Route("debug/list-all")]
+        [Route("databases/{databaseName}/debug/list-all")]
+        public HttpResponseMessage ListAll(string id)
+        {
+            var listName = id;
+
+            List<ListItem> listItems = null;
+            Database.TransactionalStorage.Batch(accessor =>
+            {
+                listItems = accessor.Lists.Read(listName, Etag.Empty, null, GetPageSize(Database.Configuration.MaxPageSize)).ToList();
+            });
+
+            if (listItems == null)
+                return GetEmptyMessage(HttpStatusCode.NotFound);
+
+            return GetMessageWithObject(listItems);
+        }
 
 		[HttpGet]
 		[Route("debug/queries")]

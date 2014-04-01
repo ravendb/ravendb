@@ -2,11 +2,13 @@ using System.Transactions;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Server;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.DTC
 {
-    public class UsingDtcForCreate : RemoteClientTest
+    public class UsingDtcForCreate : RavenTest
     {
         [Fact]
         public void ShouldWork()

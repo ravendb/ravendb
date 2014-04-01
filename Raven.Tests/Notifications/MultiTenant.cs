@@ -7,6 +7,8 @@ using System.Collections.Concurrent;
 using System.Reactive.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 using System;
 using Raven.Client.Extensions;

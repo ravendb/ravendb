@@ -1,11 +1,12 @@
 ﻿using Raven.Client.Document;
+using Raven.Tests.Common;
 using Raven.Tests.Linq;
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.MultiGet
 {
-	public class MultiGetMultiGet : RemoteClientTest
+	public class MultiGetMultiGet : RavenTest
 	{
 		[Fact]
 		public void MultiGetShouldBehaveTheSameForLazyAndNotLazy()

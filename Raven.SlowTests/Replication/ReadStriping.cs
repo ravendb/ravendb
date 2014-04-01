@@ -1,6 +1,7 @@
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Tests.Bundles.Versioning;
+using Raven.Tests.Common;
+using Raven.Tests.Document;
 using Xunit;
 
 namespace Raven.Tests.Bundles.Replication

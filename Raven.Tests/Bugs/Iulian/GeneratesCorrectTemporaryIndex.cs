@@ -1,4 +1,6 @@
 ﻿
+using Raven.Tests.Common;
+
 namespace Raven.Tests.Bugs.Iulian
 {
 	using System.Linq;

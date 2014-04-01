@@ -321,6 +321,28 @@ namespace Raven.Database.Client
             return server.DocumentStore.BulkInsert(database, options);
         }
 
+        public DocumentSessionListeners Listeners { get { return server.DocumentStore.Listeners; } }
+        public void SetListeners(DocumentSessionListeners listeners)
+        {
+            server.DocumentStore.SetListeners(listeners);
+        }
+
+        public string DefaultDatabase
+        {
+            get { return server.DocumentStore.DefaultDatabase; }
+            set { server.DocumentStore.DefaultDatabase = value; }
+        }
+        public Guid ResourceManagerId
+        {
+            get { return server.DocumentStore.ResourceManagerId; }
+            set { server.DocumentStore.ResourceManagerId = value; }
+        }
+        public bool EnlistInDistributedTransactions
+        {
+            get { return server.DocumentStore.EnlistInDistributedTransactions; }
+            set { server.DocumentStore.EnlistInDistributedTransactions = value; }
+        }
+
         /// <summary>
         ///     Registers the store listener.
         /// </summary>
@@ -363,32 +385,6 @@ namespace Raven.Database.Client
         public DocumentStoreBase RegisterListener(IDocumentConflictListener conflictListener)
         {
             return server.DocumentStore.RegisterListener(conflictListener);
-        }
-
-        /// <summary>
-        ///     Let the studio knows that it shouldn't display the warning about sys db access
-        /// </summary>
-        public void SetStudioConfigToAllowSingleDb()
-        {
-            if (DocumentDatabase == null)
-                return;
-            JsonDocument jsonDocument = DocumentDatabase.Documents.Get("Raven/StudioConfig", null);
-            RavenJObject doc;
-            RavenJObject metadata;
-            if (jsonDocument == null)
-            {
-                doc = new RavenJObject();
-                metadata = new RavenJObject();
-            }
-            else
-            {
-                doc = jsonDocument.DataAsJson;
-                metadata = jsonDocument.Metadata;
-            }
-
-            doc["WarnWhenUsingSystemDatabase"] = false;
-
-            DocumentDatabase.Documents.Put("Raven/StudioConfig", null, doc, metadata, null);
         }
     }
 }

@@ -3,11 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
+
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace Raven.SlowTests.Issues
 {
 	public class RavenDB_1411 : RavenTest
 	{

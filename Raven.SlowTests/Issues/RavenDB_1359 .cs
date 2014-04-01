@@ -3,16 +3,21 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+using Raven.Tests.Issues;
+
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace Raven.SlowTests.Issues
 {
 	public class RavenDB_1359 : RavenTest
 	{

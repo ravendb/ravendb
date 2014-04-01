@@ -3,35 +3,35 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Net;
-using System.Net.Sockets;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
-using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 using Raven.Smuggler;
-using Raven.Tests.Triggers;
-using Raven.Tests.Util;
-using Xunit;
-using Raven.Abstractions.Extensions;
-using System.Linq;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Triggers;
+using Raven.Tests.Common.Util;
 
-namespace Raven.Tests.Issues
+using Xunit;
+
+namespace Raven.SlowTests.Issues
 {
 
     public class RavenDB_1603 : RavenTest
@@ -50,7 +50,7 @@ namespace Raven.Tests.Issues
         protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
             configuration.Container = new CompositionContainer(new TypeCatalog(
-                                                                   typeof(ReadTriggers.HiddenDocumentsTrigger)));
+                                                                   typeof(HiddenDocumentsTrigger)));
         }
 
         [Fact]

@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Linq;
 

@@ -8,12 +8,14 @@ using Raven.Client.Linq;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Tests.Bugs;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Abstractions;
 
 namespace Raven.Tests.MultiGet
 {
-	public class MultiGetProfiling : RemoteClientTest
+	public class MultiGetProfiling : RavenTest
 	{
 		[Fact]
 		public void CanProfileLazyRequests()

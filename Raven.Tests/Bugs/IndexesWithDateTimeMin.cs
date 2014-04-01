@@ -1,5 +1,7 @@
 using System;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 

@@ -6,6 +6,8 @@
 using System.IO;
 using System.Net;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs

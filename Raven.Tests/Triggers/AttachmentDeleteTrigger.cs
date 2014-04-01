@@ -11,6 +11,7 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Abstractions.Exceptions;
 using Raven.Database.Plugins;
+using Raven.Tests.Common;
 using Raven.Tests.Storage;
 using Xunit;
 

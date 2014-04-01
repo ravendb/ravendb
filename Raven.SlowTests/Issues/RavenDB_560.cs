@@ -1,17 +1,19 @@
 ﻿using System;
-using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Bundles.Replication.Tasks;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Server;
-using Raven.Tests.Bundles.Replication;
+using Raven.Tests.Common;
+
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace Raven.SlowTests.Issues
 {
 	public class RavenDB_560 : ReplicationBase
 	{

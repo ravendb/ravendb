@@ -1,17 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Server;
-using Xunit;
 using Raven.Client.Linq;
+using Raven.Tests.Bugs.TransformResults;
+using Raven.Tests.Common;
 
-namespace Raven.Tests.Bugs.TransformResults
+using Xunit;
+
+namespace Raven.SlowTests.Bugs
 {
-	public class TimeoutTester : RemoteClientTest
+	public class TimeoutTester : RavenTest
 	{
 		[Fact]
 		public void will_timeout_query_after_some_time()

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client;
 using Raven.Client.Linq;

@@ -10,11 +10,13 @@ using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Document
 {
-	public class Game : RemoteClientTest
+	public class Game : RavenTest
 	{
 		/// <summary>
 		/// http://groups.google.com/group/ravendb/browse_thread/thread/e9f045e073d7a698

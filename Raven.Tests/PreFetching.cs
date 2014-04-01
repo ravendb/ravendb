@@ -5,6 +5,8 @@ using Raven.Abstractions.Util;
 using Raven.Client.Embedded;
 using Raven.Database.Indexing;
 using Raven.Database.Prefetching;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests

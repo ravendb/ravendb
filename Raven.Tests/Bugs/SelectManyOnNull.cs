@@ -1,4 +1,6 @@
 using System.Linq;
+
+using Raven.Tests.Common;
 using Raven.Tests.Queries;
 using Xunit;
 

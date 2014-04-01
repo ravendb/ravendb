@@ -5,12 +5,13 @@
 //-----------------------------------------------------------------------
 using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Tests.Common;
 using Raven.Tests.Document;
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class SortingWithWildcardQuery : RemoteClientTest
+	public class SortingWithWildcardQuery : RavenTest
 	{
 		[Fact]
 		public void Can_sort_using_a_index()

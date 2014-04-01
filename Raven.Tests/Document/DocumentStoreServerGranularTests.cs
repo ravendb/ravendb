@@ -1,5 +1,7 @@
 ﻿using System.Net;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Document

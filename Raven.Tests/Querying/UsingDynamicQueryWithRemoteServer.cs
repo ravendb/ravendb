@@ -6,11 +6,13 @@
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Querying
 {
-	public class UsingDynamicQueryWithRemoteServer : RemoteClientTest
+	public class UsingDynamicQueryWithRemoteServer : RavenTest
 	{
 		private readonly IDocumentStore documentStore;
 

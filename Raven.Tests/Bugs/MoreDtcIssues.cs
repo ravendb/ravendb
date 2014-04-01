@@ -1,10 +1,12 @@
 using System.Transactions;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-    public class MoreDtcIssues : RemoteClientTest
+	public class MoreDtcIssues : RavenTest
     {
         public class MyTestClass
         {

@@ -57,7 +57,7 @@ namespace Raven.Client.Document.Batches
 			HandleRespose(new MultiLoadResult
 			{
 				Includes = response.Result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-				Results = response.Result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
+                Results = response.Result.Value<RavenJArray>("Results").Select(x => x as RavenJObject).ToList()
 			});
 		}
 

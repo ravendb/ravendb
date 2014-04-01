@@ -5,13 +5,16 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Specialized;
+using System.Net;
 using System.Threading.Tasks;
+using Amazon.RDS.Model;
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Client.Listeners;
 using Raven.Database;
 using Raven.Database.Client;
 using Raven.Database.Config;
@@ -21,11 +24,63 @@ namespace Raven.Client.Embedded
     public class EmbeddableDocumentStore : IDocumentStore
     {
         private IDocumentStore _inner;
+        private string _connectionStringName;
         public RavenConfiguration Configuration { get; set; }
+
+        public string ConnectionStringName
+        {
+            get { return _connectionStringName; }
+            set
+            {
+                _connectionStringName = value;
+                HandleConnectionStringOptions();
+            }
+        }
+
+        protected void HandleConnectionStringOptions()
+        {
+            var parser = ConnectionStringParser<EmbeddedRavenConnectionStringOptions>.FromConnectionStringName(ConnectionStringName);
+            parser.Parse();
+            var options = parser.ConnectionStringOptions;
+
+            if(options.ResourceManagerId != Guid.Empty)
+                ResourceManagerId = options.ResourceManagerId;
+            if (options.Credentials != null)
+                Credentials = options.Credentials;
+            if (string.IsNullOrEmpty(options.Url) == false)
+                Url = options.Url;
+            if (string.IsNullOrEmpty(options.DefaultDatabase) == false)
+                DefaultDatabase = options.DefaultDatabase;
+            if (string.IsNullOrEmpty(options.ApiKey) == false)
+                ApiKey = options.ApiKey;
+
+            EnlistInDistributedTransactions = options.EnlistInDistributedTransactions;
+            var embeddedRavenConnectionStringOptions = parser.ConnectionStringOptions as EmbeddedRavenConnectionStringOptions;
+
+            if (embeddedRavenConnectionStringOptions == null)
+                return;
+
+            if (string.IsNullOrEmpty(embeddedRavenConnectionStringOptions.DataDirectory) == false)
+                DataDirectory = embeddedRavenConnectionStringOptions.DataDirectory;
+
+            RunInMemory = embeddedRavenConnectionStringOptions.RunInMemory;
+        }
+
+        public bool EnlistInDistributedTransactions { get; set; }
+
+        public string ApiKey { get; set; }
+
+        public string DefaultDatabase { get; set; }
+
+        public ICredentials Credentials { get; set; }
+
 
         public EmbeddableDocumentStore()
         {
             Conventions = new DocumentConvention();
+            Listeners = new DocumentSessionListeners();
+            Configuration = new RavenConfiguration();
+            EnlistInDistributedTransactions = true;
         }
 
         private IDocumentStore Inner
@@ -40,26 +95,42 @@ namespace Raven.Client.Embedded
 
         public IDocumentStore Initialize()
         {
+            if (_inner != null)
+                return this;
             if (string.IsNullOrEmpty(Url) == false)
             {
                 _inner = new DocumentStore
                 {
                     Url = Url,
-                    Conventions = Conventions
-                }.Initialize();
+                    Conventions = Conventions,
+                    ResourceManagerId = ResourceManagerId,
+                    DefaultDatabase = DefaultDatabase,
+                    Credentials = Credentials,
+                    ApiKey = ApiKey,
+                    EnlistInDistributedTransactions = EnlistInDistributedTransactions
+                };
             }
             else
             {
-                Configuration = new RavenConfiguration();
                 _inner = new EmbeddedDocumentStore
                 {
                     DataDirectory = DataDirectory,
                     Conventions = Conventions,
-                    Configuration = Configuration
+                    Configuration = Configuration,
+                    UseEmbeddedHttpServer = UseEmbeddedHttpServer,
+                    RunInMemory = RunInMemory,
+                    DefaultDatabase = DefaultDatabase,
+                    ResourceManagerId = ResourceManagerId,
+                    EnlistInDistributedTransactions = EnlistInDistributedTransactions
                 };
             }
+
+            _inner.SetListeners(Listeners);
+            _inner.Initialize();
             return this;
         }
+
+        public Guid ResourceManagerId { get; set; }
 
         public DocumentDatabase DocumentDatabase
         {
@@ -74,7 +145,7 @@ namespace Raven.Client.Embedded
 
         public DocumentConvention Conventions
         {
-            get; private set;
+            get; set;
         }
 
         public string DataDirectory { get; set; }
@@ -196,6 +267,58 @@ namespace Raven.Client.Embedded
         public BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
         {
             return Inner.BulkInsert(database, options);
+        }
+
+        public DocumentSessionListeners Listeners { get; private set; }
+        public void SetListeners(DocumentSessionListeners listeners)
+        {
+            this.Listeners = listeners;
+        }
+
+        ///<summary>
+        /// Whatever we should also host an HTTP endpoint for the document database
+        ///</summary>
+        public bool UseEmbeddedHttpServer { get; set; }
+        public bool RunInMemory { get; set; }
+
+        public IDocumentStore RegisterListener(IDocumentStoreListener listener)
+        {
+            Listeners.RegisterListener(listener);
+            return this;
+        }
+
+        public IDocumentStore RegisterListener(IDocumentDeleteListener listener)
+        {
+            Listeners.RegisterListener(listener);
+            return this;
+        }
+
+
+        public IDocumentStore RegisterListener(IDocumentConversionListener listener)
+        {
+            Listeners.RegisterListener(listener);
+            return this;
+        }
+
+
+        public IDocumentStore RegisterListener(IExtendedDocumentConversionListener listener)
+        {
+            Listeners.RegisterListener(listener);
+            return this;
+        }
+
+
+        public IDocumentStore RegisterListener(IDocumentQueryListener listener)
+        {
+            Listeners.RegisterListener(listener);
+            return this;
+        }
+
+
+        public IDocumentStore RegisterListener(IDocumentConflictListener listener)
+        {
+            Listeners.RegisterListener(listener);
+            return this;
         }
     }
 }

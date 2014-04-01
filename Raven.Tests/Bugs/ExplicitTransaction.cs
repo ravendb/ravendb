@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Threading;
 using Raven.Client.Connection;
+using Raven.Tests.Common;
 using Raven.Tests.Document;
 using Xunit;
 using Xunit.Extensions;

@@ -137,8 +137,9 @@ namespace Voron.Impl.Paging
 					tx.AddPagerState(newPagerState);
 				}
 
-				PagerState.Release(); //replacing the pager state --> so one less reference for it
+				var tmp = PagerState;
 				PagerState = newPagerState;
+				tmp.Release(); //replacing the pager state --> so one less reference for it
 			}
 
 			_totalAllocationSize += allocationSize;

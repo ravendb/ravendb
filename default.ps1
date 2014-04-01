@@ -101,7 +101,7 @@ task FullStorageTest {
 task Test -depends Compile {
 	Clear-Host
 	
-	$test_prjs = @("$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll" )
+	$test_prjs = @("$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", "$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", "$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", "$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", "$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll")
 	Write-Host $test_prjs
 	
 	$xUnit = "$lib_dir\xunit\xunit.console.clr4.exe"

@@ -6,11 +6,13 @@
 using System;
 using Raven.Abstractions;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Metadata
 {
-	public class LastModifiedRemote : RemoteClientTest
+	public class LastModifiedRemote : RavenTest
 	{
 		[Fact]
 		public void CanAccessLastModifiedAsMetadata()

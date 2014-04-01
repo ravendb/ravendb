@@ -1,6 +1,8 @@
 using System;
 using Raven.Client.Document;
 using Raven.Tests.Bugs;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 

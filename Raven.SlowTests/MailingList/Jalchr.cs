@@ -9,6 +9,7 @@ using System.Linq;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Tests.Common;
 using Xunit;
 
 namespace Raven.Tests.MailingList
