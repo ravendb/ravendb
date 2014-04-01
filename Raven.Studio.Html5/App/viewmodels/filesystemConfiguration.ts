@@ -6,7 +6,7 @@ import ace = require("ace/ace");
 
 import pagedList = require("common/pagedList");
 import filesystem = require("models/filesystem");
-import collection = require("models/filesystemConfigurationKeyCollection");
+//import collection = require("models/filesystemConfigurationKeyCollection");
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import getFilesystemConfigurationCommand = require("commands/getFilesystemConfigurationCommand");
@@ -16,28 +16,27 @@ class filesystemConfiguration extends viewModelBase {
 
     private router = router;
 
-    docEditor: AceAjax.Editor;
-
-    currentKey = ko.observable<string>();
     keys = ko.observableArray<string>();
+    allPagedKeyDetails = ko.observable<pagedList>();
+    currentKey = ko.observable<string>();
 
     static containerId = "#settingsContainer";
+
+    static gridSelector = "#filesGrid";
 
     constructor() {
         super();
     }
 
     attached() {
-        this.initializeDbDocEditor();
-        this.createKeyboardShortcut("F2", () => this.navigateToEditSettingsDocument(), filesystemConfiguration.containerId);       
 
         this.activeFilesystem.subscribe(x => {
             this.loadKeys(x); 
             if (this.currentKey() != null)
                 this.loadEditorWithKey(x, this.currentKey());       
-        });
+        }); 
 
-        this.loadKeys(this.activeFilesystem());        
+        this.loadKeys(this.activeFilesystem()); 
     }
 
     activate(args) {
@@ -47,15 +46,6 @@ class filesystemConfiguration extends viewModelBase {
         }  
        
         this.currentKey.subscribe(x => this.loadEditorWithKey(this.activeFilesystem(), x)); 
-    }
-
-    private initializeDbDocEditor() {
-        // Startup the read-only Ace editor with JSON syntax highlighting.
-        this.docEditor = ace.edit("dbDocEditor");
-        this.docEditor.setTheme("ace/theme/github");
-        this.docEditor.setFontSize("16px");
-        this.docEditor.getSession().setMode("ace/mode/json");        
-        this.docEditor.setReadOnly(true);       
     }
 
     loadKeys(fs: filesystem){
@@ -85,9 +75,25 @@ class filesystemConfiguration extends viewModelBase {
         }               
     }
 
+    editSelectedKey() {
+        var grid = this.getKeyDetailsGrid();
+        if (grid) {
+            grid.editLastSelectedItem();
+        }
+    }
+
+    getKeyDetailsGrid(): virtualTable {
+        var gridContents = $(filesystemConfiguration.gridSelector).children()[0];
+        if (gridContents) {
+            return ko.dataFor(gridContents);
+        }
+
+        return null;
+    }
+
     private handleDocument(doc: any) {
         var docSettings = this.stringify(doc);
-        this.docEditor.getSession().setValue(docSettings);
+        //this.docEditor.getSession().setValue(docSettings);
     }
 
     private stringify(obj: any) {
