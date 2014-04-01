@@ -208,6 +208,9 @@ class query extends viewModelBase {
             var transformer = this.transformer();
             var showFields = this.showFields();
             var indexEntries = this.indexEntries();
+
+            this.currentColumnsParams().enabled(this.showFields() === false && this.indexEntries() === false);
+
             var useAndOperator = this.isDefaultOperatorOr() === false;
             this.rawJsonUrl(appUrl.forDatabaseQuery(this.activeDatabase()) + new queryIndexCommand(selectedIndex, database, 0, 1024, queryText, sorts, transformer, showFields, indexEntries, useAndOperator).getUrl());
             var resultsFetcher = (skip: number, take: number) => {

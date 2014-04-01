@@ -5,6 +5,7 @@ class customColumns {
 
     columns = ko.observableArray<customColumnParams>();
     customMode = ko.observable(false);
+    enabled = ko.observable(true);
 
     constructor(dto: customColumnsDto) {
         this.columns($.map(dto.Columns, c => new customColumnParams(c)));
@@ -27,7 +28,7 @@ class customColumns {
     }
 
     hasOverrides() {
-        return this.customMode() && this.columns().length > 0;
+        return this.enabled() && this.customMode() && this.columns().length > 0;
     }
 
     toDto(): customColumnsDto {
