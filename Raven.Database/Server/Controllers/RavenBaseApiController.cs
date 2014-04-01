@@ -535,12 +535,9 @@ namespace Raven.Database.Server.Controllers
 
 		private HttpResponseMessage EmbeddedFileNotFount(string docPath)
 		{
-			var message = "The following embedded file was not available: " + docPath;
-			if (docPath != null && docPath.StartsWith("/studio/"))
-			{
-				message += ". Please make sure that the Raven.Studio.Html.zip file exist in the main directory (near to the Raven.Database.dll).";
-			}
-			return GetMessageWithObject(new{ Message=message}, HttpStatusCode.NotFound);
+			var message = "The following embedded file was not available: " + docPath +
+			              ". Please make sure that the Raven.Studio.Html.zip file exist in the main directory (near to the Raven.Database.dll).";
+			return GetMessageWithObject(new {Message = message}, HttpStatusCode.NotFound);
 		}
 
 		private static readonly string EmbeddedLastChangedDate =
