@@ -24,13 +24,13 @@
     <TypeScriptCompile Include="App\commands\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\createFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\createFilesystemDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\createFilesystemFolderCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteFilesystemConfigurationKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\downloadFileFromFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
-    <TypeScriptCompile Include="App\commands\addFilesystemDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\getFilesystemConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\getFilesystemConfigurationByKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\getFilesystemDestinationsCommand.ts" />
@@ -96,6 +96,8 @@
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
+    <TypeScriptCompile Include="App\models\filesystemCollection.ts" />
+    <TypeScriptCompile Include="App\models\filesystemConfigurationKeyCollection.ts" />
     <TypeScriptCompile Include="App\models\file.ts" />
     <TypeScriptCompile Include="App\models\fileMetadata.ts" />
     <TypeScriptCompile Include="App\models\filesystemDto.ts" />

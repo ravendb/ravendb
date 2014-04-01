@@ -322,6 +322,11 @@ class appUrl {
         return "#filesystems/configuration?" + filesystemPart;
     }
 
+    static forFilesystemConfigurationWithKey(fs: filesystem, key: string): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs) + "&key=" + encodeURIComponent(key);
+        return "#filesystems/configuration?" + filesystemPart;
+    }
+
     static forFilesystemUploadFile(fs: filesystem): string {
         var filesystemPart = appUrl.getEncodedFsPart(fs);
         return "#filesystems/upload?" + filesystemPart;

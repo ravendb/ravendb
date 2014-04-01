@@ -11,7 +11,7 @@ import file = require("models/file");
 class filesystemFiles extends viewModelBase {
 
    
-    fileName = ko.observable<File>();
+    fileName = ko.observable<file>();
     allFilesPagedItems = ko.observable<pagedList>();
     selectedFilesIndices = ko.observableArray<number>();
     isSelectAll = ko.observable(false);
@@ -28,11 +28,11 @@ class filesystemFiles extends viewModelBase {
         this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
         this.hasAnyFileSelected = ko.computed(() => this.selectedFilesIndices().length > 0);
 
-        this.loadFiles();
+        this.loadFiles(false);
     }
 
-    loadFiles() {
-        if (!this.allFilesPagedItems()) {
+    loadFiles(force: boolean) {
+        if (!this.allFilesPagedItems() || force ) {
             this.allFilesPagedItems(this.createPagedList());
         }
 
@@ -57,8 +57,9 @@ class filesystemFiles extends viewModelBase {
     fileSystemChanged(fs: filesystem) {
         if (fs) {
             var filesystemFilesUrl = appUrl.forFilesystemFiles(fs);
-            router.navigate(filesystemFilesUrl, false);
-            this.loadFiles();
+            this.navigate(filesystemFilesUrl);
+
+            this.loadFiles(true);
         }
     }
 

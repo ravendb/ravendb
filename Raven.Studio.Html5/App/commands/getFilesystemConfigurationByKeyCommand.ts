@@ -12,9 +12,10 @@ class getFilesystemConfigurationByKeyCommand extends commandBase {
         var url = "/config";
         var args = {
             name: this.name
-        }
+        };
 
-        return this.query<any>(url, args, this.fs);
+        return this.query<any>(url, args, this.fs)
+                   .fail(response => this.reportError("Failed to retrieve filesystem configuration key. Does exist in this filesystem?", response.responseText, response.statusText));
     }
 }
 
