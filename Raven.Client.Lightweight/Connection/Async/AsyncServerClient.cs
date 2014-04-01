@@ -1637,10 +1637,20 @@ namespace Raven.Client.Connection.Async
 				responseException = e;
 			}
 
+
+
             using (var stream = await responseException.Response.GetResponseStreamWithHttpDecompression())
             {
-                var conflictsDoc = stream.ToJObject();
-                var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+                string[] conflictIds;
+                if (method == "GET")
+                {
+                    var conflictsDoc = stream.ToJObject();
+                    conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+                }
+                else
+                {
+                    conflictIds = new[] {"Cannot get conflict ids in HEAD requesT"};
+                }
 
                 throw new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the attachment will be accessible", true)
                 {
