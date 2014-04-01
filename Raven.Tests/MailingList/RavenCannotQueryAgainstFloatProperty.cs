@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
@@ -20,7 +21,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void CanQueryAgainstFloatProperties()
 		{
-			using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore())
 			{
 				new OperationDoc_Index().Execute(store);
 
@@ -41,9 +42,9 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenSession())
 				{
-					var result = session.Query<OperationDoc, OperationDoc_Index>()
-					                    .Customize(c => c.WaitForNonStaleResults())
-										.Where(op => op.Quantity < 0)
+				    var result = session.Query<OperationDoc, OperationDoc_Index>()
+				        .Customize(c => c.WaitForNonStaleResults())
+				        .Where(op => op.Quantity < 0)
 					                    .ToList();
 
 					Assert.Equal(3, result.Count);
@@ -102,6 +103,7 @@ namespace Raven.Tests.MailingList
 							 {
 								 op.Quantity
 							 };
+                Sort(x=>x.Quantity, SortOptions.Float);
 			}
 		}
 	}

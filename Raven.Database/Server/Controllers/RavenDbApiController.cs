@@ -566,6 +566,8 @@ namespace Raven.Database.Server.Controllers
 
 	    public override void MarkRequestDuration(long duration)
 	    {
+	        if (Database == null)
+	            return;
 	        Database.WorkContext.MetricsCounters.RequestDuationMetric.Update(duration);
 	    }
 	}
