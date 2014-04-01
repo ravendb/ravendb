@@ -1,89 +1,103 @@
-﻿import app = require("durandal/app");
-import system = require("durandal/system");
-import router = require("plugins/router");
+﻿import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import filesystem = require("models/filesystem");
-import uploadFileToFilesystemCommand = require("commands/uploadFileToFilesystemCommand");
+import pagedList = require("common/pagedList");
+import getFilesystemFilesCommand = require("commands/getFilesystemFilesCommand");
+import pagedResultSet = require("common/pagedResultSet");
 import viewModelBase = require("viewmodels/viewModelBase");
+import virtualTable = require("widgets/virtualTable/viewModel");
+import file = require("models/file");
 
 class filesystemFiles extends viewModelBase {
 
-    uploadQueue = ko.observableArray();
+   
     fileName = ko.observable<File>();
+    allFilesPagedItems = ko.observable<pagedList>();
+    selectedFilesIndices = ko.observableArray<number>();
+    isSelectAll = ko.observable(false);
+    hasAnyFileSelected: KnockoutComputed<boolean>;
+
+    static gridSelector = "#filesGrid";
 
     constructor() {
         super();
-
-        var self = this;
-
-        ko.bindingHandlers["fileUpload"] = {
-            init: function (element, valueAccessor) {
-            },
-            update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-                var options = ko.utils.unwrapObservable(valueAccessor());
-                var context = <filesystemFiles>viewModel;
-                var uploadQueue = ko.utils.unwrapObservable(context.uploadQueue);
-                var filesystem = ko.utils.unwrapObservable<filesystem>(bindingContext.$data["activeFilesystem"]);
-
-
-                if (options) {
-                    if (element.files.length) {
-                        var file = <File>element.files[0];
-                        var guid = system.guid();
-                        var item = new uploadItem(guid, file.name, "Queued");
-                        //item = { id: guid, fileName: file.name, status: "Queued" };
-                        context.uploadQueue.push(item);
-                        var indexInQueue = context.uploadQueue.indexOf(uploadItem);
-
-                        new uploadFileToFilesystemCommand(file, guid, filesystem, function (event: any) {
-                            if (event.lengthComputable) {
-                                var percentComplete = event.loaded / event.total;
-                                $(".bar").width(percentComplete);
-                                $(".percent").html(percentComplete + "%");
-                            }
-                        }, true).execute().done(function () {
-                                item.status("Uploaded");
-                                //context.uploadQueue(uploadQueue);
-                            }).fail();
-
-                        context.fileName(null);
-
-                        item.status("Uploading...");
-                        //context.uploadQueue(uploadQueue);
-                    }
-                }
-            },
-        }
     }
 
     activate(args) {
         super.activate(args);
         this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
+        this.hasAnyFileSelected = ko.computed(() => this.selectedFilesIndices().length > 0);
 
-        // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo&database="blahDb"
-        //this.collectionToSelectName = args ? args.collection : null;
+        this.loadFiles();
+    }
 
-        //return this.fetchCollections(appUrl.getDatabase());
+    loadFiles() {
+        if (!this.allFilesPagedItems()) {
+            this.allFilesPagedItems(this.createPagedList());
+        }
+
+        return this.allFilesPagedItems;
+    }
+
+    createPagedList(): pagedList {
+        var fetcher = (skip: number, take: number) => this.fetchFiles(skip, take);
+        var list = new pagedList(fetcher);
+        return list;
+    }
+
+    filesLoaded(files: Array<file>) {
+
+    }
+
+    fetchFiles(skip: number, take: number): JQueryPromise<pagedResultSet> {
+        return new getFilesystemFilesCommand(appUrl.getFilesystem(), skip, take).execute()
+            .done(results => this.filesLoaded(results));
     }
 
     fileSystemChanged(fs: filesystem) {
         if (fs) {
-            //var documentsUrl = appUrl.forDocuments(null, db);
-            //router.navigate(documentsUrl, false);
-            //this.fetchCollections(db);
+            var filesystemFilesUrl = appUrl.forFilesystemFiles(fs);
+            router.navigate(filesystemFilesUrl, false);
+            this.loadFiles();
         }
     }
-}
 
-class uploadItem {
-    id = ko.observable<string>("");
-    fileName = ko.observable<string>("");
-    public status = ko.observable<string>("");
+    editSelectedFile() {
+        var grid = this.getFilesGrid();
+        if (grid) {
+            grid.editLastSelectedItem();
+        }
+    }
 
-    constructor(id: string, fileName: string, status: string) {
-        this.id(id);
-        this.fileName(fileName);
-        this.status(status);
+    toggleSelectAll() {
+        this.isSelectAll.toggle();
+
+        var filesGrid = this.getFilesGrid();
+        if (filesGrid && this.isSelectAll()) {
+            filesGrid.selectAll();
+        } else if (filesGrid && !this.isSelectAll()) {
+            filesGrid.selectNone();
+        }
+    }
+
+    getFilesGrid(): virtualTable {
+        var gridContents = $(filesystemFiles.gridSelector).children()[0];
+        if (gridContents) {
+            return ko.dataFor(gridContents);
+        }
+
+        return null;
+    }
+
+    deleteSelectedFiles() {
+        var grid = this.getFilesGrid();
+        if (grid) {
+            grid.deleteSelectedDocs();
+        }
+    }
+
+    uploadFile() {
+        router.navigate(appUrl.forFilesystemUploadFile(this.activeFilesystem()));
     }
 }
 

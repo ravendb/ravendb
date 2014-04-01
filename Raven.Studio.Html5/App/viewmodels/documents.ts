@@ -122,7 +122,7 @@ class documents extends viewModelBase {
     editSelectedDoc() {
         var grid = this.getDocumentsGrid();
         if (grid) {
-            grid.editLastSelectedDoc();
+            grid.editLastSelectedItem();
         }
     }
 

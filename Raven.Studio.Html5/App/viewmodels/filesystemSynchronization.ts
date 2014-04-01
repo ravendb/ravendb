@@ -4,7 +4,7 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 
-import addDestination = require("viewmodels/filesystemAddDestination");
+import filesystemAddDestination = require("viewmodels/filesystemAddDestination");
 
 class filesystemSynchronization extends viewModelBase {
 
@@ -17,11 +17,11 @@ class filesystemSynchronization extends viewModelBase {
     }
 
     addDestination() {
-        require(["viewmodels/filesystemAddDestination"], addDestination => {
-            var addDestinationViewModel: addDestination = new addDestination(this.destinations);
+        require(["viewmodels/filesystemAddDestination"], filesystemAddDestination => {
+            var addDestinationViewModel: filesystemAddDestination = new filesystemAddDestination(this.destinations);
             addDestinationViewModel
                 .creationTask
-                .done();
+                .done((destinationUrl: string) => alert(destinationUrl));
             app.showDialog(addDestinationViewModel);
         });
     }

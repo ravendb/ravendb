@@ -31,12 +31,13 @@ class ctor {
     gridViewport: JQuery;
     scrollThrottleTimeoutHandle = 0;
     firstVisibleRow: row = null;
-    documentsSourceSubscription: KnockoutSubscription = null;
-    isIndexMapReduce :KnockoutObservable<boolean>;
+    itemsSourceSubscription: KnockoutSubscription = null;
+    isIndexMapReduce: KnockoutObservable<boolean>;
+    isCopyAllowed: KnockoutObservable<boolean>;
     
 
     settings: {
-        documentsSource: KnockoutObservable<pagedList>;
+        itemsSource: KnockoutObservable<pagedList>;
         dynamicHeightTargetSelector: string;
         dynamicHeightBottomMargin: number;
         gridSelector: string;
@@ -47,6 +48,7 @@ class ctor {
         maxHeight: string;
         customColumnParams: { [column: string]: customColumnParams };
         isIndexMapReduce: KnockoutObservable<boolean>;
+        isCopyAllowed: KnockoutObservable<boolean>;
     }
  
     activate(settings: any) {
@@ -59,7 +61,8 @@ class ctor {
             useContextMenu: true,
             maxHeight: 'none',
             customColumnParams: {},
-            isIndexMapReduce: ko.observable<boolean>(true)
+            isIndexMapReduce: ko.observable<boolean>(true),
+            isCopyAllowed: ko.observable<boolean>(true)
         };
         this.settings = $.extend(defaults, settings);
 
@@ -70,13 +73,14 @@ class ctor {
             this.isIndexMapReduce = ko.observable<boolean>(false);
         }
 
-        this.items = this.settings.documentsSource();
+        this.items = this.settings.itemsSource();
         this.focusableGridSelector = this.settings.gridSelector + " .ko-grid";
         this.virtualHeight = ko.computed(() => this.rowHeight * this.virtualRowCount());
+        this.isCopyAllowed = this.settings.isCopyAllowed;
 
         this.refreshIdAndCheckboxColumn();
 
-        this.documentsSourceSubscription = this.settings.documentsSource.subscribe(list => {
+        this.itemsSourceSubscription = this.settings.itemsSource.subscribe(list => {
             this.recycleRows().forEach(r => {
                 r.resetCells();
                 r.isInUse(false);
@@ -115,8 +119,8 @@ class ctor {
         $(this.settings.gridSelector).unbind('keydown.jwerty');
         
         this.gridViewport.off('DynamicHeightSet');
-        if (this.documentsSourceSubscription) {
-            this.documentsSourceSubscription.dispose();
+        if (this.itemsSourceSubscription) {
+            this.itemsSourceSubscription.dispose();
         }
     }
 
@@ -237,31 +241,29 @@ class ctor {
         if (rowAtIndex) {
             rowAtIndex.fillCells(rowData);
             rowAtIndex.collectionClass(this.getCollectionClassFromDocument(rowData));
-            rowAtIndex.editUrl(appUrl.forEditDoc(rowData.getId(), this.getEntityName(rowData), rowIndex, appUrl.getDatabase()));
+            rowAtIndex.editUrl(appUrl.forEditItem(rowData.getId(), appUrl.getResource(), rowIndex, this.getEntityName(rowData)));
         }
     }
 
-    editLastSelectedDoc() {
-        var selectedDoc = this.getSelectedDocs(1).first();
-        if (selectedDoc) {
-            var id = selectedDoc.getId();
+    editLastSelectedItem() {
+        var selectedItem = this.getSelectedItems(1).first();
+        if (selectedItem) {
             var collectionName = this.items.collectionName;
             var itemIndex = this.settings.selectedIndices().first();
-            router.navigate(appUrl.forEditDoc(id, collectionName, itemIndex, appUrl.getDatabase()));
+            router.navigate(appUrl.forEditItem(selectedItem.getId(), appUrl.getResource(), itemIndex, collectionName));
         }
     }
 
-    getEntityName(doc: documentBase) {
-        var obj: any = doc;
-        if (obj && obj.getEntityName) {
-            var document = <document> obj;
-            return document.getEntityName();
+    getEntityName(item: documentBase) {
+        var obj: any = item;
+        if (obj && obj instanceof document && obj.getEntityName) {
+            var documentObj = <document> obj;
+            return documentObj.getEntityName();
         }
         return null;
     }
 
     getCollectionClassFromDocument(doc: documentBase): string {
-        
         return collection.getCollectionCssClass(this.getEntityName(doc));
     }
 
@@ -459,13 +461,13 @@ class ctor {
     }
 
     showCopyDocDialog(idsOnly: boolean) {
-        var selectedDocs = this.getSelectedDocs();
+        var selectedDocs = this.getSelectedItems();
         var copyDocumentsVm = new copyDocuments(selectedDocs, this.focusableGridSelector);
         copyDocumentsVm.isCopyingDocs(idsOnly === false);
         app.showDialog(copyDocumentsVm);
     }
 
-    getSelectedDocs(max?: number): Array<document> {
+    getSelectedItems(max?: number): Array<any> {
         if (!this.items || this.settings.selectedIndices().length === 0) {
             return [];
         }
@@ -475,7 +477,7 @@ class ctor {
     }
 
     deleteSelectedDocs() {
-        var documents = this.getSelectedDocs();
+        var documents = this.getSelectedItems();
         var deleteDocsVm = new deleteDocuments(documents, this.focusableGridSelector);
         deleteDocsVm.deletionTask.done(() => {
             var deletedDocIndices = documents.map(d => this.items.indexOf(d));
@@ -490,7 +492,7 @@ class ctor {
 
     getDocumentHref(documentId): string {
         if (typeof documentId == "string"){
-            return appUrl.forEditDoc(documentId, null, null, appUrl.getDatabase());
+            return appUrl.forEditItem(documentId, appUrl.getDatabase(), null, null);
         } else {
             return "#";
         }

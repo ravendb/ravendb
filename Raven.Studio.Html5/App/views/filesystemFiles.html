@@ -19,23 +19,33 @@
         </li>-->
     </ul>
 
-    <form>
-        <label for="upload">Upload</label>
-        <input id="upload" name="upload" type="file" data-bind="value: fileName, fileUpload: fileName" />
-    </form>
-
-    <table class="table table-striped table-hover">
-        <thead>
-            <tr class="database-header">
-                <td>File</td>
-                <td>Status</td>
-            </tr>
-        </thead>
-        <tbody data-bind="foreach: uploadQueue">
-            <tr class="database-row">
-                <td data-bind="text: fileName"></td>
-                <td data-bind="text: status"></td>
-            </tr>
-        </tbody>
-    </table>
+<div class="documents-page">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="row">
+                <div class="btn-toolbar" role="toolbar">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default" data-bind="click: toggleSelectAll" title="Select all or none">
+                            <img style="height: 18px;" data-bind="attr: { src: isSelectAll() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
+                        </button>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-primary use-bootstrap-tooltip" accesskey="n" data-bind="click: uploadFile" title="Upload new file">
+                            <i class="fa fa-upload"></i>
+                        </button>
+                    </div>
+                    <div class="btn-group" data-bind="visible: hasAnyFileSelected">
+                        <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: editSelectedFile" title="Edit selected document (F2)">
+                            <i class="fa fa-pencil"></i>
+                        </button>
+                        <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: deleteSelectedFiles" title="Delete selected documents (DEL)">
+                            <i class="fa fa-trash-o"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, gridSelector: '#filesGrid', isCopyAllowed: 'false' }"></div>
+        </div>
+    </div>
+</div>
 </div>
