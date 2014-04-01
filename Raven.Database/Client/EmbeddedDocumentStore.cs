@@ -194,6 +194,7 @@ namespace Raven.Database.Client
         public IDocumentStore Initialize()
         {
             server.Initialize();
+			SetStudioConfigToAllowSingleDb();
             return this;
         }
 

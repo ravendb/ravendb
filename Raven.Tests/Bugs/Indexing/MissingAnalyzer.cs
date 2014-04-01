@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
 using Raven.Tests.Common;
@@ -19,7 +21,7 @@ namespace Raven.Tests.Bugs.Indexing
 		{
 			using (var store = NewDocumentStore())
 			{
-				Assert.Throws<ArgumentException>(() => store.DatabaseCommands.PutIndex("foo",
+				var e = Assert.Throws<IndexCompilationException>(() => store.DatabaseCommands.PutIndex("foo",
 																							   new IndexDefinition
 																							   {
 																								   Map =
@@ -32,6 +34,8 @@ namespace Raven.Tests.Bugs.Indexing
 																											   }
 																									   }
 																							   }));
+
+				Assert.Equal("Could not create analyzer for field: 'Name' because the type 'foo bar' was not found", e.Message);
 			}
 		}
 	}
