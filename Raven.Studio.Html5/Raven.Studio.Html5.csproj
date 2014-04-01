@@ -189,7 +189,6 @@
     <TypeScriptCompile Include="App\commands\getScriptedIndexesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getReplicationSourcesCommand.ts" />
-    <Content Include="App\commands\getNewEncryptionKey.js" />
     <TypeScriptCompile Include="App\viewmodels\conflicts.ts" />
     <TypeScriptCompile Include="App\models\conflict.ts" />
     <TypeScriptCompile Include="App\models\conflictsInfo.ts" />
