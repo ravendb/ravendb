@@ -9,25 +9,17 @@ class getDocumentsMetadataByIDPrefixCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<any> {
-        var getDocsWithPrefixQueryPart = '/docs';
-        var arguments =
-        {
+    execute(): JQueryPromise<documentMetadataDto[]> {
+        var url = '/docs';
+        var arguments = {
             'startsWith': this.prefix,
             'exclude': null,
             'start': 0,
             'pageSize': this.resultsAmount,
             'metadata-only': true
         };
-        return this.query<any>(getDocsWithPrefixQueryPart, arguments, this.db, (results: documentMetadataDto[])=> {
-            return results.map(d=> {
-                return d['@metadata']['@id'];
-            });
-        });
-
+        return this.query<any>(url, arguments, this.db);
     }
-
-
 }
 
 export = getDocumentsMetadataByIDPrefixCommand;
