@@ -15,6 +15,7 @@ class settings extends viewModelBase {
 
     bundleMap = { Quotas: "Quotas", Replication: "Replication", SqlReplication: "SQL Replication", Versioning: "Versioning", PeriodicBackups: "Periodic Backup", ScriptedIndexResults: "Scripted Index" };
     userDatabasePages = ko.observableArray(["Database Settings"]);
+    systemDatabasePages = ["API Keys", "Windows Authentication"];
 
     constructor() {
         super();
@@ -69,6 +70,7 @@ class settings extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.userDatabasePages(["Database Settings"]);
         if (args) {
             var canActivateResult = $.Deferred();
             var db = this.activeDatabase();
@@ -76,16 +78,19 @@ class settings extends viewModelBase {
             new getDatabaseSettingsCommand(db)
                 .execute()
                 .done(document => {
-                    var arr = document.Settings["Raven/ActiveBundles"].split(';');
-                    self.userDatabasePages(["Database Settings"]);
-                    for (var i = 0; i < arr.length; i++) {
-                        var bundleName = self.bundleMap[arr[i]];
-                        if (bundleName != undefined) {
-                            self.userDatabasePages.push(bundleName);
+                    var documentSettings = document.Settings["Raven/ActiveBundles"];
+                    if (documentSettings != undefined) {
+                        var arr = documentSettings.split(';');
+
+                        for (var i = 0; i < arr.length; i++) {
+                            var bundleName = self.bundleMap[arr[i]];
+                            if (bundleName != undefined) {
+                                self.userDatabasePages.push(bundleName);
+                            }
                         }
                     }
-                    
-                    canActivateResult.resolve({ can: true });
+
+                canActivateResult.resolve({ can: true });
                 });
             return canActivateResult;
         } else {
@@ -94,13 +99,18 @@ class settings extends viewModelBase {
     }
 
     routeIsVisible(route: DurandalRouteConfiguration) {
-        if (this.userDatabasePages.indexOf(route.title) !== -1) {
+        var bundleTitle = route.title;
+
+        if (this.isOnUserDatabase() && (this.userDatabasePages.indexOf(bundleTitle) !== -1)) {
             // Database Settings, Quotas, Replication, SQL Replication, Versioning, Periodic Backup and Scripted Index are visible only when we're on a user database.
-            return this.isOnUserDatabase();
-        } else {
-            // API keys and Windows Auth are visible only when we're on the system database.
-            return this.isOnSystemDatabase();
+            return true;
         }
+        if (this.isOnSystemDatabase() && (this.systemDatabasePages.indexOf(bundleTitle) !== -1)) {
+            // API keys and Windows Auth are visible only when we're on the system database.
+            return true;
+        }
+
+        return false;
     }
 }
 

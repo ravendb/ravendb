@@ -130,6 +130,7 @@ class query extends viewModelBase {
     attached() {
         this.createKeyboardShortcut("F2", () => this.editSelectedIndex(), query.containerSelector);
         this.createKeyboardShortcut("ctrl+enter", () => this.runQuery(), query.containerSelector);
+        this.createKeyboardShortcut("alt+c", () => this.focusOnQuery(), query.containerSelector);
         $("#indexQueryLabel").popover({
             html: true,
             trigger: 'hover',
@@ -137,6 +138,16 @@ class query extends viewModelBase {
             content: 'Queries use Lucene syntax. Examples:<pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
         });        
         ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexQueryRawData(this.activeDatabase(),this.selectedIndex()));
+    }
+
+    focusOnQuery() {
+        var editorElement = $("#queryEditor").length == 1 ? $("#queryEditor")[0] : null;
+        if (editorElement) {
+            var docEditor = ko.utils.domData.get($("#queryEditor")[0], "aceEditor");
+            if (docEditor) {
+                docEditor.focus();
+            }
+        }
     }
 
     editSelectedIndex() {
