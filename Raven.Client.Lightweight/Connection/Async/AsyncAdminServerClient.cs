@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 

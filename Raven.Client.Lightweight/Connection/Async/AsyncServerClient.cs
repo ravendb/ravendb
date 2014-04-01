@@ -50,8 +50,7 @@ namespace Raven.Client.Connection.Async
 	/// <summary>
 	/// Access the database commands in async fashion
 	/// </summary>
-	public class AsyncServerClient : IAsyncDatabaseCommands, IAsyncAdminDatabaseCommands, IAsyncInfoDatabaseCommands,
-									 IAsyncGlobalAdminDatabaseCommands
+	public class AsyncServerClient : IAsyncDatabaseCommands, IAsyncInfoDatabaseCommands
 	{
 		private readonly ProfilingInformation profilingInformation;
 		private readonly IDocumentConflictListener[] conflictListeners;
@@ -643,6 +642,8 @@ namespace Raven.Client.Connection.Async
 			get { return operationsHeaders; }
 			set { operationsHeaders = value; }
 		}
+		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin { get{ return new AsyncAdminServerClient(this);} }
+		public IAsyncAdminDatabaseCommands Admin { get { return new AsyncAdminServerClient(this);} }
 
 		/// <summary>
 		/// Begins an async get operation
@@ -1127,66 +1128,6 @@ namespace Raven.Client.Connection.Async
             var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
             return convention.CreateSerializer().Deserialize<IndexMergeResults>(new RavenJTokenReader(result));
         }
-
-		public Task StartIndexingAsync()
-		{
-			return ExecuteWithReplication("POST", operationMetadata =>
-			{
-				var request =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-																							 (operationMetadata.Url + "/admin/StartIndexing")
-																								 .NoCache(),
-                                                                                             "POST", operationMetadata.Credentials, convention));
-
-				request.AddOperationHeaders(OperationsHeaders);
-				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
-													HandleReplicationStatusChanges);
-
-				return request.ExecuteRequestAsync();
-			});
-		}
-
-		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
-		{
-		    var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-		        (MultiDatabase.GetDatabaseUrl(url, databaseName) + "/admin/backup?incremental=" + incremental).NoCache(),
-		        "POST", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
-			request.AddOperationHeaders(OperationsHeaders);
-			return request.WriteAsync(RavenJObject.FromObject(new BackupRequest
-			{
-			    BackupLocation = backupLocation,
-                DatabaseDocument = databaseDocument
-			}));
-		}
-
-		public Task StartRestoreAsync(RestoreRequest restoreRequest)
-		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/restore").NoCache(), "POST", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
-			request.AddOperationHeaders(OperationsHeaders);
-			return request.WriteAsync(RavenJObject.FromObject(restoreRequest));
-		}
-
-		public Task<string> GetIndexingStatusAsync()
-		{
-			throw new NotImplementedException();
-		}
-
-		public Task StopIndexingAsync()
-		{
-			return ExecuteWithReplication("POST", operationMetadata =>
-			{
-				var request =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-																							 (operationMetadata.Url + "/admin/StopIndexing")
-																								 .NoCache(),
-                                                                                             "POST", operationMetadata.Credentials, convention));
-				request.AddOperationHeaders(OperationsHeaders);
-				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
-													HandleReplicationStatusChanges);
-
-				return request.ExecuteRequestAsync();
-			});
-		}
 
         public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize,
 		                            RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null,
@@ -2389,26 +2330,6 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-
-		#region IAsyncGlobalAdminDatabaseCommands
-
-		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin
-		{
-            get { return (IAsyncGlobalAdminDatabaseCommands)this.ForSystemDatabase(); }
-		}
-
-		async Task<AdminStatistics> IAsyncGlobalAdminDatabaseCommands.GetStatisticsAsync()
-		{
-			var json = (RavenJObject)await rootUrl.AdminStats()
-					.NoCache()
-					.ToJsonRequest(this, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
-												   .ReadResponseJsonAsync();
-
-			return json.Deserialize<AdminStatistics>(convention);
-		}
-
-		#endregion
-
         private async Task<string> GetSingleAuthToken(OperationMetadata operationMetadata)
         {
             var tokenRequest = CreateRequest(operationMetadata, "/singleAuthToken", "GET", disableRequestCompression: true);
@@ -2427,45 +2348,6 @@ namespace Raven.Client.Connection.Async
 			return result.Value<string>("Token");
 		}
 
-		#region IAsyncAdminDatabaseCommands
-
-		/// <summary>
-		/// Admin operations, like create/delete database.
-		/// </summary>
-		public IAsyncAdminDatabaseCommands Admin
-		{
-			get { return this; }
-		}
-
-		public Task CreateDatabaseAsync(DatabaseDocument databaseDocument)
-		{
-			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
-				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
-
-			var dbname = databaseDocument.Id.Replace("Raven/Databases/", "");
-            MultiDatabase.AssertValidName(dbname);
-			var doc = RavenJObject.FromObject(databaseDocument);
-			doc.Remove("Id");
-
-
-			var req = CreateRequest("/admin/databases/" + Uri.EscapeDataString(dbname), "PUT");
-			return req.WriteAsync(doc.ToString(Formatting.Indented));
-		}
-
-		public Task DeleteDatabaseAsync(string databaseName, bool hardDelete = false)
-		{
-			throw new NotImplementedException();
-		}
-
-		public Task CompactDatabaseAsync(string databaseName)
-		{
-			throw new NotImplementedException();
-		}
-
-		#endregion
-
-		#region IAsyncInfoDatabaseCommands
-
 		public IAsyncInfoDatabaseCommands Info
 		{
 			get { return this; }
@@ -2480,10 +2362,6 @@ namespace Raven.Client.Connection.Async
 
 			return json.Deserialize<ReplicationStatistics>(convention);
 		}
-
-		#endregion
-
-
 
 		/// <summary>
 		/// Returns a new <see cref="IAsyncDatabaseCommands"/> using the specified credentials
