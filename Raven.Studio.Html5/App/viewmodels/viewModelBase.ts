@@ -159,7 +159,7 @@ class viewModelBase {
             return true;
         }
 
-        var canNavTask = $.Deferred<boolean>();
+        var canNavTask = $.Deferred<any>();
 
         var systemDbConfirm = new viewSystemDatabaseConfirm();
         systemDbConfirm.viewTask

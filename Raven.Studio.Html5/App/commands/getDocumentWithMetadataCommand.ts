@@ -4,7 +4,9 @@ import document = require("models/document");
 
 class getDocumentWithMetadataCommand extends commandBase {
 
-    constructor(private id: string, private db: database) {
+    shouldResolveNotFoundAsNull: boolean;
+
+    constructor(private id: string, private db: database, shouldResolveNotFoundAsNull?: boolean) {
         super();
 
         if (!id) {
@@ -14,9 +16,10 @@ class getDocumentWithMetadataCommand extends commandBase {
         if (!db) {
             throw new Error("Must specify database");
         }
+        this.shouldResolveNotFoundAsNull = shouldResolveNotFoundAsNull || false;
     }
 
-    execute(): JQueryPromise<document> {
+    execute(): JQueryPromise<any> {
 
         // Executing /queries will return the doc with the metadata. 
         // We can do a GET call to /docs/<id>, however, it returns the metadata only as headers, 
@@ -26,7 +29,11 @@ class getDocumentWithMetadataCommand extends commandBase {
         postResult.fail(xhr => documentResult.fail(xhr));
         postResult.done((queryResult: queryResultDto) => {
             if (queryResult.Results.length === 0) {
-                documentResult.reject("Unable to find document with ID " + this.id);
+                if (this.shouldResolveNotFoundAsNull) {
+                    documentResult.resolve(null);
+                } else {
+                    documentResult.reject("Unable to find document with ID " + this.id);
+                }
             } else {
                 documentResult.resolve(new document(queryResult.Results[0]));
             }

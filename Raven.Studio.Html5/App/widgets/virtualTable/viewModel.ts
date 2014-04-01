@@ -12,6 +12,8 @@ import deleteDocuments = require("viewmodels/deleteDocuments");
 import copyDocuments = require("viewmodels/copyDocuments");
 import row = require("widgets/virtualTable/row");
 import column = require("widgets/virtualTable/column");
+import customColumnParams = require('models/customColumnParams');
+import customColumns = require('models/customColumns');
 
 class ctor {
 
@@ -45,10 +47,14 @@ class ctor {
         showIds: boolean;
         useContextMenu: boolean;
         maxHeight: string;
-        customColumnParams: { [column: string]: customColumnParams };
         isIndexMapReduce: KnockoutObservable<boolean>;
+        customColumns: KnockoutObservable<customColumns>;
     }
- 
+
+    constructor() {
+        
+    }
+
     activate(settings: any) {
         var defaults = {
             dynamicHeightTargetSelector: "footer",
@@ -58,8 +64,8 @@ class ctor {
             showIds: true,
             useContextMenu: true,
             maxHeight: 'none',
-            customColumnParams: {},
-            isIndexMapReduce: ko.observable<boolean>(true)
+            isIndexMapReduce: ko.observable<boolean>(true),
+            customColumns: ko.observable(customColumns.empty()),
         };
         this.settings = $.extend(defaults, settings);
 
@@ -83,12 +89,13 @@ class ctor {
             });
             this.items = list;
             this.settings.selectedIndices.removeAll();
-            this.columns.remove(c => (c.name !== 'Id' && c.name !== '__IsChecked'));
+            this.columns.remove(c => (c.binding !== 'Id' && c.binding !== '__IsChecked'));
             this.gridViewport.scrollTop(0);
             this.onGridScrolled();
 
             this.refreshIdAndCheckboxColumn();
         });
+
     }
 
 
@@ -130,7 +137,7 @@ class ctor {
         var rows = [];
         for (var i = 0; i < rowCount; i++) {
             var newRow = new row(this.settings.showIds, this);
-            newRow.createPlaceholderCells(this.columns().map(c => c.name));
+            newRow.createPlaceholderCells(this.columns().map(c => c.binding));
             newRow.rowIndex(i);
             var desiredTop = i * this.rowHeight;
             newRow.top(desiredTop);
@@ -195,7 +202,7 @@ class ctor {
     }
 
     refreshIdAndCheckboxColumn() {
-        var containsId = this.columns().first(x=> x.name == "Id");
+        var containsId = this.columns().first(x=> x.binding == "Id");
 
         if (!containsId && !this.isIndexMapReduce()) {
             if (this.settings.showCheckboxes !== false) {
@@ -206,7 +213,7 @@ class ctor {
             }
             this.columns.valueHasMutated();
         } else if (containsId && this.isIndexMapReduce()) {
-            this.columns.remove(c => c.name === 'Id' || c.name === "__IsChecked");
+            this.columns.remove(c => c.binding === 'Id' || c.binding === "__IsChecked");
             this.columns.valueHasMutated();
         }
     }
@@ -265,31 +272,29 @@ class ctor {
         return collection.getCollectionCssClass(this.getEntityName(doc));
     }
 
-    getColumnWidth(columnName: string): number {
-        var customParams = this.settings.customColumnParams;
-        if (customParams && customParams[columnName]) {
-            if (customParams[columnName].width) {
-                return customParams[columnName].width;
-            }
+    getColumnWidth(binding: string): number {
+
+        var customConfig = this.settings.customColumns().findConfigFor(binding);
+        if (customConfig) {
+            return customConfig.width();
         }
 
         var defaultColumnWidth = 200;
         var columnWidth = defaultColumnWidth;
-        if (columnName === "Id") {
+        if (binding === "Id") {
             return ctor.idColumnWidth;
         }
         return defaultColumnWidth;
     }
 
-    getColumnName(columnName: string): string {
-        var customParams = this.settings.customColumnParams;
-        if (customParams && customParams[columnName]) {
-            if (customParams[columnName].title) {
-                return customParams[columnName].title;
+    getColumnName(binding: string): string {
+        if (this.settings.customColumns().hasOverrides()) {
+            var customConfig = this.settings.customColumns().findConfigFor(binding);
+            if (customConfig) {
+                return customConfig.header();
             }
-        }
-        // fallback to default value - no override found.
-        return columnName;
+        } 
+        return binding;
     }
 
     ensureColumnsForRows(rows: Array<documentBase>) {
@@ -304,27 +309,37 @@ class ctor {
         }
 
         var columnsNeeded = {};
-        for (var i = 0; i < rows.length; i++) {
-            var currentRow = rows[i];
-            var rowProperties = currentRow.getDocumentPropertyNames();
-            for (var j = 0; j < rowProperties.length; j++) {
-                var property = rowProperties[j];
-                columnsNeeded[property] = null;
+
+        if (this.settings.customColumns().hasOverrides()) {
+
+            var colParams = this.settings.customColumns().columns();
+            for (var i = 0; i < colParams.length; i++) {
+                var colParam = colParams[i];
+                columnsNeeded[colParam.binding()] = null;
+            }
+        } else {
+            for (var i = 0; i < rows.length; i++) {
+                var currentRow = rows[i];
+                var rowProperties = currentRow.getDocumentPropertyNames();
+                for (var j = 0; j < rowProperties.length; j++) {
+                    var property = rowProperties[j];
+                    columnsNeeded[property] = null;
+                }
             }
         }
 
         for (var i = 0; i < this.columns().length; i++) {
-            var colName = this.columns()[i].name;
+            var colName = this.columns()[i].binding;
             delete columnsNeeded[colName];
         }
 
-        for (var prop in columnsNeeded) {
-            var columnWidth = this.getColumnWidth(prop);
-            var columnName = this.getColumnName(prop);
+        for (var binding in columnsNeeded) {
+            var columnWidth = this.getColumnWidth(binding);
+            var columnName = this.getColumnName(binding);
 
             // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
-            var newColumn = new column(prop, columnWidth, columnName);
-            if (prop === "Name") {
+            var newColumn = new column(binding, columnWidth, columnName);
+            if (binding === "Name") {
                 this.columns.splice(2, 0, newColumn);
             } else if (this.columns().length < 10) {
                 this.columns.push(newColumn);
@@ -396,10 +411,12 @@ class ctor {
     }
 
     getTemplateFor(columnName: string): string {
-        var params = this.settings.customColumnParams[columnName];
-        if (params) {
-            return params.template;
-        }
+        if (this.settings.customColumns().hasOverrides()) {
+            var customConfig = this.settings.customColumns().findConfigFor(columnName);
+            if (customConfig) {
+                return customConfig.template();
+            }
+        } 
         return undefined;
     }
 

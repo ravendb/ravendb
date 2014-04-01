@@ -1,6 +1,16 @@
 ﻿<div >
-    <div class="navbar navbar-fixed-top navbar-default">
-        <div class="navbar-inner">
+    <div class="navbar navbar-fixed-top navbar-default" role="navigation">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+            </div>
+
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav">
                 <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
                     <a data-bind="attr: { href: appUrls.documents }">Documents</a>
@@ -91,10 +101,18 @@
                     </ul>
                 </li>
             </ul>
-            <form class="navbar-form pull-left">
-                <input id="goToDocInput" type="text" class="form-control col-md-8" placeholder="Go to document">
+                <form class="navbar-form pull-left hidden-xs hidden-sm">
+                    <input id="goToDocInput" type="text" class="form-control col-md-8" placeholder="Go to document" data-bind="value: goToDocumentSearch, valueUpdate: 'afterkeydown'">
+                    <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#goToDocInput', foreach: goToDocumentSearchResults">
+                        <li role="presentation" data-bind="click: $root.goToDoc.bind($root, $data)">
+                            <a role="menuitem" tabindex="-1" href="#">
+                                <span class="collection-color-strip" data-bind="css: $root.getDocCssClass($data)"></span>
+                                <span data-bind="text: $data['@metadata']['@id']"></span>
+                            </a>
+                        </li>
+                    </ul>
             </form>
-            <ul class="nav navbar-nav pull-right">
+                <ul class="nav navbar-nav pull-right hidden-xs hidden-sm">
                 <li>
                     <a style="padding-right: 0; display: inline-block;" data-bind="attr:{href:appUrls.databasesManagement}">Databases &nbsp;<i class=" fa fa-caret-right"></i>&nbsp;</a>
                 </li>
@@ -109,10 +127,10 @@
                         </li>
                     </ul>
                 </li>
-                <li data-bind="visible: recordedErrors().length > 0, click: $root.showErrorsDialog.bind($root)">
+                    <li class="hidden-xs hidden-sm" data-bind="visible: recordedErrors().length > 0, click: $root.showErrorsDialog.bind($root)">
                     <a href="#"><i class="fa fa-warning text-danger"></i></a>
                 </li>
-                <li>
+                    <li class="hidden-xs hidden-sm">
                     <a class="navbar-brand" href="http://ravendb.net" target="_blank">
                         <i class="fa fa-home"></i>
                         <span>RavenDB</span>
@@ -120,6 +138,7 @@
                 </li>
             </ul>
         </div>
+    </div>
     </div>
     
     <!--Alerts container-->

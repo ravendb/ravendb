@@ -19,6 +19,7 @@ import getDatabasesCommand = require("commands/getDatabasesCommand");
 import getBuildVersionCommand = require("commands/getBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
+import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
@@ -38,7 +39,8 @@ class shell extends viewModelBase {
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
-    
+    goToDocumentSearch = ko.observable<string>();
+    goToDocumentSearchResults = ko.observableArray<string>();    
 
     constructor() {
         super();
@@ -47,7 +49,9 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
 
         this.appUrls = appUrl.forCurrentDatabase();
+        this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
+        autoCompleteBindingHandler.install();
     }
 
     activate(args: any) {
@@ -86,44 +90,6 @@ class shell extends viewModelBase {
             selector: '.use-bootstrap-tooltip',
             trigger: 'hover'
         });
-        
-        //TODO: Move this to a knockout binding handler
-        $("#goToDocInput").typeahead(
-            {
-                hint: true,
-                highlight: true,
-                minLength: 1
-            },
-            {
-                name: 'Documents',
-                displayKey: 'value',
-                source: (searchTerm, callback) => {
-                    var foundDocuments;
-                    new getDocumentsMetadataByIDPrefixCommand(searchTerm, 25, this.activeDatabase())
-                        .execute()
-                        .done((results: string[]) => {
-                            var matches = results.map(val => {
-                                return {
-                                    value: val,
-                                    editHref: appUrl.forEditDoc(val, null, null, this.activeDatabase())
-                                }
-                            });
-                            callback(matches);
-                        })
-                        .fail(callback(['']));
-
-                },
-                templates: {
-                    suggestion: Handlebars.compile(['<p><a><strong>{{value}}</a></strong>'].join())
-                }
-
-
-            });
-
-
-        $('#goToDocInput').bind('typeahead:selected', (obj, datum, name) => {
-            router.navigate(datum.editHref);
-        });
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -135,7 +101,6 @@ class shell extends viewModelBase {
             NProgress.set(newProgress);
         } else {
             NProgress.done();
-            $('.use-bootstrap-tooltip').tooltip('hide');
         }
     }
 
@@ -280,6 +245,15 @@ class shell extends viewModelBase {
         }
     }
 
+    goToDoc(doc: documentMetadataDto) {
+        this.goToDocumentSearch("");
+        this.navigate(appUrl.forEditDoc(doc['@metadata']['@id'], null, null, this.activeDatabase()));
+    }
+
+    getDocCssClass(doc: documentMetadataDto) {
+        return collection.getCollectionCssClass(doc['@metadata']['Raven-Entity-Name']);
+    }
+
     fetchBuildVersion() {
         new getBuildVersionCommand()
             .execute()
@@ -290,6 +264,18 @@ class shell extends viewModelBase {
         new getLicenseStatusCommand()
             .execute()
             .done((result: licenseStatusDto) => this.licenseStatus(result));
+    }
+
+    fetchGoToDocSearchResults(query: string) {
+        if (query.length >= 2) {
+            new getDocumentsMetadataByIDPrefixCommand(query, 10, this.activeDatabase())
+                .execute()
+                .done((results: string[]) => {
+                    if (this.goToDocumentSearch() === query) {
+                        this.goToDocumentSearchResults(results);
+                    }
+                });
+        }
     }
 
     showErrorsDialog() {
