@@ -59,5 +59,10 @@ namespace Raven.Setup.CustomActions.Infrastructure.IIS
 				applicationPool.CommitChanges();
 			}
 		}
+
+		public void SetLoadUserProfile(string applicationPoolName)
+		{
+			// not applicable for IIS 6
+		}
 	}
 }

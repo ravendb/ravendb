@@ -57,5 +57,21 @@ namespace Raven.Setup.CustomActions.Infrastructure.IIS
 				}
 			}
 		}
+
+		public void SetLoadUserProfile(string applicationPoolName)
+		{
+			using (var iisManager = new ServerManager())
+			{
+				foreach (var appPool in iisManager.ApplicationPools)
+				{
+					if (appPool.Name != applicationPoolName)
+						continue;
+					appPool.ProcessModel.LoadUserProfile = true;
+					iisManager.CommitChanges();
+
+					break;
+				}
+			}
+		}
 	}
 }

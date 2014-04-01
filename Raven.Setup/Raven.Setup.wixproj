@@ -85,6 +85,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <WixExtension Include="WixFirewallExtension">
+      <HintPath>..\Tools\WiX\3.7\WixFirewallExtension.dll</HintPath>
+      <Name>WixFirewallExtension</Name>
+    </WixExtension>
     <WixExtension Include="WixNetFxExtension">
       <HintPath>..\Tools\WiX\3.7\WixNetFxExtension.dll</HintPath>
       <Name>WixNetFxExtension</Name>
