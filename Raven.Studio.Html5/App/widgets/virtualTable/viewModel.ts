@@ -65,7 +65,7 @@ class ctor {
             useContextMenu: true,
             maxHeight: 'none',
             isIndexMapReduce: ko.observable<boolean>(true),
-            customColumns: ko.observable(customColumns.empty()),
+            customColumns: ko.observable(customColumns.empty())
         };
         this.settings = $.extend(defaults, settings);
 
@@ -272,14 +272,14 @@ class ctor {
         return collection.getCollectionCssClass(this.getEntityName(doc));
     }
 
-    getColumnWidth(binding: string): number {
+    getColumnWidth(binding: string, defaultColumnWidth:number = 200): number {
 
         var customConfig = this.settings.customColumns().findConfigFor(binding);
         if (customConfig) {
             return customConfig.width();
         }
 
-        var defaultColumnWidth = 200;
+        
         var columnWidth = defaultColumnWidth;
         if (binding === "Id") {
             return ctor.idColumnWidth;
@@ -333,8 +333,29 @@ class ctor {
             delete columnsNeeded[colName];
         }
 
+        var idColumn = this.columns.first(x=> x.binding == "Id");
+        var idColumnExists = idColumn ? 1 : 0;
+
+
+        var calculateWidth = ctor.idColumnWidth;
+        var colCount = Object.keys(columnsNeeded).length;
+        if ((colCount + idColumnExists) * 200 > this.grid.width()) {
+            if (idColumn) {
+                idColumn.width(calculateWidth);
+            }
+        } else {
+            calculateWidth = this.grid.width() / (colCount + idColumnExists);
+        }
+
+        if (idColumn) {
+            idColumn.width(calculateWidth);
+        }
+
+       
+
+
         for (var binding in columnsNeeded) {
-            var columnWidth = this.getColumnWidth(binding);
+            var columnWidth = this.getColumnWidth(binding, calculateWidth);
             var columnName = this.getColumnName(binding);
 
             // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
