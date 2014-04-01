@@ -67,8 +67,11 @@ namespace Raven.Database.Server.Controllers
 					var documentByKey = string.IsNullOrEmpty(transformer)
 										? Database.Documents.Get(value, transactionInformation)
 										: Database.Documents.GetWithTransformer(value, transformer, transactionInformation, queryInputs);
-					if (documentByKey == null)
-						continue;
+				    if (documentByKey == null)
+				    {
+                        result.Results.Add(null); 
+                        continue;
+				    }
 					result.Results.Add(documentByKey.ToJson());
 
 					if (documentByKey.Etag != null)

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Tests.Helpers;
@@ -11,7 +12,7 @@ namespace Raven.Tests.MailingList
 {
     public class TransformWithLoad : RavenTestBase
     {
-	    private EmbeddableDocumentStore store;
+	    private IDocumentStore store;
 
 	    public TransformWithLoad()
 	    {
