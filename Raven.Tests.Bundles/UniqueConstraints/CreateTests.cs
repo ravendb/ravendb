@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Exceptions;
+﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.Exceptions;
 using Raven.Json.Linq;
 
 using Xunit;
@@ -78,7 +79,7 @@ namespace Raven.Tests.Bundles.UniqueConstraints
 				session.SaveChanges();
 			}
 
-			Assert.Throws<OperationVetoedException>(
+			Assert.Throws<ErrorResponseException>(
 				() =>
 					{
 						using (var session = DocumentStore.OpenSession())
@@ -95,7 +96,7 @@ namespace Raven.Tests.Bundles.UniqueConstraints
 			var user = new User { Email = "foo@bar.com", Name = "Khan" };
 			var sameEmailUser = new User { Email = "foo@bar.com", Name = "James" };
 
-			Assert.Throws<OperationVetoedException>(
+            Assert.Throws<ErrorResponseException>(
 				() =>
 				{
 					using (var session = DocumentStore.OpenSession())
@@ -119,7 +120,7 @@ namespace Raven.Tests.Bundles.UniqueConstraints
                 session.SaveChanges();
             }
 
-            Assert.Throws<OperationVetoedException>(
+            Assert.Throws<ErrorResponseException>(
                 () =>
                 {
                     using (var session = DocumentStore.OpenSession())

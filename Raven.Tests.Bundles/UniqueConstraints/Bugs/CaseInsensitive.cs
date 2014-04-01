@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Exceptions;
+﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.Exceptions;
 using Raven.Client.UniqueConstraints;
 
 using Xunit;
@@ -25,13 +26,13 @@ namespace Raven.Tests.Bundles.UniqueConstraints.Bugs
             using (var session = DocumentStore.OpenSession())
             {
                 session.Store(new Lizard { Name = "Joe SMITH" });
-                Assert.Throws<OperationVetoedException>(() => session.SaveChanges());
+                Assert.Throws<ErrorResponseException>(() => session.SaveChanges());
             }
 
             using (var session = DocumentStore.OpenSession())
             {
                 session.Store(new Lizard { Name = "Joe Smith" });
-                Assert.Throws<OperationVetoedException>(() => session.SaveChanges());
+                Assert.Throws<ErrorResponseException>(() => session.SaveChanges());
             }
         }
     }
