@@ -124,6 +124,7 @@ namespace Raven.Tests.MailingList
 					Assert.Equal("Subha", proficiencies.Single().Consultant.Name);
 				}
 
+                WaitForIndexing(store);
 				//I use this patch to update the consultant name to "Subha" in the Proficiencies collection.
 				store.DatabaseCommands.UpdateByIndex("Proficiencies/ConsultantId",
 					new IndexQuery
@@ -147,7 +148,7 @@ namespace Raven.Tests.MailingList
 							}
 						}
 					},
-					allowStale: false);
+					allowStale: false).WaitForCompletion();
 
 				//Here, I again list the name of the consultant in the Proficiencies collection and expect it to be "Subhashini".
 				using (var session = store.OpenSession())
