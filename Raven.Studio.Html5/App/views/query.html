@@ -58,7 +58,7 @@
                 </ul>
             </div>
             <div class="btn-group">
-                <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-placement="right" data-toggle="dropdown" title="Configure advanced query options (Alt+C)" accesskey="C" data-bind="enable: hasSelectedIndex">
+                <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-placement="right" data-toggle="dropdown" title="Configure advanced query options" data-bind="enable: hasSelectedIndex">
                     <i class="fa fa-cog"></i> <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
@@ -134,7 +134,7 @@
             <div class="col-md-11">
                 <div class="row">
                     <div class="col-md-11">
-                        <pre class="form-control editor" data-bind="aceEditor: { code: queryText }"></pre>
+                        <pre id="queryEditor" class="form-control editor" data-bind="aceEditor: { code: queryText }, valueUpdate: 'afterkeydown'"></pre>
                     </div>
                 </div>
             </div>
@@ -143,8 +143,8 @@
             <label class="col-sm-1 control-label">
                 Sort By
             </label>
-            <div class="col-md-5" data-bind="foreach: sortBys">
-                <div class="panel" data-bind="css: { 'panel-default': fieldName, 'panel-warning': !fieldName() }">
+            <div class="col-md-9" data-bind="foreach: sortBys">
+                <div class="panel col-md-3" data-bind="css: { 'panel-default': fieldName, 'panel-warning': !fieldName() }">
                     <div class="panel-heading">
                         <div class="btn-group col-md-11">
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
@@ -161,17 +161,14 @@
                     </div>
                     <div class="panel-body">
                         <div class="btn-group">
-                            <label class="btn btn-primary" data-bind="click: ascending.bind(true), css: { active: ascending }">
+                            <label class="btn btn-primary" data-bind="click: isAscending.bind($data,true), css: { active: isAscending() }">
                                 Ascending
                             </label>
-                            <label class="btn btn-primary" data-bind="click: descending.bind(true), css: { active: descending }">
+                            <label class="btn btn-primary" data-bind="click: isAscending.bind($data,false), css: { active: !isAscending() }">
                                 Descending
                             </label>
-                            <label class="btn btn-primary" data-bind="click: rangeAscending.bind(true), css: { active: rangeAscending }">
-                                Range Ascending
-                            </label>
-                            <label class="btn btn-primary" data-bind="click: rangeDescending.bind(true), css: { active: rangeDescending }">
-                                Range Descending
+                            <label class="btn btn-primary" data-bind="click: toggleRange.bind($data), css: { active: isRange }">
+                                Range
                             </label>
                         </div>
                     </div>
@@ -183,7 +180,7 @@
             <label id="indexQueryLabelContainer" class="col-sm-1 control-label">
                 Transformer
             </label>
-            <div class="col-md-5">
+            <div class="col-md-2">
                 <div class="panel" data-bind="css: { 'panel-default': transformer, 'panel-warning': !transformer() }">
                     <div class="panel-heading">
                         <div class="btn-group col-md-11">
