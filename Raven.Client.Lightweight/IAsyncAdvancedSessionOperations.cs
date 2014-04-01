@@ -11,6 +11,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Indexes;
+using Raven.Client.Document.Batches;
 
 namespace Raven.Client
 {
@@ -19,6 +20,19 @@ namespace Raven.Client
 	/// </summary>
 	public interface IAsyncAdvancedSessionOperations : IAdvancedDocumentSessionOperations
 	{
+       
+        /// <summary>
+        /// Access the eager operations
+        /// </summary>
+        /// <summary>
+        /// Access the lazy operations
+        /// </summary>
+        IAsyncLazySessionOperations Lazily { get; }
+
+        /// <summary>
+        /// Access the eager operations
+        /// </summary>
+        IAsyncEagerSessionOperations Eagerly { get; }
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>

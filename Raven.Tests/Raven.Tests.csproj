@@ -312,6 +312,9 @@
     <Compile Include="Issues\RavenDB-1847.cs" />
     <Compile Include="Issues\RavenDb-1934.cs" />
     <Compile Include="Issues\RavenDB1369.cs" />
+    <Compile Include="Issues\RavenDb1962.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Issues\RavenDB_1538.cs" />
     <Compile Include="Issues\RavenDB_1297 .cs" />
     <Compile Include="Issues\RavenDB_1285.cs" />
