@@ -11,7 +11,8 @@ class getFilesystemConfigurationCommand extends commandBase {
 
         var url = "/config";
 
-        return this.query<string[]>(url, null, this.fs);
+        return this.query<string[]>(url, null, this.fs)
+                   .fail(response => this.reportError("Failed to retrieve filesystem configuration.", response.responseText, response.statusText));
     }
 }
 

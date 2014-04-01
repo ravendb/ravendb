@@ -28,8 +28,15 @@ class filesystemConfiguration extends viewModelBase {
     }
 
     attached() {
-       
+        this.initializeDbDocEditor();
         this.createKeyboardShortcut("F2", () => this.navigateToEditSettingsDocument(), filesystemConfiguration.containerId);       
+
+        this.activeFilesystem.subscribe(x => {
+            this.loadKeys(x); 
+            if (this.currentKey() != null)
+                this.loadEditorWithKey(x, this.currentKey());       
+        });
+
         this.loadKeys(this.activeFilesystem());        
     }
 
@@ -38,9 +45,8 @@ class filesystemConfiguration extends viewModelBase {
         if (args.key != null) {
             this.currentKey(args.key);
         }  
-
-        this.initializeDbDocEditor();
-        this.currentKey.subscribe(x => this.loadEditorWithKey(x)); 
+       
+        this.currentKey.subscribe(x => this.loadEditorWithKey(this.activeFilesystem(), x)); 
     }
 
     private initializeDbDocEditor() {
@@ -70,11 +76,12 @@ class filesystemConfiguration extends viewModelBase {
         return appUrl.forFilesystemConfigurationWithKey(this.activeFilesystem(), key);
     }
 
-    loadEditorWithKey(key: string) { 
+    loadEditorWithKey(fs: filesystem, key: string) { 
         if (key != null) {
             new getFilesystemConfigurationByKeyCommand(this.activeFilesystem(), key)
                 .execute()
-                .done(x => this.handleDocument(x));
+                .done(x => this.handleDocument(x))
+                .fail(x => this.navigate(appUrl.forFilesystemConfiguration(fs)));
         }               
     }
 

@@ -14,7 +14,8 @@ class getFilesystemConfigurationByKeyCommand extends commandBase {
             name: this.name
         };
 
-        return this.query<any>(url, args, this.fs);
+        return this.query<any>(url, args, this.fs)
+                   .fail(response => this.reportError("Failed to retrieve filesystem configuration key. Does exist in this filesystem?", response.responseText, response.statusText));
     }
 }
 
