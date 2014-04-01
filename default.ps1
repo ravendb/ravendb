@@ -13,7 +13,7 @@ properties {
 	$packages_dir = "$base_dir\packages"
 	$build_dir = "$base_dir\build"
 	$sln_file = "$base_dir\zzz_RavenDB_Release.sln"
-	$version = "2.5"
+	$version = "3.0"
 	$tools_dir = "$base_dir\Tools"
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
