@@ -3,6 +3,8 @@ using System.Threading;
 using System.Transactions;
 using Raven.Json.Linq;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 

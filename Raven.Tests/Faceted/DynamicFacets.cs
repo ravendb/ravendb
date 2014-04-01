@@ -8,6 +8,9 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Tests.Common.Attributes;
+using Raven.Tests.Common.Dto.Faceted;
+
 using Xunit;
 
 namespace Raven.Tests.Faceted

@@ -1,6 +1,10 @@
 ﻿using System.Globalization;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing.Spatial;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Attributes;
+using Raven.Tests.Common.Util;
+
 using Xunit;
 using Xunit.Extensions;
 

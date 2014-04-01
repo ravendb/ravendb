@@ -13,6 +13,7 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
 using Raven.Tests.Storage;
 using Xunit;
 

@@ -1,10 +1,12 @@
 using System.Transactions;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class RemoteTx : RemoteClientTest
+	public class RemoteTx : RavenTest
 	{
 		[Fact]
 		public void WillNotErrorOnDocumentNotYetCommitted()

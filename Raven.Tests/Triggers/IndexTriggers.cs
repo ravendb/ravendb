@@ -12,6 +12,7 @@ using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Tests.Common;
 using Raven.Tests.Storage;
 using Xunit;
 using System.Linq;

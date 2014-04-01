@@ -7,6 +7,9 @@ using System;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Dto.Faceted;
+
 using Xunit;
 using Raven.Client;
 
@@ -14,23 +17,7 @@ namespace Raven.Tests.Faceted
 {
 	public class Aggregation : RavenTest
 	{
-		public class Order
-		{
-			public string Product { get; set; }
-			public decimal Total { get; set; }
-			public Currency Currency { get; set; }
-			public int Quantity { get; set; }
-			public long Region { get; set; }
-			public DateTime At { get; set; }
-            public float Tax { get; set; }
-		}
-
-		public enum Currency
-		{
-			USD,
-			EUR,
-			NIS
-		}
+		
 
 		public class Orders_All : AbstractIndexCreationTask<Order>
 		{

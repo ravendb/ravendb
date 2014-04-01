@@ -1,4 +1,6 @@
-﻿using Xunit;
+﻿using Raven.Tests.Common;
+
+using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.Bugs

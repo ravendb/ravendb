@@ -6,6 +6,8 @@ using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Database.Server;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 

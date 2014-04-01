@@ -1,11 +1,14 @@
 using System.Transactions;
 using Raven.Client.Document;
 using Raven.Tests.Bugs;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Util;
+
 using Xunit;
 
 namespace Raven.Tests.MultiGet
 {
-    public class MultiGetDTC : RemoteClientTest
+    public class MultiGetDTC : RavenTest
     {
         [Fact]
         public void CanUseMultiGetToBatchGetDocumentRequests()

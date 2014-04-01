@@ -9,6 +9,8 @@ using Raven.Abstractions.Exceptions;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Transactions

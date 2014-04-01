@@ -16,13 +16,14 @@ using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
 using Raven.Tests.Indexes;
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.Document
 {
-	public class DocumentStoreEmbeddedTests : RemoteClientTest
+	public class DocumentStoreEmbeddedTests : RavenTest
 	{
 		private readonly EmbeddableDocumentStore documentStore;
 

@@ -6,11 +6,13 @@ using Raven.Client;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Triggers.Bugs
 {
-	public class ModifyingMetadataFromTrigger : RemoteClientTest
+	public class ModifyingMetadataFromTrigger : RavenTest
 	{
 		private readonly IDocumentStore store;
 

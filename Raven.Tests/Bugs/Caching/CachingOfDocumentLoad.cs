@@ -4,11 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Caching
 {
-	public class CachingOfDocumentLoad : RemoteClientTest
+	public class CachingOfDocumentLoad : RavenTest
 	{
 		[Fact]
 		public void Can_cache_document_load()

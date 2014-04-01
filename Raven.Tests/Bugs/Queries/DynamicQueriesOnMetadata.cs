@@ -1,6 +1,8 @@
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Data;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 

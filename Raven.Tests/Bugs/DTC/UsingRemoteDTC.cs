@@ -1,11 +1,13 @@
 using System.Transactions;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs.DTC
 {
-	public class UsingRemoteDTC : RemoteClientTest
+	public class UsingRemoteDTC : RavenTest
 	{
 		[Fact]
 		public void CanUseRemoteDTC()

@@ -6,6 +6,7 @@
 using System;
 using Raven.Client.Document;
 using Raven.Database.Server;
+using Raven.Tests.Common;
 using Raven.Tests.Indexes;
 using Xunit;
 using Xunit.Extensions;

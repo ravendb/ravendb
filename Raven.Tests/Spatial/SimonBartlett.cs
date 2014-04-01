@@ -10,6 +10,8 @@ using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Spatial4n.Core.Context.Nts;
 using Xunit;
 

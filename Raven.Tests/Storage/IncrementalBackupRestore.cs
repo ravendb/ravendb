@@ -7,6 +7,8 @@ using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 using Xunit.Extensions;
 

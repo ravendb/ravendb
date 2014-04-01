@@ -1,6 +1,8 @@
 ﻿using System.IO;
 using System.Linq;
 using Raven.Database.Extensions;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs

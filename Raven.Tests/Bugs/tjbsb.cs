@@ -1,6 +1,8 @@
 using System.Transactions;
 using Raven.Client;
 using Raven.Client.Embedded;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs

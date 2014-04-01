@@ -11,6 +11,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Embedded;
 using Raven.Database.Config;
 using Raven.Database.Queries;
+using Raven.Tests.Common;
 using Raven.Tests.Storage;
 using Xunit;
 using Raven.Database;

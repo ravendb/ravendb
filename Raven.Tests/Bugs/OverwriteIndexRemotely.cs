@@ -10,11 +10,13 @@ using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Server;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class OverwriteIndexRemotely : RemoteClientTest, IDisposable
+	public class OverwriteIndexRemotely : RavenTest, IDisposable
 	{
 		private readonly RavenDbServer ravenDbServer;
 		private readonly IDocumentStore documentStore;

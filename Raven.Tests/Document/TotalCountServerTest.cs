@@ -4,11 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
+
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Document
 {
-	public class TotalCountServerTest : RemoteClientTest
+	public class TotalCountServerTest : RavenTest
 	{
 		[Fact]
 		public void TotalResultIsIncludedInQueryResult()

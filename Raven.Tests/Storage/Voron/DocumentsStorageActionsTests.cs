@@ -1,32 +1,23 @@
-﻿using System.Text;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
+using Raven.Bundles.Compression.Plugin;
+using Raven.Database.Plugins;
+using Raven.Database.Storage;
+using Raven.Json.Linq;
+using Raven.Tests.Common;
+
+using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Storage.Voron
 {
-	using System;
-	using System.Collections.Generic;
-	using System.Linq;
-
-	using Microsoft.Isam.Esent.Interop;
-
-	using Raven.Abstractions.Data;
-	using Raven.Abstractions.Exceptions;
-	using Raven.Database.Storage;
-	using Raven.Json.Linq;
-
-	using Xunit;
-	using Xunit.Extensions;
-using Raven.Abstractions.MEF;
-using Raven.Database.Plugins;
-	using Raven.Bundles.Compression.Plugin;
-	using Raven.Bundles.Encryption.Plugin;
-	using Raven.Server;
-	using System.Reflection;
-	using Raven.Tests.Bundles.Versioning;
-	using System.IO;
-	using Raven.Database;
-
 	[Trait("VoronTest", "StorageActionsTests")]
 	[Trait("VoronTest", "DocumentStorage")]
 	public class DocumentsStorageActionsTests : TransactionalStorageTestBase

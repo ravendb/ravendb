@@ -10,11 +10,13 @@ using Raven.Database.Server;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Security.OAuth
 {
-	public class AccessTokenAuthentication : RemoteClientTest
+	public class AccessTokenAuthentication : RavenTest
 	{
 		const string relativeUrl = "/docs";
 		const string baseUrl = "http://localhost";

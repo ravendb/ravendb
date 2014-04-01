@@ -12,13 +12,14 @@ using Raven.Client.Document;
 using Raven.Client.Shard;
 using Raven.Database.Server;
 using Raven.Server;
+using Raven.Tests.Common;
 using Raven.Tests.Document;
 using Rhino.Mocks;
 using Xunit;
 
 namespace Raven.Tests.Shard.Async
 {
-	public class WhenUsingShardedServers : RemoteClientTest
+	public class WhenUsingShardedServers : RavenTest
 	{
 		readonly RavenDbServer server1;
 		readonly RavenDbServer server2;

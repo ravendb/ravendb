@@ -6,11 +6,13 @@
 using System.IO;
 using System.Net;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class AttachmentEncoding : RemoteClientTest
+	public class AttachmentEncoding : RavenTest
 	{
 		[Fact]
 		public void Can_get_proper_attachment_names()

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
 using Raven.Tests.Spatial;
 using Xunit;
 

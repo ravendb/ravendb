@@ -6,6 +6,8 @@
 
 using System.Linq;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Json.Linq;
 

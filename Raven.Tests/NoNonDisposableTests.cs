@@ -7,6 +7,8 @@ using System;
 using System.Linq;
 using System.Reflection;
 using Raven.Tests.Bugs.Identifiers;
+using Raven.Tests.Common.Attributes;
+
 using Xunit;
 using Xunit.Extensions;
 
