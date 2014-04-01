@@ -1,4 +1,5 @@
-﻿using Raven.Client;
+﻿using Raven.Abstractions.Connection;
+using Raven.Client;
 using Raven.Client.Indexes;
 using System;
 using System.Linq;
@@ -38,7 +39,7 @@ namespace Raven.Tests.Issues
 				var streamEnumerator = session.Advanced.Stream(query);
 
 				//stream query with no existing index/only dynamic index should throw no index exist exception
-				Assert.Throws<InvalidOperationException>(() =>
+				Assert.Throws<ErrorResponseException>(() =>
 				{
 					while (streamEnumerator.MoveNext())
 					{
@@ -73,7 +74,7 @@ namespace Raven.Tests.Issues
 
 
 				//stream query with no existing index/only dynamic index should throw no index exist exception
-				Assert.Throws<InvalidOperationException>(() =>
+				Assert.Throws<ErrorResponseException>(() =>
 				{
 // ReSharper disable once AccessToDisposedClosure
 					session.Advanced.Stream(query);

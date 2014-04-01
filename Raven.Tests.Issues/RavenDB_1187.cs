@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Abstractions.Connection;
 using Raven.Tests.Common;
 
 namespace Raven.Tests.Issues
@@ -43,7 +44,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void QueryingForSuggestionsAgainstFieldWithSuggestionsTurnedOffShouldThrow()
 		{
-			var e = Assert.Throws<InvalidOperationException>(() =>
+			var e = Assert.Throws<ErrorResponseException>(() =>
 					{
 						using (var store = this.NewDocumentStore())
 						{
@@ -62,7 +63,7 @@ namespace Raven.Tests.Issues
 						}
 					});
 
-			Assert.Equal("Index 'Test' does not have suggestions configured for field 'Other'.", e.Message);
+			Assert.Contains("Index 'Test' does not have suggestions configured for field 'Other'.", e.Message);
 		}
 	}
 }
