@@ -48,7 +48,7 @@ namespace Raven.Tests.Common
 
 		private static int pathCount;
 
-		public RavenTestBase()
+		protected RavenTestBase()
 		{
             Environment.SetEnvironmentVariable(Constants.RavenDefaultQueryTimeout, "30");
 			CommonInitializationUtil.Initialize();
@@ -57,6 +57,11 @@ namespace Raven.Tests.Common
 			var dataFolder = FilePathTools.MakeSureEndsWithSlash(@"~\Data".ToFullPath());
 			ClearDatabaseDirectory(dataFolder);
 			pathsToDelete.Add(dataFolder);
+		}
+
+		~RavenTestBase()
+		{
+			Dispose();
 		}
 
 		protected string NewDataPath(string prefix = null, bool forceCreateDir = false)
@@ -551,6 +556,8 @@ namespace Raven.Tests.Common
 
 		public virtual void Dispose()
 		{
+			GC.SuppressFinalize(this);
+
 			var errors = new List<Exception>();
 
 				foreach (var store in stores)
@@ -606,7 +613,6 @@ namespace Raven.Tests.Common
 					}
 				}
 			}
-
 
 			if (errors.Count > 0)
 				throw new AggregateException(errors);

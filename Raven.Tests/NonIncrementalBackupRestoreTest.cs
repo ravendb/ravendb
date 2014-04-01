@@ -32,9 +32,9 @@ namespace Raven.Tests
 		}
 
         public override void Dispose()
-        {
+		{
+			db.Dispose();
             base.Dispose();
-            db.Dispose();
         }
 
 

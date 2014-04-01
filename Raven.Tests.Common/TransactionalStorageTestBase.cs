@@ -23,6 +23,8 @@ namespace Raven.Tests.Common
         public override void Dispose()
         {
             SystemTime.UtcDateTime = null;
+
+			base.Dispose();
         }
     }
 }
