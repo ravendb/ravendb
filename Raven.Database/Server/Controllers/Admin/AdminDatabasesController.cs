@@ -114,7 +114,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		[HttpPost]
 		[Route("admin/databases/{*id}")]
-		public async Task<HttpResponseMessage> ModifyDatabase(string id)
+		public async Task<HttpResponseMessage> DatabasePost(string id)
 		{
 			var docKey = "Raven/Databases/" + id;
 			var existingDatabase = Database.Documents.Get(docKey, null);
