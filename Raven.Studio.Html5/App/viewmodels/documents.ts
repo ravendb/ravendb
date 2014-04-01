@@ -128,7 +128,7 @@ class documents extends viewModelBase {
     selectColumns() {
         var selectColumnsViewModel: selectColumns = new selectColumns(this.currentColumnsParams().clone(), this.contextName(), this.activeDatabase());
         app.showDialog(selectColumnsViewModel);
-        selectColumnsViewModel.nextTask.done((cols) => {
+        selectColumnsViewModel.onExit().done((cols) => {
             this.currentColumnsParams(cols);
 
             var pagedList = this.currentCollection().getDocuments();

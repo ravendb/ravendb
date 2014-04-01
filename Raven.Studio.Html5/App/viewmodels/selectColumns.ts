@@ -11,7 +11,7 @@ import commandBase = require('commands/commandBase');
 
 class selectColumns extends dialogViewModelBase {
 
-    public nextTask = $.Deferred<customColumns>();
+    private nextTask = $.Deferred<customColumns>();
     nextTaskStarted = false;
     private newCommandBase = new commandBase();
     private form: JQuery;
@@ -36,6 +36,11 @@ class selectColumns extends dialogViewModelBase {
             this.nextTask.reject();
         }
     }
+
+    onExit() {
+        return this.nextTask.promise();
+    }
+
 
     changeCurrentColumns() {
         this.nextTaskStarted = true;
