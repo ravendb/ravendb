@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Embedded;
@@ -89,7 +90,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var documentStore = NewDocumentStore())
 			{
-				var exception = Assert.Throws<OperationVetoedException>(() =>
+				var exception = Assert.Throws<ErrorResponseException>(() =>
 				{
 					SetupWindowsAuth(documentStore);
 				});
@@ -103,7 +104,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var documentStore = NewDocumentStore())
 			{
-				var exception = Assert.Throws<OperationVetoedException>(() =>
+                var exception = Assert.Throws<ErrorResponseException>(() =>
 				{
 					SetupOAuth(documentStore);
 				});

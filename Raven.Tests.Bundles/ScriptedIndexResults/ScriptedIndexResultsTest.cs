@@ -132,7 +132,7 @@ PutDocument(docId, type);
 				store.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
 				{
 					Query = "Tag:Animals"
-				});
+				}).WaitForCompletion();
 				
 				WaitForIndexing(store);
 
