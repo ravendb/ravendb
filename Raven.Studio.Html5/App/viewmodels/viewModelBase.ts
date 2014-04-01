@@ -157,7 +157,6 @@ class viewModelBase {
 
     modelPollingStart() {
         this.modelPolling();
-        this.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
         this.activeDatabase.subscribe(() => this.forceModelPolling());
         this.activeFilesystem.subscribe(() => this.forceModelPolling());
     }
@@ -171,7 +170,7 @@ class viewModelBase {
             return true;
         }
 
-        var canNavTask = $.Deferred<boolean>();
+        var canNavTask = $.Deferred<any>();
 
         var systemDbConfirm = new viewSystemDatabaseConfirm();
         systemDbConfirm.viewTask

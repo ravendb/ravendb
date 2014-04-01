@@ -22,6 +22,8 @@
 
                         <label for="encryptionAlgorithm">Encryption Algorithm:</label>
                         <select required data-bind="options: ['DESC', 'R2C2', 'Rijndael', 'Triple DESC'], optionsCaption: 'Choose one...', value: encryptionAlgorithm, valueAllowUnset: false, hasFocus: algorithmFocus"></select><br />
+                        <label for="encryptionBits">Encryption Key Bits:</label>
+                        <select required data-bind="options: ['128', '192', '256'], optionsCaption: 'Choose one...', value: encryptionBits, valueAllowUnset: false, hasFocus: bitsFocus"></select><br />
                         <label for="encryptedIndexes">Encrypted Indexes:</label>
                         <input data-bind="checked: isEncryptedIndexes" type="checkbox" id="isEncryptedIndexes">
                     </div>

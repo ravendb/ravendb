@@ -143,8 +143,7 @@ interface queryResultDto {
     Includes: any[];
 }
 
-interface alertContainerDto {
-    '@metadata': documentMetadataDto;
+interface alertContainerDto extends documentDto {
     Alerts: alertDto[];
 }
 
@@ -476,4 +475,16 @@ interface smugglerOptionsDto {
     IncludeTransformers: boolean;
     IncludeAttachments: boolean;
     RemoveAnalyzers: boolean;
+
+}
+
+interface customColumnParamsDto {
+    Header?: string;
+    Binding: string;
+    DefaultWidth?: number;
+    Template?: string;
+}
+
+interface customColumnsDto {
+    Columns: Array<customColumnParamsDto>;
 }

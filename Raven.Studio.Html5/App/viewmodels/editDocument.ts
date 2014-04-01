@@ -36,6 +36,7 @@ class editDocument extends viewModelBase {
     topRecentDocuments = ko.computed(() => this.getTopRecentDocuments());
     relatedDocumentHrefs=ko.observableArray<{id:string;href:string}>();
     docEditroHasFocus = ko.observable(true);
+    documentMatchRegexp = /\w+\/\w+/ig;
 
     static editDocSelector = "#editDocumentContainer";
     static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string>}>();
@@ -241,19 +242,21 @@ class editDocument extends viewModelBase {
     findRelatedDocuments(doc: documentBase): { id: string; href: string }[] {
         var results: { id: string; href: string }[] = [];
         var documentFields = doc.getDocumentPropertyNames();
+
+        
+
         for (var key in documentFields) {
-            if (typeof doc[documentFields[key]] === "string" && doc[documentFields[key]].indexOf("/") > 0) {
+            if (typeof doc[documentFields[key]] === "string" && this.documentMatchRegexp.test(doc[documentFields[key]])) {
                 results.push({
                     id: doc[documentFields[key]].toString(),
                     href: appUrl.forEditDoc(doc[documentFields[key]].toString(), null, null, this.activeDatabase())}
-            );
+                );
             }
             
         }
 
         return results;
     }
-
 
     loadDocument(id: string): JQueryPromise<document> {
         var loadDocTask = new getDocumentWithMetadataCommand(id, this.databaseForEditedDoc).execute();

@@ -30,7 +30,7 @@ class getConflictsCommand extends commandBase {
         var resultsSelector = (dto: conflictsInfoDto) => new conflictsInfo(dto);
         var url = "/indexes/Raven/ConflictDocuments";
         var conflictsTask = $.Deferred();
-        this.query(url, args, this.ownerDb, resultsSelector).
+        this.query<conflictsInfo>(url, args, this.ownerDb, resultsSelector).
             fail(response => conflictsTask.reject(response)).
             done(conflicts => {
                 var items = conflicts.results;

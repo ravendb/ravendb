@@ -2,7 +2,7 @@ import durandalRouter = require("plugins/router");
 import database = require("models/database");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
 
@@ -13,7 +13,9 @@ class settings extends viewModelBase {
     isOnUserDatabase: KnockoutComputed<boolean>;
     appUrls: computedAppUrls;
 
-    userDatabasePages = ko.observableArray(["Periodic Backup", "Database Settings", "Scripted Index"]);
+    bundleMap = { Quotas: "Quotas", Replication: "Replication", SqlReplication: "SQL Replication", Versioning: "Versioning", PeriodicBackups: "Periodic Backup", ScriptedIndexResults: "Scripted Index" };
+    userDatabasePages = ko.observableArray(["Database Settings"]);
+    systemDatabasePages = ["API Keys", "Windows Authentication"];
 
     constructor() {
         super();
@@ -26,18 +28,23 @@ class settings extends viewModelBase {
         var apiKeyRoute = { route: ['databases/settings', 'databases/settings/apiKeys'], moduleId: 'viewmodels/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys() };
         var windowsAuthRoute = { route: 'databases/settings/windowsAuth', moduleId: 'viewmodels/windowsAuth', title: 'Windows Authentication', nav: true, hash: appUrl.forWindowsAuth() };
         var databaseSettingsRoute = { route: 'databases/settings/databaseSettings', moduleId: 'viewmodels/databaseSettings', title: 'Database Settings', nav: true, hash: appUrl.forCurrentDatabase().databaseSettings };
-        var periodicBackupRoute = { route: 'databases/settings/periodicBackup', moduleId: 'viewmodels/periodicBackup', title: 'Periodic Backup', nav: true, hash: appUrl.forCurrentDatabase().periodicBackup };
+        //var quotasRoute = { route: 'settings/quotas', moduleId: 'viewmodels/quotas', title: 'Quotas', nav: true, hash: appUrl.forCurrentDatabase().quotas };
         var replicationsRoute = { route: 'databases/settings/replication', moduleId: 'viewmodels/replications', title: 'Replication', nav: true, hash: appUrl.forCurrentDatabase().replications };
         var sqlReplicationsRoute = { route: 'databases/settings/sqlReplication', moduleId: 'viewmodels/sqlReplications', title: 'SQL Replication', nav: true, hash: appUrl.forCurrentDatabase().sqlReplications };
+        //var versioningRoute = { route: 'settings/versioning', moduleId: 'viewmodels/versioning', title: 'Versioning', nav: true, hash: appUrl.forCurrentDatabase().versioning };
+        var periodicBackupRoute = { route: 'databases/settings/periodicBackup', moduleId: 'viewmodels/periodicBackup', title: 'Periodic Backup', nav: true, hash: appUrl.forCurrentDatabase().periodicBackup };
         var scriptedIndexesRoute = { route: 'databases/settings/scriptedIndex', moduleId: 'viewmodels/scriptedIndexes', title: 'Scripted Index', nav: true, hash: appUrl.forCurrentDatabase().scriptedIndexes };
+
         this.router = durandalRouter.createChildRouter()
             .map([
                 apiKeyRoute,
                 windowsAuthRoute,
                 databaseSettingsRoute,
-                periodicBackupRoute,
+                //quotasRoute,
                 replicationsRoute,
                 sqlReplicationsRoute,
+                //versioningRoute,
+                periodicBackupRoute,
                 scriptedIndexesRoute
             ])
             .buildNavigationModel();
@@ -64,26 +71,27 @@ class settings extends viewModelBase {
 
     activate(args) {
         super.activate(args);
+        this.userDatabasePages(["Database Settings"]);
         if (args) {
             var canActivateResult = $.Deferred();
             var db = this.activeDatabase();
-            var documentId = "Raven/Databases/" + db.name;
-            var systemDatabase = appUrl.getSystemDatabase();
             var self = this;
-            new getDocumentWithMetadataCommand(documentId, systemDatabase)
+            new getDatabaseSettingsCommand(db)
                 .execute()
                 .done(document => {
-                    var arr = document.Settings["Raven/ActiveBundles"].split(';');
-                    self.userDatabasePages.remove("Replication");
-                    self.userDatabasePages.remove("SQL Replication");
-                    if (jQuery.inArray("Replication", arr) != -1) {
-                        self.userDatabasePages.push("Replication");
+                    var documentSettings = document.Settings["Raven/ActiveBundles"];
+                    if (documentSettings != undefined) {
+                        var arr = documentSettings.split(';');
+
+                        for (var i = 0; i < arr.length; i++) {
+                            var bundleName = self.bundleMap[arr[i]];
+                            if (bundleName != undefined) {
+                                self.userDatabasePages.push(bundleName);
+                            }
+                        }
                     }
-                    if (jQuery.inArray("SqlReplication", arr) != -1) {
-                        self.userDatabasePages.push("SQL Replication");
-                    }
-                    
-                    canActivateResult.resolve({ can: true });
+
+                canActivateResult.resolve({ can: true });
                 });
             return canActivateResult;
         } else {
@@ -92,13 +100,18 @@ class settings extends viewModelBase {
     }
 
     routeIsVisible(route: DurandalRouteConfiguration) {
-        if (this.userDatabasePages.indexOf(route.title) !== -1) {
-            // Periodic backup, database settings, and replication are visible only when we're on a user database.
-            return this.isOnUserDatabase();
-        } else {
-            // API keys and Windows Auth are visible only when we're on the system database.
-            return this.isOnSystemDatabase();
+        var bundleTitle = route.title;
+
+        if (this.isOnUserDatabase() && (this.userDatabasePages.indexOf(bundleTitle) !== -1)) {
+            // Database Settings, Quotas, Replication, SQL Replication, Versioning, Periodic Backup and Scripted Index are visible only when we're on a user database.
+            return true;
         }
+        if (this.isOnSystemDatabase() && (this.systemDatabasePages.indexOf(bundleTitle) !== -1)) {
+            // API keys and Windows Auth are visible only when we're on the system database.
+            return true;
+        }
+
+        return false;
     }
 }
 

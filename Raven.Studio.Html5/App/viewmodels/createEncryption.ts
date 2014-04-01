@@ -13,10 +13,12 @@ class createEncryption extends dialogViewModelBase {
     creationEncryptionStarted = false;
 
     key = ko.observable();
-    encryptionAlgorithm = ko.observable();
+    encryptionAlgorithm = ko.observable('Rijndael');
+    encryptionBits = ko.observable();
     isEncryptedIndexes = ko.observable(true);
     keyFocus = ko.observable(true);
     algorithmFocus = ko.observable(false);
+    bitsFocus = ko.observable(false);
 
     private newCommandBase = new commandBase();
     private newEncryptionKey: getNewEncryptionKey;
@@ -61,11 +63,10 @@ class createEncryption extends dialogViewModelBase {
                 .execute()
                 .done(result=> {
                     if (Boolean(result)) {
-                        this.creationEncryption.resolve(key, this.encryptionAlgorithm(), this.isEncryptedIndexes());
+                        this.creationEncryption.resolve(key, this.encryptionAlgorithm(), this.encryptionBits(), this.isEncryptedIndexes());
                         this.creationEncryptionStarted = true;
                         dialog.close(this);
                     }
-
                 });
         }
     }
@@ -85,6 +86,10 @@ class createEncryption extends dialogViewModelBase {
         else if (!this.encryptionAlgorithm()) {
             this.newCommandBase.reportError("Please select an encryption algorithm");
             this.algorithmFocus(true);
+        }
+        else if (!this.encryptionBits()) {
+            this.newCommandBase.reportError("Please select an encryption key bits");
+            this.bitsFocus(true);
         } else {
             result = true;
         }

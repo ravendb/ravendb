@@ -117,11 +117,12 @@ class databases extends viewModelBase {
             var createEncryptionViewModel: createEncryption = new createEncryption();
             createEncryptionViewModel
                 .creationEncryption
-                .done((key: string, encryptionAlgorithm: string, isEncryptedIndexes: string) => {
+                .done((key: string, encryptionAlgorithm: string, encryptionBits: string, isEncryptedIndexes: string) => {
                     savedKey = key;
                     securedSettings = {
                         'Raven/Encryption/Key': key,
                         'Raven/Encryption/Algorithm': this.getEncryptionAlgorithmFullName(encryptionAlgorithm),
+                        'Raven/Encryption/KeyBitsPreference': encryptionBits,
                         'Raven/Encryption/EncryptIndexes': isEncryptedIndexes
                     };
                     deferred.resolve(securedSettings);
