@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -163,14 +164,15 @@ namespace Raven.Tests.Storage
 			db.Maintenance.StartBackup("raven.db.test.backup.txt", false, new DatabaseDocument());
 			WaitForBackup(db, false);
 
-			Assert.True(GetStateOfLastStatusMessage().Severity == BackupStatus.BackupMessageSeverity.Error);
+		    var condition = GetStateOfLastStatusMessage().Severity == BackupStatus.BackupMessageSeverity.Error;
+		    Assert.True(condition);
 		}
 
 		private BackupStatus.BackupMessage GetStateOfLastStatusMessage()
 		{
 			JsonDocument jsonDocument = db.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
 			var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
-			return backupStatus.Messages.OrderByDescending(m => m.Timestamp).First();
+			return backupStatus.Messages.Last();
 		}
 	}
 }

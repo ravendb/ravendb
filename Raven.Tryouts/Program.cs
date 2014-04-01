@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using NLog;
 
 using Raven.Tests.Notifications;
+using Raven.Tests.Storage;
 
 namespace Raven.Tryouts
 {
@@ -13,11 +14,14 @@ namespace Raven.Tryouts
 
 		private unsafe static void Main(string[] args)
 		{
-            //Console.WriteLine(NumericUtils.PrefixCodedToInt(NumericUtils.IntToPrefixCoded(int.MinValue)));
 			for (int i = 0; i < 100; i++)
 			{
 				Console.Clear();
 				Console.WriteLine(i);
+			    using (var x = new BackupRestore())
+			    {
+			        x.AfterFailedBackupRestoreCanDetectError();
+			    }
 			}
 
 		}
