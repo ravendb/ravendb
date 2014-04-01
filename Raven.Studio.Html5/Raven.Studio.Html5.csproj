@@ -24,7 +24,7 @@
     <TypeScriptCompile Include="App\commands\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\createFilesystemCommand.ts" />
-    <TypeScriptCompile Include="App\commands\createFilesystemDestinationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveFilesystemDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\createFilesystemFolderCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteFilesystemConfigurationKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteTransformerCommand.ts" />
@@ -121,7 +121,9 @@
     <TypeScriptCompile Include="App\viewmodels\filesystemConfiguration.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystemFiles.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystems.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystemSearch.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystemStatistics.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystemSynchronization.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystemUploadFile.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
@@ -192,7 +194,6 @@
     <TypeScriptCompile Include="App\commands\getConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getReplicationSourcesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomColumnsCommand.ts" />
-    <Content Include="App\commands\getNewEncryptionKey.js" />
     <TypeScriptCompile Include="App\viewmodels\conflicts.ts" />
     <TypeScriptCompile Include="App\models\conflict.ts" />
     <TypeScriptCompile Include="App\models\conflictsInfo.ts" />

@@ -4,9 +4,6 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
 import commandBase = require("commands/commandBase");
 
-//import filesystem = require("models/filesystem");
-import createFilesystemDestinationCommand = require("commands/createFilesystemDestinationCommand");
-
 class filesystemAddDestination extends dialogViewModelBase {
 
     public creationTask = $.Deferred();
@@ -58,9 +55,6 @@ class filesystemAddDestination extends dialogViewModelBase {
         if (destinationUrl == null) {
             errorMessage = "Please fill out the Destination url field";
         }
-        //else if (this.isFilesystemNameExists(filesystemName, this.filesystems()) === true) {
-        //    errorMessage = "Database Name Already Exists!";
-        //}
         else if ((errorMessage = this.CheckInput(destinationUrl)) != null) { }
 
         if (errorMessage != null) {
@@ -72,9 +66,9 @@ class filesystemAddDestination extends dialogViewModelBase {
     }
 
     private CheckInput(url): string {
-
-        //hveiras: I took the uri regex from http://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
-        var uriRegex = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi;
+       
+        //hveiras: Modified version I took from uri regex from http://stackoverflow.com/questions/2723140/validating-url-with-jquery-without-the-validate-plugin
+        var uriRegex = /(http|https):\/\/(\w+:{ 0, 1}\w*@)?(\S+)(:[0 - 9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/;
 
         var message = null;
         if (!uriRegex.test(url)) {
@@ -83,15 +77,6 @@ class filesystemAddDestination extends dialogViewModelBase {
 
         return message;
     }
-
-    //private isFilesystemNameExists(filesystemName: string, filesystems: filesystem[]): boolean {
-    //    for (var i = 0; i < filesystems.length; i++) {
-    //        if (filesystemName == filesystems[i].name) {
-    //            return true;
-    //        }
-    //    }
-    //    return false;
-    //}
 }
 
 export = filesystemAddDestination;
