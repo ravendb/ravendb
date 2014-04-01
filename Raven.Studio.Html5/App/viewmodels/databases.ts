@@ -25,7 +25,7 @@ class databases extends viewModelBase {
 
         this.systemDb = appUrl.getSystemDatabase();
         this.docsForSystemUrl = appUrl.forDocuments(null, this.systemDb);
-        this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterDatabases(s));        
+        this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterDatabases(s));
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -90,12 +90,25 @@ class databases extends viewModelBase {
             var createDatabaseViewModel: createDatabase = new createDatabase(this.databases);
             createDatabaseViewModel
                 .creationTask
-                .done((databaseName: string, bundles: string[]) => this.showDbCreationAdvancedStepsIfNecessary(databaseName, bundles));
+                .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string) => {
+                    var settings = {
+                        "Raven/ActiveBundles": bundles.join(";")
+                    };
+                    settings["Raven/DataDir"] = (!this.isEmptyStringOrWhitespace(databasePath)) ? databasePath : "~/Databases/" + databaseName;
+                    if (!this.isEmptyStringOrWhitespace(databaseLogs)) {
+                        settings["Raven/Esent/LogsPath"] = databaseLogs;
+                    }
+                    if (!this.isEmptyStringOrWhitespace(databaseIndexes)) {
+                        settings["Raven/IndexStoragePath"] = databaseIndexes;
+                    }
+
+                    this.showDbCreationAdvancedStepsIfNecessary(databaseName, bundles, settings);
+                });
             app.showDialog(createDatabaseViewModel);
         });
     }
 
-    showDbCreationAdvancedStepsIfNecessary(databaseName: string, bundles: string[]) {
+    showDbCreationAdvancedStepsIfNecessary(databaseName: string, bundles: string[], settings: {}) {
         var securedSettings = {};
         var deferred = $.Deferred();
         var savedKey;
@@ -119,7 +132,9 @@ class databases extends viewModelBase {
         }
 
         deferred.done(() => {
-            this.createDB(databaseName, bundles, securedSettings)
+            //this.createDB(databaseName, bundles, advancedSettings, securedSettings)
+            new createDatabaseCommand(databaseName, settings, securedSettings)
+                .execute()
                 .done(() => {
                     this.databases.unshift(new database(databaseName));
                     if (!jQuery.isEmptyObject(securedSettings)) {
@@ -141,6 +156,10 @@ class databases extends viewModelBase {
                 //self.creationTask.resolve(databaseName);
                 //dialog.close(self);
             });
+    }
+
+    private isEmptyStringOrWhitespace(str: string) {
+        return !$.trim(str);
     }
 
     private getEncryptionAlgorithmFullName(encrytion: string) {

@@ -56,6 +56,9 @@ class sqlReplications extends viewModelBase {
     }
 
     addNewSqlReplication() {
+        $('.panel-collapse').each(function () {
+           $(this).attr('class', 'panel-collapse collapse');
+        });
         this.replications.push(sqlReplication.empty());
     }
 

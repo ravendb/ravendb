@@ -28,8 +28,8 @@ namespace Raven.Tests.MailingList
 		public EmbeddableDocumentStore Store()
 		{
 			var store = new EmbeddableDocumentStore { DataDirectory = path };
-			store.Initialize();
-			store.RegisterListener(new NonStaleQueryListener());
+            store.RegisterListener(new NonStaleQueryListener());
+            store.Initialize();
 
 			new TemplateTests_Search().Execute(store);
 

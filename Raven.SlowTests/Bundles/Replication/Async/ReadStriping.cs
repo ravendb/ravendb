@@ -3,10 +3,9 @@ using System.Threading.Tasks;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Tests.Common;
-
+using Raven.Tests.Document;
 using Xunit;
 
-using Company = Raven.Tests.Bundles.Company;
 
 namespace Raven.SlowTests.Bundles.Replication.Async
 {

@@ -141,7 +141,7 @@ namespace Raven.Client.Shard
 			EnsureNotClosed();
 
 			var sessionId = Guid.NewGuid();
-			var session = new AsyncShardedDocumentSession(dbName, this, listeners, sessionId, ShardStrategy, shardDbCommands);
+			var session = new AsyncShardedDocumentSession(dbName, this, Listeners, sessionId, ShardStrategy, shardDbCommands);
 			AfterSessionCreated(session);
 			return session;
 		}
@@ -251,7 +251,7 @@ namespace Raven.Client.Shard
 			EnsureNotClosed();
 
 			var sessionId = Guid.NewGuid();
-			var session = new ShardedDocumentSession(database, this, listeners, sessionId, ShardStrategy, shardDbCommands)
+            var session = new ShardedDocumentSession(database, this, Listeners, sessionId, ShardStrategy, shardDbCommands)
 				{
 					DatabaseName = database
 				};
@@ -291,7 +291,7 @@ namespace Raven.Client.Shard
 #if !NETFX_CORE
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{
-			return new BulkInsertOperation(database, this, listeners, options ?? new BulkInsertOptions(), Changes(database));
+            return new BulkInsertOperation(database, this, Listeners, options ?? new BulkInsertOptions(), Changes(database));
 		}
 #endif
 

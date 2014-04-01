@@ -111,6 +111,12 @@ namespace Voron.Impl.Backup
 		{
 		    journalDir = journalDir ?? voronDataDir;
 
+			if (Directory.Exists(voronDataDir) == false)
+				Directory.CreateDirectory(voronDataDir);
+
+			if (Directory.Exists(journalDir) == false)
+				Directory.CreateDirectory(journalDir);
+
 		    using (var zip = ZipFile.OpenRead(backupPath))
 		    {
 		        foreach (var entry in zip.Entries)

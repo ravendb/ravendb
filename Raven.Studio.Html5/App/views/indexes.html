@@ -59,7 +59,7 @@
     </div>
 
     <div data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-        <div class="indexes-container panel-group" id="indexesAccordion" data-bind="foreach: indexGroups">
+        <div class="indexes-container panel-group" id="indexesAccordion" data-bind="foreach: sortedGroups">
             <div class="index-group panel panel-default">
                 <div class="panel-heading">
                     <div class="pull-right indexGroup-actions-container">
@@ -67,15 +67,15 @@
                             <i class="fa fa-trash-o"></i>
                         </button>
                     </div>
-                
+
                     <h4 class="panel-title">
                         <a data-toggle="collapse" data-bind="attr: { href: '#indexCollapse' + $index() }">
                             <span data-bind="text: entityName"></span>
                             <span class="text-muted" data-bind="text: '(' + indexes().length + ')'"></span>
                         </a>
                     </h4>
-                
-            </div>
+
+                </div>
                 <div class="index-group-content panel-collapse in" data-bind="attr: { id: 'indexCollapse' + $index() }">
                     <div class="panel panel-default" style="overflow: visible;">
                         <div class="panel-body" data-bind="foreach: indexes">
@@ -106,11 +106,11 @@
                                             </label>
                                         </div>
                                         <!--
-                                            COMMENTED OUT: In 3.0, this doesn't seem to do anything. Is it because the index creation and saving has changed?
+                                        COMMENTED OUT: In 3.0, this doesn't seem to do anything. Is it because the index creation and saving has changed?
 
-                                            <button class="btn btn-default btn-warning" title="Make index persistent" data-bind="click: $root.makeIndexPersistent.bind($root, $data), visible: isOnRam() !== 'false'">
-                                            <i class="fa fa-download"></i>
-                                        </button>-->
+                                        <button class="btn btn-default btn-warning" title="Make index persistent" data-bind="click: $root.makeIndexPersistent.bind($root, $data), visible: isOnRam() !== 'false'">
+                                        <i class="fa fa-download"></i>
+                                    </button>-->
                                         <button class="btn btn-danger use-bootstrap-tooltip" title="Delete the index" data-bind="click: $root.deleteIndex.bind($root)">
                                             <i class="fa fa-trash-o"></i>
                                         </button>

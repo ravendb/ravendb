@@ -19,7 +19,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void DocumentStoreFailsWhenGrabbingNonExistingItemAndStoringNewOne()
 		{
-			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true, Identifier = "docstore1" }.Initialize())
+			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true  }.Initialize())
 			{
 				documentStore.Conventions.AllowQueriesOnId = true;
 				using (var session = documentStore.OpenSession())
@@ -48,7 +48,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void DocumentStoreWorksWhenAddingItemAndThenGrabbingNonExistingItemAndStoringNewOne()
 		{
-			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true, Identifier = "docstore2" }.Initialize())
+			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true  }.Initialize())
 			{
 				documentStore.Conventions.AllowQueriesOnId = true; 
 				using (var session = documentStore.OpenSession())
@@ -76,7 +76,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void DocumentStoreWorksWhenAddingItemThenDeletingItAndThenGrabbingNonExistingItemAndStoringNewOne()
 		{
-			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true, Identifier = "docstore3" }.Initialize())
+			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
 			{
 				documentStore.Conventions.AllowQueriesOnId = true;
 				using (var session = documentStore.OpenSession())

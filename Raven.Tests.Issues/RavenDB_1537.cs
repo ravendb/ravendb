@@ -30,7 +30,6 @@ namespace Raven.Tests.Issues
 {
     public class RavenDB_1537 : RavenTest
     {
-
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
             configuration.Settings["Raven/ActiveBundles"] = "PeriodicBackup";
@@ -786,6 +785,8 @@ namespace Raven.Tests.Issues
                 }
 
                 Etag user6DeletionEtag = null, user9DeletionEtag = null, attach5DeletionEtag = null, attach7DeletionEtag = null;
+                
+                WaitForUserToContinueTheTest(store);
 
                 store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
                 {

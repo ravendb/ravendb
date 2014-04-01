@@ -18,10 +18,6 @@ namespace Raven.Tryouts
 			{
 				Console.Clear();
 				Console.WriteLine(i);
-				using (var x = new ReplicationConflicts_Embedded())
-				{
-					x.CanGetNotificationsConflictedDocumentsCausedByDelete();
-				}
 			}
 
 		}

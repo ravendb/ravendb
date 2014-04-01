@@ -13,6 +13,9 @@ class createDatabase extends dialogViewModelBase {
     creationTaskStarted = false;
 
     databaseName = ko.observable('');
+    databasePath = ko.observable('');
+    databaseLogs = ko.observable('');
+    databaseIndexes = ko.observable('');
     databaseNameFocus = ko.observable(true);
     isCompressionBundleEnabled = ko.observable(false);
     isEncryptionBundleEnabled = ko.observable(false);
@@ -25,8 +28,9 @@ class createDatabase extends dialogViewModelBase {
     isScriptedIndexBundleEnabled = ko.observable(false);
 
     private databases = ko.observableArray<database>();
+    private maxNameLength = 260 - 30;
     private newCommandBase = new commandBase();
-
+    
     constructor(databases) {
         super();
         this.databases = databases;
@@ -53,18 +57,48 @@ class createDatabase extends dialogViewModelBase {
         // Next needs to configure bundle settings, if we've selected some bundles.
         // We haven't yet implemented bundle configuration, so for now we're just 
         // creating the database.
-
         var databaseName = this.databaseName();
+        var databasePath = this.databasePath();
+        var databaseLogs = this.databaseLogs();
+        var databaseIndexes = this.databaseIndexes();
 
-        if (this.isClientSideInputOK(databaseName)) {
+        if (this.isDatabaseNameLegal(databaseName) && this.arePathsLegal(databasePath, databaseLogs, databaseIndexes)) {
             this.creationTaskStarted = true;
-            this.creationTask.resolve(databaseName, this.getActiveBundles());
+            this.creationTask.resolve(databaseName, this.getActiveBundles(), databasePath, databaseLogs, databaseIndexes);
             dialog.close(this);
         }
     }
 
-    private isClientSideInputOK(databaseName): boolean {
-        var errorMessage = "";
+    private arePathsLegal(databasePath: string, databaseLogs: string, databaseIndexes: string) {
+        if (this.isPathLegal(databasePath, "Path") && this.isPathLegal(databaseLogs, "Logs") && this.isPathLegal(databaseIndexes, "Indexes")) {
+            return true;
+        }
+        return false;
+    }
+
+    private isPathLegal(name: string, pathName: string) {
+        var rg1 = /^[^\\*:\?"<>\|]+$/; // forbidden characters \ * : ? " < > |
+        var rg2 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
+        var errorMessage = null;
+
+        if (!$.trim(name) == false) { // if name isn't empty or not consist of only whitepaces
+            if (name.length > this.maxNameLength) {
+                errorMessage = "The path name for the '" + pathName + "' can't exceed " + this.maxNameLength + " characters!";
+            } else if (!rg1.test(name)) {
+                errorMessage = "The " + pathName + " can't contain any of the following characters: * : ?" + ' " ' + "< > |";
+            } else if (rg2.test(name)) {
+                errorMessage = "The name '" + name + "' is forbidden for use!";
+            }
+        }
+        if (errorMessage != null) {
+            this.newCommandBase.reportError(errorMessage);
+            return false;
+        }
+        return true;
+    }
+
+    private isDatabaseNameLegal(databaseName: string): boolean {
+        var errorMessage = null;
 
         if (databaseName == null) {
             errorMessage = "Please fill out the Database Name field";
@@ -72,7 +106,7 @@ class createDatabase extends dialogViewModelBase {
         else if (this.isDatabaseNameExists(databaseName, this.databases()) === true) {
             errorMessage = "Database Name Already Exists!";
         }
-        else if ((errorMessage = this.CheckInput(databaseName)) != null) { }
+        else if ((errorMessage = this.CheckName(databaseName)) != null) { }
 
         if (errorMessage != null) {
             this.newCommandBase.reportError(errorMessage);
@@ -82,18 +116,20 @@ class createDatabase extends dialogViewModelBase {
         return true;
     }
 
-    private CheckInput(name): string {
-        var rg1 = /^[^\\/:\*\?"<>\|]+$/; // forbidden characters \ / : * ? " < > |
+    private CheckName(name: string): string {
+        var rg1 = /^[^\\/\*:\?"<>\|]+$/; // forbidden characters \ / * : ? " < > |
         var rg2 = /^\./; // cannot start with dot (.)
         var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
-        var maxLength = 260 - 30;
 
         var message = null;
-        if (name.length > maxLength) {
-            message = "The database length can't exceed " + maxLength + " characters!";
+        if (!$.trim(name)) {
+            message = "An empty databse name is forbidden for use!";
+        }
+        else if (name.length > this.maxNameLength) {
+            message = "The database length can't exceed " + this.maxNameLength + " characters!";
         }
         else if (!rg1.test(name)) {
-            message = "The database name can't contain any of the following characters: \ / : * ?" + ' " ' +"< > |";
+            message = "The database name can't contain any of the following characters: \ / * : ?" + ' " ' +"< > |";
         }
         else  if (rg2.test(name)) {
             message = "The database name can't start with a dot!";
@@ -102,7 +138,6 @@ class createDatabase extends dialogViewModelBase {
             message = "The name '" + name + "' is forbidden for use!";
         }
         return message;
-        //return rg1.test(name) && !rg2.test(name) && !rg3.test(name) && (name.length <= maxLength);
     }
 
     private isDatabaseNameExists(databaseName: string, databases: database[]): boolean {

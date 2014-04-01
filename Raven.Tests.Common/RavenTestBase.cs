@@ -32,6 +32,7 @@ using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Database.Util;
+using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Common.Util;
 
@@ -122,7 +123,7 @@ namespace Raven.Tests.Common
 					configureStore(documentStore);
 				ModifyStore(documentStore);
 				ModifyConfiguration(documentStore.Configuration);
-
+                documentStore.Configuration.PostInit();
 				documentStore.Initialize();
 
 				if (enableAuthentication)
@@ -288,6 +289,7 @@ namespace Raven.Tests.Common
 			{
 				EnableAuthentication(ravenDbServer.SystemDatabase);
 				ModifyConfiguration(ravenConfiguration);
+                ravenConfiguration.PostInit();
 			}
 
 			return ravenDbServer;
@@ -491,7 +493,7 @@ namespace Raven.Tests.Common
 		    if (embeddableDocumentStore != null)
 		    {
 		        embeddableDocumentStore.Configuration.Port = port;
-                embeddableDocumentStore.SetStudioConfigToAllowSingleDb();
+                SetStudioConfigToAllowSingleDb(embeddableDocumentStore);
                 embeddableDocumentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
 		        NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
                 server = new OwinHttpServer(embeddableDocumentStore.Configuration, embeddableDocumentStore.DocumentDatabase);
@@ -508,6 +510,31 @@ namespace Raven.Tests.Common
 				} while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
 			}
 		}
+
+
+        /// <summary>
+        ///     Let the studio knows that it shouldn't display the warning about sys db access
+        /// </summary>
+        public static void SetStudioConfigToAllowSingleDb(IDocumentStore documentDatabase)
+        {
+            JsonDocument jsonDocument = documentDatabase.DatabaseCommands.Get("Raven/StudioConfig");
+            RavenJObject doc;
+            RavenJObject metadata;
+            if (jsonDocument == null)
+            {
+                doc = new RavenJObject();
+                metadata = new RavenJObject();
+            }
+            else
+            {
+                doc = jsonDocument.DataAsJson;
+                metadata = jsonDocument.Metadata;
+            }
+
+            doc["WarnWhenUsingSystemDatabase"] = false;
+
+            documentDatabase.DatabaseCommands.Put("Raven/StudioConfig", null, doc, metadata);
+        }
 
 		protected void WaitForUserToContinueTheTest(bool debug = true, string url = null)
 		{
