@@ -15,7 +15,7 @@
                     <button type="button" style="display:inline-block;" class="close" data-bind="click: $root.removeSqlReplication.bind($root)" title="Remove this SQL replication">×</button>
                 </h3>
             </div>
-            <div data-bind="attr: { 'id': 'sqlRelication' + $index() }, css: { 'collapse': ($index() !== $parent.lastIndex()), 'in': ($index() === $parent.lastIndex()) }" class="panel-collapse">
+            <div data-bind="attr: { 'id': 'sqlRelication' + $index() }, css: { 'collapse': ($index() !== $parent.lastIndex()), 'in': ($index() === $parent.lastIndex()) }" class="panel-collapse collapse">
                 <div class="panel-body sql-replication-panel-body">
                     <form class="form-horizontal" role="form">
                         <div class="form-group">
