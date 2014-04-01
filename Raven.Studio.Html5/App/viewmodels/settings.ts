@@ -99,13 +99,18 @@ class settings extends viewModelBase {
     }
 
     routeIsVisible(route: DurandalRouteConfiguration) {
-        if (this.systemDatabasePages.indexOf(route.title) === -1) {
+        var bundleTitle = route.title;
+
+        if (this.isOnUserDatabase() && (this.userDatabasePages.indexOf(bundleTitle) !== -1)) {
             // Database Settings, Quotas, Replication, SQL Replication, Versioning, Periodic Backup and Scripted Index are visible only when we're on a user database.
-            return this.isOnUserDatabase();
-        } else {
-            // API keys and Windows Auth are visible only when we're on the system database.
-            return this.isOnSystemDatabase();
+            return true;
         }
+        if (this.isOnSystemDatabase() && (this.systemDatabasePages.indexOf(bundleTitle) !== -1)) {
+            // API keys and Windows Auth are visible only when we're on the system database.
+            return true;
+        }
+
+        return false;
     }
 }
 
