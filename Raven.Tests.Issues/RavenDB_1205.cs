@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Data;
+using Raven.Client;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -24,7 +25,7 @@ namespace Raven.Tests.Issues
 		[InlineData("remote")]
 		public void CanGetScoreExplanationFromLuceneQuery(string documentStoreType)
 		{
-			using (var store = documentStoreType == "embeded" ? NewDocumentStore() : NewRemoteDocumentStore())
+			using (var store = documentStoreType == "embeded" ? (IDocumentStore)NewDocumentStore() : NewRemoteDocumentStore())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -55,7 +56,7 @@ namespace Raven.Tests.Issues
 		[InlineData("remote")]
 		public void CanGetScoreExplanationByUsingDatabaseCommandsQuery(string documentStoreType)
 		{
-			using (var store = documentStoreType == "embeded" ? NewDocumentStore() : NewRemoteDocumentStore())
+			using (var store = documentStoreType == "embeded" ? (IDocumentStore) NewDocumentStore() : NewRemoteDocumentStore())
 			{
 				using (var session = store.OpenSession())
 				{
