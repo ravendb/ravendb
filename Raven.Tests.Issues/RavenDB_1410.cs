@@ -36,15 +36,9 @@ namespace Raven.Tests.Issues
 					var list = query.ToList();
 				});
 
-				var streamEnumerator = session.Advanced.Stream(query);
-
-				//stream query with no existing index/only dynamic index should throw no index exist exception
-				Assert.Throws<ErrorResponseException>(() =>
+				Assert.Throws<InvalidOperationException>(() =>
 				{
-					while (streamEnumerator.MoveNext())
-					{
-						break; // Don't care about results - it would have thrown on MoveNext
-					}
+                    var streamEnumerator = session.Advanced.Stream(query);
 				});
 				
 			}
@@ -74,7 +68,7 @@ namespace Raven.Tests.Issues
 
 
 				//stream query with no existing index/only dynamic index should throw no index exist exception
-				Assert.Throws<ErrorResponseException>(() =>
+                Assert.Throws<InvalidOperationException>(() =>
 				{
 // ReSharper disable once AccessToDisposedClosure
 					session.Advanced.Stream(query);
