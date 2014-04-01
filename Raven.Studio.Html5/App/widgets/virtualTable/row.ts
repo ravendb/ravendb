@@ -10,6 +10,7 @@ class row {
     collectionClass = ko.observable("");
     editUrl = ko.observable("");
     isChecked = ko.observable(false);
+    static documentMatchRegexp = /\w+\/\w+/ig;
 
     constructor(addIdCell: boolean, public viewModel: viewModel) {
         if (addIdCell) {
@@ -84,8 +85,8 @@ class row {
             return cell.checkboxTemplate;
         }
         else if (!!data) {
-            if (!!data[propertyName] && typeof data[propertyName] == "string" && data[propertyName].indexOf('/')>0  ||
-                typeof data == "string" && data.indexOf('/') >0) {
+            if (!!data[propertyName] && typeof data[propertyName] == "string" && row.documentMatchRegexp.test(data[propertyName])  ||
+                typeof data == "string" && row.documentMatchRegexp.test(data[propertyName])) {
                 return cell.externalIdTemplate;
             }
         }
