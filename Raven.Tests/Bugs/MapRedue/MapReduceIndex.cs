@@ -83,7 +83,7 @@ namespace Raven.Tests.Bugs.MapRedue
 
         private void RemoveAllDocuments(IDocumentStore aStore)
         {
-            aStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery { Query = "Tag:Documents" }, allowStale: false);
+            aStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery { Query = "Tag:Documents" }, allowStale: false).WaitForCompletion();
         }
 
         private void InserDocumentIntoDb(IDocumentSession aSession,

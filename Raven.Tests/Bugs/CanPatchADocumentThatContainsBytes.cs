@@ -47,7 +47,7 @@ for (var i = 0; i < this.Skills.$values.length; i++) {
     this.Skills.$values[i].IsPrimary = false
 }
 "
-                    });
+                    }).WaitForCompletion();
 
                     var user = session.Load<User>(1);
                     Assert.False(user.Skills.Single().IsPrimary);
