@@ -35,8 +35,6 @@ class ctor {
     firstVisibleRow: row = null;
     itemsSourceSubscription: KnockoutSubscription = null;
     isIndexMapReduce: KnockoutObservable<boolean>;
-    isCopyAllowed: KnockoutObservable<boolean>;
-
 
     settings: {
         itemsSource: KnockoutObservable<pagedList>;
@@ -50,7 +48,7 @@ class ctor {
         maxHeight: string;
         customColumnParams: { [column: string]: customColumnParams };
         isIndexMapReduce: KnockoutObservable<boolean>;
-        isCopyAllowed: KnockoutObservable<boolean>;
+        isCopyAllowed: boolean;
         customColumns: KnockoutObservable<customColumns>;
     }
 
@@ -65,7 +63,7 @@ class ctor {
             maxHeight: 'none',
             customColumnParams: {},
             isIndexMapReduce: ko.observable<boolean>(true),
-            isCopyAllowed: ko.observable<boolean>(true),
+            isCopyAllowed: true,
             customColumns: ko.observable(customColumns.empty())
         };
         this.settings = $.extend(defaults, settings);
@@ -80,7 +78,6 @@ class ctor {
         this.items = this.settings.itemsSource();
         this.focusableGridSelector = this.settings.gridSelector + " .ko-grid";
         this.virtualHeight = ko.computed(() => this.rowHeight * this.virtualRowCount());
-        this.isCopyAllowed = this.settings.isCopyAllowed;
 
         this.refreshIdAndCheckboxColumn();
 
@@ -342,9 +339,9 @@ class ctor {
             calculateWidth = this.grid.width() / (colCount + idColumnExists);
         }
 
-        if (idColumn) {
-            idColumn.width(calculateWidth);
-        }
+        //if (idColumn) {
+        //    idColumn.width(calculateWidth);
+        //}
 
         for (var binding  in columnsNeeded) {
             var columnWidth = this.getColumnWidth(binding, calculateWidth);

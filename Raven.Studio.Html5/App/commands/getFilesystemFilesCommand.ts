@@ -10,6 +10,19 @@ class getFilesystemFilesCommand extends commandBase {
     }
 
     execute(): JQueryPromise<pagedResultSet> {
+        var filesTask = this.fetchFiles();
+        var totalResultsTask = this.fetchTotalResultCount();
+
+        var doneTask = $.Deferred();
+        var combinedTask = $.when(filesTask, totalResultsTask);
+
+        combinedTask.done((filesResult: file[], resultsCount: number) => doneTask.resolve(new pagedResultSet(filesResult, resultsCount)));
+        combinedTask.fail(xhr => doneTask.reject(xhr));
+
+        return doneTask;
+    }
+
+    private fetchFiles(): JQueryPromise<file[]> {
         var args = {
             start: this.skip,
             pageSize: this.take
@@ -17,13 +30,13 @@ class getFilesystemFilesCommand extends commandBase {
 
         var url = "/files";
         var filesSelector = (files: filesystemFileHeaderDto[]) => files.map(d => new file(d));
-        var doneTask = $.Deferred();
-        this.query(url, args, this.fs, filesSelector).done(collection => {
-            var resultSet = new pagedResultSet(collection, collection.count());
-            doneTask.resolve(resultSet);
-        });
+        return this.query(url, args, this.fs, filesSelector);
+    }
 
-        return doneTask;
+    private fetchTotalResultCount(): JQueryPromise<number> {
+        var url = "/stats";
+        var countSelector = (dto: filesystemStatisticsDto) => dto.FileCount;
+        return this.query<number>(url, null, this.fs, countSelector);
     }
 }
 

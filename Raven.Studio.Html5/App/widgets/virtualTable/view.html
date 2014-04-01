@@ -41,9 +41,9 @@
 
 <div id="gridContextMenu">
     <ul class="dropdown-menu" role="menu">
-        <li><button tabindex="-1" class="btn btn-link" data-bind="disable:isIndexMapReduce || isCopyAllowed, click: copySelectedDocs, text: settings.selectedIndices().length === 1 ? 'Copy Item' : 'Copy Items'"></button></li>
-        <li><button tabindex="-1" class="btn btn-link" data-bind="disable:isIndexMapReduce, click: copySelectedDocIds, text: settings.selectedIndices().length === 1 ? 'Copy ID' : 'Copy IDs'"></button></li>
-        <li class="divider"></li>
+        <li data-bind="visible: settings.isCopyAllowed"><button tabindex="-1" class="btn btn-link" data-bind="disable: isIndexMapReduce, click: copySelectedDocs, text: settings.selectedIndices().length === 1 ? 'Copy Item' : 'Copy Items'"></button></li>
+        <li data-bind="visible: settings.isCopyAllowed"><button tabindex="-1" class="btn btn-link" data-bind="disable: isIndexMapReduce, click: copySelectedDocIds, text: settings.selectedIndices().length === 1 ? 'Copy ID' : 'Copy IDs'"></button></li>
+        <li data-bind="visible: settings.isCopyAllowed" class="divider"></li>
         <li><button tabindex="-1" class="btn btn-link" data-bind="disable:isIndexMapReduce, click: deleteSelectedDocs">Delete</button></li>
     </ul>
 </div>

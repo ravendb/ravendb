@@ -19,10 +19,6 @@ class filesystemFiles extends viewModelBase {
 
     static gridSelector = "#filesGrid";
 
-    constructor() {
-        super();
-    }
-
     activate(args) {
         super.activate(args);
         this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
@@ -45,13 +41,11 @@ class filesystemFiles extends viewModelBase {
         return list;
     }
 
-    filesLoaded(files: Array<file>) {
-
-    }
-
     fetchFiles(skip: number, take: number): JQueryPromise<pagedResultSet> {
-        return new getFilesystemFilesCommand(appUrl.getFilesystem(), skip, take).execute()
-            .done(results => this.filesLoaded(results));
+        var task = new getFilesystemFilesCommand(appUrl.getFilesystem(), skip, take).execute();
+        //task.done((results: pagedResultSet) => this.documentCount(results.totalResultCount));
+
+        return task;
     }
 
     fileSystemChanged(fs: filesystem) {

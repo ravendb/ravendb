@@ -337,11 +337,11 @@ class appUrl {
     */
     static getResource(): resource {
         var appFilesystem = appUrl.getFilesystem()
-        if (appFilesystem != appUrl.getDefaultFilesystem()) {
+        if (!appFilesystem.isDefault) {
             return appFilesystem;
         }
         else {
-            return appUrl.getDefaultFilesystem();
+            return appUrl.getDatabase();
         }
     }
 

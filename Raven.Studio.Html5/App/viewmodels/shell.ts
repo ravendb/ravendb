@@ -84,7 +84,8 @@ class shell extends viewModelBase {
             { route: 'filesystems/search', title: 'Search', moduleId: 'viewmodels/filesystemSearch', nav: true, hash: this.appUrls.filesystemSearch },
             { route: 'filesystems/synchronization', title: 'Synchronization', moduleId: 'viewmodels/filesystemSynchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
             { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystemConfiguration', nav: true, hash: this.appUrls.filesystemConfiguration },
-            { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystemUploadFile', nav: false},
+            { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystemUploadFile', nav: false },
+            { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystemEditFile', nav: false },
         ]).buildNavigationModel();
 
         router.activeInstruction.subscribe(val => {
