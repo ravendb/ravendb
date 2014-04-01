@@ -3,7 +3,7 @@ import router = require("plugins/router");
 
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
 import document = require("models/document");
 import database = require("models/database");
 
@@ -31,9 +31,7 @@ class databaseSettings extends viewModelBase {
     private fetchDatabaseSettings() {
         var db = this.activeDatabase();
         if (db) {
-            var documentId = this.getDatabaseSettingsDocumentId(db);
-            var systemDatabase = appUrl.getSystemDatabase();
-            new getDocumentWithMetadataCommand(documentId, systemDatabase)
+            new getDatabaseSettingsCommand(db)
                 .execute()
                 .done(document => this.handleDocument(document));
         }

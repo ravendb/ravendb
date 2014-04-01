@@ -17,7 +17,17 @@ class indexes extends viewModelBase {
     queryUrl = ko.observable<string>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     containerSelector = "#indexesContainer";
-    recentQueries = ko.observableArray<storedQueryDto>()
+    recentQueries = ko.observableArray<storedQueryDto>();
+    sortedGroups = ko.computed(()=> {
+        var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
+
+        groups.forEach((group: { entityName: string; indexes: KnockoutObservableArray<index> })=> {
+            group.indexes(group.indexes().slice(0).sort((l: index, r: index) => l.name.toLowerCase() > r.name.toLowerCase()?1:-1));
+        });
+
+        return groups;
+    });
+
     
     activate(args) {
         super.activate(args);
@@ -30,7 +40,7 @@ class indexes extends viewModelBase {
 
   modelPolling() {
     
-  }
+  }    
 
     attached() {
         // Alt+Minus and Alt+Plus are already setup. Since laptops don't have a dedicated key for plus, we'll also use the equal sign key (co-opted for plus).

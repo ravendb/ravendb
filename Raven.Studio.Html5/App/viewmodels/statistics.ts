@@ -13,7 +13,7 @@ class statistics extends viewModelBase {
       return new getDatabaseStatsCommand(db)
         .execute()
         .done((result: databaseStatisticsDto)=> this.processStatsResults(result));
-    }
+    }    
 
     return null;
   }

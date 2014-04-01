@@ -9,7 +9,7 @@
                 <div class="col-md-7">
                     <div class="form-group">
                         <label for="databaseName">Name</label>
-                        <input required type="text" class="form-control" id="databaseName" placeholder="Database Name" data-bind="value: databaseName, hasfocus: databaseNameFocus">
+                        <input required type="text" class="form-control" id="databaseName" placeholder="Database Name" data-bind="value: databaseName, valueUpdate: 'keyup', hasfocus: databaseNameFocus">
                     </div>
                     <div class="panel-group" id="accordion">
                         <div class="panel panel-default">
@@ -24,15 +24,15 @@
                                 <div class="panel-body">
                                     <div class="form-group">
                                         <label for="databasePath">Path</label>
-                                        <input type="text" class="form-control" id="databasePath" placeholder="~/Tenants/Northwind">
+                                        <input data-bind="value: databasePath, valueUpdate: 'keyup', attr: { placeholder: '~/Databases/' + databaseName() }" type="text" class="form-control" id="databasePath">
                                     </div>
                                     <div class="form-group">
                                         <label for="databaseLogs">Logs</label>
-                                        <input type="text" class="form-control" id="databaseLogs">
+                                        <input data-bind="value: databaseLogs, valueUpdate: 'keyup', attr: { placeholder: '~/Databases/' + databaseName() }" type="text" class="form-control" id="databaseLogs">
                                     </div>
                                     <div class="form-group">
                                         <label for="databaseIndexes">Indexes</label>
-                                        <input type="text" class="form-control" id="databaseIndexes">
+                                        <input data-bind="value: databaseIndexes, valueUpdate: 'keyup', attr: { placeholder: '~/Databases/Indexes/' + databaseName() }" type="text" class="form-control" id="databaseIndexes">
                                     </div>
                                 </div>
                             </div>

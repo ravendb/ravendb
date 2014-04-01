@@ -10,6 +10,7 @@ class row {
     collectionClass = ko.observable("");
     editUrl = ko.observable("");
     isChecked = ko.observable(false);
+    static documentMatchRegexp = /\w+\/\w+/ig;
 
     constructor(addIdCell: boolean, public viewModel: viewModel) {
         if (addIdCell) {
@@ -39,7 +40,7 @@ class row {
             var prop = rowProperties[i];
             var cellValue = rowData[prop];
             // pass json object when not custom template!
-            if (typeof cellValue === "object" && this.getCellTemplateName(prop) !== cell.customTemplate) {
+            if (typeof cellValue === "object" && this.getCellTemplateName(prop, rowData) !== cell.customTemplate) {
                 cellValue = JSON.stringify(cellValue, null, 4);
             }
             this.addOrUpdateCellMap(prop, cellValue);
@@ -52,7 +53,7 @@ class row {
 
     addOrUpdateCellMap(propertyName: string, data: any) {
         if (!this.cellMap[propertyName]) {            
-            this.cellMap[propertyName] = new cell(data, this.getCellTemplateName(propertyName));
+            this.cellMap[propertyName] = new cell(data, this.getCellTemplateName(propertyName, data));
         } else {
             var cellVal: cell = this.cellMap[propertyName];
             cellVal.data(data);
@@ -77,17 +78,22 @@ class row {
         return null;
     }
 
-    getCellTemplateName(propertyName: string): string {
+    getCellTemplateName(propertyName: string, data:any): string {
         if (propertyName === "Id") {
             return cell.idTemplate;
-        }
-
-        if (propertyName === "__IsChecked") {
+        }else if (propertyName === "__IsChecked") {
             return cell.checkboxTemplate;
         }
+        else if (!!data) {
+            if (!!data[propertyName] && typeof data[propertyName] == "string" && row.documentMatchRegexp.test(data[propertyName])  ||
+                typeof data == "string" && row.documentMatchRegexp.test(data[propertyName])) {
+                return cell.externalIdTemplate;
+            }
+        }
 
-        var customProps = this.viewModel.settings.customColumnParams[propertyName];
-        if (customProps && customProps.template) {
+        var colParam = this.viewModel.settings.customColumns().findConfigFor(propertyName);
+        // note: we just inform here about custom template - without specific name of this template.
+        if (colParam && colParam.template() !== cell.defaultTemplate) {
             return cell.customTemplate;
         }
 

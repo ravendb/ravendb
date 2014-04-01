@@ -23,18 +23,33 @@
     <TypeScriptCompile Include="App\commands\changesApiCommand.ts" />
     <TypeScriptCompile Include="App\commands\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
-    <TypeScriptCompile Include="App\commands\createSampleDataCommand.ts" />
+    <TypeScriptCompile Include="App\commands\createFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\createFilesystemDestinationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\createFilesystemFolderCommand.ts" />
+    <TypeScriptCompile Include="App\commands\deleteFilesystemConfigurationKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
+    <TypeScriptCompile Include="App\commands\downloadFileFromFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getFilesystemConfigurationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getFilesystemConfigurationByKeyCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getFilesystemDestinationsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getFilesystemFilesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getFilesystemsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getFilesystemStatsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getFilesystemSynchronizationStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\exportDatabaseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveFilesystemConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryFacetsCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveTransformerCommand.ts" />
+    <TypeScriptCompile Include="App\commands\searchFilesystemByQueryCommand.ts" />
+    <TypeScriptCompile Include="App\commands\searchFilesystemByTermCommand.ts" />
+    <TypeScriptCompile Include="App\commands\searchFilesystemConfigurationByPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\startRestoreCommand.ts" />
     <TypeScriptCompile Include="App\commands\startIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\backupDatabaseCommand.ts" />
@@ -75,23 +90,39 @@
     <TypeScriptCompile Include="App\commands\saveIndexAsPersistentCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexLockModeCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexDefinitionCommand.ts" />
+    <TypeScriptCompile Include="App\commands\uploadFileToFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
+    <TypeScriptCompile Include="App\models\filesystemCollection.ts" />
+    <TypeScriptCompile Include="App\models\filesystemConfigurationKeyCollection.ts" />
+    <TypeScriptCompile Include="App\models\file.ts" />
+    <TypeScriptCompile Include="App\models\fileMetadata.ts" />
+    <TypeScriptCompile Include="App\models\filesystemDto.ts" />
     <TypeScriptCompile Include="App\models\facet.ts" />
+    <TypeScriptCompile Include="App\models\filesystem.ts" />
     <TypeScriptCompile Include="App\models\index.ts" />
     <TypeScriptCompile Include="App\models\indexDefinition.ts" />
     <TypeScriptCompile Include="App\models\indexPriority.ts" />
     <TypeScriptCompile Include="App\models\luceneField.ts" />
     <TypeScriptCompile Include="App\models\querySort.ts" />
+    <TypeScriptCompile Include="App\models\resource.ts" />
     <TypeScriptCompile Include="App\models\spatialIndexField.ts" />
     <TypeScriptCompile Include="App\models\transformer.ts" />
+    <TypeScriptCompile Include="App\models\uploadItem.ts" />
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
+    <TypeScriptCompile Include="App\viewmodels\createFilesystem.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystemAddDestination.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystemConfiguration.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystemFiles.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystems.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystemStatistics.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystemUploadFile.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
-    <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\backupDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyDocuments.ts" />
@@ -159,6 +190,7 @@
     <TypeScriptCompile Include="App\commands\getScriptedIndexesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getReplicationSourcesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getCustomColumnsCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
     <TypeScriptCompile Include="App\viewmodels\conflicts.ts" />
     <TypeScriptCompile Include="App\models\conflict.ts" />
@@ -166,13 +198,27 @@
     <TypeScriptCompile Include="App\models\abstractQueryResult.ts" />
     <TypeScriptCompile Include="App\models\conflictVersion.ts" />
     <TypeScriptCompile Include="App\commands\saveScriptedIndexesCommand.ts" />
+    <TypeScriptCompile Include="App\models\customColumnParams.ts" />
+    <TypeScriptCompile Include="App\models\customColumns.ts" />
+    <TypeScriptCompile Include="App\viewmodels\selectColumns.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\selectColumns.html" />
+    <TypeScriptCompile Include="App\viewmodels\patch.ts" />
+    <Content Include="App\views\alerts.html" />
+    <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\patch.html" />
     <Content Include="App\views\createEncryption.html" />
     <Content Include="App\views\conflicts.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
+    <Content Include="App\views\filesystemAddDestination.html" />
+    <Content Include="App\views\filesystemConfiguration.html" />
+    <Content Include="App\views\filesystemFiles.html" />
+    <Content Include="App\views\createFilesystem.html" />
+    <Content Include="App\views\filesystems.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\filesystemUploadFile.html" />
     <Content Include="App\views\scriptedIndexes.html" />
     <Content Include="App\views\resetIndexConfirm.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
@@ -217,7 +263,9 @@
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />
     <Content Include="App\views\viewSystemDatabaseConfirm.html" />
     <Content Include="App\views\windowsAuth.html" />
-    <TypeScriptCompile Include="App\widgets\virtualTable\customColumnParams.ts" />
+    <Content Include="Content\app.min.css">
+      <DependentUpon>app.css</DependentUpon>
+    </Content>
     <Content Include="Content\bootstrap-theme.css" />
     <Content Include="Content\bootstrap-theme.min.css" />
     <Content Include="Content\bootstrap.css" />
@@ -824,7 +872,6 @@
     <Content Include="Scripts\ace\worker\worker_client.js" />
     <Content Include="Scripts\ace\worker\worker_test.js" />
     <Content Include="Scripts\almond-custom.js" />
-    <Content Include="Scripts\bloodhound.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
     <Content Include="Scripts\durandal\activator.js" />
@@ -850,23 +897,12 @@
     <Content Include="Content\app.css.map">
       <DependentUpon>app.css</DependentUpon>
     </Content>
-    <Content Include="App_Readme\Handlebarsjs_README.md" />
-    <Content Include="App_Readme\Handlebarsjs_LICENSE" />
     <None Include="Scripts\jquery-2.1.0.intellisense.js" />
-    <Content Include="Scripts\handlebars.amd.js" />
-    <Content Include="Scripts\handlebars.amd.min.js" />
-    <Content Include="Scripts\handlebars.js" />
-    <Content Include="Scripts\handlebars.min.js" />
-    <Content Include="Scripts\handlebars.runtime.amd.js" />
-    <Content Include="Scripts\handlebars.runtime.amd.min.js" />
-    <Content Include="Scripts\handlebars.runtime.js" />
-    <Content Include="Scripts\handlebars.runtime.min.js" />
     <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-2.1.0.min.js" />
     <Content Include="Scripts\jwerty-0.3.js" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.amd.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
-    <TypeScriptCompile Include="Scripts\typings\handlebars\handlebars.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery\jquery.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jwerty\jwerty.d.ts" />
     <Content Include="Scripts\knockout-3.1.0.debug.js" />
@@ -883,9 +919,6 @@
     <Content Include="Scripts\nprogress.js" />
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
-    <Content Include="Scripts\typeahead.bundle.js" />
-    <Content Include="Scripts\typeahead.bundle.min.js" />
-    <Content Include="Scripts\typeahead.jquery.js" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
     <Content Include="web.config" />
     <Content Include="Scripts\ace\mode\xquery\JSONiqTokenizer.ebnf" />
@@ -1195,7 +1228,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>0</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost:33979/</IISUrl>
+          <IISUrl>http://localhost:8080/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>

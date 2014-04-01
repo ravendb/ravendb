@@ -1,4 +1,4 @@
-// knockout-delegatedEvents 0.1.3 | (c) 2014 Ryan Niemeyer |  http://www.opensource.org/licenses/mit-license
+// knockout-delegatedEvents 0.3.0 | (c) 2014 Ryan Niemeyer |  http://www.opensource.org/licenses/mit-license
 ;(function(factory) {
     //CommonJS
     if (typeof require === "function" && typeof exports === "object" && typeof module === "object") {
@@ -68,7 +68,14 @@
 
                 //execute the action as KO normally would
                 if (action) {
-                    result = action.call(owner, data, event);
+                    //if the event is a submit event, we want to just pass
+                    //the form element, and set the context to 'this'.
+                    //This matches the knockout behaviour for submit bindings.
+                    if (eventName === "submit") {
+                      result = action.call(data, event.target);
+                    } else {
+                      result = action.call(owner, data, event);
+                    }
 
                     //prevent default action, if handler does not return true
                     if (result !== true) {
@@ -78,6 +85,12 @@
                         else {
                             event.returnValue = false;
                         }
+                    }
+
+                    //prevent bubbling
+                    event.cancelBubble = true;
+                    if (typeof event.stopPropagation === "function") {
+                        event.stopPropagation();
                     }
                 }
             }

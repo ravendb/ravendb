@@ -40,50 +40,52 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetMessageWithObject(dbDoc);
 		}
 
-		private string CheckInput(string databaseName)
+		private Tuple<string, HttpStatusCode> CheckInput(string databaseName)
 		{
-			string message = null;
+			string errorMessage = null;
+			HttpStatusCode errorCode = HttpStatusCode.BadRequest;
 
 			if (databaseName == null)
 			{
-				message = "An empty name is forbidden for use!";
+				errorMessage = "An empty name is forbidden for use!";
 			}
 			else if (databaseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
 			{
-				message = string.Format("The name '{0}' contains charaters that are forbidden for use!", databaseName);
+				errorMessage = string.Format("The name '{0}' contains charaters that are forbidden for use!", databaseName);
 			}
 			else if (Array.IndexOf(Constants.WindowsReservedFileNames, databaseName.ToLower()) >= 0){
-				message = string.Format("The name '{0}' is forbidden for use!", databaseName);
+				errorMessage = string.Format("The name '{0}' is forbidden for use!", databaseName);
 			}
 			else if ((Environment.OSVersion.Platform == PlatformID.Unix) && (databaseName.Length > Constants.LinuxMaxFileNameLength) && (Database.Configuration.DataDirectory.Length + databaseName.Length > Constants.LinuxMaxPath))
 			{
 				int theoreticalMaxFileNameLength = Constants.LinuxMaxPath - Database.Configuration.DataDirectory.Length;
 				int maxfileNameLength = (theoreticalMaxFileNameLength > Constants.LinuxMaxFileNameLength) ? Constants.LinuxMaxFileNameLength : theoreticalMaxFileNameLength;
-				message = string.Format("Invalid name for a database! Databse name cannot exceed {0} characters", maxfileNameLength);
+				errorMessage = string.Format("Invalid name for a database! Databse name cannot exceed {0} characters", maxfileNameLength);
 			}
 			else if (Path.Combine(Database.Configuration.DataDirectory, databaseName).Length > Constants.WindowsMaxPath)
 			{
 				int maxfileNameLength = Constants.WindowsMaxPath - Database.Configuration.DataDirectory.Length;
-				message = string.Format("Invalid name for a database! Databse name cannot exceed {0} characters", maxfileNameLength);
+				errorMessage = string.Format("Invalid name for a database! Databse name cannot exceed {0} characters", maxfileNameLength);
+			}
+			else if (IsSystemDatabase(databaseName))
+			{
+				errorMessage = "System Database document cannot be changed";
+				errorCode = HttpStatusCode.Forbidden;
 			}
 
-			return message;
+			return new Tuple<string, HttpStatusCode>(errorMessage, errorCode);
 		}
 
 		[HttpPut]
 		[Route("admin/databases/{*id}")]
 		public async Task<HttpResponseMessage> DatabasesPut(string id)
 		{
-			var errorMessage = CheckInput(id);
-			if (errorMessage != null)
+			Tuple<string, HttpStatusCode> message = CheckInput(id);
+			if (message.Item1 != null)
 			{
-				return GetMessageWithString(errorMessage, HttpStatusCode.BadRequest);
+				return GetMessageWithString(message.Item1, message.Item2);
 			}
 
-			if (IsSystemDatabase(id))
-			{
-				return GetMessageWithString("System Database document cannot be changed", HttpStatusCode.Forbidden);
-			}
 			var docKey = "Raven/Databases/" + id;
 			var existingDatabase = Database.Documents.Get(docKey, null);
 			if (existingDatabase != null)
@@ -98,6 +100,36 @@ namespace Raven.Database.Server.Controllers.Admin
 				    !dbDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
 				{
 					return GetMessageWithString(string.Format("Failed to create '{0}' database, becuase of not valid encryption configuration.", id), HttpStatusCode.BadRequest);
+				}
+			}
+
+			DatabasesLandlord.Protect(dbDoc);
+			var json = RavenJObject.FromObject(dbDoc);
+			json.Remove("Id");
+
+			Database.Documents.Put(docKey, null, json, new RavenJObject(), null);
+
+			return GetEmptyMessage();
+		}
+
+		[HttpPost]
+		[Route("admin/databases/{*id}")]
+		public async Task<HttpResponseMessage> ModifyDatabase(string id)
+		{
+			var docKey = "Raven/Databases/" + id;
+			var existingDatabase = Database.Documents.Get(docKey, null);
+			if (existingDatabase == null)
+			{
+				return GetMessageWithString(string.Format("Database with the name '{0}' doesn't exist", id), HttpStatusCode.BadRequest);
+			}
+
+			var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
+			if (dbDoc.Settings.ContainsKey("Bundles") && dbDoc.Settings["Bundles"].Contains("Encryption"))
+			{
+				if (!dbDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
+				    !dbDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
+				{
+					return GetMessageWithString(string.Format("Failed to modify '{0}' database, becuase of not valid encryption configuration.", id), HttpStatusCode.BadRequest);
 				}
 			}
 
