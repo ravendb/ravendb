@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{46152256-7443-426C-A20D-B2F354B51810}</ProjectGuid>
+    <ProjectGuid>{FD6DA74C-A7E3-4176-A340-2EB2F3952F2D}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Raven.SlowTests</RootNamespace>
@@ -116,7 +116,7 @@
       <Name>Raven.Tests.Common</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Issues\Raven.Tests.Issues.csproj">
-      <Project>{D8BDD718-6E21-41B7-9C41-D0FBE0532DF4}</Project>
+      <Project>{d8bdd718-6e21-41b7-9c41-d0fbe0532df4}</Project>
       <Name>Raven.Tests.Issues</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
