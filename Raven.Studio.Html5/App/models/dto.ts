@@ -15,6 +15,20 @@ interface dictionary<TValue> {
 interface metadataAwareDto {
     '@metadata'?: documentMetadataDto;
 }
+interface documentChangeNotificationDto {
+    Type: string;
+    Id: string;
+    CollectionName: string;
+    TypeName: string;
+    Etag: string;
+    Message: string;
+}
+
+interface indexChangeNotificationDto {
+    Type: string;
+    Name: string;
+    Etag: string;
+}
 
 interface documentMetadataDto {
     'Raven-Entity-Name'?: string;

@@ -40,6 +40,77 @@ body {
     margin-bottom: 0;
   }
 }
+@media (max-device-height: 1024px) {
+  span {
+    font-size: 12px!important;
+  }
+  a {
+    padding: 5px!important;
+    max-height: 30px!important;
+    font-size: 13px!important;
+  }
+  i {
+    font-size: 15px!important;
+    display: block!important;
+  }
+  button {
+    max-height: 30px!important;
+    font-size: 13px!important;
+  }
+  .panel h4 {
+    font-size: 14px!important;
+  }
+  .panel label {
+    font-size: 12px!important;
+  }
+  .panel span {
+    font-size: 10px!important;
+  }
+  .tooltip-inner {
+    font-size: 10px!important;
+  }
+  #bs-example-navbar-collapse-1 a {
+    font-size: 12px!important;
+  }
+  #bs-example-navbar-collapse-1 input[type=text] {
+    font-size: 12px!important;
+    height: 24px!important;
+  }
+  #bs-example-navbar-collapse-1 i {
+    display: inline-block !important;
+  }
+  #shellFooter li {
+    max-width: 100px!important;
+  }
+  .breadcrumb h3 {
+    font-size: 16px!important;
+  }
+  .breadcrumb a {
+    font-size: 14px!important;
+  }
+  .breadcrumb span {
+    font-size: 14px!important;
+  }
+  .breadcrumb i {
+    font-size: 15px!important;
+    display: inline-block !important;
+  }
+  .documents-page a {
+    font-size: 12px!important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #editDocumentContainer .document-addition-data {
+    margin-top: 85px!important;
+  }
+}
+.panel span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: auto;
+}
 .page {
   padding: 0 10px 20px 10px;
   width: 98%;
