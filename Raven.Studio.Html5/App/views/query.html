@@ -212,14 +212,14 @@
                 <label id="indexQueryLabelContainer" class="control-label col-md-1">
                     Results
                 </label>
-                <div class="col-md-9">
+                <div class="col-md-9 query-results">
                     <div id="queryResultsPanel" class="panel panel-default">
                         <div class="panel-body">
                             <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, documentsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px', isIndexMapReduce: isIndexMapReduce }"></div>
                         </div>
                     </div>
                 </div>
-                <div class="form-group panel panel-default col-md-2">
+                <div class="form-group panel panel-default col-md-2 side-panel">
                     <div class="panel-body"><strong>Query stats</strong></div>
                     <ul class="list-group" data-bind="with: queryStats">
                         <li class="list-group-item" data-bind="text: 'Total Results: ' + TotalResults"></li>
@@ -234,7 +234,7 @@
                         </li>
                         <li class="list-group-item" data-bind="text: 'ETag: ' + ResultEtag"></li>
                     </ul>
-                    
+
                 </div>
             </div>
             

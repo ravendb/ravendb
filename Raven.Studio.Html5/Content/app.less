@@ -56,39 +56,88 @@ html, body {
 
 @media(max-device-height:1024px) {    
     span{
-        font-size:12px!important;
+        font-size:14px!important;
     }
     a{
-        padding:5px!important;        
-        max-height:30px!important;        
-        font-size:13px!important;    
+            font-size: 14x!important;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
     }
     i{
-        font-size:15px!important;                
+        font-size:14px!important;                
         display:block!important;
     }
     button{
         max-height:30px!important;        
         font-size:13px!important;                
-    }
-
-    .panel {
-        h4{
-            font-size:14px!important;
-        }
-        label{
-            font-size:12px!important;
-        }
-        span{
-            font-size:10px!important;
-        }
-    }
+    }      
 
     .tooltip-inner {
            font-size:10px!important;                
+    }   
+}
+
+.control-label {
+    @media(max-device-height:1024px) {
+        max-width:400px!important;
+    }
+}
+
+.query-results {
+    @media(max-device-height:1024px) {
+        width:86%!important;
+    }
+}
+
+
+.side-panel {
+    margin-left:10px!important;
+
+    li {
+        max-width: 400px;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
     }
 
-    #bs-example-navbar-collapse-1 {
+    @media(max-device-height:1024px) {        
+
+        h4 {
+            font-size: 14px !important;
+        }
+
+        label {
+            font-size: 12px !important;
+        }
+
+        span {
+            font-size: 10px !important;
+        }
+
+        li{
+            max-width:200px!important;
+        }
+    }
+    
+}
+
+
+
+
+.container-fluid {
+    @media(max-device-height:1024px) {
+         a{
+        padding:5px!important;        
+        max-height:30px!important;        
+        font-size:13px!important;    
+    }
+    }
+}
+
+ #bs-example-navbar-collapse-1 {
         a{
             font-size:12px!important;
         }
@@ -102,43 +151,6 @@ html, body {
             display:inline-block!important;
         }
     }
-
-    #shellFooter{
-        li{
-            max-width:100px!important;
-        }
-    }
-
-
-    .breadcrumb{
-        h3{
-            font-size:16px!important;
-        }
-        a{
-            font-size:14px!important;
-        }
-        span{
-            font-size:14px!important;
-        }
-        i{
-            font-size:15px!important;                
-            display:inline-block!important;
-        }
-    }
-
-    .documents-page{
-        a{
-            font-size: 12px!important;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-    }
-
-    #editDocumentContainer .document-addition-data{
-        margin-top:85px!important;
-    }
-}
 
 .panel span{    
     overflow: hidden;
@@ -221,14 +233,7 @@ html, body {
             }
         }
     }
-
-    /*.systemButton {
-        color:grey;
-        margin-top:50px;        
-        position:absolute;
-        top:-40px;
-        right:25px;
-    }*/
+     
 
 }
 
@@ -445,6 +450,15 @@ html, body {
 
 .documents-page {
     margin-top: 10px;
+
+    @media(max-device-height:1024px) {
+          a{
+            font-size: 12px!important;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
 }
 
 .collection-color-strip {
@@ -461,6 +475,18 @@ html, body {
 }
 
 #queryContainer {
+    #indexQueryLabelContainer {
+        @media(max-device-height:1024px) {
+            display:inline-block!important;
+            i{
+                display:none!important;
+            }
+            a {
+                display:none!important;
+            }
+        }
+    }
+
     .editor {
         height: 60px;
     }
@@ -472,6 +498,12 @@ html, body {
 
     .form-horizontal {
         overflow: hidden auto;
+    }
+
+    .side-panel {
+        @media(max-device-height:1024px) {
+            margin-left: 100px !important;
+        }
     }
 }
 
@@ -549,6 +581,27 @@ html, body {
 
 .breadcrumb {
     padding: 0 10px 0 10px;
+
+    @media(max-device-height:1024px) {
+      
+        h3{
+            font-size:16px!important;
+            display:inline-block!important;
+        }
+        a{
+            font-size:14px!important;
+            display:inline-block!important;
+        }
+        span{
+            font-size:14px!important;
+            display:inline-block!important;
+        }
+        i{
+            font-size:15px!important;                
+            display:inline-block!important;
+        }
+    
+    }
 }
 
 .studio-alerts {
@@ -560,6 +613,7 @@ html, body {
 }
 
 #editDocumentContainer {
+      
     &:focus {
         outline: 0;
     }
@@ -581,6 +635,10 @@ html, body {
 
     .query-metadata {
         padding-top: 20px;
+
+        @media(max-device-height:1024px) {
+            padding-top:  25px !important;
+        }
     }
 }
 
@@ -609,14 +667,30 @@ html, body {
     }
 }
 
-#shellFooter li {    
-                    
-        max-width:200px;
-        margin:0;
-        padding:0;
+#shellFooter {
+    li {
+        max-width: 200px;
+        margin: 0;
+        padding: 0;
         overflow: hidden;
-        white-space:nowrap;
-        text-overflow: ellipsis;     
+        white-space: nowrap;
+        text-overflow: ellipsis;
+
+        @media(max-device-height:1024px) {
+            max-width: 100px !important;
+        }
+    }
+      span {
+         overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+
+        @media(max-device-height:1024px) {
+            max-width: 100px !important;
+        }
+        
+    }
+  
 }
 
 #editTransformerContainer .transformer {

@@ -42,68 +42,77 @@ body {
 }
 @media (max-device-height: 1024px) {
   span {
-    font-size: 12px!important;
+    font-size: 14px!important;
   }
   a {
-    padding: 5px!important;
-    max-height: 30px!important;
-    font-size: 13px!important;
+    font-size: 14x!important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   i {
-    font-size: 15px!important;
+    font-size: 14px!important;
     display: block!important;
   }
   button {
     max-height: 30px!important;
     font-size: 13px!important;
   }
-  .panel h4 {
-    font-size: 14px!important;
-  }
-  .panel label {
-    font-size: 12px!important;
-  }
-  .panel span {
-    font-size: 10px!important;
-  }
   .tooltip-inner {
     font-size: 10px!important;
   }
-  #bs-example-navbar-collapse-1 a {
-    font-size: 12px!important;
+}
+@media (max-device-height: 1024px) {
+  .control-label {
+    max-width: 400px!important;
   }
-  #bs-example-navbar-collapse-1 input[type=text] {
-    font-size: 12px!important;
-    height: 24px!important;
+}
+@media (max-device-height: 1024px) {
+  .query-results {
+    width: 86%!important;
   }
-  #bs-example-navbar-collapse-1 i {
-    display: inline-block !important;
+}
+.side-panel {
+  margin-left: 10px!important;
+}
+.side-panel li {
+  max-width: 400px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+@media (max-device-height: 1024px) {
+  .side-panel h4 {
+    font-size: 14px !important;
   }
-  #shellFooter li {
-    max-width: 100px!important;
+  .side-panel label {
+    font-size: 12px !important;
   }
-  .breadcrumb h3 {
-    font-size: 16px!important;
+  .side-panel span {
+    font-size: 10px !important;
   }
-  .breadcrumb a {
-    font-size: 14px!important;
+  .side-panel li {
+    max-width: 200px!important;
   }
-  .breadcrumb span {
-    font-size: 14px!important;
+}
+@media (max-device-height: 1024px) {
+  .container-fluid a {
+    padding: 5px!important;
+    max-height: 30px!important;
+    font-size: 13px!important;
   }
-  .breadcrumb i {
-    font-size: 15px!important;
-    display: inline-block !important;
-  }
-  .documents-page a {
-    font-size: 12px!important;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  #editDocumentContainer .document-addition-data {
-    margin-top: 85px!important;
-  }
+}
+#bs-example-navbar-collapse-1 a {
+  font-size: 12px!important;
+}
+#bs-example-navbar-collapse-1 input[type=text] {
+  font-size: 12px!important;
+  height: 24px!important;
+}
+#bs-example-navbar-collapse-1 i {
+  display: inline-block !important;
 }
 .panel span {
   overflow: hidden;
@@ -124,15 +133,6 @@ body {
 .navbar-splitbutton + .dropdown > a {
   padding-left: 6px;
   padding-right: 8px;
-}
-.database-page {
-  /*.systemButton {
-        color:grey;
-        margin-top:50px;        
-        position:absolute;
-        top:-40px;
-        right:25px;
-    }*/
 }
 .database-page .btn-toolbar {
   margin-bottom: 20px;
@@ -333,6 +333,14 @@ body {
 .documents-page {
   margin-top: 10px;
 }
+@media (max-device-height: 1024px) {
+  .documents-page a {
+    font-size: 12px!important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
 .collection-color-strip {
   height: 20px;
   width: 4px;
@@ -341,6 +349,17 @@ body {
 }
 #editIndex .map {
   height: 120px;
+}
+@media (max-device-height: 1024px) {
+  #queryContainer #indexQueryLabelContainer {
+    display: inline-block !important;
+  }
+  #queryContainer #indexQueryLabelContainer i {
+    display: none!important;
+  }
+  #queryContainer #indexQueryLabelContainer a {
+    display: none!important;
+  }
 }
 #queryContainer .editor {
   height: 60px;
@@ -351,6 +370,11 @@ body {
 }
 #queryContainer .form-horizontal {
   overflow: hidden auto;
+}
+@media (max-device-height: 1024px) {
+  #queryContainer .side-panel {
+    margin-left: 100px !important;
+  }
 }
 .ko-grid {
   /*position: absolute;
@@ -414,6 +438,24 @@ body {
 .breadcrumb {
   padding: 0 10px 0 10px;
 }
+@media (max-device-height: 1024px) {
+  .breadcrumb h3 {
+    font-size: 16px!important;
+    display: inline-block !important;
+  }
+  .breadcrumb a {
+    font-size: 14px!important;
+    display: inline-block !important;
+  }
+  .breadcrumb span {
+    font-size: 14px!important;
+    display: inline-block !important;
+  }
+  .breadcrumb i {
+    font-size: 15px!important;
+    display: inline-block !important;
+  }
+}
 .studio-alerts {
   position: fixed;
   top: 60px;
@@ -438,6 +480,11 @@ body {
 }
 #editDocumentContainer .query-metadata {
   padding-top: 20px;
+}
+@media (max-device-height: 1024px) {
+  #editDocumentContainer .query-metadata {
+    padding-top: 25px !important;
+  }
 }
 .keyboard-shortcut {
   margin-left: 20px;
@@ -466,6 +513,21 @@ body {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+@media (max-device-height: 1024px) {
+  #shellFooter li {
+    max-width: 100px !important;
+  }
+}
+#shellFooter span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+@media (max-device-height: 1024px) {
+  #shellFooter span {
+    max-width: 100px !important;
+  }
 }
 #editTransformerContainer .transformer {
   height: 600px;
