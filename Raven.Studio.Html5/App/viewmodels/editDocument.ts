@@ -17,6 +17,7 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 import viewModelBase = require("viewmodels/viewModelBase");
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
+import bsTooltipBindingHandler = require("common/bsTooltipBindingHandler");
 
 class editDocument extends viewModelBase {
 
@@ -60,6 +61,8 @@ class editDocument extends viewModelBase {
         this.metadataText.subscribe(() => this.updateDocEditorText());
         this.documentText.subscribe(() => this.updateDocEditorText());
         this.isEditingMetadata.subscribe(() => this.updateDocEditorText());
+
+        bsTooltipBindingHandler.install();
     }
 
     // Called by Durandal when seeing if we can activate this view.

@@ -10,6 +10,7 @@ import querySort = require("models/querySort");
 import app = require("durandal/app");
 import resetIndexConfirm = require("viewmodels/resetIndexConfirm");
 import router = require("plugins/router"); 
+import bsTooltipBindingHandler = require("common/bsTooltipBindingHandler");
 
 class indexes extends viewModelBase {
 
@@ -30,6 +31,7 @@ class indexes extends viewModelBase {
 
     
     activate(args) {
+        bsTooltipBindingHandler.install();
         super.activate(args);
 
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), null));
