@@ -19,10 +19,10 @@ class indexes extends viewModelBase {
     containerSelector = "#indexesContainer";
     recentQueries = ko.observableArray<storedQueryDto>();
     sortedGroups = ko.computed(()=> {
-        var groups = this.indexGroups().slice().sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
+        var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
 
         groups.forEach((group: { entityName: string; indexes: KnockoutObservableArray<index> })=> {
-            group.indexes(group.indexes().slice().sort((l: index, r: index) => l.name.toLowerCase() > r.name.toLowerCase()?1:-1));
+            group.indexes(group.indexes().slice(0).sort((l: index, r: index) => l.name.toLowerCase() > r.name.toLowerCase()?1:-1));
         });
 
         return groups;

@@ -351,13 +351,13 @@ html, body {
 
 .documents-page {
     margin-top: 10px;
+}
 
-    .collection-color-strip {
-        height: 20px;
-        width: 4px;
-        display: inline-block;
-        vertical-align: middle;
-    }
+.collection-color-strip {
+    height: 20px;
+    width: 4px;
+    display: inline-block;
+    vertical-align: middle;
 }
 
 #editIndex {
@@ -473,6 +473,21 @@ html, body {
     #docEditor {
         height: 500px;
     }
+
+    .document-addition-data {
+        margin-top: 95px;
+        padding-top: 10px;
+        padding-bottom: 40px;
+    }
+
+    hr {
+        border-color:red;
+        margin-top:5px;
+    }
+
+    .query-metadata {
+        padding-top: 20px;
+    }
 }
 
 .keyboard-shortcut {
@@ -500,6 +515,16 @@ html, body {
     }
 }
 
+#shellFooter li {    
+                    
+        max-width:200px;
+        margin:0;
+        padding:0;
+        overflow: hidden;
+        white-space:nowrap;
+        text-overflow: ellipsis;
+     
+}
 
 #editTransformerContainer .transformer {
   height: 600px;
@@ -525,74 +550,8 @@ html, body {
 	z-index: 2;
 }
 
-.twitter-typeahead .tt-hint {
-    display: block;
-    height: 34px;
-    padding: 6px 12px;
-    font-size: 14px;
-    line-height: 1.428571429;
-    border: 1px solid transparent;
-    border-radius:4px;
-    visibility:hidden;
-}
-.twitter-typeahead .hint-small {
-    height: 30px;
-    padding: 5px 10px;
-    font-size: 12px;
-    border-radius: 3px;
-    line-height: 1.5;
-}
-.twitter-typeahead .hint-large {
-    height: 45px;
-    padding: 10px 16px;
-    font-size: 18px;
-    border-radius: 6px;
-    line-height: 1.33;
-}
-
-.typeahead {
-  background-color: #fff;
-}
-
-.typeahead:focus {
-  border: 2px solid #0097cf;
-}
-
-.tt-query {
-  -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
-     -moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
-          box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
-}
-
-.tt-dropdown-menu {
-  width: 422px;
-  margin-top: 12px;
-  padding: 8px 0;
-  background-color: #fff;
-  border: 1px solid #ccc;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  -webkit-border-radius: 8px;
-     -moz-border-radius: 8px;
-          border-radius: 8px;
-  -webkit-box-shadow: 0 5px 10px rgba(0,0,0,.2);
-     -moz-box-shadow: 0 5px 10px rgba(0,0,0,.2);
-          box-shadow: 0 5px 10px rgba(0,0,0,.2);
-}
-
-.tt-suggestion {
-  padding: 3px 20px;
-  font-size: 18px;
-  line-height: 24px;
-}
-
-.tt-suggestion.tt-cursor {
-  color: #fff;
-  background-color: #32aec4;
-
-}
-
-.tt-suggestion p {
-  margin: 0;
+.auto-complete {
+    background-color: white;
 }
 
 #logsContainer, #alertsContainer, #indexErrorsContainer {
@@ -705,3 +664,72 @@ footer {
         height: 160px;
     }
 }
+
+// Start of Filesystems
+// TODO: as this styles are apparently the same than .database-page, consider renaming the original ones to a generic name
+.filesystem-page {
+
+    .btn-toolbar {
+        margin-bottom: 20px;
+    }
+
+    .filesystems-container {
+        margin-top: 10px;
+
+        .filesystem {
+            cursor: pointer;
+            border-radius: 10px;
+            -webkit-box-shadow: 0 0 5px 1px silver;
+            box-shadow: 0 0 5px 1px silver;
+            min-width: 140px;
+            min-height: 60px;
+            display: inline-block;
+            padding: 8px;
+            margin: 0 10px 14px 0;
+
+            @selectColor: rgb(66, 139, 202);
+            @hoverColor: lighten(@selectColor, 10%);
+
+            &:hover {
+                background-color: white;
+                -webkit-box-shadow: 0 0 5px 0 @hoverColor;
+                box-shadow: 0 0 5px 0 @hoverColor;
+            }
+
+            &.selected {
+                -webkit-box-shadow: 0 0 6px 0 @selectColor;
+                box-shadow: 0 0 6px 0 @selectColor;
+                background-color: @selectColor;
+                
+                a, .text-muted {
+                    color: white;
+                }
+            }
+
+            &.default-filesystem {
+                @systemDbColor: rgba(192, 192, 192, 0.21);
+                background-color: @systemDbColor;
+
+                &.selected {
+                    background-color: darken(@systemDbColor, 70%);
+
+                    a, .text-muted {
+                        color: darken(@selectColor, 10%);
+                    }
+                }
+            }
+        }
+    }
+
+    .systemButton {
+        color:grey;
+        margin-top:50px;        
+        position:absolute;
+        top:-40px;
+        right:25px;
+    }
+
+}
+
+// End of Filesystems
+

@@ -38,7 +38,7 @@ class alerts extends viewModelBase {
         clearTimeout(this.updateNowTimeoutHandle);
     }
 
-    fetchAlerts(): JQueryPromise<alert[]> {
+    fetchAlerts(): JQueryPromise<alertContainerDto> {
         var db = this.activeDatabase();
         if (db) {
             return new getAlertsCommand(db)

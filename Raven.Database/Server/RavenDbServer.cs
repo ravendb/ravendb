@@ -68,9 +68,9 @@ namespace Raven.Server
             set { configuration.RunInMemory = value; }
 	    }
 
-	    public RavenDbServer Initialize(Action<RavenDBOptions> configur = null)
+	    public RavenDbServer Initialize(Action<RavenDBOptions> configure = null)
 	    {
-            owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer, configure: configur);
+            owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer, configure: configure);
             options = owinHttpServer.Options;
             serverThingsForTests = new ServerThingsForTests(options);
 	        documentStore.HttpMessageHandler = new OwinClientHandler(owinHttpServer.Invoke);

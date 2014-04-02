@@ -1,8 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-
+using System.Collections.Specialized;
+using System.IO;
 using NLog;
-
+using Raven.Abstractions.Data;
+using Raven.Client.Extensions;
+using Raven.Client.RavenFS;
+using Raven.Client.RavenFS.Extensions;
+using Raven.Database.Config;
+using Raven.Server;
 using Raven.Tests.Notifications;
 using Raven.Tests.Storage;
 
@@ -10,20 +16,58 @@ namespace Raven.Tryouts
 {
 	class Program
 	{
-		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
-
 		private unsafe static void Main(string[] args)
 		{
-			for (int i = 0; i < 100; i++)
+			for (int i = 0; i < 100*10; i++)
 			{
-				Console.Clear();
-				Console.WriteLine(i);
-			    using (var x = new BackupRestore())
-			    {
-			        x.AfterFailedBackupRestoreCanDetectError();
-			    }
+				Console.Write("\r"+i);
+				using (var x = new Indexes())
+				{
+					x.CanRecordAttempts();
+				}
 			}
 
+			//var server = new RavenDbServer(new RavenConfiguration
+			//{
+			//	Port = 8080
+			//})
+			//{
+			//	UseEmbeddedHttpServer = true,
+			//	RunInMemory = true,
+			//};
+
+			//server.Initialize();
+			//var oneClient = new RavenFileSystemClient("http://localhost:8080", "one");
+			//oneClient.Admin.CreateFileSystemAsync(new DatabaseDocument
+			//{
+			//	Settings = {{"Raven/FileSystem/DataDir", "~/fs/one"}}
+			//}, "one").Wait();
+			//oneClient.Admin.CreateFileSystemAsync(new DatabaseDocument
+			//{
+			//	Settings = {{"Raven/FileSystem/DataDir", "~/fs/two"}}
+			//}, "two").Wait();
+
+
+			//var twoClient = new RavenFileSystemClient("http://localhost:8080", "two");
+
+			//oneClient.Config.SetDestinationsConfig(new SynchronizationDestination
+			//{
+			//	FileSystem = "two",
+			//	ServerUrl = "http://localhost:8080"
+			//}).Wait();
+
+			//oneClient.UploadAsync("test.bin",
+			//	new NameValueCollection {{"test", "foo"}},
+			//	new MemoryStream())
+			//	.Wait();
+
+			//oneClient.Synchronization.StartAsync("test.bin", twoClient);
+
+			//Console.WriteLine("Ready...");
+
+			//Console.ReadLine();
+
+			//server.Dispose();
 		}
 	}
 

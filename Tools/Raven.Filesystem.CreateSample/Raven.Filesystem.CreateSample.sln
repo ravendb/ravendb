@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30110.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Filesystem.CreateSample", "Raven.Filesystem.CreateSample.csproj", "{F01A4AD0-422B-47A1-B0EB-53261B41DDC2}"
+EndProject
+Global
+	GlobalSection(CodealikeProperties) = postSolution
+		SolutionGuid = eec608b4-caf1-4acb-8b3e-e8efae813a68
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F01A4AD0-422B-47A1-B0EB-53261B41DDC2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F01A4AD0-422B-47A1-B0EB-53261B41DDC2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F01A4AD0-422B-47A1-B0EB-53261B41DDC2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F01A4AD0-422B-47A1-B0EB-53261B41DDC2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

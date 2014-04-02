@@ -11,17 +11,17 @@
         <div class="panel panel-default" data-bind="css: { 'panel-info': !disabled(), 'panel-warning': disabled }">
             <div class="panel-heading">
                 <h3 class="panel-title">
-                    <a data-toggle="collapse" data-parent="#accordion" data-bind="attr: { 'href': '#sqlRelication' + $index() }"><span data-bind="text: name() ? name() : 'untitled'"></span></a>
+                    <a data-toggle="collapse" data-parent="#accordion" data-bind="attr: { 'href': '#sqlRelication' + $index() }"><span data-bind="text: name() ? name() : 'New SQL Replication ' + $root.itemNumber($index())"></span></a>
                     <button type="button" style="display:inline-block;" class="close" data-bind="click: $root.removeSqlReplication.bind($root)" title="Remove this SQL replication">×</button>
                 </h3>
             </div>
-            <div data-bind="attr: { 'id': 'sqlRelication' + $index() }" class="panel-collapse collapse in">
+            <div data-bind="attr: { 'id': 'sqlRelication' + $index() }, css: { 'collapse': ($index() !== $parent.lastIndex()), 'in': ($index() === $parent.lastIndex()) }" class="panel-collapse collapse">
                 <div class="panel-body sql-replication-panel-body">
                     <form class="form-horizontal" role="form">
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Name</label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" data-bind="value: name, valueUpdate: 'afterkeydown'" />
+                                <input type="text" class="form-control" data-bind="value: name, valueUpdate: 'afterkeydown', attr: { placeholder: 'New SQL Replication ' + $root.itemNumber($index()) }" />
                             </div>
                         </div>
                         <div class="form-group">
@@ -40,7 +40,7 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">SQL Provider</label>
                             <div class="col-sm-9">
-                                <select class="form-control" 
+                                <select class="form-control"
                                         data-bind="options: ['System.Data.SqlClient','System.Data.SqlServerCe.4.0','System.Data.OleDb','System.Data.OracleClient','MySql.Data.MySqlClient','System.Data.SqlServerCe.3.5','Npgsql'], optionsCaption: '', value: factoryName"></select>
                             </div>
                         </div>
@@ -49,7 +49,7 @@
                                 <select class="form-control" data-bind="options: availableConnectionStringTypes, optionsText: 'label', optionsValue: 'value', value: connectionStringType"></select>
                             </div>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" data-bind="value: connectionStringValue"/>
+                                <input type="text" class="form-control" data-bind="value: connectionStringValue" />
                             </div>
                         </div>
                         <div class="form-group">
@@ -73,12 +73,12 @@
                                         <tr>
                                             <td>
                                                 <div>
-                                                    <input type="text" class="form-control" data-bind="value: tableName"/>
+                                                    <input type="text" class="form-control" data-bind="value: tableName" />
                                                 </div>
                                             </td>
                                             <td>
                                                 <div>
-                                                    <input type="text" class="form-control" data-bind="value: documentKeyColumn"/>
+                                                    <input type="text" class="form-control" data-bind="value: documentKeyColumn" />
                                                 </div>
                                             </td>
                                             <td><button type="button" style="display:inline-block;" class="close" data-bind="click: $parent.removeTable.bind($parent)" title="Remove this table">×</button></td>

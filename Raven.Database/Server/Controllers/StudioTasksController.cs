@@ -11,14 +11,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
-using Kent.Boogaart.KBCsv;
+using Microsoft.VisualBasic.FileIO;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Client.Util;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
-using Newtonsoft.Json;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -202,9 +201,10 @@ namespace Raven.Database.Server.Controllers
 
                 var stream = await file.ReadAsStreamAsync();
 
-                using (var csvReader = new CsvReader(stream))
+                using (var csvReader = new TextFieldParser(stream))
                 {
-                    var header = csvReader.ReadHeaderRecord();
+	                csvReader.SetDelimiters(",");
+                    var headers = csvReader.ReadFields();
                     var entity =
                         Inflector.Pluralize(CSharpClassName.ConvertToValidClassName(Path.GetFileNameWithoutExtension(filename)));
                     if (entity.Length > 0 && char.IsLower(entity[0]))
@@ -212,42 +212,44 @@ namespace Raven.Database.Server.Controllers
 
                     var totalCount = 0;
                     var batch = new List<RavenJObject>();
-                    var columns = header.Values.Where(x => x.StartsWith("@") == false).ToArray();
+                    var columns = headers.Where(x => x.StartsWith("@") == false).ToArray();
 
                     batch.Clear();
-                    foreach (var record in csvReader.DataRecords)
-                    {
+	                while (csvReader.EndOfData == false)
+	                {
+		                var record = csvReader.ReadFields();
                         var document = new RavenJObject();
                         string id = null;
                         RavenJObject metadata = null;
-                        foreach (var column in columns)
-                        {
-                            if (string.IsNullOrEmpty(column))
-                                continue;
+		                for (int index = 0; index < columns.Length; index++)
+		                {
+			                var column = columns[index];
+			                if (string.IsNullOrEmpty(column))
+				                continue;
 
-                            if (string.Equals("id", column, StringComparison.OrdinalIgnoreCase))
-                            {
-                                id = record[column];
-                            }
-                            else if (string.Equals(Constants.RavenEntityName, column, StringComparison.OrdinalIgnoreCase))
-                            {
-                                metadata = metadata ?? new RavenJObject();
-                                metadata[Constants.RavenEntityName] = record[column];
-                                id = id ?? record[column] + "/";
-                            }
-                            else if (string.Equals(Constants.RavenClrType, column, StringComparison.OrdinalIgnoreCase))
-                            {
-                                metadata = metadata ?? new RavenJObject();
-                                metadata[Constants.RavenClrType] = record[column];
-                                id = id ?? record[column] + "/";
-                            }
-                            else
-                            {
-                                document[column] = SetValueInDocument(record[column]);
-                            }
-                        }
+			                if (string.Equals("id", column, StringComparison.OrdinalIgnoreCase))
+			                {
+								id = record[index];
+			                }
+			                else if (string.Equals(Constants.RavenEntityName, column, StringComparison.OrdinalIgnoreCase))
+			                {
+				                metadata = metadata ?? new RavenJObject();
+								metadata[Constants.RavenEntityName] = record[index];
+								id = id ?? record[index] + "/";
+			                }
+			                else if (string.Equals(Constants.RavenClrType, column, StringComparison.OrdinalIgnoreCase))
+			                {
+				                metadata = metadata ?? new RavenJObject();
+								metadata[Constants.RavenClrType] = record[index];
+								id = id ?? record[index] + "/";
+			                }
+			                else
+			                {
+								document[column] = SetValueInDocument(record[index]);
+			                }
+		                }
 
-                        metadata = metadata ?? new RavenJObject { { "Raven-Entity-Name", entity } };
+		                metadata = metadata ?? new RavenJObject { { "Raven-Entity-Name", entity } };
                         document.Add("@metadata", metadata);
                         metadata.Add("@id", id ?? Guid.NewGuid().ToString());
 

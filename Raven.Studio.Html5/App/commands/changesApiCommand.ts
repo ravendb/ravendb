@@ -14,7 +14,7 @@ class changesApiCommand extends commandBase {
         super();
     }
 
-    execute() {
+    execute(): JQueryPromise<any> {
      /* if (!window.EventSource) {
         console.log('EventStore is not available');
         return;

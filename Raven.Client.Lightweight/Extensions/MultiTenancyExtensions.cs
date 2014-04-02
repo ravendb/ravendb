@@ -72,35 +72,6 @@ namespace Raven.Client.Extensions
 
 #endif
 
-        ///<summary>
-        /// Ensures that the database exists, creating it if needed
-        ///</summary>
-        public static async Task EnsureDatabaseExistsAsync(this IAsyncGlobalAdminDatabaseCommands self, string name, bool ignoreFailures = false)
-        {
-            var serverClient = ((IAsyncDatabaseCommands)self).ForSystemDatabase() as AsyncServerClient;
-            if (serverClient == null)
-                throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
-
-            var doc = MultiDatabase.CreateDatabaseDocument(name);
-
-            serverClient.ForceReadFromMaster();
-
-            var get = await serverClient.GetAsync(doc.Id).ConfigureAwait(false);
-            if (get != null)
-                return;
-
-            try
-            {
-                await serverClient.GlobalAdmin.CreateDatabaseAsync(doc).ConfigureAwait(false);
-            }
-            catch (Exception)
-            {
-                if (ignoreFailures == false)
-                    throw;
-            }
-            await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention()).ConfigureAwait(false);
-        }
-
         [Obsolete("The method was moved to be under the Admin property. Use the store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists instead.")]
         public static Task EnsureDatabaseExists(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)
         {

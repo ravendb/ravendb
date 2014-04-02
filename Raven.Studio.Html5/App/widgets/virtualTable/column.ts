@@ -1,12 +1,12 @@
 class column {
 
     width = ko.observable(0);
-    name: string; // prop name
-    title: string; // title (human readable text)
+    binding: string; 
+    header: string;
 
-    constructor(name: string, width: number, title?: string) {
-        this.name = name;
-        this.title = title || name;
+    constructor(binding: string, width: number, header?: string) {
+        this.binding = binding;
+        this.header = header || binding;
         this.width(width);
     }
 }

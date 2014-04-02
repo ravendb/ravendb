@@ -10,6 +10,7 @@ class row {
     collectionClass = ko.observable("");
     editUrl = ko.observable("");
     isChecked = ko.observable(false);
+    static documentMatchRegexp = /\w+\/\w+/ig;
 
     constructor(addIdCell: boolean, public viewModel: viewModel) {
         if (addIdCell) {
@@ -84,14 +85,15 @@ class row {
             return cell.checkboxTemplate;
         }
         else if (!!data) {
-            if (!!data[propertyName] && typeof data[propertyName] == "string" && data[propertyName].indexOf('/')>0  ||
-                typeof data == "string" && data.indexOf('/') >0) {
+            if (!!data[propertyName] && typeof data[propertyName] == "string" && row.documentMatchRegexp.test(data[propertyName])  ||
+                typeof data == "string" && row.documentMatchRegexp.test(data[propertyName])) {
                 return cell.externalIdTemplate;
             }
         }
 
-        var customProps = this.viewModel.settings.customColumnParams[propertyName];
-        if (customProps && customProps.template) {
+        var colParam = this.viewModel.settings.customColumns().findConfigFor(propertyName);
+        // note: we just inform here about custom template - without specific name of this template.
+        if (colParam && colParam.template() !== cell.defaultTemplate) {
             return cell.customTemplate;
         }
 
