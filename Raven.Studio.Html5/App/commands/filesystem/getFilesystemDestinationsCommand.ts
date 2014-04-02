@@ -1,6 +1,6 @@
 ﻿import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
-import getFilesystemConfigurationByKeyCommand = require("commands/filesystem/getFilesystemConfigurationByKeyCommand");
+import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
 
 class getFilesystemDestinationsCommand extends commandBase {
 
@@ -10,7 +10,7 @@ class getFilesystemDestinationsCommand extends commandBase {
 
     execute(): JQueryPromise<any> {
 
-        var command = new getFilesystemConfigurationByKeyCommand(this.fs, "Raven/Synchronization/Destinations");
+        var command = new getConfigurationByKeyCommand(this.fs, "Raven/Synchronization/Destinations");
         return command.execute();
     }
 }

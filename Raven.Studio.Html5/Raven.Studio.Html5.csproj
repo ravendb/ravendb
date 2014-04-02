@@ -32,7 +32,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\downloadFileFromFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesystemConfigurationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemConfigurationByKeyCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getConfigurationByKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesystemDestinationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesystemFilesCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesystemsCommand.ts" />
@@ -96,6 +96,7 @@
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\configurationKey.ts" />
     <TypeScriptCompile Include="App\models\filesystem\filesystem.ts" />
     <TypeScriptCompile Include="App\models\filesystem\filesystemCollection.ts" />
     <TypeScriptCompile Include="App\models\file.ts" />
@@ -117,7 +118,7 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\createFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemEditFile.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemAddDestination.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemConfiguration.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\configuration.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemFiles.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystems.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemSearch.ts" />
@@ -204,7 +205,9 @@
     <TypeScriptCompile Include="App\viewmodels\selectColumns.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
-    <Content Include="App\views\filesystemEditFile.html" />
+    <Content Include="App\views\filesystem\filesystemSearch.html" />
+    <Content Include="App\views\filesystem\filesystemSynchronization.html" />
+    <Content Include="App\views\filesystem\filesystemEditFile.html" />
     <Content Include="App\views\selectColumns.html" />
     <TypeScriptCompile Include="App\viewmodels\patch.ts" />
     <Content Include="App\views\alerts.html" />
@@ -213,14 +216,14 @@
     <Content Include="App\views\createEncryption.html" />
     <Content Include="App\views\conflicts.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
-    <Content Include="App\views\filesystemAddDestination.html" />
-    <Content Include="App\views\filesystemConfiguration.html" />
-    <Content Include="App\views\filesystemFiles.html" />
-    <Content Include="App\views\createFilesystem.html" />
-    <Content Include="App\views\filesystems.html" />
+    <Content Include="App\views\filesystem\filesystemAddDestination.html" />
+    <Content Include="App\views\filesystem\configuration.html" />
+    <Content Include="App\views\filesystem\filesystemFiles.html" />
+    <Content Include="App\views\filesystem\createFilesystem.html" />
+    <Content Include="App\views\filesystem\filesystems.html" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
-    <Content Include="App\views\filesystemUploadFile.html" />
+    <Content Include="App\views\filesystem\filesystemUploadFile.html" />
     <Content Include="App\views\scriptedIndexes.html" />
     <Content Include="App\views\resetIndexConfirm.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />

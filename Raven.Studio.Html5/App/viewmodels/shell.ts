@@ -79,13 +79,13 @@ class shell extends viewModelBase {
             { route: 'databases/settings*details', title: 'Settings', moduleId: 'viewmodels/settings', nav: true, hash: this.appUrls.settings },
             { route: 'databases/status*details', title: 'Status', moduleId: 'viewmodels/status', nav: true, hash: this.appUrls.status },
             { route: 'databases/edit', title: 'Edit Document', moduleId: 'viewmodels/editDocument', nav: false },
-            { route: ['', 'filesystems'], title: 'File Systems', moduleId: 'viewmodels/filesystems', nav: true, hash: this.appUrls.filesystemsManagement },
-            { route: 'filesystems/files', title: 'Files', moduleId: 'viewmodels/filesystemFiles', nav: true, hash: this.appUrls.filesystemFiles },
-            { route: 'filesystems/search', title: 'Search', moduleId: 'viewmodels/filesystemSearch', nav: true, hash: this.appUrls.filesystemSearch },
-            { route: 'filesystems/synchronization', title: 'Synchronization', moduleId: 'viewmodels/filesystemSynchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
-            { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystemConfiguration', nav: true, hash: this.appUrls.filesystemConfiguration },
-            { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystemUploadFile', nav: false },
-            { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystemEditFile', nav: false },
+            { route: ['', 'filesystems'], title: 'File Systems', moduleId: 'viewmodels/filesystem/filesystems', nav: true, hash: this.appUrls.filesystemsManagement },
+            { route: 'filesystems/files', title: 'Files', moduleId: 'viewmodels/filesystem/filesystemFiles', nav: true, hash: this.appUrls.filesystemFiles },
+            { route: 'filesystems/search', title: 'Search', moduleId: 'viewmodels/filesystem/filesystemSearch', nav: true, hash: this.appUrls.filesystemSearch },
+            { route: 'filesystems/synchronization', title: 'Synchronization', moduleId: 'viewmodels/filesystem/filesystemSynchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
+            { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
+            { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
+            { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
         ]).buildNavigationModel();
 
         router.activeInstruction.subscribe(val => {

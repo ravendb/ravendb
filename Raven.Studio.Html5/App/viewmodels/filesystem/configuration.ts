@@ -10,9 +10,9 @@ import filesystem = require("models/filesystem/filesystem");
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import getFilesystemConfigurationCommand = require("commands/filesystem/getFilesystemConfigurationCommand");
-import getFilesystemConfigurationByKeyCommand = require("commands/filesystem/getFilesystemConfigurationByKeyCommand");
+import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
 
-class filesystemConfiguration extends viewModelBase {
+class configuration extends viewModelBase {
 
     private router = router;
 
@@ -68,7 +68,7 @@ class filesystemConfiguration extends viewModelBase {
 
     loadEditorWithKey(fs: filesystem, key: string) { 
         if (key != null) {
-            new getFilesystemConfigurationByKeyCommand(this.activeFilesystem(), key)
+            new getConfigurationByKeyCommand(this.activeFilesystem(), key)
                 .execute()
                 .done(x => this.handleDocument(x))
                 .fail(x => this.navigate(appUrl.forFilesystemConfiguration(fs)));
@@ -83,7 +83,7 @@ class filesystemConfiguration extends viewModelBase {
     }
 
     getKeyDetailsGrid(): virtualTable {
-        var gridContents = $(filesystemConfiguration.gridSelector).children()[0];
+        var gridContents = $(configuration.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);
         }
@@ -109,4 +109,4 @@ class filesystemConfiguration extends viewModelBase {
     }
 } 
 
-export = filesystemConfiguration;
+export = configuration;

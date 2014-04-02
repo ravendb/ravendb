@@ -5,7 +5,7 @@ import appUrl = require("common/appUrl");
 
 import viewModelBase = require("viewmodels/viewModelBase");
 
-import getFilesystemConfigurationByKeyCommand = require("commands/filesystem/getFilesystemConfigurationByKeyCommand");
+import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
 import saveFilesystemDestinationCommand = require("commands/filesystem/saveFilesystemDestinationCommand");
 
 
@@ -22,7 +22,7 @@ class filesystemSynchronization extends viewModelBase {
     }
 
     addDestination() {
-        require(["viewmodels/filesystemAddDestination"], filesystemAddDestination => {
+        require(["viewmodels/filesystem/filesystemAddDestination"], filesystemAddDestination => {
             var addDestinationViewModel: filesystemAddDestination = new filesystemAddDestination(this.destinations);
             addDestinationViewModel
                 .creationTask
