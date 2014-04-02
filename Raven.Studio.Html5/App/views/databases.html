@@ -18,7 +18,7 @@
                     <span class="input-group-addon"><i class="fa fa-search"></i></span>
                 </div>
             </form>
-            <button type="button" class="btn btn-danger" data-bind="click: deleteSelectedDatabase, visible: selectedDatabase() != null" title="Delete selected database"><i class="fa fa-trash-o"></i></button>
+            <button type="button" class="btn btn-danger pull-right" data-bind="click: deleteSelectedDatabase, enable: selectedDatabase() != null" title="Delete selected database"><i class="fa fa-trash-o"></i></button>
         </div>
         <br />
         <div class="databases-container" data-bind="foreach: databases">
