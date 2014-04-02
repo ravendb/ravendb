@@ -362,11 +362,7 @@ namespace Raven.Bundles.Replication.Tasks
 							if (destinationsReplicationInformationForSource == null)
 								return false;
 
-							scope.Record(new RavenJObject
-								{
-									{ "LastDocumentEtag", destinationsReplicationInformationForSource.LastDocumentEtag.ToString() },
-									{ "LastAttachmentEtag", destinationsReplicationInformationForSource.LastAttachmentEtag.ToString() }
-								});
+							scope.Record(RavenJObject.FromObject(destinationsReplicationInformationForSource));
 						}
 						catch (Exception e)
 						{
