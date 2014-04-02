@@ -230,6 +230,7 @@
     <Compile Include="Justin.cs" />
     <Compile Include="kendaleiv.cs" />
     <Compile Include="Kushnir.cs" />
+    <Compile Include="LargeQuery.cs" />
     <Compile Include="Lars.cs" />
     <Compile Include="LastModifiedMetadataTest.cs" />
     <Compile Include="LateBoundValue.cs" />
