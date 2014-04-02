@@ -263,6 +263,9 @@
     <Compile Include="IndexMerging\SimpleIndexMerging.cs" />
     <Compile Include="Embedded\EmbeddedTests.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
+    <Compile Include="Issues\RavenDb1962.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Bugs\CanPatchADocumentThatContainsBytes.cs" />
     <Compile Include="Bugs\DefaultOperatorTest.cs" />
     <Compile Include="Bugs\DyanmicId.cs" />
