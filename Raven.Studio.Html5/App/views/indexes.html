@@ -91,7 +91,13 @@
                                         <small class="text-muted" data-bind="bsTooltip:{placement:'right'},text: ' - ' + docsCount + ' docs'" title="The number of documents affected by this index"></small>
                                     </h4>
                                     <div class="pull-right index-actions-container">
-                                        <div class="btn-group">
+                                        <button class="btn btn-danger" title="Delete the index" data-bind="bsTooltip:{placement:'bottom'},click: $root.deleteIndex.bind($root)">
+                                            <i class="fa fa-trash-o"></i>
+                                        </button>
+                                        <button class="btn btn-danger indexes-controls" title="Reset the index" data-bind="bsTooltip:{placement:'bottom'},click: $root.resetIndex.bind($root)">
+                                            <i class="fa fa-refresh"></i>
+                                        </button>
+                                        <div class="btn-group indexes-controls">
                                             <label class="btn btn-default" data-bind="bsTooltip:{placement:'left'},click: $root.unlockIndex.bind($root, $data), css: { active: lockMode() === 'Unlock' }" title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes().">
                                                 <i class="fa fa-unlock"></i>
                                                 Unlocked
@@ -106,18 +112,12 @@
                                             </label>
                                         </div>
                                         <!--
-                                        COMMENTED OUT: In 3.0, this doesn't seem to do anything. Is it because the index creation and saving has changed?
+                                            COMMENTED OUT: In 3.0, this doesn't seem to do anything. Is it because the index creation and saving has changed?
 
-                                        <button class="btn btn-default btn-warning" title="Make index persistent" data-bind="click: $root.makeIndexPersistent.bind($root, $data), visible: isOnRam() !== 'false'">
-                                        <i class="fa fa-download"></i>
-                                    </button>-->
-                                        <button class="btn btn-danger" title="Delete the index" data-bind="bsTooltip:{placement:'bottom'},click: $root.deleteIndex.bind($root)">
-                                            <i class="fa fa-trash-o"></i>
-                                        </button>
-                                        <button class="btn btn-danger" title="Reset the index" data-bind="bsTooltip:{placement:'bottom'},click: $root.resetIndex.bind($root)">
-                                            <i class="fa fa-refresh"></i>
-                                        </button>
-                                        <a class="btn btn-primary" title="Edit the index" data-bind="bsTooltip:{placement:'bottom'},attr: { href: editUrl }">
+                                            <button class="btn btn-default btn-warning" title="Make index persistent" data-bind="click: $root.makeIndexPersistent.bind($root, $data), visible: isOnRam() !== 'false'">
+                                                <i class="fa fa-download"></i>
+                                            </button>-->
+                                        <a class="btn btn-primary indexes-controls" title="Edit the index" data-bind="bsTooltip:{placement:'bottom'},attr: { href: editUrl }">
                                             <i class="fa fa-pencil"></i>
                                         </a>
                                     </div>

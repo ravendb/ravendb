@@ -40,7 +40,9 @@ class editDocument extends viewModelBase {
     documentMatchRegexp = /\w+\/\w+/ig;
 
     static editDocSelector = "#editDocumentContainer";
-    static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string>}>();
+    static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
+
+    private lodaedDocumentName : string;
 
     constructor() {
         super();
@@ -132,6 +134,8 @@ class editDocument extends viewModelBase {
         } else {
             this.editNewDocument();
         }
+
+        this.lodaedDocumentName = this.userSpecifiedId();
     }
 
     // Called when the view is attached to the DOM.
@@ -196,14 +200,20 @@ class editDocument extends viewModelBase {
     }
 
     saveDocument() {
-        var updatedDto = JSON.parse(this.documentText());
+        //the name of the document was changed and we have to save it as a new one
         var meta = JSON.parse(this.metadataText());
+        var currentDocumentId = this.userSpecifiedId();
+        if (this.lodaedDocumentName && this.lodaedDocumentName != currentDocumentId) {
+            this.isCreatingNewDocument(true);
+        }
+
+        var updatedDto = JSON.parse(this.documentText());
         updatedDto['@metadata'] = meta;
 
         // Fix up the metadata: if we're a new doc, attach the expected reserved properties like ID, ETag, and RavenEntityName.
         // AFAICT, Raven requires these reserved meta properties in order for the doc to be seen as a member of a collection.
         if (this.isCreatingNewDocument()) {
-            this.attachReservedMetaProperties(this.userSpecifiedId(), meta);
+            this.attachReservedMetaProperties(currentDocumentId, meta);
         } else {
             // If we're editing a document, we hide some reserved properties from the user.
             // Restore these before we save.
@@ -211,12 +221,13 @@ class editDocument extends viewModelBase {
         }
 
         var newDoc = new document(updatedDto);
-        var saveCommand = new saveDocumentCommand(this.userSpecifiedId(), newDoc, appUrl.getDatabase());
+        var saveCommand = new saveDocumentCommand(currentDocumentId, newDoc, appUrl.getDatabase());
         var saveTask = saveCommand.execute();
         saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
             // Resync Changes
             viewModelBase.dirtyFlag().reset();
 
+            this.lodaedDocumentName = currentDocumentId;
             this.isCreatingNewDocument(false);
             this.loadDocument(idAndEtag.Key);
             this.updateUrl(idAndEtag.Key);

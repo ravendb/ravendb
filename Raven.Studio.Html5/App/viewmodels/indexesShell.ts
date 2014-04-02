@@ -8,6 +8,8 @@ class indexesShell extends viewModelBase {
     currentBreadcrumbTitle: KnockoutComputed<string>;
     indexesUrl = appUrl.forCurrentDatabase().indexes;
     appUrls: computedAppUrls;
+    isIndexNameVisible = ko.observable(false);
+    indexName = ko.observable();
 
     constructor() {
         super();
@@ -31,6 +33,13 @@ class indexesShell extends viewModelBase {
 
             return activeRoute != null ? activeRoute.title : "";
         });
+    }
+
+    activate(indexName?) {
+        if (indexName != null) {
+            this.indexName(indexName);
+            this.isIndexNameVisible(true);
+        }
     }
 }
 
