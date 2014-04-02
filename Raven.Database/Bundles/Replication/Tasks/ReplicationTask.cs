@@ -362,11 +362,7 @@ namespace Raven.Bundles.Replication.Tasks
 							if (destinationsReplicationInformationForSource == null)
 								return false;
 
-							scope.Record(new RavenJObject
-								{
-									{ "LastDocumentEtag", destinationsReplicationInformationForSource.LastDocumentEtag.ToString() },
-									{ "LastAttachmentEtag", destinationsReplicationInformationForSource.LastAttachmentEtag.ToString() }
-								});
+							scope.Record(RavenJObject.FromObject(destinationsReplicationInformationForSource));
 						}
 						catch (Exception e)
 						{
@@ -963,7 +959,8 @@ namespace Raven.Bundles.Replication.Tasks
 				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl() +
 						  "&currentEtag=" + currentEtag + "&dbid=" + docDb.TransactionalStorage.Id;
 				var request = httpRavenRequestFactory.Create(url, "GET", destination.ConnectionStringOptions);
-				return request.ExecuteRequest<SourceReplicationInformation>();
+			    var lastReplicatedEtagFrom = request.ExecuteRequest<SourceReplicationInformation>();
+			    return lastReplicatedEtagFrom;
 			}
 			catch (WebException e)
 			{
