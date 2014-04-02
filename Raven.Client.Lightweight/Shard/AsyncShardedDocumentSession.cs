@@ -662,7 +662,7 @@ namespace Raven.Client.Shard
 			return Conventions.GenerateDocumentKeyAsync(dbName, value, entity);
 		}
 
-	    public Task<ResponseTimeInformation> ExecuteAllPendingLazyOperations()
+	    public Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync()
 	    {
 	        throw new NotImplementedException();
 	    }
