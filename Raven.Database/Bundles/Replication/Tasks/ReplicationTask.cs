@@ -458,7 +458,14 @@ namespace Raven.Bundles.Replication.Tasks
 						    || documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments > SystemDocsLimitForRemoteEtagUpdate
 						    || documentsToReplicate.CountOfFilteredDocumentsWhichOriginFromDestination > DestinationDocsLimitForRemoteEtagUpdate) // see RavenDB-1555
 						{
-							SetLastReplicatedEtagForServer(destination, lastDocEtag: documentsToReplicate.LastEtag);
+							using (scope.StartRecording("Notify"))
+							{
+								SetLastReplicatedEtagForServer(destination, lastDocEtag: documentsToReplicate.LastEtag);
+								scope.Record(new RavenJObject
+								             {
+									             { "LastDocEtag", documentsToReplicate.LastEtag.ToString() }
+								             });
+							}
 						}
 					}
 					RecordLastEtagChecked(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag);
@@ -469,14 +476,14 @@ namespace Raven.Bundles.Replication.Tasks
 			using (var scope = recorder.StartRecording("Send"))
 			{
 				string lastError;
-				if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError) == false)// failed to replicate, start error handling strategy
+				if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError) == false) // failed to replicate, start error handling strategy
 				{
 					if (IsFirstFailure(destination.ConnectionStringOptions.Url))
 					{
 						log.Info(
 							"This is the first failure for {0}, assuming transient failure and trying again",
 							destination);
-						if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError))// success on second fail
+						if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError)) // success on second fail
 						{
 							RecordSuccess(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
 							return true;
@@ -1139,7 +1146,8 @@ namespace Raven.Bundles.Replication.Tasks
 			records = new RavenJArray();
 			record = new RavenJObject
 			         {
-				         { "Url", destination.ConnectionStringOptions.Url }, 
+				         { "Url", destination.ConnectionStringOptions.Url },
+						 { "StartTime", SystemTime.UtcNow},
 						 { "Records", records }
 			         };
 		}
@@ -1149,7 +1157,11 @@ namespace Raven.Bundles.Replication.Tasks
 			record.Add("TotalExecutionTime", watch.Elapsed.ToString());
 
 			var stats = destinationStats.GetOrDefault(destination.ConnectionStringOptions.Url, new DestinationStats { Url = destination.ConnectionStringOptions.Url });
-			stats.LastStats = record;
+
+			stats.LastStats.Insert(0, record);
+
+			while (stats.LastStats.Length > 50)
+				stats.LastStats.RemoveAt(stats.LastStats.Length - 1);
 		}
 
 		public ReplicationStatisticsRecorderScope StartRecording(string name)
