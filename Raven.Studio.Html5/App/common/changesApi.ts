@@ -11,7 +11,6 @@ class changesApi {
 
     private eventsId: string;
     source: EventSource;
-    private dbUrl: string;
 
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
     private commandBase = new commandBase();
@@ -23,11 +22,9 @@ class changesApi {
 
     private connect() {
         if (!!window.EventSource) {
+            var dbUrl = appUrl.forDatabaseQuery(this.db);
 
-            // TODO appUrl.forDatabaseQuery(this.db)
-            var dbUrl = "http://marcin-win:8081/databases/sample";
-            this.dbUrl = dbUrl;
-            //TODO: delete me
+            console.log("Connecting to changes API (db = " + this.db.name + ")");
 
             this.source = new EventSource(dbUrl + '/changes/events?id=' + this.eventsId);
             this.source.onmessage = (e) => this.onEvent(e);
@@ -86,7 +83,8 @@ class changesApi {
     
     dispose() {
         if (this.source) {
-            //TODO: send diconnect command!
+            console.log("Disconnecting from changes API");
+            this.send('disconnect');
             this.source.close();
         }
     }
