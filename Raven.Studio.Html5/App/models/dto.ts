@@ -24,6 +24,11 @@ interface documentChangeNotificationDto {
     Message: string;
 }
 
+interface indexChangeNotificationDto {
+    Type: string;
+    Name: string;
+    Etag: string;
+}
 
 interface documentMetadataDto {
     'Raven-Entity-Name'?: string;

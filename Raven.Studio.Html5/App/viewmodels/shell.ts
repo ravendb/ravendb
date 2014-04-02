@@ -43,8 +43,8 @@ class shell extends viewModelBase {
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();    
 
-    globalChangesApi: changesApi;
-    currentDbChangesApi = ko.observable<changesApi>(null);
+    static globalChangesApi: changesApi;
+    static currentDbChangesApi = ko.observable<changesApi>(null);
 
     constructor() {
         super();
@@ -97,7 +97,7 @@ class shell extends viewModelBase {
             trigger: 'hover'
         });
 
-        this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -222,10 +222,10 @@ class shell extends viewModelBase {
     }
 
     updateChangesApi(newDb: database) {
-        if (this.currentDbChangesApi()) {
-            this.currentDbChangesApi().dispose();
+        if (shell.currentDbChangesApi()) {
+            shell.currentDbChangesApi().dispose();
         }
-        this.currentDbChangesApi(new changesApi(newDb));
+        shell.currentDbChangesApi(new changesApi(newDb));
     }
 
     modelPolling() {

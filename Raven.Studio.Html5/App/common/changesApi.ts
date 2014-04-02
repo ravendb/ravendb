@@ -13,6 +13,7 @@ class changesApi {
     source: EventSource;
 
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
+    private allIndexesHandlers = ko.observableArray<changesCallback<indexChangeNotificationDto>>();
     private commandBase = new commandBase();
 
     constructor(private db: database) {
@@ -29,7 +30,7 @@ class changesApi {
             this.source = new EventSource(dbUrl + '/changes/events?id=' + this.eventsId);
             this.source.onmessage = (e) => this.onEvent(e);
             this.source.onerror = (e) => this.onError(e);
-            
+
         } else {
             console.log("EventSource is not supported");
         }
@@ -51,19 +52,38 @@ class changesApi {
         this.commandBase.reportError('Changes stream was disconnected. Retrying connection shortly.');
     }
 
+    private fireEvents<T>(events: Array<any>, param: T) {
+        for (var i = 0; i < events.length; i++) {
+            events[i].fire(param);
+        }
+    }
+
     private onEvent(e) {
         var json = JSON.parse(e.data);
         var type = json.Type;
         if (type === "Heartbeat") {
             // ignore 
         } else if (type === "DocumentChangeNotification") {
-            var handlers = this.allDocsHandlers();
-            for (var i = 0; i < handlers.length; i++) {
-                handlers[i].fire(json.Value);
-            }
+            this.fireEvents(this.allDocsHandlers(), json.Value);
+        } else if (type === "IndexChangeNotification") {
+            this.fireEvents(this.allIndexesHandlers(), json.Value);
         } else {
             console.log("Unhandled notification type: " + type);
         }
+    }
+
+    watchAllIndexes(onChange: (e: indexChangeNotificationDto) => void) {
+        var callback = new changesCallback<indexChangeNotificationDto>(onChange);
+        if (this.allIndexesHandlers().length == 0) {
+            this.send('watch-indexes');
+        }
+        this.allIndexesHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allIndexesHandlers.remove(callback);
+            if (this.allIndexesHandlers().length == 0) {
+                this.send('unwatch-indexes');
+            }
+        });
     }
 
     watchAllDocs(onChange: (e: documentChangeNotificationDto) => void) {
