@@ -5,11 +5,11 @@ import appUrl = require("common/appUrl");
 
 import viewModelBase = require("viewmodels/viewModelBase");
 
-import getFilesystemConfigurationByKeyCommand = require("commands/getFilesystemConfigurationByKeyCommand");
-import saveFilesystemDestinationCommand = require("commands/saveFilesystemDestinationCommand");
+import getFilesystemConfigurationByKeyCommand = require("commands/filesystem/getFilesystemConfigurationByKeyCommand");
+import saveFilesystemDestinationCommand = require("commands/filesystem/saveFilesystemDestinationCommand");
 
 
-import filesystemAddDestination = require("viewmodels/filesystemAddDestination");
+import filesystemAddDestination = require("viewmodels/filesystem/filesystemAddDestination");
 
 class filesystemSynchronization extends viewModelBase {
 

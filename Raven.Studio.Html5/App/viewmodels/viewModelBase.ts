@@ -1,6 +1,6 @@
 import appUrl = require("common/appUrl");
 import database = require("models/database");
-import filesystem = require("models/filesystem");
+import filesystem = require("models/filesystem/filesystem");
 import router = require("plugins/router");
 import app = require("durandal/app");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");

@@ -6,7 +6,7 @@ import app = require("durandal/app");
 import sys = require("durandal/system");
 
 import database = require("models/database");
-import filesystem = require("models/filesystem");
+import filesystem = require("models/filesystem/filesystem");
 import document = require("models/document");
 import appUrl = require("common/appUrl");
 import collection = require("models/collection");
@@ -17,7 +17,7 @@ import alertType = require("common/alertType");
 import pagedList = require("common/pagedList");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
-import getFilesystemsCommand = require("commands/getFilesystemsCommand");
+import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
 import getBuildVersionCommand = require("commands/getBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");

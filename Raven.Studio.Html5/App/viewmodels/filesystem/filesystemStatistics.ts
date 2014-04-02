@@ -1,6 +1,6 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import getFilesystemStatsCommand = require("commands/getFilesystemStatsCommand");
-import filesystem = require("models/filesystem");
+import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
+import filesystem = require("models/filesystem/filesystem");
 import moment = require("moment");
 
 class filesystemStatistics extends viewModelBase {

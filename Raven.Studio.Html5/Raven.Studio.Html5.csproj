@@ -24,32 +24,32 @@
     <TypeScriptCompile Include="App\commands\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\createFilesystemCommand.ts" />
-    <TypeScriptCompile Include="App\commands\saveFilesystemDestinationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\createFilesystemFolderCommand.ts" />
-    <TypeScriptCompile Include="App\commands\deleteFilesystemConfigurationKeyCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\saveFilesystemDestinationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\createFilesystemFolderCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\deleteFilesystemConfigurationKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
-    <TypeScriptCompile Include="App\commands\downloadFileFromFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\downloadFileFromFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getFilesystemConfigurationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getFilesystemConfigurationByKeyCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getFilesystemDestinationsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getFilesystemFilesCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getFilesystemsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getFilesystemStatsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getFilesystemSynchronizationStatusCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemConfigurationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemConfigurationByKeyCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemDestinationsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemFilesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemStatsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemSynchronizationStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\exportDatabaseCommand.ts" />
-    <TypeScriptCompile Include="App\commands\saveFilesystemConfigurationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\saveFilesystemConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryFacetsCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveTransformerCommand.ts" />
-    <TypeScriptCompile Include="App\commands\searchFilesystemByQueryCommand.ts" />
-    <TypeScriptCompile Include="App\commands\searchFilesystemByTermCommand.ts" />
-    <TypeScriptCompile Include="App\commands\searchFilesystemConfigurationByPrefixCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\searchFilesystemByQueryCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\searchFilesystemByTermCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\searchFilesystemConfigurationByPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\startRestoreCommand.ts" />
     <TypeScriptCompile Include="App\commands\startIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\backupDatabaseCommand.ts" />
@@ -90,19 +90,18 @@
     <TypeScriptCompile Include="App\commands\saveIndexAsPersistentCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexLockModeCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexDefinitionCommand.ts" />
-    <TypeScriptCompile Include="App\commands\uploadFileToFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
-    <TypeScriptCompile Include="App\models\filesystemCollection.ts" />
-    <TypeScriptCompile Include="App\models\filesystemConfigurationKeyCollection.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\filesystem.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\filesystemCollection.ts" />
     <TypeScriptCompile Include="App\models\file.ts" />
     <TypeScriptCompile Include="App\models\fileMetadata.ts" />
-    <TypeScriptCompile Include="App\models\filesystemDto.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\filesystemDto.ts" />
     <TypeScriptCompile Include="App\models\facet.ts" />
-    <TypeScriptCompile Include="App\models\filesystem.ts" />
     <TypeScriptCompile Include="App\models\index.ts" />
     <TypeScriptCompile Include="App\models\indexDefinition.ts" />
     <TypeScriptCompile Include="App\models\indexPriority.ts" />
@@ -115,16 +114,16 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
-    <TypeScriptCompile Include="App\viewmodels\createFilesystem.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystemEditFile.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystemAddDestination.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystemConfiguration.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystemFiles.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystems.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystemSearch.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystemStatistics.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystemSynchronization.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystemUploadFile.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\createFilesystem.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemEditFile.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemAddDestination.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemConfiguration.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemFiles.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystems.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemSearch.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemStatistics.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemSynchronization.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemUploadFile.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\backupDatabase.ts" />
@@ -923,7 +922,9 @@
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
-    <Content Include="web.config" />
+    <Content Include="web.config">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="Scripts\ace\mode\xquery\JSONiqTokenizer.ebnf" />
     <Content Include="Scripts\ace\mode\xquery\Readme.md" />
     <Content Include="Scripts\ace\mode\xquery\XQueryParser.ebnf" />
@@ -1140,6 +1141,7 @@
     <Content Include="Scripts\jquery-2.1.0.min.map" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
+      <SubType>Designer</SubType>
     </None>
     <None Include="web.Release.config">
       <DependentUpon>web.config</DependentUpon>
@@ -1217,6 +1219,7 @@
   <ItemGroup>
     <TypeScriptCompile Include="Scripts\typings\es6shim\es6shim.d.ts" />
   </ItemGroup>
+  <ItemGroup />
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>

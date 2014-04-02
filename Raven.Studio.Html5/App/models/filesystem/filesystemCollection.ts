@@ -1,6 +1,6 @@
 ﻿import pagedList = require("common/pagedList");
 import pagedResultSet = require("common/pagedResultSet");
-import filesystem = require("models/filesystem");
+import filesystem = require("models/filesystem/filesystem");
 
 class filesystemCollection{
 

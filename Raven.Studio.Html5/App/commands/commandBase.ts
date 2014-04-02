@@ -1,7 +1,7 @@
 import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
 import database = require("models/database");
-import filesystem = require("models/filesystem");
+import filesystem = require("models/filesystem/filesystem");
 import resource = require("models/resource");
 import appUrl = require("common/appUrl");
 

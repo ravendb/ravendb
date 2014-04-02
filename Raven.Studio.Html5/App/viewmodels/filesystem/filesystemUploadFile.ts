@@ -1,8 +1,8 @@
 ﻿import system = require("durandal/system");
 import router = require("plugins/router"); 
 import appUrl = require("common/appUrl");
-import uploadFileToFilesystemCommand = require("commands/uploadFileToFilesystemCommand");
-import filesystem = require("models/filesystem");
+import uploadFileToFilesystemCommand = require("commands/filesystem/uploadFileToFilesystemCommand");
+import filesystem = require("models/filesystem/filesystem");
 import uploadItem = require("models/uploadItem");
 import viewModelBase = require("viewmodels/viewModelBase");
 

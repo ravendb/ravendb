@@ -4,12 +4,12 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
 import databases = require("viewmodels/databases");
-import filesystem = require("models/filesystem");
-import getFilesystemsCommand = require("commands/getFilesystemsCommand");
-import getFilesystemStatsCommand = require("commands/getFilesystemStatsCommand");
+import filesystem = require("models/filesystem/filesystem");
+import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
+import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 
-import createFilesystem = require("viewmodels/createFilesystem");
+import createFilesystem = require("viewmodels/filesystem/createFilesystem");
 import createFilesystemCommand = require("commands/createFilesystemCommand");
 
 

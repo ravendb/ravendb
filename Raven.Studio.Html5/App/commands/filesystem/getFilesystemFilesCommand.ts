@@ -1,6 +1,6 @@
 ﻿import commandBase = require("commands/commandBase");
 import file = require("models/file");
-import filesystem = require("models/filesystem");
+import filesystem = require("models/filesystem/filesystem");
 import pagedResultSet = require("common/pagedResultSet");
 
 class getFilesystemFilesCommand extends commandBase {

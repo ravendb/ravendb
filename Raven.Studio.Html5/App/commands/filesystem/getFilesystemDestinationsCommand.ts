@@ -1,6 +1,6 @@
 ﻿import commandBase = require("commands/commandBase");
-import filesystem = require("models/filesystem");
-import getFilesystemConfigurationByKeyCommand = require("commands/getFilesystemConfigurationByKeyCommand");
+import filesystem = require("models/filesystem/filesystem");
+import getFilesystemConfigurationByKeyCommand = require("commands/filesystem/getFilesystemConfigurationByKeyCommand");
 
 class getFilesystemDestinationsCommand extends commandBase {
 

@@ -5,12 +5,12 @@ import appUrl = require("common/appUrl");
 import ace = require("ace/ace");
 
 import pagedList = require("common/pagedList");
-import filesystem = require("models/filesystem");
+import filesystem = require("models/filesystem/filesystem");
 //import collection = require("models/filesystemConfigurationKeyCollection");
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
-import getFilesystemConfigurationCommand = require("commands/getFilesystemConfigurationCommand");
-import getFilesystemConfigurationByKeyCommand = require("commands/getFilesystemConfigurationByKeyCommand");
+import getFilesystemConfigurationCommand = require("commands/filesystem/getFilesystemConfigurationCommand");
+import getFilesystemConfigurationByKeyCommand = require("commands/filesystem/getFilesystemConfigurationByKeyCommand");
 
 class filesystemConfiguration extends viewModelBase {
 
