@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Extensions;

@@ -12,6 +12,7 @@ using Raven.Server;
 using Raven.Tests.Issues;
 using Raven.Tests.Notifications;
 using Raven.Tests.Storage;
+using Xunit;
 
 namespace Raven.Tryouts
 {
@@ -19,12 +20,19 @@ namespace Raven.Tryouts
 	{
 		private unsafe static void Main(string[] args)
 		{
-			for (int i = 0; i < 100*10; i++)
+			for (int i = 0; i < 10; i++)
 			{
 				Console.Write("\r"+i);
-				using (var x = new RavenDB_1010())
+				using (var x = new DatabaseReloadingTests())
 				{
-					x.Ordering_By_TimeSpan_Property();
+					try
+					{
+						x.Should_save_put_to_tenant_database_if_tenant_database_is_reloaded_before_the_put_transaction();
+					}
+					catch (SkipException e)
+					{
+						Console.WriteLine(e.Message);
+					}
 				}
 			}
 
