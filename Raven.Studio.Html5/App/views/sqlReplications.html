@@ -21,7 +21,7 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Name</label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" data-bind="value: name, valueUpdate: 'afterkeydown', attr: { placeholder: 'New SQL Replication ' + $root.itemNumber($index()) }" />
+                                <input required type="text" class="form-control" data-bind="value: name, valueUpdate: 'keyup', attr: { placeholder: 'New SQL Replication ' + $root.itemNumber($index()) }" />
                             </div>
                         </div>
                         <div class="form-group">
@@ -49,13 +49,13 @@
                                 <select class="form-control" data-bind="options: availableConnectionStringTypes, optionsText: 'label', optionsValue: 'value', value: connectionStringType"></select>
                             </div>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" data-bind="value: connectionStringValue" />
+                                <input required type="text" class="form-control" data-bind="value: connectionStringValue" />
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Source Document Collection</label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" data-bind="value: ravenEntityName" />
+                                <input required type="text" class="form-control" data-bind="value: ravenEntityName, valueUpdate: 'keyup'" />
                             </div>
                         </div>
                         <div class="form-group">
@@ -73,12 +73,12 @@
                                         <tr>
                                             <td>
                                                 <div>
-                                                    <input type="text" class="form-control" data-bind="value: tableName" />
+                                                    <input type="text" class="form-control" data-bind="value: tableName, valueUpdate: 'keyup'" />
                                                 </div>
                                             </td>
                                             <td>
                                                 <div>
-                                                    <input type="text" class="form-control" data-bind="value: documentKeyColumn" />
+                                                    <input type="text" class="form-control" data-bind="value: documentKeyColumn, valueUpdate: 'keyup'" />
                                                 </div>
                                             </td>
                                             <td><button type="button" style="display:inline-block;" class="close" data-bind="click: $parent.removeTable.bind($parent)" title="Remove this table">×</button></td>
