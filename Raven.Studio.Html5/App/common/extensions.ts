@@ -21,6 +21,18 @@ interface Function {
     memoize(thisArg: any): Function;
 }
 
+interface Window {
+    EventSource: EventSource;
+}
+
+declare class EventSource {
+    constructor(string);
+    close();
+    onerror: (event: any) => void;
+    onmessage: (event: any) => void;
+}
+
+
 var subscribableFn: any = ko.subscribable.fn;
 var observableArrayFn: any = ko.observableArray.fn;
 
