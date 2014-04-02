@@ -333,38 +333,57 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				if (docDb.Disposed)
 					return false;
+
 				using (docDb.DisableAllTriggersForCurrentThread())
+				using (var stats = new ReplicationStatisticsRecorder(destination, destinationStats))
 				{
 					SourceReplicationInformation destinationsReplicationInformationForSource;
-					try
+					using (var scope = stats.StartRecording("Destination"))
 					{
-						destinationsReplicationInformationForSource = GetLastReplicatedEtagFrom(destination);
-						if (destinationsReplicationInformationForSource == null)
+						try
+						{
+							destinationsReplicationInformationForSource = GetLastReplicatedEtagFrom(destination);
+							if (destinationsReplicationInformationForSource == null)
+								return false;
+
+							scope.Record(new RavenJObject
+								{
+									{ "LastDocumentEtag", destinationsReplicationInformationForSource.LastDocumentEtag.ToString() },
+									{ "LastAttachmentEtag", destinationsReplicationInformationForSource.LastAttachmentEtag.ToString() }
+								});
+						}
+						catch (Exception e)
+						{
+							scope.RecordError(e);
+							log.WarnException("Failed to replicate to: " + destination, e);
 							return false;
-					}
-					catch (Exception e)
-					{
-						log.WarnException("Failed to replicate to: " + destination, e);
-						return false;
+						}
 					}
 
 					bool? replicated = null;
-					switch (ReplicateDocuments(destination, destinationsReplicationInformationForSource))
+
+					using (var scope = stats.StartRecording("Documents"))
 					{
-						case true:
-							replicated = true;
-							break;
-						case false:
-							return false;
+						switch (ReplicateDocuments(destination, destinationsReplicationInformationForSource, scope))
+						{
+							case true:
+								replicated = true;
+								break;
+							case false:
+								return false;
+						}
 					}
 
-					switch (ReplicateAttachments(destination, destinationsReplicationInformationForSource))
+					using (var scope = stats.StartRecording("Attachments"))
 					{
-						case true:
-							replicated = true;
-							break;
-						case false:
-							return false;
+						switch (ReplicateAttachments(destination, destinationsReplicationInformationForSource, scope))
+						{
+							case true:
+								replicated = true;
+								break;
+							case false:
+								return false;
+						}
 					}
 
 					return replicated ?? false;
@@ -377,81 +396,99 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		private bool? ReplicateAttachments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource)
+		private bool? ReplicateAttachments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder)
 		{
-			var tuple = GetAttachments(destinationsReplicationInformationForSource, destination);
-			var attachments = tuple.Item1;
+			Tuple<RavenJArray, Etag> tuple;
+			RavenJArray attachments;
 
-			if (attachments == null || attachments.Length == 0)
+			using (var scope = recorder.StartRecording("Get"))
 			{
-				if (tuple.Item2 != destinationsReplicationInformationForSource.LastAttachmentEtag)
+				tuple = GetAttachments(destinationsReplicationInformationForSource, destination, scope);
+				attachments = tuple.Item1;
+
+				if (attachments == null || attachments.Length == 0)
 				{
-					SetLastReplicatedEtagForServer(destination, lastAttachmentEtag: tuple.Item2);
-				}
-				return null;
-			}
-			string lastError;
-			if (TryReplicationAttachments(destination, attachments, out lastError) == false)// failed to replicate, start error handling strategy
-			{
-				if (IsFirstFailure(destination.ConnectionStringOptions.Url))
-				{
-					log.Info(
-						"This is the first failure for {0}, assuming transient failure and trying again",
-						destination);
-					if (TryReplicationAttachments(destination, attachments, out lastError))// success on second fail
+					if (tuple.Item2 != destinationsReplicationInformationForSource.LastAttachmentEtag)
 					{
-						RecordSuccess(destination.ConnectionStringOptions.Url, lastReplicatedEtag: tuple.Item2);
-						return true;
+						SetLastReplicatedEtagForServer(destination, lastAttachmentEtag: tuple.Item2);
 					}
+					return null;
 				}
-				RecordFailure(destination.ConnectionStringOptions.Url, lastError);
-				return false;
 			}
+
+			using (var scope = recorder.StartRecording("Send"))
+			{
+				string lastError;
+				if (TryReplicationAttachments(destination, attachments, out lastError) == false) // failed to replicate, start error handling strategy
+				{
+					if (IsFirstFailure(destination.ConnectionStringOptions.Url))
+					{
+						log.Info("This is the first failure for {0}, assuming transient failure and trying again", destination);
+						if (TryReplicationAttachments(destination, attachments, out lastError)) // success on second fail
+						{
+							RecordSuccess(destination.ConnectionStringOptions.Url, lastReplicatedEtag: tuple.Item2);
+							return true;
+						}
+					}
+
+					scope.RecordError(lastError);
+					RecordFailure(destination.ConnectionStringOptions.Url, lastError);
+					return false;
+				}
+			}
+
 			RecordSuccess(destination.ConnectionStringOptions.Url,
 				lastReplicatedEtag: tuple.Item2);
 
 			return true;
 		}
 
-		private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource)
+		private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder)
 		{
-			var documentsToReplicate = GetJsonDocuments(destinationsReplicationInformationForSource, destination);
-			if (documentsToReplicate.Documents == null || documentsToReplicate.Documents.Length == 0)
+			JsonDocumentsToReplicate documentsToReplicate;
+			using (var scope = recorder.StartRecording("Get"))
 			{
-				if (documentsToReplicate.LastEtag != destinationsReplicationInformationForSource.LastDocumentEtag)
+				documentsToReplicate = GetJsonDocuments(destinationsReplicationInformationForSource, destination, scope);
+				if (documentsToReplicate.Documents == null || documentsToReplicate.Documents.Length == 0)
 				{
-					// we don't notify remote server about updates to system docs, see: RavenDB-715
-					if (documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments == 0 ||
-						documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments > SystemDocsLimitForRemoteEtagUpdate  ||
-						documentsToReplicate.CountOfFilteredDocumentsWhichOriginFromDestination > DestinationDocsLimitForRemoteEtagUpdate) // see RavenDB-1555
+					if (documentsToReplicate.LastEtag != destinationsReplicationInformationForSource.LastDocumentEtag)
 					{
-						SetLastReplicatedEtagForServer(destination, lastDocEtag: documentsToReplicate.LastEtag);
+						// we don't notify remote server about updates to system docs, see: RavenDB-715
+						if (documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments == 0
+						    || documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments > SystemDocsLimitForRemoteEtagUpdate
+						    || documentsToReplicate.CountOfFilteredDocumentsWhichOriginFromDestination > DestinationDocsLimitForRemoteEtagUpdate) // see RavenDB-1555
+						{
+							SetLastReplicatedEtagForServer(destination, lastDocEtag: documentsToReplicate.LastEtag);
+						}
 					}
+					RecordLastEtagChecked(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag);
+					return null;
 				}
-				RecordLastEtagChecked(destination.ConnectionStringOptions.Url,
-					documentsToReplicate.LastEtag);
-				return null;
 			}
-			string lastError;
-			if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError) == false)// failed to replicate, start error handling strategy
+
+			using (var scope = recorder.StartRecording("Send"))
 			{
-				if (IsFirstFailure(destination.ConnectionStringOptions.Url))
+				string lastError;
+				if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError) == false)// failed to replicate, start error handling strategy
 				{
-					log.Info(
-						"This is the first failure for {0}, assuming transient failure and trying again",
-						destination);
-					if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError))// success on second fail
+					if (IsFirstFailure(destination.ConnectionStringOptions.Url))
 					{
-						RecordSuccess(destination.ConnectionStringOptions.Url,
-							documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
-						return true;
+						log.Info(
+							"This is the first failure for {0}, assuming transient failure and trying again",
+							destination);
+						if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError))// success on second fail
+						{
+							RecordSuccess(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
+							return true;
+						}
 					}
+					scope.RecordError(lastError);
+					RecordFailure(destination.ConnectionStringOptions.Url, lastError);
+					return false;
 				}
-				RecordFailure(destination.ConnectionStringOptions.Url, lastError);
-				return false;
 			}
-			RecordSuccess(destination.ConnectionStringOptions.Url,
-				documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
+
+			RecordSuccess(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
 			return true;
 		}
 
@@ -657,7 +694,7 @@ namespace Raven.Bundles.Replication.Tasks
 			public int CountOfFilteredDocumentsWhichOriginFromDestination { get; set; }
 		}
 
-		private JsonDocumentsToReplicate GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination)
+		private JsonDocumentsToReplicate GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
 		{
 			var result = new JsonDocumentsToReplicate();
 			try
@@ -738,6 +775,14 @@ namespace Raven.Bundles.Replication.Tasks
 											 lastEtag);
 					});
 
+					scope.Record(new RavenJObject
+					             {
+						             {"StartEtag", lastEtag.ToString()},
+									 {"EndEtag", result.LastEtag.ToString()},
+									 {"Count", docsSinceLastReplEtag},
+									 {"FilteredCount", filteredDocsToReplicate.Count}
+					             });
+
 					result.Documents = new RavenJArray(filteredDocsToReplicate
 														.Select(x =>
 														{
@@ -749,6 +794,7 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 			catch (Exception e)
 			{
+				scope.RecordError(e);
 				log.WarnException("Could not get documents to replicate after: " + destinationsReplicationInformationForSource.LastDocumentEtag, e);
 			}
 			return result;
@@ -775,7 +821,7 @@ namespace Raven.Bundles.Replication.Tasks
 		}
 
 
-		private Tuple<RavenJArray, Etag> GetAttachments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination)
+		private Tuple<RavenJArray, Etag> GetAttachments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
 		{
 			RavenJArray attachments = null;
 			Etag lastAttachmentEtag = Etag.Empty;
@@ -788,7 +834,8 @@ namespace Raven.Bundles.Replication.Tasks
 					int attachmentSinceLastEtag = 0;
 					List<AttachmentInformation> attachmentsToReplicate;
 					List<AttachmentInformation> filteredAttachmentsToReplicate;
-					lastAttachmentEtag = destinationsReplicationInformationForSource.LastAttachmentEtag;
+					var startEtag = destinationsReplicationInformationForSource.LastAttachmentEtag;
+					lastAttachmentEtag = startEtag;
 					while (true)
 					{
 						attachmentsToReplicate = GetAttachmentsToReplicate(actions, lastAttachmentEtag);
@@ -829,6 +876,14 @@ namespace Raven.Bundles.Replication.Tasks
 											 string.Join(", ", diff),
 											 destinationsReplicationInformationForSource.LastDocumentEtag);
 					});
+
+					scope.Record(new RavenJObject
+					             {
+						             {"StartEtag", startEtag.ToString()},
+									 {"EndEtag", lastAttachmentEtag.ToString()},
+									 {"Count", attachmentSinceLastEtag},
+									 {"FilteredCount", filteredAttachmentsToReplicate.Count}
+					             });
 
 					attachments = new RavenJArray(filteredAttachmentsToReplicate
 													  .Select(x =>
@@ -1062,5 +1117,103 @@ namespace Raven.Bundles.Replication.Tasks
 			prefetchingBehavior.Dispose();
 		}
 		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+	}
+
+	internal class ReplicationStatisticsRecorder : IDisposable
+	{
+		private readonly ReplicationStrategy destination;
+
+		private readonly ConcurrentDictionary<string, DestinationStats> destinationStats;
+
+		private readonly RavenJObject record;
+
+		private readonly RavenJArray records;
+
+		private readonly Stopwatch watch;
+
+		public ReplicationStatisticsRecorder(ReplicationStrategy destination, ConcurrentDictionary<string, DestinationStats> destinationStats)
+		{
+			this.destination = destination;
+			this.destinationStats = destinationStats;
+			watch = Stopwatch.StartNew();
+			records = new RavenJArray();
+			record = new RavenJObject
+			         {
+				         { "Url", destination.ConnectionStringOptions.Url }, 
+						 { "Records", records }
+			         };
+		}
+
+		public void Dispose()
+		{
+			record.Add("TotalExecutionTime", watch.Elapsed.ToString());
+
+			var stats = destinationStats.GetOrDefault(destination.ConnectionStringOptions.Url, new DestinationStats { Url = destination.ConnectionStringOptions.Url });
+			stats.LastStats = record;
+		}
+
+		public ReplicationStatisticsRecorderScope StartRecording(string name)
+		{
+			var scopeRecord = new RavenJObject();
+			records.Add(scopeRecord);
+			return new ReplicationStatisticsRecorderScope(name, scopeRecord);
+		}
+
+		internal class ReplicationStatisticsRecorderScope : IDisposable
+		{
+			private readonly RavenJObject record;
+
+			private readonly RavenJArray records;
+
+			private readonly Stopwatch watch;
+
+			public ReplicationStatisticsRecorderScope(string name, RavenJObject record)
+			{
+				this.record = record;
+				records = new RavenJArray();
+
+				record.Add("Name", name);
+				record.Add("Records", records);
+
+				watch = Stopwatch.StartNew();
+			}
+
+			public void Dispose()
+			{
+				record.Add("ExecutionTime", watch.Elapsed.ToString());
+			}
+
+			public void Record(RavenJObject value)
+			{
+				records.Add(value);
+			}
+
+			public void RecordError(Exception exception)
+			{
+				records.Add(new RavenJObject
+				            {
+					            { "Error", new RavenJObject
+					                       {
+						                       { "Type", exception.GetType().Name }, 
+											   { "Message", exception.Message }
+					                       } }
+				            });
+			}
+
+			public void RecordError(string error)
+			{
+				records.Add(new RavenJObject
+				            {
+					            { "Error", error }
+				            });
+			}
+
+			public ReplicationStatisticsRecorderScope StartRecording(string name)
+			{
+				var scopeRecord = new RavenJObject();
+				records.Add(scopeRecord);
+				return new ReplicationStatisticsRecorderScope(name, scopeRecord);
+			}
+		}
 	}
 }
