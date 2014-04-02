@@ -72,7 +72,7 @@ namespace Raven.Tests.MailingList
 				                                     			},
 				                                     		}
 				                                     	}
-				                                     }, allowStale: false);
+				                                     }, allowStale: false).WaitForCompletion();
 
 				var document = store.DatabaseCommands.Get("patrons/1");
 
