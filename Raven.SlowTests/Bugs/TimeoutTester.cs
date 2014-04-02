@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
@@ -43,11 +43,11 @@ namespace Raven.SlowTests.Bugs
 					Assert.NotNull(answerInfo);
 					answerId = answerInfo.Id;
 				}
-				List<Thread> threads = new List<Thread>();
+				List<Task> tasks = new List<Task>();
 				object locker = new object();
 				for (int k = 0; k < 100; k++)
 				{
-					var thread = new Thread(() =>
+					var thread = Task.Factory.StartNew(() =>
 					{
 						lock (locker)
 						{
@@ -74,15 +74,11 @@ namespace Raven.SlowTests.Bugs
 								session.SaveChanges();
 							}
 						}
-					});
-					threads.Add(thread);
-					thread.Start();
+					},TaskCreationOptions.LongRunning);
+					tasks.Add(thread);
 				}
 
-				foreach (var thread in threads)
-				{
-					thread.Join();
-				}
+				Task.WaitAll(tasks.ToArray());
 			}
 		}
 
