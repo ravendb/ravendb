@@ -92,7 +92,7 @@ namespace Raven.Client.Document.Batches
 			var multiLoadResult = new MultiLoadResult
 			{
 				Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-				Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
+				Results = result.Value<RavenJArray>("Results").Select(x=>x as RavenJObject).ToList()
 			};
 			HandleResponse(multiLoadResult);
 		}
