@@ -479,7 +479,12 @@ namespace Raven.Database.Config
 					return Math.Min(maxNumberOfParallelIndexTasks ?? MemoryStatistics.MaxParallelism, MemoryStatistics.MaxParallelism);
 				return maxNumberOfParallelIndexTasks ?? Environment.ProcessorCount;
 			}
-			set { maxNumberOfParallelIndexTasks = value; }
+			set
+			{
+				if (value == 0)
+					throw new ArgumentException("You cannot set the number of parallel tasks to zero");
+				maxNumberOfParallelIndexTasks = value;
+			}
 		}
 
 		/// <summary>
