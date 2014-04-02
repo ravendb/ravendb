@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Raven.Tests.Core
+namespace Raven.Tests.Core.Utils.Entities
 {
 	public class Company
 	{
