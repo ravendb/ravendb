@@ -40,11 +40,6 @@ body {
     margin-bottom: 0;
   }
 }
-@media (max-device-height: 2000px) {
-  a {
-    padding: 10px!important;
-  }
-}
 @media (max-device-height: 1024px) {
   span {
     font-size: 12px!important;
