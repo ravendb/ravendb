@@ -18,47 +18,56 @@ namespace Raven.Tryouts
 	{
 		private unsafe static void Main(string[] args)
 		{
-			var server = new RavenDbServer(new RavenConfiguration
+			for (int i = 0; i < 100*10; i++)
 			{
-				Port = 8080
-			})
-			{
-				UseEmbeddedHttpServer = true,
-				RunInMemory = true,
-			};
+				Console.Write("\r"+i);
+				using (var x = new Indexes())
+				{
+					x.CanRecordAttempts();
+				}
+			}
 
-			server.Initialize();
-			var oneClient = new RavenFileSystemClient("http://localhost:8080", "one");
-			oneClient.Admin.CreateFileSystemAsync(new DatabaseDocument
-			{
-				Settings = {{"Raven/FileSystem/DataDir", "~/fs/one"}}
-			}, "one").Wait();
-			oneClient.Admin.CreateFileSystemAsync(new DatabaseDocument
-			{
-				Settings = {{"Raven/FileSystem/DataDir", "~/fs/two"}}
-			}, "two").Wait();
+			//var server = new RavenDbServer(new RavenConfiguration
+			//{
+			//	Port = 8080
+			//})
+			//{
+			//	UseEmbeddedHttpServer = true,
+			//	RunInMemory = true,
+			//};
+
+			//server.Initialize();
+			//var oneClient = new RavenFileSystemClient("http://localhost:8080", "one");
+			//oneClient.Admin.CreateFileSystemAsync(new DatabaseDocument
+			//{
+			//	Settings = {{"Raven/FileSystem/DataDir", "~/fs/one"}}
+			//}, "one").Wait();
+			//oneClient.Admin.CreateFileSystemAsync(new DatabaseDocument
+			//{
+			//	Settings = {{"Raven/FileSystem/DataDir", "~/fs/two"}}
+			//}, "two").Wait();
 
 
-			var twoClient = new RavenFileSystemClient("http://localhost:8080", "two");
+			//var twoClient = new RavenFileSystemClient("http://localhost:8080", "two");
 
-			oneClient.Config.SetDestinationsConfig(new SynchronizationDestination
-			{
-				FileSystem = "two",
-				ServerUrl = "http://localhost:8080"
-			}).Wait();
+			//oneClient.Config.SetDestinationsConfig(new SynchronizationDestination
+			//{
+			//	FileSystem = "two",
+			//	ServerUrl = "http://localhost:8080"
+			//}).Wait();
 
-			oneClient.UploadAsync("test.bin",
-				new NameValueCollection {{"test", "foo"}},
-				new MemoryStream())
-				.Wait();
+			//oneClient.UploadAsync("test.bin",
+			//	new NameValueCollection {{"test", "foo"}},
+			//	new MemoryStream())
+			//	.Wait();
 
-			oneClient.Synchronization.StartAsync("test.bin", twoClient);
+			//oneClient.Synchronization.StartAsync("test.bin", twoClient);
 
-			Console.WriteLine("Ready...");
+			//Console.WriteLine("Ready...");
 
-			Console.ReadLine();
+			//Console.ReadLine();
 
-			server.Dispose();
+			//server.Dispose();
 		}
 	}
 
