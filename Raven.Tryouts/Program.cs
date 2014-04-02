@@ -9,6 +9,7 @@ using Raven.Client.RavenFS;
 using Raven.Client.RavenFS.Extensions;
 using Raven.Database.Config;
 using Raven.Server;
+using Raven.Tests.Issues;
 using Raven.Tests.Notifications;
 using Raven.Tests.Storage;
 
@@ -21,9 +22,9 @@ namespace Raven.Tryouts
 			for (int i = 0; i < 100*10; i++)
 			{
 				Console.Write("\r"+i);
-				using (var x = new Indexes())
+				using (var x = new RavenDB_1010())
 				{
-					x.CanRecordAttempts();
+					x.Ordering_By_TimeSpan_Property();
 				}
 			}
 

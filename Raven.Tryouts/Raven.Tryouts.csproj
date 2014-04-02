@@ -208,6 +208,10 @@
       <Project>{381234CC-8AA7-41FF-8CAD-22330E15F993}</Project>
       <Name>Raven.Tests.Common</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Issues\Raven.Tests.Issues.csproj">
+      <Project>{D8BDD718-6E21-41B7-9C41-D0FBE0532DF4}</Project>
+      <Name>Raven.Tests.Issues</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
       <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>
       <Name>Raven.Tests</Name>
