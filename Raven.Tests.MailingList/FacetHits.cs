@@ -2,6 +2,7 @@
 using System.Linq;
 using Lucene.Net.Support;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
@@ -39,6 +40,8 @@ namespace Raven.Tests.MailingList
 					      Price = product.Price.Amount
 
 				      };
+
+                Sort(x=>x.Price, SortOptions.Float);
 			}
 		}
 
