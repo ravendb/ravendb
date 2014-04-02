@@ -20,7 +20,6 @@ namespace Raven.Tests.Issues
     using Raven.Database.Extensions;
     using Raven.Imports.Newtonsoft.Json;
     using Raven.Json.Linq;
-    using Raven.Tests.Bundles.Replication;
 
     using Xunit;
 
