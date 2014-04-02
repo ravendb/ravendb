@@ -432,5 +432,22 @@ namespace Raven.Setup.CustomActions
 			}
 			
 		}
+
+		[CustomAction]
+		public static ActionResult SetLoadUserProfile(Session session)
+		{
+			try
+			{
+				iisManager.SetLoadUserProfile(session["WEB_APP_POOL_NAME"]);
+
+				return ActionResult.Success;
+			}
+			catch (Exception ex)
+			{
+				Log.Error(session, "Error occurred during DisallowOverlappingRotation. Exception: " + ex);
+				return ActionResult.Failure;
+			}
+
+		}
 	}
 }
