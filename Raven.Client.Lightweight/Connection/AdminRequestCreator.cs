@@ -76,7 +76,7 @@ namespace Raven.Client.Connection
 
 		public HttpJsonRequest CreateRestoreRequest()
 		{
-			return createRequest("/admin/restore", "POST");
+			return createRequestForSystemDatabase("/admin/restore", "POST");
 		}
 
 		public HttpJsonRequest IndexingStatus(string serverUrl)
