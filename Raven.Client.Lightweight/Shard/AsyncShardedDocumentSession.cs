@@ -12,6 +12,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Client.Document.Async;
+using Raven.Client.Document.Batches;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
@@ -54,7 +55,70 @@ namespace Raven.Client.Shard
 
 		#region Load and Include
 
-		public Task<T> LoadAsync<T>(string id)
+	    public Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(string id)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public Lazy<Task<TResult>> LoadAsync<TResult>(string id, Action<TResult> onEval)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(ValueType id)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public Lazy<Task<TResult>> LoadAsync<TResult>(ValueType id, Action<TResult> onEval)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(params ValueType[] ids)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<ValueType> ids)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<ValueType> ids, Action<TResult[]> onEval)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(params string[] ids)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public IAsyncLazySessionOperations Lazily { get; private set; }
+	    public IAsyncEagerSessionOperations Eagerly { get; private set; }
+
+	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public Lazy<Task<TResult[]>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public Task<T> LoadAsync<T>(string id)
 		{
 			object existingEntity;
 			if (entitiesByKey.TryGetValue(id, out existingEntity))
@@ -110,7 +174,22 @@ namespace Raven.Client.Shard
 			});
 		}
 
-		public Task<T[]> LoadAsync<T>(params string[] ids)
+	    IAsyncLazyLoaderWithInclude<TResult> IAsyncLazySessionOperations.Include<TResult>(Expression<Func<TResult, object>> path)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(params string[] ids)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<string> ids)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public Task<T[]> LoadAsync<T>(params string[] ids)
 		{
 			return LoadAsyncInternal<T>(ids);
 		}
@@ -324,12 +403,22 @@ namespace Raven.Client.Shard
 			return results;
 		}
 
-		public IAsyncLoaderWithInclude<object> Include(string path)
+	    public Lazy<Task<T[]>> LazyAsyncLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public IAsyncLoaderWithInclude<object> Include(string path)
 		{
 			return new AsyncMultiLoaderWithInclude<object>(this).Include(path);
 		}
 
-		public IAsyncLoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
+	    IAsyncLazyLoaderWithInclude<object> IAsyncLazySessionOperations.Include(string path)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public IAsyncLoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
 		{
 			return new AsyncMultiLoaderWithInclude<T>(this).Include(path);
 		}
@@ -572,5 +661,10 @@ namespace Raven.Client.Shard
 				throw new InvalidOperationException("Could not find shard: " + shardId);
 			return Conventions.GenerateDocumentKeyAsync(dbName, value, entity);
 		}
+
+	    public Task<ResponseTimeInformation> ExecuteAllPendingLazyOperations()
+	    {
+	        throw new NotImplementedException();
+	    }
 	}
 }

@@ -32,9 +32,7 @@ namespace Raven.Client.Document
     public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
                                    ISyncAdvancedSessionOperation, IDocumentQueryGenerator
     {
-        private readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
-        private readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
-
+ 
         /// <summary>
         /// Gets the database commands.
         /// </summary>
@@ -343,25 +341,7 @@ namespace Raven.Client.Document
             return new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
         }
 
-        internal object ProjectionToInstance(RavenJObject y, Type type)
-        {
-            HandleInternalMetadata(y);
-            foreach (var conversionListener in theListeners.ExtendedConversionListeners)
-            {
-                conversionListener.BeforeConversionToEntity(null, y, null);
-            }
-            var instance = y.Deserialize(type, Conventions);
-            foreach (var conversionListener in theListeners.ConversionListeners)
-            {
-                conversionListener.DocumentToEntity(null, instance, y, null);
-            }
-            foreach (var conversionListener in theListeners.ExtendedConversionListeners)
-            {
-                conversionListener.AfterConversionToEntity(null, y, null, instance);
-            }
-            return instance;
-        }
-
+      
 
         public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
         {

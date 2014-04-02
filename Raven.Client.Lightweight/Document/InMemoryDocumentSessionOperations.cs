@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
+using Raven.Client.Document.Batches;
 #if !NETFX_CORE
 using System.Transactions;
 #endif
@@ -34,6 +35,9 @@ namespace Raven.Client.Document
     /// </summary>
     public abstract class InMemoryDocumentSessionOperations : IDisposable
     {
+        protected readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
+        protected readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
+
         private static int counter;
 
         private readonly int hash = Interlocked.Increment(ref counter);
@@ -1331,8 +1335,9 @@ more responsive application.
             return items;
         }
 
-        private object ProjectionToInstance(RavenJObject y, Type type)
+        internal object ProjectionToInstance(RavenJObject y, Type type)
         {
+            HandleInternalMetadata(y);
             foreach (var conversionListener in theListeners.ExtendedConversionListeners)
             {
                 conversionListener.BeforeConversionToEntity(null, y, null);
@@ -1348,10 +1353,13 @@ more responsive application.
             }
             return instance;
         }
-
+        
         public void TrackIncludedDocumnet(JsonDocument include)
         {
             includedDocumentsByKey[include.Key] = include;
         }
+
+
+      
     }
 }

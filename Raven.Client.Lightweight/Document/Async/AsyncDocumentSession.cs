@@ -19,6 +19,9 @@ using Raven.Client.Linq;
 using Raven.Client.Indexes;
 using Raven.Client.Util;
 using Raven.Json.Linq;
+using Raven.Client.Document.Batches;
+using Raven.Client.WinRT.MissingFromWinRT;
+using System.Diagnostics;
 
 namespace Raven.Client.Document.Async
 {
@@ -48,6 +51,296 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		/// <value>The async database commands.</value>
 		public IAsyncDatabaseCommands AsyncDatabaseCommands { get; private set; }
+        /// <summary>
+        /// Access the lazy operations
+        /// </summary>
+        public IAsyncLazySessionOperations Lazily
+        {
+            get { return this; }
+        }
+
+        /// <summary>
+        /// Access the eager operations
+        /// </summary>
+        public IAsyncEagerSessionOperations Eagerly
+        {
+            get { return this; }
+        }
+        /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
+
+        IAsyncLazyLoaderWithInclude<object> IAsyncLazySessionOperations.Include(string path)
+	    {
+            return new AsyncLazyMultiLoaderWithInclude<object>(this).Include(path);
+	    }
+       
+
+	    /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
+        IAsyncLazyLoaderWithInclude<T> IAsyncLazySessionOperations.Include<T>(Expression<Func<T, object>> path)
+        {
+            return  new AsyncLazyMultiLoaderWithInclude<T>(this).Include(path);
+        }
+
+        /// <summary>
+        /// Loads the specified ids.
+        /// </summary>
+        /// <param name="ids">The ids.</param>
+        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(params string[] ids)
+        {
+            return Lazily.LoadAsync<T>(ids, null);
+        }
+
+        /// <summary>
+        /// Loads the specified ids.
+        /// </summary>
+        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<string> ids)
+        {
+            return Lazily.LoadAsync<T>(ids, null);
+        }
+
+        /// <summary>
+        /// Loads the specified id.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id">The id.</param>
+        /// <returns></returns>
+        Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(string id)
+        {
+            return Lazily.LoadAsync(id, (Action<T>)null);
+        }
+
+        /// <summary>
+        /// Loads the specified ids and a function to call when it is evaluated
+        /// </summary>
+        public Lazy<Task<T[]>> LoadAsync<T>(IEnumerable<string> ids, Action<T[]> onEval)
+        {
+            return LazyLoadInternal(ids.ToArray(), new KeyValuePair<string, Type>[0], onEval);
+        }
+
+	   
+
+	    /// <summary>
+        /// Loads the specified id and a function to call when it is evaluated
+        /// </summary>
+        public Lazy<Task<T>> LoadAsync<T>(string id, Action<T> onEval)
+        {
+            if (IsLoaded(id))
+                 return new Lazy<Task<T>>(() => LoadAsync<T>(id));
+               
+            var lazyLoadOperation = new LazyLoadOperation<T>(id, new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id), handleInternalMetadata: HandleInternalMetadata);
+            return AddLazyOperation(lazyLoadOperation, onEval);
+        }
+
+        /// <summary>
+        /// Loads the specified entities with the specified id after applying
+        /// conventions on the provided id to get the real document id.
+        /// </summary>
+        /// <remarks>
+        /// This method allows you to call:
+        /// Load{Post}(1)
+        /// And that call will internally be translated to 
+        /// Load{Post}("posts/1");
+        /// 
+        /// Or whatever your conventions specify.
+        /// </remarks>
+        Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(ValueType id, Action<T> onEval)
+        {
+            var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
+            return Lazily.LoadAsync(documentKey, onEval);
+        }
+
+        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(params ValueType[] ids)
+        {
+            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+            return Lazily.LoadAsync<T>(documentKeys, null);
+        }
+
+        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<ValueType> ids)
+        {
+            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+            return Lazily.LoadAsync<T>(documentKeys, null);
+        }
+
+        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<ValueType> ids, Action<T[]> onEval)
+        {
+            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+            return LazyLoadInternal(documentKeys.ToArray(), new KeyValuePair<string, Type>[0], onEval);
+        }
+
+        Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id)
+        {
+            var transformer = new TTransformer().TransformerName;
+            var ids = new[] { id };
+            var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(ids, transformer,
+                                                                          new LoadTransformerOperation(this, transformer, ids),
+                                                                          singleResult: true);
+            return AddLazyOperation<TResult>(lazyLoadOperation, null);
+        }
+
+        Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string[] ids)
+        {
+            var transformer = new TTransformer().TransformerName;
+            var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(ids, transformer,
+                                                                          new LoadTransformerOperation(this, transformer, ids),
+                                                                          singleResult: false);
+            return AddLazyOperation<TResult[]>(lazyLoadOperation, null);
+        }
+      
+       
+
+	    
+        public Lazy<Task<TResult[]>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query)
+        {
+            var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, null, null);
+            var lazyOp = new LazyMoreLikeThisOperation<TResult>(multiLoadOperation, query);
+            return AddLazyOperation<TResult[]>(lazyOp, null);
+        }
+
+        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation)
+        {
+            var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation);
+
+            return AddLazyOperation<T[]>(operation, null);
+        }
+	    /// <summary>
+        /// Loads the specified entities with the specified id after applying
+        /// conventions on the provided id to get the real document id.
+        /// </summary>
+        /// <remarks>
+        /// This method allows you to call:
+        /// Load{Post}(1)
+        /// And that call will internally be translated to 
+        /// Load{Post}("posts/1");
+        /// 
+        /// Or whatever your conventions specify.
+        /// </remarks>
+         Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(ValueType id)
+        {
+            return Lazily.LoadAsync(id, (Action<T>)null);
+        }
+
+         internal  Lazy<Task<T>> AddLazyOperation<T>(ILazyOperation operation, Action<T> onEval)
+         {
+             pendingLazyOperations.Add(operation);
+             var lazyValue = new Lazy<Task<T>>(() => ExecuteAllPendingLazyOperations()  
+                 .ContinueWith(t =>
+             {
+                   if(t.Exception != null)
+                        throw new InvalidOperationException("Could not perform add lazy operation", t.Exception);
+
+                    return (T)operation.Result;
+             }));
+
+             if (onEval != null)
+                 onEvaluateLazy[operation] = theResult => onEval((T)theResult);
+
+             return  lazyValue;
+         }
+
+         internal Lazy<Task<int>> AddLazyCountOperation(ILazyOperation operation)
+         {
+             pendingLazyOperations.Add(operation);
+             var lazyValue = new Lazy<Task<int>>(() => ExecuteAllPendingLazyOperations()
+                 .ContinueWith(t =>
+                 {
+                     if(t.Exception != null)
+                         throw new InvalidOperationException("Could not perform lazy count", t.Exception);
+                     return operation.QueryResult.TotalResults;
+                 }));
+
+             return lazyValue;
+         }
+         public async Task<ResponseTimeInformation> ExecuteAllPendingLazyOperations()
+         {
+             if (pendingLazyOperations.Count == 0)
+                 return new ResponseTimeInformation();
+
+             try
+             {
+                 var sw = Stopwatch.StartNew();
+
+                 IncrementRequestCount();
+
+                 var responseTimeDuration = new ResponseTimeInformation();
+
+                 while (await ExecuteLazyOperationsSingleStep(responseTimeDuration))
+                 {
+                     await Task.Delay(100);
+                 }
+
+                 responseTimeDuration.ComputeServerTotal();
+
+
+                 foreach (var pendingLazyOperation in pendingLazyOperations)
+                 {
+                     Action<object> value;
+                     if (onEvaluateLazy.TryGetValue(pendingLazyOperation, out value))
+                         value(pendingLazyOperation.Result);
+                 }
+                 responseTimeDuration.TotalClientDuration = sw.Elapsed;
+                 return responseTimeDuration;
+             }
+             finally
+             {
+                 pendingLazyOperations.Clear();
+             }
+         }
+
+         private async Task<bool> ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation)
+         {
+             var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
+             try
+             {
+                 var requests = pendingLazyOperations.Select(x => x.CreateRequest()).ToArray();
+                 var responses = await AsyncDatabaseCommands.MultiGetAsync(requests);
+
+                 for (int i = 0; i < pendingLazyOperations.Count; i++)
+                 {
+                     long totalTime;
+                     long.TryParse(responses[i].Headers["Temp-Request-Time"], out totalTime);
+
+                     responseTimeInformation.DurationBreakdown.Add(new ResponseTimeItem
+                     {
+                         Url = requests[i].UrlAndQuery,
+                         Duration = TimeSpan.FromMilliseconds(totalTime)
+                     });
+                     if (responses[i].RequestHasErrors())
+                     {
+                         throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
+                                                             Environment.NewLine + responses[i].Result);
+                     }
+                     pendingLazyOperations[i].HandleResponse(responses[i]);
+                     if (pendingLazyOperations[i].RequiresRetry)
+                     {
+                         return true;
+                     }
+                 }
+                 return false;
+             }
+             finally
+             {
+                 foreach (var disposable in disposables)
+                 {
+                     disposable.Dispose();
+                 }
+             }
+         }
+         /// <summary>
+         /// Register to lazily load documents and include
+         /// </summary>
+         public Lazy<Task<T[]>> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
+         {
+             var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
+             var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
+             return AddLazyOperation(lazyOp, onEval);
+         }
+
+
 
 		/// <summary>
 		/// Load documents with the specified key prefix
@@ -522,7 +815,12 @@ namespace Raven.Client.Document.Async
 			return items.ToArray();
 		}
 
-		/// <summary>
+	    public Lazy<Task<T[]>> LazyAsyncLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    /// <summary>
 		/// Begins the async multi load operation
 		/// </summary>
 		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
@@ -543,6 +841,8 @@ namespace Raven.Client.Document.Async
 			} while (multiLoadOperation.SetResult(result));
 			return multiLoadOperation.Complete<T>();
 		}
+
+     
 
 		/// <summary>
 		/// Begins the async save changes operation
@@ -655,5 +955,8 @@ namespace Raven.Client.Document.Async
 		{
 			return Conventions.GenerateDocumentKeyAsync(dbName, AsyncDatabaseCommands, entity);
 		}
+
+	   
+      
 	}
 }
