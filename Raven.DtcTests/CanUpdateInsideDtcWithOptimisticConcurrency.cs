@@ -6,7 +6,7 @@
 using System.Transactions;
 
 using Raven.Tests.Common;
-
+using Raven.Tests.Common.Dto;
 using Xunit;
 
 namespace Raven.Tests.MailingList
@@ -23,7 +23,7 @@ namespace Raven.Tests.MailingList
 				using(var tx = new TransactionScope())
 				using (var s = store.OpenSession())
 				{
-					s.Store(new User { FirstName = "a" }, "Users/test");
+					s.Store(new User { Name = "a" }, "Users/test");
 					s.SaveChanges();
 					tx.Complete();
 				}
@@ -32,7 +32,7 @@ namespace Raven.Tests.MailingList
 				using (var s = store.OpenSession())
 				{
 					s.Advanced.AllowNonAuthoritativeInformation = false;
-					s.Load<User>("Users/test").FirstName = "b";
+					s.Load<User>("Users/test").Name = "b";
 					s.SaveChanges();
 					tx.Complete();
 				}
@@ -41,7 +41,7 @@ namespace Raven.Tests.MailingList
 				using (var s = store.OpenSession())
 				{
 					s.Advanced.AllowNonAuthoritativeInformation = false;
-					Assert.Equal("b", s.Load<User>("Users/test").FirstName);
+					Assert.Equal("b", s.Load<User>("Users/test").Name);
 					tx.Complete();
 				}
 			}

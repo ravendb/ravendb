@@ -1,15 +1,10 @@
-using System;
-using System.Threading;
 using System.Transactions;
-using NLog;
-using NLog.Targets;
 using Raven.Client.Document;
 using Raven.Tests.Common;
+using Raven.Tests.Common.Dto;
 using Raven.Tests.Common.Util;
 
 using Xunit;
-using log4net.Appender;
-using log4net.Layout;
 
 namespace Raven.Tests.Bugs
 {

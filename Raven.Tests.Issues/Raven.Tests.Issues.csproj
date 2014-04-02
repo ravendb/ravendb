@@ -100,7 +100,6 @@
     <Compile Include="BulkInsertClient.cs" />
     <Compile Include="BulkInsertDatabaseUrl.cs" />
     <Compile Include="BulkInsertTests.cs" />
-    <Compile Include="DatabaseReloadingTests.cs" />
     <Compile Include="LongIndexAndTransformerNames.cs" />
     <Compile Include="NestedPropertiesIndex_1182.cs" />
     <Compile Include="RaveDB-1279.cs" />
@@ -203,7 +202,6 @@
     <Compile Include="RavenDB_1557.cs" />
     <Compile Include="RavenDB_1560.cs" />
     <Compile Include="RavenDB_1561.cs" />
-    <Compile Include="RavenDB_1562.cs" />
     <Compile Include="RavenDB_1565.cs" />
     <Compile Include="RavenDB_1595.cs" />
     <Compile Include="RavenDB_1598_MappingComplexProperties.cs" />
@@ -244,10 +242,8 @@
     <Compile Include="RavenDB_483.cs" />
     <Compile Include="RavenDB_505.cs" />
     <Compile Include="RavenDB_514.cs" />
-    <Compile Include="RavenDB_529.cs" />
     <Compile Include="RavenDB_535.cs" />
     <Compile Include="RavenDB_542 .cs" />
-    <Compile Include="RavenDB_551.cs" />
     <Compile Include="RavenDB_554.cs" />
     <Compile Include="RavenDB_556.cs" />
     <Compile Include="RavenDB_576.cs" />
