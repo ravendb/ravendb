@@ -10,7 +10,7 @@ class deleteDocumentsCommand extends executeBulkDocsCommand {
 
     execute(): JQueryPromise<bulkDocumentDto[]> {        
         var docCount = this.docs.length;
-        var alertInfoTitle = docCount === 1 ? "Deleting " + this.docs[0].Key : "Deleting " + docCount + "docs...";
+        var alertInfoTitle = docCount === 1 ? "Deleting " + this.docs[0].Key : "Deleting " + docCount + " docs...";
         this.reportInfo(alertInfoTitle);
 
         var deleteTask = super.execute();
@@ -27,7 +27,7 @@ class deleteDocumentsCommand extends executeBulkDocsCommand {
             Method: "DELETE",
             Etag: null,
             AdditionalData: null
-        }
+        };
     }
 }
 

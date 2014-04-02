@@ -20,11 +20,11 @@ class saveWindowsAuthCommand extends commandBase {
     }
 
     private handleLicenseStatus(licenseStatus: licenseStatusDto) {
-        if (licenseStatus.IsCommercial || licenseStatus.ValidCommercialLicenseSeen) {
+        //if (licenseStatus.IsCommercial || licenseStatus.ValidCommercialLicenseSeen) {
             this.performWithCommercialLicense();
-        } else {
-            this.reportWarning("Cannot setup Windows Authentication without a valid commercial license.");
-        }
+        //} else {
+            //this.reportWarning("Cannot setup Windows Authentication without a valid commercial license.");
+        //}
     }
 
     private performWithCommercialLicense() {

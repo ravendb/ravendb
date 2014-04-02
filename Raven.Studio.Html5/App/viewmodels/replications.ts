@@ -4,7 +4,7 @@ import replicationConfig = require("models/replicationConfig")
 import replicationDestination = require("models/replicationDestination");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getReplicationsCommand = require("commands/getReplicationsCommand");
-import saveReplicationDocument = require("commands/saveReplicationDocument");
+import saveReplicationDocumentCommand = require("commands/saveReplicationDocumentCommand");
 import getAutomaticConflictResolutionDocumentCommand = require("commands/getAutomaticConflictResolutionDocumentCommand");
 import saveAutomaticConflictResolutionDocument = require("commands/saveAutomaticConflictResolutionDocument");
 
@@ -72,7 +72,7 @@ class replications extends viewModelBase {
     private saveReplicationSetup() {
         var db = this.activeDatabase();
         if (db) {
-            new saveReplicationDocument(this.replicationsSetup().toDto(), db).execute();
+            new saveReplicationDocumentCommand(this.replicationsSetup().toDto(), db).execute();
         }
     }
 

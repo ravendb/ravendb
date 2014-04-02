@@ -22,7 +22,7 @@ class viewModelBase {
      * p.s. from Judah: a big scary prompt when loading the system DB is a bit heavy-handed, no? 
      */
     canActivate(args: any): any {
-        var database = appUrl.getDatabase();
+        var database = (appUrl.getDatabase()!=null) ? appUrl.getDatabase() : appUrl.getSystemDatabase(); //TODO: temporary fix for routing problem for system databse - remove this when fixed
 
         if (database.isSystem) {
             if (viewModelBase.isConfirmedUsingSystemDatabase) {
