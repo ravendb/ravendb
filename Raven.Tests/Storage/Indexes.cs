@@ -57,7 +57,7 @@ namespace Raven.Tests.Storage
 			}
 		}
 
-		[Fact]
+		[Fact(Skip = "RavenDB-2025")]
 		public void CanRecordAttempts()
 		{
 			using (var tx = NewTransactionalStorage())
