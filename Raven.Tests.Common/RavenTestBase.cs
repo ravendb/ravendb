@@ -62,7 +62,14 @@ namespace Raven.Tests.Common
 
 		~RavenTestBase()
 		{
-			Dispose();
+		    try
+		    {
+		        Dispose();
+		    }
+		    catch (Exception)
+		    {
+                // nothing that we can do here
+		    }
 		}
 
 		protected string NewDataPath(string prefix = null, bool forceCreateDir = false)
