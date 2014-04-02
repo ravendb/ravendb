@@ -15,7 +15,7 @@ namespace Raven.Tests.Issues
 		private const int Cntr = 5;
 
 		[Fact]
-		public async Task CanDisplayLazyValues()
+		public async Task CanExecuteLazyLoadsInAsyncSession()
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
@@ -36,7 +36,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public async Task CanDisplayLazyRequestTimes_RemoteAndData()
+		public async Task CanExecuteLazyLoadsInAsyncSession_CheckSingleCall()
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
@@ -50,21 +50,11 @@ namespace Raven.Tests.Issues
 					
 					LazyLoadAsync(store, session);
 
-					var requestTimes = await session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
+					var requestTimes = await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync();
+					Assert.Equal(1, session.Advanced.NumberOfRequests); 
 					Assert.NotNull(requestTimes.TotalClientDuration);
 					Assert.NotNull(requestTimes.TotalServerDuration);
 					Assert.Equal(Cntr, requestTimes.DurationBreakdown.Count);
-				}
-
-				using (var ses = store.OpenSession())
-				{
-					var queryRes = ses.Query<User>().Where(x => x.Name.StartsWith("T")).ToList();
-					var i = 1;
-					foreach (var res in queryRes)
-					{
-						Assert.Equal(res.Name, "Test User #" + i);
-						i++;
-					}
 				}
 			}
 		}
