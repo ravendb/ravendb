@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
@@ -27,16 +28,23 @@ namespace Raven.Tests.Core
 			Server = coreTestFixture.Server;
 		}
 
-		protected DocumentStore GetDocumentStore([CallerMemberName] string databaseName = null, string dbSuffixIdentifier = null)
+		protected virtual DocumentStore GetDocumentStore([CallerMemberName] string databaseName = null, string dbSuffixIdentifier = null, 
+			Action<DatabaseDocument> modifyDatabaseDocument = null)
 		{
 			var serverClient = (ServerClient)Server.DocumentStore.DatabaseCommands.ForSystemDatabase();
 
 			serverClient.ForceReadFromMaster();
 
+			if (dbSuffixIdentifier != null)
+				databaseName = string.Format("{0}_{1}", databaseName, dbSuffixIdentifier);
+
 			var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
 
 			if (serverClient.Get(doc.Id) != null)
 				throw new InvalidOperationException(string.Format("Database '{0}' already exists", databaseName));
+
+			if (modifyDatabaseDocument != null)
+				modifyDatabaseDocument(doc);
 
 			serverClient.GlobalAdmin.CreateDatabase(doc);
 
@@ -45,7 +53,7 @@ namespace Raven.Tests.Core
 			var documentStore = new DocumentStore
 			{
 				HttpMessageHandler = Server.DocumentStore.HttpMessageHandler,
-				Url = "http://localhost",
+				Url = Server.SystemDatabase.ServerUrl,
 				DefaultDatabase = databaseName
 			};
 			documentStore.Initialize();

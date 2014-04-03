@@ -5,40 +5,98 @@
 // -----------------------------------------------------------------------
 using System.IO;
 using System.Threading;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Core.Replication
 {
-	public class AttachmentReplication : RavenCoreTestBase
+	public class AttachmentReplication : RavenReplicationCoreTest
 	{
 		[Fact]
-		public void Can_replicate_between_two_instances()
+		public void CanReplicateAttachments()
 		{
-			using (var store1 = GetDocumentStore(dbSuffixIdentifier:"1"))
-			using (var store2 = GetDocumentStore(dbSuffixIdentifier:"2"))
+			using (var source = GetDocumentStore(dbSuffixIdentifier: "1"))
+			using (var destination = GetDocumentStore(dbSuffixIdentifier: "2"))
 			{
-				
+				SetupReplication(source, destinations: destination);
+
+				source.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
+
+				var attachment = WaitForAttachment(destination, "attach/1");
+
+				Assert.NotNull(attachment);
+				Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
+
+				source.DatabaseCommands.PutAttachment("attach/2", null, new MemoryStream(new byte[1024]), new RavenJObject());
+
+				attachment = WaitForAttachment(destination, "attach/2");
+
+				Assert.NotNull(attachment);
+				Assert.Equal(1024, attachment.Data().ReadData().Length);
 			}
-
-			//TellFirstInstanceToReplicateToSecondInstance();
-
-			//store1.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
-
-			//Attachment attachment = null;
-			//for (int i = 0; i < RetriesCount; i++)
-			//{
-			//	attachment = store2.DatabaseCommands.GetAttachment("ayende");
-			//	if (attachment != null)
-			//		break;
-			//	Thread.Sleep(100);
-			//}
-
-			//Assert.NotNull(attachment);
-			//Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
 		}
 
+		[Fact]
+		public void CanReplicateAttachmentDeletion()
+		{
+			using (var source = GetDocumentStore(dbSuffixIdentifier: "1"))
+			using (var destination = GetDocumentStore(dbSuffixIdentifier: "2"))
+			{
+				SetupReplication(source, destinations: destination);
+
+				source.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
+
+				var attachment = WaitForAttachment(destination, "attach/1");
+
+				Assert.NotNull(attachment);
+
+				source.DatabaseCommands.DeleteAttachment("attach/1", null);
+
+				for (int i = 0; i < RetriesCount; i++)
+				{
+					if (destination.DatabaseCommands.GetAttachment("attach/1") == null)
+						break;
+					Thread.Sleep(100);
+				}
+
+				Assert.Null(destination.DatabaseCommands.GetAttachment("attach/1"));
+			}
+		}
+
+		[Fact]
+		public void ShouldCreateConflictThenResolveIt()
+		{
+			using (var source = GetDocumentStore(dbSuffixIdentifier: "1"))
+			using (var destination = GetDocumentStore(dbSuffixIdentifier: "2"))
+			{
+				source.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
+				destination.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 3, 2, 1 }), new RavenJObject());
+
+				SetupReplication(source, destinations: destination);
+
+				source.DatabaseCommands.PutAttachment("marker", null, new MemoryStream(new byte[]{}), new RavenJObject());
+
+				var marker = WaitForAttachment(destination, "marker");
+
+				Assert.NotNull(marker);
+
+				var conflictException = Assert.Throws<ConflictException>(() => destination.DatabaseCommands.GetAttachment("attach/1"));
+
+				Assert.Equal("Conflict detected on attach/1, conflict must be resolved before the attachment will be accessible", conflictException.Message);
+
+				Assert.True(conflictException.ConflictedVersionIds[0].StartsWith("attach/1/conflicts/"));
+				Assert.True(conflictException.ConflictedVersionIds[1].StartsWith("attach/1/conflicts/"));
+
+				// resolve by using first
+
+				var resolution = destination.DatabaseCommands.GetAttachment(conflictException.ConflictedVersionIds[0]);
+
+				destination.DatabaseCommands.PutAttachment("attach/1", null, resolution.Data(), resolution.Metadata);
+
+				Assert.DoesNotThrow(() => destination.DatabaseCommands.GetAttachment("attach/1"));
+			}
+		}
 	}
 }

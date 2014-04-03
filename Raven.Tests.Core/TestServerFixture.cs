@@ -4,15 +4,25 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using Raven.Database.Config;
 using Raven.Server;
 
 namespace Raven.Tests.Core
 {
 	public class TestServerFixture : IDisposable
 	{
+		public const int Port = 8079;
+
 		public TestServerFixture()
 		{
-			Server = new RavenDbServer { RunInMemory = true }.Initialize();
+			Server = new RavenDbServer(new RavenConfiguration()
+			{
+				Port = Port
+			})
+			{
+				RunInMemory = true,
+				UseEmbeddedHttpServer = true
+			}.Initialize();
 		}
 
 		public RavenDbServer Server { get; private set; }
