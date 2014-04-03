@@ -18,7 +18,7 @@ class configuration extends viewModelBase {
 
     keys = ko.observableArray<configurationKey>();
     selectedKey = ko.observable<configurationKey>().subscribeTo("ActivateConfigurationKey").distinctUntilChanged();
-    keyDetails = ko.observable<Array<Pair<string, string[]>>>();
+    keyDetails = ko.observable<Array<Pair<string, string>>>();
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
     currentKey = ko.observable<configurationKey>();
 
@@ -54,8 +54,21 @@ class configuration extends viewModelBase {
     selectedKeyChanged(selected: configurationKey) {
         if (selected) {
             selected.getValues().done(x => {
-                this.keyDetails(x);
+
+                var nameValueCollection = new Array<Pair<string, string>>();
+                
+                for (var i = 0; i < x.length; i++) {
+                    var pair = x[i];
+                    var name = pair.item1;
+                    for (var j = 0; j < pair.item2.length; j++) {
+                        var value = pair.item2[j];
+                        nameValueCollection.push(new Pair(name, value));
+                    }
+                }
+
+                this.keyDetails(nameValueCollection);
             });
+
             this.currentKey(selected);
         }
     }
