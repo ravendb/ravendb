@@ -21,7 +21,13 @@ class getConfigurationByKeyCommand extends commandBase {
                 var array = new Array<Pair<string, string[]>>();
                 for (var key in data) {
                     if (data.hasOwnProperty(key)) {
-                        array.push(new Pair<string, string[]>(key, data[key]));
+                        var value = data[key];
+                        if (value instanceof Array) {
+                            array.push(new Pair(key, value));
+                        }
+                        else {
+                            array.push(new Pair(key, new Array<string>(value)));
+                        }
                     }
                 }
 

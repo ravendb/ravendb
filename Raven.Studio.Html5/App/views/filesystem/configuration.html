@@ -38,7 +38,8 @@
         <div class="row">
             <ul class="nav nav-pills nav-stacked" data-bind="foreach: keyDetails">
                 <li>
-                    <span data-bind="text: $data.item1"></span>
+                    <input type="text" data-bind="value: $data.item1" />
+                    <input type="text" data-bind="value: $data.item2" />
                 </li>
             </ul>
         </div>
