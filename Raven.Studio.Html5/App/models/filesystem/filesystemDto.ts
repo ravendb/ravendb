@@ -6,7 +6,7 @@ enum filesystemSynchronizationType {
     Delete = 4,
 }
 
-interface filesystemSynchronizationDetails {
+interface filesystemSynchronizationDetailsDto {
     Filename: string;
     FileETag: string;
     DestinationUrl: string;
@@ -40,8 +40,8 @@ interface filesystemStatisticsDto {
     Name: string;
     FileCount: number;
     Metrics: filesystemMetricsDto;
-    ActiveSyncs: filesystemSynchronizationDetails[];
-    PendingSyncs: filesystemSynchronizationDetails[];
+    ActiveSyncs: filesystemSynchronizationDetailsDto[];
+    PendingSyncs: filesystemSynchronizationDetailsDto[];
 }
 
 interface filesystemFileHeaderDto {
@@ -81,4 +81,22 @@ interface filesystemConfigSearchResultsDto{
     TotalCount: number;
     Start: number;
     PageSize: number;
+}
+
+interface filesystemHistoryItemDto {
+    Version: number;
+    ServerId: string;
+}
+
+interface filesystemConflictItemDto {
+    FileName: string;
+    RemoteServerUrl: string;
+
+    RemoteHistory: filesystemHistoryItemDto[];
+    CurrentHistory: filesystemHistoryItemDto[];
+}
+
+interface filesystemListPageDto<T> {
+    TotalCount: number;
+    Items: T[];
 }

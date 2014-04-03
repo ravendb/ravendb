@@ -8,10 +8,23 @@ class getFilesystemDestinationsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<any> {
+    execute(): JQueryPromise<string[]> {
 
-        var command = new getConfigurationByKeyCommand(this.fs, "Raven/Synchronization/Destinations");
-        return command.execute();
+        var url = "/config";
+        var args = {
+            name: "Raven/Synchronization/Destinations",
+        };
+
+        var task = $.Deferred();
+        this.query<Array<Pair<string, string[]>>>(url, args, this.fs)
+            .done(data => {                
+                if (data.hasOwnProperty('url'))
+                    task.resolve(data['url']);
+                else
+                    task.resolve({});
+            });
+
+        return task;
     }
 }
 
