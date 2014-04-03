@@ -1,5 +1,6 @@
 import appUrl = require("common/appUrl");
 import database = require("models/database");
+import filesystem = require("models/filesystem");
 import router = require("plugins/router");
 import app = require("durandal/app");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
@@ -8,7 +9,9 @@ import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
 class viewModelBase {
-    activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
+    public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
+    public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
+
     private keyboardShortcutDomContainers: string[] = [];
     private modelPollingHandle: number;
     static dirtyFlag = new ko.DirtyFlag([]);
@@ -44,6 +47,12 @@ class viewModelBase {
         var currentDb = this.activeDatabase();
         if (!!db && db !== null && (!currentDb || currentDb.name !== db.name)) {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
+        }
+
+        var fs = appUrl.getFilesystem();
+        var currentFilesystem = this.activeFilesystem();
+        if (!currentFilesystem || currentFilesystem.name !== fs.name) {
+            ko.postbox.publish("ActivateFilesystemWithName", fs.name);
         }
 
         this.modelPollingStart();
@@ -89,6 +98,7 @@ class viewModelBase {
      */
     deactivate() {
         this.activeDatabase.unsubscribeFrom("ActivateDatabase");
+        this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
     }
