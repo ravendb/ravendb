@@ -34,6 +34,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
+using Raven.Client.Document.Async;
 
 namespace Raven.Client.Document
 {
@@ -712,6 +713,26 @@ namespace Raven.Client.Document
 
 			return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
+
+        /// <summary>
+        /// Register the query as a lazy query in the session and return a lazy
+        /// instance that will evaluate the query only when needed
+        /// </summary>
+        public virtual Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval)
+        {
+            var headers = new Dictionary<string, string>();
+            if (queryOperation == null)
+            {
+                ExecuteBeforeQueryListeners();
+                queryOperation = InitializeQueryOperation((key, val) => headers[key] = val);
+            }
+
+            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
+            lazyQueryOperation.SetHeaders(headers);
+
+            return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
+        }
+
 
 		/// <summary>
 		/// Register the query as a lazy-count query in the session and return a lazy

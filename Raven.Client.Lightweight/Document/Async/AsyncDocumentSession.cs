@@ -227,7 +227,7 @@ namespace Raven.Client.Document.Async
          internal  Lazy<Task<T>> AddLazyOperation<T>(ILazyOperation operation, Action<T> onEval)
          {
              pendingLazyOperations.Add(operation);
-             var lazyValue = new Lazy<Task<T>>(() => ExecuteAllPendingLazyOperations()  
+             var lazyValue = new Lazy<Task<T>>(() => ExecuteAllPendingLazyOperationsAsync()  
                  .ContinueWith(t =>
              {
                    if(t.Exception != null)
@@ -245,7 +245,7 @@ namespace Raven.Client.Document.Async
          internal Lazy<Task<int>> AddLazyCountOperation(ILazyOperation operation)
          {
              pendingLazyOperations.Add(operation);
-             var lazyValue = new Lazy<Task<int>>(() => ExecuteAllPendingLazyOperations()
+             var lazyValue = new Lazy<Task<int>>(() => ExecuteAllPendingLazyOperationsAsync()
                  .ContinueWith(t =>
                  {
                      if(t.Exception != null)
@@ -255,7 +255,7 @@ namespace Raven.Client.Document.Async
 
              return lazyValue;
          }
-         public async Task<ResponseTimeInformation> ExecuteAllPendingLazyOperations()
+         public async Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync()
          {
              if (pendingLazyOperations.Count == 0)
                  return new ResponseTimeInformation();

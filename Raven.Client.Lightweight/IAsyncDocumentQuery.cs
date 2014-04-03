@@ -19,14 +19,17 @@ namespace Raven.Client
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		/// <param name="fields">The fields.</param>
 		IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields);
+        IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections);
 
 		/// <summary>
 		/// Selects all the projection fields directly from the index
 		/// </summary>
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		IAsyncDocumentQuery<TProjection> SelectFields<TProjection>();
+        
+        Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval);
 
-		/// <summary>
+ 		/// <summary>
 		/// Gets the query result
 		/// Execute the query the first time that this is called.
 		/// </summary>
@@ -58,5 +61,6 @@ namespace Raven.Client
 		/// Get the facets as per the specified facets with the given start and pageSize
 		/// </summary>
 		Task<FacetResults> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize);
-	}
+
+    }
 }
