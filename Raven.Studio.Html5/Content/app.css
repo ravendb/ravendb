@@ -1,4 +1,4 @@
-﻿html,
+html,
 body {
   height: 100%;
 }
@@ -42,24 +42,24 @@ body {
 }
 @media (max-device-height: 1024px) {
   span {
-    font-size: 14px!important;
+    font-size: 14px !important;
   }
   a {
-    font-size: 14x!important;
+    font-size: 14x !important;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   i {
-    font-size: 14px!important;
-    display: block!important;
+    font-size: 14px !important;
+    display: block !important;
   }
   button {
-    max-height: 30px!important;
-    font-size: 13px!important;
+    max-height: 30px !important;
+    font-size: 13px !important;
   }
   .tooltip-inner {
-    font-size: 10px!important;
+    font-size: 10px !important;
   }
 }
 @media (max-device-height: 1024px) {
@@ -73,7 +73,7 @@ body {
   }
 }
 .side-panel {
-  margin-left: 10px!important;
+  margin-left: 10px !important;
 }
 .side-panel li {
   max-width: 400px;
@@ -94,22 +94,22 @@ body {
     font-size: 10px !important;
   }
   .side-panel li {
-    max-width: 200px!important;
+    max-width: 200px !important;
   }
 }
 @media (max-device-height: 1024px) {
   .container-fluid a {
-    padding: 5px!important;
-    max-height: 30px!important;
-    font-size: 13px!important;
+    padding: 5px !important;
+    max-height: 30px !important;
+    font-size: 13px !important;
   }
 }
 #bs-example-navbar-collapse-1 a {
-  font-size: 12px!important;
+  font-size: 12px !important;
 }
 #bs-example-navbar-collapse-1 input[type=text] {
-  font-size: 12px!important;
-  height: 24px!important;
+  font-size: 12px !important;
+  /*height:24px!important;*/
 }
 #bs-example-navbar-collapse-1 i {
   display: inline-block !important;
@@ -335,7 +335,7 @@ body {
 }
 @media (max-device-height: 1024px) {
   .documents-page a {
-    font-size: 12px!important;
+    font-size: 12px !important;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -355,10 +355,10 @@ body {
     display: inline-block !important;
   }
   #queryContainer #indexQueryLabelContainer i {
-    display: none!important;
+    display: none !important;
   }
   #queryContainer #indexQueryLabelContainer a {
-    display: none!important;
+    display: none !important;
   }
 }
 #queryContainer .editor {
@@ -440,19 +440,19 @@ body {
 }
 @media (max-device-height: 1024px) {
   .breadcrumb h3 {
-    font-size: 16px!important;
+    font-size: 16px !important;
     display: inline-block !important;
   }
   .breadcrumb a {
-    font-size: 14px!important;
+    font-size: 14px !important;
     display: inline-block !important;
   }
   .breadcrumb span {
-    font-size: 14px!important;
+    font-size: 14px !important;
     display: inline-block !important;
   }
   .breadcrumb i {
-    font-size: 15px!important;
+    font-size: 15px !important;
     display: inline-block !important;
   }
 }
@@ -544,7 +544,7 @@ body {
 #csvImportContainer .file {
   position: relative;
   text-align: right;
-  -moz-opacity: 0 ;
+  -moz-opacity: 0;
   filter: alpha(opacity: 0);
   opacity: 0;
   z-index: 2;
@@ -649,6 +649,5 @@ footer ul {
   height: 160px;
 }
 .indexes-controls {
-    margin-left: 15px;
+  /*margin-left: 15px; Why 15px? This makes it funky in appearance.*/
 }
-/*# sourceMappingURL=app.css.map */
