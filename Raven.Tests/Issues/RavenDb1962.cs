@@ -39,7 +39,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-
+        [Fact]
         public async Task CanDisplayLazyRequestTimes_RemoteAndData()
         {
             using (var store = NewRemoteDocumentStore())
