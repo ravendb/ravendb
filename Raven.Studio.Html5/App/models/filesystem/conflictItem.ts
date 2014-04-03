@@ -13,8 +13,12 @@ class conflictItem {
 
     static fromConflictItemDto(dto: filesystemConflictItemDto) : conflictItem {
         var item = new conflictItem(dto.FileName, dto.RemoteServerUrl);
-        item.remoteHistory.pushAll(dto.RemoteHistory.map(x => new conflictHistory(x.Version, x.ServerId)));
-        item.currentHistory.pushAll(dto.CurrentHistory.map(x => new conflictHistory(x.Version, x.ServerId)));
+        if (dto.RemoteHistory != null) {
+            item.remoteHistory.pushAll(dto.RemoteHistory.map(x => new conflictHistory(x.Version, x.ServerId)));
+        }
+        if (dto.CurrentHistory != null) {
+            item.currentHistory.pushAll(dto.CurrentHistory.map(x => new conflictHistory(x.Version, x.ServerId)));
+        }
         return item;
     }
 }

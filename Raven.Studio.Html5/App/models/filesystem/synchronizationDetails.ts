@@ -16,14 +16,23 @@ class synchronizationDetails {
 
     static fromOutgoingActivities(pending: filesystemSynchronizationDetailsDto[], active: filesystemSynchronizationDetailsDto[]) {
         var details = new synchronizationDetails();
-        details.active.pushAll(active.map(x => new synchronizationDetail(x)));
-        details.pending.pushAll(pending.map(x => new synchronizationDetail(x)));
+
+        if (active != null) {
+            details.active.pushAll(active.map(x => new synchronizationDetail(x)));
+        }
+        
+        if (pending != null) {
+            details.pending.pushAll(pending.map(x => new synchronizationDetail(x)));
+        }
+
         return details;
     }
 
     static fromIncomingActivities(finished: filesystemSynchronizationReportDto[]) {
         var details = new synchronizationDetails();
-        details.finished.pushAll(finished.map(x => new synchronizationReport(x)));
+        if (finished != null) {
+            details.finished.pushAll(finished.map(x => new synchronizationReport(x)));
+        }
         return details;
     }
 } 
