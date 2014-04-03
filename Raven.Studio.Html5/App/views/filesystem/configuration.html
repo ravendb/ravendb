@@ -36,12 +36,26 @@
             </div>
         </div>
         <div class="row">
-            <ul class="nav nav-pills nav-stacked" data-bind="foreach: keyDetails">
-                <li>
-                    <input type="text" data-bind="value: $data.item1" />
-                    <input type="text" data-bind="value: $data.item2" />
-                </li>
-            </ul>
+            <form data-bind="submit: save">
+                <table data-bind="visible: keyValues().length > 0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Value</th>
+                            <!--<th />-->
+                        </tr>
+                    </thead>
+                    <tbody data-bind='foreach: keyValues'>
+                        <tr>
+                            <td><input data-bind='value: $data.item1, uniqueName: true' /></td>
+                            <td><input data-bind='value: $data.item2, uniqueName: true' /></td>
+                            <!--<td><a href='#' data-bind='click: $root.removeGift'>Delete</a></td>-->
+                        </tr>
+                    </tbody>
+                </table>
+                <button data-bind='click: addKeyValue' class="btn btn-default">Add New</button>
+                <button type="submit" data-bind='enable: keyValues().length > 0' class="btn btn-primary">Save</button>
+            </form>
         </div>
     </div>
 

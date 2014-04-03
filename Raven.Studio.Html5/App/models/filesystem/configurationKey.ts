@@ -5,7 +5,7 @@ import filesystem = require("models/filesystem/filesystem");
 
 class configurationKey {
 
-    constructor(public fs: filesystem, public key) {
+    constructor(public fs: filesystem, public key: string) {
     }
 
     // Notifies consumers that this configuration key should be the selected one.

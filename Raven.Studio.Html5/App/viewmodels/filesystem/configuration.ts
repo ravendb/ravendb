@@ -3,14 +3,11 @@ import system = require("durandal/system");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 
-import pagedList = require("common/pagedList");
 import filesystem = require("models/filesystem/filesystem");
 import viewModelBase = require("viewmodels/viewModelBase");
-import virtualTable = require("widgets/virtualTable/viewModel");
 import getConfigurationCommand = require("commands/filesystem/getConfigurationCommand");
-import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
+import saveConfigurationCommand = require("commands/filesystem/saveConfigurationCommand");
 import configurationKey = require("models/filesystem/configurationKey");
-import customColumns = require('models/customColumns');
 
 class configuration extends viewModelBase {
 
@@ -18,8 +15,7 @@ class configuration extends viewModelBase {
 
     keys = ko.observableArray<configurationKey>();
     selectedKey = ko.observable<configurationKey>().subscribeTo("ActivateConfigurationKey").distinctUntilChanged();
-    keyDetails = ko.observable<Array<Pair<string, string>>>();
-    currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
+    keyValues = ko.observableArray<Pair<string, string>>();
     currentKey = ko.observable<configurationKey>();
 
     static gridSelector = "#keyDetailsGrid";
@@ -66,20 +62,22 @@ class configuration extends viewModelBase {
                     }
                 }
 
-                this.keyDetails(nameValueCollection);
+                this.keyValues(nameValueCollection);
             });
 
             this.currentKey(selected);
         }
     }
 
-    getKeyDetailsGrid(): virtualTable {
-        var gridContents = $(configuration.gridSelector).children()[0];
-        if (gridContents) {
-            return ko.dataFor(gridContents);
-        }
+    save() {
 
-        return null;
+        var args: { [name: string]: string[]; } = {};
+
+        new saveConfigurationCommand(this.activeFilesystem(), this.currentKey(), this.keyValues()).execute();
+    }
+
+    addKeyValue() {
+        this.keyValues.push(new Pair("", ""));
     }
 
 } 
