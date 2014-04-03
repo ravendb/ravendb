@@ -209,7 +209,6 @@
     <Compile Include="IndexWithWhere.cs" />
     <Compile Include="InIssues.cs" />
     <Compile Include="InQueries.cs" />
-    <Compile Include="InTest.cs" />
     <Compile Include="IssueTest.cs" />
     <Compile Include="ItemsBySetIdIndexTests.cs" />
     <Compile Include="Jabber\Games.cs" />
