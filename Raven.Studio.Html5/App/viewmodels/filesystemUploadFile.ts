@@ -50,8 +50,12 @@ class filesystemUploadFile extends viewModelBase {
         }
     }
 
+    getFilesystem() :filesystem {
+        return new filesystem(this.fileName() ? this.fileName().name : null);
+    }
+
     navigateToFiles() {
-        router.navigate(appUrl.forFilesystemFiles(this.activeFilesystem()));
+        router.navigate(appUrl.forFilesystemFiles(this.getFilesystem()));
     }
 }
 

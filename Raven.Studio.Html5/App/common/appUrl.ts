@@ -52,12 +52,20 @@ class appUrl {
         filesystemConfiguration: ko.computed(() => appUrl.forFilesystemConfiguration(appUrl.currentFilesystem())),
     };
 
-    static checkIsAreaActive(routeRoot: string): boolean {
+  
+
+        static checkIsAreaActive(routeRoot: string): boolean {
 
         var items = router.routes.filter(m => m.isActive() && m.route != null && m.route != '');
         var isThereAny = items.some(m => m.route.substring(0, routeRoot.length) === routeRoot);
 
         return isThereAny;
+    }
+
+    static forDatabaseQuery(db: database) {
+        if (db && !db.isSystem) {
+            return appUrl.baseUrl + "/databases/" + db.name;
+        }
     }
 
     static forDatabases(): string {
