@@ -34,8 +34,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task CanChangeConventionJustForOneType_Async()
 		{
-			using(GetNewServer())
-			using (var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
+			using (var store = NewDocumentStore())
 			{
 				store.Conventions.RegisterAsyncIdConvention<User>((dbName, cmds, user) => new CompletedTask<string>("users/" + user.Name));
 
