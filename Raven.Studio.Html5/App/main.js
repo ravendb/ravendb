@@ -13,7 +13,6 @@
             exports: 'Handlebars'
          }
     },
-    urlArgs: "bust=" + (new Date()).getTime()
 });
 
 define('jquery', function() { return jQuery; });

@@ -2,7 +2,11 @@ import appUrl = require("common/appUrl");
 import database = require("models/database");
 import router = require("plugins/router");
 import app = require("durandal/app");
+import changesApi = require("common/changesApi");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
+import shell = require("viewmodels/shell");
+import changesCallback = require("common/changesCallback");
+import changeSubscription = require("models/changeSubscription");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -11,6 +15,7 @@ class viewModelBase {
     activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private keyboardShortcutDomContainers: string[] = [];
     private modelPollingHandle: number;
+    private notifications: Array<changeSubscription> = [];
     static dirtyFlag = new ko.DirtyFlag([]);
     private static isConfirmedUsingSystemDatabase: boolean;
 
@@ -36,6 +41,17 @@ class viewModelBase {
         return true;
     }
 
+    createNotifications(): Array<changeSubscription> {
+        return [];
+    }
+
+    cleanupNotifications() {
+        for (var i = 0; i < this.notifications.length; i++) {
+            this.notifications[i].off();
+        }
+        this.notifications = [];
+    }
+
     /*
     * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
     */
@@ -46,7 +62,9 @@ class viewModelBase {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
         }
 
-        this.modelPollingStart();
+        this.notifications = this.createNotifications();
+
+        this.modelPollingStart(); //TODO: delete polling
 
         window.onbeforeunload = (e: any) => {
             this.saveInObservable();
@@ -90,7 +108,8 @@ class viewModelBase {
     deactivate() {
         this.activeDatabase.unsubscribeFrom("ActivateDatabase");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
-        this.modelPollingStop();
+        this.modelPollingStop(); //TODO: delete polling
+        this.cleanupNotifications();
     }
 
     /*
@@ -137,19 +156,19 @@ class viewModelBase {
         router.navigate(url, options);
     }
 
-    modelPolling() {
+    modelPolling() {  //TODO: delete polling
     }
 
-    forceModelPolling() {
+    forceModelPolling() {  //TODO: delete polling
         this.modelPolling();
     }
 
-    private modelPollingStart() {
+    private modelPollingStart() {  //TODO: delete polling
         this.modelPolling();
         this.activeDatabase.subscribe(() => this.forceModelPolling());
     }
 
-    private modelPollingStop() {
+    private modelPollingStop() {  //TODO: delete polling
         clearInterval(this.modelPollingHandle);
     }
 

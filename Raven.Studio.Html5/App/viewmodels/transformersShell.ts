@@ -34,10 +34,6 @@ class transformerShell extends viewModelBase {
         });
     }
 
-    //todo: implement refresh of all transformers
-    modelPolling() {
-    }
-
 }
 
 export = transformerShell;

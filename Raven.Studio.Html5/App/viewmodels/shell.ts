@@ -24,6 +24,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import changesApi = require("common/changesApi");
+import changeSubscription = require("models/changeSubscription");
 
 class shell extends viewModelBase {
     private router = router;
@@ -51,12 +52,13 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => this.updateChangesApi(db));
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateChangesApi(db); this.fetchDbStats(db); });
 
         this.appUrls = appUrl.forCurrentDatabase();
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
+        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
     }
 
     activate(args: any) {
@@ -97,7 +99,6 @@ class shell extends viewModelBase {
             trigger: 'hover'
         });
 
-        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -110,6 +111,12 @@ class shell extends viewModelBase {
         } else {
             NProgress.done();
         }
+    }
+
+    createNotifications(): Array<changeSubscription> {
+        return [
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.reloadDatabases()),
+        ];
     }
 
     databasesLoaded(databases) {
@@ -228,7 +235,7 @@ class shell extends viewModelBase {
         shell.currentDbChangesApi(new changesApi(newDb));
     }
 
-    modelPolling() {
+    reloadDatabases() {
         new getDatabasesCommand()
             .execute()
             .done(results => {
@@ -241,10 +248,10 @@ class shell extends viewModelBase {
                     }
                 
                 });
-
         });
+    }
 
-        var db = this.activeDatabase();
+    fetchDbStats(db: database) {
         if (db) {
             new getDatabaseStatsCommand(db)
                 .execute()

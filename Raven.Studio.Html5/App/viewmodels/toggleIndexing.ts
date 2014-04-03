@@ -10,16 +10,16 @@ class toggleIndexing extends viewModelBase {
   disableIndexing() {
     new stopIndexingCommand(this.activeDatabase())
       .execute()
-      .done(() => this.forceModelPolling());
+      .done(() => this.getIndexStatus());
   }
 
   enableIndexing() {
     new startIndexingCommand(this.activeDatabase())
       .execute()
-      .done(() => this.forceModelPolling());
+        .done(() => this.getIndexStatus());
   }
 
-  modelPolling() {
+  getIndexStatus() {
     new getIndexingStatusCommand(this.activeDatabase())
       .execute()
       .done(result=> this.indexingStatus(result.IndexingStatus));

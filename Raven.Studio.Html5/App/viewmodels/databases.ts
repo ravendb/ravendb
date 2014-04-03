@@ -10,6 +10,9 @@ import createDatabase = require("viewmodels/createDatabase");
 import createDatabaseCommand = require("commands/createDatabaseCommand");
 import createEncryption = require("viewmodels/createEncryption");
 import createEncryptionConfirmation = require("viewmodels/createEncryptionConfirmation");
+import changesApi = require('common/changesApi');
+import shell = require('viewmodels/shell');
+import changeSubscription = require('models/changeSubscription');
 
 class databases extends viewModelBase {
 
@@ -33,11 +36,18 @@ class databases extends viewModelBase {
         return true;
     }
 
-    attached() {
-        ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
+    createNotifications(): Array<changeSubscription> {
+        return [
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.reloadDatabases())
+        ];
     }
 
-    modelPolling() {
+    attached() {
+        ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
+        this.reloadDatabases();
+    }
+
+    reloadDatabases() {
         new getDatabasesCommand()
             .execute()
             .done((results: database[]) => this.databasesLoaded(results));
