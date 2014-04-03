@@ -1,15 +1,15 @@
 class replicationDestination {
 
-    url = ko.observable<string>();
-    username = ko.observable<string>();
-    password = ko.observable<string>();
-    domain = ko.observable<string>();
-    apiKey = ko.observable<string>();
-    database = ko.observable<string>();
-    transitiveReplicationBehavior = ko.observable<string>();
-    ignoredClient = ko.observable<boolean>();
-    disabled = ko.observable<boolean>();
-    clientVisibleUrl = ko.observable<string>();
+    url = ko.observable<string>().extend({ required: true });
+    username = ko.observable<string>().extend({ required: true });
+    password = ko.observable<string>().extend({ required: true });
+    domain = ko.observable<string>().extend({ required: true });
+    apiKey = ko.observable<string>().extend({ required: true });
+    database = ko.observable<string>().extend({ required: true });
+    transitiveReplicationBehavior = ko.observable<string>().extend({ required: true });
+    ignoredClient = ko.observable<boolean>().extend({ required: true });
+    disabled = ko.observable<boolean>().extend({ required: true });
+    clientVisibleUrl = ko.observable<string>().extend({ required: true });
 
     name = ko.computed(() => {
         if (this.url() && this.database()) {
@@ -52,11 +52,9 @@ class replicationDestination {
         }
     }
 
-    toggleIsAdvancedShows() {
-        this.isAdvancedShown.toggle();
+    toggleIsAdvancedShows(item, event) {
+        $(event.target).next().toggle();
     }
-
-    isAdvancedShown = ko.observable< boolean>(false);
 
     constructor(dto: replicationDestinationDto) {
         this.url(dto.Url);

@@ -7,7 +7,7 @@ import deleteDocumentsCommand = require("commands/deleteDocumentsCommand");
 
 class sqlReplications extends viewModelBase {
 
-    replications = ko.observableArray<sqlReplication>().extend({ required: true });
+    replications = ko.observableArray<sqlReplication>();
     isFirstload = ko.observable(true);
     lastIndex = ko.computed(function () {
         return this.isFirstload() ? -1 : this.replications().length - 1;
@@ -45,8 +45,9 @@ class sqlReplications extends viewModelBase {
                     for (var i = 0; i < results.length; i++) {
                         this.loadedSqlReplications.push(results[i].getId());
                     }
-                    this.replications(results);
                     viewModelBase.dirtyFlag = new ko.DirtyFlag([this.replications]);
+                    this.replications(results);
+                    viewModelBase.dirtyFlag().reset();
             });
         }
     }

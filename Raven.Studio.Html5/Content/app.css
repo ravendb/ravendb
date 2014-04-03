@@ -651,4 +651,7 @@ footer ul {
 .indexes-controls {
     margin-left: 15px;
 }
+.advanced-replication-settings {
+    cursor: pointer;
+}
 /*# sourceMappingURL=app.css.map */
