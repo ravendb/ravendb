@@ -6,7 +6,7 @@ import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
-import saveFilesystemDestinationCommand = require("commands/filesystem/saveFilesystemDestinationCommand");
+import saveFilesystemDestinationCommand = require("commands/filesystem/saveDestinationCommand");
 
 
 import filesystemAddDestination = require("viewmodels/filesystem/filesystemAddDestination");

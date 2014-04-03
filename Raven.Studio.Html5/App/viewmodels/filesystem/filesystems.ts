@@ -6,11 +6,11 @@ import database = require("models/database");
 import databases = require("viewmodels/databases");
 import filesystem = require("models/filesystem/filesystem");
 import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
-import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
+import getFilesystemStatsCommand = require("commands/filesystem/getStatsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 import createFilesystem = require("viewmodels/filesystem/createFilesystem");
-import createFilesystemCommand = require("commands/createFilesystemCommand");
+import createFilesystemCommand = require("commands/filesystem/createFilesystemCommand");
 
 
 class filesystems extends viewModelBase {

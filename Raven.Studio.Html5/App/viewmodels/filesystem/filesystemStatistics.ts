@@ -1,5 +1,5 @@
 ﻿import viewModelBase = require("viewmodels/viewModelBase");
-import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
+import getFilesystemStatsCommand = require("commands/filesystem/getStatsCommand");
 import filesystem = require("models/filesystem/filesystem");
 import moment = require("moment");
 
