@@ -36,7 +36,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\getDestinationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesystemsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getStatsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getSynchronizationStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />

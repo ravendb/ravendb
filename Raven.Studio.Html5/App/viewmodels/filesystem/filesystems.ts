@@ -6,7 +6,7 @@ import database = require("models/database");
 import databases = require("viewmodels/databases");
 import filesystem = require("models/filesystem/filesystem");
 import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
-import getFilesystemStatsCommand = require("commands/filesystem/getStatsCommand");
+import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 import createFilesystem = require("viewmodels/filesystem/createFilesystem");
