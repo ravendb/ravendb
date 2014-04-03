@@ -3,6 +3,7 @@ import database = require("models/database");
 import router = require("plugins/router");
 import app = require("durandal/app");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
+import filesystem = require("models/filesystem");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -13,6 +14,7 @@ class viewModelBase {
     private modelPollingHandle: number;
     static dirtyFlag = new ko.DirtyFlag([]);
     private static isConfirmedUsingSystemDatabase: boolean;
+    public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
 
     /*
      * Called by Durandal when checking whether this navigation is allowed. 
