@@ -173,6 +173,8 @@
     <TypeScriptCompile Include="App\common\changesApi.ts" />
     <TypeScriptCompile Include="App\models\changeSubscription.ts" />
     <TypeScriptCompile Include="App\common\changesCallback.ts" />
+    <TypeScriptCompile Include="App\models\patchDocuments.ts" />
+    <TypeScriptCompile Include="App\models\patchParam.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\selectColumns.html" />
