@@ -108,7 +108,7 @@
     <Compile Include="Commands\Other.cs" />
     <Compile Include="Indexing\ReferencedDocuments.cs" />
     <Compile Include="Session\Includes.cs" />
-    <Compile Include="Session\Ids.cs" />
+    <Compile Include="Session\Keys.cs" />
     <Compile Include="Session\UnitOfWork.cs" />
     <Compile Include="Streaming\DocumentStreaming.cs" />
     <Compile Include="Streaming\QueryStreaming.cs" />
