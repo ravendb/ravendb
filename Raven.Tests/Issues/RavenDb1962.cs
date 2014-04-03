@@ -16,7 +16,7 @@ namespace Raven.Tests.Issues
         private const int Cntr = 5;
 
         [Fact]
-        public async Task CanDisplayLazyValues()
+        public async Task CanExecuteLazyLoadsInAsyncSession()
         {
             using (var store = NewRemoteDocumentStore())
             {
@@ -38,9 +38,9 @@ namespace Raven.Tests.Issues
 
             }
         }
-
+ 
         [Fact]
-        public async Task CanDisplayLazyRequestTimes_RemoteAndData()
+        public async Task CanExecuteLazyLoadsInAsyncSession_CheckSingleCall()
         {
             using (var store = NewRemoteDocumentStore())
             {
@@ -129,14 +129,3 @@ namespace Raven.Tests.Issues
        
     }
 }
-/*
-In ISyncAdvancedSessionOperation I can use Lazily to load multiple documents in one round trip.
-i.e.
-session.Advanced.Lazily.Load<Document>(documentId1);
-session.Advanced.Lazily.Load<Document>(documentId2);
-session.Advanced.Lazily.Load<Document>(documentId3);
-session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
-
-Is it possible to get Lazy loading support on IAsyncAdvancedSessionOperations?
-
-*/
