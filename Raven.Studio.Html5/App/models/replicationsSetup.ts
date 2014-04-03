@@ -3,7 +3,7 @@ import replicationDestination = require("models/replicationDestination");
 class replicationsSetup {
 
     source = ko.observable<string>();
-    destinations = ko.observableArray<replicationDestination>();
+    destinations = ko.observableArray<replicationDestination>().extend({ required: true });
 
     constructor(dto: replicationsDto) {
         this.source(dto.Source);

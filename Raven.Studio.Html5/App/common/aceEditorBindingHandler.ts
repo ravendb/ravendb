@@ -11,7 +11,8 @@ class aceEditorBindingHandler {
     defaults = {
         theme: "ace/theme/github",
         fontSize: "16px",
-        lang: "ace/mode/csharp"
+        lang: "ace/mode/csharp",
+        readOnly: false
     }
     
     static install() {
@@ -26,11 +27,12 @@ class aceEditorBindingHandler {
     }
         
     // Called by Knockout a single time when the binding handler is setup.
-    init(element: HTMLElement, valueAccessor: () => { code: string; theme?: string; fontSize?: string; lang?: string; getFocus?: boolean}, allBindings, viewModel, bindingContext: any) {
+    init(element: HTMLElement, valueAccessor: () => { code: string; theme?: string; fontSize?: string; lang?: string; getFocus?: boolean; readOnly?: boolean}, allBindings, viewModel, bindingContext: any) {
         var bindingValues = valueAccessor();
         var theme = bindingValues.theme || this.defaults.theme; // "ace/theme/github";
         var fontSize = bindingValues.fontSize || this.defaults.fontSize; // "16px";
         var lang = bindingValues.lang || this.defaults.lang; // "ace/mode/csharp";
+        var readOnly = bindingValues.readOnly || this.defaults.readOnly; // false
         var code = typeof bindingValues.code === "function" ? bindingValues.code : bindingContext.$rawData;
 
         if (typeof code !== "function") {
@@ -41,6 +43,7 @@ class aceEditorBindingHandler {
         aceEditor.setTheme(theme);
         aceEditor.setFontSize(fontSize);
         aceEditor.getSession().setMode(lang);
+        aceEditor.setReadOnly(readOnly);
 
         // When we lose focus, push the value into the observable.
         var aceFocusElement = ".ace_text-input";
@@ -59,7 +62,7 @@ class aceEditorBindingHandler {
     }
 
     // Called by Knockout each time the dependent observable value changes.
-    update(element: HTMLElement, valueAccessor: () => { code: () => string; theme?: string; fontSize?: string; lang?: string; }, allBindings, viewModel, bindingContext: any) {
+    update(element: HTMLElement, valueAccessor: () => { code: () => string; theme?: string; fontSize?: string; lang?: string; readOnly?: boolean }, allBindings, viewModel, bindingContext: any) {
         var bindingValues = valueAccessor();
         var code = ko.unwrap(bindingValues.code);
         var aceEditor: AceAjax.Editor = ko.utils.domData.get(element, "aceEditor");

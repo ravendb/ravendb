@@ -16,19 +16,19 @@ class sqlReplication extends document {
 
     public metadata: documentMetadata;
 
-    name = ko.observable<string>();
-    disabled = ko.observable<boolean>();
+    name = ko.observable<string>().extend({ required: true });
+    disabled = ko.observable<boolean>().extend({ required: true });
     parameterizeDeletesDisabled = ko.observable<boolean>();
-    ravenEntityName = ko.observable<string>();
-    script = ko.observable<string>();
-    factoryName = ko.observable<string>();
-    connectionString = ko.observable<string>();
-    connectionStringName = ko.observable<string>();
-    connectionStringSettingName = ko.observable<string>();
-    sqlReplicationTables = ko.observableArray<sqlReplicationTable>();
+    ravenEntityName = ko.observable<string>().extend({ required: true });
+    script = ko.observable<string>().extend({ required: true });
+    factoryName = ko.observable<string>().extend({ required: true });
+    connectionString = ko.observable<string>().extend({ required: true });
+    connectionStringName = ko.observable<string>().extend({ required: true });
+    connectionStringSettingName = ko.observable<string>().extend({ required: true });
+    sqlReplicationTables = ko.observableArray<sqlReplicationTable>().extend({ required: true });
 
-    connectionStringType = ko.observable<string>();
-    connectionStringValue = ko.observable<string>();
+    connectionStringType = ko.observable<string>().extend({ required: true });
+    connectionStringValue = ko.observable<string>().extend({ required: true });
 
     constructor(dto: sqlReplicationDto) {
         super(dto);
