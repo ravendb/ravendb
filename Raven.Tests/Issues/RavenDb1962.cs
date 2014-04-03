@@ -47,9 +47,11 @@ namespace Raven.Tests.Issues
                 using (var session = store.OpenAsyncSession())
                 {
 
-                   await StoreDataAsync(store, session);
-    
-                    var userFetchTasks = LazyLoadAsync(store, session);
+                    await StoreDataAsync(store, session);
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                   var userFetchTasks = LazyLoadAsync(store, session);
 
 
                     var requestTimes = await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync();
