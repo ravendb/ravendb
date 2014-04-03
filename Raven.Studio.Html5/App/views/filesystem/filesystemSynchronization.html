@@ -8,7 +8,7 @@
         <li>
             <h3>
                 <a href="#filesystems">
-                    File Systems
+                    Files
                 </a>
             </h3>
         </li>
@@ -18,14 +18,68 @@
         <li>
             <a>Synchronization</a>
         </li>
-        <!--<li class="active">
-            <span data-bind="text: currentBreadcrumbTitle"></span>
-        </li>-->
     </ul>
 
-    <div class="btn-toolbar" role="toolbar">
-        <div class="btn-group">
-            <a class="btn btn-primary use-bootstrap-tooltip" data-bind="click: addDestination" title="Add a new destination (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add destination</a>
+    <div class="col-md-12">
+
+        <div class="btn-toolbar" role="toolbar">
+            <div class="btn-group">
+                <a class="btn btn-primary use-bootstrap-tooltip" data-bind="click: addDestination" title="Add a new destination (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add destination</a>
+            </div>
+
+            <div class="btn-group">
+                <a class="btn btn-primary use-bootstrap-tooltip" data-bind="click: synchronizeNow" title="Sync Now (Alt+S)" accesskey="S"><i class="fa fa-refresh"></i> Sync Now</a>
+            </div>
+        </div>
+
+        <br />
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4>Destinations</h4>
+            </div>
+
+            <div class="destinations-container" data-bind="foreach: destinations">
+                <p><a data-bind="text: $data"></a></p>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4>Conflicts</h4>
+            </div>
+
+            <div class="conflicts-container" data-bind="foreach: conflicts">
+                <p><a data-bind="text: $data"></a></p>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+
+            <div class="panel-heading">
+                <h4>Activity</h4>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 panel-group" data-bind="with: outgoingActivity">
+                    <h5>Outgoing</h5>
+
+                    <div class="outgoing-container" data-bind="foreach: active">
+                        <p><a data-bind="text: $data.fileName"></a></p>
+                    </div>
+                    <div class="outgoing-container" data-bind="foreach: pending">
+                        <p><a data-bind="text: $data.fileName"></a></p>
+                    </div>
+                </div>
+
+                <div class="col-md-6 panel-group" data-bind="with: incomingActivity">
+                    <h5>Incoming</h5>
+
+                    <div class="outgoing-container" data-bind="foreach: finished">
+                        <p><a data-bind="text: $data.fileName"></a></p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

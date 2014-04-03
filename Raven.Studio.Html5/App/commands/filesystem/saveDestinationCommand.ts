@@ -12,24 +12,22 @@ class saveFilesystemConfigurationCommand extends commandBase {
 
         var result = $.Deferred();
 
-        var newValue = { url: [this.url] };
-
+        var doc = { url: [this.url] };
 
         var keys: string[] = [this.url];
 
         this.query<any>("/config", { name: "Raven/Synchronization/Destinations" }, this.fs)
-            .done(x => {
-                if (x){                    
-                    keys = x.url.concat(keys);
+            .done(data => {
+                if (data) {                                                                               
+                    data.url = [].concat(this.url).concat(data.url);
+                    doc = data;
                 }
             })
             .always(x => {
                 var url = "/config?name=" + encodeURIComponent("Raven/Synchronization/Destinations");
-
-                var doc = { url: keys };
-
+        
                 result = this.put(url, JSON.stringify(doc), this.fs)
-                    .done(y => { result.resolve(newValue); });
+                    .done(y => { result.resolve(doc); });
             });
 
         return result;
