@@ -10,7 +10,7 @@ import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemSta
 import viewModelBase = require("viewmodels/viewModelBase");
 
 import createFilesystem = require("viewmodels/filesystem/createFilesystem");
-import createFilesystemCommand = require("commands/createFilesystemCommand");
+import createFilesystemCommand = require("commands/filesystem/createFilesystemCommand");
 
 
 class filesystems extends viewModelBase {
