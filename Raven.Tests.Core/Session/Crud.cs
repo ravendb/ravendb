@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Dynamic;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
@@ -20,8 +21,8 @@ namespace Raven.Tests.Core.Session
 			{
 				using (var session = store.OpenAsyncSession())
 				{
-					await session.StoreAsync(new User {Name = "Fitzchak"});
-					await session.StoreAsync(new User {Name = "Arek"}, "users/arek");
+					await session.StoreAsync(new User { Name = "Fitzchak" });
+					await session.StoreAsync(new User { Name = "Arek" }, "users/arek");
 
 					await session.SaveChangesAsync();
 				}
@@ -72,9 +73,9 @@ namespace Raven.Tests.Core.Session
 			{
 				using (var session = store.OpenAsyncSession())
 				{
-					var entity1 = new User {Name = "Andy A"};
-					var entity2 = new User {Name = "Andy B"};
-					var entity3 = new User {Name = "Andy C"};
+					var entity1 = new User { Name = "Andy A" };
+					var entity2 = new User { Name = "Andy B" };
+					var entity3 = new User { Name = "Andy C" };
 
 					await session.StoreAsync(entity1);
 					await session.StoreAsync(entity2);
@@ -102,9 +103,9 @@ namespace Raven.Tests.Core.Session
 			{
 				using (var session = store.OpenAsyncSession())
 				{
-					var address = new Address {City = "London", Country = "UK"};
+					var address = new Address { City = "London", Country = "UK" };
 					await session.StoreAsync(address);
-					await session.StoreAsync(new User {Name = "Adam", AddressId = session.Advanced.GetDocumentId(address)});
+					await session.StoreAsync(new User { Name = "Adam", AddressId = session.Advanced.GetDocumentId(address) });
 
 					await session.SaveChangesAsync();
 				}
@@ -133,6 +134,46 @@ namespace Raven.Tests.Core.Session
 					Assert.Equal(1, session.Advanced.NumberOfRequests);
 					Assert.NotNull(address);
 					Assert.Equal("London", address.City);
+				}
+			}
+		}
+
+		[Fact]
+		public void DeletingEntityThatIsNotTrackedShouldThrow()
+		{
+			using (var store = GetDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					var e = Assert.Throws<InvalidOperationException>(() => session.Delete(new User()));
+					Assert.Equal("Raven.Tests.Core.Utils.Entities.User is not associated with the session, cannot delete unknown entity instance", e.Message);
+				}
+			}
+		}
+
+		[Fact]
+		public void DeletingEntityByIdThatIsNotTrackedShouldThrow()
+		{
+			using (var store = GetDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User { Id = "users/1", Name = "John" });
+					session.Store(new User { Id = "users/2", Name = "Jonathan" });
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					session.Delete("users/1");
+					session.Delete<User>(2);
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					Assert.Null(session.Load<User>("users/1"));
+					Assert.Null(session.Load<User>("users/2"));
 				}
 			}
 		}

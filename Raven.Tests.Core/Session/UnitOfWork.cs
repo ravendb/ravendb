@@ -37,6 +37,13 @@ namespace Raven.Tests.Core.Session
 
 					session.Advanced.Clear();
 					Assert.False(session.Advanced.HasChanges);
+
+					var user2 = new User { Id = "users/2", Name = "John" };
+					session.Store(user2);
+					session.Delete(user2);
+
+					Assert.True(session.Advanced.HasChanged(user2));
+					Assert.True(session.Advanced.HasChanges);
 				}
 			}
 		}
