@@ -501,3 +501,16 @@ interface customColumnParamsDto {
 interface customColumnsDto {
     Columns: Array<customColumnParamsDto>;
 }
+
+interface patchValueDto {
+    Key: string;
+    Value: string;
+}
+
+interface patchDto {
+    PatchOnOption: string;
+    Query: string;
+    Script: string;
+    SelectedItem: string;
+    Values: Array<patchValueDto>;
+}
