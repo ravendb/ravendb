@@ -292,7 +292,7 @@ namespace Raven.Database.Server.Controllers
 			SpatialUnits units;
 			var unitsSpecified = Enum.TryParse(GetQueryStringValue("spatialUnits"), out units);
 			double distanceErrorPct;
-			if (!double.TryParse(GetQueryStringValue("distErrPrc"), out distanceErrorPct))
+			if (!double.TryParse(GetQueryStringValue("distErrPrc"), NumberStyles.Any, CultureInfo.InvariantCulture, out distanceErrorPct))
 				distanceErrorPct = Constants.DefaultSpatialDistanceErrorPct;
 			SpatialRelation spatialRelation;
 			
