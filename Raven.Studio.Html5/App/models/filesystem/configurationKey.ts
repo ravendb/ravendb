@@ -5,8 +5,6 @@ import filesystem = require("models/filesystem/filesystem");
 
 class configurationKey {
 
-    private valuesList: pagedList;
-
     constructor(public fs: filesystem, public key) {
     }
 
@@ -16,23 +14,8 @@ class configurationKey {
         ko.postbox.publish("ActivateConfigurationKey", this);
     }
 
-    getValues(): pagedList {
-        if (!this.valuesList) {
-            this.valuesList = this.createPagedList();
-        }
-
-        return this.valuesList;
-    }
-
-    fetchValues(skip: number, take: number): JQueryPromise<pagedResultSet> {
+    getValues(): JQueryPromise<Array<Pair<string, string[]>>> {
         return new getConfigurationByKeyCommand(this.fs, this.key).execute();
-    }
-
-    private createPagedList(): pagedList {
-        var fetcher = (skip: number, take: number) => this.fetchValues(skip, take);
-        var list = new pagedList(fetcher);
-        list.collectionName = this.key;
-        return list;
     }
 
 }

@@ -18,7 +18,7 @@ class configuration extends viewModelBase {
 
     keys = ko.observableArray<configurationKey>();
     selectedKey = ko.observable<configurationKey>().subscribeTo("ActivateConfigurationKey").distinctUntilChanged();
-    currentKeyPagedItems = ko.observable<pagedList>();
+    keyDetails = ko.observable<Array<Pair<string, string[]>>>();
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
     currentKey = ko.observable<configurationKey>();
 
@@ -53,8 +53,9 @@ class configuration extends viewModelBase {
 
     selectedKeyChanged(selected: configurationKey) {
         if (selected) {
-            var pagedList = selected.getValues();
-            this.currentKeyPagedItems(pagedList);
+            selected.getValues().done(x => {
+                this.keyDetails(x);
+            });
             this.currentKey(selected);
         }
     }

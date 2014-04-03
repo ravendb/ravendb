@@ -29,7 +29,7 @@ class saveFilesystemConfigurationCommand extends commandBase {
                 var doc = { url: keys };
 
                 result = this.put(url, JSON.stringify(doc), this.fs)
-                             .done(y => { result.resolve(newValue) })
+                    .done(y => { result.resolve(newValue); });
             });
 
         return result;

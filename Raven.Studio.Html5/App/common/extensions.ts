@@ -21,11 +21,6 @@ interface Function {
     memoize(thisArg: any): Function;
 }
 
-interface Pair<T1, T2> {
-    left: T1;
-    right: T2;
-} 
-
 var subscribableFn: any = ko.subscribable.fn;
 var observableArrayFn: any = ko.observableArray.fn;
 
@@ -247,3 +242,8 @@ ko.bindingHandlers['slideVisible'] = {
         ko.unwrap(value) ? jQuery(element).slideDown() : jQuery(element).slideUp();
     }
 };
+
+class Pair<T1, T2> {
+    constructor(public item1: T1, public item2: T2) {
+    }
+}
