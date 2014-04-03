@@ -83,8 +83,9 @@ class ctor {
 
         this.itemsSourceSubscription = this.settings.itemsSource.subscribe(list => {
             this.recycleRows().forEach(r => {
-                r.resetCells();this.recycleRows.valueHasMutated();
- +                    this.columns.valueHasMutated();
+                r.resetCells();
+                this.recycleRows.valueHasMutated();
+                this.columns.valueHasMutated();
                 r.isInUse(false);
             });
             this.items = list;

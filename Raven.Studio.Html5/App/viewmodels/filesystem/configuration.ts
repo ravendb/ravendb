@@ -2,83 +2,60 @@
 import system = require("durandal/system");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
-import ace = require("ace/ace");
 
 import pagedList = require("common/pagedList");
 import filesystem = require("models/filesystem/filesystem");
-//import collection = require("models/filesystemConfigurationKeyCollection");
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
-import getFilesystemConfigurationCommand = require("commands/filesystem/getFilesystemConfigurationCommand");
+import getConfigurationCommand = require("commands/filesystem/getConfigurationCommand");
 import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
+import configurationKey = require("models/filesystem/configurationKey");
+import customColumns = require('models/customColumns');
 
 class configuration extends viewModelBase {
 
     private router = router;
 
-    keys = ko.observableArray<string>();
-    allPagedKeyDetails = ko.observable<pagedList>();
-    currentKey = ko.observable<string>();
+    keys = ko.observableArray<configurationKey>();
+    selectedKey = ko.observable<configurationKey>().subscribeTo("ActivateConfigurationKey").distinctUntilChanged();
+    currentKeyPagedItems = ko.observable<pagedList>();
+    currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
+    currentKey = ko.observable<configurationKey>();
 
-    static containerId = "#settingsContainer";
-
-    static gridSelector = "#filesGrid";
+    static gridSelector = "#keyDetailsGrid";
 
     constructor() {
         super();
+        this.selectedKey.subscribe(k => this.selectedKeyChanged(k));
     }
 
     attached() {
 
         this.activeFilesystem.subscribe(x => {
-            this.loadKeys(x); 
-            if (this.currentKey() != null)
-                this.loadEditorWithKey(x, this.currentKey());       
+            this.loadKeys(x);     
         }); 
 
         this.loadKeys(this.activeFilesystem()); 
     }
 
-    activate(args) {
-        super.activate(args); 
-        if (args.key != null) {
-            this.currentKey(args.key);
-        }  
-       
-        this.currentKey.subscribe(x => this.loadEditorWithKey(this.activeFilesystem(), x)); 
-    }
-
     loadKeys(fs: filesystem){
-        new getFilesystemConfigurationCommand(fs)
+        new getConfigurationCommand(fs)
             .execute()
             .done(x => {
-                this.keys(x);
-                if (this.currentKey() == null)
-                    this.currentKey(x.first());                 
+                this.keys(x);          
             });
     }
 
-    isActive(key: string): boolean{
-        return this.currentKey() === key;
+    selectKey(key: configurationKey) {
+        key.activate();
+        router.navigate(appUrl.forFilesystemConfigurationWithKey(this.activeFilesystem(), key.key));
     }
 
-    getEditorUrl(key: string): string{
-        return appUrl.forFilesystemConfigurationWithKey(this.activeFilesystem(), key);
-    }
-
-    loadEditorWithKey(fs: filesystem, key: string) { 
-        if (key != null) {
-            new getConfigurationByKeyCommand(this.activeFilesystem(), key)
-                .execute()
-                .done(x => this.handleDocument(x))
-                .fail(x => this.navigate(appUrl.forFilesystemConfiguration(fs)));
-        }               
-    }
-
-    editSelectedKey() {
-        var grid = this.getKeyDetailsGrid();
-        if (grid) {
-            grid.editLastSelectedItem();
+    selectedKeyChanged(selected: configurationKey) {
+        if (selected) {
+            var pagedList = selected.getValues();
+            this.currentKeyPagedItems(pagedList);
+            this.currentKey(selected);
         }
     }
 
@@ -91,22 +68,6 @@ class configuration extends viewModelBase {
         return null;
     }
 
-    private handleDocument(doc: any) {
-        var docSettings = this.stringify(doc);
-        //this.docEditor.getSession().setValue(docSettings);
-    }
-
-    private stringify(obj: any) {
-        var prettifySpacing = 4;
-        return JSON.stringify(obj, null, prettifySpacing);
-    }
-
-    navigateToEditSettingsDocument() {
-        var fs = this.activeFilesystem();
-        if (fs && this.currentKey() != null) {
-            router.navigate(appUrl.forFilesystemConfigurationWithKey(this.activeFilesystem(), this.currentKey()));
-        }
-    }
 } 
 
 export = configuration;

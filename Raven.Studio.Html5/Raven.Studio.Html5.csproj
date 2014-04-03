@@ -24,6 +24,7 @@
     <TypeScriptCompile Include="App\commands\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\createFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\saveFilesystemDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemFolderCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteFilesystemConfigurationKeyCommand.ts" />
@@ -31,7 +32,6 @@
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\downloadFileFromFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationByKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesystemDestinationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesystemFilesCommand.ts" />
