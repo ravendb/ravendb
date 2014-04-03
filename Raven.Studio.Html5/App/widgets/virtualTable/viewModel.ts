@@ -301,7 +301,8 @@ class ctor {
 
         // Enforce a max number of columns. Having many columns is unweildy to the user
         // and greatly slows down scroll speed.
-        var maxColumns = 10;
+        //var maxColumns = this.grid.width()/200;
+        var maxColumns = this.grid.width() / 200;
         if (this.columns().length >= maxColumns) {
             return;
         }
@@ -330,11 +331,13 @@ class ctor {
         }
 
         var idColumn = this.columns.first(x=> x.binding == "Id");
+        var idCheckboxColumn = this.columns.first(x=> x.binding == "__IsChecked");
+        var idCheckboxWidth = idCheckboxColumn ? idCheckboxColumn.width() : 0;
         var idColumnExists = idColumn ? 1 : 0;
 
         var calculateWidth = ctor.idColumnWidth;
         var colCount = Object.keys(columnsNeeded).length;
-        if ((colCount + idColumnExists) * 200 > this.grid.width()) {
+        if ((colCount + idColumnExists) * 200 + idCheckboxWidth > this.grid.width()) {
             if (idColumn) {
                 idColumn.width(calculateWidth);
             }

@@ -20,7 +20,6 @@
     <TargetFrameworkProfile />
   </PropertyGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="App\commands\changesApiCommand.ts" />
     <TypeScriptCompile Include="App\commands\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\createFilesystemCommand.ts" />
@@ -201,6 +200,11 @@
     <TypeScriptCompile Include="App\models\customColumnParams.ts" />
     <TypeScriptCompile Include="App\models\customColumns.ts" />
     <TypeScriptCompile Include="App\viewmodels\selectColumns.ts" />
+    <TypeScriptCompile Include="App\common\changesApi.ts" />
+    <TypeScriptCompile Include="App\models\changeSubscription.ts" />
+    <TypeScriptCompile Include="App\common\changesCallback.ts" />
+    <TypeScriptCompile Include="App\models\patchDocuments.ts" />
+    <TypeScriptCompile Include="App\models\patchParam.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\selectColumns.html" />
@@ -1223,7 +1227,7 @@
         <WebProjectProperties>
           <UseIIS>True</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>0</DevelopmentServerPort>
+          <DevelopmentServerPort>56397</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>http://localhost:8080/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>

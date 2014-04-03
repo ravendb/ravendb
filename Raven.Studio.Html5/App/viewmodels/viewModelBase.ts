@@ -1,6 +1,5 @@
 import appUrl = require("common/appUrl");
 import database = require("models/database");
-import filesystem = require("models/filesystem");
 import router = require("plugins/router");
 import app = require("durandal/app");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
@@ -9,9 +8,7 @@ import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
 class viewModelBase {
-    public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
-    public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
-               
+    activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private keyboardShortcutDomContainers: string[] = [];
     private modelPollingHandle: number;
     static dirtyFlag = new ko.DirtyFlag([]);
@@ -25,9 +22,9 @@ class viewModelBase {
      * p.s. from Judah: a big scary prompt when loading the system DB is a bit heavy-handed, no? 
      */
     canActivate(args: any): any {
-        var database = appUrl.getDatabase();
-                
-        if (database != null && database.isSystem) {
+        var database = (appUrl.getDatabase()!=null) ? appUrl.getDatabase() : appUrl.getSystemDatabase(); //TODO: temporary fix for routing problem for system databse - remove this when fixed
+
+        if (database.isSystem) {
             if (viewModelBase.isConfirmedUsingSystemDatabase) {
                 return true;
             }
@@ -43,19 +40,12 @@ class viewModelBase {
     * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
     */
     activate(args) {
-
         var db = appUrl.getDatabase();
         var currentDb = this.activeDatabase();
         if (!!db && db !== null && (!currentDb || currentDb.name !== db.name)) {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
         }
 
-        var fs = appUrl.getFilesystem();
-        var currentFilesystem = this.activeFilesystem();
-        if (!currentFilesystem || currentFilesystem.name !== fs.name) {
-            ko.postbox.publish("ActivateFilesystemWithName", fs.name);
-        }
-		
         this.modelPollingStart();
 
         window.onbeforeunload = (e: any) => {
@@ -99,7 +89,6 @@ class viewModelBase {
      */
     deactivate() {
         this.activeDatabase.unsubscribeFrom("ActivateDatabase");
-        this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
     }
@@ -107,7 +96,7 @@ class viewModelBase {
     /*
      * Creates a keyboard shortcut local to the specified element and its children.
      * The shortcut will be removed as soon as the view model is deactivated.
-     * Also defines shortcut for ace editor, if ace editor was received
+     * Also defines shortcut for ace edito, if ace editor was recieved
      */
     createKeyboardShortcut(keys: string, handler: () => void, elementSelector: string) {
         jwerty.key(keys, e => {
@@ -121,7 +110,7 @@ class viewModelBase {
     }
 
     //A method to save the current value in the observables from text boxes and inputs before a refresh/page close.
-    //Should be implemented on the inheriting class.
+    //Should be implemented on the inhereting class.
     saveInObservable() {
 
     }
@@ -155,10 +144,9 @@ class viewModelBase {
         this.modelPolling();
     }
 
-    modelPollingStart() {
+    private modelPollingStart() {
         this.modelPolling();
         this.activeDatabase.subscribe(() => this.forceModelPolling());
-        this.activeFilesystem.subscribe(() => this.forceModelPolling());
     }
 
     private modelPollingStop() {

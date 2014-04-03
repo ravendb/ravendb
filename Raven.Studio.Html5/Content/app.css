@@ -40,6 +40,75 @@ body {
     margin-bottom: 0;
   }
 }
+@media (max-device-height: 1024px) {
+  span {
+    font-size: 14px!important;
+  }
+  a {
+    font-size: 90%!important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  i {
+    font-size: 90%!important;
+    display: inline-block !important;
+  }
+  button {
+    max-height: 5%!important;
+    font-size: 90%!important;
+  }
+  .tooltip-inner {
+    font-size: 10px!important;
+  }
+}
+@media (max-device-height: 1024px) {
+  .control-label {
+    max-width: 400px!important;
+  }
+}
+@media (max-device-height: 1024px) {
+  .query-results {
+    width: 86%!important;
+  }
+}
+.side-panel li {
+  max-width: 20%;
+  margin-top: 5%;
+  margin-bottom: 5%;
+  padding-top: 5%;
+  padding-bottom: 5%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+@media (max-device-height: 1024px) {
+  .side-panel h4 {
+    font-size: 90% !important;
+  }
+  .side-panel label {
+    font-size: 90% !important;
+  }
+  .side-panel span {
+    font-size: 80% !important;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+@media (max-device-height: 1024px) {
+  .container-fluid a {
+    padding: 5px!important;
+    max-height: 30px!important;
+    font-size: 13px!important;
+  }
+}
+.panel span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: auto;
+}
 .page {
   padding: 0 10px 20px 10px;
   width: 98%;
@@ -53,15 +122,6 @@ body {
 .navbar-splitbutton + .dropdown > a {
   padding-left: 6px;
   padding-right: 8px;
-}
-.database-page {
-  /*.systemButton {
-        color:grey;
-        margin-top:50px;        
-        position:absolute;
-        top:-40px;
-        right:25px;
-    }*/
 }
 .database-page .btn-toolbar {
   margin-bottom: 20px;
@@ -262,6 +322,14 @@ body {
 .documents-page {
   margin-top: 10px;
 }
+@media (max-device-height: 1024px) {
+  .documents-page a {
+    font-size: 12px!important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
 .collection-color-strip {
   height: 20px;
   width: 4px;
@@ -270,6 +338,17 @@ body {
 }
 #editIndex .map {
   height: 120px;
+}
+@media (max-device-height: 1024px) {
+  #queryContainer #indexQueryLabelContainer {
+    display: inline-block !important;
+  }
+  #queryContainer #indexQueryLabelContainer i {
+    display: none!important;
+  }
+  #queryContainer #indexQueryLabelContainer a {
+    display: none!important;
+  }
 }
 #queryContainer .editor {
   height: 60px;
@@ -280,6 +359,22 @@ body {
 }
 #queryContainer .form-horizontal {
   overflow: hidden auto;
+}
+#queryContainer .side-panel li {
+  max-width: 100%!important;
+  margin-top: 5%;
+  margin-bottom: 5%;
+  padding-top: 5%;
+  padding-bottom: 5%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+@media (max-device-height: 1024px) {
+  #queryContainer .side-panel {
+    margin-left: 100px !important;
+    width: 30%;
+  }
 }
 .ko-grid {
   /*position: absolute;
@@ -340,8 +435,23 @@ body {
 .help-cursor {
   cursor: help;
 }
-.breadcrumb {
-  padding: 0 10px 0 10px;
+@media (max-device-height: 1024px) {
+  .breadcrumb h3 {
+    font-size: 16px!important;
+    display: inline-block !important;
+  }
+  .breadcrumb a {
+    font-size: 14px!important;
+    display: inline-block !important;
+  }
+  .breadcrumb span {
+    font-size: 14px!important;
+    display: inline-block !important;
+  }
+  .breadcrumb i {
+    font-size: 15px!important;
+    display: inline-block !important;
+  }
 }
 .studio-alerts {
   position: fixed;
@@ -368,6 +478,11 @@ body {
 #editDocumentContainer .query-metadata {
   padding-top: 20px;
 }
+@media (max-device-height: 1024px) {
+  #editDocumentContainer .query-metadata {
+    padding-top: 25px !important;
+  }
+}
 .keyboard-shortcut {
   margin-left: 20px;
 }
@@ -388,10 +503,43 @@ body {
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
 }
+#shellHeader .databases li {
+  padding-left: 3%!important;
+}
+#shellHeader span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+#shellHeader a {
+  font-size: 100% !important;
+}
+#shellHeader input[type=text] {
+  font-size: 100% !important;
+  max-height: 5% !important;
+}
+#shellHeader i {
+  display: inline-block !important;
+}
+#shellFooter ul {
+  width: 100% !important;
+}
 #shellFooter li {
-  max-width: 200px;
+  max-width: 20% !important;
   margin: 0;
   padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+#shellFooter li a {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 5% !important;
+  padding-right: 5% !important;
+  font-size: 100% !important;
+}
+#shellFooter span {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -399,25 +547,15 @@ body {
 #editTransformerContainer .transformer {
   height: 600px;
 }
-#csvImportContainer .fileinputs {
-  position: relative;
-}
-#csvImportContainer .fakefile {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-}
-#csvImportContainer .file {
-  position: relative;
-  text-align: right;
-  -moz-opacity: 0 ;
-  filter: alpha(opacity: 0);
-  opacity: 0;
-  z-index: 2;
-}
 .auto-complete {
   background-color: white;
+}
+@media (max-device-height: 1024px) {
+  #logsContainer button,
+  #alertsContainer button,
+  #indexErrorsContainer button {
+    max-height: 50%!important;
+  }
 }
 #logsContainer table,
 #alertsContainer table,
@@ -515,53 +653,10 @@ footer ul {
 #scriptedIndex .map {
   height: 160px;
 }
-
-.filesystem-page .btn-toolbar {
-  margin-bottom: 20px;
+.indexes-controls {
+  margin-left: 15px;
 }
-.filesystem-page .filesystems-container {
-  margin-top: 10px;
-}
-.filesystem-page .filesystems-container .filesystem {
-  cursor: pointer;
-  border-radius: 10px;
-  -webkit-box-shadow: 0 0 5px 1px silver;
-  box-shadow: 0 0 5px 1px silver;
-  min-width: 140px;
-  min-height: 60px;
-  display: inline-block;
-  padding: 8px;
-  margin: 0 10px 14px 0;
-}
-.filesystem-page .filesystems-container .filesystem:hover {
-  background-color: white;
-  -webkit-box-shadow: 0 0 5px 0 #6aa3d5;
-  box-shadow: 0 0 5px 0 #6aa3d5;
-}
-.filesystem-page .filesystems-container .filesystem.selected {
-  -webkit-box-shadow: 0 0 6px 0 #428bca;
-  box-shadow: 0 0 6px 0 #428bca;
-  background-color: #428bca;
-}
-.filesystem-page .filesystems-container .filesystem.selected a,
-.filesystem-page .filesystems-container .filesystem.selected .text-muted {
-  color: white;
-}
-.filesystem-page .filesystems-container .filesystem.default-filesystem {
-  background-color: rgba(192, 192, 192, 0.21);
-}
-.filesystem-page .filesystems-container .filesystem.default-filesystem.selected {
-  background-color: rgba(14, 14, 14, 0.21);
-}
-.filesystem-page .filesystems-container .filesystem.default-filesystem.selected a,
-.filesystem-page .filesystems-container .filesystem.default-filesystem.selected .text-muted {
-  color: #3071a9;
-}
-.filesystem-page .systemButton {
-  color: grey;
-  margin-top: 50px;
-  position: absolute;
-  top: -40px;
-  right: 25px;
+.advanced-replication-settings {
+    cursor: pointer;
 }
 /*# sourceMappingURL=app.css.map */
