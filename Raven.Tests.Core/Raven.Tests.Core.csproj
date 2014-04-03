@@ -108,6 +108,7 @@
     <Compile Include="Commands\Other.cs" />
     <Compile Include="Indexing\ReferencedDocuments.cs" />
     <Compile Include="Session\Includes.cs" />
+    <Compile Include="Session\Ids.cs" />
     <Compile Include="Session\UnitOfWork.cs" />
     <Compile Include="Streaming\DocumentStreaming.cs" />
     <Compile Include="Streaming\QueryStreaming.cs" />
@@ -115,6 +116,7 @@
     <Compile Include="Utils\Entities\User.cs" />
     <Compile Include="RavenCoreTestBase.cs" />
     <Compile Include="TestServerFixture.cs" />
+    <Compile Include="Utils\Entities\UserWithoutId.cs" />
     <Compile Include="Utils\Indexes\Users_ByName.cs" />
   </ItemGroup>
   <Choose>
