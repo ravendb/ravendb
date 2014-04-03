@@ -1,10 +1,10 @@
-﻿<div id="editDocumentContainer" tabindex="-1">
+﻿<div id="editFileContainer" tabindex="-1">
     <!-- We use a container with a tab index so that we can capture keyboard events, such as CTRL+S. -->
     <ul class="breadcrumb">
         <li>
             <h3>
                 <i class="fa fa-file-text-o"></i>
-                <a href="#documents" data-bind="click: navigateToFiles">
+                <a data-bind="click: navigateToFiles">
                     Files
                 </a>
             </h3>
@@ -16,26 +16,18 @@
 
     <div class="btn-toolbar">
         <div class="btn-group">
-            <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveDocument, enable: userSpecifiedId" title="Save (Alt+S)" accesskey="R"><i class="fa fa-save"></i></button>
-            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: refreshDocument" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></button>
+            <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveFile" title="Save (Alt+S)" accesskey="R"><i class="fa fa-save"></i></button>
+            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: refreshFile" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></button>
             <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: downloadFile" title="Download file (Alt+[)" accesskey="["><i class="fa fa-download"></i></button>
-            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: deleteDocument" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
+            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: deleteFile" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
         </div>
-
-        <!--<div class="btn-group" data-bind="with: docsList">
-            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: $root.firstDocument.bind($root)" title="Go to first document (Alt+Home)"><i class="fa fa-step-backward"></i></button>
-            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: $root.previousDocumentOrLast.bind($root)" title="Go to previous document (Alt+PageUp)"><i class="fa fa-caret-left"></i></button>
-            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="text: 'Doc ' + (currentItemIndex() + 1) + ' of ' + totalResultCount()"></button>
-            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: $root.nextDocumentOrFirst.bind($root)" title="Go to next document (Alt+PageDown)"><i class="fa fa-caret-right"></i></button>
-            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: $root.lastDocument.bind($root)" title="Go to last document (Alt+End)"><i class="fa fa-step-forward"></i></button>
-        </div>-->
     </div>
     <br />
     <div class="row">
-        <div class="col-md-9">
-            <div class="row" data-bind="with: metadata">
+        <div class="col-md-8">
+            <div class="row">
                 <div class="col-md-12">
-                    <input type="text" class="form-control use-bootstrap-tooltip" placeholder="document id" title="File name" data-bind="value: $root.fileName, attr: { disabled: true }" />
+                    <input type="text" class="form-control use-bootstrap-tooltip" title="File name" data-bind="value: fileName, attr: { disabled: true }" />
                 </div>
             </div>
             <br />
@@ -48,7 +40,7 @@
                 </div>
             </div>
         </div>
-        <div class="form-group panel panel-default col-md-3 document-addition-data">
+        <div class="form-group panel panel-default col-md-4 document-addition-data">
             <div class="col-md-12" data-bind="with: metadata">
                 <h4><strong>Metadata</strong></h4>
                 <hr />
@@ -68,12 +60,52 @@
                         <span data-bind="text: lastModified"></span>
                     </div>
                 </div>
+                <div class="row">
+                    <div class="col-md-5">
+                        <label>Origin</label>
+                    </div>
+                    <div class="col-md-7">
+                        <span data-bind="text: origin"></span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-5">
+                        <label>Raven-Synchronization-History</label>
+                    </div>
+                    <div class="col-md-7">
+                        <span data-bind="text: ravenSynchronizationHistory"></span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-5">
+                        <label>Raven-Synchronization-Version</label>
+                    </div>
+                    <div class="col-md-7">
+                        <span data-bind="text: ravenSynchronizationVersion"></span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-5">
+                        <label>Raven-Synchronization-Source</label>
+                    </div>
+                    <div class="col-md-7">
+                        <span data-bind="text: ravenSynchronizationSource"></span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-5">
+                        <label>RavenFS-Size</label>
+                    </div>
+                    <div class="col-md-7">
+                        <span data-bind="text: ravenFSSize"></span>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-12 query-metadata">
+            <!--<div class="col-md-12 query-metadata">
                 <h4><strong>Recent Files</strong></h4>
                 <hr />
                 <div data-bind="foreach: topRecentFiles"><a class="btn btn-default" data-bind="text:$data.docId, attr:{href:$data.docUrl}"></a></div>
-            </div>
+            </div>-->
             <!--<div class="col-md-12 query-metadata">
                 <h4><strong>Related Documents</strong></h4>
                 <hr />

@@ -6,12 +6,14 @@ class file implements documentBase {
     LastModified: string;
     __metadata: fileMetadata;
 
-    constructor(dto: filesystemFileHeaderDto) {
-        this.id = dto.Name;
-        this.Size = dto.HumaneTotalSize;
-        this.LastModified = dto.Metadata["Last-Modified"];
+    constructor(dto?: filesystemFileHeaderDto) {
+        if (dto) {
+            this.id = dto.Name;
+            this.Size = dto.HumaneTotalSize;
+            this.LastModified = dto.Metadata["Last-Modified"];
 
-        this.__metadata = new fileMetadata(dto.Metadata);
+            this.__metadata = new fileMetadata(dto.Metadata);
+        }
     }
 
     getId() {

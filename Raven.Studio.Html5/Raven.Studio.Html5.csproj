@@ -25,9 +25,11 @@
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\deleteFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\saveDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteConfigurationKeyCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\downloadFileFromFilesystemCommand.ts" />
@@ -116,6 +118,7 @@
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\createFilesystem.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\deleteFiles.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemEditFile.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemAddDestination.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\configuration.ts" />
@@ -205,6 +208,7 @@
     <TypeScriptCompile Include="App\viewmodels\selectColumns.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\filesystem\deleteFiles.html" />
     <Content Include="App\views\filesystem\filesystemSearch.html" />
     <Content Include="App\views\filesystem\filesystemSynchronization.html" />
     <Content Include="App\views\filesystem\filesystemEditFile.html" />

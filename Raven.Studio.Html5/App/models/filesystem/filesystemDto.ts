@@ -56,6 +56,16 @@ interface filesystemFileHeaderDto {
     Metadata: any;
 }
 
+interface fileMetadataDto {
+    'Last-Modified'?: string;
+    '@etag'?: string;
+    'Raven-Synchronization-History': string;
+    'Raven-Synchronization-Version': string;
+    'Raven-Synchronization-Source': string;
+    'RavenFS-Size': string;
+    'Origin': string;
+}
+
 interface filesystemSynchronizationReportDto{
 
     FileName: string;
