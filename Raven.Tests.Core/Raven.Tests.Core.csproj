@@ -102,6 +102,8 @@
     <Compile Include="Commands\Crud.cs" />
     <Compile Include="Commands\DocumentsRetrieving.cs" />
     <Compile Include="Replication\AttachmentReplication.cs" />
+    <Compile Include="Replication\DocumentReplication.cs" />
+    <Compile Include="Replication\RavenReplicationCoreTest.cs" />
     <Compile Include="Session\Crud.cs" />
     <Compile Include="Commands\Other.cs" />
     <Compile Include="Indexing\ReferencedDocuments.cs" />
