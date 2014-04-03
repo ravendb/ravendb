@@ -113,18 +113,24 @@ task Test -depends Compile {
 	$xUnit = "$lib_dir\xunit\xunit.console.clr4.exe"
 	Write-Host "xUnit location: $xUnit"
 	
+	$hasErrors = $false
 	$test_prjs | ForEach-Object { 
 		if($global:full_storage_test) {
 			$env:raventest_storage_engine = 'esent';
 			Write-Host "Testing $_ (esent)"
-			exec { &"$xUnit" "$_" }
 		}
 		else {
 			$env:raventest_storage_engine = $null;
 			Write-Host "Testing $_ (default)"
-			exec { &"$xUnit" "$_" }
 		}
+		&"$xUnit" "$_"
+		if ($lastexitcode -ne 0) {
+	        $hasErrors = $true
+	    }
 	}
+	if ($hasErrors) {
+        throw ("Test failure!")
+    }
 }
 
 task StressTest -depends Compile {
