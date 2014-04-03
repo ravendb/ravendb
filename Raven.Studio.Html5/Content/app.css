@@ -45,18 +45,18 @@ body {
     font-size: 14px!important;
   }
   a {
-    font-size: 14x!important;
+    font-size: 90%!important;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   i {
-    font-size: 14px!important;
-    display: block!important;
+    font-size: 90%!important;
+    display: inline-block !important;
   }
   button {
-    max-height: 30px!important;
-    font-size: 13px!important;
+    max-height: 5%!important;
+    font-size: 90%!important;
   }
   .tooltip-inner {
     font-size: 10px!important;
@@ -72,29 +72,28 @@ body {
     width: 86%!important;
   }
 }
-.side-panel {
-  margin-left: 10px!important;
-}
 .side-panel li {
-  max-width: 400px;
-  margin: 0;
-  padding: 0;
+  max-width: 20%;
+  margin-top: 5%;
+  margin-bottom: 5%;
+  padding-top: 5%;
+  padding-bottom: 5%;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 @media (max-device-height: 1024px) {
   .side-panel h4 {
-    font-size: 14px !important;
+    font-size: 90% !important;
   }
   .side-panel label {
-    font-size: 12px !important;
+    font-size: 90% !important;
   }
   .side-panel span {
-    font-size: 10px !important;
-  }
-  .side-panel li {
-    max-width: 200px!important;
+    font-size: 80% !important;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 }
 @media (max-device-height: 1024px) {
@@ -103,16 +102,6 @@ body {
     max-height: 30px!important;
     font-size: 13px!important;
   }
-}
-#bs-example-navbar-collapse-1 a {
-  font-size: 12px!important;
-}
-#bs-example-navbar-collapse-1 input[type=text] {
-  font-size: 12px!important;
-  height: 24px!important;
-}
-#bs-example-navbar-collapse-1 i {
-  display: inline-block !important;
 }
 .panel span {
   overflow: hidden;
@@ -371,9 +360,20 @@ body {
 #queryContainer .form-horizontal {
   overflow: hidden auto;
 }
+#queryContainer .side-panel li {
+  max-width: 100%!important;
+  margin-top: 5%;
+  margin-bottom: 5%;
+  padding-top: 5%;
+  padding-bottom: 5%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 @media (max-device-height: 1024px) {
   #queryContainer .side-panel {
     margin-left: 100px !important;
+    width: 30%;
   }
 }
 .ko-grid {
@@ -434,9 +434,6 @@ body {
 }
 .help-cursor {
   cursor: help;
-}
-.breadcrumb {
-  padding: 0 10px 0 10px;
 }
 @media (max-device-height: 1024px) {
   .breadcrumb h3 {
@@ -506,51 +503,59 @@ body {
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
 }
+#shellHeader .databases li {
+  padding-left: 3%!important;
+}
+#shellHeader span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+#shellHeader a {
+  font-size: 100% !important;
+}
+#shellHeader input[type=text] {
+  font-size: 100% !important;
+  max-height: 5% !important;
+}
+#shellHeader i {
+  display: inline-block !important;
+}
+#shellFooter ul {
+  width: 100% !important;
+}
 #shellFooter li {
-  max-width: 200px;
+  max-width: 20% !important;
   margin: 0;
   padding: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-@media (max-device-height: 1024px) {
-  #shellFooter li {
-    max-width: 100px !important;
-  }
+#shellFooter li a {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 5% !important;
+  padding-right: 5% !important;
+  font-size: 100% !important;
 }
 #shellFooter span {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-@media (max-device-height: 1024px) {
-  #shellFooter span {
-    max-width: 100px !important;
-  }
-}
 #editTransformerContainer .transformer {
   height: 600px;
 }
-#csvImportContainer .fileinputs {
-  position: relative;
-}
-#csvImportContainer .fakefile {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-}
-#csvImportContainer .file {
-  position: relative;
-  text-align: right;
-  -moz-opacity: 0 ;
-  filter: alpha(opacity: 0);
-  opacity: 0;
-  z-index: 2;
-}
 .auto-complete {
   background-color: white;
+}
+@media (max-device-height: 1024px) {
+  #logsContainer button,
+  #alertsContainer button,
+  #indexErrorsContainer button {
+    max-height: 50%!important;
+  }
 }
 #logsContainer table,
 #alertsContainer table,
@@ -649,6 +654,6 @@ footer ul {
   height: 160px;
 }
 .indexes-controls {
-    margin-left: 15px;
+  margin-left: 15px;
 }
 /*# sourceMappingURL=app.css.map */

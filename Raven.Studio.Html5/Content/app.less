@@ -53,29 +53,28 @@ html, body {
     }
 }
 
-
 @media(max-device-height:1024px) {    
     span{
         font-size:14px!important;
     }
     a{
-            font-size: 14x!important;
+            font-size:90%!important;                
             overflow: hidden;
             text-overflow: ellipsis;
-            white-space: nowrap;
+            white-space: nowrap;            
     }
     i{
-        font-size:14px!important;                
-        display:block!important;
+        font-size:90%!important;                
+        display:inline-block!important;
     }
     button{
-        max-height:30px!important;        
-        font-size:13px!important;                
+        max-height:5%!important;        
+        font-size:90%!important;                        
     }      
 
     .tooltip-inner {
            font-size:10px!important;                
-    }   
+    }       
 }
 
 .control-label {
@@ -91,13 +90,13 @@ html, body {
 }
 
 
-.side-panel {
-    margin-left:10px!important;
-
+.side-panel {  
     li {
-        max-width: 400px;
-        margin: 0;
-        padding: 0;
+        max-width: 20%;
+        margin-top: 5%;
+        margin-bottom: 5%;
+        padding-top: 5%;
+        padding-bottom: 5%;
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
@@ -106,20 +105,17 @@ html, body {
     @media(max-device-height:1024px) {        
 
         h4 {
-            font-size: 14px !important;
+            font-size: 90% !important;
         }
-
         label {
-            font-size: 12px !important;
+            font-size: 90% !important;
         }
-
         span {
-            font-size: 10px !important;
-        }
-
-        li{
-            max-width:200px!important;
-        }
+            font-size: 80% !important;
+             overflow: hidden;
+             white-space: nowrap;
+             text-overflow: ellipsis;
+        }       
     }
     
 }
@@ -137,20 +133,7 @@ html, body {
     }
 }
 
- #bs-example-navbar-collapse-1 {
-        a{
-            font-size:12px!important;
-        }
 
-        input[type=text]{
-            font-size:12px!important;
-            height:24px!important;
-        }
-
-        i{
-            display:inline-block!important;
-        }
-    }
 
 .panel span{    
     overflow: hidden;
@@ -501,9 +484,22 @@ html, body {
     }
 
     .side-panel {
+        
+         li {             
+            max-width: 100%!important;
+            margin-top: 5%;
+            margin-bottom: 5%;
+            padding-top: 5%;
+            padding-bottom: 5%;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
         @media(max-device-height:1024px) {
             margin-left: 100px !important;
-        }
+            width:30%;
+        }        
     }
 }
 
@@ -580,8 +576,7 @@ html, body {
 }
 
 .breadcrumb {
-    padding: 0 10px 0 10px;
-
+    
     @media(max-device-height:1024px) {
       
         h3{
@@ -652,7 +647,7 @@ html, body {
     overflow-x: hidden;
     -ms-word-break: break-all;
     word-break: break-all;
-    cursor: pointer;
+    cursor: pointer;        
 
     tbody {
         td {
@@ -667,54 +662,63 @@ html, body {
     }
 }
 
+#shellHeader {
+    .databases{
+        li{
+            padding-left:3%!important;
+        }
+    }    
+    span {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+     a {
+            font-size: 100% !important;
+        }                      
+
+    input[type=text] {
+        font-size: 100% !important;
+        max-height: 5% !important;
+    }
+
+    i {
+        display: inline-block !important;
+    }    
+}
+
 #shellFooter {
+    ul {
+        width: 100% !important;
+    }
+
     li {
-        max-width: 200px;
+        max-width: 20% !important;
         margin: 0;
         padding: 0;
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
 
-        @media(max-device-height:1024px) {
-            max-width: 100px !important;
+        a {
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            padding-left: 5% !important;
+            padding-right: 5% !important;
+            font-size: 100% !important;
         }
     }
-      span {
-         overflow: hidden;
+
+    span {
+        overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
-
-        @media(max-device-height:1024px) {
-            max-width: 100px !important;
-        }
-        
     }
-  
 }
 
 #editTransformerContainer .transformer {
   height: 600px;
-}
-
-#csvImportContainer .fileinputs {
-    position: relative;
-}
-
-#csvImportContainer .fakefile {
-	position: absolute;
-	top: 0;
-	left: 0;
-	z-index: 1;
-}
-
-#csvImportContainer .file {
-	position: relative;
-	text-align: right;
-	-moz-opacity:0 ;
-	filter:~"alpha(opacity: 0)";
-	opacity: 0;
-	z-index: 2;
 }
 
 .auto-complete {
@@ -722,6 +726,12 @@ html, body {
 }
 
 #logsContainer, #alertsContainer, #indexErrorsContainer {
+    @media(max-device-height:1024px) {
+        button{
+            max-height:50%!important;
+        }
+    }
+
 
     table {
         outline: none;
