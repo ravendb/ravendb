@@ -18,10 +18,16 @@ class getFilesystemDestinationsCommand extends commandBase {
         var task = $.Deferred();
         this.query<Array<Pair<string, string[]>>>(url, args, this.fs)
             .done(data => {                
-                if (data.hasOwnProperty('url'))
-                    task.resolve(data['url']);
-                else
+                if (data.hasOwnProperty('url')) {
+                    var value = data['url'];
+                    if (value instanceof Array)
+                        task.resolve(value);                        
+                    else 
+                        task.resolve([value]);    
+                }
+                else {
                     task.resolve({});
+                }                
             });
 
         return task;
