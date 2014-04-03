@@ -85,6 +85,7 @@
     <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
     <Compile Include="Replication\AsyncReadStriping.cs" />
     <Compile Include="Replication\ReadStriping.cs" />
+    <Compile Include="RunExternalProcess.cs" />
     <Compile Include="Security\OAuth\ReplicationWithOAuthMultipleKeys.cs" />
     <Compile Include="Storage\Voron\DocumentsStorageActionsTests.cs" />
     <Compile Include="Synchronization\IndexationTests.cs" />
