@@ -4,14 +4,12 @@ import filesystem = require("models/filesystem");
 import router = require("plugins/router");
 import app = require("durandal/app");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
-import filesystem = require("models/filesystem");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
 class viewModelBase {
     public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
-    public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
 
     private keyboardShortcutDomContainers: string[] = [];
     private modelPollingHandle: number;
