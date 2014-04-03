@@ -72,14 +72,18 @@ namespace RavenFS.Tests.Synchronization
 
 			content.Position = 0;
 			server1.UploadAsync("test.bin", new NameValueCollection {{"test", "value"}}, content).Wait();
+			
+			Assert.Equal(1, server1.StatsAsync().Result.FileCount);
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
 			Assert.Null(server1.Synchronization.SynchronizeDestinationsAsync().Result[0].Exception);
+			Assert.Equal(1, server2.StatsAsync().Result.FileCount);
 
 			SyncTestUtils.TurnOnSynchronization(server2, server3);
 
 			Assert.Null(server2.Synchronization.SynchronizeDestinationsAsync().Result[0].Exception);
+			Assert.Equal(1, server3.StatsAsync().Result.FileCount);
 
 			SyncTestUtils.TurnOffSynchronization(server1);
 
@@ -123,6 +127,10 @@ namespace RavenFS.Tests.Synchronization
 
 			Assert.Equal(server1Md5, server2Md5);
 			Assert.Equal(server2Md5, server3Md5);
+
+			Assert.Equal(1, server1.StatsAsync().Result.FileCount);
+			Assert.Equal(1, server2.StatsAsync().Result.FileCount);
+			Assert.Equal(1, server3.StatsAsync().Result.FileCount);
 		}
 
 		[Fact]
@@ -161,10 +169,13 @@ namespace RavenFS.Tests.Synchronization
 
 			// On all servers should not have any file
 			Assert.Equal(0, server1.BrowseAsync().Result.Count());
+			Assert.Equal(0, server1.StatsAsync().Result.FileCount);
 
 			Assert.Equal(0, server2.BrowseAsync().Result.Count());
+			Assert.Equal(0, server2.StatsAsync().Result.FileCount);
 
 			Assert.Equal(0, server3.BrowseAsync().Result.Count());
+			Assert.Equal(0, server3.StatsAsync().Result.FileCount);
 		}
 
 		[Fact]

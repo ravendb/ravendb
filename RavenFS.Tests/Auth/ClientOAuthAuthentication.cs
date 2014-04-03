@@ -122,8 +122,7 @@ namespace RavenFS.Tests.Auth
 
             var stats = await adminClient.GetFileSystemsStats();
 
-            Assert.Equal(1, stats.Count);
-            Assert.Equal("AdminClientWorkWithOAuthEnabled", stats.First().Name);
+            Assert.Equal(0, stats.Count); // 0 because our fs aren't active
         }
 
         [Fact]
