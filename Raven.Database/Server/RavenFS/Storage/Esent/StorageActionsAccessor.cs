@@ -532,7 +532,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			return Api.RetrieveColumnAsInt32(session, Details, tableColumnsCache.DetailsColumns["file_count"]).Value;
 		}
 
-		public void DecrementFileCount()
+		public void DecrementFileCount(string nameOfFileThatShouldNotBeCounted)
 		{
 			if (Api.TryMoveFirst(session, Details) == false)
 				throw new InvalidOperationException("Could not find system metadata row");
