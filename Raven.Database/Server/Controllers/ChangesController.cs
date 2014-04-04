@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Web.Http;
 using Raven.Database.Server.Connections;
 
@@ -162,6 +163,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage GetChangesEvents()
 		{
 			var eventsTransport = new ChangesPushContent(this);
+            eventsTransport.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
 			Database.TransportState.Register(eventsTransport);
 			return new HttpResponseMessage {Content = eventsTransport};
 		}

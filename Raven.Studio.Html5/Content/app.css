@@ -32,13 +32,108 @@ body {
 .loader.active {
   visibility: visible;
 }
-@media (max-width: 979px) {
-  .page-host {
-    top: 0;
-  }
-  .navbar-fixed-top {
-    margin-bottom: 0;
-  }
+/*@media (max-width: 979px) {
+    .page-host {
+        top: 0;
+    }
+
+    .navbar-fixed-top {
+        margin-bottom: 0;
+    }
+
+    #shellHeader {
+        > .container-fluid {
+            padding-left: 0;
+            padding-right: 0;
+        }
+    }
+}
+
+@media(max-device-height:1024px) {
+    span {
+        font-size: 14px !important;
+    }
+
+    a {
+        font-size: 90% !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    i {
+        font-size: 90% !important;
+        display: inline-block !important;
+    }
+
+    button {
+        max-height: 5% !important;
+        font-size: 90% !important;
+    }
+
+    .tooltip-inner {
+        font-size: 10px !important;
+    }
+}
+
+.control-label {
+    @media(max-device-height:1024px) {
+        max-width:400px!important;
+    }
+}
+
+.query-results {
+    @media(max-device-height:1024px) {
+        width:86%!important;
+    }
+}*/
+.side-panel {
+  /*@media(max-device-height:1024px) {
+
+        h4 {
+            font-size: 90% !important;
+        }
+
+        label {
+            font-size: 90% !important;
+        }
+
+        span {
+            font-size: 80% !important;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+    }*/
+}
+.side-panel li {
+  max-width: 20%;
+  margin-top: 5%;
+  margin-bottom: 5%;
+  padding-top: 5%;
+  padding-bottom: 5%;
+  overflow: hidden;
+  white-space: nowrap;
+  -ms-text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  text-overflow: ellipsis;
+}
+/*.container-fluid {
+    @media(max-device-height:1024px) {
+        a {
+            padding: 5px !important;
+            max-height: 30px !important;
+            font-size: 13px !important;
+        }
+    }
+}*/
+.panel span {
+  overflow: hidden;
+  -ms-text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: auto;
 }
 .page {
   padding: 0 10px 20px 10px;
@@ -53,15 +148,6 @@ body {
 .navbar-splitbutton + .dropdown > a {
   padding-left: 6px;
   padding-right: 8px;
-}
-.database-page {
-  /*.systemButton {
-        color:grey;
-        margin-top:50px;        
-        position:absolute;
-        top:-40px;
-        right:25px;
-    }*/
 }
 .database-page .btn-toolbar {
   margin-bottom: 20px;
@@ -262,6 +348,14 @@ body {
 .documents-page {
   margin-top: 10px;
 }
+@media (max-device-height: 1024px) {
+  .documents-page a {
+    font-size: 12px !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
 .collection-color-strip {
   height: 20px;
   width: 4px;
@@ -270,6 +364,17 @@ body {
 }
 #editIndex .map {
   height: 120px;
+}
+@media (max-device-height: 1024px) {
+  #queryContainer #indexQueryLabelContainer {
+    display: inline-block !important;
+  }
+  #queryContainer #indexQueryLabelContainer i {
+    display: none !important;
+  }
+  #queryContainer #indexQueryLabelContainer a {
+    display: none !important;
+  }
 }
 #queryContainer .editor {
   height: 60px;
@@ -280,6 +385,22 @@ body {
 }
 #queryContainer .form-horizontal {
   overflow: hidden auto;
+}
+#queryContainer .side-panel li {
+  max-width: 100% !important;
+  margin-top: 5%;
+  margin-bottom: 5%;
+  padding-top: 5%;
+  padding-bottom: 5%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+@media (max-device-height: 1024px) {
+  #queryContainer .side-panel {
+    margin-left: 100px !important;
+    width: 30%;
+  }
 }
 .ko-grid {
   /*position: absolute;
@@ -340,8 +461,23 @@ body {
 .help-cursor {
   cursor: help;
 }
-.breadcrumb {
-  padding: 0 10px 0 10px;
+@media (max-device-height: 1024px) {
+  .breadcrumb h3 {
+    font-size: 16px !important;
+    display: inline-block !important;
+  }
+  .breadcrumb a {
+    font-size: 14px !important;
+    display: inline-block !important;
+  }
+  .breadcrumb span {
+    font-size: 14px !important;
+    display: inline-block !important;
+  }
+  .breadcrumb i {
+    font-size: 15px !important;
+    display: inline-block !important;
+  }
 }
 .studio-alerts {
   position: fixed;
@@ -367,6 +503,9 @@ body {
 }
 #editDocumentContainer .query-metadata {
   padding-top: 20px;
+  /*@media(max-device-height:1024px) {
+            padding-top: 25px !important;
+        }*/
 }
 .keyboard-shortcut {
   margin-left: 20px;
@@ -388,10 +527,44 @@ body {
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
 }
+#shellHeader {
+  /* When the screen width < 1070, shrink down the padding between the nav bar items. */
+}
+#shellHeader .container-fluid {
+  padding-right: 0;
+  padding-left: 0;
+}
+#shellHeader #goToDocInput {
+  width: 10em;
+}
+@media (max-width: 1070px) {
+  #shellHeader .nav li a {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  #shellHeader .databases {
+    padding-right: 0px;
+  }
+}
+#shellFooter ul {
+  width: 100% !important;
+}
 #shellFooter li {
-  max-width: 200px;
+  max-width: 20% !important;
   margin: 0;
   padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+#shellFooter li a {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 5% !important;
+  padding-right: 5% !important;
+  font-size: 100% !important;
+}
+#shellFooter span {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -399,25 +572,15 @@ body {
 #editTransformerContainer .transformer {
   height: 600px;
 }
-#csvImportContainer .fileinputs {
-  position: relative;
-}
-#csvImportContainer .fakefile {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-}
-#csvImportContainer .file {
-  position: relative;
-  text-align: right;
-  -moz-opacity: 0 ;
-  filter: alpha(opacity: 0);
-  opacity: 0;
-  z-index: 2;
-}
 .auto-complete {
   background-color: white;
+}
+@media (max-device-height: 1024px) {
+  #logsContainer button,
+  #alertsContainer button,
+  #indexErrorsContainer button {
+    max-height: 50% !important;
+  }
 }
 #logsContainer table,
 #alertsContainer table,
@@ -515,6 +678,11 @@ footer ul {
 #scriptedIndex .map {
   height: 160px;
 }
+
+.advanced-replication-settings {
+  cursor: pointer;
+}
+
 .filesystem-page .btn-toolbar {
   margin-bottom: 20px;
 }

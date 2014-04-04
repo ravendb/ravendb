@@ -25,6 +25,7 @@ import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler")
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import changesApi = require("common/changesApi");
 
 class shell extends viewModelBase {
     private router = router;
@@ -50,12 +51,16 @@ class shell extends viewModelBase {
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();    
 
+    static globalChangesApi: changesApi;
+    static currentDbChangesApi = ko.observable<changesApi>(null);
+
     constructor() {
         super();
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("ActivateFilesystemWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => this.updateChangesApi(db));
 
         this.appUrls = appUrl.forCurrentDatabase();
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
@@ -112,6 +117,8 @@ class shell extends viewModelBase {
             selector: '.use-bootstrap-tooltip',
             trigger: 'hover'
         });
+
+        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -253,13 +260,20 @@ class shell extends viewModelBase {
 
     activateFilesystemWithName(filesystemName: string) {
         if (this.filesystemsLoadedTask) {
-            this.filesystemsLoadedTask.done(() => {            
+            this.filesystemsLoadedTask.done(() => {
                 var matchingFilesystem = this.filesystems().first(d => d.name == filesystemName);
                 if (matchingFilesystem && this.activeFilesystem() !== matchingFilesystem) {
                     ko.postbox.publish("ActivateFilesystem", matchingFilesystem);
                 }
             });
         }
+    }
+
+    updateChangesApi(newDb: database) {
+        if (shell.currentDbChangesApi()) {
+            shell.currentDbChangesApi().dispose();
+        }
+        shell.currentDbChangesApi(new changesApi(newDb));
     }
 
     modelPolling() {

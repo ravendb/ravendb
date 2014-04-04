@@ -1,5 +1,5 @@
-<div>
-    <div class="navbar navbar-default" role="navigation">
+﻿<div >
+    <div id="shellHeader" class="navbar navbar-fixed-top navbar-default" role="navigation">
         <div class="container-fluid">
             <div class="navbar-header">
                 <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
@@ -30,7 +30,7 @@
             </div>
 
             <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-                <div id="databasesNavbar" data-bind="visible: appUrls.isAreaActive('databases')">
+                <div id="databaseNavbar" data-bind="visible: appUrls.isAreaActive('databases')">
                     <ul class="nav navbar-nav">
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
                             <a data-bind="attr: { href: appUrls.documents }">Documents</a>
@@ -98,7 +98,6 @@
                             <a data-bind="attr: { href: appUrls.status }">Status</a>
                         </li>
                     </ul>
-
                     <ul class="nav navbar-nav">
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
@@ -113,16 +112,24 @@
                                     </a>
                                 </li>
                                 <li>
-                                    <a data-bind="attr: { href: newIndexUrl }"><i class=" fa fa-bolt"></i> Index</a>
+                                    <a data-bind="attr: { href: newIndexUrl }">Index</a>
                                 </li>
                                 <li>
-                                    <a data-bind="attr: { href: newTransformerUrl }"><i class="fa fa-search"></i> Transformer</a>
+                                    <a data-bind="attr: { href: newTransformerUrl }">Transformer</a>
                                 </li>
                             </ul>
                         </li>
                     </ul>
-                    <form class="navbar-form pull-left hidden-xs hidden-sm">
-                        <input id="goToDocInput" type="text" class="form-control col-md-8" placeholder="Go to document">
+                    <form class="navbar-form pull-left hidden-xs hidden-sm col-sm-2">
+                        <input id="goToDocInput" type="text" class="form-control" placeholder="Go to document" data-bind="value: goToDocumentSearch, valueUpdate: 'afterkeydown'" />
+                        <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#goToDocInput', foreach: goToDocumentSearchResults">
+                            <li role="presentation" data-bind="click: $root.goToDoc.bind($root, $data)">
+                                <a role="menuitem" tabindex="-1" href="#">
+                                    <span class="collection-color-strip" data-bind="css: $root.getDocCssClass($data)"></span>
+                                    <span data-bind="text: $data['@metadata']['@id']"></span>
+                                </a>
+                            </li>
+                        </ul>
                     </form>
                 </div>
                 <div id="filesystemsNavbar" data-bind="visible: appUrls.isAreaActive('filesystems')">
@@ -145,11 +152,16 @@
                     </ul>
                 </div>
                 <div id="databaseSelectNavbar" data-bind="visible: appUrls.isAreaActive('databases')">
-                    <ul class="nav navbar-nav pull-right hidden-xs hidden-sm">
-                        <li>
-                            <a style="padding-right: 0; display: inline-block;" data-bind="attr: { href: appUrls.databasesManagement }">Databases &nbsp;<i class=" fa fa-caret-right"></i>&nbsp;</a>
+                    <ul class="nav navbar-nav pull-right hidden-xs hidden-sm databases col-md-3">
+                        <li class="hidden-xs hidden-sm pull-right">
+                            <a class="navbar-brand" href="http://ravendb.net" target="_blank">
+                                <img style="height: 24px" src="content/images/raven.png" />
+                            </a>
                         </li>
-                        <li class="dropdown">
+                        <li class="hidden-xs hidden-sm" data-bind="visible: recordedErrors().length > 0, click: $root.showErrorsDialog.bind($root)">
+                            <a href="#"><i class="fa fa-warning text-danger"></i></a>
+                        </li>
+                        <li class="dropdown pull-right">
                             <a class="dropdown-toggle" data-bind="with: activeDatabase" data-toggle="dropdown" href="#" style="padding-left: 5px;">
                                 <span data-bind="text: name"></span>
                                 <b class="caret"></b>
@@ -160,23 +172,23 @@
                                 </li>
                             </ul>
                         </li>
+                        <li class="pull-right">
+                            <a style="padding-right: 0; display: inline-block;" data-bind="attr:{href:appUrls.databasesManagement}">Databases &nbsp;<i class=" fa fa-caret-right"></i>&nbsp;</a>
+                        </li>
+
+                    </ul>
+                </div>
+                <div id="filesystemSelectNavbar" data-bind="visible: appUrls.isAreaActive('filesystems')">
+                    <ul class="nav navbar-nav pull-right hidden-xs hidden-sm databases col-md-3">
+                        <li class="hidden-xs hidden-sm pull-right">
+                            <a class="navbar-brand" href="http://ravendb.net" target="_blank">
+                                <img style="height: 24px" src="content/images/raven.png" />
+                            </a>
+                        </li>
                         <li class="hidden-xs hidden-sm" data-bind="visible: recordedErrors().length > 0, click: $root.showErrorsDialog.bind($root)">
                             <a href="#"><i class="fa fa-warning text-danger"></i></a>
                         </li>
-                        <li class="hidden-xs hidden-sm">
-                            <a class="navbar-brand" href="http://ravendb.net" target="_blank">
-                                <i class="fa fa-home"></i>
-                                <span>RavenDB</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-                <div id="filesystemsSelectNavbar" data-bind="visible: appUrls.isAreaActive('filesystems')">
-                    <ul class="nav navbar-nav pull-right hidden-xs hidden-sm">
-                        <li>
-                            <a style="padding-right: 0; display: inline-block;" data-bind="attr: { href: appUrls.filesystemsManagement }">Files &nbsp;<i class=" fa fa-caret-right"></i>&nbsp;</a>
-                        </li>
-                        <li class="dropdown">
+                        <li class="dropdown pull-right">
                             <a class="dropdown-toggle" data-bind="with: activeFilesystem" data-toggle="dropdown" href="#" style="padding-left: 5px;">
                                 <span data-bind="text: name"></span>
                                 <b class="caret"></b>
@@ -187,21 +199,16 @@
                                 </li>
                             </ul>
                         </li>
-                        <li class="hidden-xs hidden-sm" data-bind="visible: recordedErrors().length > 0, click: $root.showErrorsDialog.bind($root)">
-                            <a href="#"><i class="fa fa-warning text-danger"></i></a>
+                        <li class="pull-right">
+                            <a style="padding-right: 0; display: inline-block;" data-bind="attr:{href:appUrls.filesystemManagement}">File Systems &nbsp;<i class=" fa fa-caret-right"></i>&nbsp;</a>
                         </li>
-                        <li class="hidden-xs hidden-sm">
-                            <a class="navbar-brand" href="http://ravendb.net" target="_blank">
-                                <i class="fa fa-home"></i>
-                                <span>RavenDB</span>
-                            </a>
-                        </li>
+
                     </ul>
-                    </div>
                 </div>
+            </div>
         </div>
     </div>
-
+    
     <!--Alerts container-->
     <div class="studio-alerts" data-bind="with: currentAlert">
         <div class="alert alert-dismissable fade in" data-bind="attr: { id: id }, css: { 'alert-info': type === 0, 'alert-success': type === 1, 'alert-warning': type === 2, 'alert-danger': type === 3 }, event: { 'closed.bs.alert': $root.onAlertHidden.bind($root) }">
@@ -219,22 +226,22 @@
     <div class="navbar navbar-fixed-bottom navbar-inverse" data-bind="with: activeDatabase">
         <div class="navbar-inner">
             <ul class="nav navbar-nav">
-                <li><a class="navbar-brand" href="#/status">Stats</a></li>
+                <li><a data-bind="text:'Status'" class="navbar-link" href="#/status"></a></li>
                 <!-- ko with: statistics -->
-                <li><a data-bind="text: CountOfDocuments + ' documents', attr: { href: $parents[1].appUrls.documents }"></a></li>
-                <li><a data-bind="text: CountOfIndexes + ' indexes', attr: { href: $parents[1].appUrls.indexes }"></a></li>
-                <li><a data-bind="text: StaleIndexes.length + ' stale', attr: { href: $parents[1].appUrls.status }"></a></li>
-                <li><a data-bind="text: Errors.length + ' errors', attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
-                <li><a data-bind="text: ApproximateTaskCount + ' tasks', attr: { href: $parents[1].appUrls.status }"></a></li>
-                <li data-bind="visible:$root.rawUrlIsVisible">
-                    <a target='_blank' data-bind="text:'Raw Url: ' + $root.currentRawUrl(), attr:{href:$root.currentRawUrl()}"></a>
+                <li><a class="navbar-link" data-bind="text: CountOfDocuments + ' documents', attr: { href: $parents[1].appUrls.documents }"></a></li>
+                <li><a class="navbar-link" data-bind="text: CountOfIndexes + ' indexes', attr: { href: $parents[1].appUrls.indexes }"></a></li>
+                <li><a class="navbar-link" data-bind="text: StaleIndexes.length + ' stale', attr: { href: $parents[1].appUrls.status }"></a></li>
+                <li><a class="navbar-link" data-bind="text: Errors.length + ' errors', attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
+                <li><a class="navbar-link" data-bind="text: ApproximateTaskCount + ' tasks', attr: { href: $parents[1].appUrls.status }"></a></li>
+                <li class="raw-url" data-bind="visible:$root.rawUrlIsVisible">
+                    <a class="navbar-link" href="#" target='_blank' data-bind="text:$root.currentRawUrl(), attr:{ href: $root.currentRawUrl()}"></a>
                 </li>
                 <!-- /ko -->
-            </ul>
-            <ul class="nav navbar-nav pull-right" data-bind="with: $root">
-                <li data-bind="with: licenseStatus"><a data-bind="text: 'License Status: ' + Status">AGPL - Open Source</a></li>
-                <li data-bind="with: buildVersion"><a data-bind="text: 'Server Build #' + BuildVersion"></a></li>
-                <li><a>Client Build #30</a></li>
+                <!-- ko with: $root -->
+                <!--<li class="navbar-right"><a class="navbar-link pull-right">Client Build #30</a></li>-->
+                <li data-bind="with: buildVersion" class="navbar-right pull-right"><a class="navbar-link " data-bind="text: 'Server Build #' + BuildVersion"></a></li>
+                <li data-bind="with: licenseStatus" class="navbar-right pull-right"><a class="navbar-link " data-bind="text: 'License Status: ' + Status">AGPL - Open Source</a></li>
+                <!-- /ko -->
             </ul>
         </div>
     </div>

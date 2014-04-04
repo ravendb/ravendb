@@ -23,6 +23,7 @@ import customColumns = require('models/customColumns');
 import selectColumns = require('viewmodels/selectColumns');
 import getCustomColumnsCommand = require('commands/getCustomColumnsCommand');
 
+
 class query extends viewModelBase {
 
     selectedIndex = ko.observable<string>();

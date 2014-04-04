@@ -4,8 +4,8 @@ class replicationConfig {
     private static RESOLVE_TO_LOCAL = "ResolveToLocal";
     private static RESOLVE_TO_REMOTE = "ResolveToRemote";
 
-    documentConflictResolution = ko.observable<string>();
-    attachmentConflictResolution = ko.observable<string>();
+    documentConflictResolution = ko.observable<string>().extend({ required: true });
+    attachmentConflictResolution = ko.observable<string>().extend({ required: true });
 
     constructor(dto: replicationConfigDto) {
         this.documentConflictResolution(dto.DocumentConflictResolution);
