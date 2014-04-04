@@ -22,7 +22,7 @@ import customColumnParams = require('models/customColumnParams');
 import customColumns = require('models/customColumns');
 import selectColumns = require('viewmodels/selectColumns');
 import getCustomColumnsCommand = require('commands/getCustomColumnsCommand');
-import bsTooltipBindingHandler = require("common/bsTooltipBindingHandler");
+
 
 class query extends viewModelBase {
 
@@ -62,7 +62,6 @@ class query extends viewModelBase {
 
     constructor() {
         super();
-        bsTooltipBindingHandler.install();
         this.appUrls = appUrl.forCurrentDatabase();
         this.editIndexUrl = ko.computed(() => this.selectedIndex() ? appUrl.forEditIndex(this.selectedIndex(), this.activeDatabase()) : null);
         this.termsUrl = ko.computed(() => this.selectedIndex() ? appUrl.forTerms(this.selectedIndex(), this.activeDatabase()) : null);

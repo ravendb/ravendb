@@ -45,18 +45,31 @@ body {
     font-size: 14px !important;
   }
   a {
+<<<<<<< HEAD
     font-size: 14x !important;
+=======
+    font-size: 90%!important;
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   i {
+<<<<<<< HEAD
     font-size: 14px !important;
     display: block !important;
   }
   button {
     max-height: 30px !important;
     font-size: 13px !important;
+=======
+    font-size: 90%!important;
+    display: inline-block !important;
+  }
+  button {
+    max-height: 5%!important;
+    font-size: 90%!important;
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
   }
   .tooltip-inner {
     font-size: 10px !important;
@@ -72,29 +85,41 @@ body {
     width: 86%!important;
   }
 }
+<<<<<<< HEAD
 .side-panel {
   margin-left: 10px !important;
 }
+=======
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
 .side-panel li {
-  max-width: 400px;
-  margin: 0;
-  padding: 0;
+  max-width: 20%;
+  margin-top: 5%;
+  margin-bottom: 5%;
+  padding-top: 5%;
+  padding-bottom: 5%;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 @media (max-device-height: 1024px) {
   .side-panel h4 {
-    font-size: 14px !important;
+    font-size: 90% !important;
   }
   .side-panel label {
-    font-size: 12px !important;
+    font-size: 90% !important;
   }
   .side-panel span {
+<<<<<<< HEAD
     font-size: 10px !important;
   }
   .side-panel li {
     max-width: 200px !important;
+=======
+    font-size: 80% !important;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
   }
 }
 @media (max-device-height: 1024px) {
@@ -104,6 +129,7 @@ body {
     font-size: 13px !important;
   }
 }
+<<<<<<< HEAD
 #bs-example-navbar-collapse-1 a {
   font-size: 12px !important;
 }
@@ -114,6 +140,8 @@ body {
 #bs-example-navbar-collapse-1 i {
   display: inline-block !important;
 }
+=======
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
 .panel span {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -371,9 +399,20 @@ body {
 #queryContainer .form-horizontal {
   overflow: hidden auto;
 }
+#queryContainer .side-panel li {
+  max-width: 100%!important;
+  margin-top: 5%;
+  margin-bottom: 5%;
+  padding-top: 5%;
+  padding-bottom: 5%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 @media (max-device-height: 1024px) {
   #queryContainer .side-panel {
     margin-left: 100px !important;
+    width: 30%;
   }
 }
 .ko-grid {
@@ -434,9 +473,6 @@ body {
 }
 .help-cursor {
   cursor: help;
-}
-.breadcrumb {
-  padding: 0 10px 0 10px;
 }
 @media (max-device-height: 1024px) {
   .breadcrumb h3 {
@@ -506,32 +542,51 @@ body {
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
 }
+#shellHeader .databases li {
+  padding-left: 3%!important;
+}
+#shellHeader span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+#shellHeader a {
+  font-size: 100% !important;
+}
+#shellHeader input[type=text] {
+  font-size: 100% !important;
+  max-height: 5% !important;
+}
+#shellHeader i {
+  display: inline-block !important;
+}
+#shellFooter ul {
+  width: 100% !important;
+}
 #shellFooter li {
-  max-width: 200px;
+  max-width: 20% !important;
   margin: 0;
   padding: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-@media (max-device-height: 1024px) {
-  #shellFooter li {
-    max-width: 100px !important;
-  }
+#shellFooter li a {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 5% !important;
+  padding-right: 5% !important;
+  font-size: 100% !important;
 }
 #shellFooter span {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-@media (max-device-height: 1024px) {
-  #shellFooter span {
-    max-width: 100px !important;
-  }
-}
 #editTransformerContainer .transformer {
   height: 600px;
 }
+<<<<<<< HEAD
 #csvImportContainer .fileinputs {
   position: relative;
 }
@@ -549,8 +604,17 @@ body {
   opacity: 0;
   z-index: 2;
 }
+=======
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
 .auto-complete {
   background-color: white;
+}
+@media (max-device-height: 1024px) {
+  #logsContainer button,
+  #alertsContainer button,
+  #indexErrorsContainer button {
+    max-height: 50%!important;
+  }
 }
 #logsContainer table,
 #alertsContainer table,
@@ -649,5 +713,12 @@ footer ul {
   height: 160px;
 }
 .indexes-controls {
+<<<<<<< HEAD
   /*margin-left: 15px; Why 15px? This makes it funky in appearance.*/
+=======
+  margin-left: 15px;
+}
+.advanced-replication-settings {
+    cursor: pointer;
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
 }

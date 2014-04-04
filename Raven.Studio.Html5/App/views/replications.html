@@ -3,7 +3,7 @@
         <div class="panel-heading">
             <div class="pull-left panel-title">Automatic conflict resolution</div>
             <div class="pull-right">
-                <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveAutomaticConflictResolutionSettings" title="Save changes"><i class="fa fa-save"></i></button>
+                <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveAutomaticConflictResolutionSettings, visible: replicationConfigDirtyFlag()().isDirty" title="Save changes"><i class="fa fa-save"></i></button>
             </div>
             <div class="clearfix"></div>
         </div>
@@ -51,7 +51,7 @@
             <div class="pull-left panel-title">Replication destinations</div>
             <div class="pull-right">
                 <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add destination</button>
-                <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveChanges" title="Save replication destinations (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+                <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveChanges, visible: replicationsSetupDirtyFlag()().isDirty" title="Save replication destinations (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
             </div>
             <div class="clearfix"></div>
         </div>
@@ -85,13 +85,13 @@
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">Url</label>
                                 <div class="col-sm-7">
-                                    <input type="email" class="form-control" data-bind="value: url" />
+                                    <input type="email" class="form-control" data-bind="value: url, valueUpdate: 'keyup'" />
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">Database</label>
                                 <div class="col-sm-7">
-                                    <input type="text" class="form-control" data-bind="value: database" />
+                                    <input type="text" class="form-control" data-bind="value: database, valueUpdate: 'keyup'" />
                                 </div>
                             </div>
                             <div class="form-group">
@@ -105,19 +105,19 @@
                                 <div class="form-group">
                                     <label class="col-sm-4 control-label">User Name</label>
                                     <div class="col-sm-7">
-                                        <input type="text" class="form-control" data-bind="value: username" />
+                                        <input type="text" class="form-control" data-bind="value: username, valueUpdate: 'keyup'" />
                                     </div>
                                 </div>
                                 <div class="form-group">
                                     <label class="col-sm-4 control-label">Password</label>
                                     <div class="col-sm-7">
-                                        <input type="text" class="form-control" data-bind="value: password" />
+                                        <input type="text" class="form-control" data-bind="value: password, valueUpdate: 'keyup'" />
                                     </div>
                                 </div>
                                 <div class="form-group">
                                     <label class="col-sm-4 control-label">Domain</label>
                                     <div class="col-sm-7">
-                                        <input type="text" class="form-control" data-bind="value: domain" />
+                                        <input type="text" class="form-control" data-bind="value: domain, valueUpdate: 'keyup'" />
                                     </div>
                                 </div>
                             </div>
@@ -125,18 +125,18 @@
                                 <div class="form-group">
                                     <label class="col-sm-4 control-label">API Key</label>
                                     <div class="col-sm-7">
-                                        <input type="text" class="form-control" data-bind="value: apiKey" />
+                                        <input type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'keyup'" />
                                     </div>
                                 </div>
                             </div>
-                            <a data-bind="click:toggleIsAdvancedShows">
+                            <a data-bind="click: toggleIsAdvancedShows" class="advanced-replication-settings">
                                 Advanced Options
                             </a>
-                            <div data-bind="visible:isAdvancedShown">
+                            <div data-bind="visible: false">
                                 <div class="form-group">
                                     <label class="col-sm-4 control-label">Client Visible Url</label>
                                     <div class="col-sm-7">
-                                        <input type="text" class="form-control" data-bind="value: clientVisibleUrl" />
+                                        <input type="text" class="form-control" data-bind="value: clientVisibleUrl, valueUpdate: 'keyup'" />
                                     </div>
                                 </div>
                                 <div class="form-group">

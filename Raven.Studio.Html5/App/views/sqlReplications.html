@@ -1,9 +1,9 @@
 ﻿<div>
     <nav class="navbar navbar-default" role="navigation">
         <div class="collapse navbar-collapse">
-            <form class="navbar-form navbar-left">
-                <button type="button" class="btn btn-primary  use-bootstrap-tooltip" data-bind="click: saveChanges, enable: replications().length > 0" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i> Save Changes</button>
-                <button type="button" class="btn btn-primary  use-bootstrap-tooltip" data-bind="click: addNewSqlReplication" title="New SQL Replication(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> New SQL Replication</button>
+            <form class="navbar-form pull-right">
+                <button type="button" class="btn btn-default  use-bootstrap-tooltip" data-bind="click: addNewSqlReplication" title="New SQL Replication(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> New SQL Replication</button>
+                <button type="button" class="btn btn-primary  use-bootstrap-tooltip" data-bind="click: saveChanges, visible: isSaveVisible" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
             </form>
         </div>
     </nav>
@@ -46,16 +46,16 @@
                         </div>
                         <div class="form-group">
                             <div class="col-sm-3">
-                                <select class="form-control" data-bind="options: availableConnectionStringTypes, optionsText: 'label', optionsValue: 'value', value: connectionStringType"></select>
+                                <select class="form-control" data-bind="options: availableConnectionStringTypes, optionsText: 'label', optionsValue: 'value', value: connectionStringType, valueUpdate: 'keyup'"></select>
                             </div>
                             <div class="col-sm-9">
-                                <input required type="text" class="form-control" data-bind="value: connectionStringValue" />
+                                <input required type="text" class="form-control" data-bind="value: connectionStringValue, valueUpdate: 'keyup'" />
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Source Document Collection</label>
                             <div class="col-sm-9">
-                                <input required type="text" class="form-control" data-bind="value: ravenEntityName, valueUpdate: 'keyup'" />
+                                <input type="text" class="form-control" data-bind="value: ravenEntityName, valueUpdate: 'keyup'" />
                             </div>
                         </div>
                         <div class="form-group">

@@ -7,7 +7,6 @@ import appUrl = require("common/appUrl");
 import deleteTransformerConfirm = require("viewmodels/deleteTransformerConfirm");
 import dialog = require("plugins/dialog");
 import app = require("durandal/app");
-import bsTooltipBindingHandler = require("common/bsTooltipBindingHandler");
 
 //todo: implement refresh from db
 class Transformers extends viewModelBase {
@@ -20,7 +19,6 @@ class Transformers extends viewModelBase {
 
     constructor() {
         super();
-        bsTooltipBindingHandler.install();
     }
 
     activate(args) {

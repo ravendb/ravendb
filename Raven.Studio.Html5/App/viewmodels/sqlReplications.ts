@@ -12,6 +12,10 @@ class sqlReplications extends viewModelBase {
     lastIndex = ko.computed(function () {
         return this.isFirstload() ? -1 : this.replications().length - 1;
     }, this);
+    isSaveVisible = ko.computed(function () {
+        this.replications();
+        return viewModelBase.dirtyFlag().isDirty();
+    }, this);
     loadedSqlReplications = [];
 
     constructor() {
@@ -41,7 +45,9 @@ class sqlReplications extends viewModelBase {
                     for (var i = 0; i < results.length; i++) {
                         this.loadedSqlReplications.push(results[i].getId());
                     }
+                    viewModelBase.dirtyFlag = new ko.DirtyFlag([this.replications]);
                     this.replications(results);
+                    viewModelBase.dirtyFlag().reset();
             });
         }
     }
@@ -67,43 +73,18 @@ class sqlReplications extends viewModelBase {
             var deleteDeferred = this.deleteSqlReplications(deletedReplications, db);
             deleteDeferred.done(() => {
                 var saveDeferred = this.saveSqlReplications(onScreenReplications, db);
-                saveDeferred.done(() => this.updateLoadedSqlReplications());
-            });
-
-            /*var deleteDeferred = $.Deferred();
-            //delete the deleted sql replications
-            if (deletedReplications.length > 0) {
-                new deleteDocumentsCommand(deletedReplications, db)
-                    .execute()
-                    .done(() => {
-                        deleteDeferred.resolve();
+                saveDeferred.done(()=> {
+                    this.updateLoadedSqlReplications();
+                    // Resync Changes
+                    viewModelBase.dirtyFlag().reset();
                 });
-            } else {
-                deleteDeferred.resolve();
-            }
-
-            var saveDeferred = $.Deferred();
-            deleteDeferred.done(() => {
-                //save the new/updated sql replications
-                if (onScreenReplications.length > 0) {
-                    new saveSqlReplicationsCommand(this.replications(), db)
-                        .execute()
-                        .done((result: bulkDocumentDto[])=> {
-                            this.updateKeys(result);
-                            saveDeferred.resolve();
-                        });
-                } else {
-                    saveDeferred.resolve();
-                }
             });
-
-            saveDeferred.done(()=> this.updateLoadedSqlReplications());*/
         }
     }
 
     private deleteSqlReplications(deletedReplications: Array<string>, db): JQueryDeferred<{}> {
         var deleteDeferred = $.Deferred();
-        //delete the deleted sql replications
+        //delete from the server the deleted on screen sql replications
         if (deletedReplications.length > 0) {
             new deleteDocumentsCommand(deletedReplications, db)
                 .execute()
@@ -131,6 +112,7 @@ class sqlReplications extends viewModelBase {
         }
         return saveDeferred;
     }
+
     private updateLoadedSqlReplications() {
         this.loadedSqlReplications = [];
         var sqlReplications = this.replications();

@@ -1,12 +1,12 @@
 ﻿<section id="editTransformerContainer">
     <div class="btn-toolbar">
         <div class="btn-group">
-            <button class="btn btn-primary" data-bind="bsTooltip:{placement:'bottom'}, click: saveTransformer, enable: editedTransformer().name" title="Save the transformer (Alt+S)" accesskey="S">
+            <button class="btn btn-primary use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: saveTransformer, enable: editedTransformer().name" title="Save the transformer (Alt+S)" accesskey="S">
                 <i class="fa fa-save"></i>
             </button>
         </div>
         <div class="btn-group">
-            <button class="btn btn-danger" data-bind="bsTooltip:{placement:'bottom'}, click: deleteTransformer, enable: isEditingExistingTransformer" title="Delete the transformer (Alt+Shift+Delete)">
+            <button class="btn btn-danger use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: deleteTransformer, enable: isEditingExistingTransformer" title="Delete the transformer (Alt+Shift+Delete)">
                 <i class="fa fa-trash-o"></i>
             </button>
         </div>
@@ -16,7 +16,7 @@
     <br />
     <form class="form-horizontal" role="form" data-bind="with: editedTransformer, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
         <div class="form-group">
-            <label for="transformerName" class="col-md-1 control-label" title="Transformer name(Alt+I)" data-bind="bsTooltip:{placement:'bottom'}">Name</label>
+            <label for="transformerName" class="col-md-1 control-label" title="Transformer name(Alt+I) use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom">Name</label>
             <div class="col-md-11">
                 <div class="row">
                     <div class="col-md-11">

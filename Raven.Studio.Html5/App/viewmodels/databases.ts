@@ -204,6 +204,12 @@ class databases extends viewModelBase {
             var isMatch = !filter || (d.name.toLowerCase().indexOf(filterLower) >= 0);
             d.isVisible(isMatch);
         });
+
+        var selectedDatabase = this.selectedDatabase();
+        if (selectedDatabase && !selectedDatabase.isVisible()) {
+            selectedDatabase.isSelected(false);
+            this.selectedDatabase(null);
+        }
     }
 
     deleteSelectedDatabase() {

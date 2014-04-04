@@ -14,7 +14,6 @@ import dialog = require("plugins/dialog");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
-import bsTooltipBindingHandler = require("common/bsTooltipBindingHandler");
 
 class editIndex extends viewModelBase { 
 
@@ -34,7 +33,6 @@ class editIndex extends viewModelBase {
         super();
 
         aceEditorBindingHandler.install();
-        bsTooltipBindingHandler.install();
 
         this.priorityFriendlyName = ko.computed(() => this.getPriorityFriendlyName());
         this.priorityLabel = ko.computed(() => this.priorityFriendlyName() ? "Priority: " + this.priorityFriendlyName() : "Priority");

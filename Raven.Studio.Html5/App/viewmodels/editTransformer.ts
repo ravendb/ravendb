@@ -13,7 +13,6 @@ import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
-import bsTooltipBindingHandler = require("common/bsTooltipBindingHandler");
 
 class editTransformer extends viewModelBase {
     editedTransformer = ko.observable<transformer>();
@@ -25,7 +24,6 @@ class editTransformer extends viewModelBase {
     constructor() {
         super();
         aceEditorBindingHandler.install();
-        bsTooltipBindingHandler.install();
     }
 
     canActivate(transformerToEditName: string) {

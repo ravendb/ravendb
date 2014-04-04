@@ -53,6 +53,7 @@ html, body {
     }
 }
 
+<<<<<<< HEAD
 
 @media(max-device-height:1024px) {
     span {
@@ -79,6 +80,30 @@ html, body {
     .tooltip-inner {
         font-size: 10px !important;
     }
+=======
+@media(max-device-height:1024px) {    
+    span{
+        font-size:14px!important;
+    }
+    a{
+            font-size:90%!important;                
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;            
+    }
+    i{
+        font-size:90%!important;                
+        display:inline-block!important;
+    }
+    button{
+        max-height:5%!important;        
+        font-size:90%!important;                        
+    }      
+
+    .tooltip-inner {
+           font-size:10px!important;                
+    }       
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
 }
 
 .control-label {
@@ -94,13 +119,19 @@ html, body {
 }
 
 
+<<<<<<< HEAD
 .side-panel {
     margin-left: 10px !important;
 
+=======
+.side-panel {  
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
     li {
-        max-width: 400px;
-        margin: 0;
-        padding: 0;
+        max-width: 20%;
+        margin-top: 5%;
+        margin-bottom: 5%;
+        padding-top: 5%;
+        padding-bottom: 5%;
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
@@ -109,20 +140,26 @@ html, body {
     @media(max-device-height:1024px) {
 
         h4 {
-            font-size: 14px !important;
+            font-size: 90% !important;
         }
-
         label {
-            font-size: 12px !important;
+            font-size: 90% !important;
         }
-
         span {
+<<<<<<< HEAD
             font-size: 10px !important;
         }
 
         li {
             max-width: 200px !important;
         }
+=======
+            font-size: 80% !important;
+             overflow: hidden;
+             white-space: nowrap;
+             text-overflow: ellipsis;
+        }       
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
     }
 }
 
@@ -139,6 +176,7 @@ html, body {
     }
 }
 
+<<<<<<< HEAD
 #bs-example-navbar-collapse-1 {
     a {
         font-size: 12px !important;
@@ -153,6 +191,9 @@ html, body {
         display: inline-block !important;
     }
 }
+=======
+
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
 
 .panel span {
     overflow: hidden;
@@ -502,9 +543,22 @@ html, body {
     }
 
     .side-panel {
+        
+         li {             
+            max-width: 100%!important;
+            margin-top: 5%;
+            margin-bottom: 5%;
+            padding-top: 5%;
+            padding-bottom: 5%;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
         @media(max-device-height:1024px) {
             margin-left: 100px !important;
-        }
+            width:30%;
+        }        
     }
 }
 
@@ -581,8 +635,7 @@ html, body {
 }
 
 .breadcrumb {
-    padding: 0 10px 0 10px;
-
+    
     @media(max-device-height:1024px) {
 
         h3 {
@@ -655,7 +708,7 @@ html, body {
     overflow-x: hidden;
     -ms-word-break: break-all;
     word-break: break-all;
-    cursor: pointer;
+    cursor: pointer;        
 
     tbody {
         td {
@@ -670,17 +723,51 @@ html, body {
     }
 }
 
+#shellHeader {
+    .databases{
+        li{
+            padding-left:3%!important;
+        }
+    }    
+    span {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+     a {
+            font-size: 100% !important;
+        }                      
+
+    input[type=text] {
+        font-size: 100% !important;
+        max-height: 5% !important;
+    }
+
+    i {
+        display: inline-block !important;
+    }    
+}
+
 #shellFooter {
+    ul {
+        width: 100% !important;
+    }
+
     li {
-        max-width: 200px;
+        max-width: 20% !important;
         margin: 0;
         padding: 0;
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
 
-        @media(max-device-height:1024px) {
-            max-width: 100px !important;
+        a {
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            padding-left: 5% !important;
+            padding-right: 5% !important;
+            font-size: 100% !important;
         }
     }
 
@@ -688,10 +775,13 @@ html, body {
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
+<<<<<<< HEAD
 
         @media(max-device-height:1024px) {
             max-width: 100px !important;
         }
+=======
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
     }
 }
 
@@ -699,6 +789,7 @@ html, body {
     height: 600px;
 }
 
+<<<<<<< HEAD
 #csvImportContainer .fileinputs {
     position: relative;
 }
@@ -719,11 +810,19 @@ html, body {
     z-index: 2;
 }
 
+=======
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
 .auto-complete {
     background-color: white;
 }
 
 #logsContainer, #alertsContainer, #indexErrorsContainer {
+    @media(max-device-height:1024px) {
+        button{
+            max-height:50%!important;
+        }
+    }
+
 
     table {
         outline: none;
@@ -835,5 +934,9 @@ footer {
 }
 
 .indexes-controls {
-    /*margin-left: 15px; Why 15px? This makes it funky in appearance.*/ 
+    /*margin-left: 15px; COMMENTED OUT: Why 15px? This makes it funky in appearance.*/ 
+}
+
+.advanced-replication-settings {
+    cursor: pointer;
 }
