@@ -134,7 +134,10 @@ namespace Raven.Database.Server.Controllers
 
 				for (var i = 0; i < count; i++)
 				{
-					var doc = (RavenJObject)RavenJToken.ReadFrom(new BsonReader(reader));
+					var doc = (RavenJObject)RavenJToken.ReadFrom(new BsonReader(reader)
+					                                             {
+						                                             DateTimeKindHandling = DateTimeKind.Unspecified
+					                                             });
 
 					var metadata = doc.Value<RavenJObject>("@metadata");
 
