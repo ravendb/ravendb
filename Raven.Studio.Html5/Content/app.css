@@ -32,65 +32,80 @@ body {
 .loader.active {
   visibility: visible;
 }
-@media (max-width: 979px) {
-  .page-host {
-    top: 0;
-  }
-  .navbar-fixed-top {
-    margin-bottom: 0;
-  }
+/*@media (max-width: 979px) {
+    .page-host {
+        top: 0;
+    }
+
+    .navbar-fixed-top {
+        margin-bottom: 0;
+    }
+
+    #shellHeader {
+        > .container-fluid {
+            padding-left: 0;
+            padding-right: 0;
+        }
+    }
 }
-@media (max-device-height: 1024px) {
-  span {
-    font-size: 14px !important;
-  }
-  a {
-<<<<<<< HEAD
-    font-size: 14x !important;
-=======
-    font-size: 90%!important;
->>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  i {
-<<<<<<< HEAD
-    font-size: 14px !important;
-    display: block !important;
-  }
-  button {
-    max-height: 30px !important;
-    font-size: 13px !important;
-=======
-    font-size: 90%!important;
-    display: inline-block !important;
-  }
-  button {
-    max-height: 5%!important;
-    font-size: 90%!important;
->>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
-  }
-  .tooltip-inner {
-    font-size: 10px !important;
-  }
+
+@media(max-device-height:1024px) {
+    span {
+        font-size: 14px !important;
+    }
+
+    a {
+        font-size: 90% !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    i {
+        font-size: 90% !important;
+        display: inline-block !important;
+    }
+
+    button {
+        max-height: 5% !important;
+        font-size: 90% !important;
+    }
+
+    .tooltip-inner {
+        font-size: 10px !important;
+    }
 }
-@media (max-device-height: 1024px) {
-  .control-label {
-    max-width: 400px!important;
-  }
+
+.control-label {
+    @media(max-device-height:1024px) {
+        max-width:400px!important;
+    }
 }
-@media (max-device-height: 1024px) {
-  .query-results {
-    width: 86%!important;
-  }
-}
-<<<<<<< HEAD
+
+.query-results {
+    @media(max-device-height:1024px) {
+        width:86%!important;
+    }
+}*/
 .side-panel {
-  margin-left: 10px !important;
+  /*@media(max-device-height:1024px) {
+
+        h4 {
+            font-size: 90% !important;
+        }
+
+        label {
+            font-size: 90% !important;
+        }
+
+        span {
+            font-size: 80% !important;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+    }*/
 }
-=======
->>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
 .side-panel li {
   max-width: 20%;
   margin-top: 5%;
@@ -99,51 +114,23 @@ body {
   padding-bottom: 5%;
   overflow: hidden;
   white-space: nowrap;
+  -ms-text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
 }
-@media (max-device-height: 1024px) {
-  .side-panel h4 {
-    font-size: 90% !important;
-  }
-  .side-panel label {
-    font-size: 90% !important;
-  }
-  .side-panel span {
-<<<<<<< HEAD
-    font-size: 10px !important;
-  }
-  .side-panel li {
-    max-width: 200px !important;
-=======
-    font-size: 80% !important;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
->>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
-  }
-}
-@media (max-device-height: 1024px) {
-  .container-fluid a {
-    padding: 5px !important;
-    max-height: 30px !important;
-    font-size: 13px !important;
-  }
-}
-<<<<<<< HEAD
-#bs-example-navbar-collapse-1 a {
-  font-size: 12px !important;
-}
-#bs-example-navbar-collapse-1 input[type=text] {
-  font-size: 12px !important;
-  /*height:24px!important;*/
-}
-#bs-example-navbar-collapse-1 i {
-  display: inline-block !important;
-}
-=======
->>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
+/*.container-fluid {
+    @media(max-device-height:1024px) {
+        a {
+            padding: 5px !important;
+            max-height: 30px !important;
+            font-size: 13px !important;
+        }
+    }
+}*/
 .panel span {
   overflow: hidden;
+  -ms-text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
   white-space: nowrap;
   width: auto;
@@ -400,7 +387,7 @@ body {
   overflow: hidden auto;
 }
 #queryContainer .side-panel li {
-  max-width: 100%!important;
+  max-width: 100% !important;
   margin-top: 5%;
   margin-bottom: 5%;
   padding-top: 5%;
@@ -516,11 +503,9 @@ body {
 }
 #editDocumentContainer .query-metadata {
   padding-top: 20px;
-}
-@media (max-device-height: 1024px) {
-  #editDocumentContainer .query-metadata {
-    padding-top: 25px !important;
-  }
+  /*@media(max-device-height:1024px) {
+            padding-top: 25px !important;
+        }*/
 }
 .keyboard-shortcut {
   margin-left: 20px;
@@ -542,23 +527,24 @@ body {
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
 }
-#shellHeader .databases li {
-  padding-left: 3%!important;
+#shellHeader {
+  /* When the screen width < 1070, shrink down the padding between the nav bar items. */
 }
-#shellHeader span {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+#shellHeader .container-fluid {
+  padding-right: 0;
+  padding-left: 0;
 }
-#shellHeader a {
-  font-size: 100% !important;
+#shellHeader #goToDocInput {
+  width: 10em;
 }
-#shellHeader input[type=text] {
-  font-size: 100% !important;
-  max-height: 5% !important;
-}
-#shellHeader i {
-  display: inline-block !important;
+@media (max-width: 1070px) {
+  #shellHeader .nav li a {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  #shellHeader .databases {
+    padding-right: 0px;
+  }
 }
 #shellFooter ul {
   width: 100% !important;
@@ -586,26 +572,6 @@ body {
 #editTransformerContainer .transformer {
   height: 600px;
 }
-<<<<<<< HEAD
-#csvImportContainer .fileinputs {
-  position: relative;
-}
-#csvImportContainer .fakefile {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-}
-#csvImportContainer .file {
-  position: relative;
-  text-align: right;
-  -moz-opacity: 0;
-  filter: alpha(opacity: 0);
-  opacity: 0;
-  z-index: 2;
-}
-=======
->>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
 .auto-complete {
   background-color: white;
 }
@@ -613,7 +579,7 @@ body {
   #logsContainer button,
   #alertsContainer button,
   #indexErrorsContainer button {
-    max-height: 50%!important;
+    max-height: 50% !important;
   }
 }
 #logsContainer table,
@@ -712,13 +678,6 @@ footer ul {
 #scriptedIndex .map {
   height: 160px;
 }
-.indexes-controls {
-<<<<<<< HEAD
-  /*margin-left: 15px; Why 15px? This makes it funky in appearance.*/
-=======
-  margin-left: 15px;
-}
 .advanced-replication-settings {
-    cursor: pointer;
->>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
+  cursor: pointer;
 }

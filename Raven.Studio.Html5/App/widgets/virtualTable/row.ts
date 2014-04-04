@@ -78,7 +78,6 @@ class row {
     }
 
     getCellTemplateName(propertyName: string, data: any): string {
-        debugger;
         if (propertyName === "Id") {
             return cell.idTemplate;
         }else if (propertyName === "__IsChecked") {

@@ -82,19 +82,19 @@
                             <div class="index panel panel-default">
                                 <div class="panel-body">
                                     <h4 class="pull-left">
-                                        <a data-bind="attr: { href: queryUrl }">
+                                        <a class="use-bootstrap-tooltip" data-bind="attr: { href: queryUrl }" title="Query this index">
                                             <span data-bind="text: name, css: { 'text-warning': isIdle, 'text-muted': isDisabled, 'text-danger': isAbandoned }"></span>
                                         </a>
                                         <small class="text-warning" data-bind="visible: isIdle">Idle</small>
                                         <small class="text-danger" data-bind="visible: isAbandoned">Abandoned</small>
                                         <small class="text-muted" data-bind="visible: isDisabled">Disabled</small>
-                                        <small class="text-muted use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="text: ' - ' + docscount + ' docs' " title=" the number of documents affected by this index"></small>
+                                        <small class="text-muted use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="text: ' - ' + docsCount + ' docs' " title=" the number of documents affected by this index"></small>
                                     </h4>
                                     <div class="pull-right index-actions-container">
                                         <button class="btn btn-danger use-bootstrap-tooltip" title="Delete the index" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: $root.deleteIndex.bind($root)">
                                             <i class="fa fa-trash-o"></i>
                                         </button>
-                                        <button class="btn btn-danger indexes-controls use-bootstrap-tooltip" title="Reset the index" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: $root.resetIndex.bind($root)">
+                                        <button class="btn btn-warning indexes-controls use-bootstrap-tooltip" title="Reset the index" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: $root.resetIndex.bind($root)">
                                             <i class="fa fa-refresh"></i>
                                         </button>
                                         <div class="btn-group indexes-controls">

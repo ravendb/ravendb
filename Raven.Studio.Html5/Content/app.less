@@ -43,7 +43,7 @@ html, body {
     }
 }
 
-@media (max-width: 979px) {
+/*@media (max-width: 979px) {
     .page-host {
         top: 0;
     }
@@ -51,9 +51,14 @@ html, body {
     .navbar-fixed-top {
         margin-bottom: 0;
     }
-}
 
-<<<<<<< HEAD
+    #shellHeader {
+        > .container-fluid {
+            padding-left: 0;
+            padding-right: 0;
+        }
+    }
+}
 
 @media(max-device-height:1024px) {
     span {
@@ -61,49 +66,25 @@ html, body {
     }
 
     a {
-        font-size: 14x !important;
+        font-size: 90% !important;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
 
     i {
-        font-size: 14px !important;
-        display: block !important;
+        font-size: 90% !important;
+        display: inline-block !important;
     }
 
     button {
-        max-height: 30px !important;
-        font-size: 13px !important;
+        max-height: 5% !important;
+        font-size: 90% !important;
     }
 
     .tooltip-inner {
         font-size: 10px !important;
     }
-=======
-@media(max-device-height:1024px) {    
-    span{
-        font-size:14px!important;
-    }
-    a{
-            font-size:90%!important;                
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;            
-    }
-    i{
-        font-size:90%!important;                
-        display:inline-block!important;
-    }
-    button{
-        max-height:5%!important;        
-        font-size:90%!important;                        
-    }      
-
-    .tooltip-inner {
-           font-size:10px!important;                
-    }       
->>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
 }
 
 .control-label {
@@ -116,16 +97,10 @@ html, body {
     @media(max-device-height:1024px) {
         width:86%!important;
     }
-}
+}*/
 
 
-<<<<<<< HEAD
 .side-panel {
-    margin-left: 10px !important;
-
-=======
-.side-panel {  
->>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
     li {
         max-width: 20%;
         margin-top: 5%;
@@ -134,39 +109,34 @@ html, body {
         padding-bottom: 5%;
         overflow: hidden;
         white-space: nowrap;
+        -ms-text-overflow: ellipsis;
+        -o-text-overflow: ellipsis;
         text-overflow: ellipsis;
     }
 
-    @media(max-device-height:1024px) {
+    /*@media(max-device-height:1024px) {
 
         h4 {
             font-size: 90% !important;
         }
+
         label {
             font-size: 90% !important;
         }
-        span {
-<<<<<<< HEAD
-            font-size: 10px !important;
-        }
 
-        li {
-            max-width: 200px !important;
-        }
-=======
+        span {
             font-size: 80% !important;
-             overflow: hidden;
-             white-space: nowrap;
-             text-overflow: ellipsis;
-        }       
->>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
-    }
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+    }*/
 }
 
 
 
 
-.container-fluid {
+/*.container-fluid {
     @media(max-device-height:1024px) {
         a {
             padding: 5px !important;
@@ -174,29 +144,14 @@ html, body {
             font-size: 13px !important;
         }
     }
-}
+}*/
 
-<<<<<<< HEAD
-#bs-example-navbar-collapse-1 {
-    a {
-        font-size: 12px !important;
-    }
 
-    input[type=text] {
-        font-size: 12px !important;
-        /*height:24px!important;*/
-    }
-
-    i {
-        display: inline-block !important;
-    }
-}
-=======
-
->>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
 
 .panel span {
     overflow: hidden;
+    -ms-text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
     text-overflow: ellipsis;
     white-space: nowrap;
     width: auto;
@@ -543,9 +498,9 @@ html, body {
     }
 
     .side-panel {
-        
-         li {             
-            max-width: 100%!important;
+
+        li {
+            max-width: 100% !important;
             margin-top: 5%;
             margin-bottom: 5%;
             padding-top: 5%;
@@ -556,9 +511,8 @@ html, body {
         }
 
         @media(max-device-height:1024px) {
-            margin-left: 100px !important;
-            width:30%;
-        }        
+            margin-left: 100px !important; width:30%;
+        }
     }
 }
 
@@ -635,7 +589,7 @@ html, body {
 }
 
 .breadcrumb {
-    
+
     @media(max-device-height:1024px) {
 
         h3 {
@@ -692,9 +646,9 @@ html, body {
     .query-metadata {
         padding-top: 20px;
 
-        @media(max-device-height:1024px) {
+        /*@media(max-device-height:1024px) {
             padding-top: 25px !important;
-        }
+        }*/
     }
 }
 
@@ -708,7 +662,7 @@ html, body {
     overflow-x: hidden;
     -ms-word-break: break-all;
     word-break: break-all;
-    cursor: pointer;        
+    cursor: pointer;
 
     tbody {
         td {
@@ -724,29 +678,30 @@ html, body {
 }
 
 #shellHeader {
-    .databases{
-        li{
-            padding-left:3%!important;
+    .container-fluid {
+        padding-right: 0;
+        padding-left: 0;
+    }
+
+    #goToDocInput {
+        width: 10em;
+    } 
+
+    /* When the screen width < 1070, shrink down the padding between the nav bar items. */ 
+    @media (max-width: 1070px) {
+        .nav {
+            li {
+                a {
+                    padding-left: 10px;
+                    padding-right: 10px;
+                }
+            }
         }
-    }    
-    span {
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
+
+        .databases {
+            padding-right: 0px;
+        }
     }
-
-     a {
-            font-size: 100% !important;
-        }                      
-
-    input[type=text] {
-        font-size: 100% !important;
-        max-height: 5% !important;
-    }
-
-    i {
-        display: inline-block !important;
-    }    
 }
 
 #shellFooter {
@@ -775,13 +730,6 @@ html, body {
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
-<<<<<<< HEAD
-
-        @media(max-device-height:1024px) {
-            max-width: 100px !important;
-        }
-=======
->>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
     }
 }
 
@@ -789,37 +737,14 @@ html, body {
     height: 600px;
 }
 
-<<<<<<< HEAD
-#csvImportContainer .fileinputs {
-    position: relative;
-}
-
-#csvImportContainer .fakefile {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 1;
-}
-
-#csvImportContainer .file {
-    position: relative;
-    text-align: right;
-    -moz-opacity: 0;
-    filter: ~"alpha(opacity: 0)";
-    opacity: 0;
-    z-index: 2;
-}
-
-=======
->>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
 .auto-complete {
     background-color: white;
 }
 
 #logsContainer, #alertsContainer, #indexErrorsContainer {
     @media(max-device-height:1024px) {
-        button{
-            max-height:50%!important;
+        button {
+            max-height: 50% !important;
         }
     }
 
@@ -931,10 +856,6 @@ footer {
     .map {
         height: 160px;
     }
-}
-
-.indexes-controls {
-    /*margin-left: 15px; COMMENTED OUT: Why 15px? This makes it funky in appearance.*/ 
 }
 
 .advanced-replication-settings {
