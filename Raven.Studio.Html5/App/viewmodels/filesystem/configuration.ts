@@ -51,8 +51,8 @@ class configuration extends viewModelBase {
         if (selected) {
             selected.getValues().done(x => {
 
+                //we collapse the dictionary into a flattened value pair array to show in the UI.
                 var nameValueCollection = new Array<Pair<string, string>>();
-                
                 for (var i = 0; i < x.length; i++) {
                     var pair = x[i];
                     var name = pair.item1;
@@ -72,8 +72,23 @@ class configuration extends viewModelBase {
     save() {
 
         var args: { [name: string]: string[]; } = {};
+        var values = this.keyValues();
 
-        new saveConfigurationCommand(this.activeFilesystem(), this.currentKey(), this.keyValues()).execute();
+        for (var i = 0; i < values.length; i++) {
+
+            var key = values[i].item1;
+            var value = values[i].item2;
+
+            if (args[key] == null) {
+                args[key] = [value];
+            }
+            else {
+                args[key].push(value);
+            }
+
+        }
+
+        new saveConfigurationCommand(this.activeFilesystem(), this.currentKey(), args).execute();
     }
 
     addKeyValue() {
