@@ -96,11 +96,6 @@ class shell extends viewModelBase {
             { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
         ]).buildNavigationModel();
 
-        router.activeInstruction.subscribe(val => {
-            if (val.config.route.split('/').length == 1) //if it's a root navigation item.
-                this.activeArea(val.config.title);
-        });
-
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
         this.connectToRavenServer();
@@ -119,6 +114,11 @@ class shell extends viewModelBase {
             container: 'body',
             selector: '.use-bootstrap-tooltip',
             trigger: 'hover'
+        });
+
+        router.activeInstruction.subscribe(val => {
+            if (val.config.route.split('/').length == 1) //if it's a root navigation item.
+                this.activeArea(val.config.title);
         });
 
         shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
