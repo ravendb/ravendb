@@ -340,7 +340,11 @@ namespace Raven.Client.Document
 			{
 				var binaryWriter = new BinaryWriter(gzip);
 				binaryWriter.Write(localBatch.Count);
-				var bsonWriter = new BsonWriter(binaryWriter);
+				var bsonWriter = new BsonWriter(binaryWriter)
+				                 {
+					                 DateTimeKindHandling = DateTimeKind.Unspecified
+				                 };
+
 				foreach (var doc in localBatch)
 				{
 					doc.WriteTo(bsonWriter);
