@@ -91,6 +91,9 @@ namespace Raven.Database
         public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 
         [ImportMany]
+        public OrderedPartCollection<AbstractMapOnMapReduceTrigger> MapTriggers { get; set; }
+
+        [ImportMany]
         public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
 
         [ImportMany]
@@ -198,6 +201,7 @@ namespace Raven.Database
                     Database = this,
                     DatabaseName = Name,
                     IndexUpdateTriggers = IndexUpdateTriggers,
+                    MapTriggers = MapTriggers,
                     ReadTriggers = ReadTriggers,
                     RaiseIndexChangeNotification = RaiseNotifications,
                     TaskScheduler = backgroundTaskScheduler,
@@ -268,6 +272,7 @@ namespace Raven.Database
                 .Concat(AttachmentDeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
                 .Concat(AttachmentReadTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
                 .Concat(IndexUpdateTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+                .Concat(MapTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
             .Apply(initialization => initialization.SecondStageInit());
         }
 
@@ -322,6 +327,10 @@ namespace Raven.Database
             IndexUpdateTriggers
                 .Init(disableAllTriggers)
                 .OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+            
+            MapTriggers
+                .Init(disableAllTriggers)
+                .OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
         }
 
         private void InitializeIndexCodecTriggers()
@@ -372,6 +381,7 @@ namespace Raven.Database
                         .Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Delete" }))
                         .Concat(ReadTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Read" }))
                         .Concat(IndexUpdateTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Index Update" }))
+                        .Concat(MapTriggers.Select(x => new DatabaseStatistics.TriggerInfo { Name = x.ToString(), Type = "Map" }))
                         .ToArray(),
                     Extensions = Configuration.ReportExtensions(
                         typeof(IStartupTask),
@@ -383,6 +393,7 @@ namespace Raven.Database
                         typeof(AbstractDynamicCompilationExtension),
                         typeof(AbstractIndexQueryTrigger),
                         typeof(AbstractIndexUpdateTrigger),
+                        typeof(AbstractMapOnMapReduceTrigger),
                         typeof(AbstractAnalyzerGenerator),
                         typeof(AbstractAttachmentDeleteTrigger),
                         typeof(AbstractAttachmentPutTrigger),
