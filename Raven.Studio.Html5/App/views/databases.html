@@ -28,7 +28,7 @@
         <div class="databases-container" data-bind="foreach: databases">
             <div class="database" data-bind="visible: isVisible, click: function () { $root.selectDatabase($data); return true; }, css: { selected: isSelected}">
                 <h4><a data-bind="text: name, attr: { href: $root.getDocumentsUrl($data) }"></a></h4>
-                <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: docCount() + ' documents'"></span>
+                <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: itemCount() + ' documents'"></span>
             </div>
         </div>
     </div>

@@ -49,9 +49,19 @@ namespace Raven.Database.Config
 		private static int maxParallelism;
 		public static int MaxParallelism
 		{
-			get { return maxParallelism; }
+			get
+			{
+				if (MaxParallelismSet == false)
+				{
+					return Environment.ProcessorCount;
+				}
+				return maxParallelism;
+			}
 			set
 			{
+				if (value == 0)
+					throw new ArgumentException("You cannot set the max parallelism to zero");
+				
 				maxParallelism = value;
 				MaxParallelismSet = true;
 			}

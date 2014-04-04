@@ -178,7 +178,6 @@ class shell extends viewModelBase {
 	        .fail(result => this.handleRavenConnectionFailure(result))
 	        .done(results => {
 	            this.filesystemsLoaded(results);
-	            router.activate();
 	            this.fetchBuildVersion();
 	            this.fetchLicenseStatus();
 	        });
