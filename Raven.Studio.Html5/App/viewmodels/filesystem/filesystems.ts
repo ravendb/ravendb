@@ -16,6 +16,8 @@ import createFilesystemCommand = require("commands/filesystem/createFilesystemCo
 class filesystems extends viewModelBase {
 
     filesystems = ko.observableArray<filesystem>();    
+    hasFilesystems = ko.computed(() => this.filesystems().length > 0);
+
     searchText = ko.observable("");
     selectedFilesystem = ko.observable<filesystem>();
     defaultFs: filesystem;
