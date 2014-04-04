@@ -77,7 +77,7 @@ namespace Raven.Tests.Common
 			if(prefix != null)
 				prefix = prefix.Replace("<", "").Replace(">", "");
 
-			var newDataDir = Path.GetFullPath(string.Format(@".\{1}-{0}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "TestDatabase", pathCount++));
+			var newDataDir = Path.GetFullPath(string.Format(@".\{1}-{0}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "TestDatabase", Interlocked.Increment(ref pathCount)));
 		    if (forceCreateDir && Directory.Exists(newDataDir) == false)
 		        Directory.CreateDirectory(newDataDir);
 			pathsToDelete.Add(newDataDir);
@@ -302,7 +302,7 @@ namespace Raven.Tests.Common
 			return ravenDbServer;
 		}
 
-		public ITransactionalStorage NewTransactionalStorage(string requestedStorage = null, string dataDir = null, string tempDir = null, bool runInMemory = false, OrderedPartCollection<AbstractDocumentCodec> documentCodecs = null)
+		public ITransactionalStorage NewTransactionalStorage(string requestedStorage = null, string dataDir = null, string tempDir = null, bool? runInMemory = null, OrderedPartCollection<AbstractDocumentCodec> documentCodecs = null)
 		{
 			ITransactionalStorage newTransactionalStorage;
 			string storageType = GetDefaultStorageType(requestedStorage);
@@ -312,7 +312,7 @@ namespace Raven.Tests.Common
 			{
 				DataDirectory = dataDirectory,
 				FileSystemDataDirectory = Path.Combine(dataDirectory, "FileSystem"),
-				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
+				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && (runInMemory ?? true),
 			};
 
             ravenConfiguration.Settings["Raven/Voron/TempPath"] = tempDir;

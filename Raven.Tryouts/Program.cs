@@ -1,18 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.IO;
-using NLog;
-using Raven.Abstractions.Data;
-using Raven.Client.Extensions;
-using Raven.Client.RavenFS;
-using Raven.Client.RavenFS.Extensions;
-using Raven.Database.Config;
-using Raven.Server;
-using Raven.Tests.Issues;
-using Raven.Tests.Notifications;
+using System.Threading.Tasks;
 using Raven.Tests.Storage;
-using Xunit;
 
 namespace Raven.Tryouts
 {
@@ -23,17 +12,13 @@ namespace Raven.Tryouts
 			for (int i = 0; i < 10; i++)
 			{
 				Console.Write("\r"+i);
-				using (var x = new DatabaseReloadingTests())
+				Parallel.For(0, 100, a =>
 				{
-					try
+					using (var x = new Indexes())
 					{
-						x.Should_save_put_to_tenant_database_if_tenant_database_is_reloaded_before_the_put_transaction();
+						x.CanRecordAttempts();
 					}
-					catch (SkipException e)
-					{
-						Console.WriteLine(e.Message);
-					}
-				}
+				});
 			}
 
 			//var server = new RavenDbServer(new RavenConfiguration
