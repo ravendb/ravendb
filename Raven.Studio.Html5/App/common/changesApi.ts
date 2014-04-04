@@ -25,7 +25,7 @@ class changesApi {
         if (!!window.EventSource) {
             var dbUrl = appUrl.forResourceQuery(this.db);
 
-            console.log("Connecting to changes API (db = " + this.db.name + ")");
+            //console.log("Connecting to changes API (db = " + this.db.name + ")");
 
             this.source = new EventSource(dbUrl + '/changes/events?id=' + this.eventsId);
             this.source.onmessage = (e) => this.onEvent(e);
@@ -103,7 +103,7 @@ class changesApi {
     
     dispose() {
         if (this.source) {
-            console.log("Disconnecting from changes API");
+            //console.log("Disconnecting from changes API");
             this.send('disconnect');
             this.source.close();
         }
