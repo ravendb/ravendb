@@ -863,12 +863,12 @@ namespace Raven.Bundles.Replication.Tasks
 					{
 						if (attachmentSinceLastEtag == 0)
 							return string.Format("No attachments to replicate to {0} - last replicated etag: {1}", destination,
-												 destinationsReplicationInformationForSource.LastDocumentEtag);
+												 destinationsReplicationInformationForSource.LastAttachmentEtag);
 
 						if (attachmentSinceLastEtag == filteredAttachmentsToReplicate.Count)
 							return string.Format("Replicating {0} attachments [>{1}] to {2}.",
 											 attachmentSinceLastEtag,
-											 destinationsReplicationInformationForSource.LastDocumentEtag,
+											 destinationsReplicationInformationForSource.LastAttachmentEtag,
 											 destination);
 
 						var diff = attachmentsToReplicate.Except(filteredAttachmentsToReplicate).Select(x => x.Key);
@@ -877,7 +877,7 @@ namespace Raven.Bundles.Replication.Tasks
 											 filteredAttachmentsToReplicate.Count,
 											 destination,
 											 string.Join(", ", diff),
-											 destinationsReplicationInformationForSource.LastDocumentEtag);
+											 destinationsReplicationInformationForSource.LastAttachmentEtag);
 					});
 
 					scope.Record(new RavenJObject
