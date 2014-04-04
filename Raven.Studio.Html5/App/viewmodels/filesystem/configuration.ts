@@ -16,7 +16,9 @@ class configuration extends viewModelBase {
     keys = ko.observableArray<configurationKey>();
     selectedKey = ko.observable<configurationKey>().subscribeTo("ActivateConfigurationKey").distinctUntilChanged();
     keyValues = ko.observableArray<Pair<string, string>>();
+    selectedKeyValue = ko.observable<Pair<string, string>>();
     currentKey = ko.observable<configurationKey>();
+    
 
     static gridSelector = "#keyDetailsGrid";
 
@@ -29,6 +31,12 @@ class configuration extends viewModelBase {
 
         this.activeFilesystem.subscribe(x => {
             this.loadKeys(x);     
+        });
+        
+        // Initialize the context menu (using Bootstrap-ContextMenu library).
+        // TypeScript doesn't know about Bootstrap-Context menu, so we cast jQuery as any.
+        (<any>$('.keys-collection')).contextmenu({
+            target: '#keys-context-menu'
         }); 
 
         this.loadKeys(this.activeFilesystem()); 
@@ -53,6 +61,7 @@ class configuration extends viewModelBase {
 
                 //we collapse the dictionary into a flattened value pair array to show in the UI.
                 var nameValueCollection = new Array<Pair<string, string>>();
+                
                 for (var i = 0; i < x.length; i++) {
                     var pair = x[i];
                     var name = pair.item1;
@@ -62,11 +71,18 @@ class configuration extends viewModelBase {
                     }
                 }
 
+                if (nameValueCollection.length == 0)
+                    nameValueCollection.push(new Pair("", ""));   
+
                 this.keyValues(nameValueCollection);
             });
 
             this.currentKey(selected);
         }
+    }
+
+    selectKeyValue(selection: Pair<string, string>) {
+        this.selectedKeyValue(selection);
     }
 
     save() {
@@ -77,7 +93,12 @@ class configuration extends viewModelBase {
         for (var i = 0; i < values.length; i++) {
 
             var key = values[i].item1;
+            if (key == null || key == "")
+                continue;
+
             var value = values[i].item2;
+            if (value == null || value == "")
+                continue;
 
             if (args[key] == null) {
                 args[key] = [value];
@@ -85,7 +106,6 @@ class configuration extends viewModelBase {
             else {
                 args[key].push(value);
             }
-
         }
 
         new saveConfigurationCommand(this.activeFilesystem(), this.currentKey(), args).execute();
@@ -95,6 +115,16 @@ class configuration extends viewModelBase {
         this.keyValues.push(new Pair("", ""));
     }
 
+    removeKeyValue(keyValue) {
+
+        if (keyValue) {
+            this.keyValues.remove(keyValue);
+        }
+
+        if (this.keyValues.length == 0) {
+            this.keyValues.push(new Pair("", ""));
+        }
+    }
 } 
 
 export = configuration;
