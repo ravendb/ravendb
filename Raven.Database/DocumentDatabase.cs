@@ -158,15 +158,14 @@ namespace Raven.Database
 
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
-        private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches =
-            new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(1024, StringComparer.OrdinalIgnoreCase);
+        private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches;
 
         public DocumentDatabase(InMemoryRavenConfiguration configuration, TransportState transportState = null)
         {
             DocumentLock = new PutSerialLock();
             this.configuration = configuration;
             this.transportState = transportState ?? new TransportState();
-
+            
             using (LogManager.OpenMappedContext("database", configuration.DatabaseName ?? Constants.SystemDatabase))
             {
                 log.Debug("Start loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
@@ -181,11 +180,13 @@ namespace Raven.Database
 
                 Name = configuration.DatabaseName;
                 backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Default;
-
+                
                 ExtensionsState = new AtomicDictionary<object>();
                 Configuration = configuration;
 
                 ExecuteAlterConfiguration();
+
+                recentTouches = new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(configuration.MaxRecentTouchesToRemember, StringComparer.OrdinalIgnoreCase);
 
                 configuration.Container.SatisfyImportsOnce(this);
 
