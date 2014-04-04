@@ -111,6 +111,10 @@ class configuration extends viewModelBase {
         new saveConfigurationCommand(this.activeFilesystem(), this.currentKey(), args).execute();
     }
 
+    deleteKey() {
+        throw new Error("Not Implemented");
+    }
+
     addKeyValue() {
         this.keyValues.push(new Pair("", ""));
     }
