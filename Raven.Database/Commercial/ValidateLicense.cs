@@ -249,7 +249,6 @@ namespace Raven.Database.Commercial
 					MemoryStatistics.MaxParallelism = int.Parse(maxParallel);
 				}
 			}
-
 			var clasterInspector = new ClusterInspecter();
 
 			string claster;
