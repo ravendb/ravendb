@@ -78,7 +78,8 @@ namespace Raven.Bundles.Replication.Responders
                 }
                 else
                 {
-                    AddWithoutConflict(id, existingEtag, metadata, incoming);
+                    var etag = deleted == false ? existingEtag : null;
+                    AddWithoutConflict(id, etag, metadata, incoming);
                 }
                 return;
 			}

@@ -48,7 +48,6 @@ namespace Raven.Storage.Managed
 		private long lastUsageTime;
 		private IUuidGenerator uuidGenerator;
 		private readonly IDocumentCacher documentCacher;
-	    private DisposableAction exitLockDisposable;
 		private MuninInFlightTransactionalState inFlightTransactionalState;
 
 	    public IPersistentSource PersistenceSource
@@ -61,7 +60,6 @@ namespace Raven.Storage.Managed
 			this.configuration = configuration;
 			this.onCommit = onCommit;
 			documentCacher = new DocumentCacher(configuration);
-		    exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
 		}
 
 		public void Dispose()
@@ -93,12 +91,6 @@ namespace Raven.Storage.Managed
 			get;
 			private set;
 		}
-
-	    public IDisposable WriteLock()
-	    {
-	        Monitor.Enter(this);
-            return exitLockDisposable;
-	    }
 
 		public IDisposable DisableBatchNesting()
 		{

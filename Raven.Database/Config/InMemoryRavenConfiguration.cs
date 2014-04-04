@@ -9,12 +9,15 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
+using System.Configuration;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -24,6 +27,7 @@ using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Enum = System.Enum;
 
 namespace Raven.Database.Config
 {
@@ -69,7 +73,8 @@ namespace Raven.Database.Config
 
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
 			ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
-
+			
+			EncryptionKeyBitsPreference = ravenSettings.EncryptionKeyBitsPreference.Value;
 			// Core settings
 			MaxPageSize = ravenSettings.MaxPageSize.Value;
 
@@ -118,8 +123,6 @@ namespace Raven.Database.Config
 				 Math.Max(16, Math.Min(MaxNumberOfItemsToIndexInSingleBatch / 256, defaultInitialNumberOfItemsToIndexInSingleBatch));
 			}
 			AvailableMemoryForRaisingIndexBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingIndexBatchSizeLimit.Value;
-
-
 
 			MaxNumberOfItemsToReduceInSingleBatch = ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Value;
 			InitialNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default ?
@@ -176,6 +179,8 @@ namespace Raven.Database.Config
 				IndexStoragePath = indexStoragePathSettingValue;
 			}
 
+			MaxRecentTouchesToRemember = ravenSettings.MaxRecentTouchesToRemember.Value;
+
 			// HTTP settings
 			HostName = ravenSettings.HostName.Value;
 
@@ -201,7 +206,7 @@ namespace Raven.Database.Config
 			DisableDocumentPreFetchingForIndexing = ravenSettings.DisableDocumentPreFetchingForIndexing.Value;
 
 			MaxNumberOfItemsToPreFetchForIndexing = ravenSettings.MaxNumberOfItemsToPreFetchForIndexing.Value;
-
+			
 			// Misc settings
 			WebDir = ravenSettings.WebDir.Value;
 
@@ -221,7 +226,12 @@ namespace Raven.Database.Config
 			PostInit();
 		}
 
-        /// <summary>
+		public int EncryptionKeyBitsPreference
+		{
+		    get; set;
+		}
+
+		/// <summary>
         /// This limits the number of concurrent multi get requests,
         /// Note that this plays with the max number of requests allowed as well as the max number
         /// of sessions
@@ -471,7 +481,12 @@ namespace Raven.Database.Config
 					return Math.Min(maxNumberOfParallelIndexTasks ?? MemoryStatistics.MaxParallelism, MemoryStatistics.MaxParallelism);
 				return maxNumberOfParallelIndexTasks ?? Environment.ProcessorCount;
 			}
-			set { maxNumberOfParallelIndexTasks = value; }
+			set
+			{
+				if (value == 0)
+					throw new ArgumentException("You cannot set the number of parallel tasks to zero");
+				maxNumberOfParallelIndexTasks = value;
+			}
 		}
 
 		/// <summary>
@@ -794,6 +809,12 @@ namespace Raven.Database.Config
 		/// Default: 10,000
 		/// </summary>
 		public int MaxStepsForScript { get; set; }
+
+		/// <summary>
+		/// The maximum number of recent document touches to store (i.e. updates done in
+		/// order to initiate indexing rather than because something has actually changed).
+		/// </summary>
+		public int MaxRecentTouchesToRemember { get; set; }
 
 		/// <summary>
 		/// The number of additional steps to add to a given script based on the processed document's quota.

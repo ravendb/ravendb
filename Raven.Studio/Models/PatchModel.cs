@@ -411,7 +411,7 @@ namespace Raven.Studio.Models
                         .ContinueOnSuccessInTheUIThread(collections =>
                         {
                             AvailableObjects.Clear();
-                            AvailableObjects.AddRange(collections.OrderByDescending(x => x.Count)
+                            AvailableObjects.AddRange(collections.OrderBy(x => x.Name)
                                                           .Where(x => x.Count > 0)
                                                           .Select(col => col.Name).ToList());
 							if(KeepSelectedItem == false)

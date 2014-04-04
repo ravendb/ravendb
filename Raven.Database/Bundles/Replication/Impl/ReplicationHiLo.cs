@@ -41,7 +41,12 @@ namespace Raven.Bundles.Replication.Impl
 				{
 					if (current > currentMax.Value)
 					{
-						currentMax = new Hodler(GetNextMax());
+                        using (var locker = Database.DocumentLock.TryLock(250))
+                        {
+                            if (locker == null)
+                                continue;
+                            currentMax = new Hodler(GetNextMax());
+                        }
 					}
 					return Interlocked.Increment(ref current);
 				}
@@ -50,65 +55,45 @@ namespace Raven.Bundles.Replication.Impl
 
 		}
 
-        private long GetNextMax()
-        {
-            var span = SystemTime.UtcNow - lastRequestedUtc;
-            if (span.TotalSeconds < 1)
-            {
-                capacity *= 2;
-            }
-            lastRequestedUtc = SystemTime.UtcNow;
+		private long GetNextMax()
+		{
+			var span = SystemTime.UtcNow - lastRequestedUtc;
+			if (span.TotalSeconds < 1)
+			{
+				capacity *= 2;
+			}
+			lastRequestedUtc = SystemTime.UtcNow;
 
-            JsonDocument document;
-            using (Database.TransactionalStorage.DisableBatchNesting())
-                document = Database.Get(Constants.RavenReplicationVersionHiLo, null);
-
-            if (document == null)
-            {
-                document = Database.Get(Constants.RavenReplicationVersionHiLo, null);
-                if (document != null)
-                    return NextMax(document, currentMax.Value);
-            }
-
-            using (Database.TransactionalStorage.DisableBatchNesting())
-                while (true)
-                {
-                    try
-                    {
-                        var minNextMax = currentMax.Value;
-
-                        if (document == null)
-                            document = Database.Get(Constants.RavenReplicationVersionHiLo, null);
-
-                        if (document == null)
-                        {
-                            Database.Put(Constants.RavenReplicationVersionHiLo,
-                                         Etag.Empty,
-                                // sending empty guid means - ensure the that the document does NOT exists
-                                         RavenJObject.FromObject(RavenJObject.FromObject(new { Max = minNextMax + capacity })),
-                                         new RavenJObject(),
-                                         null);
-                            return minNextMax + capacity;
-                        }
-
-                        return NextMax(document, minNextMax);
-                    }
-                    catch (ConcurrencyException)
-                    {
-                        // expected, we need to retry
-                        document = null;
-                    }
-                }
-        }
-
-	    private long NextMax(JsonDocument document, long minNextMax)
-	    {
-	        var max = GetMaxFromDocument(document, minNextMax);
-	        document.DataAsJson["Max"] = max + capacity;
-	        Database.Put(Constants.RavenReplicationVersionHiLo, document.Etag, document.DataAsJson, document.Metadata, null);
-	        current = max + 1;
-	        return max + capacity;
-	    }
+			while (true)
+			{
+				try
+				{
+					var minNextMax = currentMax.Value;
+					var document = Database.Get(Constants.RavenReplicationVersionHiLo, null);
+					if (document == null)
+					{
+						Database.Put(Constants.RavenReplicationVersionHiLo,
+							Etag.Empty,
+							// sending empty etag means - ensure the that the document does NOT exists
+							RavenJObject.FromObject(RavenJObject.FromObject(new {Max = minNextMax + capacity})),
+							new RavenJObject(),
+							null);
+						return minNextMax + capacity;
+					}
+					var max = GetMaxFromDocument(document, minNextMax);
+					document.DataAsJson["Max"] = max + capacity;
+					Database.Put(Constants.RavenReplicationVersionHiLo, document.Etag,
+						document.DataAsJson,
+						document.Metadata, null);
+					current = max + 1;
+					return max + capacity;
+				}
+				catch (ConcurrencyException)
+				{
+					// expected, we need to retry
+				}
+			}
+		}
 
 	    private long GetMaxFromDocument(JsonDocument document, long minMax)
 		{

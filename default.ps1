@@ -339,21 +339,13 @@ task CopyServer -depends CreateOutpuDirectories {
 	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 }
 
-task CopyInstaller {
-	if($env:buildlabel -eq 13)
-	{
-	  return
-	}
+function SignFile($filePath){
 
-	Copy-Item $build_dir\RavenDB.Setup.exe "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
-}
-
-task SignInstaller {
 	if($env:buildlabel -eq 13)
 	{
 		return
 	}
-  
+	
 	$signTool = "C:\Program Files (x86)\Windows Kits\8.0\bin\x86\signtool.exe"
 	if (!(Test-Path $signTool)) 
 	{
@@ -382,10 +374,29 @@ task SignInstaller {
 	{
 		throw "Certificate password must be provided"
 	}
-  
-  $installerFile = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
     
-  Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "http://timestamp.verisign.com/scripts/timstamp.dll" "$installerFile" }
+	Exec { &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "http://ravendb.net" /t "http://timestamp.verisign.com/scripts/timstamp.dll" "$filePath" }
+}
+
+task SignServer {
+  $serverFile = "$build_dir\Output\Server\Raven.Server.exe"
+  SignFile($serverFile)
+  
+} 
+
+task CopyInstaller {
+	if($env:buildlabel -eq 13)
+	{
+	  return
+	}
+
+	Copy-Item $build_dir\RavenDB.Setup.exe "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
+}
+
+task SignInstaller {
+
+  $installerFile = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
+  SignFile($installerFile)
 } 
 
 task CreateDocs {
@@ -457,6 +468,7 @@ task DoReleasePart1 -depends Compile, `
 	CopyWeb, `
 	CopyBundles, `
 	CopyServer, `
+	SignServer, `
 	CopyRootFiles, `
 	CopySamples, `
 	ZipOutput {	
@@ -611,7 +623,7 @@ task CreateNugetPackages -depends Compile, InitNuget {
 	New-Item $nuget_dir\RavenDB.Server\tools -Type directory | Out-Null
 	@("Esent.Interop.???", "ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.NTS.???",
 		"Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll",	"NewtonSoft.Json.???", "NLog.???", "Jint.Raven.???",
-		"Raven.Abstractions.???", "Raven.Database.???", "Raven.Server.???", "Raven.Smuggler.???", "AWS.Extensions.???", "AWSSDK.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Server\tools }
+		"Raven.Abstractions.???", "Raven.Database.???", "Raven.Server.???", "Raven.Smuggler.???", "Raven.Client.Lightweight.???", "AWS.Extensions.???", "AWSSDK.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Server\tools }
 	Copy-Item (Get-DependencyPackageFiles 'Microsoft.CompilerServices.AsyncTargetingPack' -FrameworkVersion net40) $nuget_dir\RavenDB.Server\tools
 	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $nuget_dir\RavenDB.Server\tools\Raven.Server.exe.config
 

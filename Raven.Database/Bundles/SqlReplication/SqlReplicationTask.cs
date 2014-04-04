@@ -19,7 +19,6 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
-using Raven.Database.Impl.Synchronization;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
@@ -48,12 +47,10 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private PrefetchingBehavior prefetchingBehavior;
 
-		private EtagSynchronizer etagSynchronizer;
 		private Etag lastLatestEtag;
 
 		public void Execute(DocumentDatabase database)
 		{
-			etagSynchronizer = database.EtagSynchronizer.GetSynchronizer(EtagSynchronizerType.SqlReplicator);
 			prefetchingBehavior = database.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
 
 			Database = database;
@@ -226,6 +223,21 @@ namespace Raven.Database.Bundles.SqlReplication
 							var deletedDocs = deletedDocsByConfig[replicationConfig];
 							var docsToReplicate = documents
 								.Where(x => lastReplicatedEtag.CompareTo(x.Etag) <= 0) // haven't replicate the etag yet
+                                .Where(document =>
+                                {
+                                    var info = Database.GetRecentTouchesFor(document.Key);
+                                    if (info != null)
+                                    {
+                                        if (info.TouchedEtag.CompareTo(lastReplicatedEtag) > 0)
+                                        {
+                                            log.Debug(
+                                                "Will not replicate document '{0}' to '{1}' because the updates after etag {2} are related document touches",
+                                                document.Key, replicationConfig.Name, info.TouchedEtag);
+                                            return false;
+                                        }
+                                    }
+	                                return true;
+                                })
 								.ToList();
 
 							var currentLatestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicate);
@@ -385,7 +397,6 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private Etag GetLeastReplicatedEtag(IEnumerable<SqlReplicationConfig> config, SqlReplicationStatus localReplicationStatus)
 		{
-			var synchronizationEtag = etagSynchronizer.GetSynchronizationEtag();
 			Etag leastReplicatedEtag = null;
 			foreach (var sqlReplicationConfig in config)
 			{
@@ -395,9 +406,8 @@ namespace Raven.Database.Bundles.SqlReplication
 				else if (lastEtag.CompareTo(leastReplicatedEtag) < 0)
 					leastReplicatedEtag = lastEtag;
 			}
-			var calculateSynchronizationEtag = etagSynchronizer.CalculateSynchronizationEtag(synchronizationEtag, leastReplicatedEtag);
 
-			return calculateSynchronizationEtag;
+			return leastReplicatedEtag;
 		}
 
 		private bool ReplicateChangesToDestination(SqlReplicationConfig cfg, IEnumerable<JsonDocument> docs)

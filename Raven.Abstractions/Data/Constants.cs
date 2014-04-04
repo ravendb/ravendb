@@ -14,8 +14,6 @@ namespace Raven.Abstractions.Data
 			InDatabaseKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
 		}
 
-		public const string RavenEtagSynchronization = "Raven/Etag/Synchronization";
-		
 		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
 		public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
 		public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
@@ -56,6 +54,7 @@ namespace Raven.Abstractions.Data
 		public const string DontEncryptDocumentsStartingWith = "Raven/";
 		public const string AlgorithmTypeSetting = "Raven/Encryption/Algorithm";
 		public const string EncryptionKeySetting = "Raven/Encryption/Key";
+		public const string EncryptionKeyBitsPreferenceSetting = "Raven/Encryption/KeyBitsPreference";
 		public const string EncryptIndexes = "Raven/Encryption/EncryptIndexes";
 
 		public const string InDatabaseKeyVerificationDocumentName = "Raven/Encryption/Verification";
@@ -89,7 +88,7 @@ namespace Raven.Abstractions.Data
 		public const string RavenReplicationSourcesBasePath = "Raven/Replication/Sources";
 		public const string RavenReplicationDestinations = "Raven/Replication/Destinations";
 		public const string RavenReplicationDestinationsBasePath = "Raven/Replication/Destinations/";
-
+		
 		public const string RavenReplicationDocsTombstones = "Raven/Replication/Docs/Tombstones";
 		public const string RavenReplicationAttachmentsTombstones = "Raven/Replication/Attachments/Tombstones";
 

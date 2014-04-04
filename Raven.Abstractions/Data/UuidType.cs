@@ -10,7 +10,6 @@
         ScheduledReductions = 6,
         Queue = 7,
         Tasks = 8,
-        Indexing = 9,
-		EtagSynchronization = 10
+        Indexing = 9
     }
 }

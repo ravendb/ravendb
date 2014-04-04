@@ -187,8 +187,7 @@ namespace Raven.Studio.Commands
 						{
 							var resetReplication = new ResetReplication(hasChanges);
 							await resetReplication.ShowAsync();
-							if (resetReplication.Selected.Count == 0)
-								return;
+							
 							const string ravenSqlreplicationStatus = "Raven/SqlReplication/Status";
 
 							var status = await session.LoadAsync<SqlReplicationStatus>(ravenSqlreplicationStatus);
