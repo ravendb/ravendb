@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs

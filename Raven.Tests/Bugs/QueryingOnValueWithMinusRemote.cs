@@ -1,10 +1,12 @@
 ﻿using System.Linq;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryingOnValueWithMinusRemote : RemoteClientTest
+	public class QueryingOnValueWithMinusRemote : RavenTest
 	{
 		[Fact]
 		public void CanQueryOnValuesContainingMinus()

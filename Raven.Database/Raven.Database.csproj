@@ -105,13 +105,6 @@
     <Reference Include="Jint.Raven">
       <HintPath>..\SharedLibs\Jint.Raven.dll</HintPath>
     </Reference>
-    <Reference Include="Kent.Boogaart.HelperTrinity">
-      <HintPath>..\packages\Kent.Boogaart.HelperTrinity.1.4.0.0\lib\net40\Kent.Boogaart.HelperTrinity.dll</HintPath>
-    </Reference>
-    <Reference Include="Kent.Boogaart.KBCsv">
-      <HintPath>..\packages\Kent.Boogaart.KBCsv.1.4.0.0\lib\sl40\Kent.Boogaart.KBCsv.dll</HintPath>
-      <HintPath>..\packages\Kent.Boogaart.KBCsv.1.4.0.0\lib\net40\Kent.Boogaart.KBCsv.dll</HintPath>
-    </Reference>
     <Reference Include="Lucene.Net, Version=2.3.2.1, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
@@ -174,12 +167,11 @@
     <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.5.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="NLog">
+      <HintPath>..\packages\NLog.2.1.0\lib\net45\NLog.dll</HintPath>
+    </Reference>
     <Reference Include="Owin">
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
-    </Reference>
-    <Reference Include="NLog, Version=2.1.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\NLog.2.1.0\lib\net45\NLog.dll</HintPath>
     </Reference>
     <Reference Include="Spatial4n.Core.NTS">
       <HintPath>..\SharedLibs\Spatial4n.Core.NTS.dll</HintPath>
@@ -263,6 +255,8 @@
     <Compile Include="Bundles\PeriodicBackups\Controllers\AdminPeriodicBackupController.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\AncestryPutTrigger.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualDeleteTrigger.cs" />
+    <Compile Include="Client\EmbeddableDocumentStore.cs" />
+    <Compile Include="Client\EmbeddedDocumentStore.cs" />
     <Compile Include="Embedded\ResponseStream.cs" />
     <Compile Include="Impl\DTC\DtcNotSupportedTransactionalState.cs" />
     <Compile Include="Indexing\IndexMerging\ChangeRootReferenceVisitor.cs" />
@@ -276,7 +270,7 @@
     <Compile Include="Plugins\Builtins\ReadOnlyDeleteTrigger.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyPutTrigger.cs" />
     <Compile Include="Linq\Ast\TransformDynamicInvocationExpressions.cs" />
-    <Compile Include="RavenDbServer.cs" />
+    <Compile Include="Server\RavenDbServer.cs" />
     <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTask.cs" />
@@ -324,7 +318,7 @@
     <Compile Include="Impl\PutSerialLock.cs" />
     <Compile Include="Indexing\IndependentBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
-    <Compile Include="LastCollectionEtags.cs" />
+    <Compile Include="Actions\LastCollectionEtags.cs" />
     <Compile Include="Linq\AttachmentForIndexing.cs" />
     <Compile Include="Plugins\AbstractIndexReaderWarmer.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsInReduce.cs" />

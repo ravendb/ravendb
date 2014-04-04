@@ -11,6 +11,8 @@ using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 using Raven.Tests.Bugs.LiveProjections.Entities;
+using Raven.Tests.Common;
+
 using Xunit;
 using Task = System.Threading.Tasks.Task;
 

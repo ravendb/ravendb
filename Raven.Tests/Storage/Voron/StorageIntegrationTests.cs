@@ -1,4 +1,6 @@
-﻿namespace Raven.Tests.Storage.Voron
+﻿using Raven.Tests.Common;
+
+namespace Raven.Tests.Storage.Voron
 {
 	using Xunit;
 

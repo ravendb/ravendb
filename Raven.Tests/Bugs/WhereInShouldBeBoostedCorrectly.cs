@@ -2,6 +2,8 @@
 using System.Linq;
 using Raven.Client.Indexes;
 using Raven.Client.Linq.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs

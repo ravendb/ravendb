@@ -25,10 +25,12 @@ import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler")
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import changesApi = require("common/changesApi");
 
 class shell extends viewModelBase {
     private router = router;
-    databases = ko.observableArray<database>();    
+
+    databases = ko.observableArray<database>();
     currentAlert = ko.observable<alertArgs>();
     queuedAlert: alertArgs;
     databasesLoadedTask: JQueryPromise<any>;
@@ -45,10 +47,14 @@ class shell extends viewModelBase {
 
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
+
     activeArea = ko.observable<string>("");
 
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();    
+
+    static globalChangesApi: changesApi;
+    static currentDbChangesApi = ko.observable<changesApi>(null);
 
     constructor() {
         super();
@@ -56,6 +62,7 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("ActivateFilesystemWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => this.updateChangesApi(db));
 
         this.appUrls = appUrl.forCurrentDatabase();
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
@@ -68,7 +75,7 @@ class shell extends viewModelBase {
 
         NProgress.set(.7);
         router.map([
-            { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: true, hash: this.appUrls.databasesManagement },           
+            { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: true, hash: this.appUrls.databasesManagement },
             { route: 'databases/documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: this.appUrls.documents },
             { route: 'databases/conflicts', title: 'Conflicts', moduleId: 'viewmodels/conflicts', nav: true, hash: this.appUrls.conflicts },
             { route: 'databases/patch', title: 'Patch', moduleId: 'viewmodels/patch', nav: true, hash: this.appUrls.patch },
@@ -84,6 +91,7 @@ class shell extends viewModelBase {
             { route: 'filesystems/search', title: 'Search', moduleId: 'viewmodels/filesystem/filesystemSearch', nav: true, hash: this.appUrls.filesystemSearch },
             { route: 'filesystems/synchronization', title: 'Synchronization', moduleId: 'viewmodels/filesystem/filesystemSynchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
             { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
+            //{ route: 'filesystems/create', title: 'Create Filesystem', moduleId: 'viewmodels/filesystem/createFilesystem', nav: true },
             { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
             { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
         ]).buildNavigationModel();
@@ -112,6 +120,8 @@ class shell extends viewModelBase {
             selector: '.use-bootstrap-tooltip',
             trigger: 'hover'
         });
+
+        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -135,7 +145,8 @@ class shell extends viewModelBase {
             systemDatabase.activate();
         } else {
             this.databases.first(x=> x.isVisible()).activate();
-        }        
+        }
+        
     }
 
     filesystemsLoaded(filesystems) {
@@ -162,15 +173,15 @@ class shell extends viewModelBase {
                 router.activate();
             });
 
-        this.filesystemsLoadedTask = new getFilesystemsCommand()
-            .execute()
-            .fail(result => this.handleRavenConnectionFailure(result))
-            .done(results => {
-                this.filesystemsLoaded(results);
-                router.activate();
-                this.fetchBuildVersion();
-                this.fetchLicenseStatus();
-            });
+	    this.filesystemsLoadedTask = new getFilesystemsCommand()
+	        .execute()
+	        .fail(result => this.handleRavenConnectionFailure(result))
+	        .done(results => {
+	            this.filesystemsLoaded(results);
+	            router.activate();
+	            this.fetchBuildVersion();
+	            this.fetchLicenseStatus();
+	        });
     }
 
     fetchStudioConfig() {
@@ -253,13 +264,20 @@ class shell extends viewModelBase {
 
     activateFilesystemWithName(filesystemName: string) {
         if (this.filesystemsLoadedTask) {
-            this.filesystemsLoadedTask.done(() => {            
+            this.filesystemsLoadedTask.done(() => {
                 var matchingFilesystem = this.filesystems().first(d => d.name == filesystemName);
                 if (matchingFilesystem && this.activeFilesystem() !== matchingFilesystem) {
                     ko.postbox.publish("ActivateFilesystem", matchingFilesystem);
                 }
             });
         }
+    }
+
+    updateChangesApi(newDb: database) {
+        if (shell.currentDbChangesApi()) {
+            shell.currentDbChangesApi().dispose();
+        }
+        shell.currentDbChangesApi(new changesApi(newDb));
     }
 
     modelPolling() {

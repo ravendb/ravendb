@@ -5,6 +5,8 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Notifications

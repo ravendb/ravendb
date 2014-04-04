@@ -5,12 +5,13 @@ using Raven.Client;
 using Raven.Client.Linq;
 using Raven.Client.Document;
 using Raven.Server;
+using Raven.Tests.Common;
 using Raven.Tests.Linq;
 using Xunit;
 
 namespace Raven.Tests.MultiGet
 {
-	public class MultiGetCaching : RemoteClientTest
+	public class MultiGetCaching : RavenTest
 	{
 		[Fact]
 		public void CanAggressivelyCacheLoads()

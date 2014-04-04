@@ -9,6 +9,8 @@ using System.Linq;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Linq

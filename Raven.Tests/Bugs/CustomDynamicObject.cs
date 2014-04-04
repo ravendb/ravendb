@@ -3,6 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Runtime.Serialization;
+
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs

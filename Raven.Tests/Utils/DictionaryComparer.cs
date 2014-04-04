@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Data;
+using Raven.Tests.Common;
+
 using Xunit;
 namespace Raven.Tests.Utils
 {

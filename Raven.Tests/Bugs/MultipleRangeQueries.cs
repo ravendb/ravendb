@@ -1,10 +1,12 @@
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class MultipleRangeQueries : RemoteClientTest
+	public class MultipleRangeQueries : RavenTest
 	{
 		[Fact]
 		public void CanQueryOnSameFieldMultipleTimesUsingRanges()

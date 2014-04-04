@@ -1,11 +1,13 @@
 using System;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class GetDocumentUrlOnTransient : RemoteClientTest
+	public class GetDocumentUrlOnTransient : RavenTest
 	{
 		[Fact]
 		public void ShouldThrow()

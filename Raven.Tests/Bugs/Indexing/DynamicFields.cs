@@ -9,6 +9,8 @@ using System.Linq;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
@@ -63,7 +65,7 @@ namespace Raven.Tests.Bugs.Indexing
 					from p in products
 					select new
 					{
-						_ = p.Attributes.Select(attribute => new Field(attribute.Name, attribute.NumericValue.ToString(), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS))
+						_ = p.Attributes.Select(attribute => new Field(attribute.Name, attribute.NumericValue.ToString("#.#"), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS))
 					};
 			}
 		}
@@ -168,9 +170,9 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var session = store.OpenSession())
 				{
-                    var products = session.Advanced.DocumentQuery<Product, Product_ByNumericAttributeUsingField>()
-						.WhereEquals("Color", 30d)
-						.WaitForNonStaleResults(TimeSpan.FromMinutes(3))
+				    var products = session.Advanced.DocumentQuery<Product, Product_ByNumericAttributeUsingField>()
+				        .WhereEquals("Color", 30d)
+				        .WaitForNonStaleResults(TimeSpan.FromMinutes(3))
 						.ToList();
 
 					Assert.NotEmpty(products);

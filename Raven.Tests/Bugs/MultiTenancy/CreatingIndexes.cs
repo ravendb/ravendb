@@ -12,12 +12,14 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Server;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Extensions;
 
 namespace Raven.Tests.Bugs.MultiTenancy
 {
-	public class CreatingIndexes : RemoteClientTest, IDisposable
+	public class CreatingIndexes : RavenTest, IDisposable
 	{
 		protected RavenDbServer GetNewServer(int port)
 		{

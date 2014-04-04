@@ -48,7 +48,7 @@ html, body {
     }
 }
 
-@media (max-width: 979px) {
+/*@media (max-width: 979px) {
     .page-host {
         top: 0;
     }
@@ -56,6 +56,110 @@ html, body {
     .navbar-fixed-top {
         margin-bottom: 0;
     }
+
+    #shellHeader {
+        > .container-fluid {
+            padding-left: 0;
+            padding-right: 0;
+        }
+    }
+}
+
+@media(max-device-height:1024px) {
+    span {
+        font-size: 14px !important;
+    }
+
+    a {
+        font-size: 90% !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    i {
+        font-size: 90% !important;
+        display: inline-block !important;
+    }
+
+    button {
+        max-height: 5% !important;
+        font-size: 90% !important;
+    }
+
+    .tooltip-inner {
+        font-size: 10px !important;
+    }
+}
+
+.control-label {
+    @media(max-device-height:1024px) {
+        max-width:400px!important;
+    }
+}
+
+.query-results {
+    @media(max-device-height:1024px) {
+        width:86%!important;
+    }
+}*/
+
+
+.side-panel {
+    li {
+        max-width: 20%;
+        margin-top: 5%;
+        margin-bottom: 5%;
+        padding-top: 5%;
+        padding-bottom: 5%;
+        overflow: hidden;
+        white-space: nowrap;
+        -ms-text-overflow: ellipsis;
+        -o-text-overflow: ellipsis;
+        text-overflow: ellipsis;
+    }
+
+    /*@media(max-device-height:1024px) {
+
+        h4 {
+            font-size: 90% !important;
+        }
+
+        label {
+            font-size: 90% !important;
+        }
+
+        span {
+            font-size: 80% !important;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+    }*/
+}
+
+
+
+
+/*.container-fluid {
+    @media(max-device-height:1024px) {
+        a {
+            padding: 5px !important;
+            max-height: 30px !important;
+            font-size: 13px !important;
+        }
+    }
+}*/
+
+
+
+.panel span {
+    overflow: hidden;
+    -ms-text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: auto;
 }
 
 .page {
@@ -112,7 +216,7 @@ html, body {
                 -webkit-box-shadow: 0 0 6px 0 @selectColor;
                 box-shadow: 0 0 6px 0 @selectColor;
                 background-color: @selectColor;
-                
+
                 a, .text-muted {
                     color: white;
                 }
@@ -132,15 +236,6 @@ html, body {
             }
         }
     }
-
-    /*.systemButton {
-        color:grey;
-        margin-top:50px;        
-        position:absolute;
-        top:-40px;
-        right:25px;
-    }*/
-
 }
 
 .document-collections {
@@ -172,16 +267,17 @@ html, body {
     }
 
     .index-group .panel-heading {
-        padding-top:0;
+        padding-top: 0;
     }
 
-    .index-group .panel-heading .panel-title{
-        padding-top:15px;
-    }
+        .index-group .panel-heading .panel-title {
+            padding-top: 15px;
+        }
+
     .index-group .panel-heading {
-                .indexGroup-actions-container {
+        .indexGroup-actions-container {
             display: none;
-            padding-top:5px;
+            padding-top: 5px;
         }
 
         &:hover {
@@ -216,9 +312,9 @@ html, body {
     }
 
     .replication-destination-card {
-           display: inline-table;
-            width: 500px;
-            margin-right: 20px;
+        display: inline-table;
+        width: 500px;
+        margin-right: 20px;
     }
 
     .win-auth-tabs {
@@ -356,6 +452,15 @@ html, body {
 
 .documents-page {
     margin-top: 10px;
+
+    @media(max-device-height:1024px) {
+        a {
+            font-size: 12px !important;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
 }
 
 .collection-color-strip {
@@ -372,6 +477,18 @@ html, body {
 }
 
 #queryContainer {
+    #indexQueryLabelContainer {
+        @media(max-device-height:1024px) {
+            display:inline-block!important; i {
+                display: none !important;
+            }
+
+            a {
+                display: none !important;
+            }
+        }
+    }
+
     .editor {
         height: 60px;
     }
@@ -383,6 +500,24 @@ html, body {
 
     .form-horizontal {
         overflow: hidden auto;
+    }
+
+    .side-panel {
+
+        li {
+            max-width: 100% !important;
+            margin-top: 5%;
+            margin-bottom: 5%;
+            padding-top: 5%;
+            padding-bottom: 5%;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        @media(max-device-height:1024px) {
+            margin-left: 100px !important; width:30%;
+        }
     }
 }
 
@@ -459,7 +594,29 @@ html, body {
 }
 
 .breadcrumb {
-    padding: 0 10px 0 10px;
+
+    @media(max-device-height:1024px) {
+
+        h3 {
+            font-size: 16px !important;
+            display: inline-block !important;
+        }
+
+        a {
+            font-size: 14px !important;
+            display: inline-block !important;
+        }
+
+        span {
+            font-size: 14px !important;
+            display: inline-block !important;
+        }
+
+        i {
+            font-size: 15px !important;
+            display: inline-block !important;
+        }
+    }
 }
 
 .studio-alerts {
@@ -471,6 +628,7 @@ html, body {
 }
 
 #editDocumentContainer {
+
     &:focus {
         outline: 0;
     }
@@ -486,12 +644,16 @@ html, body {
     }
 
     hr {
-        border-color:red;
-        margin-top:5px;
+        border-color: red;
+        margin-top: 5px;
     }
 
     .query-metadata {
         padding-top: 20px;
+
+        /*@media(max-device-height:1024px) {
+            padding-top: 25px !important;
+        }*/
     }
 }
 
@@ -520,39 +682,64 @@ html, body {
     }
 }
 
-#shellFooter li {    
-                    
-        max-width:200px;
-        margin:0;
-        padding:0;
+#shellHeader {
+    .container-fluid {
+        padding-right: 0;
+        padding-left: 0;
+    }
+
+    #goToDocInput {
+        width: 10em;
+    } 
+
+    /* When the screen width < 1070, shrink down the padding between the nav bar items. */ 
+    @media (max-width: 1070px) {
+        .nav {
+            li {
+                a {
+                    padding-left: 10px;
+                    padding-right: 10px;
+                }
+            }
+        }
+
+        .databases {
+            padding-right: 0px;
+        }
+    }
+}
+
+#shellFooter {
+    ul {
+        width: 100% !important;
+    }
+
+    li {
+        max-width: 20% !important;
+        margin: 0;
+        padding: 0;
         overflow: hidden;
-        white-space:nowrap;
+        white-space: nowrap;
         text-overflow: ellipsis;
-     
+
+        a {
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            padding-left: 5% !important;
+            padding-right: 5% !important;
+            font-size: 100% !important;
+        }
+    }
+
+    span {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
 }
 
 #editTransformerContainer .transformer {
-  height: 600px;
-}
-
-#csvImportContainer .fileinputs {
-    position: relative;
-}
-
-#csvImportContainer .fakefile {
-	position: absolute;
-	top: 0;
-	left: 0;
-	z-index: 1;
-}
-
-#csvImportContainer .file {
-	position: relative;
-	text-align: right;
-	-moz-opacity:0 ;
-	filter:~"alpha(opacity: 0)";
-	opacity: 0;
-	z-index: 2;
+    height: 600px;
 }
 
 .auto-complete {
@@ -560,6 +747,12 @@ html, body {
 }
 
 #logsContainer, #alertsContainer, #indexErrorsContainer {
+    @media(max-device-height:1024px) {
+        button {
+            max-height: 50% !important;
+        }
+    }
+
 
     table {
         outline: none;
@@ -670,6 +863,14 @@ footer {
     }
 }
 
+.indexes-controls {
+    /*margin-left: 15px; COMMENTED OUT: Why 15px? This makes it funky in appearance.*/ 
+}
+
+.advanced-replication-settings {
+    cursor: pointer;
+}
+
 // Start of Filesystems
 // TODO: as this styles are apparently the same than .database-page, consider renaming the original ones to a generic name
 .filesystem-page {
@@ -736,5 +937,7 @@ footer {
 
 }
 
+
 // End of Filesystems
+
 

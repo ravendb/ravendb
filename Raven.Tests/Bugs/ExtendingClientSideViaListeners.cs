@@ -4,6 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -16,7 +19,7 @@ namespace Raven.Tests.Bugs
 			using (var store = NewDocumentStore()
 				.RegisterListener(new FailStore()))
 			{
-				using (var session = store.OpenSession())
+                using (var session = store.OpenSession())
 				{
 					session.Store(new Email());
 					Assert.Throws<NotImplementedException>(() => session.SaveChanges());

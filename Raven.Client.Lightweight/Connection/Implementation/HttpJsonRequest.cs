@@ -383,7 +383,7 @@ namespace Raven.Client.Connection
 							sb.AppendLine();
 						sb.Append(ravenJObject.Value<string>("Error"));
 
-						throw new ErrorResponseException(Response, sb.ToString());
+                        throw new ErrorResponseException(Response, sb.ToString(), readToEnd);
 					}
 					throw new ErrorResponseException(Response, readToEnd);
 				}

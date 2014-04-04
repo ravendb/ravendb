@@ -150,7 +150,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 				if (renameSucceeded)
 				{
 					accessor.UpdateFileMetadata(deletingFileName, metadata);
-					accessor.DecrementFileCount();
+					accessor.DecrementFileCount(deletingFileName);
 
 					Log.Debug(string.Format("File '{0}' was renamed to '{1}' and marked as deleted",
 											fileName, deletingFileName));

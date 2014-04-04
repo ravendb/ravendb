@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Database.Util;
+using Raven.Tests.Common;
 
 namespace Raven.Tests.Storage.Voron
 {

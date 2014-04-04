@@ -96,10 +96,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.Owin.Hosting.2.1.0\lib\net45\Microsoft.Owin.Hosting.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.CompilerServices.AsyncTargetingPack.Net4, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.CompilerServices.AsyncTargetingPack.1.0.0\lib\net40\Microsoft.CompilerServices.AsyncTargetingPack.Net4.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="NetTopologySuite, Version=1.13.4693.18484, Culture=neutral, PublicKeyToken=f580a05016ebada1, processorArchitecture=MSIL">
@@ -200,13 +196,25 @@
       <Project>{41ac479e-1eb2-4d23-aaf2-e4c8df1bc2ba}</Project>
       <Name>Raven.Abstractions</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
+      <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
+      <Name>Raven.Client.Lightweight</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
-      <Project>{14F2D508-8E06-407B-9451-97E99538E26B}</Project>
-      <Name>Raven.Tests.Helpers</Name>
+    <ProjectReference Include="..\Raven.DtcTests\Raven.DtcTests.csproj">
+      <Project>{85A32315-822F-45BE-BC57-C2CA4404E09A}</Project>
+      <Name>Raven.DtcTests</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
+      <Project>{381234CC-8AA7-41FF-8CAD-22330E15F993}</Project>
+      <Name>Raven.Tests.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Issues\Raven.Tests.Issues.csproj">
+      <Project>{D8BDD718-6E21-41B7-9C41-D0FBE0532DF4}</Project>
+      <Name>Raven.Tests.Issues</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
       <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>

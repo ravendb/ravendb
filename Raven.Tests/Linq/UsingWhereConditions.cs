@@ -13,6 +13,8 @@ using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
+using Raven.Tests.Common;
+
 using Xunit;
 
 /*

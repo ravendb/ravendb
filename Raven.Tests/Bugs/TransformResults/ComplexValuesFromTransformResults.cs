@@ -10,6 +10,8 @@ using Raven.Client.Linq;
 using Raven.Database.Impl;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.TransformResults

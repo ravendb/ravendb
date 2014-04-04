@@ -1,0 +1,260 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{83AB5B46-5502-40DD-BA5F-83499F19B953}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Raven.Tests.Bundles</RootNamespace>
+    <AssemblyName>Raven.Tests.Bundles</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Lucene.Net">
+      <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Owin, Version=2.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Owin.2.1.0\lib\net45\Microsoft.Owin.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Owin.Host.HttpListener">
+      <HintPath>..\packages\Microsoft.Owin.Host.HttpListener.2.1.0\lib\net45\Microsoft.Owin.Host.HttpListener.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Owin.Hosting, Version=2.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Owin.Hosting.2.1.0\lib\net45\Microsoft.Owin.Hosting.dll</HintPath>
+    </Reference>
+    <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Web.Http, Version=5.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.1.0\lib\net45\System.Web.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="xunit">
+      <HintPath>..\SharedLibs\xunit\xunit.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.extensions">
+      <HintPath>..\SharedLibs\xunit\xunit.extensions.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\bundles\raven.bundles.uniqueconstraints\Util.cs">
+      <Link>UniqueConstraints\Util.cs</Link>
+    </Compile>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Tests\Properties\TestAssemblyInfo.cs">
+      <Link>Properties\TestAssemblyInfo.cs</Link>
+    </Compile>
+    <Compile Include="Authorization\AuthorizationTest.cs" />
+    <Compile Include="Authorization\Bugs\Bowes.cs" />
+    <Compile Include="Authorization\Bugs\DeanWard.cs" />
+    <Compile Include="Authorization\Bugs\fampinheiro.cs" />
+    <Compile Include="Authorization\Bugs\Jalchr.cs" />
+    <Compile Include="Authorization\Bugs\Kwal.cs" />
+    <Compile Include="Authorization\Bugs\LoadingSavedInfo.cs" />
+    <Compile Include="Authorization\Bugs\Matthew.cs" />
+    <Compile Include="Authorization\Bugs\Mojo2.cs" />
+    <Compile Include="Authorization\Bugs\Mojo2_Failed.cs" />
+    <Compile Include="Authorization\Bugs\Preston.cs" />
+    <Compile Include="Authorization\Bugs\WhenUsingMultiTenancy.cs" />
+    <Compile Include="Authorization\Bugs\WithChangingOfUser.cs" />
+    <Compile Include="Authorization\CanAskAuthQuestions.cs" />
+    <Compile Include="Authorization\CanHandleAuthQuestions.cs" />
+    <Compile Include="Authorization\Deleting.cs" />
+    <Compile Include="Authorization\Reading.cs" />
+    <Compile Include="Authorization\Writing.cs" />
+    <Compile Include="CascadeDelete\CascadeDelete.cs" />
+    <Compile Include="Company.cs" />
+    <Compile Include="CompressionAndEncryption\CompressionAndEncryption.cs" />
+    <Compile Include="CompressionAndEncryption\Crud.cs" />
+    <Compile Include="CompressionAndEncryption\Indexes.cs" />
+    <Compile Include="Compression\Compression.cs" />
+    <Compile Include="Compression\Crud.cs" />
+    <Compile Include="Compression\Indexes.cs" />
+    <Compile Include="Encryption\Crud.cs" />
+    <Compile Include="Encryption\Encryption.cs" />
+    <Compile Include="Encryption\EncryptionBackupAndRestore.cs" />
+    <Compile Include="Encryption\Indexes.cs" />
+    <Compile Include="Encryption\WithoutEncryption.cs" />
+    <Compile Include="Expiration\Expiration.cs" />
+    <Compile Include="Expiration\WithCascade.cs" />
+    <Compile Include="MoreLikeThis\MoreLikeThisMultiTenant.cs" />
+    <Compile Include="MoreLikeThis\MoreLikeThisQueryParametersTests.cs" />
+    <Compile Include="MoreLikeThis\MoreLikeThisShouldSupportMapReduceIndexes.cs" />
+    <Compile Include="MoreLikeThis\MoreLikeThisTests.cs" />
+    <Compile Include="PeriodicBackups\PeriodicBackupTests.cs" />
+    <Compile Include="Replication\Async\AttachmentReplication.cs" />
+    <Compile Include="Replication\Async\ConflictWhenReplicating.cs" />
+    <Compile Include="Replication\Async\FailoverBetweenTwoMultiTenantDatabases.cs" />
+    <Compile Include="Replication\Async\FailureHandling.cs" />
+    <Compile Include="Replication\Async\MultihopReplication.cs" />
+    <Compile Include="Replication\Async\SimpleReplication.cs" />
+    <Compile Include="Replication\Async\WritesDuringFailover.cs" />
+    <Compile Include="Replication\AttachmentReplication.cs" />
+    <Compile Include="Replication\AttachmentReplicationBugs.cs" />
+    <Compile Include="Replication\Bugs\ApiKeysWithMultiTenancy.cs" />
+    <Compile Include="Replication\Bugs\David.cs" />
+    <Compile Include="Replication\Bugs\HiLoHanging.cs" />
+    <Compile Include="Replication\Bugs\MultipleWritesInReplicationWindow.cs" />
+    <Compile Include="Replication\Bugs\ReplicatingDanish.cs" />
+    <Compile Include="Replication\Bugs\SameEtagFromDifferentServers.cs" />
+    <Compile Include="Replication\Bugs\SameInstanceIdUsedForMultipleDatabases.cs" />
+    <Compile Include="Replication\Bugs\Vlad.cs" />
+    <Compile Include="Replication\ConflictsInEmbeddableStore.cs" />
+    <Compile Include="Replication\ConflictWhenReplicating.cs" />
+    <Compile Include="Replication\FailoverBetweenTwoMultiTenantDatabases.cs" />
+    <Compile Include="Replication\FailoverDisabled.cs" />
+    <Compile Include="Replication\FailureHandling.cs" />
+    <Compile Include="Replication\Issues\RavenDB693.cs" />
+    <Compile Include="Replication\Issues\RavenDB693_Embeddable.cs" />
+    <Compile Include="Replication\Issues\RavenDB_677.cs" />
+    <Compile Include="Replication\Issues\ReplicationWithReferencedIndexes.cs" />
+    <Compile Include="Replication\MultihopReplication.cs" />
+    <Compile Include="Replication\ReplicationDestinationDisabled.cs" />
+    <Compile Include="Replication\ReplicationWithOAuth.cs" />
+    <Compile Include="Replication\SimpleReplication.cs" />
+    <Compile Include="Replication\StoreIndex.cs" />
+    <Compile Include="Replication\WritesDuringFailover.cs" />
+    <Compile Include="Replication\WritesDuringFailover2.cs" />
+    <Compile Include="ScriptedIndexResults\Animal.cs" />
+    <Compile Include="ScriptedIndexResults\Animals_Stats.cs" />
+    <Compile Include="ScriptedIndexResults\AnimalType.cs" />
+    <Compile Include="ScriptedIndexResults\ScriptedIndexResultsTest.cs" />
+    <Compile Include="SqlReplication\CanReplicate.cs" />
+    <Compile Include="TestUtil.cs" />
+    <Compile Include="UniqueConstraints\Bugs\CaseInsensitive.cs" />
+    <Compile Include="UniqueConstraints\Bugs\Concurrency.cs" />
+    <Compile Include="UniqueConstraints\Bugs\JimBolla.cs" />
+    <Compile Include="UniqueConstraints\Bugs\Lars.cs" />
+    <Compile Include="UniqueConstraints\Bugs\MultiTenancy.cs" />
+    <Compile Include="UniqueConstraints\Bugs\RavenDB_1499.cs" />
+    <Compile Include="UniqueConstraints\Bugs\Troy.cs" />
+    <Compile Include="UniqueConstraints\Bugs\Troy2.cs" />
+    <Compile Include="UniqueConstraints\Bugs\Troy3.cs" />
+    <Compile Include="UniqueConstraints\Bugs\TroyMapReduce.cs" />
+    <Compile Include="UniqueConstraints\Bugs\viscious.cs" />
+    <Compile Include="UniqueConstraints\CreateTests.cs" />
+    <Compile Include="UniqueConstraints\DeleteTests.cs" />
+    <Compile Include="UniqueConstraints\ExtensionCheckTests.cs" />
+    <Compile Include="UniqueConstraints\ExtensionLoadTests.cs" />
+    <Compile Include="UniqueConstraints\UniqueConstraintsTest.cs" />
+    <Compile Include="UniqueConstraints\UpdateTests.cs" />
+    <Compile Include="Versioning\Bugs\MultipleVersions.cs" />
+    <Compile Include="Versioning\Bugs\MultiTenant.cs" />
+    <Compile Include="Versioning\Bugs\RavenDB_438.cs" />
+    <Compile Include="Versioning\Bugs\VersioningWithGuidIds.cs" />
+    <Compile Include="Versioning\Versioning.cs" />
+    <Compile Include="Versioning\VersioningTest.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Bundles\Raven.Bundles.Authorization\Raven.Bundles.Authorization.csproj">
+      <Project>{034ffd8f-f917-4a45-b920-9c460cd66baf}</Project>
+      <Name>Raven.Bundles.Authorization</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Bundles\Raven.Bundles.CascadeDelete\Raven.Bundles.CascadeDelete.csproj">
+      <Project>{d9ccc62f-0b4e-4b37-be7e-203d34b4ec4f}</Project>
+      <Name>Raven.Bundles.CascadeDelete</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Bundles\Raven.Bundles.Encryption.IndexFileCodec\Raven.Bundles.Encryption.IndexFileCodec.csproj">
+      <Project>{1bb3d982-9675-400d-a247-547c071fbe35}</Project>
+      <Name>Raven.Bundles.Encryption.IndexFileCodec</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Bundles\Raven.Bundles.UniqueConstraints\Raven.Bundles.UniqueConstraints.csproj">
+      <Project>{4c026f8a-fb36-4a30-82e9-324d207f6b48}</Project>
+      <Name>Raven.Bundles.UniqueConstraints</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Bundles\Raven.Client.Authorization\Raven.Client.Authorization.csproj">
+      <Project>{3a852fd2-e0f9-449c-8f66-0c6a180d030a}</Project>
+      <Name>Raven.Client.Authorization</Name>
+      <Aliases>client</Aliases>
+    </ProjectReference>
+    <ProjectReference Include="..\Bundles\Raven.Client.UniqueConstraints\Raven.Client.UniqueConstraints.csproj">
+      <Project>{d185331d-2b7c-4251-8ebe-140ede1fab9f}</Project>
+      <Name>Raven.Client.UniqueConstraints</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
+      <Project>{41ac479e-1eb2-4d23-aaf2-e4c8df1bc2ba}</Project>
+      <Name>Raven.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Client.Embedded\Raven.Client.Embedded.csproj">
+      <Project>{0F5287AD-37B3-4375-BA3E-3CED64B1FC5B}</Project>
+      <Name>Raven.Client.Embedded</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
+      <Project>{4e087ecb-e7ca-4891-ac3c-3c76702715b6}</Project>
+      <Name>Raven.Client.Lightweight</Name>
+      <Aliases>global</Aliases>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
+      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
+      <Name>Raven.Database</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
+      <Project>{3e6401ac-3e33-4b61-a460-49953654a207}</Project>
+      <Name>Raven.Smuggler</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
+      <Project>{381234CC-8AA7-41FF-8CAD-22330E15F993}</Project>
+      <Name>Raven.Tests.Common</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
+  </Target>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

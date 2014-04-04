@@ -217,7 +217,7 @@ namespace RavenFS.Tests.Storage
                 storage.Batch(accessor =>
                 {
                     accessor.Delete("file2");
-                    accessor.DecrementFileCount();
+					accessor.DecrementFileCount("file2");
                 });
 
                 storage.Batch(accessor => Assert.Equal(1, accessor.GetFileCount()));
@@ -232,7 +232,7 @@ namespace RavenFS.Tests.Storage
                 storage.Batch(accessor =>
                 {
                     accessor.Delete("file1");
-                    accessor.DecrementFileCount();
+					accessor.DecrementFileCount("file1");
                 });
 
                 storage.Batch(accessor => Assert.Equal(0, accessor.GetFileCount()));

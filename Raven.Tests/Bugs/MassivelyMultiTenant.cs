@@ -1,10 +1,12 @@
 using Raven.Client.Document;
 using Raven.Client.Extensions;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class MassivelyMultiTenant : RemoteClientTest
+	public class MassivelyMultiTenant : RavenTest
 		{
 		[Fact]
 		public void CanHaveLotsOf_ACTIVE_Tenants()

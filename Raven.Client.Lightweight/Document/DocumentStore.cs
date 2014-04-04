@@ -336,7 +336,7 @@ namespace Raven.Client.Document
 			currentSessionId = sessionId;
 			try
 			{
-				var session = new DocumentSession(options.Database, this, listeners, sessionId,
+                var session = new DocumentSession(options.Database, this, Listeners, sessionId,
 					SetupCommands(DatabaseCommands, options.Database, options.Credentials, options))
 					{
 						DatabaseName = options.Database ?? DefaultDatabase
@@ -632,13 +632,13 @@ namespace Raven.Client.Document
 				}
 				return new ServerClient(new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
 					currentSessionId, GetReplicationInformerForDatabase, null,
-					listeners.ConflictListeners));
+                    Listeners.ConflictListeners));
 			};
 #endif
 
 			asyncDatabaseCommandsGenerator = () =>
 			{
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, listeners.ConflictListeners);
+                var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, Listeners.ConflictListeners);
 
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;
@@ -809,7 +809,7 @@ namespace Raven.Client.Document
 				if (AsyncDatabaseCommands == null)
 					throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
-				var session = new AsyncDocumentSession(dbName, this, asyncDatabaseCommands, listeners, sessionId)
+                var session = new AsyncDocumentSession(dbName, this, asyncDatabaseCommands, Listeners, sessionId)
 				{
 				    DatabaseName = dbName ?? DefaultDatabase
 				};
@@ -875,7 +875,7 @@ namespace Raven.Client.Document
 #if !NETFX_CORE
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{
-			return new BulkInsertOperation(database ?? DefaultDatabase, this, listeners, options ?? new BulkInsertOptions(), Changes(database ?? DefaultDatabase));
+            return new BulkInsertOperation(database ?? DefaultDatabase, this, Listeners, options ?? new BulkInsertOptions(), Changes(database ?? DefaultDatabase));
 		}
 
 		protected override void AfterSessionCreated(InMemoryDocumentSessionOperations session)

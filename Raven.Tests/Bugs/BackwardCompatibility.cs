@@ -5,6 +5,8 @@ using System.Runtime.CompilerServices;
 using Raven.Abstractions.Data;
 using Raven.Client.Listeners;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 

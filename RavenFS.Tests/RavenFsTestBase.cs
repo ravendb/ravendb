@@ -62,7 +62,12 @@ namespace RavenFS.Tests
                 Authentication.EnableOnce();
             }
 
-            var ravenDbServer = new RavenDbServer(ravenConfiguration);
+            var ravenDbServer = new RavenDbServer(ravenConfiguration)
+            {
+	            UseEmbeddedHttpServer = true
+            };
+	        ravenDbServer.Initialize();
+
             servers.Add(ravenDbServer);
 
             if (enableAuthentication)
@@ -76,11 +81,11 @@ namespace RavenFS.Tests
         }
 
         protected virtual RavenFileSystemClient NewClient(int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
-                                                          ICredentials credentials = null, [CallerMemberName] string fileSystemName = null)
+                                                          ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
-            var server = CreateRavenDbServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication);
+            var server = CreateRavenDbServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage);
 
             var client = new RavenFileSystemClient(GetServerUrl(fiddler, server.SystemDatabase.ServerUrl), fileSystemName, apiKey: apiKey, credentials: credentials);
 
@@ -176,14 +181,14 @@ namespace RavenFS.Tests
 
         public static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
         {
-            var field = database.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.NotNull(field);
-            var validateLicense = field.GetValue(database);
+			var field = database.GetType().GetField("initializer", BindingFlags.Instance | BindingFlags.NonPublic);
+			var initializer = field.GetValue(database);
+			var validateLicenseField = initializer.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
+			var validateLicense = validateLicenseField.GetValue(initializer);
 
-            var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
-            Assert.NotNull(currentLicenseProp);
+			var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
 
-            return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
+			return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
         }
 
         public virtual void Dispose()

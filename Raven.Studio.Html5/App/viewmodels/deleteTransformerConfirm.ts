@@ -16,7 +16,7 @@ class deleteTransformerConfirm extends dialogViewModelBase {
             throw new Error("Transformers must not be null or empty.");
         }
 
-        this.message = transformersNames.length === 1 ? "Really Delete '" + transformersNames[0] + "' transformer?" : 'Really delete all transformers?';
+        //this.message = transformersNames.length === 1 ? "You're deleting  "Really Delete '" + transformersNames[0] + "' transformer?" : 'Really delete all transformers?';
     }
 
     deleteTransformers() {
