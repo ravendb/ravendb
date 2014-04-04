@@ -906,7 +906,7 @@ footer {
                 -webkit-box-shadow: 0 0 6px 0 @selectColor;
                 box-shadow: 0 0 6px 0 @selectColor;
                 background-color: @selectColor;
-                
+
                 a, .text-muted {
                     color: white;
                 }
@@ -928,16 +928,35 @@ footer {
     }
 
     .systemButton {
-        color:grey;
-        margin-top:50px;        
-        position:absolute;
-        top:-40px;
-        right:25px;
+        color: grey;
+        margin-top: 50px;
+        position: absolute;
+        top: -40px;
+        right: 25px;
     }
-
 }
 
+#editFileContainer {
 
+    &:focus {
+        outline: 0;
+    }
+
+    #fileMetadataEditor {
+        height: 500px;
+    }
+
+    .document-addition-data {
+        margin-top: 95px;
+        padding-top: 10px;
+        padding-bottom: 40px;
+    }
+
+    hr {
+        border-color: red;
+        margin-top: 5px;
+    }
+}
 // End of Filesystems
 
 

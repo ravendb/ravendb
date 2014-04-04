@@ -732,4 +732,24 @@ footer ul {
   top: -40px;
   right: 25px;
 }
+
+#editFileContainer #fileMetadataEditor {
+    height: 500px;
+}
+
+#editFileContainer:focus {
+  outline: 0;
+}
+
+#editFileContainer .document-addition-data {
+    margin-top: 95px;
+    padding-top: 10px;
+    padding-bottom: 40px;
+}
+
+#editFileContainer hr {
+    border-color: red;
+    margin-top: 5px;
+}
+
 /*# sourceMappingURL=app.css.map */

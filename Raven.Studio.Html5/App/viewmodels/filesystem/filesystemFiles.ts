@@ -87,7 +87,7 @@ class filesystemFiles extends viewModelBase {
     deleteSelectedFiles() {
         var grid = this.getFilesGrid();
         if (grid) {
-            grid.deleteSelectedDocs();
+            grid.deleteSelectedItems();
         }
     }
 

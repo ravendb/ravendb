@@ -167,7 +167,7 @@ class documents extends viewModelBase {
     deleteSelectedDocs() {
         var grid = this.getDocumentsGrid();
         if (grid) {
-            grid.deleteSelectedDocs();
+            grid.deleteSelectedItems();
         }
     }
 

@@ -8,7 +8,7 @@ import document = require("models/document");
 import collection = require("models/collection");
 import database = require("models/database");
 import pagedResultSet = require("common/pagedResultSet");
-import deleteDocuments = require("viewmodels/deleteDocuments");
+import deleteItems = require("viewmodels/deleteItems");
 import copyDocuments = require("viewmodels/copyDocuments");
 import row = require("widgets/virtualTable/row");
 import column = require("widgets/virtualTable/column");
@@ -170,7 +170,7 @@ class ctor {
     }
 
     setupKeyboardShortcuts() {
-        this.setupKeyboardShortcut("DELETE", () => this.deleteSelectedDocs());
+        this.setupKeyboardShortcut("DELETE", () => this.deleteSelectedItems());
         this.setupKeyboardShortcut("Ctrl+C,D", () => this.copySelectedDocs());
         this.setupKeyboardShortcut("Ctrl+C,I", () => this.copySelectedDocIds());
     }
@@ -505,9 +505,9 @@ class ctor {
         return this.items.getCachedItemsAt(maxSelectedIndices);
     }
 
-    deleteSelectedDocs() {
+    deleteSelectedItems() {
         var documents = this.getSelectedItems();
-        var deleteDocsVm = new deleteDocuments(documents, this.focusableGridSelector);
+        var deleteDocsVm = new deleteItems(documents, this.focusableGridSelector);
         deleteDocsVm.deletionTask.done(() => {
             var deletedDocIndices = documents.map(d => this.items.indexOf(d));
             deletedDocIndices.forEach(i => this.settings.selectedIndices.remove(i));
