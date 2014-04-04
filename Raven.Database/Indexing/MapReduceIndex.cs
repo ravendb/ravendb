@@ -101,6 +101,10 @@ namespace Raven.Database.Indexing
 			if (documentsWrapped.Count > 0)
 				actions.MapReduce.UpdateRemovedMapReduceStats(name, deleted);
 
+			var mapBatchers = context.MapTriggers.Select(x => x.CreateBatcher(name))
+				.Where(x => x != null)
+				.ToList();
+
 			var allState = new ConcurrentQueue<Tuple<HashSet<ReduceKeyAndBucket>, IndexingWorkStats, Dictionary<string, int>>>();
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, partition =>
 			{
@@ -131,7 +135,26 @@ namespace Raven.Database.Indexing
 								currentDocumentResults.Clear();
 								currentKey = documentId;
 							}
-							currentDocumentResults.Add(new DynamicJsonObject(RavenJObject.FromObject(currentDoc, jsonSerializer)));
+
+							var ravenJObject = RavenJObject.FromObject(currentDoc, jsonSerializer);
+
+							mapBatchers.ApplyAndIgnoreAllErrors(
+								exception =>
+								{
+									logIndexing.WarnException(
+										string.Format(
+											"Error when executed OnObjectMapped trigger for index '{0}'",
+											name),
+										exception);
+									context.AddError(name,
+										string.Empty,
+										exception.Message,
+										"OnObjectMapped Trigger"
+										);
+								},
+								trigger => trigger.OnObjectMapped(currentKey, ravenJObject));
+
+							currentDocumentResults.Add(new DynamicJsonObject(ravenJObject));
 							Interlocked.Increment(ref localStats.IndexingSuccesses);
 						}
 						count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey);
