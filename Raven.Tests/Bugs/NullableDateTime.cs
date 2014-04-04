@@ -6,6 +6,8 @@ using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Database.Server;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -97,10 +99,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanLoadFromIndex_Remote()
         {
-            var path =
-                System.IO.Path.GetDirectoryName(
-                    System.Reflection.Assembly.GetAssembly(typeof(Raven.Tests.Document.DocumentStoreServerTests)).CodeBase);
-            path = System.IO.Path.Combine(path, "TestDb").Substring(6);
+	        var path = NewDataPath();
 
             using (var server = new Raven.Server.RavenDbServer(new
                                                                 Raven.Database.Config.RavenConfiguration()

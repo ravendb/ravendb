@@ -2,6 +2,9 @@ using System;
 using System.Linq;
 using Raven.Client.Embedded;
 using Raven.Client.Linq;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Util;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs

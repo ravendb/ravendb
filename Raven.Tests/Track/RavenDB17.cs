@@ -1,6 +1,9 @@
 ﻿using System.Threading;
 using System.Transactions;
 using Raven.Tests.Bugs;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Util;
+
 using Xunit;
 
 namespace Raven.Tests.Track

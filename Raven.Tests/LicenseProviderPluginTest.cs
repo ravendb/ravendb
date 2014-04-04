@@ -3,6 +3,8 @@ using System.Reflection;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Plugins;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests

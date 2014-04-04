@@ -9,6 +9,8 @@ using System.ComponentModel;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Client.Embedded;
 using Raven.Database.Extensions;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs

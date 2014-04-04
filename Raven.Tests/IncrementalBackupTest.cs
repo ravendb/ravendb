@@ -8,6 +8,7 @@ using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Tests.Common;
 using Raven.Tests.Storage;
 using Xunit;
 using Xunit.Extensions;

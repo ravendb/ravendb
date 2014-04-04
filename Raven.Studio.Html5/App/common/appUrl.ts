@@ -52,6 +52,8 @@ class appUrl {
         filesystemConfiguration: ko.computed(() => appUrl.forFilesystemConfiguration(appUrl.currentFilesystem())),
     };
 
+  
+
     static checkIsAreaActive(routeRoot: string): boolean {
 
         var items = router.routes.filter(m => m.isActive() && m.route != null && m.route != '');

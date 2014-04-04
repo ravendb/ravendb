@@ -40,7 +40,7 @@ namespace Raven.Database.Server.RavenFS.Storage
 
         int GetFileCount();
 
-        void DecrementFileCount();
+        void DecrementFileCount(string nameOfFileThatShouldNotBeCounted);
 
         void RenameFile(string filename, string rename, bool commitPeriodically = false);
 

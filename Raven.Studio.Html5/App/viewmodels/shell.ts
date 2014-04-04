@@ -29,7 +29,8 @@ import changesApi = require("common/changesApi");
 
 class shell extends viewModelBase {
     private router = router;
-    databases = ko.observableArray<database>();    
+
+    databases = ko.observableArray<database>();
     currentAlert = ko.observable<alertArgs>();
     queuedAlert: alertArgs;
     databasesLoadedTask: JQueryPromise<any>;
@@ -46,6 +47,7 @@ class shell extends viewModelBase {
 
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
+
     activeArea = ko.observable<string>("");
 
     goToDocumentSearch = ko.observable<string>();
@@ -73,7 +75,7 @@ class shell extends viewModelBase {
 
         NProgress.set(.7);
         router.map([
-            { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: true, hash: this.appUrls.databasesManagement },           
+            { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: true, hash: this.appUrls.databasesManagement },
             { route: 'databases/documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: this.appUrls.documents },
             { route: 'databases/conflicts', title: 'Conflicts', moduleId: 'viewmodels/conflicts', nav: true, hash: this.appUrls.conflicts },
             { route: 'databases/patch', title: 'Patch', moduleId: 'viewmodels/patch', nav: true, hash: this.appUrls.patch },
@@ -89,6 +91,7 @@ class shell extends viewModelBase {
             { route: 'filesystems/search', title: 'Search', moduleId: 'viewmodels/filesystem/filesystemSearch', nav: true, hash: this.appUrls.filesystemSearch },
             { route: 'filesystems/synchronization', title: 'Synchronization', moduleId: 'viewmodels/filesystem/filesystemSynchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
             { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
+            //{ route: 'filesystems/create', title: 'Create Filesystem', moduleId: 'viewmodels/filesystem/createFilesystem', nav: true },
             { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
             { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
         ]).buildNavigationModel();
@@ -142,7 +145,8 @@ class shell extends viewModelBase {
             systemDatabase.activate();
         } else {
             this.databases.first(x=> x.isVisible()).activate();
-        }        
+        }
+        
     }
 
     filesystemsLoaded(filesystems) {
@@ -169,15 +173,15 @@ class shell extends viewModelBase {
                 router.activate();
             });
 
-        this.filesystemsLoadedTask = new getFilesystemsCommand()
-            .execute()
-            .fail(result => this.handleRavenConnectionFailure(result))
-            .done(results => {
-                this.filesystemsLoaded(results);
-                router.activate();
-                this.fetchBuildVersion();
-                this.fetchLicenseStatus();
-            });
+	    this.filesystemsLoadedTask = new getFilesystemsCommand()
+	        .execute()
+	        .fail(result => this.handleRavenConnectionFailure(result))
+	        .done(results => {
+	            this.filesystemsLoaded(results);
+	            router.activate();
+	            this.fetchBuildVersion();
+	            this.fetchLicenseStatus();
+	        });
     }
 
     fetchStudioConfig() {

@@ -11,7 +11,7 @@ import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm
 class viewModelBase {
     public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
-               
+
     private keyboardShortcutDomContainers: string[] = [];
     private modelPollingHandle: number;
     static dirtyFlag = new ko.DirtyFlag([]);
@@ -43,7 +43,6 @@ class viewModelBase {
     * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
     */
     activate(args) {
-
         var db = appUrl.getDatabase();
         var currentDb = this.activeDatabase();
         if (!!db && db !== null && (!currentDb || currentDb.name !== db.name)) {
@@ -55,7 +54,7 @@ class viewModelBase {
         if (!currentFilesystem || currentFilesystem.name !== fs.name) {
             ko.postbox.publish("ActivateFilesystemWithName", fs.name);
         }
-		
+
         this.modelPollingStart();
 
         window.onbeforeunload = (e: any) => {
@@ -107,7 +106,7 @@ class viewModelBase {
     /*
      * Creates a keyboard shortcut local to the specified element and its children.
      * The shortcut will be removed as soon as the view model is deactivated.
-     * Also defines shortcut for ace editor, if ace editor was received
+     * Also defines shortcut for ace edito, if ace editor was recieved
      */
     createKeyboardShortcut(keys: string, handler: () => void, elementSelector: string) {
         jwerty.key(keys, e => {
@@ -121,7 +120,7 @@ class viewModelBase {
     }
 
     //A method to save the current value in the observables from text boxes and inputs before a refresh/page close.
-    //Should be implemented on the inheriting class.
+    //Should be implemented on the inhereting class.
     saveInObservable() {
 
     }
@@ -155,7 +154,7 @@ class viewModelBase {
         this.modelPolling();
     }
 
-    modelPollingStart() {
+    private modelPollingStart() {
         this.modelPolling();
         this.activeDatabase.subscribe(() => this.forceModelPolling());
         this.activeFilesystem.subscribe(() => this.forceModelPolling());

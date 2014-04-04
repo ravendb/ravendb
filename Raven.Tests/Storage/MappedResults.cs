@@ -6,6 +6,8 @@
 using System.Collections.Generic;
 using Raven.Json.Linq;
 using Raven.Database.Storage;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 

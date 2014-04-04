@@ -7,6 +7,9 @@ using System;
 using System.Collections.Concurrent;
 using Raven.Abstractions.Data;
 using Raven.Tests.Bugs.Identifiers;
+using Raven.Tests.Common.Attributes;
+using Raven.Tests.Common.Util;
+
 using Xunit;
 
 namespace Raven.Tests.Notifications

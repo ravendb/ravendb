@@ -26,7 +26,11 @@
   <CustomAction Id="DisallowApplicationPoolOverlappingRotation" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="DisallowApplicationPoolOverlappingRotation"
             Execute="immediate" Return="check" />
 
-  <InstallExecuteSequence>
+	<CustomAction Id="SetLoadUserProfile" BinaryKey="Raven.Setup.CustomActions.CA.dll" DllEntry="SetLoadUserProfile"
+							Execute="immediate" Return="check" />
+	
+	
+	<InstallExecuteSequence>
     <Custom Action="RegisterAspNet_Cmd" Before="InstallFinalize">
       <![CDATA[NOT Installed AND (&IIS=3) AND NOT(!IIS=3)]]>
     </Custom>
@@ -45,7 +49,11 @@
       <![CDATA[NOT Installed AND (&IIS=3) AND NOT(!IIS=3)]]>
     </Custom>
 
-    <Custom Action='SetupPerformanceCountersForIISUser' After='InstallFinalize'>
+		<Custom Action="SetLoadUserProfile" After="InstallFinalize">
+			<![CDATA[NOT Installed AND (&IIS=3) AND NOT(!IIS=3)]]>
+		</Custom>
+
+		<Custom Action='SetupPerformanceCountersForIISUser' After='InstallFinalize'>
       <![CDATA[(&IIS=3) AND NOT(!IIS=3)]]>
     </Custom>
   </InstallExecuteSequence>

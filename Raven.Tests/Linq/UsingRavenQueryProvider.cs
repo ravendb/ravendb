@@ -14,6 +14,8 @@ using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Database.Data;
 using Raven.Client;

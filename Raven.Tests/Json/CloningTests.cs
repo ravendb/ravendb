@@ -1,6 +1,8 @@
 ﻿using System.Threading.Tasks;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Json

@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
-     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension"
+		 xmlns:fire="http://schemas.microsoft.com/wix/FirewallExtension">
 	<Fragment>
     <?include ServiceSettings.wxi ?>
     
     <DirectoryRef Id='INSTALLFOLDER'>
       <Component Id="Raven.Server" Guid="70BBCA5D-5EC0-4D96-80FD-823AD8759B2E">
         <File Id='Raven.Server.exe.config' Name='Raven.Server.exe.config' DiskId='1' Source='$(var.SolutionDir)\DefaultConfigs\RavenDb.exe.config' />
-        <File Id="Raven.Server" Name='$(var.Raven.Server.ProjectName).exe' DiskId='1' Source='$(var.Raven.Server.TargetPath)' KeyPath='yes'>
-        </File>
+        <File Id="Raven.Server" Name='$(var.Raven.Server.ProjectName).exe' DiskId='1' Source='$(var.Raven.Server.TargetPath)' KeyPath='yes' />
+				<fire:FirewallException Id="Firewall.Raven.Server" Name="RavenDB - Service - [SERVICE_PORT]" Port="[SERVICE_PORT]" 
+																Protocol="tcp" Scope="any" IgnoreFailure="yes" Program="System" />
        
         <util:XmlFile Id="ModifyPort"
                  Action="setValue"

@@ -149,8 +149,10 @@ namespace Raven.Database.Server.Controllers
 		public int GetPageSize(int maxPageSize)
 		{
 			int pageSize;
-			if (int.TryParse(GetQueryStringValue("pageSize"), out pageSize) == false || pageSize < 0)
+			if (int.TryParse(GetQueryStringValue("pageSize"), out pageSize) == false)
 				pageSize = 25;
+		    if (pageSize < 0)
+		        return 0;
 			if (pageSize > maxPageSize)
 				pageSize = maxPageSize;
 			return pageSize;

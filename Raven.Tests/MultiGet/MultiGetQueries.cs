@@ -6,13 +6,15 @@ using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Tests.Bugs.TransformResults;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Linq;
 using User = Raven.Tests.Linq.User;
 
 namespace Raven.Tests.MultiGet
 {
-	public class MultiGetQueries : RemoteClientTest
+	public class MultiGetQueries : RavenTest
 	{
 		[Fact]
 		public void UnlessAccessedLazyQueriesAreNoOp()

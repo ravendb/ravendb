@@ -1,11 +1,13 @@
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Json.Linq;
 using System.Linq;
 
 namespace Raven.Tests.Bugs.Entities
 {
-	public class CanSaveUpdateAndRead : RemoteClientTest
+	public class CanSaveUpdateAndRead : RavenTest
 	{
 		[Fact]
 		public void Can_read_entity_name_after_update()

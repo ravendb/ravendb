@@ -2,6 +2,8 @@
 using NetTopologySuite.IO;
 using Raven.Abstractions.Spatial;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Spatial

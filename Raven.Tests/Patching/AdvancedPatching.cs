@@ -4,6 +4,8 @@ using System.Linq;
 using Jint;
 using Raven.Abstractions.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Document;
 using Raven.Client;

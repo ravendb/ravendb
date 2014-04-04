@@ -8,6 +8,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Tests.Common;
+
 using Xunit;
 using Xunit.Extensions;
 

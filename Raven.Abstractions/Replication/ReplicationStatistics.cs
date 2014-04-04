@@ -4,6 +4,8 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Replication
 {
+	using Raven.Json.Linq;
+
 	public class ReplicationStatistics
 	{
 		public string Self { get; set; }
@@ -19,6 +21,11 @@ namespace Raven.Abstractions.Replication
 
 	public class DestinationStats
 	{
+		public DestinationStats()
+		{
+			LastStats = new RavenJArray();
+		}
+
 		public int FailureCountInternal = 0;
 		public string Url { get; set; }
 		public DateTime? LastHeartbeatReceived { get; set; }
@@ -29,5 +36,6 @@ namespace Raven.Abstractions.Replication
 		public DateTime? LastFailureTimestamp { get; set; }
 		public int FailureCount { get { return FailureCountInternal; } }
 		public string LastError { get; set; }
+		public RavenJArray LastStats { get; set; }
 	}
 }

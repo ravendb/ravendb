@@ -4,6 +4,8 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Tests.Bugs.QueryOptimizer;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Querying

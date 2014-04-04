@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 using System.Collections.Concurrent;
 using Raven.Abstractions.Data;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Reactive.Linq;
 using System;

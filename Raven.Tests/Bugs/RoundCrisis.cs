@@ -6,15 +6,17 @@
 using System;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
-using Raven.Client.Document;
+using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
 	public class RoundCrisis : RavenTest
 	{
-		private readonly DocumentStore documentStore;
+		private readonly IDocumentStore documentStore;
 
 		public RoundCrisis()
 		{

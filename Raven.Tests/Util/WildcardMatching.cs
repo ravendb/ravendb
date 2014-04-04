@@ -3,8 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using Raven.Database.Util;
-using Raven.Tests.Stress;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Attributes;
+
 using Xunit;
 using Xunit.Extensions;
 

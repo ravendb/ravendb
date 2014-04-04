@@ -9,6 +9,8 @@ using System.IO;
 using System.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.MailingList.Everett

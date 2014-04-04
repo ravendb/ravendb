@@ -10,6 +10,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Linq;
 using Raven.Client.Spatial;
 using Raven.Json.Linq;
+using System.Threading.Tasks;
 
 namespace Raven.Client
 {
@@ -88,5 +89,6 @@ namespace Raven.Client
 		/// Get the facets as per the specified facets with the given start and pageSize
 		/// </summary>
 		FacetResults GetFacets(List<Facet> facets, int facetStart, int? facetPageSize);
-	}
+
+    }
 }

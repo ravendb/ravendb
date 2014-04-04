@@ -4,11 +4,13 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Tests.Bugs;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.MultiGet
 {
-	public class MultiGetNonStaleResults : RemoteClientTest
+	public class MultiGetNonStaleResults : RavenTest
 	{
 		[Fact]
 		public void ShouldBeAbleToGetNonStaleResults()

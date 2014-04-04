@@ -107,8 +107,9 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
             if (!metadata.AllKeys.Contains("ETag"))
                 throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
-
-            var version = storage.Files.ReadVersion(Snapshot, key, writeBatch.Value);
+			
+			ushort version;
+	        var existingFile = LoadJson(storage.Files, key, writeBatch.Value, out version);
 
             var innerMetadata = new NameValueCollection(metadata);
             var etag = innerMetadata.Value<Guid>("ETag");
@@ -124,7 +125,13 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                        };
 
             storage.Files.Add(writeBatch.Value, key, file, version);
-            filesByEtag.Add(writeBatch.Value, CreateKey(etag), key);
+
+	        if (existingFile != null)
+	        {
+		        filesByEtag.Delete(writeBatch.Value, CreateKey(existingFile.Value<string>("etag")));
+	        }
+
+	        filesByEtag.Add(writeBatch.Value, CreateKey(etag), key);
 
             if (tombstone)
                 return;
@@ -331,10 +338,17 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             if (existingMetadata.AllKeys.Contains("Content-MD5"))
                 innerMetadata["Content-MD5"] = existingMetadata["Content-MD5"];
 
+	        var oldEtag = file.Value<string>("etag");
+
             file["etag"] = etag.ToString();
             file["metadata"] = ToQueryString(innerMetadata);
 
             storage.Files.Add(writeBatch.Value, key, file, version);
+
+			var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
+
+			filesByEtag.Delete(writeBatch.Value, CreateKey(oldEtag));
+			filesByEtag.Add(writeBatch.Value, CreateKey(etag), key);
         }
 
         public void CompleteFileUpload(string filename)
@@ -358,9 +372,11 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             return Convert.ToInt32(storage.GetEntriesCount(fileCount));
         }
 
-        public void DecrementFileCount()
+		public void DecrementFileCount(string nameOfFileThatShouldNotBeCounted)
         {
-            // nothing to do here
+			var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
+
+			fileCount.Delete(writeBatch.Value, CreateKey(nameOfFileThatShouldNotBeCounted));
         }
 
         public void RenameFile(string filename, string rename, bool commitPeriodically = false)
@@ -382,6 +398,13 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
             file["name"] = rename;
             storage.Files.Add(writeBatch.Value, renameKey, file, renameVersion ?? 0);
+
+			var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
+			fileCount.Add(writeBatch.Value, renameKey, renameKey);
+
+			var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
+
+			filesByEtag.Add(writeBatch.Value, CreateKey(file.Value<string>("etag")), renameKey);
         }
 
         private void RenameUsage(string fileName, string rename, bool commitPeriodically)

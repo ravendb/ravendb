@@ -90,7 +90,7 @@ class filesystems extends viewModelBase {
     }
 
     newFilesystem() {
-        require(["viewmodels/createFilesystem"], createFilesystem => {
+        require(["viewmodels/filesystem/createFilesystem"], createFilesystem => {
             var createFilesystemViewModel: createFilesystem = new createFilesystem(this.filesystems);
             createFilesystemViewModel
                 .creationTask

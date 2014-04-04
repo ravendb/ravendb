@@ -3,9 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Database.Data;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -87,5 +90,31 @@ namespace Raven.Client.Connection.Async
 				return result.Value<string>("IndexingStatus");
 			});
 		}
+
+		
+		public async Task EnsureDatabaseExistsAsync(string name, bool ignoreFailures = false)
+		{
+			var serverClient = (AsyncServerClient) (innerAsyncServerClient.ForSystemDatabase());
+
+			var doc = MultiDatabase.CreateDatabaseDocument(name);
+
+			serverClient.ForceReadFromMaster();
+
+			var get = await serverClient.GetAsync(doc.Id).ConfigureAwait(false);
+			if (get != null)
+				return;
+
+			try
+			{
+				await serverClient.GlobalAdmin.CreateDatabaseAsync(doc).ConfigureAwait(false);
+			}
+			catch (Exception)
+			{
+				if (ignoreFailures == false)
+					throw;
+			}
+			await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention()).ConfigureAwait(false);
+		}
+
 	}
 }

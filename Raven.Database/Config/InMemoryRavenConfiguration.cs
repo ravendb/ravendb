@@ -38,7 +38,7 @@ namespace Raven.Database.Config
 	{
 	    public const string VoronTypeName = "voron";
 	    private const string EsentTypeName = "esent";
-	    private CompositionContainer container;
+		private CompositionContainer container;
 		private bool containerExternallySet;
 		private string dataDirectory;
 		private string pluginsDirectory;
@@ -163,7 +163,7 @@ namespace Raven.Database.Config
             if (string.IsNullOrEmpty(DefaultFileSystemStorageTypeName))
             {
                 DefaultFileSystemStorageTypeName = Settings["Raven/FileSystem/Storage"] ?? VoronTypeName;
-            }
+			}
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
 
@@ -192,6 +192,7 @@ namespace Raven.Database.Config
 				IndexStoragePath = indexStoragePathSettingValue;
 			}
 
+			MaxRecentTouchesToRemember = ravenSettings.MaxRecentTouchesToRemember.Value;
 		    JournalsStoragePath = Settings["Raven/Esent/LogsPath"] ?? Settings[Constants.RavenTxJournalPath];
 
 			// HTTP settings
@@ -496,7 +497,12 @@ namespace Raven.Database.Config
 					return Math.Min(maxNumberOfParallelIndexTasks ?? MemoryStatistics.MaxParallelism, MemoryStatistics.MaxParallelism);
 				return maxNumberOfParallelIndexTasks ?? Environment.ProcessorCount;
 			}
-			set { maxNumberOfParallelIndexTasks = value; }
+			set
+			{
+				if (value == 0)
+					throw new ArgumentException("You cannot set the number of parallel tasks to zero");
+				maxNumberOfParallelIndexTasks = value;
+			}
 		}
 
 		/// <summary>
@@ -849,7 +855,7 @@ namespace Raven.Database.Config
 		public TimeSpan MaxIndexingRunLatency { get; set; }
 
 		internal bool IsTenantDatabase { get; set; }
-
+		
 		/// <summary>
 		/// If True, cluster discovery will be disabled. Default is False
 		/// </summary>
@@ -859,12 +865,18 @@ namespace Raven.Database.Config
 		/// The server name
 		/// </summary>
 		public string ServerName { get; set; }
-
+		
 		/// <summary>
 		/// The maximum number of steps (instructions) to give a script before timing out.
 		/// Default: 10,000
 		/// </summary>
 		public int MaxStepsForScript { get; set; }
+
+		/// <summary>
+		/// The maximum number of recent document touches to store (i.e. updates done in
+		/// order to initiate indexing rather than because something has actually changed).
+		/// </summary>
+		public int MaxRecentTouchesToRemember { get; set; }
 
 		/// <summary>
 		/// The number of additional steps to add to a given script based on the processed document's quota.
@@ -888,7 +900,7 @@ namespace Raven.Database.Config
         /// the facet cache when finishing an indexing batch
         /// </summary>
 	    public TimeSpan PrewarmFacetsOnIndexingMaxAge { get; set; }
-
+	    
         /// <summary>
         /// The time we should wait for pre-warming the facet cache from existing query after an indexing batch
         /// in a syncronous manner (after that, the pre warm still runs, but it will do so in a background thread).
@@ -995,12 +1007,12 @@ namespace Raven.Database.Config
                 return VoronTypeName;                
 			}
 
-            if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
+			if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
 			{
 				if (File.Exists(Path.Combine(DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
-                {
+				{
                     return VoronTypeName;
-                }
+				}
 				if (File.Exists(Path.Combine(DataDirectory, "Data")))
 					return EsentTypeName;
 			}

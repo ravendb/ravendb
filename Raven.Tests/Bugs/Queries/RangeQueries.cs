@@ -2,6 +2,8 @@ using System;
 using System.Collections;
 using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Collections.Generic;
 using Raven.Database.Indexing;

@@ -5,7 +5,7 @@ import moment = require("moment");
 
 class filesystemStatistics extends viewModelBase {
 
-    stats = ko.observable<filesystemStatisticsDto>();
+    stats = ko.observable<filesystemStatisticsDto>();  
 
     fetchStats(): JQueryPromise<filesystemStatisticsDto> {
         var db = this.activeFilesystem();

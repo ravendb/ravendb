@@ -202,7 +202,6 @@
                         <li class="pull-right">
                             <a style="padding-right: 0; display: inline-block;" data-bind="attr:{href:appUrls.filesystemManagement}">File Systems &nbsp;<i class=" fa fa-caret-right"></i>&nbsp;</a>
                         </li>
-
                     </ul>
                 </div>
             </div>
@@ -218,11 +217,11 @@
             <a class="alert alert-link" href="#" data-bind="visible: details, click: $root.showErrorsDialog.bind($root)">Details</a>
         </div>
     </div>
-
+    
     <div class="page-host" data-bind="router: { cacheViews: false }"></div>
 </div>
 
-<footer style="z-index: 999">
+<footer style="z-index: 999" id="shellFooter">
     <div class="navbar navbar-fixed-bottom navbar-inverse" data-bind="with: activeDatabase">
         <div class="navbar-inner">
             <ul class="nav navbar-nav">
@@ -234,7 +233,9 @@
                 <li><a class="navbar-link" data-bind="text: Errors.length + ' errors', attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
                 <li><a class="navbar-link" data-bind="text: ApproximateTaskCount + ' tasks', attr: { href: $parents[1].appUrls.status }"></a></li>
                 <li class="raw-url" data-bind="visible:$root.rawUrlIsVisible">
-                    <a class="navbar-link" href="#" target='_blank' data-bind="text:$root.currentRawUrl(), attr:{ href: $root.currentRawUrl()}"></a>
+
+                <a class="navbar-link" href="#" target='_blank' data-bind="text:$root.currentRawUrl(), attr:{ href: $root.currentRawUrl()}"></a>
+
                 </li>
                 <!-- /ko -->
                 <!-- ko with: $root -->
@@ -243,6 +244,7 @@
                 <li data-bind="with: licenseStatus" class="navbar-right pull-right"><a class="navbar-link " data-bind="text: 'License Status: ' + Status">AGPL - Open Source</a></li>
                 <!-- /ko -->
             </ul>
+
         </div>
     </div>
 </footer>

@@ -3,6 +3,8 @@ using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Json;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Patching
@@ -17,7 +19,7 @@ namespace Raven.Tests.Patching
 				store.DocumentDatabase.Documents.Put("foos/1", null, RavenJObject.Parse("{'Something':'something'}"),
 					RavenJObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
 				WaitForIndexing(store);
-				store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName",
+				var operation = store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName",
 					new IndexQuery(), new[]
 					{
 						new PatchRequest
@@ -36,6 +38,9 @@ namespace Raven.Tests.Patching
 						}
 							
 					}, false);
+
+				operation.WaitForCompletion();
+
 				var jsonDocument = store.DocumentDatabase.Documents.Get("foos/1", null);
 				Assert.Equal("Bars", jsonDocument.Metadata.Value<string>("Raven-Entity-Name"));
 			}

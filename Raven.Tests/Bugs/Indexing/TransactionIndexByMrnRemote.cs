@@ -1,11 +1,13 @@
 ﻿using System.ComponentModel.Composition.Hosting;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class TransactionIndexByMrnRemote : RemoteClientTest
+	public class TransactionIndexByMrnRemote : RavenTest
 	{
 		[Fact]
 		public void CanCreateIndex()

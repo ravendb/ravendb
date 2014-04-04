@@ -292,7 +292,7 @@ namespace Raven.Database.Server.Controllers
 			SpatialUnits units;
 			var unitsSpecified = Enum.TryParse(GetQueryStringValue("spatialUnits"), out units);
 			double distanceErrorPct;
-			if (!double.TryParse(GetQueryStringValue("distErrPrc"), out distanceErrorPct))
+			if (!double.TryParse(GetQueryStringValue("distErrPrc"), NumberStyles.Any, CultureInfo.InvariantCulture, out distanceErrorPct))
 				distanceErrorPct = Constants.DefaultSpatialDistanceErrorPct;
 			SpatialRelation spatialRelation;
 			
@@ -566,7 +566,21 @@ namespace Raven.Database.Server.Controllers
 
 	    public override void MarkRequestDuration(long duration)
 	    {
+	        if (Database == null)
+	            return;
 	        Database.WorkContext.MetricsCounters.RequestDuationMetric.Update(duration);
+	    }
+
+	    public bool ClientIsV3OrHigher
+	    {
+	        get
+	        {
+	            IEnumerable<string> values;
+	            if (Request.Headers.TryGetValues("Raven-Client-Version", out values) == false)
+                    return false; // probably 1.0 client?
+
+	            return values.All(x => string.IsNullOrEmpty(x) == false && (x[0] != '1' && x[0] != '2'));
+	        }
 	    }
 	}
 }

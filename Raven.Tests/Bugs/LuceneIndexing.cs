@@ -4,6 +4,8 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 using Version = Lucene.Net.Util.Version;
 
