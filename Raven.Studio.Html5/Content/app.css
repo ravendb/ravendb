@@ -1,4 +1,4 @@
-﻿html,
+html,
 body {
   height: 100%;
 }
@@ -42,24 +42,37 @@ body {
 }
 @media (max-device-height: 1024px) {
   span {
-    font-size: 14px!important;
+    font-size: 14px !important;
   }
   a {
+<<<<<<< HEAD
+    font-size: 14x !important;
+=======
     font-size: 90%!important;
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   i {
+<<<<<<< HEAD
+    font-size: 14px !important;
+    display: block !important;
+  }
+  button {
+    max-height: 30px !important;
+    font-size: 13px !important;
+=======
     font-size: 90%!important;
     display: inline-block !important;
   }
   button {
     max-height: 5%!important;
     font-size: 90%!important;
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
   }
   .tooltip-inner {
-    font-size: 10px!important;
+    font-size: 10px !important;
   }
 }
 @media (max-device-height: 1024px) {
@@ -72,6 +85,12 @@ body {
     width: 86%!important;
   }
 }
+<<<<<<< HEAD
+.side-panel {
+  margin-left: 10px !important;
+}
+=======
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
 .side-panel li {
   max-width: 20%;
   margin-top: 5%;
@@ -90,19 +109,39 @@ body {
     font-size: 90% !important;
   }
   .side-panel span {
+<<<<<<< HEAD
+    font-size: 10px !important;
+  }
+  .side-panel li {
+    max-width: 200px !important;
+=======
     font-size: 80% !important;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
   }
 }
 @media (max-device-height: 1024px) {
   .container-fluid a {
-    padding: 5px!important;
-    max-height: 30px!important;
-    font-size: 13px!important;
+    padding: 5px !important;
+    max-height: 30px !important;
+    font-size: 13px !important;
   }
 }
+<<<<<<< HEAD
+#bs-example-navbar-collapse-1 a {
+  font-size: 12px !important;
+}
+#bs-example-navbar-collapse-1 input[type=text] {
+  font-size: 12px !important;
+  /*height:24px!important;*/
+}
+#bs-example-navbar-collapse-1 i {
+  display: inline-block !important;
+}
+=======
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
 .panel span {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -324,7 +363,7 @@ body {
 }
 @media (max-device-height: 1024px) {
   .documents-page a {
-    font-size: 12px!important;
+    font-size: 12px !important;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -344,10 +383,10 @@ body {
     display: inline-block !important;
   }
   #queryContainer #indexQueryLabelContainer i {
-    display: none!important;
+    display: none !important;
   }
   #queryContainer #indexQueryLabelContainer a {
-    display: none!important;
+    display: none !important;
   }
 }
 #queryContainer .editor {
@@ -437,19 +476,19 @@ body {
 }
 @media (max-device-height: 1024px) {
   .breadcrumb h3 {
-    font-size: 16px!important;
+    font-size: 16px !important;
     display: inline-block !important;
   }
   .breadcrumb a {
-    font-size: 14px!important;
+    font-size: 14px !important;
     display: inline-block !important;
   }
   .breadcrumb span {
-    font-size: 14px!important;
+    font-size: 14px !important;
     display: inline-block !important;
   }
   .breadcrumb i {
-    font-size: 15px!important;
+    font-size: 15px !important;
     display: inline-block !important;
   }
 }
@@ -547,6 +586,26 @@ body {
 #editTransformerContainer .transformer {
   height: 600px;
 }
+<<<<<<< HEAD
+#csvImportContainer .fileinputs {
+  position: relative;
+}
+#csvImportContainer .fakefile {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+#csvImportContainer .file {
+  position: relative;
+  text-align: right;
+  -moz-opacity: 0;
+  filter: alpha(opacity: 0);
+  opacity: 0;
+  z-index: 2;
+}
+=======
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
 .auto-complete {
   background-color: white;
 }
@@ -654,9 +713,12 @@ footer ul {
   height: 160px;
 }
 .indexes-controls {
+<<<<<<< HEAD
+  /*margin-left: 15px; Why 15px? This makes it funky in appearance.*/
+=======
   margin-left: 15px;
 }
 .advanced-replication-settings {
     cursor: pointer;
+>>>>>>> 4b1e777b9fb748f797ad012166946b3bd570d1c9
 }
-/*# sourceMappingURL=app.css.map */
