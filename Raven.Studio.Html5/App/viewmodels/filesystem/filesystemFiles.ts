@@ -19,6 +19,10 @@ class filesystemFiles extends viewModelBase {
 
     static gridSelector = "#filesGrid";
 
+    canActivate(args: any) {
+        return true;
+    }
+
     activate(args) {
         super.activate(args);
         this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));

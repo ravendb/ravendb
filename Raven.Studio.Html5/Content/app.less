@@ -48,63 +48,6 @@ html, body {
     }
 }
 
-/*@media (max-width: 979px) {
-    .page-host {
-        top: 0;
-    }
-
-    .navbar-fixed-top {
-        margin-bottom: 0;
-    }
-
-    #shellHeader {
-        > .container-fluid {
-            padding-left: 0;
-            padding-right: 0;
-        }
-    }
-}
-
-@media(max-device-height:1024px) {
-    span {
-        font-size: 14px !important;
-    }
-
-    a {
-        font-size: 90% !important;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    i {
-        font-size: 90% !important;
-        display: inline-block !important;
-    }
-
-    button {
-        max-height: 5% !important;
-        font-size: 90% !important;
-    }
-
-    .tooltip-inner {
-        font-size: 10px !important;
-    }
-}
-
-.control-label {
-    @media(max-device-height:1024px) {
-        max-width:400px!important;
-    }
-}
-
-.query-results {
-    @media(max-device-height:1024px) {
-        width:86%!important;
-    }
-}*/
-
-
 .side-panel {
     li {
         max-width: 20%;
@@ -118,40 +61,7 @@ html, body {
         -o-text-overflow: ellipsis;
         text-overflow: ellipsis;
     }
-
-    /*@media(max-device-height:1024px) {
-
-        h4 {
-            font-size: 90% !important;
-        }
-
-        label {
-            font-size: 90% !important;
-        }
-
-        span {
-            font-size: 80% !important;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-        }
-    }*/
 }
-
-
-
-
-/*.container-fluid {
-    @media(max-device-height:1024px) {
-        a {
-            padding: 5px !important;
-            max-height: 30px !important;
-            font-size: 13px !important;
-        }
-    }
-}*/
-
-
 
 .panel span {
     overflow: hidden;
@@ -165,22 +75,6 @@ html, body {
 .page {
     padding: 0 10px 20px 10px;
     width: 98%;
-}
-
-.navbar-splitbutton {
-
-    > a {
-        padding-right: 5px !important;
-    }
-
-    + .dropdown {
-        cursor: pointer;
-
-        > a {
-            padding-left: 6px;
-            padding-right: 8px;
-        }
-    }
 }
 
 .database-page {
@@ -254,7 +148,6 @@ html, body {
     margin-top: 10px;
 
     .index {
-
         .index-actions-container {
             display: none;
         }
@@ -266,23 +159,23 @@ html, body {
         }
     }
 
-    .index-group .panel-heading {
-        padding-top: 0;
-    }
+    .index-group {
+        .panel-heading {
+            padding-top: 0;
 
-        .index-group .panel-heading .panel-title {
-            padding-top: 15px;
-        }
+            .panel-title {
+                padding-top: 15px;
+            }
 
-    .index-group .panel-heading {
-        .indexGroup-actions-container {
-            display: none;
-            padding-top: 5px;
-        }
-
-        &:hover {
             .indexGroup-actions-container {
-                display: inline-block;
+                display: none;
+                padding-top: 5px;
+            }
+
+            &:hover {
+                .indexGroup-actions-container {
+                    display: inline-block;
+                }
             }
         }
     }
@@ -435,7 +328,7 @@ html, body {
 }
 
 .all-documents-collection {
-    background: rgb(255,2,2); /* Old browsers */
+    background: rgb(2,6,255); /* Old browsers */
     background: -moz-linear-gradient(top, rgba(255,2,2,1) 0%, rgba(255,242,2,1) 27%, rgba(2,255,27,1) 54%, rgba(2,6,255,1) 79%, rgba(246,2,255,1) 100%); /* FF3.6+ */
     background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(255,2,2,1)), color-stop(27%,rgba(255,242,2,1)), color-stop(54%,rgba(2,255,27,1)), color-stop(79%,rgba(2,6,255,1)), color-stop(100%,rgba(246,2,255,1))); /* Chrome,Safari4+ */
     background: -webkit-linear-gradient(top, rgba(255,2,2,1) 0%,rgba(255,242,2,1) 27%,rgba(2,255,27,1) 54%,rgba(2,6,255,1) 79%,rgba(246,2,255,1) 100%); /* Chrome10+,Safari5.1+ */
@@ -457,6 +350,8 @@ html, body {
         a {
             font-size: 12px !important;
             overflow: hidden;
+            -ms-text-overflow: ellipsis;
+            -o-text-overflow: ellipsis;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
@@ -477,18 +372,6 @@ html, body {
 }
 
 #queryContainer {
-    #indexQueryLabelContainer {
-        @media(max-device-height:1024px) {
-            display:inline-block!important; i {
-                display: none !important;
-            }
-
-            a {
-                display: none !important;
-            }
-        }
-    }
-
     .editor {
         height: 60px;
     }
@@ -512,19 +395,14 @@ html, body {
             padding-bottom: 5%;
             overflow: hidden;
             white-space: nowrap;
+            -ms-text-overflow: ellipsis;
+            -o-text-overflow: ellipsis;
             text-overflow: ellipsis;
-        }
-
-        @media(max-device-height:1024px) {
-            margin-left: 100px !important; width:30%;
         }
     }
 }
 
 .ko-grid {
-    /*position: absolute;
-    right: 0;
-    left: 0;*/
     &:focus {
         outline: 0;
     }
@@ -650,10 +528,6 @@ html, body {
 
     .query-metadata {
         padding-top: 20px;
-
-        /*@media(max-device-height:1024px) {
-            padding-top: 25px !important;
-        }*/
     }
 }
 
@@ -684,8 +558,8 @@ html, body {
 
 #shellHeader {
     .container-fluid {
-        padding-right: 0;
-        padding-left: 0;
+        padding-right: 15px;
+        padding-left: 5px;
     }
 
     #goToDocInput {
@@ -693,12 +567,12 @@ html, body {
     } 
 
     /* When the screen width < 1070, shrink down the padding between the nav bar items. */ 
-    @media (max-width: 1070px) {
+    @media (max-width: 1130px) {
         .nav {
             li {
                 a {
-                    padding-left: 10px;
-                    padding-right: 10px;
+                    padding-left: 8px;
+                    padding-right: 8px;
                 }
             }
         }
@@ -706,11 +580,45 @@ html, body {
         .databases {
             padding-right: 0px;
         }
+
+        .navbar-form {
+            padding-left: 5px;
+            padding-right: 5px;
+
+            #goToDocInput {
+                width: 8em;
+            } 
+        }
+    }
+
+    /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
+    @media(max-width: 767px) {
+        #topNavBarCollapse {
+            padding-left: 40px;
+        }
+    }
+
+    .navbar-splitbutton {
+        > a {
+            padding-right: 5px !important;
+        }
+
+        + .dropdown {
+            cursor: pointer;
+
+            > a {
+                padding-left: 0;
+                padding-right: 8px;
+            }
+        }
     }
 }
 
 #shellFooter {
-    ul {
+    @media(max-width: 767px) {
+        display: none;
+    }
+    /*ul {
         width: 100% !important;
     }
 
@@ -720,6 +628,8 @@ html, body {
         padding: 0;
         overflow: hidden;
         white-space: nowrap;
+        -ms-text-overflow: ellipsis;
+        -o-text-overflow: ellipsis;
         text-overflow: ellipsis;
 
         a {
@@ -734,8 +644,10 @@ html, body {
     span {
         overflow: hidden;
         white-space: nowrap;
+        -ms-text-overflow: ellipsis;
+        -o-text-overflow: ellipsis;
         text-overflow: ellipsis;
-    }
+    }*/
 }
 
 #editTransformerContainer .transformer {
@@ -747,13 +659,6 @@ html, body {
 }
 
 #logsContainer, #alertsContainer, #indexErrorsContainer {
-    @media(max-device-height:1024px) {
-        button {
-            max-height: 50% !important;
-        }
-    }
-
-
     table {
         outline: none;
 
@@ -833,16 +738,6 @@ footer {
     font-size: 18px;
 }
 
-@media (max-width: 979px) {
-    .page-host {
-        top: 0;
-    }
-
-    .navbar-fixed-top {
-        margin-bottom: 0;
-    }
-}
-
 #recentErrorsDialog {
     height: 500px;
     width: 600px;
@@ -861,10 +756,6 @@ footer {
     .map {
         height: 160px;
     }
-}
-
-.indexes-controls {
-    /*margin-left: 15px; COMMENTED OUT: Why 15px? This makes it funky in appearance.*/ 
 }
 
 .advanced-replication-settings {
@@ -936,7 +827,6 @@ footer {
     }
 
 }
-
 
 // End of Filesystems
 

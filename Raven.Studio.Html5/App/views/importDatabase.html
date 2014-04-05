@@ -3,57 +3,43 @@
         <h3 class="panel-title">Import Database</h3>
     </div>
     <div class="panel-body">
-        <div class="panel panel-info">
-            <div class="panel-heading">
-                <div class="glyphicon glyphicon-info-sign"></div>
-                Import data to the current database.
+        <h5 class="pull-left">Import data to the current database.</h5>
+        <div class="alert alert-warning pull-right">
+            <i class="fa fa-warning"></i>
+            Importing will overwrite any existing documents and indexes.
+        </div>
+        <br />
+        <br />
+        <div class="btn-toolbar">
+            <div class="btn-group">
+                <button class="btn btn-primary" data-bind="">
+                    <div class="glyphicon glyphicon-import"></div>
+                    Import Database
+                </button>
             </div>
         </div>
-        <div class="panel panel-warning">
-            <div class="panel-heading">
-                <div class="glyphicon glyphicon-warning-sign"></div>
-                Importing will overwrite any existing documents and indexes.
-            </div>
-        </div>
-        
-        <button class="btn btn-primary" data-bind="">
-            <div class="glyphicon glyphicon-import"></div>
-            Import Database
-        </button>
-
-        <div class="panel panel-default">
-            <div class="panel-body">
-                <div>
-                    <label>
-                        <input type="checkbox">
-                        <span>Include Documents</span>
-                    </label>
-                </div>
-                <div>
-                    <label>
-                        <input type="checkbox">
-                        <span>Include Indexes</span>
-                    </label>
-                </div>
-                <div>
-                    <label>
-                        <input type="checkbox">
-                        <span>Include Attachments</span>
-                    </label>
-                </div>
-                <div>
-                    <label>
-                        <input type="checkbox">
-                        <span>Include Transformers</span>
-                    </label>
-                </div>
-                <div>
-                    <label>
-                        <input type="checkbox">
-                        <span>Remove Analyzers</span>
-                    </label>
-                </div>
-            </div>
-        </div>
+        <br />
+        <ul class="nav nav-tabs">
+            <li class="active"><a href="#">Options</a></li>
+            <li><a href="#">Advanced</a></li>
+        </ul>
+        <br />
+        <div class="btn-group-vertical" data-toggle="buttons">
+            <label class="btn btn-default active">
+                <input type="checkbox"> Include documents
+            </label>
+            <label class="btn btn-default active">
+                <input type="checkbox"> Include indexes
+            </label>
+            <label class="btn btn-default">
+                <input type="checkbox"> Include attachments
+            </label>
+            <label class="btn btn-default active">
+                <input type="checkbox"> Include transformers
+            </label>
+            <label class="btn btn-default">
+                <input type="checkbox"> Remove analyzers
+            </label>
+        </div>        
     </div>
 </div>
