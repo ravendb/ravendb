@@ -18,9 +18,6 @@ class configuration extends viewModelBase {
     keyValues = ko.observableArray<Pair<string, string>>();
     selectedKeyValue = ko.observable<Pair<string, string>>();
     currentKey = ko.observable<configurationKey>();
-    
-
-    static gridSelector = "#keyDetailsGrid";
 
     constructor() {
         super();
@@ -33,8 +30,6 @@ class configuration extends viewModelBase {
             this.loadKeys(x);     
         });
         
-        // Initialize the context menu (using Bootstrap-ContextMenu library).
-        // TypeScript doesn't know about Bootstrap-Context menu, so we cast jQuery as any.
         (<any>$('.keys-collection')).contextmenu({
             target: '#keys-context-menu'
         }); 
@@ -109,6 +104,10 @@ class configuration extends viewModelBase {
         }
 
         new saveConfigurationCommand(this.activeFilesystem(), this.currentKey(), args).execute();
+    }
+
+    deleteKey() {
+        throw new Error("Not Implemented");
     }
 
     addKeyValue() {

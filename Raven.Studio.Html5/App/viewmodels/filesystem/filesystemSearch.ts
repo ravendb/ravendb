@@ -14,6 +14,15 @@ class filesystemSearch extends viewModelBase {
     constructor() {
         super();
 
+         
+    }
+
+    attached() {
+        (<any>$('#fileNameEndsWith')).popover({
+            html: true,
+            content: () => $('#fileNameEndsWithContextMenu').html(),
+            placement: 'bottom'
+        });
     }
 
 }

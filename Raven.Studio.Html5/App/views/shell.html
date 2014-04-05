@@ -132,7 +132,8 @@
                         </ul>
                     </form>
                 </div>
-                <div id="filesystemsNavbar" data-bind="visible: appUrls.isAreaActive('filesystems')">
+
+                <div id="filesystemsNavbar" data-bind="visible: canShowFilesystemNavbar()">
                     <ul class=" nav navbar-nav">
                         <li data-bind="css: { active: appUrls.isActive('Files') }">
                             <a data-bind="attr: { href: appUrls.filesystemFiles }">Files</a>
@@ -151,6 +152,7 @@
                         </li>
                     </ul>
                 </div>
+
                 <div id="databaseSelectNavbar" data-bind="visible: appUrls.isAreaActive('databases')">
                     <ul class="nav navbar-nav pull-right hidden-xs hidden-sm databases col-md-3">
                         <li class="hidden-xs hidden-sm pull-right">
@@ -222,9 +224,9 @@
 </div>
 
 <footer style="z-index: 999" id="shellFooter">
-    <div class="navbar navbar-fixed-bottom navbar-inverse" data-bind="with: activeDatabase">
+    <div class="navbar navbar-fixed-bottom navbar-inverse">
         <div class="navbar-inner">
-            <ul class="nav navbar-nav">
+            <ul class="nav navbar-nav" data-bind="with: activeDatabase, visible: appUrls.isAreaActive('databases')">
                 <li><a data-bind="text:'Status'" class="navbar-link" href="#/status"></a></li>
                 <!-- ko with: statistics -->
                 <li><a class="navbar-link" data-bind="text: CountOfDocuments + ' documents', attr: { href: $parents[1].appUrls.documents }"></a></li>
@@ -232,12 +234,20 @@
                 <li><a class="navbar-link" data-bind="text: StaleIndexes.length + ' stale', attr: { href: $parents[1].appUrls.status }"></a></li>
                 <li><a class="navbar-link" data-bind="text: Errors.length + ' errors', attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
                 <li><a class="navbar-link" data-bind="text: ApproximateTaskCount + ' tasks', attr: { href: $parents[1].appUrls.status }"></a></li>
-                <li class="raw-url" data-bind="visible:$root.rawUrlIsVisible">
-
-                <a class="navbar-link" href="#" target='_blank' data-bind="text:$root.currentRawUrl(), attr:{ href: $root.currentRawUrl()}"></a>
-
-                </li>
+                <li class="raw-url" data-bind="visible:$root.rawUrlIsVisible"><a class="navbar-link" href="#" target='_blank' data-bind="text:$root.currentRawUrl(), attr:{ href: $root.currentRawUrl()}"></a></li>
                 <!-- /ko -->
+            </ul>
+
+            <ul class="nav navbar-nav" data-bind="with: activeFilesystem, visible: appUrls.isAreaActive('filesystems')">
+                <li><a data-bind="text:'Status'" class="navbar-link" href="#/filesystems/status"></a></li>
+                <!-- ko with: statistics -->
+                <li><a href="#filesystems" data-bind="text: FileCount + ' files'"></a></li>
+                <li><a href="#filesystems" data-bind="text: Metrics.RequestsPerSecond + ' requests per second'"></a></li>
+                <li><a href="#filesystems" data-bind="text: Metrics.RequestsDuration.Mean.toFixed(1) + 'ms mean duration'"></a></li>
+                <!-- /ko -->
+            </ul>
+
+            <ul>
                 <!-- ko with: $root -->
                 <!--<li class="navbar-right"><a class="navbar-link pull-right">Client Build #30</a></li>-->
                 <li data-bind="with: buildVersion" class="navbar-right pull-right"><a class="navbar-link " data-bind="text: 'Server Build #' + BuildVersion"></a></li>
