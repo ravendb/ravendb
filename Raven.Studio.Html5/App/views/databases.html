@@ -24,7 +24,6 @@
                 <button type="button" class="btn btn-danger use-bootstrap-tooltip" data-bind="click: deleteSelectedDatabase, visible: selectedDatabase() != null" title="Delete selected database"><i class="fa fa-trash-o"></i></button>
             </div>
         </div>
-        <br />
         <div class="databases-container" data-bind="foreach: databases">
             <div class="database" data-bind="visible: isVisible, click: function () { $root.selectDatabase($data); return true; }, css: { selected: isSelected}">
                 <h4><a data-bind="text: name, attr: { href: $root.getDocumentsUrl($data) }"></a></h4>

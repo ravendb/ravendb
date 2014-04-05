@@ -3,18 +3,24 @@
         <h3 class="panel-title">Create Sample Data</h3>
     </div>
     <div class="panel-body">
-        <div class="panel panel-info">
-            <div class="panel-heading">
-                <div class="glyphicon glyphicon-info-sign"></div>
-                Create sample data for this database.
-                <br>
-                This will only work if you don't have any documents in the database.
+        <!--<h4 class="pull-left">Create sample data for this database.</h4>-->
+        <div class="btn-toolbar pull-left">
+            <div class="btn-group">
+                <button class="btn btn-primary" data-bind="click: generateSampleData">
+                    <i class="fa fa-download"></i>
+                    Create Sample Data
+                </button>
             </div>
         </div>
-
-        <button class="btn btn-primary" data-bind="click:generateSampleData">
-            <div class="glyphicon glyphicon-cutlery"></div>
-            Create Sample Data
-        </button>
+        <div class="alert alert-info pull-right">
+            <i class="fa fa-info"></i>
+            Requires an empty database.
+        </div>
+        <br />
+        <br />
+        <br />
+        <div class="progress progress-striped active" data-bind="visible: isBusy">
+            <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+        </div>
     </div>
 </div>

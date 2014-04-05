@@ -41,17 +41,13 @@ class shell extends viewModelBase {
     recordedErrors = ko.observableArray<alertArgs>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
-
     filesystems = ko.observableArray<filesystem>();
     filesystemsLoadedTask: JQueryPromise<any>;
-
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
-
-    activeArea = ko.observable<string>("");
-
+    activeArea = ko.observable<string>("Databases");
     goToDocumentSearch = ko.observable<string>();
-    goToDocumentSearchResults = ko.observableArray<string>();    
+    goToDocumentSearchResults = ko.observableArray<string>();   
 
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
@@ -96,11 +92,6 @@ class shell extends viewModelBase {
             { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
         ]).buildNavigationModel();
 
-        router.activeInstruction.subscribe(val => {
-            if (val.config.route.split('/').length == 1) //if it's a root navigation item.
-                this.activeArea(val.config.title);
-        });
-
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
         this.connectToRavenServer();
@@ -133,6 +124,8 @@ class shell extends viewModelBase {
             NProgress.set(newProgress);
         } else {
             NProgress.done();
+            this.activeArea(appUrl.checkIsAreaActive("filesystems") ? "File Systems" : "Databases");
+            $('.tooltip.fade').remove(); // Fix for tooltips that are shown right before navigation - they get stuck and remain in the UI.
         }
     }
 
@@ -144,9 +137,8 @@ class shell extends viewModelBase {
         if (this.databases().length == 1) {
             systemDatabase.activate();
         } else {
-            this.databases.first(x=> x.isVisible()).activate();
-        }
-        
+            this.databases.first(x => x.isVisible()).activate();
+        }        
     }
 
     filesystemsLoaded(filesystems) {

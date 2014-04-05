@@ -13,7 +13,10 @@ class filesystemSearch extends viewModelBase {
 
     constructor() {
         super();
+    }
 
+    canActivate(args: any) {
+        return true;
     }
 
 }

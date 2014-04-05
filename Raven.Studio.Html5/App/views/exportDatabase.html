@@ -3,51 +3,37 @@
         <h3 class="panel-title">Export Database</h3>
     </div>
     <div class="panel-body">
-        <div class="panel panel-info">
-            <div class="panel-heading">
-                <div class="glyphicon glyphicon-info-sign"></div>
-                Export your database to a dump file.
+        <h5>Export your database to a dump file.</h5>
+        <div class="btn-toolbar">
+            <div class="btn-group">
+                <button class="btn btn-primary" data-bind="">
+                    <div class="glyphicon glyphicon-import"></div>
+                    Export Database
+                </button>
             </div>
         </div>
-
-        <button class="btn btn-primary" data-bind="click: startExport">
-            <div class="glyphicon glyphicon-export"></div>
-            Export Database
-        </button>
-
-        <div class="panel panel-default">
-            <div class="panel-body">
-                <div>
-                    <label>
-                        <input type="checkbox" data-bind="checked: includeDocuments">
-                        <span>Include Documents</span>
-                    </label>
-                </div>
-                <div>
-                    <label>
-                        <input type="checkbox" data-bind="checked: includeIndexes">
-                        <span>Include Indexes</span>
-                    </label>
-                </div>
-                <div>
-                    <label>
-                        <input type="checkbox" data-bind="checked: includeTransformers">
-                        <span>Include Transformers</span>
-                    </label>
-                </div>
-                <div>
-                    <label>
-                        <input type="checkbox" data-bind="checked: includeAttachments">
-                        <span>Include Attachments</span>
-                    </label>
-                </div>
-                <div>
-                    <label>
-                        <input type="checkbox" data-bind="checked: removeAnalyzers">
-                        <span>Remove Analyzers</span>
-                    </label>
-                </div>
-            </div>
+        <br/>
+        <ul class="nav nav-tabs">
+            <li class="active"><a href="#">Options</a></li>
+            <li><a href="#">Advanced</a></li>
+        </ul>
+        <br />
+        <div class="btn-group-vertical" data-toggle="buttons">
+            <label class="btn btn-default active">
+                <input type="checkbox"> Include documents
+            </label>
+            <label class="btn btn-default active">
+                <input type="checkbox"> Include indexes
+            </label>
+            <label class="btn btn-default">
+                <input type="checkbox"> Include attachments
+            </label>
+            <label class="btn btn-default active">
+                <input type="checkbox"> Include transformers
+            </label>
+            <label class="btn btn-default">
+                <input type="checkbox"> Remove analyzers
+            </label>
         </div>
     </div>
 </div>

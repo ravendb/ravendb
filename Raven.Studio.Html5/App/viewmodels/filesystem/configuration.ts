@@ -27,6 +27,10 @@ class configuration extends viewModelBase {
         this.selectedKey.subscribe(k => this.selectedKeyChanged(k));
     }
 
+    canActivate(args: any) {
+        return true;
+    }
+
     attached() {
 
         this.activeFilesystem.subscribe(x => {
