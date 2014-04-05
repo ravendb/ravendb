@@ -45,16 +45,14 @@ class shell extends viewModelBase {
     recordedErrors = ko.observableArray<alertArgs>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
-
     filesystems = ko.observableArray<filesystem>();
     filesystemsLoadedTask: JQueryPromise<any>;
+
     canShowFilesystemNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('filesystems'));
 
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
-
-    activeArea = ko.observable<string>("");
-
+    activeArea = ko.observable<string>("Databases");
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();    
 
@@ -95,7 +93,7 @@ class shell extends viewModelBase {
             { route: 'filesystems/files', title: 'Files', moduleId: 'viewmodels/filesystem/filesystemFiles', nav: true, hash: this.appUrls.filesystemFiles },
             { route: 'filesystems/search', title: 'Search', moduleId: 'viewmodels/filesystem/filesystemSearch', nav: true, hash: this.appUrls.filesystemSearch },
             { route: 'filesystems/synchronization', title: 'Synchronization', moduleId: 'viewmodels/filesystem/filesystemSynchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
-            { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },            
+            { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
             { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
             { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
         ]).buildNavigationModel();
@@ -137,6 +135,8 @@ class shell extends viewModelBase {
             NProgress.set(newProgress);
         } else {
             NProgress.done();
+            this.activeArea(appUrl.checkIsAreaActive("filesystems") ? "File Systems" : "Databases");
+            $('.tooltip.fade').remove(); // Fix for tooltips that are shown right before navigation - they get stuck and remain in the UI.
         }
     }
 
@@ -148,9 +148,8 @@ class shell extends viewModelBase {
         if (this.databases().length == 1) {
             systemDatabase.activate();
         } else {
-            this.databases.first(x=> x.isVisible()).activate();
+            this.databases.first(x => x.isVisible()).activate();
         }
-        
     }
 
     filesystemsLoaded(filesystems) {
@@ -293,22 +292,22 @@ class shell extends viewModelBase {
                     });
                 if (!existingDb ) {
                     this.databases.unshift(result);
-                    }                
+                    }
                 });
             });
-
+                
         new getFilesystemsCommand()
             .execute()
             .done(results => {
                 ko.utils.arrayForEach(results, (result: filesystem) => {
                     var existingFs = this.filesystems().first(d=> {
                         return d.name == result.name;
-                    });
+                });
                     if (!existingFs) {
                         this.filesystems.unshift(result);
                     }
                 });
-            });
+        });
 
         var db = this.activeDatabase();
         if (db) {

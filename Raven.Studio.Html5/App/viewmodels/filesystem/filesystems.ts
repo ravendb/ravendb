@@ -23,12 +23,15 @@ class filesystems extends viewModelBase {
     defaultFs: filesystem;
     initializedStats: boolean;
 
-
     constructor() {
         super();
 
         this.defaultFs = appUrl.getDefaultFilesystem();
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterFilesystems(s));
+    }
+
+    canActivate(args: any) {
+        return true;
     }
 
     modelPolling() {

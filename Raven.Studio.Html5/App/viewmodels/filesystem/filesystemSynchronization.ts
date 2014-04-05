@@ -28,6 +28,10 @@ class filesystemSynchronization extends viewModelBase {
         super();
     }
 
+    canActivate(args: any) {
+        return true;
+    }
+
     activate(args) {
         super.activate(args);
     }

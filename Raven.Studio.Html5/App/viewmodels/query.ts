@@ -265,7 +265,6 @@ class query extends viewModelBase {
             this.recentQueries.unshift(existing);
         } else {
             this.recentQueries.unshift(newQuery);
-            console.log("zanzibar new", (indexName + (queryText || "") + sorts.reduce((a, b) => a + b, "") + (transformer || "") + showFields + indexEntries + useAndOperator), (indexName + queryText + sorts.reduce((a, b) => a + b, "") + transformer + showFields + indexEntries + useAndOperator).hashCode());
         }
 
         // Limit us to 15 query recent runs.

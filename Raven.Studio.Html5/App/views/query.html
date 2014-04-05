@@ -53,7 +53,7 @@
                     <i class="fa fa-plus"></i> Add <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
-                    <li data-bind="visible: selectedIndex() !== 'All Documents'"><a class="use-bootstrap-tooltip" href="#" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: addSortBy" accesskey="O" title="Add a field to sort by (Alt+O)" data-placement="right">Sort By</a></li>
+                    <li data-bind="visible: selectedIndex() !== 'All Documents'"><a class="use-bootstrap-tooltip" href="#" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addSortBy" accesskey="O" title="Add a field to sort by (Alt+O)">Sort By</a></li>
                     <li data-bind="visible: !transformer()"><a href="#" class="use-bootstrap-tooltip" data-bind="click: addTransformer" accesskey="T" title="Add a transformer to transform the results of the query (Alt+T)" data-placement="right">Transformer</a></li>
                 </ul>
             </div>
@@ -149,32 +149,34 @@
                 Sort By
             </label>
             <div class="col-md-9" data-bind="foreach: sortBys">
-                <div class="panel col-md-3" data-bind="css: { 'panel-default': fieldName, 'panel-warning': !fieldName() }">
-                    <div class="panel-heading">
-                        <div class="btn-group col-md-11">
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                <span data-bind="text: fieldNameOrDefault"></span> <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.indexFields">
-                                <li><a href="#" data-bind="text: $data, click: $parent.fieldName.bind($data)"></a></li>
-                            </ul>
+                <div class="col-xs-12 col-sm-9 col-md-6 col-lg-3" style="padding-left: 0">
+                    <div class="panel" data-bind="css: { 'panel-default': fieldName, 'panel-warning': !fieldName() }">
+                        <div class="panel-heading">
+                            <div class="btn-group col-md-11">
+                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                    <span data-bind="text: fieldNameOrDefault"></span> <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.indexFields">
+                                    <li><a href="#" data-bind="text: $data, click: $parent.fieldName.bind($data)"></a></li>
+                                </ul>
+                            </div>
+                            <div>
+                                <button type="button" class="close use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: $root.removeSortBy.bind($root, $data)" title="Remove this sort from the query">&times;</button>
+                            </div>
+                            <div class="clearfix"></div>
                         </div>
-                        <div>
-                            <button type="button" class="close use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: $root.removeSortBy.bind($root, $data)" title="Remove this sort from the query">&times;</button>
-                        </div>
-                        <div class="clearfix"></div>
-                    </div>
-                    <div class="panel-body">
-                        <div class="btn-group">
-                            <label class="btn btn-primary" data-bind="click: isAscending.bind($data,true), css: { active: isAscending() }">
-                                Ascending
-                            </label>
-                            <label class="btn btn-primary" data-bind="click: isAscending.bind($data,false), css: { active: !isAscending() }">
-                                Descending
-                            </label>
-                            <label class="btn btn-primary" data-bind="click: toggleRange.bind($data), css: { active: isRange }">
-                                Range
-                            </label>
+                        <div class="panel-body">
+                            <div class="btn-group">
+                                <label class="btn btn-primary" data-bind="click: isAscending.bind($data,true), css: { active: isAscending() }">
+                                    Ascending
+                                </label>
+                                <label class="btn btn-primary" data-bind="click: isAscending.bind($data,false), css: { active: !isAscending() }">
+                                    Descending
+                                </label>
+                                <label class="btn btn-primary" data-bind="click: toggleRange.bind($data), css: { active: isRange }">
+                                    Range
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -182,10 +184,10 @@
         </div>
 
         <div class="form-group" data-bind="visible: transformer() != null">
-            <label id="indexQueryLabelContainer" class="col-sm-1 control-label">
-                Transformer
+            <label id="indexQueryLabelContainer" style="overflow-x: hidden; text-overflow: ellipsis;" class="col-md-1 control-label">
+                <span>Transformer</span>
             </label>
-            <div class="col-md-2">
+            <div class="col-xs-12 col-sm-9 col-md-6 col-lg-3">
                 <div class="panel" data-bind="css: { 'panel-default': transformer, 'panel-warning': !transformer() }">
                     <div class="panel-heading">
                         <div class="btn-group col-md-11">
@@ -208,7 +210,7 @@
                 <li class="list-group-item"><a data-bind="text:$data.id, attr:{href:$data.href}"></a></li>
             </ul>-->
         <div class="form-group">
-            <div class="form-group col-md-12" >
+            <div class="form-group col-md-12">
                 <label id="indexQueryLabelContainer" class="control-label col-md-1">
                     Results
                 </label>
@@ -237,7 +239,7 @@
 
                 </div>
             </div>
-            
+
         </div>
     </form>
 </div>

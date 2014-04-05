@@ -17,6 +17,10 @@ class filesystemSearch extends viewModelBase {
          
     }
 
+    canActivate(args: any) {
+        return true;
+    }
+
     attached() {
         (<any>$('#fileNameEndsWith')).popover({
             html: true,
@@ -24,7 +28,6 @@ class filesystemSearch extends viewModelBase {
             placement: 'bottom'
         });
     }
-
 }
 
 export = filesystemSearch;
