@@ -16,7 +16,7 @@ class replicationConfig {
         return {
             DocumentConflictResolution: this.documentConflictResolution(),
             AttachmentConflictResolution: this.attachmentConflictResolution()
-        }
+        };
     }
 
     resolveDocumentsConflictsToLocal() {
