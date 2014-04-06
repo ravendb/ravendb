@@ -28,7 +28,7 @@ class sqlReplication extends document {
     sqlReplicationTables = ko.observableArray<sqlReplicationTable>().extend({ required: true });
 
     connectionStringType = ko.observable<string>().extend({ required: true });
-    connectionStringValue = ko.observable<string>().extend({ required: true });
+    connectionStringValue = ko.observable<string>('').extend({ required: true });
 
     constructor(dto: sqlReplicationDto) {
         super(dto);

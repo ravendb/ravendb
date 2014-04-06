@@ -64,8 +64,6 @@ class settings extends viewModelBase {
         var isSystemDbOnlyPath = instruction.fragment.indexOf("windowsAuth") >= 0 || instruction.fragment.indexOf("apiKeys") >= 0 || instruction.fragment === "settings";
         var isUserDbOnlyPath = !isSystemDbOnlyPath;
 
-        debugger;
-
         if ((isSystemDbOnlyPath && !this.activeDatabase().isSystem)){
             return appUrl.forCurrentDatabase().databaseSettings();
         } else if (isUserDbOnlyPath && this.activeDatabase().isSystem) {
