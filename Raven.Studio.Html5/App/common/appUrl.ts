@@ -107,7 +107,8 @@ class appUrl {
     }
 
     static forSettings(db: database): string {
-        return "#databases/settings?" + appUrl.getEncodedDbPart(db);
+        var path = (db && db.isSystem) ? "#databases/settings/apiKeys" : "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
+        return path;
     }
 
     static forLogs(db: database): string {

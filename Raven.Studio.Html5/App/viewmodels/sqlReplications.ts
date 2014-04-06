@@ -12,7 +12,7 @@ class sqlReplications extends viewModelBase {
     lastIndex = ko.computed(function () {
         return this.isFirstload() ? -1 : this.replications().length - 1;
     }, this);
-    isSaveVisible = ko.computed(function () {
+    isSaveEnabled = ko.computed(function () {
         this.replications();
         return viewModelBase.dirtyFlag().isDirty();
     }, this);
