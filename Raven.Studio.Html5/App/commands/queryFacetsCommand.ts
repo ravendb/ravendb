@@ -64,6 +64,10 @@ class queryFacetsCommand extends commandBase {
 
                 item['Key'] = facetValue.Range;
                 item[facetAggregationLabel + " of " + aggregateField] = facetValue.Hits;
+
+                for (var facetProp in facetValue) {
+                    item[facetProp] = facetValue[facetProp];
+                }
             }
 
             propIndex++;
