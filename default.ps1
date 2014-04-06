@@ -194,7 +194,6 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output\Server -Type directory | Out-Null
 	New-Item $build_dir\Output\Web -Type directory | Out-Null
 	New-Item $build_dir\Output\Web\bin -Type directory | Out-Null
-	New-Item $build_dir\Output\EmbeddedClient -Type directory | Out-Null
 	New-Item $build_dir\Output\Client -Type directory | Out-Null
 	New-Item $build_dir\Output\Bundles -Type directory | Out-Null
 	New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
@@ -203,14 +202,6 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 
 task CleanOutputDirectory { 
 	Remove-Item $build_dir\Output -Recurse -Force -ErrorAction SilentlyContinue
-}
-
-task CopyEmbeddedClient {
-	$all_client_dlls = @( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
-		"$build_dir\Raven.Studio.Html5.zip", 
-		"$base_dir\Raven.Client.Embedded\bin\$global:configuration\Raven.Client.Embedded.???")
-
-	$all_client_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\EmbeddedClient }
 }
 
 task CopySmuggler {
@@ -361,7 +352,6 @@ task ZipOutput {
 	exec { 
 		& $tools_dir\zip.exe -9 -A -r `
 			$file `
-			EmbeddedClient\*.* `
 			Client\*.* `
 			Smuggler\*.* `
 			Backup\*.* `
@@ -380,7 +370,6 @@ task DoReleasePart1 -depends Compile, `
 	CompileHtml5, `
 	CleanOutputDirectory, `
 	CreateOutpuDirectories, `
-	CopyEmbeddedClient, `
 	CopySmuggler, `
 	CopyBackup, `
 	CopyClient, `
@@ -534,7 +523,6 @@ task CreateNugetPackages -depends Compile, InitNuget {
 
 	New-Item $nuget_dir\RavenDB.Embedded\lib\net45 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Embedded.nuspec $nuget_dir\RavenDB.Embedded\RavenDB.Embedded.nuspec
-	@("Raven.Client.Embedded.???") |% { Copy-Item "$base_dir\Raven.Client.Embedded\bin\$global:configuration\$_" $nuget_dir\RavenDB.Embedded\lib\net45 }
 	
 	# Client packages
 	@("Authorization", "UniqueConstraints") | Foreach-Object { 
@@ -640,7 +628,6 @@ task CreateSymbolSources -depends CreateNugetPackages {
 		$srcDirName1 = $srcDirName1.Replace("Raven.Bundles.", "Bundles\Raven.Bundles.")
 		$srcDirName1 = $srcDirName1.Replace("Raven.Client.Authorization", "Bundles\Raven.Client.Authorization")
 		$srcDirName1 = $srcDirName1.Replace("Raven.Client.UniqueConstraints", "Bundles\Raven.Client.UniqueConstraints")
-		$srcDirName1 = $srcDirName1.Replace("Raven.Embedded", "Raven.Client.Embedded")
 		
 		$srcDirNames = @($srcDirName1)
 		if ($dirName -eq "RavenDB.Server") {
