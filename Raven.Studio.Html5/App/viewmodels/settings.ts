@@ -32,7 +32,7 @@ class settings extends viewModelBase {
         var replicationsRoute = { route: 'databases/settings/replication', moduleId: 'viewmodels/replications', title: 'Replication', nav: true, hash: appUrl.forCurrentDatabase().replications };
         var sqlReplicationsRoute = { route: 'databases/settings/sqlReplication', moduleId: 'viewmodels/sqlReplications', title: 'SQL Replication', nav: true, hash: appUrl.forCurrentDatabase().sqlReplications };
         //var versioningRoute = { route: 'settings/versioning', moduleId: 'viewmodels/versioning', title: 'Versioning', nav: true, hash: appUrl.forCurrentDatabase().versioning };
-        var periodicBackupRoute = { route: 'databases/settings/periodicBackup', moduleId: 'viewmodels/periodicBackup', title: 'Periodic Backup', nav: true, hash: appUrl.forCurrentDatabase().periodicBackup };
+        var periodicBackupRoute = { route: 'databases/settings/periodicBackups', moduleId: 'viewmodels/periodicBackup', title: 'Periodic Backup', nav: true, hash: appUrl.forCurrentDatabase().periodicBackup };
         var scriptedIndexesRoute = { route: 'databases/settings/scriptedIndex', moduleId: 'viewmodels/scriptedIndexes', title: 'Scripted Index', nav: true, hash: appUrl.forCurrentDatabase().scriptedIndexes };
 
         this.router = durandalRouter.createChildRouter()
@@ -63,6 +63,8 @@ class settings extends viewModelBase {
         var isBundleExists = this.userDatabasePages.indexOf(this.bundleMap[bundelName]) >= 0;
         var isSystemDbOnlyPath = instruction.fragment.indexOf("windowsAuth") >= 0 || instruction.fragment.indexOf("apiKeys") >= 0 || instruction.fragment === "settings";
         var isUserDbOnlyPath = !isSystemDbOnlyPath;
+
+        debugger;
 
         if ((isSystemDbOnlyPath && !this.activeDatabase().isSystem)){
             return appUrl.forCurrentDatabase().databaseSettings();
