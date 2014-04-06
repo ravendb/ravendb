@@ -3,7 +3,7 @@
         <div class="collapse navbar-collapse">
             <form class="navbar-form pull-right">
                 <button type="button" class="btn btn-default  use-bootstrap-tooltip" data-bind="click: addNewSqlReplication" title="New SQL Replication(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> New SQL Replication</button>
-                <button type="button" class="btn btn-primary  use-bootstrap-tooltip" data-bind="click: saveChanges, visible: isSaveVisible" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+                <button type="button" class="btn btn-primary  use-bootstrap-tooltip" data-bind="click: saveChanges, enable: isSaveEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
             </form>
         </div>
     </nav>
