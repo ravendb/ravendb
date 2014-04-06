@@ -177,7 +177,7 @@ namespace Voron.Impl
 				                actionType = DebugActionType.Delete;
 				                break;
 			                case WriteBatch.BatchOperationType.MultiAdd:
-				                tree.MultiAdd(tx, operation.Key, operation.Value as Slice, operation.Version);
+				                tree.MultiAdd(tx, operation.Key, operation.Value as Slice, version: operation.Version);
 				                actionType = DebugActionType.MultiAdd;
 				                break;
 			                case WriteBatch.BatchOperationType.MultiDelete:

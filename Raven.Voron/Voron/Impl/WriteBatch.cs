@@ -32,27 +32,21 @@ namespace Voron.Impl
 			}
 		}
 
-		public Func<long> Size
+		public long Size()
 		{
-			get
-			{
-				return () =>
-				{
-					long totalSize = 0;
+			long totalSize = 0;
 
-					if (_lastOperations.Count > 0)
-						totalSize += _lastOperations.Sum(
-							operation =>
-							operation.Value.Values.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
+			if (_lastOperations.Count > 0)
+				totalSize += _lastOperations.Sum(
+					operation =>
+					operation.Value.Values.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
 
-					if (_multiTreeOperations.Count > 0)
-						totalSize += _multiTreeOperations.Sum(
-							tree =>
-							tree.Value.Sum(
-								multiOp => multiOp.Value.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size)));
-					return totalSize;
-				};
-			}
+			if (_multiTreeOperations.Count > 0)
+				totalSize += _multiTreeOperations.Sum(
+					tree =>
+					tree.Value.Sum(
+						multiOp => multiOp.Value.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size)));
+			return totalSize;
 		}
 
 		public bool IsEmpty { get { return _lastOperations.Count == 0 && _multiTreeOperations.Count == 0; } }
@@ -115,7 +109,7 @@ namespace Voron.Impl
 			_sliceEqualityComparer = new SliceEqualityComparer();
 		}
 
-		public void Add(Slice key, Stream value, string treeName, ushort? version = null,bool shouldIgnoreConcurrencyExceptions = false)
+		public void Add(Slice key, Stream value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
 		{
 			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
 			if (value == null) throw new ArgumentNullException("value");
@@ -127,7 +121,7 @@ namespace Voron.Impl
 
 
 			var batchOperation = new BatchOperation(key, value, version, treeName, BatchOperationType.Add);
-			if(shouldIgnoreConcurrencyExceptions)
+			if (shouldIgnoreConcurrencyExceptions)
 				batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
 			AddOperation(batchOperation);
 		}
@@ -219,7 +213,7 @@ namespace Voron.Impl
 #endif
 
 			private readonly long originalStreamPosition;
-			private readonly HashSet<Type> exceptionTypesToIgnore = new HashSet<Type>(); 
+			private readonly HashSet<Type> exceptionTypesToIgnore = new HashSet<Type>();
 			private readonly Action reset = delegate { };
 
 			public BatchOperation(Slice key, Stream value, ushort? version, string treeName, BatchOperationType type)
@@ -268,7 +262,7 @@ namespace Voron.Impl
 			public BatchOperationType Type { get; private set; }
 
 			public ushort? Version { get; private set; }
-			
+
 			public HashSet<Type> ExceptionTypesToIgnore
 			{
 				get { return exceptionTypesToIgnore; }
@@ -290,7 +284,7 @@ namespace Voron.Impl
 			public void SetIgnoreExceptionOnExecution<T>()
 				where T : Exception
 			{
-				ExceptionTypesToIgnore.Add(typeof (T));
+				ExceptionTypesToIgnore.Add(typeof(T));
 			}
 		}
 
