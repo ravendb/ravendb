@@ -225,6 +225,9 @@ task CopyClient {
 
 task CopyWeb {
 	@( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
+		"$base_dir\Raven.Web\bin\Microsoft.Owin.???",
+		"$base_dir\Raven.Web\bin\Owin.???",
+		"$base_dir\Raven.Web\bin\Microsoft.Owin.Host.SystemWeb.???",
 		"$build_dir\Raven.Studio.Html5.zip",
 		"$base_dir\Raven.Web\bin\Raven.Web.???"  ) | ForEach-Object { Copy-Item "$_" $build_dir\Output\Web\bin }
 	@("$base_dir\DefaultConfigs\web.config", 
