@@ -55,6 +55,7 @@ class query extends viewModelBase {
         return !!currentIndex && currentIndex.hasReduce == true;
     });
     contextName = ko.observable<string>();
+    didDynamicChangeIndex :KnockoutComputed<boolean>;
 
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
 
@@ -78,6 +79,18 @@ class query extends viewModelBase {
             }
 
             return "";
+        });
+
+        this.didDynamicChangeIndex = ko.computed(() => {
+            debugger;
+
+            if (this.queryStats()) {
+                var recievedIndex = this.queryStats().IndexName;
+                var selectedIndex = this.selectedIndex();
+                return selectedIndex.indexOf("dynamic/") === 0 && this.indexes()[0].name !== recievedIndex;
+            } else {
+                return false;
+            }
         });
         
         aceEditorBindingHandler.install();        
