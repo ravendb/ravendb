@@ -18,10 +18,14 @@ namespace Voron
             if (treeName.Equals(Constants.FreeSpaceTreeName, StringComparison.InvariantCultureIgnoreCase))
                 return state.FreeSpaceRoot;
 
+
 		    Tree tree = tx.ReadTree(treeName);
 
 			if (tree != null)
 				return tree;
+
+			if (tx.Flags == TransactionFlags.ReadWrite)
+				return tx.Environment.CreateTree(tx, treeName);
 
 			throw new InvalidOperationException("No such tree: " + treeName);			
 		}
