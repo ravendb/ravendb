@@ -438,7 +438,7 @@ namespace Raven.Database.Server.Controllers
 			if (string.IsNullOrEmpty(zipPath) == false)
 			{
 			    var fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, zipPath + ".zip");
-			    if (File.Exists(zipPath))
+				if (File.Exists(fullZipPath))
 				{
                     return WriteFileFromZip(fullZipPath, docPath);
 				}
@@ -454,7 +454,7 @@ namespace Raven.Database.Server.Controllers
 			if (etagValue == currentFileEtag)
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
-			var fileStream = new FileStream(zipPath + ".zip", FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+			var fileStream = new FileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 			var zipFile = new ZipFile(fileStream);
 			var zipEntry = zipFile.GetEntry(docPath);
 
