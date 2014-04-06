@@ -225,7 +225,9 @@ class databases extends viewModelBase {
 
     onDatabaseDeleted(db: database) {
         this.databases.remove(db);
-        if (this.selectedDatabase() === db) {
+        if (this.databases.length === 0)
+            this.selectDatabase(this.systemDb);
+        else if (this.databases.contains(this.selectedDatabase()) === false) {
             this.selectDatabase(this.databases().first());
         }
     }
