@@ -431,7 +431,7 @@ body {
   text-overflow: ellipsis;
 }
 #shellHeader {
-  /* When the screen width < 1070, shrink down the padding between the nav bar items. */
+  /* When the screen width < 1150, shrink down the padding between the nav bar items. */
   /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
 }
 #shellHeader .container-fluid {
@@ -441,7 +441,7 @@ body {
 #shellHeader #goToDocInput {
   width: 10em;
 }
-@media (max-width: 1130px) {
+@media (max-width: 1150px) {
   #shellHeader .nav li a {
     padding-left: 8px;
     padding-right: 8px;
@@ -506,6 +506,14 @@ body {
 }
 @media (max-width: 767px) {
   #shellFooter {
+    display: none;
+  }
+}
+@media (max-width: 1150px) {
+  #shellFooter .status-link {
+    display: none;
+  }
+  #shellFooter .server-build-link {
     display: none;
   }
 }

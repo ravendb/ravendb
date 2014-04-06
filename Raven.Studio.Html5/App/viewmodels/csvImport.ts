@@ -18,7 +18,7 @@ class csvImport extends viewmodelBase {
     attached() {
         var that = this;    
             
-        document.getElementById('uploadedCsv').addEventListener('change', this.fileChanged, false);
+        //document.getElementById('uploadedCsv').addEventListener('change', this.fileChanged, false);
         $("#sendFileForm").submit(() => {
             var saveFileFormElement: HTMLFormElement;
             saveFileFormElement = <HTMLFormElement>document.getElementById('sendFileForm');
