@@ -368,7 +368,7 @@ class ctor {
                     Binding: binding,
                     Header: binding,
                     Template: curColumnTemplate,
-                    DefaultWidth: Math.floor(newColumn.width())
+                    DefaultWidth: availiableWidth > 0 ? Math.floor(newColumn.width()) : 0
                 }));
 
             }
