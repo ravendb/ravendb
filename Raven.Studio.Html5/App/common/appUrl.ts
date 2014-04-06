@@ -107,13 +107,8 @@ class appUrl {
     }
 
     static forSettings(db: database): string {
-        var url;
-        if (db && db.isSystem) {
-            url = "#databases/settings/apiKeys";
-        } else {
-            url = "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
-        }
-        return url;
+        var path = (db && db.isSystem) ? "#databases/settings/apiKeys" : "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
+        return path;
     }
 
     static forLogs(db: database): string {
