@@ -83,12 +83,20 @@ class row {
         }else if (propertyName === "__IsChecked") {
             return cell.checkboxTemplate;
         }
-        else if (!!data) {
-            if (!!data[propertyName] && typeof data[propertyName] == "string") {
-                
-                if (data[propertyName].isJSON())
+        else if (!!data) {            
+            if (typeof data == "string") {
+                var cleanData = data.replace('/\t+/g', '')
+                                    .replace(/\s+/g, '')
+                                    .replace('/\n+/g', '');
+                if (/^\[{"[a-zA-Z0-9_-]+":/.test(cleanData))                
                     return cell.defaultTemplate;
-                if (/\w+\/\w+/ig.test(data[propertyName]) || (typeof data == "string" && /\w+\/\w+/ig.test(data)))
+                if (/\w+\/\w+/ig.test(data))
+                    return cell.externalIdTemplate;
+            }
+            else if (!!data[propertyName] &&
+                typeof data[propertyName] == "string" &&                
+                /\w+\/\w+/ig.test(data[propertyName]))
+            {
                     return cell.externalIdTemplate;
             }
         }

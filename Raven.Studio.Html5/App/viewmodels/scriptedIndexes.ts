@@ -11,7 +11,7 @@ class scriptedIndexes extends viewModelBase {
     indexNames = ko.observableArray<string>();
     selectedIndex = ko.observable<string>();
 
-    scrIndexes = ko.observable<scriptedIndexMap>();
+    scrIndexes = ko.observable<scriptedIndexMap>().extend({ required: true });
     scrIndex = ko.observable<scriptedIndex>();
 
     constructor() {
@@ -27,7 +27,7 @@ class scriptedIndexes extends viewModelBase {
     fetchAllIndexes(): JQueryPromise<any> {
         return new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
-            .done((results: databaseStatisticsDto) => this.performAllIndexesResult(results));
+            .done((results: databaseStatisticsDto) => { this.performAllIndexesResult(results); });
     }
 
     performAllIndexesResult(results: databaseStatisticsDto) {
@@ -38,7 +38,10 @@ class scriptedIndexes extends viewModelBase {
     fetchAllScriptedIndexes() {
         new getScriptedIndexesCommand(this.activeDatabase())
             .execute()
-            .done((indexes: scriptedIndex[]) => this.performAllScriptedIndexes(indexes));
+            .done((indexes: scriptedIndex[])=> {
+                this.performAllScriptedIndexes(indexes);
+                viewModelBase.dirtyFlag = new ko.DirtyFlag([this.scrIndexes]);
+        });
     }
 
     performAllScriptedIndexes(indexes: scriptedIndex[]) {
@@ -87,7 +90,11 @@ class scriptedIndexes extends viewModelBase {
     saveChanges() {
         new saveScriptedIndexesCommand(this.scrIndexes(), this.activeDatabase())
             .execute()
-            .done((result: bulkDocumentDto[]) => this.updateIndexes(result));
+            .done((result: bulkDocumentDto[])=> {
+                this.updateIndexes(result);
+                // Resync Changes
+                viewModelBase.dirtyFlag().reset();
+        });
     }
 
     private updateIndexes(serverIndexes: bulkDocumentDto[]) {
