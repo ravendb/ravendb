@@ -349,7 +349,7 @@ class ctor {
             
             availiableWidth -= curColWidth ;
             if (availiableWidth > 0) {
-                var columnWidth = this.getColumnWidth(binding, curColWidth );
+                var columnWidth = this.getColumnWidth(binding, curColWidth);
                 var columnName = this.getColumnName(binding);
 
                 // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
@@ -359,6 +359,8 @@ class ctor {
                 } else if (this.columns().length < 100) { //TODO: CHANGE 100 TO MAX_COLUMNS
                     this.columns.push(newColumn);
                 }
+            } else {
+                break;
             }
 
             var curColumnConfig = this.settings.customColumns().findConfigFor(binding);
