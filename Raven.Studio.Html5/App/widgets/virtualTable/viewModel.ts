@@ -323,10 +323,10 @@ class ctor {
             }
         }
 
-        for (var i = 0; i < this.columns().length; i++) {
+     /*   for (var i = 0; i < this.columns().length; i++) {
             var colName = this.columns()[i].binding;
             delete columnsNeeded[colName];
-        }
+        }*/
 
         var idColumn = this.columns.first(x=> x.binding == "Id");
         var idCheckboxColumn = this.columns.first(x=> x.binding == "__IsChecked");
