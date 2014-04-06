@@ -278,7 +278,7 @@ namespace Raven.Database.Server.WebApi
 		            GetHeaders(controller.InnerHeaders), 
 		            controller.InnerRequest.Method.Method,
 		            response != null ? (int) response.StatusCode : 500,
-		            controller.InnerRequest.RequestUri.PathAndQuery,
+		            controller.InnerRequest.RequestUri.ToString(),
 		            sb != null ? sb.ToString() : null
 		            );
 		    }
