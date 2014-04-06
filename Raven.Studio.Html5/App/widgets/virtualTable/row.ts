@@ -84,9 +84,12 @@ class row {
             return cell.checkboxTemplate;
         }
         else if (!!data) {
-            if (!!data[propertyName] && typeof data[propertyName] == "string" && /\w+\/\w+/ig.test(data[propertyName])  ||
-                typeof data == "string" && /\w+\/\w+/ig.test(data)) {
-                return cell.externalIdTemplate;
+            if (!!data[propertyName] && typeof data[propertyName] == "string") {
+                
+                if (data[propertyName].isJSON())
+                    return cell.defaultTemplate;
+                if (/\w+\/\w+/ig.test(data[propertyName]) || (typeof data == "string" && /\w+\/\w+/ig.test(data)))
+                    return cell.externalIdTemplate;
             }
         }
 
