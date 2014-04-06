@@ -232,6 +232,9 @@ class ctor {
                     this.ensureColumnsForRows(resultSet.items);
                     this.recycleRows.valueHasMutated();
                     this.columns.valueHasMutated();
+
+                    var rows = this.recycleRows();
+                    var columns = this.columns();
                 }
 
                 this.recycleRows.valueHasMutated();
@@ -277,7 +280,7 @@ class ctor {
         }
 
         var columnWidth = defaultColumnWidth;
-        if (binding === "Id")  {
+        if (binding === "Id" && defaultColumnWidth > ctor.idColumnWidth)  {
             return ctor.idColumnWidth;
         }
         return defaultColumnWidth;
@@ -300,7 +303,8 @@ class ctor {
         // Enforce a max number of columns. Having many columns is unweildy to the user
         // and greatly slows down scroll speed.
         //var maxColumns = this.grid.width()/200;
-        var maxColumns = this.grid.width() / 200;
+        //this.columns.remove(c => (c.binding !== 'Id' && c.binding !== '__IsChecked'));
+        var maxColumns = this.grid.width() / 200 ;
         if (this.columns().length >= maxColumns) {
             return;
         }
@@ -323,10 +327,10 @@ class ctor {
             }
         }
 
-     /*   for (var i = 0; i < this.columns().length; i++) {
+        for (var i = 0; i < this.columns().length; i++) {
             var colName = this.columns()[i].binding;
             delete columnsNeeded[colName];
-        }*/
+        }
 
         var idColumn = this.columns.first(x=> x.binding == "Id");
         var idCheckboxColumn = this.columns.first(x=> x.binding == "__IsChecked");
@@ -335,14 +339,23 @@ class ctor {
 
         var calculateWidth = ctor.idColumnWidth;
         var colCount = Object.keys(columnsNeeded).length;
+
+
+        calculateWidth = this.grid.width() / (colCount + idColumnExists + 1);
+
+        /*
         if ((colCount + idColumnExists) * 200 + idCheckboxWidth > this.grid.width()) {
             if (idColumn) {
                 idColumn.width(calculateWidth);
             }
         } else {
-            calculateWidth = this.grid.width() / (colCount + idColumnExists);
+            if ((colCount + idColumnExists) > 0){
+                calculateWidth = this.grid.width() / (colCount + idColumnExists);
+            } else {
+                calculateWidth = 200;
+            }
         }
-
+*/
         //if (idColumn) {
         //    idColumn.width(calculateWidth);
         //}
