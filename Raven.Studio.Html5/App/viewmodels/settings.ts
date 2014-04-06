@@ -57,19 +57,19 @@ class settings extends viewModelBase {
     * This is used for preventing a navigating to system-only pages when the current databagse is non-system, and vice-versa.
     */
     getValidRoute(instance: Object, instruction: DurandalRouteInstruction): any {
-        //debugger;
-
         var pathArr = instruction.fragment.split('/');
         var bundelName = pathArr[pathArr.length - 1].toLowerCase();
+        var isLegalBundelName = (this.bundleMap[bundelName] != undefined);
         var isBundleExists = this.userDatabasePages.indexOf(this.bundleMap[bundelName]) >= 0;
         var isSystemDbOnlyPath = instruction.fragment.indexOf("windowsAuth") >= 0 || instruction.fragment.indexOf("apiKeys") >= 0 || instruction.fragment === "settings";
         var isUserDbOnlyPath = !isSystemDbOnlyPath;
 
-        //if ((isSystemDbOnlyPath && !this.activeDatabase().isSystem) || (isUserDbOnlyPath && !isBundleExists)) {
         if ((isSystemDbOnlyPath && !this.activeDatabase().isSystem)){
             return appUrl.forCurrentDatabase().databaseSettings();
         } else if (isUserDbOnlyPath && this.activeDatabase().isSystem) {
             return appUrl.forApiKeys();
+        } else if (isUserDbOnlyPath && isLegalBundelName && !isBundleExists) {
+            return appUrl.forCurrentDatabase().databaseSettings();
         }
 
         return true;
