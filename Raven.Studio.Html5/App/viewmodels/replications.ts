@@ -22,21 +22,25 @@ class replications extends viewModelBase {
         this.replicationsSetup(new replicationsSetup({ Destinations: [], Source: null }));
 
         var db = this.activeDatabase();
-        var automaticConflictResolution = new getAutomaticConflictResolutionDocumentCommand(db).execute();
-        var replicationDestinations = new getReplicationsCommand(db).execute();
+        if (db) {
+            var automaticConflictResolution = new getAutomaticConflictResolutionDocumentCommand(db).execute();
+            var replicationDestinations = new getReplicationsCommand(db).execute();
 
-        var self = this;
-        $.when(automaticConflictResolution, replicationDestinations)
-            .done((repConfig, repSetup) => {
-                this.replicationConfig(new replicationConfig(repConfig));
-                this.replicationsSetup(new replicationsSetup(repSetup));
-                this.replicationConfigDirtyFlag = ko.observable(new ko.DirtyFlag([this.replicationConfig]));
-                this.replicationsSetupDirtyFlag = ko.observable(new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations()]));
-                var combinedFlag = ko.computed(function () {
-                    return (self.replicationConfigDirtyFlag()().isDirty() || self.replicationsSetupDirtyFlag()().isDirty());
-                });
-                viewModelBase.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
-        });
+            var self = this;
+            $.when(automaticConflictResolution, replicationDestinations)
+                .done((repConfig, repSetup) => {
+                    this.replicationConfig(new replicationConfig(repConfig));
+                    if (repSetup != null) {
+                        this.replicationsSetup(new replicationsSetup(repSetup));
+                    }
+                    this.replicationConfigDirtyFlag = ko.observable(new ko.DirtyFlag([this.replicationConfig]));
+                    this.replicationsSetupDirtyFlag = ko.observable(new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations()]));
+                    var combinedFlag = ko.computed(function () {
+                        return (self.replicationConfigDirtyFlag()().isDirty() || self.replicationsSetupDirtyFlag()().isDirty());
+                    });
+                    viewModelBase.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
+                });  
+        }
     }
 
     createNewDestination() {
