@@ -4,6 +4,22 @@ html, body {
     height: 100%;
 }
 
+.not-implemented-yet {
+  position: relative;
+}
+
+.not-implemented-yet:after {
+  content: " ";
+  z-index: 10;
+  display: block;
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  top: 0;
+  left: 0;
+  right: 0;  
+}
+
 .table-no-borders td
 {
     border-top: none !important;
