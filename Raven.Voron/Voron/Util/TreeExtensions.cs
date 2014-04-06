@@ -18,7 +18,7 @@ namespace Voron
             if (treeName.Equals(Constants.FreeSpaceTreeName, StringComparison.InvariantCultureIgnoreCase))
                 return state.FreeSpaceRoot;
 
-		    Tree tree = tx.ReadTree(treeName);
+		    Tree tree = tx.Environment.CreateTree(tx, treeName);
 
 			if (tree != null)
 				return tree;
