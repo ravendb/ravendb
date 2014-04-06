@@ -4,7 +4,7 @@ import database = require("models/database");
 class getAutomaticConflictResolutionDocumentCommand extends getDocumentWithMetadataCommand {
 
     constructor(db: database) {
-        super("Raven/Replication/Config", db);
+        super("Raven/Replication/Config", db, true);
     }
 
     execute(): JQueryPromise<replicationsDto> {
