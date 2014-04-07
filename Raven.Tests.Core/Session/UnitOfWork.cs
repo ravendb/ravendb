@@ -1,10 +1,11 @@
-﻿// -----------------------------------------------------------------------
+﻿using Raven.Abstractions.Exceptions;
+// -----------------------------------------------------------------------
 //  <copyright file="UnitOfWork.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Tests.Core.Utils.Entities;
-
+using System;
 using Xunit;
 
 namespace Raven.Tests.Core.Session
@@ -181,5 +182,37 @@ namespace Raven.Tests.Core.Session
 				}
 			}
 		}
+
+        [Fact]
+        public void OptmisticConcurrency()
+        {
+            const string entityId = "users/1";
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    Assert.False(session.Advanced.UseOptimisticConcurrency);
+                    session.Advanced.UseOptimisticConcurrency = true;
+
+                    session.Store(new User() { Id = entityId, Name = "User1" });
+                    session.SaveChanges();
+
+                    using (var otherSession = store.OpenSession())
+                    {
+                        var otherUser = otherSession.Load<User>(entityId);
+                        otherUser.Name = "OtherName";
+                        otherSession.Store(otherUser);
+                        otherSession.SaveChanges();
+                    }
+
+                    var user = session.Load<User>("users/1");
+                    user.Name = "Name";
+                    session.Store(user);
+                    var e = Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
+                    Assert.Equal("PUT attempted on document '" + entityId + "' using a non current etag", e.Message);
+                }
+            }
+        }
 	}
 }
