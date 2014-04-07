@@ -335,16 +335,17 @@ class ctor {
         var idCheckboxWidth = idCheckboxColumn ? idCheckboxColumn.width() : 0;
         var idColumnExists = idColumn ? 1 : 0;
 
-        var calculateWidth = ctor.idColumnWidth;
+        //var calculateWidth = ctor.idColumnWidth;
         var colCount = Object.keys(columnsNeeded).length;
 
-        calculateWidth = (this.grid.width() - 200 * idColumnExists) / (colCount + idColumnExists + 1);
+        var calculateWidth = (this.grid.width() - 200 * idColumnExists) / (colCount + idColumnExists + 1);
 
         var availiableWidth = this.grid.width() - 200 * idColumnExists;
         var freeWidth = availiableWidth;
+        var fontSize = parseInt(this.grid.css("font-size"));
         var columnCount = 0;
         for (var binding in columnsNeeded) {
-            var curColWidth = (binding.length + 2) * parseInt(this.grid.css("font-size"));
+            var curColWidth = (binding.length + 2) * fontSize;
             if (freeWidth - curColWidth < 0) {
                 break;
             }
@@ -355,14 +356,13 @@ class ctor {
 
         var firstRow = this.recycleRows().length > 0 ? this.recycleRows()[0] : null;
         for (var binding in columnsNeeded) {
-            var curColWidth = (binding.length + 2) * parseInt(this.grid.css("font-size")) + freeWidthPerColumn;
+            var curColWidth = (binding.length + 2) * fontSize + freeWidthPerColumn;
             var columnWidth = this.getColumnWidth(binding, curColWidth);
 
             availiableWidth -= columnWidth;
             if (availiableWidth <= 0) {
                 break;
             }
-
             var columnName = this.getColumnName(binding);
 
             // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
@@ -556,3 +556,4 @@ class ctor {
 }
 
 export = ctor;
+
