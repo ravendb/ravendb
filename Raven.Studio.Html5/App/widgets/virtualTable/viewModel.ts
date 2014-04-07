@@ -343,14 +343,16 @@ class ctor {
 
         var availiableWidth = this.grid.width() - 200 * idColumnExists;
         var firstRow = this.recycleRows().length > 0 ? this.recycleRows()[0] : null;
+
+// ReSharper disable once DuplicatingLocalDeclaration
         for (var binding in columnsNeeded) {
 
             var curColWidth = (binding.length + 3) * parseInt(this.grid.css("font-size"));
             
             availiableWidth -= curColWidth ;
             if (availiableWidth > 0) {
-                var columnWidth = this.getColumnWidth(binding, curColWidth);
-                var columnName = this.getColumnName(binding);
+                var columnWidth = this.getColumnWidth(binding, curColWidth );
+                var columnName  = this.getColumnName(binding);
 
                 // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
                 var newColumn = new column(binding, columnWidth, columnName);
@@ -359,8 +361,6 @@ class ctor {
                 } else if (this.columns().length < 100) { //TODO: CHANGE 100 TO MAX_COLUMNS
                     this.columns.push(newColumn);
                 }
-            } else {
-                break;
             }
 
             var curColumnConfig = this.settings.customColumns().findConfigFor(binding);
@@ -374,7 +374,20 @@ class ctor {
                 }));
 
             }
+
+          
         }
+
+        var unneededColumns = new Array<string>();
+        ko.utils.arrayForEach(this.columns(), col => {
+            if (col.binding !== "Id" && col.binding !== "__IsChecked" &&
+                rows.every((r, inx, a) => typeof r[col.binding] === 'undefined') &&
+                !unneededColumns.contains(col.binding))
+                unneededColumns.push(col.binding);
+        });
+
+        this.columns.remove(c => unneededColumns.contains(c.binding));
+        this.columns.valueHasMutated();
     }
 
     ensureRowsCoverViewport() {
