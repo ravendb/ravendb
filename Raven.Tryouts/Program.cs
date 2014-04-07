@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.SlowTests.Issues;
 using Raven.Tests.Storage;
 
 namespace Raven.Tryouts
@@ -12,13 +13,10 @@ namespace Raven.Tryouts
 			for (int i = 0; i < 10; i++)
 			{
 				Console.Write("\r"+i);
-				Parallel.For(0, 100, a =>
+				using (var x = new RavenDB_1603())
 				{
-					using (var x = new Indexes())
-					{
-						x.CanRecordAttempts();
-					}
-				});
+					x.CanHandleDocumentExceptionsGracefully_Smuggler().Wait();
+				}
 			}
 
 			//var server = new RavenDbServer(new RavenConfiguration

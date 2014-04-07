@@ -1,26 +1,49 @@
-﻿<div class="filesystems-page">
+﻿<div class="alert alert-danger">
+    <p>Note: not implemented yet</p>
+    <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2064">You can track progress here</a>
+</div>
 
-    <div class="alert alert-danger">
-        TODO: Implement this page.
+<div class="filesystems-page not-implemented-yet">
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <form class="form-inline">
+                <div class="row" style="padding: 0 10px 0 10px">
+                    <div class="input-group col-lg-12">
+                        <input type="text" class="form-control" placeholder="E.g. __fileName:MyFile* AND __directory:/subfolder" />
+                        <span class="input-group-addon" style="width: 30px">
+                            <a href="javascript:void(0)"><i class="fa fa-times"></i></a>
+                        </span>
+                        <span class="input-group-addon" style="width: 30px">
+                            <a href="javascript:void(0)"><i class="fa fa-search"></i></a>
+                        </span>
+                    </div>
+                </div>
+            </form>
+            <br />
+            <h5>Add search filter</h5>
+            <div class="row" style="padding: 0 10px 0 10px">
+                <div class="btn-group">
+                    <button id="fileNameEndsWith" type="button" class="btn btn-default popover-html">File name ends with...</button>
+                    <button type="button" class="btn btn-default popover-html">File name starts with...</button>
+                    <button type="button" class="btn btn-default popover-html">File size...</button>
+                    <button type="button" class="btn btn-default popover-html">Has metadata...</button>
+                    <button type="button" class="btn btn-default popover-html">In folder...</button>
+                    <button type="button" class="btn btn-default popover-html">Last modified...</button>
+                </div>
+            </div>
+        </div>
+        <div class="panel-body">
+
+        </div>
     </div>
+</div>
 
-    <ul class="breadcrumb">
-        <li>
-            <h3>
-                <a href="#filesystems">
-                    Files
-                </a>
-            </h3>
-        </li>
-        <li data-bind="with: activeFilesystem">
-            <a data-bind="text: name"></a>
-        </li>
-        <li>
-            <a>Search</a>
-        </li>
-        <!--<li class="active">
-            <span data-bind="text: currentBreadcrumbTitle"></span>
-        </li>-->
-    </ul>
-
+<div id="fileNameEndsWithContextMenu" hidden>
+    <form class="form-inline" role="form">
+        <div class="form-group">
+            <label>Ends with</label>
+            <input type="text" class="form-control" />
+        </div>
+    </form>
 </div>

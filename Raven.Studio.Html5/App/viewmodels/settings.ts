@@ -13,7 +13,7 @@ class settings extends viewModelBase {
     isOnUserDatabase: KnockoutComputed<boolean>;
     appUrls: computedAppUrls;
 
-    bundleMap = { Quotas: "Quotas", Replication: "Replication", SqlReplication: "SQL Replication", Versioning: "Versioning", PeriodicBackups: "Periodic Backup", ScriptedIndexResults: "Scripted Index" };
+    bundleMap = { quotas: "Quotas", replication: "Replication", sqlreplication: "SQL Replication", versioning: "Versioning", periodicbackups: "Periodic Backup", scriptedindexresults: "Scripted Index", scriptedindex: "Scripted Index"};
     userDatabasePages = ko.observableArray(["Database Settings"]);
     systemDatabasePages = ["API Keys", "Windows Authentication"];
 
@@ -25,9 +25,9 @@ class settings extends viewModelBase {
         this.isOnSystemDatabase = ko.computed(() => this.activeDatabase() && this.activeDatabase().isSystem);
         this.isOnUserDatabase = ko.computed(() => this.activeDatabase() && !this.isOnSystemDatabase());
 
-        var apiKeyRoute = { route: ['databases/settings', 'databases/settings/apiKeys'], moduleId: 'viewmodels/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys() };
+        var apiKeyRoute = { route: 'databases/settings/apiKeys', moduleId: 'viewmodels/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys() };
         var windowsAuthRoute = { route: 'databases/settings/windowsAuth', moduleId: 'viewmodels/windowsAuth', title: 'Windows Authentication', nav: true, hash: appUrl.forWindowsAuth() };
-        var databaseSettingsRoute = { route: 'databases/settings/databaseSettings', moduleId: 'viewmodels/databaseSettings', title: 'Database Settings', nav: true, hash: appUrl.forCurrentDatabase().databaseSettings };
+        var databaseSettingsRoute = { route: ['databases/settings', 'databases/settings/databaseSettings'], moduleId: 'viewmodels/databaseSettings', title: 'Database Settings', nav: true, hash: appUrl.forCurrentDatabase().databaseSettings };
         //var quotasRoute = { route: 'settings/quotas', moduleId: 'viewmodels/quotas', title: 'Quotas', nav: true, hash: appUrl.forCurrentDatabase().quotas };
         var replicationsRoute = { route: 'databases/settings/replication', moduleId: 'viewmodels/replications', title: 'Replication', nav: true, hash: appUrl.forCurrentDatabase().replications };
         var sqlReplicationsRoute = { route: 'databases/settings/sqlReplication', moduleId: 'viewmodels/sqlReplications', title: 'SQL Replication', nav: true, hash: appUrl.forCurrentDatabase().sqlReplications };
@@ -57,10 +57,16 @@ class settings extends viewModelBase {
     * This is used for preventing a navigating to system-only pages when the current databagse is non-system, and vice-versa.
     */
     getValidRoute(instance: Object, instruction: DurandalRouteInstruction): any {
+        //debugger;
 
+        var pathArr = instruction.fragment.split('/');
+        var bundelName = pathArr[pathArr.length - 1].toLowerCase();
+        var isBundleExists = this.userDatabasePages.indexOf(this.bundleMap[bundelName]) >= 0;
         var isSystemDbOnlyPath = instruction.fragment.indexOf("windowsAuth") >= 0 || instruction.fragment.indexOf("apiKeys") >= 0 || instruction.fragment === "settings";
         var isUserDbOnlyPath = !isSystemDbOnlyPath;
-        if (isSystemDbOnlyPath && !this.activeDatabase().isSystem) {
+
+        //if ((isSystemDbOnlyPath && !this.activeDatabase().isSystem) || (isUserDbOnlyPath && !isBundleExists)) {
+        if ((isSystemDbOnlyPath && !this.activeDatabase().isSystem)){
             return appUrl.forCurrentDatabase().databaseSettings();
         } else if (isUserDbOnlyPath && this.activeDatabase().isSystem) {
             return appUrl.forApiKeys();
@@ -84,7 +90,7 @@ class settings extends viewModelBase {
                         var arr = documentSettings.split(';');
 
                         for (var i = 0; i < arr.length; i++) {
-                            var bundleName = self.bundleMap[arr[i]];
+                            var bundleName = self.bundleMap[arr[i].toLowerCase()];
                             if (bundleName != undefined) {
                                 self.userDatabasePages.push(bundleName);
                             }

@@ -10,33 +10,38 @@ import saveAutomaticConflictResolutionDocument = require("commands/saveAutomatic
 
 class replications extends viewModelBase {
 
-    replicationConfig = ko.observable<replicationConfig>();
-    replicationsSetup = ko.observable<replicationsSetup>();
+    replicationConfig = ko.observable<replicationConfig>().extend({ required: true });
+    replicationsSetup = ko.observable<replicationsSetup>().extend({ required: true });
     
-    replicationConfigDirtyFlag = ko.observable(new ko.DirtyFlag([]));
-    replicationsSetupDirtyFlag = ko.observable(new ko.DirtyFlag([]));
+    replicationConfigDirtyFlag = new ko.DirtyFlag([]);
+    replicationsSetupDirtyFlag = new ko.DirtyFlag([]);
 
     activate() {
-
         this.replicationConfig(new replicationConfig({DocumentConflictResolution: "None", AttachmentConflictResolution: "None"}));
         this.replicationsSetup(new replicationsSetup({ Destinations: [], Source: null }));
 
         var db = this.activeDatabase();
-        var automaticConflictResolution = new getAutomaticConflictResolutionDocumentCommand(db).execute();
-        var replicationDestinations = new getReplicationsCommand(db).execute();
+        if (db) {
+            var automaticConflictResolution = new getAutomaticConflictResolutionDocumentCommand(db).execute();
+            var replicationDestinations = new getReplicationsCommand(db).execute();
 
-        var self = this;
-        $.when(automaticConflictResolution, replicationDestinations)
-            .done((repConfig, repSetup) => {
-                this.replicationConfig(new replicationConfig(repConfig));
-                this.replicationsSetup(new replicationsSetup(repSetup));
-                this.replicationConfigDirtyFlag = ko.observable(new ko.DirtyFlag([this.replicationConfig]));
-                this.replicationsSetupDirtyFlag = ko.observable(new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations()]));
-                var combinedFlag = ko.computed(function () {
-                    return (self.replicationConfigDirtyFlag()().isDirty() || self.replicationsSetupDirtyFlag()().isDirty());
-                });
-                viewModelBase.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
-        });
+            var self = this;
+            $.when(automaticConflictResolution, replicationDestinations)
+                .done((repConfig, repSetup) => {
+                    if (repConfig != null) {
+                        this.replicationConfig(new replicationConfig(repConfig));
+                    }
+                    if (repSetup != null) {
+                        this.replicationsSetup(new replicationsSetup(repSetup));
+                    }
+                    this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
+                    this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations()]);
+                    var combinedFlag = ko.computed(function () {
+                        return (self.replicationConfigDirtyFlag().isDirty() || self.replicationsSetupDirtyFlag().isDirty());
+                    });
+                    viewModelBase.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
+                });  
+        }
     }
 
     createNewDestination() {
@@ -80,7 +85,7 @@ class replications extends viewModelBase {
         if (db) {
             new saveReplicationDocumentCommand(this.replicationsSetup().toDto(), db)
                 .execute()
-                .done(() => this.replicationsSetupDirtyFlag()().reset() );
+                .done(() => this.replicationsSetupDirtyFlag().reset() );
         }
     }
 
@@ -89,7 +94,7 @@ class replications extends viewModelBase {
         if (db) {
             new saveAutomaticConflictResolutionDocument(this.replicationConfig().toDto(), db)
                 .execute()
-                .done(() => this.replicationConfigDirtyFlag()().reset() );
+                .done(() => this.replicationConfigDirtyFlag().reset() );
         }
     }
 }

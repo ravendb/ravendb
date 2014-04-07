@@ -68,8 +68,8 @@ namespace Raven.Tests.Common.Util
                     var read = s.Read(buffer, 0, 4096);
                     if (read == 0)
                         break;
-                    Interlocked.Add(ref total, read);
-                    if (VetoTransfer(total, new ArraySegment<byte>(buffer, 0, read)))
+                    var tmpTotal = Interlocked.Add(ref total, read);
+					if (VetoTransfer(tmpTotal, new ArraySegment<byte>(buffer, 0, read)))
                     {
                         //force close of both streams
                         s.Close();

@@ -83,7 +83,7 @@ class viewModelBase {
     }
 
     /*
-    * Called by Durandal before deactivate in order to detemine whether removing from the DOM is necessary.
+    * Called by Durandal before deactivate in order to determine whether removing from the DOM is necessary.
     */
     canDeactivate(isClose): any {
         var isDirty = viewModelBase.dirtyFlag().isDirty();
@@ -106,7 +106,7 @@ class viewModelBase {
     /*
      * Creates a keyboard shortcut local to the specified element and its children.
      * The shortcut will be removed as soon as the view model is deactivated.
-     * Also defines shortcut for ace edito, if ace editor was recieved
+     * Also defines shortcut for ace editor, if ace editor was received
      */
     createKeyboardShortcut(keys: string, handler: () => void, elementSelector: string) {
         jwerty.key(keys, e => {
@@ -120,7 +120,7 @@ class viewModelBase {
     }
 
     //A method to save the current value in the observables from text boxes and inputs before a refresh/page close.
-    //Should be implemented on the inhereting class.
+    //Should be implemented on the inheriting class.
     saveInObservable() {
 
     }

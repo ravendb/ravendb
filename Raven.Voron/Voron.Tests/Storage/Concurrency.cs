@@ -144,7 +144,7 @@ namespace Voron.Tests.Storage
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var e = Assert.Throws<ConcurrencyException>(() => tx.State.Root.MultiAdd(tx, "key/1", "321", 2));
+				var e = Assert.Throws<ConcurrencyException>(() => tx.State.Root.MultiAdd(tx, "key/1", "321", version: 2));
 				Assert.Equal("Cannot add 'key/1' to 'Root' tree. Version mismatch. Expected: 2. Actual: 1.", e.Message);
 			}
 

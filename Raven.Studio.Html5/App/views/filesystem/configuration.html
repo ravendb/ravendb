@@ -1,4 +1,9 @@
-﻿<div class="filesystems-page">
+﻿<div class="alert alert-danger">
+    <p>Note: not implemented yet</p>
+    <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2062">You can track progress here</a>
+</div>
+
+<div class="filesystems-page not-implemented-yet">
 
     <ul class="breadcrumb">
         <li>
@@ -61,9 +66,15 @@
                                 </td>
                             </tr>
                         </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3">
+                                    <button data-bind='click: addKeyValue' class="btn btn-default">Add New</button>
+                                    <button type="submit" class="btn btn-primary">Save</button>
+                                </td>
+                            </tr>
+                        </tfoot>
                     </table>
-                    <button data-bind='click: addKeyValue' class="btn btn-default">Add New</button>
-                    <button type="submit" class="btn btn-primary">Save</button>
                 </div>
             </form>
         </div>

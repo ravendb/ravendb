@@ -12,7 +12,7 @@ class deleteFilesystemConfigurationKeyCommand extends commandBase {
         var url = "/config";
         var args = {
             name: this.name
-        }
+        };
 
         return this.del(url, args, this.fs);
     }

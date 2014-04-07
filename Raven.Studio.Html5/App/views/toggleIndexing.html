@@ -3,25 +3,19 @@
         <h3 class="panel-title">Toggle Indexing</h3>
     </div>
     <div class="panel-body">
-        <div class="panel panel-info">
-            <div class="panel-heading">
-                <div class="glyphicon glyphicon-info-sign"></div>
-                Enable and disable indexing
-            </div>
+
+        <div class="btn-group" data-toggle="buttons">
+            <label class="btn btn-primary" data-bind="click: enableIndexing, css: { active: indexingStatus() !== 'Paused' }">
+                <input type="checkbox"> <i class="fa fa-play"></i> Enable indexing
+            </label>
+            <label class="btn btn-primary" data-bind="click: disableIndexing, css: { active: indexingStatus() !== 'Indexing' }">
+                <input type="checkbox"> <i class="fa fa-stop text-danger"></i> Disable indexing
+            </label>
         </div>
-
-        <button class="btn btn-primary" data-bind="click: disableIndexing, visible: indexingStatus() != 'Paused'">
-            <span class="glyphicon glyphicon-stop"></span>
-            <span>Disable Indexing</span>
-        </button>
-
-        <button class="btn btn-primary" data-bind="click: enableIndexing, visible: indexingStatus() != 'Indexing'">
-            <span class="glyphicon glyphicon-play"></span>
-            <span>Enable Indexing</span>
-        </button>
-
+        <br />
+        <br />
         <div>
-            Current Status: <span data-bind="text: indexingStatus"></span>
+            <span class="text-muted">Current Status:</span>&nbsp;<span data-bind="text: indexingStatus"></span>
         </div>
     </div>
 </div>

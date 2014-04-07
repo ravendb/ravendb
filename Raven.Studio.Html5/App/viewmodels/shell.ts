@@ -17,7 +17,7 @@ import alertType = require("common/alertType");
 import pagedList = require("common/pagedList");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
-import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
+
 import getBuildVersionCommand = require("commands/getBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
@@ -26,6 +26,10 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import changesApi = require("common/changesApi");
+
+import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
+import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
+
 
 class shell extends viewModelBase {
     private router = router;
@@ -41,15 +45,14 @@ class shell extends viewModelBase {
     recordedErrors = ko.observableArray<alertArgs>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
-
     filesystems = ko.observableArray<filesystem>();
     filesystemsLoadedTask: JQueryPromise<any>;
 
+    canShowFilesystemNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('filesystems'));
+
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
-
-    activeArea = ko.observable<string>("");
-
+    activeArea = ko.observable<string>("Databases");
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();    
 
@@ -91,15 +94,9 @@ class shell extends viewModelBase {
             { route: 'filesystems/search', title: 'Search', moduleId: 'viewmodels/filesystem/filesystemSearch', nav: true, hash: this.appUrls.filesystemSearch },
             { route: 'filesystems/synchronization', title: 'Synchronization', moduleId: 'viewmodels/filesystem/filesystemSynchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
             { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
-            //{ route: 'filesystems/create', title: 'Create Filesystem', moduleId: 'viewmodels/filesystem/createFilesystem', nav: true },
             { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
             { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
         ]).buildNavigationModel();
-
-        router.activeInstruction.subscribe(val => {
-            if (val.config.route.split('/').length == 1) //if it's a root navigation item.
-                this.activeArea(val.config.title);
-        });
 
         // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
@@ -121,6 +118,11 @@ class shell extends viewModelBase {
             trigger: 'hover'
         });
 
+        router.activeInstruction.subscribe(val => {
+            if (val.config.route.split('/').length == 1) //if it's a root navigation item.
+                this.activeArea(val.config.title);
+        });
+
         shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
     }
 
@@ -133,6 +135,8 @@ class shell extends viewModelBase {
             NProgress.set(newProgress);
         } else {
             NProgress.done();
+            this.activeArea(appUrl.checkIsAreaActive("filesystems") ? "File Systems" : "Databases");
+            $('.tooltip.fade').remove(); // Fix for tooltips that are shown right before navigation - they get stuck and remain in the UI.
         }
     }
 
@@ -144,9 +148,8 @@ class shell extends viewModelBase {
         if (this.databases().length == 1) {
             systemDatabase.activate();
         } else {
-            this.databases.first(x=> x.isVisible()).activate();
+            this.databases.first(x => x.isVisible()).activate();
         }
-        
     }
 
     filesystemsLoaded(filesystems) {
@@ -178,7 +181,6 @@ class shell extends viewModelBase {
 	        .fail(result => this.handleRavenConnectionFailure(result))
 	        .done(results => {
 	            this.filesystemsLoaded(results);
-	            router.activate();
 	            this.fetchBuildVersion();
 	            this.fetchLicenseStatus();
 	        });
@@ -291,9 +293,20 @@ class shell extends viewModelBase {
                 if (!existingDb ) {
                     this.databases.unshift(result);
                     }
-                
                 });
-
+            });
+                
+        new getFilesystemsCommand()
+            .execute()
+            .done(results => {
+                ko.utils.arrayForEach(results, (result: filesystem) => {
+                    var existingFs = this.filesystems().first(d=> {
+                        return d.name == result.name;
+                });
+                    if (!existingFs) {
+                        this.filesystems.unshift(result);
+                    }
+                });
         });
 
         var db = this.activeDatabase();
@@ -301,6 +314,13 @@ class shell extends viewModelBase {
             new getDatabaseStatsCommand(db)
                 .execute()
                 .done(result=> db.statistics(result));
+        }
+
+        var fs = this.activeFilesystem();
+        if (fs) {
+            new getFilesystemStatsCommand(fs)
+                .execute()
+                .done(result=> fs.statistics(result));
         }
     }
 

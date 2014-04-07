@@ -27,7 +27,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void TempPathForVoronShouldWork1()
         {
-            using (var storage = NewTransactionalStorage(requestedStorage: "voron", dataDir: path))
+            using (var storage = NewTransactionalStorage(requestedStorage: "voron", dataDir: path, runInMemory:false))
             {
                 var scratchFile = Path.Combine(path, "scratch.buffers");
                 var scratchFileTemp = Path.Combine(temp, "scratch.buffers");
@@ -40,7 +40,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void TempPathForVoronShouldWork2()
         {
-            using (var storage = NewTransactionalStorage(requestedStorage: "voron", dataDir: path, tempDir: temp))
+			using (var storage = NewTransactionalStorage(requestedStorage: "voron", dataDir: path, tempDir: temp, runInMemory: false))
             {
                 var scratchFile = Path.Combine(path, "scratch.buffers");
                 var scratchFileTemp = Path.Combine(temp, "scratch.buffers");

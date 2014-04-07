@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{46152256-7443-426C-A20D-B2F354B51810}</ProjectGuid>
+    <ProjectGuid>{FD6DA74C-A7E3-4176-A340-2EB2F3952F2D}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Raven.SlowTests</RootNamespace>
