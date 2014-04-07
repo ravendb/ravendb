@@ -274,13 +274,12 @@ class ctor {
     }
 
     getColumnWidth(binding: string, defaultColumnWidth: number = 100): number {
-         
-        var customConfig = this.settings.customColumns().findConfigFor(binding);
-        if (customConfig) {
+        var customColumns = this.settings.customColumns();
+        var customConfig = customColumns.findConfigFor(binding);
+        if (customConfig && customColumns.customMode() === true) {
             return customConfig.width();
         }
 
-        var columnWidth = defaultColumnWidth;
         if (binding === "Id" && defaultColumnWidth > ctor.idColumnWidth) {
             return ctor.idColumnWidth;
         }
@@ -342,25 +341,37 @@ class ctor {
         calculateWidth = (this.grid.width() - 200 * idColumnExists) / (colCount + idColumnExists + 1);
 
         var availiableWidth = this.grid.width() - 200 * idColumnExists;
+        var freeWidth = availiableWidth;
+        var columnCount = 0;
+        for (var binding in columnsNeeded) {
+            var curColWidth = (binding.length + 2) * parseInt(this.grid.css("font-size"));
+            if (freeWidth - curColWidth < 0) {
+                break;
+            }
+            freeWidth -= curColWidth;
+            columnCount++;
+        }
+        var freeWidthPerColumn = (freeWidth / columnCount + 1);
+
         var firstRow = this.recycleRows().length > 0 ? this.recycleRows()[0] : null;
         for (var binding in columnsNeeded) {
+            var curColWidth = (binding.length + 2) * parseInt(this.grid.css("font-size")) + freeWidthPerColumn;
+            var columnWidth = this.getColumnWidth(binding, curColWidth);
 
-            var curColWidth = (binding.length + 3) * parseInt(this.grid.css("font-size"));
-            
-            availiableWidth -= curColWidth ;
-            if (availiableWidth > 0) {
-                var columnWidth = this.getColumnWidth(binding, curColWidth);
-                var columnName = this.getColumnName(binding);
-
-                // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
-                var newColumn = new column(binding, columnWidth, columnName);
-                if (binding === "Name") {
-                    this.columns.splice(2, 0, newColumn);
-                } else if (this.columns().length < 100) { //TODO: CHANGE 100 TO MAX_COLUMNS
-                    this.columns.push(newColumn);
-                }
-            } else {
+            availiableWidth -= columnWidth;
+            if (availiableWidth <= 0) {
                 break;
+            }
+
+            var columnName = this.getColumnName(binding);
+
+            // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
+            var newColumn = new column(binding, columnWidth, columnName);
+            if (binding === "Name") {
+                this.columns.splice(2, 0, newColumn);
+                //} else if (this.columns().length < maxColumns + 1) {
+            } else {
+                this.columns.push(newColumn);
             }
 
             var curColumnConfig = this.settings.customColumns().findConfigFor(binding);
@@ -370,7 +381,7 @@ class ctor {
                     Binding: binding,
                     Header: binding,
                     Template: curColumnTemplate,
-                    DefaultWidth: availiableWidth > 0 ? Math.floor(newColumn.width()) : 0
+                    DefaultWidth: availiableWidth > 0 ? Math.floor(columnWidth) : 0
                 }));
 
             }
