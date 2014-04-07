@@ -159,7 +159,7 @@ namespace Raven.Tests.Issues
                     }
                 }, new SmugglerOptions()));
 
-                Assert.Equal("Smuggler encountered a connection problem: 'Unable to connect to the remote server'.", e.Message);
+                Assert.Contains("Smuggler encountered a connection problem:", e.Message);
 
                 e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ExportData(new SmugglerExportOptions
                 {
@@ -171,7 +171,7 @@ namespace Raven.Tests.Issues
                     }
                 }, new SmugglerOptions()));
 
-                Assert.Equal("Smuggler encountered a connection problem: 'Unable to connect to the remote server'.", e.Message);
+                Assert.Contains("Smuggler encountered a connection problem:", e.Message);
             }
             finally
             {
