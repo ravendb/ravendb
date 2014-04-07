@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Raven.Client.Exceptions;
 
 namespace Raven.Tests.Core.Session
 {
@@ -177,5 +178,25 @@ namespace Raven.Tests.Core.Session
 				}
 			}
 		}
+
+        [Fact]
+        public void StoringDocumentWithTheSameIdInTheSameSessionShouldThrow()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var user = new User() { Id = "users/1", Name = "User1" };
+
+                    session.Store(user);
+                    session.SaveChanges();
+
+                    user = new User() { Id = "users/1", Name = "User2" };
+
+                    var e = Assert.Throws<NonUniqueObjectException>(() => session.Store(user));
+                    Assert.Equal("Attempted to associate a different object with id 'users/1'.", e.Message);
+                }
+            }
+        }
 	}
 }
