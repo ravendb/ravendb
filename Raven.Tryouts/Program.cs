@@ -8,7 +8,7 @@ namespace Raven.Tryouts
 {
 	class Program
 	{
-		private unsafe static void Main(string[] args)
+		private  static void Main(string[] args)
 		{
 			for (int i = 0; i < 10; i++)
 			{
@@ -62,11 +62,6 @@ namespace Raven.Tryouts
 			//server.Dispose();
 		}
 	}
-
-    public unsafe class My
-    {
-        public byte* B { get; set; }
-    }
 
 	public class OrderTotalResult
 	{
