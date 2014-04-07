@@ -7,41 +7,56 @@ import getReplicationsCommand = require("commands/getReplicationsCommand");
 import saveReplicationDocumentCommand = require("commands/saveReplicationDocumentCommand");
 import getAutomaticConflictResolutionDocumentCommand = require("commands/getAutomaticConflictResolutionDocumentCommand");
 import saveAutomaticConflictResolutionDocument = require("commands/saveAutomaticConflictResolutionDocument");
+import appUrl = require("common/appUrl");
 
 class replications extends viewModelBase {
 
-    replicationConfig = ko.observable<replicationConfig>().extend({ required: true });
-    replicationsSetup = ko.observable<replicationsSetup>().extend({ required: true });
+    replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None", AttachmentConflictResolution: "None" }));
+    replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ Destinations: [], Source: null }));
     
     replicationConfigDirtyFlag = new ko.DirtyFlag([]);
     replicationsSetupDirtyFlag = new ko.DirtyFlag([]);
 
-    activate() {
-        this.replicationConfig(new replicationConfig({DocumentConflictResolution: "None", AttachmentConflictResolution: "None"}));
-        this.replicationsSetup(new replicationsSetup({ Destinations: [], Source: null }));
+    isConfigSaveEnabled: KnockoutComputed<boolean>;
+    isSetupSaveEnabled: KnockoutComputed<boolean>;
 
+    canActivate(args: any): JQueryPromise<any> {
+        var deferred = $.Deferred();
         var db = this.activeDatabase();
         if (db) {
             var automaticConflictResolution = new getAutomaticConflictResolutionDocumentCommand(db).execute();
             var replicationDestinations = new getReplicationsCommand(db).execute();
 
-            var self = this;
             $.when(automaticConflictResolution, replicationDestinations)
-                .done((repConfig, repSetup) => {
+                .done((repConfig, repSetup)=> {
                     if (repConfig != null) {
                         this.replicationConfig(new replicationConfig(repConfig));
                     }
                     if (repSetup != null) {
                         this.replicationsSetup(new replicationsSetup(repSetup));
                     }
-                    this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
-                    this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations()]);
-                    var combinedFlag = ko.computed(function () {
-                        return (self.replicationConfigDirtyFlag().isDirty() || self.replicationsSetupDirtyFlag().isDirty());
-                    });
-                    viewModelBase.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
-                });  
+                    deferred.resolve({ can: true });
+                })
+                .fail(() => deferred.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) }));
         }
+        return deferred;
+    }
+
+    activate() {
+        var self = this;
+        this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
+        this.isConfigSaveEnabled = ko.computed(function () {
+            return self.replicationConfigDirtyFlag().isDirty();
+        });
+        this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations()]);
+        this.isSetupSaveEnabled = ko.computed(function () {
+            return self.replicationsSetupDirtyFlag().isDirty();
+        });
+
+        var combinedFlag = ko.computed(function () {
+            return (self.replicationConfigDirtyFlag().isDirty() || self.replicationsSetupDirtyFlag().isDirty());
+        });
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
     }
 
     createNewDestination() {
