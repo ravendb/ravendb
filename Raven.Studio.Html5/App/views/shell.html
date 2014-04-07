@@ -235,14 +235,16 @@
     <div class="navbar navbar-fixed-bottom navbar-inverse">
         <div class="navbar-inner">
             <ul class="nav navbar-nav" data-bind="with: activeDatabase, visible: appUrls.isAreaActive('databases')">
-                <li><a data-bind="attr: { href: $root.appUrls.status }" class="navbar-link">Status</a></li>
+                <li class="status-link"><a data-bind="attr: { href: $root.appUrls.status }" class="navbar-link">Status</a></li>
                 <!-- ko with: statistics -->
                 <li><a class="navbar-link" data-bind="text: CountOfDocuments + ' documents', attr: { href: $parents[1].appUrls.documents }"></a></li>
                 <li><a class="navbar-link" data-bind="text: CountOfIndexes + ' indexes', attr: { href: $parents[1].appUrls.indexes }"></a></li>
                 <li><a class="navbar-link" data-bind="text: StaleIndexes.length + ' stale', attr: { href: $parents[1].appUrls.status }"></a></li>
                 <li><a class="navbar-link" data-bind="text: Errors.length + ' errors', attr: { href: $parents[1].appUrls.indexErrors }"></a></li>
                 <li><a class="navbar-link" data-bind="text: ApproximateTaskCount + ' tasks', attr: { href: $parents[1].appUrls.status }"></a></li>
-                <li class="raw-url" data-bind="visible:$root.rawUrlIsVisible"><a class="navbar-link" href="#" target='_blank' data-bind="text:$root.currentRawUrl(), attr:{ href: $root.currentRawUrl()}"></a></li>
+                <li class="raw-url hidden-sm" data-bind="visible:$root.rawUrlIsVisible">
+                    <a class="navbar-link" href="#" target='_blank' data-bind="text:$root.currentRawUrl(), attr:{ href: $root.currentRawUrl()}" style="max-width: 180px; text-overflow: ellipsis; overflow-x: hidden; white-space:nowrap;"></a>
+                </li>
                 <!-- /ko -->
             </ul>
 
@@ -255,11 +257,11 @@
                 <!-- /ko -->
             </ul>
 
-            <ul>
+            <ul class="nav navbar-nav navbar-right" style="margin-right: 10px;">
                 <!-- ko with: $root -->
                 <!--<li class="navbar-right"><a class="navbar-link pull-right">Client Build #30</a></li>-->
-                <li data-bind="with: buildVersion" class="navbar-right pull-right"><a class="navbar-link " data-bind="text: 'Server Build #' + BuildVersion"></a></li>
-                <li data-bind="with: licenseStatus" class="navbar-right pull-right"><a class="navbar-link " data-bind="text: 'License Status: ' + Status">AGPL - Open Source</a></li>
+                <li data-bind="with: licenseStatus"><a class="navbar-link " data-bind="text: 'License Status: ' + Status">AGPL - Open Source</a></li>
+                <li class="server-build-link" data-bind="with: buildVersion"><a class="navbar-link " data-bind="text: 'Server Build #' + BuildVersion"></a></li>
                 <!-- /ko -->
             </ul>
 

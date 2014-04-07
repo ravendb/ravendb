@@ -582,8 +582,8 @@ html, body {
         width: 10em;
     } 
 
-    /* When the screen width < 1070, shrink down the padding between the nav bar items. */ 
-    @media (max-width: 1130px) {
+    /* When the screen width < 1150, shrink down the padding between the nav bar items. */ 
+    @media (max-width: 1150px) {
         .nav {
             li {
                 a {
@@ -634,6 +634,19 @@ html, body {
     @media(max-width: 767px) {
         display: none;
     }
+
+    @media(max-width: 1150px) {
+        // When we're in a small width window, we don't have enough space to show everything in the footer.
+        // Hide the status link and the server build link.
+        .status-link {
+            display: none;
+        }
+
+        .server-build-link {
+            display: none;
+        }
+    }
+
     /*ul {
         width: 100% !important;
     }

@@ -63,11 +63,26 @@ class queryFacetsCommand extends commandBase {
                 }
 
                 item['Key'] = facetValue.Range;
-                item[facetAggregationLabel + " of " + aggregateField] = facetValue.Hits;
+                //item[facetAggregationLabel + " of " + aggregateField] = facetValue.Hits;
+                
+                for (var power = 0; power < 5; power++) {
+                    var curFieldName = facet.getLabelForAggregation(Math.pow(2, power));
+                    var curFieldVal = facetValue[curFieldName];
 
-                for (var facetProp in facetValue) {
-                    item[facetProp] = facetValue[facetProp];
+                    if (!!curFieldVal) {
+                        if (typeof curFieldVal === "number") {
+                            var fixedVal = curFieldVal.toFixed(2);
+                            if (fixedVal != curFieldVal) {
+                                curFieldVal = fixedVal;
+                            }
+                        }
+                        item[curFieldName  + " of " + aggregateField] = curFieldVal;
+                    }
                 }
+                
+
+              //  item[facetAggregationLabel + " of " + aggregateField] = facetValue[facetAggregationLabel];
+                
             }
 
             propIndex++;
