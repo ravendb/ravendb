@@ -88,8 +88,10 @@ class row {
                 var cleanData = data.replace('/\t+/g', '')
                                     .replace(/\s+/g, '')
                                     .replace('/\n+/g', '');
-                if (/^\[{"[a-zA-Z0-9_-]+":/.test(cleanData))                
-                    return cell.defaultTemplate;
+                if (/^\[{"[a-zA-Z0-9_-]+":/.test(cleanData) ||
+                    //this handy REGEX for testing URLs was taken from http://stackoverflow.com/questions/8188645/javascript-regex-to-match-a-url-in-a-field-of-text
+                    /(http|ftp|https):\/\/[\w-]+(\.[\w-]+)+([\w.,@?^=%&amp;:\/~+#-]*[\w@?^=%&amp;\/~+#-])?/.test(cleanData))                
+                        return cell.defaultTemplate;
                 if (/\w+\/\w+/ig.test(data))
                     return cell.externalIdTemplate;
             }
