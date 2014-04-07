@@ -326,7 +326,22 @@ class ctor {
         var idColumn = this.columns.first(x=> x.binding == "Id");
         var idColumnExists = idColumn ? 1 : 0;
 
-        var availiableWidth = this.grid.width() - 200 * idColumnExists;
+        var unneededColumns = new Array<string>();
+        ko.utils.arrayForEach(this.columns(), col => {
+            if (col.binding !== "Id" && col.binding !== "__IsChecked" &&
+                rows.every(row => !row.getDocumentPropertyNames().contains(col.binding)))
+                unneededColumns.push(col.binding);
+        });
+
+        this.columns.remove(c => unneededColumns.contains(c.binding));
+        this.columns.valueHasMutated();
+
+        var columnsCurrentTotalWidth = 0;
+        for (var i = 2; i < this.columns().length; i++) {
+            columnsCurrentTotalWidth += this.columns()[i].width();
+        }
+
+        var availiableWidth = this.grid.width() - 200 * idColumnExists - columnsCurrentTotalWidth;
         var freeWidth = availiableWidth;
         var fontSize = parseInt(this.grid.css("font-size"));
         var columnCount = 0;
@@ -344,7 +359,6 @@ class ctor {
         for (var binding in columnsNeeded) {
             var curColWidth = (binding.length + 2) * fontSize + freeWidthPerColumn;
             var columnWidth = this.getColumnWidth(binding, curColWidth);
-
             availiableWidth -= columnWidth;
             if (availiableWidth <= 0) {
                 break;
@@ -355,7 +369,7 @@ class ctor {
             var newColumn = new column(binding, columnWidth, columnName);
             if (binding === "Name") {
                 this.columns.splice(2, 0, newColumn);
-                //} else if (this.columns().length < maxColumns + 1) {
+                //} else if (this.columns().length < 9) {
             } else {
                 this.columns.push(newColumn);
             }
@@ -371,16 +385,6 @@ class ctor {
                 }));
 
             }
-
-            var unneededColumns = new Array<string>();
-            ko.utils.arrayForEach(this.columns(), col => {
-                if (col.binding !== "Id" && col.binding !== "__IsChecked" &&
-                    rows.every(row => !row.getDocumentPropertyNames().contains(col.binding)))
-                    unneededColumns.push(col.binding);
-            });
-
-            this.columns.remove(c => unneededColumns.contains(c.binding));
-            this.columns.valueHasMutated();
         }
     }
 
