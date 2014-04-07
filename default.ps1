@@ -50,19 +50,6 @@ task Compile -depends Init {
 	
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
-	# exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Utilities\Raven.ProjectRewriter\Raven.ProjectRewriter.csproj" /p:OutDir="$build_dir\" }
-	# exec { &"$build_dir\Raven.ProjectRewriter.exe" }
-	
-	$dat = "$base_dir\..\BuildsInfo\RavenDB\Settings.dat"
-	$datDest = "$base_dir\Raven.Studio\Settings.dat"
-	echo $dat
-	if (Test-Path $dat) {
-		Copy-Item $dat $datDest -force
-	}
-	ElseIf ((Test-Path $datDest) -eq $false) {
-		New-Item $datDest -type file -force
-	}
-	
 	Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
 }
