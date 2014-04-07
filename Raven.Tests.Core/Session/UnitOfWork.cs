@@ -195,7 +195,7 @@ namespace Raven.Tests.Core.Session
                     Assert.False(session.Advanced.UseOptimisticConcurrency);
                     session.Advanced.UseOptimisticConcurrency = true;
 
-                    session.Store(new User() { Id = entityId, Name = "User1" });
+                    session.Store(new User { Id = entityId, Name = "User1" });
                     session.SaveChanges();
 
                     using (var otherSession = store.OpenSession())

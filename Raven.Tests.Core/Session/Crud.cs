@@ -186,12 +186,12 @@ namespace Raven.Tests.Core.Session
             {
                 using (var session = store.OpenSession())
                 {
-                    var user = new User() { Id = "users/1", Name = "User1" };
+                    var user = new User { Id = "users/1", Name = "User1" };
 
                     session.Store(user);
                     session.SaveChanges();
 
-                    user = new User() { Id = "users/1", Name = "User2" };
+                    user = new User { Id = "users/1", Name = "User2" };
 
                     var e = Assert.Throws<NonUniqueObjectException>(() => session.Store(user));
                     Assert.Equal("Attempted to associate a different object with id 'users/1'.", e.Message);
