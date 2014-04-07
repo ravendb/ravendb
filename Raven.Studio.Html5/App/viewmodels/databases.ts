@@ -133,7 +133,7 @@ class databases extends viewModelBase {
         }
 
         deferred.done(() => {
-            //this.createDB(databaseName, bundles, advancedSettings, securedSettings)
+            //var self = this; // Note: no reason to use self. If you want to use 'this' in a callback, put the callback in a lambda, e.g. .done(() => this.Foobar())
             new createDatabaseCommand(databaseName, settings, securedSettings)
                 .execute()
                 .done(() => {
@@ -144,19 +144,6 @@ class databases extends viewModelBase {
                     }
                 });
         });
-    }
-
-    private createDB(databaseName: string, bundles: string[], securedSettings: {}) {
-        //var self = this; // Note: no reason to use self. If you want to use 'this' in a callback, put the callback in a lambda, e.g. .done(() => this.Foobar())
-        return new createDatabaseCommand(databaseName, bundles, securedSettings)
-            .execute()
-            .fail(response=> {
-                //self.creationTask.reject(response);
-            })
-            .done(result=> {
-                //self.creationTask.resolve(databaseName);
-                //dialog.close(self);
-            });
     }
 
     private isEmptyStringOrWhitespace(str: string) {
@@ -225,6 +212,7 @@ class databases extends viewModelBase {
 
     onDatabaseDeleted(db: database) {
         this.databases.remove(db);
+        this.databases.valueHasMutated();
         if (this.databases.length === 0)
             this.selectDatabase(this.systemDb);
         else if (this.databases.contains(this.selectedDatabase()) === false) {
