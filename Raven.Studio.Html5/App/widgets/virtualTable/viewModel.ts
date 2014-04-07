@@ -300,13 +300,6 @@ class ctor {
         // This is called when items finish loading and are ready for display.
         // Keep allocations to a minimum.
 
-        // Enforce a max number of columns. Having many columns is unweildy to the user
-        // and greatly slows down scroll speed.
-        var maxColumns = Math.floor(this.grid.width() / 200 );
-        if (this.columns().length >= maxColumns) {
-            return;
-        }
-
         var columnsNeeded = {};
         if (this.settings.customColumns().hasOverrides()) {
             var colParams = this.settings.customColumns().columns();
@@ -385,6 +378,16 @@ class ctor {
                 }));
 
             }
+
+            var unneededColumns = new Array<string>();
+            ko.utils.arrayForEach(this.columns(), col => {
+                if (col.binding !== "Id" && col.binding !== "__IsChecked" &&
+                    rows.every(row => !row.getDocumentPropertyNames().contains(col.binding)))
+                    unneededColumns.push(col.binding);
+            });
+
+            this.columns.remove(c => unneededColumns.contains(c.binding));
+            this.columns.valueHasMutated();
         }
     }
 
