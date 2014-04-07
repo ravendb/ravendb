@@ -229,10 +229,10 @@ class ctor {
                 if (!firstVisibleRowIndexHasChanged) {
                     this.virtualRowCount(resultSet.totalResultCount);
                     resultSet.items.forEach((r, i) => this.fillRow(r, i + firstVisibleIndex));
-                    this.ensureColumnsForRows(resultSet.items);
+                    this.ensureColumnsForRows(resultSet.items);                    
                     this.recycleRows.valueHasMutated();
                     this.columns.valueHasMutated();
-
+                    
                     var rows = this.recycleRows();
                     var columns = this.columns();
                 }
@@ -301,13 +301,6 @@ class ctor {
         // This is called when items finish loading and are ready for display.
         // Keep allocations to a minimum.
 
-        // Enforce a max number of columns. Having many columns is unweildy to the user
-        // and greatly slows down scroll speed.
-        var maxColumns = Math.floor(this.grid.width() / 200 );
-        if (this.columns().length >= maxColumns) {
-            return;
-        }
-
         var columnsNeeded = {};
         if (this.settings.customColumns().hasOverrides()) {
             var colParams = this.settings.customColumns().columns();
@@ -373,22 +366,20 @@ class ctor {
                     DefaultWidth: availiableWidth > 0 ? Math.floor(newColumn.width()) : 0
                 }));
 
-            }
-
-          
+            }          
         }
 
         var unneededColumns = new Array<string>();
         ko.utils.arrayForEach(this.columns(), col => {
             if (col.binding !== "Id" && col.binding !== "__IsChecked" &&
-                rows.every((r, inx, a) => typeof r[col.binding] === 'undefined') &&
-                !unneededColumns.contains(col.binding))
-                unneededColumns.push(col.binding);
+                rows.every(row => !row.getDocumentPropertyNames().contains(col.binding)))
+                    unneededColumns.push(col.binding);
         });
 
         this.columns.remove(c => unneededColumns.contains(c.binding));
         this.columns.valueHasMutated();
     }
+
 
     ensureRowsCoverViewport() {
         // This is hot path, called multiple times when scrolling. 
