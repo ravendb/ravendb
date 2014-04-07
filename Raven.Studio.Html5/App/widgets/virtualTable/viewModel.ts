@@ -457,7 +457,7 @@ class ctor {
             if (customConfig) {
                 return customConfig.template();
             }
-        } 
+        }
         return undefined;
     }
 
