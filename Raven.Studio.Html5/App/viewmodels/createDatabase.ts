@@ -162,6 +162,8 @@ class createDatabase extends dialogViewModelBase {
     }
 
     toggleQuotasBundle() {
+        if (this.isQuotasBundleEnabled() === false)
+            app.showMessage("Quotas Bundle configuration window is not implemented yet.", "Not implemented");
         this.isQuotasBundleEnabled.toggle();
     }
 
@@ -174,6 +176,8 @@ class createDatabase extends dialogViewModelBase {
     }
 
     toggleVersioningBundle() {
+        if (this.isVersioningBundleEnabled() === false)
+            app.showMessage("Versioning Bundle configuration window is not implemented yet.", "Not implemented");
         this.isVersioningBundleEnabled.toggle();
     }
 

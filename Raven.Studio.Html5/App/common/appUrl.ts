@@ -146,7 +146,7 @@ class appUrl {
     }
 
     static forPeriodicBackup(db: database): string {
-        return "#databases/settings/periodicBackup?" + appUrl.getEncodedDbPart(db);
+        return "#databases/settings/periodicBackups?" + appUrl.getEncodedDbPart(db);
     }
 
     static forReplications(db: database): string {

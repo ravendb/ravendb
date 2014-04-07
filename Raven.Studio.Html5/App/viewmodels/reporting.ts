@@ -92,9 +92,20 @@ class reporting extends viewModelBase {
         var selectedIndex = this.selectedIndexName();
         var filterQuery = this.hasFilter() ? this.filter() : null;
         var facets = this.addedValues().map(v => v.toDto());
+        var groupedFacets: facetDto[] = [];
+        facets.forEach((curFacet) => {
+            var foundFacet = groupedFacets.first(x => x.AggregationField == curFacet.AggregationField);
+
+            if (foundFacet) {
+                foundFacet.Aggregation += curFacet.Aggregation;
+            } else {
+                groupedFacets.push(curFacet);
+            }
+
+        });
         var db = this.activeDatabase();
         var resultsFetcher = (skip: number, take: number) => {
-            return new queryFacetsCommand(selectedIndex, filterQuery, skip, take, facets, db)
+            return new queryFacetsCommand(selectedIndex, filterQuery, skip, take, groupedFacets, db)
                 .execute()
                 .done((resultSet: pagedResultSet) => this.queryDuration(resultSet.additionalResultInfo));
         };

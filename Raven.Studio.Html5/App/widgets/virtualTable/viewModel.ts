@@ -232,6 +232,9 @@ class ctor {
                     this.ensureColumnsForRows(resultSet.items);
                     this.recycleRows.valueHasMutated();
                     this.columns.valueHasMutated();
+
+                    var rows = this.recycleRows();
+                    var columns = this.columns();
                 }
 
                 this.recycleRows.valueHasMutated();
@@ -270,14 +273,15 @@ class ctor {
         return collection.getCollectionCssClass(this.getEntityName(doc));
     }
 
-    getColumnWidth(binding: string, defaultColumnWidth: number = 200): number {
+    getColumnWidth(binding: string, defaultColumnWidth: number = 100): number {
+         
         var customConfig = this.settings.customColumns().findConfigFor(binding);
         if (customConfig) {
             return customConfig.width();
         }
 
         var columnWidth = defaultColumnWidth;
-        if (binding === "Id")  {
+        if (binding === "Id" && defaultColumnWidth > ctor.idColumnWidth) {
             return ctor.idColumnWidth;
         }
         return defaultColumnWidth;
@@ -299,8 +303,7 @@ class ctor {
 
         // Enforce a max number of columns. Having many columns is unweildy to the user
         // and greatly slows down scroll speed.
-        //var maxColumns = this.grid.width()/200;
-        var maxColumns = this.grid.width() / 200;
+        var maxColumns = Math.floor(this.grid.width() / 200 );
         if (this.columns().length >= maxColumns) {
             return;
         }
@@ -335,28 +338,41 @@ class ctor {
 
         var calculateWidth = ctor.idColumnWidth;
         var colCount = Object.keys(columnsNeeded).length;
-        if ((colCount + idColumnExists) * 200 + idCheckboxWidth > this.grid.width()) {
-            if (idColumn) {
-                idColumn.width(calculateWidth);
+
+        calculateWidth = (this.grid.width() - 200 * idColumnExists) / (colCount + idColumnExists + 1);
+
+        var availiableWidth = this.grid.width() - 200 * idColumnExists;
+        var firstRow = this.recycleRows().length > 0 ? this.recycleRows()[0] : null;
+        for (var binding in columnsNeeded) {
+
+            var curColWidth = (binding.length + 3) * parseInt(this.grid.css("font-size"));
+            
+            availiableWidth -= curColWidth ;
+            if (availiableWidth > 0) {
+                var columnWidth = this.getColumnWidth(binding, curColWidth);
+                var columnName = this.getColumnName(binding);
+
+                // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
+                var newColumn = new column(binding, columnWidth, columnName);
+                if (binding === "Name") {
+                    this.columns.splice(2, 0, newColumn);
+                } else if (this.columns().length < 100) { //TODO: CHANGE 100 TO MAX_COLUMNS
+                    this.columns.push(newColumn);
+                }
+            } else {
+                break;
             }
-        } else {
-            calculateWidth = this.grid.width() / (colCount + idColumnExists);
-        }
 
-        //if (idColumn) {
-        //    idColumn.width(calculateWidth);
-        //}
+            var curColumnConfig = this.settings.customColumns().findConfigFor(binding);
+            if (!curColumnConfig && !!firstRow) {
+                var curColumnTemplate: string = firstRow.getCellTemplate(binding);
+                this.settings.customColumns().columns.push(new customColumnParams({
+                    Binding: binding,
+                    Header: binding,
+                    Template: curColumnTemplate,
+                    DefaultWidth: availiableWidth > 0 ? Math.floor(newColumn.width()) : 0
+                }));
 
-        for (var binding  in columnsNeeded) {
-            var columnWidth = this.getColumnWidth(binding, calculateWidth);
-            var columnName = this.getColumnName(binding);
-
-            // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
-            var newColumn = new column(binding, columnWidth, columnName);
-            if (binding === "Name") {
-                this.columns.splice(2, 0, newColumn);
-            } else if (this.columns().length < 10) {
-                this.columns.push(newColumn);
             }
         }
     }

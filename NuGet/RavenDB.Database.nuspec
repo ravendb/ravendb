@@ -18,6 +18,7 @@
 			<dependency id="Microsoft.Data.Edm" version="5.2" />
 			<dependency id="Microsoft.Data.OData" version="5.2" />
 			<dependency id="Microsoft.WindowsAzure.ConfigurationManager" version="1.8" />
+			<dependency id="RavenDB.Client" version="" />
 		</dependencies>
 		<frameworkAssemblies>
 			<frameworkAssembly assemblyName="System.ComponentModel.Composition" targetFramework="net40" />
