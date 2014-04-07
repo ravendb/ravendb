@@ -82,8 +82,6 @@ class query extends viewModelBase {
         });
 
         this.didDynamicChangeIndex = ko.computed(() => {
-            debugger;
-
             if (this.queryStats()) {
                 var recievedIndex = this.queryStats().IndexName;
                 var selectedIndex = this.selectedIndex();

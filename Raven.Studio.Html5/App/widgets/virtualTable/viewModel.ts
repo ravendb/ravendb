@@ -324,14 +324,7 @@ class ctor {
         }
 
         var idColumn = this.columns.first(x=> x.binding == "Id");
-        var idCheckboxColumn = this.columns.first(x=> x.binding == "__IsChecked");
-        var idCheckboxWidth = idCheckboxColumn ? idCheckboxColumn.width() : 0;
         var idColumnExists = idColumn ? 1 : 0;
-
-        //var calculateWidth = ctor.idColumnWidth;
-        var colCount = Object.keys(columnsNeeded).length;
-
-        var calculateWidth = (this.grid.width() - 200 * idColumnExists) / (colCount + idColumnExists + 1);
 
         var availiableWidth = this.grid.width() - 200 * idColumnExists;
         var freeWidth = availiableWidth;
