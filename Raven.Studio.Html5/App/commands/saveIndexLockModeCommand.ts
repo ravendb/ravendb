@@ -20,9 +20,16 @@ class saveIndexLockModeCommand extends commandBase {
         
         // Deliberately not encoding index name in URI. Doing this breaks Raven's URL handling, resulting in a 400 bad request.
         var url = "/indexes/" + this.index.name + this.urlEncodeArgs(args);
-        var saveTask = this.post(url, args, this.db);
-        saveTask.done(() => this.reportSuccess("Saved " + this.index.name));
-        saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save " + this.index.name, response.responseText));
+        var saveTask = this.post(url, JSON.stringify(args), this.db, { dataType: 'text' });
+        saveTask.done(() => {
+             debugger;
+             this.reportSuccess("Saved " + this.index.name);
+        });
+        saveTask.fail((response: JQueryXHR) => {
+            debugger;
+            this.reportError("Failed to save this" + this.index.name, response.responseText);
+
+        });
 
         return saveTask;
     }
