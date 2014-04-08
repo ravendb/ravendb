@@ -214,7 +214,11 @@ class editDocument extends viewModelBase {
         } else {
             // If we're editing a document, we hide some reserved properties from the user.
             // Restore these before we save.
-            this.metaPropsToRestoreOnSave.forEach(p => meta[p.name] = p.value);
+            this.metaPropsToRestoreOnSave.forEach(p => {
+                if (p.name !== "Origin"){
+                    meta[p.name] = p.value;
+                }
+            });
         }
 
         var newDoc = new document(updatedDto);
