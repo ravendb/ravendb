@@ -97,7 +97,17 @@ namespace Voron.Trees
 			{
 				NativeMethods.memcpy(dst, src, value.Length);
 			}
+		}
 
+		public void Add(Transaction tx, Slice key, Slice value, ushort? version = null)
+		{
+			if (value == null) throw new ArgumentNullException("value");
+
+			State.IsModified = true;
+
+			var dst = DirectAdd(tx, key, value.Size, version: version);
+
+			value.CopyTo(dst);
 		}
 
 		private static void CopyStreamToPointer(Transaction tx, Stream value, byte* pos)

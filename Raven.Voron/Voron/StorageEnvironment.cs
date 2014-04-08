@@ -461,7 +461,6 @@ namespace Voron
 
 			return new EnvironmentStats
 			{
-				FreePages = _freeSpaceHandling.GetFreePageCount(),
 				FreePagesOverhead = State.FreeSpaceRoot.State.PageCount,
 				RootPages = State.Root.State.PageCount,
 				UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,

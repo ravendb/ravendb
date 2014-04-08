@@ -268,17 +268,6 @@ namespace Voron.Impl.FreeSpace
 			return true;
 		}
 
-		public long GetFreePageCount()
-		{
-			using (var tx = _env.NewTransaction(TransactionFlags.Read))
-			{
-			    var readResult = tx.State.FreeSpaceRoot.Read(tx, _freePagesCount);
-			    if (readResult == null)
-			        return 0;
-                return readResult.Reader.ReadInt64();
-			}
-		}
-
 		public List<long> AllPages(Transaction tx)
 		{
 			return tx.State.FreeSpaceRoot.AllPages(tx);

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using Voron.Impl;
+using Voron.Util.Conversion;
 
 namespace Voron
 {
@@ -81,7 +82,7 @@ namespace Voron
 
             Read(buffer, 0, sizeof (int));
 
-            return BitConverter.ToInt32(buffer, 0);
+			return EndianBitConverter.Big.ToInt32(buffer, 0);
         }
 
         public long ReadInt64()
@@ -92,7 +93,7 @@ namespace Voron
 
             Read(buffer, 0, sizeof(long));
 
-            return BitConverter.ToInt64(buffer, 0);
+            return EndianBitConverter.Big.ToInt64(buffer, 0);
         }
 
         public string ToStringValue()

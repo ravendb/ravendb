@@ -2,7 +2,6 @@
 {
     public class EnvironmentStats
     {
-        public long FreePages;
         public long FreePagesOverhead;
         public long RootPages;
         public long UnallocatedPagesAtEndOfFile;

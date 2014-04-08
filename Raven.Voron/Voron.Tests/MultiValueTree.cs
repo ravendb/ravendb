@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Voron.Impl;
 using Voron.Trees;
+using Voron.Util.Conversion;
 using Xunit;
 
 namespace Voron.Tests
@@ -54,8 +55,8 @@ namespace Voron.Tests
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.Environment.State.GetTree(tx, "foo").MultiAdd(tx, "ChildTreeKey", "1", new MemoryStream(BitConverter.GetBytes(55)));
-				tx.Environment.State.GetTree(tx, "foo").MultiAdd(tx, "ChildTreeKey", "2", new MemoryStream(BitConverter.GetBytes(12)));
+				tx.Environment.State.GetTree(tx, "foo").MultiAdd(tx, "ChildTreeKey", "1", new MemoryStream(EndianBitConverter.Big.GetBytes(55)));
+				tx.Environment.State.GetTree(tx, "foo").MultiAdd(tx, "ChildTreeKey", "2", new MemoryStream(EndianBitConverter.Big.GetBytes(12)));
 				tx.Commit();
 			}
 
@@ -88,8 +89,8 @@ namespace Voron.Tests
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.Environment.State.GetTree(tx, "foo").MultiAdd(tx, "ChildTreeKey", "1", new MemoryStream(BitConverter.GetBytes(55)));
-				tx.Environment.State.GetTree(tx, "foo").MultiAdd(tx, "ChildTreeKey", "2", new MemoryStream(BitConverter.GetBytes(12)));
+				tx.Environment.State.GetTree(tx, "foo").MultiAdd(tx, "ChildTreeKey", "1", new MemoryStream(EndianBitConverter.Big.GetBytes(55)));
+				tx.Environment.State.GetTree(tx, "foo").MultiAdd(tx, "ChildTreeKey", "2", new MemoryStream(EndianBitConverter.Big.GetBytes(12)));
 
 				tx.Environment.State.GetTree(tx, "foo").MultiDelete(tx, "ChildTreeKey", "2");
 				tx.Commit();
