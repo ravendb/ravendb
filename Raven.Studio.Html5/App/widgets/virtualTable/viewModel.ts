@@ -232,6 +232,9 @@ class ctor {
                     this.ensureColumnsForRows(resultSet.items);
                     this.recycleRows.valueHasMutated();
                     this.columns.valueHasMutated();
+
+                    var rows = this.recycleRows();
+                    var columns = this.columns();
                 }
 
                 this.recycleRows.valueHasMutated();
@@ -270,14 +273,14 @@ class ctor {
         return collection.getCollectionCssClass(this.getEntityName(doc));
     }
 
-    getColumnWidth(binding: string, defaultColumnWidth: number = 200): number {
-        var customConfig = this.settings.customColumns().findConfigFor(binding);
-        if (customConfig) {
+    getColumnWidth(binding: string, defaultColumnWidth: number = 100): number {
+        var customColumns = this.settings.customColumns();
+        var customConfig = customColumns.findConfigFor(binding);
+        if (customConfig && customColumns.customMode() === true) {
             return customConfig.width();
         }
 
-        var columnWidth = defaultColumnWidth;
-        if (binding === "Id")  {
+        if (binding === "Id" && defaultColumnWidth > ctor.idColumnWidth) {
             return ctor.idColumnWidth;
         }
         return defaultColumnWidth;
@@ -296,14 +299,6 @@ class ctor {
     ensureColumnsForRows(rows: Array<documentBase>) {
         // This is called when items finish loading and are ready for display.
         // Keep allocations to a minimum.
-
-        // Enforce a max number of columns. Having many columns is unweildy to the user
-        // and greatly slows down scroll speed.
-        //var maxColumns = this.grid.width()/200;
-        var maxColumns = this.grid.width() / 200;
-        if (this.columns().length >= maxColumns) {
-            return;
-        }
 
         var columnsNeeded = {};
         if (this.settings.customColumns().hasOverrides()) {
@@ -329,34 +324,66 @@ class ctor {
         }
 
         var idColumn = this.columns.first(x=> x.binding == "Id");
-        var idCheckboxColumn = this.columns.first(x=> x.binding == "__IsChecked");
-        var idCheckboxWidth = idCheckboxColumn ? idCheckboxColumn.width() : 0;
         var idColumnExists = idColumn ? 1 : 0;
 
-        var calculateWidth = ctor.idColumnWidth;
-        var colCount = Object.keys(columnsNeeded).length;
-        if ((colCount + idColumnExists) * 200 + idCheckboxWidth > this.grid.width()) {
-            if (idColumn) {
-                idColumn.width(calculateWidth);
-            }
-        } else {
-            calculateWidth = this.grid.width() / (colCount + idColumnExists);
+        var unneededColumns = new Array<string>();
+        ko.utils.arrayForEach(this.columns(), col => {
+            if (col.binding !== "Id" && col.binding !== "__IsChecked" &&
+                rows.every(row => !row.getDocumentPropertyNames().contains(col.binding)))
+                unneededColumns.push(col.binding);
+        });
+
+        this.columns.remove(c => unneededColumns.contains(c.binding));
+        this.columns.valueHasMutated();
+
+        var columnsCurrentTotalWidth = 0;
+        for (var i = 2; i < this.columns().length; i++) {
+            columnsCurrentTotalWidth += this.columns()[i].width();
         }
 
-        //if (idColumn) {
-        //    idColumn.width(calculateWidth);
-        //}
+        var availiableWidth = this.grid.width() - 200 * idColumnExists - columnsCurrentTotalWidth;
+        var freeWidth = availiableWidth;
+        var fontSize = parseInt(this.grid.css("font-size"));
+        var columnCount = 0;
+        for (var binding in columnsNeeded) {
+            var curColWidth = (binding.length + 2) * fontSize;
+            if (freeWidth - curColWidth < 0) {
+                break;
+            }
+            freeWidth -= curColWidth;
+            columnCount++;
+        }
+        var freeWidthPerColumn = (freeWidth / columnCount + 1);
 
-        for (var binding  in columnsNeeded) {
-            var columnWidth = this.getColumnWidth(binding, calculateWidth);
+        var firstRow = this.recycleRows().length > 0 ? this.recycleRows()[0] : null;
+        for (var binding in columnsNeeded) {
+            var curColWidth = (binding.length + 2) * fontSize + freeWidthPerColumn;
+            var columnWidth = this.getColumnWidth(binding, curColWidth);
+            availiableWidth -= columnWidth;
+            if (availiableWidth <= 0) {
+                break;
+            }
             var columnName = this.getColumnName(binding);
 
             // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
             var newColumn = new column(binding, columnWidth, columnName);
             if (binding === "Name") {
                 this.columns.splice(2, 0, newColumn);
-            } else if (this.columns().length < 10) {
+                //} else if (this.columns().length < 9) {
+            } else {
                 this.columns.push(newColumn);
+            }
+
+            var curColumnConfig = this.settings.customColumns().findConfigFor(binding);
+            if (!curColumnConfig && !!firstRow) {
+                var curColumnTemplate: string = firstRow.getCellTemplate(binding);
+                this.settings.customColumns().columns.push(new customColumnParams({
+                    Binding: binding,
+                    Header: binding,
+                    Template: curColumnTemplate,
+                    DefaultWidth: availiableWidth > 0 ? Math.floor(columnWidth) : 0
+                }));
+
             }
         }
     }
@@ -529,3 +556,4 @@ class ctor {
 }
 
 export = ctor;
+

@@ -32,7 +32,7 @@ class settings extends viewModelBase {
         var replicationsRoute = { route: 'databases/settings/replication', moduleId: 'viewmodels/replications', title: 'Replication', nav: true, hash: appUrl.forCurrentDatabase().replications };
         var sqlReplicationsRoute = { route: 'databases/settings/sqlReplication', moduleId: 'viewmodels/sqlReplications', title: 'SQL Replication', nav: true, hash: appUrl.forCurrentDatabase().sqlReplications };
         //var versioningRoute = { route: 'settings/versioning', moduleId: 'viewmodels/versioning', title: 'Versioning', nav: true, hash: appUrl.forCurrentDatabase().versioning };
-        var periodicBackupRoute = { route: 'databases/settings/periodicBackup', moduleId: 'viewmodels/periodicBackup', title: 'Periodic Backup', nav: true, hash: appUrl.forCurrentDatabase().periodicBackup };
+        var periodicBackupRoute = { route: 'databases/settings/periodicBackups', moduleId: 'viewmodels/periodicBackup', title: 'Periodic Backup', nav: true, hash: appUrl.forCurrentDatabase().periodicBackup };
         var scriptedIndexesRoute = { route: 'databases/settings/scriptedIndex', moduleId: 'viewmodels/scriptedIndexes', title: 'Scripted Index', nav: true, hash: appUrl.forCurrentDatabase().scriptedIndexes };
 
         this.router = durandalRouter.createChildRouter()
@@ -57,19 +57,19 @@ class settings extends viewModelBase {
     * This is used for preventing a navigating to system-only pages when the current databagse is non-system, and vice-versa.
     */
     getValidRoute(instance: Object, instruction: DurandalRouteInstruction): any {
-        //debugger;
-
         var pathArr = instruction.fragment.split('/');
         var bundelName = pathArr[pathArr.length - 1].toLowerCase();
+        var isLegalBundelName = (this.bundleMap[bundelName] != undefined);
         var isBundleExists = this.userDatabasePages.indexOf(this.bundleMap[bundelName]) >= 0;
         var isSystemDbOnlyPath = instruction.fragment.indexOf("windowsAuth") >= 0 || instruction.fragment.indexOf("apiKeys") >= 0 || instruction.fragment === "settings";
         var isUserDbOnlyPath = !isSystemDbOnlyPath;
 
-        //if ((isSystemDbOnlyPath && !this.activeDatabase().isSystem) || (isUserDbOnlyPath && !isBundleExists)) {
         if ((isSystemDbOnlyPath && !this.activeDatabase().isSystem)){
             return appUrl.forCurrentDatabase().databaseSettings();
         } else if (isUserDbOnlyPath && this.activeDatabase().isSystem) {
             return appUrl.forApiKeys();
+        } else if (isUserDbOnlyPath && isLegalBundelName && !isBundleExists) {
+            return appUrl.forCurrentDatabase().databaseSettings();
         }
 
         return true;

@@ -18,6 +18,7 @@ class selectColumns extends dialogViewModelBase {
 
     constructor(private customColumns: customColumns, private context, private database: database) {
         super();
+        //this.customColumns.customMode(true);
     }
 
     attached() {
