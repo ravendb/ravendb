@@ -515,3 +515,15 @@ interface patchDto {
     SelectedItem: string;
     Values: Array<patchValueDto>;
 }
+
+interface counterDto {
+    Name: string;
+    OverallTotal: number;
+    Servers: serverDto[];
+}
+
+interface serverDto {
+    Name: string;
+    PosCount: number;
+    NegCount: number;
+}

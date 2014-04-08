@@ -35,6 +35,8 @@
     <TypeScriptCompile Include="App\commands\deleteTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\downloadFileFromFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getCounterGroupsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getCountersCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationByKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getDestinationsCommand.ts" />
@@ -100,6 +102,7 @@
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
+    <TypeScriptCompile Include="App\models\counter.ts" />
     <TypeScriptCompile Include="App\models\filesystem\configurationKey.ts" />
     <TypeScriptCompile Include="App\models\filesystem\conflictHistory.ts" />
     <TypeScriptCompile Include="App\models\filesystem\conflictItem.ts" />
@@ -118,11 +121,14 @@
     <TypeScriptCompile Include="App\models\luceneField.ts" />
     <TypeScriptCompile Include="App\models\querySort.ts" />
     <TypeScriptCompile Include="App\models\resource.ts" />
+    <TypeScriptCompile Include="App\models\server.ts" />
     <TypeScriptCompile Include="App\models\spatialIndexField.ts" />
     <TypeScriptCompile Include="App\models\transformer.ts" />
     <TypeScriptCompile Include="App\models\uploadItem.ts" />
+    <TypeScriptCompile Include="App\models\counterGroup.ts" />
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
+    <TypeScriptCompile Include="App\viewmodels\counters.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\createFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\deleteFiles.ts" />
@@ -220,6 +226,7 @@
     <TypeScriptCompile Include="App\models\patchParam.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\counters.html" />
     <Content Include="App\views\filesystem\deleteFiles.html" />
     <Content Include="App\views\filesystem\filesystemSearch.html" />
     <Content Include="App\views\filesystem\filesystemSynchronization.html" />

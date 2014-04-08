@@ -62,6 +62,10 @@ class appUrl {
         return isThereAny;
     }
 
+    static forCounters(): string {
+        return "#databases/counters";
+    }
+
     static forDatabases(): string {
         return "#databases";
     }
