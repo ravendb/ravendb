@@ -9,8 +9,8 @@ import getFileCommand = require("commands/filesystem/getFileCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
-import file = require("models/file");
-import fileMetadata = require("models/fileMetadata");
+import file = require("models/filesystem/file");
+import fileMetadata = require("models/filesystem/fileMetadata");
 import deleteItems = require("viewmodels/deleteItems");
 
 class filesystemEditFile extends viewModelBase {

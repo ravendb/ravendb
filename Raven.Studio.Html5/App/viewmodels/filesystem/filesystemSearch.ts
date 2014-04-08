@@ -4,6 +4,9 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import filesystem = require("models/filesystem/filesystem");
 import viewModelBase = require("viewmodels/viewModelBase");
+import searchByQueryCommand = require("commands/filesystem/searchByQueryCommand");
+import pagedResultSet = require("common/pagedResultSet");
+import pagedList = require("common/pagedList");
 
 class filesystemSearch extends viewModelBase {
 
@@ -11,12 +14,16 @@ class filesystemSearch extends viewModelBase {
 
     searchUrl = appUrl.forCurrentDatabase().filesystemSearch;
     searchText = ko.observable("");
+    allFilesPagedItems = ko.observable<pagedList>();
+    selectedFilesIndices = ko.observableArray<number>();
     //startsWithText = ko.observable("");
+
+    static gridSelector = "#filesGrid";
 
     constructor() {
         super();
 
-        this.searchText.extend({ throttle: 200 }).subscribe(s => this.filterFiles(s));
+        this.searchText.extend({ throttle: 200 }).subscribe(s => this.searchFiles(s));
         //this.startsWithText.extend({ throttle: 200 }).subscribe(s => this.fileNameStartsWithClauseBuilder(s));
     }
 
@@ -77,9 +84,15 @@ class filesystemSearch extends viewModelBase {
         });
     }
 
-    filterFiles(filter: string) {
-        var filterLower = filter.toLowerCase();
-       
+    searchFiles(query: string) {
+        var fetcher = (skip: number, take: number) => this.fetchFiles(query.toLowerCase(), skip, take);
+        var list = new pagedList(fetcher);
+        this.allFilesPagedItems(list);
+    }
+
+    fetchFiles(query: string, skip: number, take: number): JQueryPromise<pagedResultSet> {
+        var task = new searchByQueryCommand(appUrl.getFilesystem(), query, skip, take, null).execute();
+        return task;
     }
 
     fileNameStartsWithClauseBuilder(input: string) {
