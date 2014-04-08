@@ -135,6 +135,7 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemStatistics.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemSynchronization.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemUploadFile.ts" />
+    <TypeScriptCompile Include="App\viewmodels\licensingStatus.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\backupDatabase.ts" />
@@ -224,6 +225,7 @@
     <Content Include="App\views\filesystem\filesystemSearch.html" />
     <Content Include="App\views\filesystem\filesystemSynchronization.html" />
     <Content Include="App\views\filesystem\filesystemEditFile.html" />
+    <Content Include="App\views\licensingStatus.html" />
     <Content Include="App\views\selectColumns.html" />
     <TypeScriptCompile Include="App\viewmodels\patch.ts" />
     <Content Include="App\views\patch.html" />
