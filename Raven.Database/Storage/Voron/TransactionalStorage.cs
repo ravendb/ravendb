@@ -282,8 +282,12 @@ namespace Raven.Storage.Voron
 			
 			var backupOperation = new BackupOperation(database, database.Configuration.DataDirectory,
 		        backupDestinationDirectory, tableStorage.Environment, incrementalBackup,documentDatabase);
-			
-            Task.Factory.StartNew(backupOperation.Execute);
+
+		    Task.Factory.StartNew(() =>
+		    {
+                using(backupOperation)
+		            backupOperation.Execute();
+		    });
 		}       
 
 		public void Restore(RestoreRequest restoreRequest, Action<string> output)
