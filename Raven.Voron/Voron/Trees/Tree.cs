@@ -85,7 +85,22 @@ namespace Voron.Trees
 		    CopyStreamToPointer(tx, value, pos);
 		}
 
-		private static unsafe void CopyStreamToPointer(Transaction tx, Stream value, byte* pos)
+		public void Add(Transaction tx, Slice key, byte[] value, ushort? version = null)
+		{
+			if (value == null) throw new ArgumentNullException("value");
+
+			State.IsModified = true;
+
+			var dst = DirectAdd(tx, key, value.Length, version: version);
+
+			fixed (byte* src = value)
+			{
+				NativeMethods.memcpy(dst, src, value.Length);
+			}
+
+		}
+
+		private static void CopyStreamToPointer(Transaction tx, Stream value, byte* pos)
 		{
 			var temporaryPage = tx.Environment.TemporaryPage;
 			var tempPageBuffer = temporaryPage.TempPageBuffer;

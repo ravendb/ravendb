@@ -66,7 +66,7 @@ namespace Voron
 			Set(node);
 		}
 
-		protected bool Equals(Slice other)
+		public bool Equals(Slice other)
 		{
 			return Compare(other, NativeMethods.memcmp) == 0;
 		}
