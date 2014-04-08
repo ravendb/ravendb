@@ -85,6 +85,8 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/IndexStoragePath"], (string)null);
 			FileSystemDataDir =
 				new StringSetting(settings["Raven/FileSystem/DataDir"], @"~\Data\FileSystem");
+			CountersDataDir =
+				new StringSetting(settings["Raven/Counters/DataDir"], @"~\Data\Counters");
 			FileSystemIndexStoragePath =
 				new StringSetting(settings["Raven/FileSystem/IndexStoragePath"], (string)null);
 			
@@ -214,6 +216,8 @@ namespace Raven.Database.Config
 		public StringSetting IndexStoragePath { get; private set; }
 
 		public StringSetting FileSystemDataDir { get; private set; }
+
+		public StringSetting CountersDataDir { get; private set; }
 		
 		public StringSetting FileSystemIndexStoragePath { get; private set; }
 

@@ -183,6 +183,8 @@ namespace Raven.Database.Config
 			DataDirectory = ravenSettings.DataDir.Value;
 
 			FileSystemDataDirectory = ravenSettings.FileSystemDataDir.Value;
+			
+			CountersDataDirectory = ravenSettings.CountersDataDir.Value;
 
 			FileSystemIndexStoragePath = ravenSettings.FileSystemIndexStoragePath.Value;
 
@@ -637,12 +639,21 @@ namespace Raven.Database.Config
 		/// <summary>
 		/// The directory for the RavenDB file system. 
 		/// You can use the ~\ prefix to refer to RavenDB's base directory. 
-		/// Default: ~\Data
 		/// </summary>
 		public string FileSystemDataDirectory
 		{
 			get { return fileSystemDataDirectory; }
 			set { fileSystemDataDirectory = value == null ? null : FilePathTools.MakeSureEndsWithSlash(value.ToFullPath()); }
+		}
+
+		/// <summary>
+		/// The directory for the RavenDB counters. 
+		/// You can use the ~\ prefix to refer to RavenDB's base directory. 
+		/// </summary>
+		public string CountersDataDirectory
+		{
+			get { return countersDataDirectory; }
+			set { countersDataDirectory = value == null ? null : FilePathTools.MakeSureEndsWithSlash(value.ToFullPath()); }
 		}
 
 		/// <summary>
@@ -784,6 +795,7 @@ namespace Raven.Database.Config
 
 		private string indexStoragePath, journalStoragePath;
 		private string fileSystemIndexStoragePath;
+		private string countersDataDirectory;
 		private int? maxNumberOfParallelIndexTasks;
 		private int initialNumberOfItemsToIndexInSingleBatch;
 		private AnonymousUserAccessMode anonymousUserAccessMode;

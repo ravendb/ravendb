@@ -1,13 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using Raven.Abstractions;
+using Raven.Database.Config;
 using Voron;
 using Voron.Impl;
 using Voron.Trees;
 using Voron.Util;
 using Voron.Util.Conversion;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Database.Counters
 {
@@ -15,20 +20,28 @@ namespace Raven.Database.Counters
 	{
 		private readonly StorageEnvironment storageEnvironment;
 		public Guid Id { get; private set; }
+		public DateTime LastWrite { get; private set; }
 
 		private readonly Dictionary<string, int> serverIds = new Dictionary<string, int>(); 
-		private readonly Slice etagKeySlice = new Slice(Encoding.UTF8.GetBytes("@etag"));
 
 		private long lastEtag;
 
-		public CounterStorage(string name, StorageEnvironmentOptions options)
+		public CounterStorage(string name, InMemoryRavenConfiguration configuration)
 		{
+			var options = configuration.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
+				: CreateStorageOptionsFromConfiguration(configuration.CountersDataDirectory, configuration.Settings);
+
 			storageEnvironment = new StorageEnvironment(options);
 
+			Initialize(name);
+		}
+
+		private void Initialize(string name)
+		{
 			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				storageEnvironment.CreateTree(tx, "counters");
-				
+
 				var servers = storageEnvironment.CreateTree(tx, "servers");
 				var etags = storageEnvironment.CreateTree(tx, "etags->counters");
 				storageEnvironment.CreateTree(tx, "counters->etags");
@@ -76,6 +89,24 @@ namespace Raven.Database.Counters
 			}
 		}
 
+		private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, NameValueCollection settings)
+		{
+			bool allowIncrementalBackupsSetting;
+			if (bool.TryParse(settings["Raven/Voron/AllowIncrementalBackups"] ?? "false", out allowIncrementalBackupsSetting) == false)
+				throw new ArgumentException("Raven/Voron/AllowIncrementalBackups settings key contains invalid value");
+
+			var directoryPath = path ?? AppDomain.CurrentDomain.BaseDirectory;
+			var filePathFolder = new DirectoryInfo(directoryPath);
+			if (filePathFolder.Exists == false)
+				filePathFolder.Create();
+
+			var tempPath = settings["Raven/Voron/TempPath"];
+			var journalPath = settings[Constants.RavenTxJournalPath];
+			var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
+			options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
+			return options;
+		}
+
 		public Reader CreateReader()
 		{
 			return new Reader(storageEnvironment);
@@ -83,11 +114,13 @@ namespace Raven.Database.Counters
 
 		public Writer CreateWriter()
 		{
+			LastWrite = SystemTime.UtcNow;
 			return new Writer(this, storageEnvironment);
 		}
 
 		public void Dispose()
 		{
+			
 			if (storageEnvironment != null)
 				storageEnvironment.Dispose();
 		}
@@ -250,6 +283,7 @@ namespace Raven.Database.Counters
 
 			public void Dispose()
 			{
+				parent.LastWrite = SystemTime.UtcNow;
 				if (transaction != null)
 					transaction.Dispose();
 			}
