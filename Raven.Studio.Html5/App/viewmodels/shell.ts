@@ -55,6 +55,7 @@ class shell extends viewModelBase {
     activeArea = ko.observable<string>("Databases");
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();    
+    countersUrl: string;
 
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
@@ -71,6 +72,8 @@ class shell extends viewModelBase {
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
+
+        this.countersUrl = appUrl.forCounters();
     }
 
     activate(args: any) {
@@ -96,6 +99,7 @@ class shell extends viewModelBase {
             { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
             { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
             { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
+            { route: 'databases/counters', title: 'Counters', moduleId: 'viewmodels/counters', nav: true }
         ]).buildNavigationModel();
 
         // Show progress whenever we navigate.
