@@ -223,6 +223,7 @@ interface indexDefinitionDto {
     SpatialIndexes: any; // This will be an object with zero or more properties, each property being the name of one of the .Fields, its value being of type spatialIndexDto.
     InternalFieldsMapping: any;
     Type: string;
+    MaxIndexOutputsPerDocument;
 }
 
 /*

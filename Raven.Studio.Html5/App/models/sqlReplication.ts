@@ -19,7 +19,7 @@ class sqlReplication extends document {
     name = ko.observable<string>().extend({ required: true });
     disabled = ko.observable<boolean>().extend({ required: true });
     parameterizeDeletesDisabled = ko.observable<boolean>();
-    ravenEntityName = ko.observable<string>().extend({ required: true });
+    ravenEntityName = ko.observable<string>('').extend({ required: true });
     script = ko.observable<string>().extend({ required: true });
     factoryName = ko.observable<string>().extend({ required: true });
     connectionString = ko.observable<string>().extend({ required: true });

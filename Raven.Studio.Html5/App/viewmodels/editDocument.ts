@@ -70,7 +70,7 @@ class editDocument extends viewModelBase {
         if (args && args.id) {
 
             var canActivateResult = $.Deferred();
-            new getDocumentWithMetadataCommand(args.id, this.activeDatabase())
+            new getDocumentWithMetadataCommand(args.id, appUrl.getDatabase())
                 .execute()
                 .done((document) => {
                     this.document(document);
@@ -131,8 +131,6 @@ class editDocument extends viewModelBase {
         } else {
             this.editNewDocument();
         }
-
-        this.lodaedDocumentName = this.userSpecifiedId();
     }
 
     // Called when the view is attached to the DOM.
@@ -144,7 +142,8 @@ class editDocument extends viewModelBase {
 
     // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
-        //this.userSpecifiedId(''); // Don't clear this out: it will remove the ID of the document we're editing.
+        super.compositionComplete();
+        this.lodaedDocumentName = this.userSpecifiedId();
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
     }
 
@@ -214,7 +213,11 @@ class editDocument extends viewModelBase {
         } else {
             // If we're editing a document, we hide some reserved properties from the user.
             // Restore these before we save.
-            this.metaPropsToRestoreOnSave.forEach(p => meta[p.name] = p.value);
+            this.metaPropsToRestoreOnSave.forEach(p => {
+                if (p.name !== "Origin"){
+                    meta[p.name] = p.value;
+                }
+            });
         }
 
         var newDoc = new document(updatedDto);
