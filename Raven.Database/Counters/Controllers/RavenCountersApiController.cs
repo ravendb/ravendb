@@ -14,8 +14,10 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
+using NLog.LayoutRenderers;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
+using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
@@ -104,18 +106,18 @@ namespace Raven.Database.Counters.Controllers
 			if (values.ContainsKey("MS_SubRoutes"))
 			{
 				var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
-				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("countersName"));
+				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("counterName"));
 
 				if (selectedData != null)
-					CountersName = selectedData.Values["countersName"] as string;
+					CountersName = selectedData.Values["counterName"] as string;
 			}
 			else
 			{
 				if (values.ContainsKey("cou"))
-					CountersName = values["countersName"] as string;
+					CountersName = values["counterName"] as string;
 			}
 			if (CountersName == null)
-				throw new InvalidOperationException("Could not find file system name for this request");
+				throw new InvalidOperationException("Could not find counter name for this request");
 		}
 
 		public string CountersName { get; private set; }
@@ -225,7 +227,7 @@ namespace Raven.Database.Counters.Controllers
 			}
 			else
 			{
-				var msg = "Could not find a file system named: " + tenantId;
+				var msg = "Could not find a counter named: " + tenantId;
 				Logger.Warn(msg);
 				throw new HttpException(503, msg);
 			}
@@ -240,5 +242,26 @@ namespace Raven.Database.Counters.Controllers
 		public override void MarkRequestDuration(long duration)
 		{
 		}
+
+		public override InMemoryRavenConfiguration SystemConfiguration
+		{
+			get { return CountersLandlord.SystemConfiguration; }
+		}
+
+		public CounterStorage Storage
+		{
+			get
+			{
+				var counter = CountersLandlord.GetCounterInternal(CountersName);
+				if (counter == null)
+				{
+					throw new InvalidOperationException("Could not find a counter named: " + CountersName);
+				}
+
+				return counter.Result;
+			}
+		}
+
+	
 	}
 }

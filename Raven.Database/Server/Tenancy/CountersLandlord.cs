@@ -28,6 +28,8 @@ namespace Raven.Database.Server.Tenancy
 			Init();
 		}
 
+		public InMemoryRavenConfiguration SystemConfiguration { get { return systemDatabase.Configuration; } }
+
 		public void Init()
         {
             if (initialized)
@@ -85,13 +87,13 @@ namespace Raven.Database.Server.Tenancy
 		}
 
 
-		public bool TryGetOrCreateResourceStore(string tenantId, out Task<CounterStorage> fileSystem)
+		public bool TryGetOrCreateResourceStore(string tenantId, out Task<CounterStorage> counter)
 		{
-			if (ResourcesStoresCache.TryGetValue(tenantId, out fileSystem))
+			if (ResourcesStoresCache.TryGetValue(tenantId, out counter))
 			{
-				if (fileSystem.IsFaulted || fileSystem.IsCanceled)
+				if (counter.IsFaulted || counter.IsCanceled)
 				{
-					ResourcesStoresCache.TryRemove(tenantId, out fileSystem);
+					ResourcesStoresCache.TryRemove(tenantId, out counter);
 					DateTime time;
 					LastRecentlyUsed.TryRemove(tenantId, out time);
 					// and now we will try creating it again
@@ -109,9 +111,9 @@ namespace Raven.Database.Server.Tenancy
 			if (config == null)
 				return false;
 
-			fileSystem = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
+			counter = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
 			{
-				var fs = new CounterStorage(tenantId, config);
+				var fs = new CounterStorage(systemDatabase.ServerUrl + "counters/" + tenantId, config);
 				AssertLicenseParameters();
 
 				// if we have a very long init process, make sure that we reset the last idle time for this db.

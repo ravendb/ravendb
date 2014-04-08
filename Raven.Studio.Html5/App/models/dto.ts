@@ -524,6 +524,6 @@ interface counterDto {
 
 interface serverDto {
     Name: string;
-    PosCount: number;
-    NegCount: number;
+    Positive: number;
+    Negative: number;
 }

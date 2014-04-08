@@ -5,8 +5,8 @@
 
     constructor(dto: serverDto) {
         this.name(dto.Name);
-        this.posCount(dto.PosCount);
-        this.negCount(dto.NegCount);
+        this.posCount(dto.Positive);
+        this.negCount(dto.Negative);
     }
 } 
 
