@@ -17,7 +17,7 @@ class getFilesystemFilesCommand extends commandBase {
         var combinedTask = $.when(filesTask, totalResultsTask);
 
         combinedTask.done((filesResult: file[], resultsCount: number) => {
-            doneTask.resolve(new pagedResultSet(filesResult, resultsCount))
+            doneTask.resolve(new pagedResultSet(filesResult, resultsCount));
         });
         combinedTask.fail(xhr => doneTask.reject(xhr));
 
