@@ -3,38 +3,54 @@ import getPeriodicBackupSetupCommand = require("commands/getPeriodicBackupSetupC
 import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
 import periodicBackupSetup = require("models/periodicBackupSetup");
 import savePeriodicBackupSetupCommand = require("commands/savePeriodicBackupSetupCommand");
+import appUrl = require("common/appUrl");
 
 class periodicBackup extends viewModelBase {
 
     backupSetup = ko.observable<periodicBackupSetup>();
     static containerId = "#periodicBackupContainer";
+    private form: JQuery;
 
-    activate() {
+    canActivate(args: any): any {
+        super.canActivate(args);
+
         this.backupSetup(new periodicBackupSetup);
-        this.fetchPeriodicBackupSetup();
-        this.fetchPeriodicBackupAccountsSettings();
+        var deferred = $.Deferred();
+        var db = this.activeDatabase();
+        if (db) {
+            $.when(this.fetchPeriodicBackupSetup(db), this.fetchPeriodicBackupAccountsSettings(db))
+                .done(() => deferred.resolve({ can: true }))
+                .fail(() => deferred.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) }));
+        }
+        return deferred;
+    }
+
+    activate(args) {
+        super.activate(args);
+        
+        //viewModelBase.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
     }
 
     attached() {
-        
+        this.form = $("#save-periodic-backup-form");
     }
 
-    fetchPeriodicBackupSetup() {
-        var db = this.activeDatabase();
-        if (db) {
-            new getPeriodicBackupSetupCommand(db)
-                .execute()
-                .done((result: periodicBackupSetupDto) => this.backupSetup().fromDto(result));
-        }
+    fetchPeriodicBackupSetup(db): JQueryPromise<any> {
+        var deferred = $.Deferred();
+        new getPeriodicBackupSetupCommand(db)
+            .execute()
+            .done((result: periodicBackupSetupDto) => this.backupSetup().fromDto(result) )
+            .always(() => deferred.resolve({ can: true }));
+        return deferred;
     }
 
-    fetchPeriodicBackupAccountsSettings() {
-        var db = this.activeDatabase();
-        if (db) {
-            new getDatabaseSettingsCommand(db)
-                .execute()
-                .done(document => this.backupSetup().fromDatabaseSettingsDto(document.toDto()));
-        }
+    fetchPeriodicBackupAccountsSettings(db): JQueryPromise<any> {
+        var deferred = $.Deferred();
+        new getDatabaseSettingsCommand(db)
+            .execute()
+            .done(document => this.backupSetup().fromDatabaseSettingsDto(document.toDto()) )
+            .always(() => deferred.resolve({ can: true }));
+        return deferred;
     }
 
     activatePeriodicBackup() {
@@ -42,9 +58,11 @@ class periodicBackup extends viewModelBase {
     }
 
     saveChanges() {
-        var db = this.activeDatabase();
-        if (db) {
-            new savePeriodicBackupSetupCommand(this.backupSetup(), db).execute();
+        if ((<any>this.form[0]).checkValidity() === true) {
+            var db = this.activeDatabase();
+            if (db) {
+                new savePeriodicBackupSetupCommand(this.backupSetup(), db).execute();
+            }
         }
     }
 }
