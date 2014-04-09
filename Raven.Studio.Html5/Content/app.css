@@ -654,4 +654,9 @@ footer ul {
   top: -40px;
   right: 25px;
 }
+.remove-icon{
+    color: #d2322d;
+    border-color: #ac2925;
+    cursor: pointer;
+}
 /*# sourceMappingURL=app.css.map */

@@ -10,10 +10,12 @@
     <div class="panel-group" id="accordion" data-bind="foreach: replications">
         <div class="panel panel-default" data-bind="css: { 'panel-info': !disabled(), 'panel-warning': disabled }">
             <div class="panel-heading">
-                <h3 class="panel-title">
-                    <a data-toggle="collapse" data-parent="#accordion" data-bind="attr: { 'href': '#sqlRelication' + $index() }"><span data-bind="text: name() ? name() : 'New SQL Replication ' + $root.itemNumber($index())"></span></a>
-                    <button type="button" style="display:inline-block;" class="close" data-bind="click: $root.removeSqlReplication.bind($root)" title="Remove this SQL replication">×</button>
-                </h3>
+                <a data-toggle="collapse" data-parent="#accordion" data-bind="attr: { 'href': '#sqlRelication' + $index() }">
+                    <h3 class="panel-title">
+                        <span data-bind="text: name() ? name() : 'New SQL Replication ' + $root.itemNumber($index())"></span>
+                        <span class="glyphicon glyphicon-remove remove-icon pull-right" data-bind="click: $root.removeSqlReplication.bind($root)" title="Remove this SQL replication"></span>
+                    </h3>
+                </a>
             </div>
             <div data-bind="attr: { 'id': 'sqlRelication' + $index() }, css: { 'collapse': ($index() !== $parent.lastIndex()), 'in': ($index() === $parent.lastIndex()) }" class="panel-collapse collapse">
                 <div class="panel-body sql-replication-panel-body">
