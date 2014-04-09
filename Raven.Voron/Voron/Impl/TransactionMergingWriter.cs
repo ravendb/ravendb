@@ -173,7 +173,7 @@ namespace Voron.Impl
 				                if (stream != null)
 					                tree.Add(tx, operation.Key, stream, operation.Version);
 				                else
-					                tree.Add(tx, operation.Key, (byte[]) operation.Value, operation.Version);
+					                tree.Add(tx, operation.Key, (Slice) operation.Value, operation.Version);
 				                actionType = DebugActionType.Add;
 				                break;
 			                case WriteBatch.BatchOperationType.Delete:

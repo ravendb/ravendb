@@ -78,7 +78,8 @@ namespace Voron.Trees
 		    if (value.Length > int.MaxValue)
 		        throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 
-		    var pos = DirectAdd(tx, key, (int) value.Length, version: version);
+			State.IsModified = true;
+			var pos = DirectAdd(tx, key, (int)value.Length, version: version);
 		    
 		    CopyStreamToPointer(tx, value, pos);
 		}
@@ -88,12 +89,23 @@ namespace Voron.Trees
 		{
 			if (value == null) throw new ArgumentNullException("value");
 
+			State.IsModified = true;
 			var pos = DirectAdd(tx, key, (int)value.Length, version: version);
 
 			fixed (byte* src = value)
 			{
 				NativeMethods.memcpy(pos, src, value.Length);
 			}
+		}
+
+		public void Add(Transaction tx, Slice key, Slice value, ushort? version = null)
+		{
+			if (value == null) throw new ArgumentNullException("value");
+
+			State.IsModified = true;
+			var pos = DirectAdd(tx, key, value.Size, version: version);
+
+			value.CopyTo(pos);
 		}
 
 		private static void CopyStreamToPointer(Transaction tx, Stream value, byte* pos)
@@ -231,8 +243,6 @@ namespace Voron.Trees
 		{
 			Debug.Assert(nodeType == NodeFlags.Data || nodeType == NodeFlags.MultiValuePageRef);
 
-			State.IsModified = true;
-			
 			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
 				throw new ArgumentException("Cannot add a value in a read only transaction");
 

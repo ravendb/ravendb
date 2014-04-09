@@ -109,15 +109,12 @@ namespace Voron.Impl
 			_sliceEqualityComparer = new SliceEqualityComparer();
 		}
 
-		public void Add(Slice key, byte[] value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
+		public void Add(Slice key, Slice value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
 		{
 			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
 			if (value == null) throw new ArgumentNullException("value");
-			if (value.Length > int.MaxValue)
-				throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 
-
-			var batchOperation = new BatchOperation(key, new Slice(value), version, treeName, BatchOperationType.Add);
+			var batchOperation = new BatchOperation(key, value, version, treeName, BatchOperationType.Add);
 			if (shouldIgnoreConcurrencyExceptions)
 				batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
 			AddOperation(batchOperation);
