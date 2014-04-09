@@ -34,7 +34,7 @@
                 <div class="col-md-10">
                     <div class="row">
                         <div class="col-md-6">
-                            <input id="documentToPatch" type="text" class="form-control" />
+                            <input id="documentToPatch" type="text" class="form-control" data-bind="value: selectedItem, event: { keyup: $root.loadDocumentToPatch.bind($root, $element.value) }" />
                         </div>
                     </div>
                 </div>
@@ -46,7 +46,17 @@
                 <div class="col-md-10">
                     <div class="row">
                         <div class="col-md-6">
-                            <input id="collectionToPatch" type="text" class="form-control" />
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                    <span data-bind="text: selectedItem"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul id="collectionToPatch" class="dropdown-menu" role="menu">
+                                    <!-- ko foreach: $root.collections -->
+                                    <li data-bind="click: $root.setSelectedCollection.bind($root, $data)"><a href="#" data-bind="text: $data.name"></a></li>
+                                    <!-- /ko -->
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -58,7 +68,17 @@
                 <div class="col-md-10">
                     <div class="row">
                         <div class="col-md-6">
-                            <input id="indexToPatch" type="text" class="form-control" />
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                    <span data-bind="text: selectedItem"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul id="indexToPatch" class="dropdown-menu" role="menu">
+                                    <!-- ko foreach: $root.indexNames -->
+                                    <li data-bind="click: $root.setSelectedIndex.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
+                                    <!-- /ko -->
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -133,14 +153,12 @@
                 <div>
                     <label>Matching Documents</label>
                 </div>
-                <div>
-                <!--
-                    <div id="matchingDocumentsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, documentsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#matchingDocumentsGrid' }"></div>
-                -->
+                <div data-bind="with: $root">
+                    <div id="matchingDocumentsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#matchingDocumentsGrid' }"></div>
                 </div>
             </div>
         </div>
-        <div class="form-group">
+        <div class="form-group" data-bind="with: $root">
             <div class="col-md-6">
                 <div>
                     <label>Before Patch</label>
