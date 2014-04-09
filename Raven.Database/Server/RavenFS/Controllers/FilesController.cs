@@ -30,14 +30,13 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("ravenfs/{fileSystemName}/files")]
 		public List<FileHeader> Get()
 		{
-			List<FileHeader> fileHeaders = null;
-			Storage.Batch(accessor =>
-			{
-				fileHeaders =
-					accessor.ReadFiles(Paging.Start, Paging.PageSize).Where(
-						x => !x.Metadata.AllKeys.Contains(SynchronizationConstants.RavenDeleteMarker)).ToList();
-			});
-			return fileHeaders;
+            int results;
+            var keys = Search.Query(null, null, Paging.Start, Paging.PageSize, out results);
+
+            var list = new List<FileHeader>();
+            Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
+
+            return list;
 		}
 
 		[HttpGet]

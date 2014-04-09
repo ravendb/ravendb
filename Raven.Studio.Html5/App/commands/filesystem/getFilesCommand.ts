@@ -16,7 +16,9 @@ class getFilesystemFilesCommand extends commandBase {
         var doneTask = $.Deferred();
         var combinedTask = $.when(filesTask, totalResultsTask);
 
-        combinedTask.done((filesResult: file[], resultsCount: number) => doneTask.resolve(new pagedResultSet(filesResult, resultsCount)));
+        combinedTask.done((filesResult: file[], resultsCount: number) => {
+            doneTask.resolve(new pagedResultSet(filesResult, resultsCount))
+        });
         combinedTask.fail(xhr => doneTask.reject(xhr));
 
         return doneTask;
@@ -30,7 +32,9 @@ class getFilesystemFilesCommand extends commandBase {
 
         var url = "/files";
         var filesSelector = (files: filesystemFileHeaderDto[]) => files.map(d => new file(d));
-        return this.query(url, args, this.fs, filesSelector);
+        var task = this.query(url, args, this.fs, filesSelector);
+
+        return task;
     }
 
     private fetchTotalResultCount(): JQueryPromise<number> {

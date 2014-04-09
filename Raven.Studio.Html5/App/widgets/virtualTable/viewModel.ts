@@ -236,7 +236,6 @@ class ctor {
                     var rows = this.recycleRows();
                     var columns = this.columns();
                 }
-
                 this.recycleRows.valueHasMutated();
             });
         }
@@ -353,7 +352,7 @@ class ctor {
             freeWidth -= curColWidth;
             columnCount++;
         }
-        var freeWidthPerColumn = (freeWidth / columnCount + 1);
+        var freeWidthPerColumn = (freeWidth / (columnCount + 1));
 
         var firstRow = this.recycleRows().length > 0 ? this.recycleRows()[0] : null;
         for (var binding in columnsNeeded) {
@@ -535,12 +534,13 @@ class ctor {
     deleteSelectedItems() {
         var documents = this.getSelectedItems();
         var deleteDocsVm = new deleteItems(documents, this.focusableGridSelector);
+        var self = this;
         deleteDocsVm.deletionTask.done(() => {
-            var deletedDocIndices = documents.map(d => this.items.indexOf(d));
-            deletedDocIndices.forEach(i => this.settings.selectedIndices.remove(i));
-            this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
-            this.items.invalidateCache(); // Causes the cache of items to be discarded.
-            this.onGridScrolled(); // Forces a re-fetch of the rows in view.
+            var deletedDocIndices = documents.map(d => self.items.indexOf(d));
+            deletedDocIndices.forEach(i => self.settings.selectedIndices.remove(i));
+            self.recycleRows().forEach(r => r.isChecked(self.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
+            self.items.invalidateCache(); // Causes the cache of items to be discarded.
+            self.onGridScrolled(); // Forces a re-fetch of the rows in view.
         });
 
         app.showDialog(deleteDocsVm);
