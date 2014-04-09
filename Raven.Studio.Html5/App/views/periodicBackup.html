@@ -13,13 +13,13 @@
                 </div>
             </nav>
         </div>
-        <form class="form-horizontal" role="form" data-bind="slideVisible: activated">
+        <form id="save-periodic-backup-form" class="form-horizontal" role="form" data-bind="slideVisible: activated">
             <div class="form-group">
                 <div class="col-sm-3">
                     <select class="form-control" data-bind="options: availablePeriodicBackups, optionsText: 'label', optionsValue: 'value', value: type"></select>
                 </div>
                 <div class="col-sm-3">
-                    <input type="text" class="form-control" data-bind="value: mainValue" />
+                    <input required type="text" class="form-control" data-bind="value: mainValue" />
                 </div>
             </div>
             <div class="form-group" data-bind="slideVisible: additionalAwsInfoRequired">

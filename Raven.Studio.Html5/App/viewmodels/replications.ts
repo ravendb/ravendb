@@ -24,25 +24,16 @@ class replications extends viewModelBase {
         var deferred = $.Deferred();
         var db = this.activeDatabase();
         if (db) {
-            var automaticConflictResolution = new getAutomaticConflictResolutionDocumentCommand(db).execute();
-            var replicationDestinations = new getReplicationsCommand(db).execute();
-
-            $.when(automaticConflictResolution, replicationDestinations)
-                .done((repConfig, repSetup)=> {
-                    if (repConfig != null) {
-                        this.replicationConfig(new replicationConfig(repConfig));
-                    }
-                    if (repSetup != null) {
-                        this.replicationsSetup(new replicationsSetup(repSetup));
-                    }
-                    deferred.resolve({ can: true });
-                })
+            $.when(this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
+                .done(() => deferred.resolve({ can: true }) )
                 .fail(() => deferred.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) }));
         }
         return deferred;
     }
 
-    activate() {
+    activate(args) {
+        super.activate(args);
+
         var self = this;
         this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
         this.isConfigSaveEnabled = ko.computed(function () {
@@ -57,6 +48,24 @@ class replications extends viewModelBase {
             return (self.replicationConfigDirtyFlag().isDirty() || self.replicationsSetupDirtyFlag().isDirty());
         });
         viewModelBase.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
+    }
+
+    fetchAutomaticConflictResolution(db): JQueryPromise<any> {
+        var deferred = $.Deferred();
+        new getAutomaticConflictResolutionDocumentCommand(db)
+            .execute()
+            .done(repConfig => this.replicationConfig(new replicationConfig(repConfig)))
+            .always(() => deferred.resolve({ can: true }));
+        return deferred;
+    }
+
+    fetchReplications(db): JQueryPromise<any> {
+        var deferred = $.Deferred();
+        new getReplicationsCommand(db)
+            .execute()
+            .done(repSetup => this.replicationsSetup(new replicationsSetup(repSetup)))
+            .always(() => deferred.resolve({ can: true }));
+        return deferred;
     }
 
     createNewDestination() {

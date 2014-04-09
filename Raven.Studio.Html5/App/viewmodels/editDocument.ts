@@ -70,7 +70,6 @@ class editDocument extends viewModelBase {
     canActivate(args: any) {
         super.canActivate(args);
         if (args && args.id) {
-
             var canActivateResult = $.Deferred();
             new getDocumentWithMetadataCommand(args.id, appUrl.getDatabase())
                 .execute()
