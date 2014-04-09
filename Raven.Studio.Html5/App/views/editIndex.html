@@ -228,7 +228,7 @@
 
                 <label class="col-sm-1 control-label">Max Index Outputs Per Document</label>
                 <div class="col-md-2">
-                    <input type="text" class="form-control" data-bind="value: maxIndexOutputsPerDocument" />
+                    <input class="form-control" required type="number" data-bind="value: maxIndexOutputsPerDocument" min="0" />
                 </div>
             </div>
         </form>

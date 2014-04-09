@@ -30,6 +30,9 @@ class sqlReplication extends document {
     connectionStringType = ko.observable<string>().extend({ required: true });
     connectionStringValue = ko.observable<string>('').extend({ required: true });
 
+
+    connectionStringSourceFieldName :KnockoutComputed<string>;
+
     constructor(dto: sqlReplicationDto) {
         super(dto);
 
@@ -44,6 +47,16 @@ class sqlReplication extends document {
         this.setupConnectionString(dto);
 
         this.metadata = new documentMetadata(dto['@metadata']);
+
+        this.connectionStringSourceFieldName = ko.computed(() => {
+            if (this.connectionStringType() == this.CONNECTION_STRING) {
+                return "Connection string text";
+            } else if (this.connectionStringType() == this.CONNECTION_STRING_NAME) {
+                return "Setting name in local machine configuration";
+            } else {
+                return "Setting name in memory/remote configuration";
+            }
+        });
     }
 
     private setupConnectionString(dto: sqlReplicationDto) {
@@ -57,6 +70,10 @@ class sqlReplication extends document {
             this.connectionStringType(this.CONNECTION_STRING_SETTING_NAME);
             this.connectionStringValue(dto.ConnectionStringSettingName);
         }
+    }
+
+    setConnectionStringType(strType) {
+        this.connectionStringType(strType);
     }
 
     static empty(): sqlReplication {
