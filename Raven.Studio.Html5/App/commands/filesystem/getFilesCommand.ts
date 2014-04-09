@@ -1,5 +1,5 @@
 ﻿import commandBase = require("commands/commandBase");
-import file = require("models/file");
+import file = require("models/filesystem/file");
 import filesystem = require("models/filesystem/filesystem");
 import pagedResultSet = require("common/pagedResultSet");
 

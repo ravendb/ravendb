@@ -3,14 +3,14 @@
     <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2064">You can track progress here</a>
 </div>
 
-<div class="filesystems-page not-implemented-yet">
+<div class="filesystems-page">
 
     <div class="panel panel-default">
         <div class="panel-heading">
             <form class="form-inline">
                 <div class="row" style="padding: 0 10px 0 10px">
                     <div class="input-group col-lg-12">
-                        <input type="text" class="form-control" placeholder="E.g. __fileName:MyFile* AND __directory:/subfolder" />
+                        <input type="text" class="form-control" data-bind="value: searchText" placeholder="E.g. __fileName:MyFile* AND __directory:/subfolder" />
                         <span class="input-group-addon" style="width: 30px">
                             <a href="javascript:void(0)"><i class="fa fa-times"></i></a>
                         </span>
@@ -24,26 +24,79 @@
             <h5>Add search filter</h5>
             <div class="row" style="padding: 0 10px 0 10px">
                 <div class="btn-group">
+                    <button id="fileNameStartsWith" type="button" class="btn btn-default popover-html">File name starts with...</button>
                     <button id="fileNameEndsWith" type="button" class="btn btn-default popover-html">File name ends with...</button>
-                    <button type="button" class="btn btn-default popover-html">File name starts with...</button>
-                    <button type="button" class="btn btn-default popover-html">File size...</button>
-                    <button type="button" class="btn btn-default popover-html">Has metadata...</button>
-                    <button type="button" class="btn btn-default popover-html">In folder...</button>
-                    <button type="button" class="btn btn-default popover-html">Last modified...</button>
+                    <button id="fileSizeBetween" type="button" class="btn btn-default popover-html">File size...</button>
+                    <button id="hasMetadata" type="button" class="btn btn-default popover-html">Has metadata...</button>
+                    <button id="inFolder" type="button" class="btn btn-default popover-html">In folder...</button>
+                    <button id="lastModifiedBetween" type="button" class="btn btn-default popover-html">Last modified...</button>
                 </div>
             </div>
         </div>
         <div class="panel-body">
-
+            <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, gridSelector: '#filesGrid', isCopyAllowed: false }"></div>
         </div>
     </div>
+</div>
+
+<div id="fileNameStartsWithContextMenu" hidden>
+    <form class="form-inline" role="form">
+        <div class="form-group">
+            <label>Starts with: </label>
+            <input type="text" class="form-control" />
+        </div>
+    </form>
 </div>
 
 <div id="fileNameEndsWithContextMenu" hidden>
     <form class="form-inline" role="form">
         <div class="form-group">
-            <label>Ends with</label>
+            <label>Ends with: </label>
             <input type="text" class="form-control" />
+        </div>
+    </form>
+</div>
+
+<div id="fileSizeBetweenContextMenu" hidden>
+    <form class="form-inline" role="form">
+        <div class="form-group">
+            <label>Between: </label>
+            <input type="text" class="form-control" />
+            <label> and: </label>
+            <input type="text" class="form-control" />
+        </div>
+    </form>
+</div>
+
+<div id="hasMetadataContextMenu" hidden>
+    <form class="form-inline" role="form">
+        <div class="form-group">
+            <label>Key: </label>
+            <input type="text" class="form-control" />
+            <label> value: </label>
+            <input type="text" class="form-control" />
+        </div>
+    </form>
+</div>
+
+<div id="inFolderContextMenu" hidden>
+    <form class="form-inline" role="form">
+        <div class="form-group">
+            <label>Folder path: </label>
+            <input type="text" class="form-control" />
+        </div>
+    </form>
+</div>
+
+<div id="lastModifiedBetweenContextMenu" hidden>
+    <form class="form-inline" role="form">
+        <div class="form-group">
+            <label>Between: </label>
+            <input type="text" class="form-control" />
+            <button class="btn btn-default"><i class="fa fa-calendar"></i></button>
+            <label> and: </label>
+            <input type="text" class="form-control" />
+            <button class="btn btn-default"><i class="fa fa-calendar"></i></button>
         </div>
     </form>
 </div>
