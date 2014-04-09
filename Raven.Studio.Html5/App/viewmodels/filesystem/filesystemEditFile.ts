@@ -6,13 +6,12 @@ import ace = require("ace/ace");
 import filesystem = require("models/filesystem/filesystem");
 import pagedList = require("common/pagedList");
 import getFileCommand = require("commands/filesystem/getFileCommand");
-import deleteFileCommand = require("commands/filesystem/deleteFileCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
-import file = require("models/file");
-import fileMetadata = require("models/fileMetadata");
-import deleteFiles = require("viewmodels/filesystem/deleteFiles");
+import file = require("models/filesystem/file");
+import fileMetadata = require("models/filesystem/fileMetadata");
+import deleteItems = require("viewmodels/deleteItems");
 
 class filesystemEditFile extends viewModelBase {
 
@@ -101,7 +100,7 @@ class filesystemEditFile extends viewModelBase {
     deleteFile() {
         var file = this.file();
         if (file) {
-            var viewModel = new deleteFiles([file]);
+            var viewModel = new deleteItems([file]);
             viewModel.deletionTask.done(() => {
                 var filesUrl = appUrl.forFilesystemFiles(this.activeFilesystem());
                 router.navigate(filesUrl);

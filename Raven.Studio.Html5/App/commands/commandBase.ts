@@ -62,7 +62,7 @@ class commandBase {
                 task.resolve(transformedResults);
             });
             ajax.fail((request, status, error) => {
-                task.reject(request, status, error)
+                task.reject(request, status, error);
                 });
             return task;
         } else {
@@ -91,7 +91,7 @@ class commandBase {
                 }
             });
             ajax.fail((request, status, error) => {
-                task.reject(request, status, error)
+                task.reject(request, status, error);
                 });
             return task;
         } else {

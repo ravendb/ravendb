@@ -1,4 +1,4 @@
-html,
+﻿html,
 body {
   height: 100%;
 }
@@ -614,6 +614,10 @@ footer ul {
 .advanced-replication-settings {
   cursor: pointer;
 }
+.popover-lg {
+  max-width: 800px;
+  width: 600px;
+}
 .filesystem-page .btn-toolbar {
   margin-bottom: 20px;
 }
@@ -661,5 +665,20 @@ footer ul {
   position: absolute;
   top: -40px;
   right: 25px;
+}
+#editFileContainer:focus {
+  outline: 0;
+}
+#editFileContainer #fileMetadataEditor {
+  height: 500px;
+}
+#editFileContainer .document-addition-data {
+  margin-top: 95px;
+  padding-top: 10px;
+  padding-bottom: 40px;
+}
+#editFileContainer hr {
+  border-color: red;
+  margin-top: 5px;
 }
 /*# sourceMappingURL=app.css.map */
