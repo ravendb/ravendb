@@ -24,6 +24,7 @@
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\deleteDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteFilesCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesConflictsCommand.ts" />
@@ -35,6 +36,7 @@
     <TypeScriptCompile Include="App\commands\deleteTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\downloadFileFromFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationByKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getDestinationsCommand.ts" />

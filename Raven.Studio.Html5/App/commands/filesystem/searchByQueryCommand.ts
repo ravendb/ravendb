@@ -23,7 +23,7 @@ class searchByQueryCommand  extends commandBase {
         return doneTask;
     }
 
-    private fetchFiles(): JQueryPromise<any[]> {
+    private fetchFiles(): JQueryPromise<file[]> {
         var args = {
             query: this.queryParameter,
             start: this.skip,
@@ -31,9 +31,8 @@ class searchByQueryCommand  extends commandBase {
         };
 
         var url = "/search";
-        //var filesSelector = (files: filesystemFileHeaderDto[]) => files.map(d => new file(d));
-        //return this.query(url, args, this.fs, filesSelector);
-        return this.query(url, args, this.fs);
+        var filesSelector = (results: searchResults) => results.Files.map(d => new file(d));
+        return this.query(url, args, this.fs, filesSelector);
     }
 
     private fetchTotalResultCount(): JQueryPromise<number> {

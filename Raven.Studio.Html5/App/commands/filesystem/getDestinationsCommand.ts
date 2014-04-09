@@ -26,7 +26,7 @@ class getFilesystemDestinationsCommand extends commandBase {
                         task.resolve([value]);    
                 }
                 else {
-                    task.resolve({});
+                    task.resolve([]);
                 }                
             });
 

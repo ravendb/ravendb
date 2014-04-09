@@ -26,7 +26,7 @@ class saveFilesystemConfigurationCommand extends commandBase {
             .always(x => {
                 var url = "/config?name=" + encodeURIComponent("Raven/Synchronization/Destinations");
         
-                result = this.put(url, JSON.stringify(doc), this.fs)
+                this.put(url, JSON.stringify(doc), this.fs)
                     .done(y => { result.resolve(doc); });
             });
 

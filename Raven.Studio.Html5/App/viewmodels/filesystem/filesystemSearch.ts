@@ -31,6 +31,14 @@ class filesystemSearch extends viewModelBase {
         return true;
     }
 
+    activate(args) {
+        super.activate(args);
+        //this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
+       
+
+        this.loadFiles(false);
+    }
+
     attached() {
 
         (<any>$("body")).click((event) => {
@@ -85,9 +93,23 @@ class filesystemSearch extends viewModelBase {
     }
 
     searchFiles(query: string) {
-        var fetcher = (skip: number, take: number) => this.fetchFiles(query.toLowerCase(), skip, take);
+        var fetcher = (skip: number, take: number) => this.fetchFiles(query, skip, take);
         var list = new pagedList(fetcher);
         this.allFilesPagedItems(list);
+    }
+
+    loadFiles(force: boolean) {
+        if (!this.allFilesPagedItems() || force) {
+            this.allFilesPagedItems(this.createPagedList());
+        }
+
+        return this.allFilesPagedItems;
+    }
+
+    createPagedList(): pagedList {
+        var fetcher = (skip: number, take: number) => this.fetchFiles("", skip, take);
+        var list = new pagedList(fetcher);
+        return list;
     }
 
     fetchFiles(query: string, skip: number, take: number): JQueryPromise<pagedResultSet> {

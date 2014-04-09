@@ -11,21 +11,31 @@ import getDestinationsCommand = require("commands/filesystem/getDestinationsComm
 import getFilesConflictsCommand = require("commands/filesystem/getFilesConflictsCommand");
 import getSyncOutgoingActivitiesCommand = require("commands/filesystem/getSyncOutgoingActivitiesCommand");
 import getSyncIncomingActivitiesCommand = require("commands/filesystem/getSyncIncomingActivitiesCommand");
-import saveFilesystemDestinationCommand = require("commands/filesystem/saveDestinationCommand");
+import saveDestinationCommand = require("commands/filesystem/saveDestinationCommand");
+import deleteDestinationCommand = require("commands/filesystem/deleteDestinationCommand");
+import synchronizeWithDestinationCommand = require("commands/filesystem/synchronizeWithDestinationCommand");
+
 import filesystemAddDestination = require("viewmodels/filesystem/filesystemAddDestination");
 
 class filesystemSynchronization extends viewModelBase {
 
-    destinations = ko.observableArray<string>();      
-    conflicts = ko.observable<string>();      
-    outgoingActivity = ko.observable<synchronizationDetails>();      
-    incomingActivity = ko.observable<synchronizationDetails>();          
+    destinations = ko.observableArray<string>();
+    isDestinationsVisible = ko.computed(() => this.destinations().length > 0); 
+
+    conflicts = ko.observableArray<string>();      
+    isConflictsVisible = ko.computed(() => this.conflicts().length > 0); 
+
+    outgoingActivity = ko.observableArray<synchronizationDetails>();   
+    isOutgoingActivityVisible = ko.computed(() => this.outgoingActivity().length > 0); 
+       
+    incomingActivity = ko.observableArray<synchronizationDetails>();      
+    isIncomingActivityVisible = ko.computed(() => this.incomingActivity().length > 0);     
           
     private router = router;
     synchronizationUrl = appUrl.forCurrentDatabase().filesystemSynchronization;
 
     constructor() {
-        super();
+        super();        
     }
 
     canActivate(args: any) {
@@ -48,13 +58,31 @@ class filesystemSynchronization extends viewModelBase {
 
     private addDestinationUrl(url: string) {
         var fs = this.activeFilesystem();
-        if (fs) {            
-            new saveFilesystemDestinationCommand(fs, url).execute(); 
+        if (fs) {        
+            var self = this;    
+            new saveDestinationCommand(fs, url).execute()
+                .done(x => self.forceModelPolling());
         }
     }
 
     synchronizeNow() {
 
+    }
+
+    synchronizeWithDestination(destination: string) {
+        var fs = this.activeFilesystem();
+        if (fs) {
+            new synchronizeWithDestinationCommand(fs, destination).execute();
+        }
+    }
+
+    deleteDestination(destination: string) {
+        var fs = this.activeFilesystem();
+        var self = this;
+        if (fs) {
+            new deleteDestinationCommand(fs, destination).execute()
+                .done(x => self.forceModelPolling());
+        }
     }
 
     modelPolling() {
@@ -73,6 +101,15 @@ class filesystemSynchronization extends viewModelBase {
             new getSyncIncomingActivitiesCommand(fs).execute()
                 .done(x => this.incomingActivity(x));
         }
+    }
+
+
+    collapseAll() {
+        $(".synchronization-group-content").collapse('hide');
+    }
+
+    expandAll() {
+        $(".synchronization-group-content").collapse('show');
     }
 }
 

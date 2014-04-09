@@ -77,23 +77,21 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			var jsonSerializer = new JsonSerializer
 			{
 				Converters =
-						                     {
-							                     new NameValueCollectionJsonConverter()
-						                     }
+				{
+					new NameValueCollectionJsonConverter()
+				}
 			};
 			var contentStream = await Request.Content.ReadAsStreamAsync();
 
-			var nameValueCollection =
-				jsonSerializer.Deserialize<NameValueCollection>(new JsonTextReader(new StreamReader(contentStream)));
+			var nameValueCollection = jsonSerializer.Deserialize<NameValueCollection>(new JsonTextReader(new StreamReader(contentStream)));
 
-			ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor => accessor.SetConfig(name, nameValueCollection)),
-											 ConcurrencyResponseException);
+			ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor => accessor.SetConfig(name, nameValueCollection)), ConcurrencyResponseException);
 
 			Publisher.Publish(new ConfigChange { Name = name, Action = ConfigChangeAction.Set });
 
 			Log.Debug("Config '{0}' was inserted", name);
 
-			return new HttpResponseMessage(HttpStatusCode.Created);
+            return this.GetMessageWithObject(nameValueCollection, HttpStatusCode.Created);
 		}
 
 		[HttpDelete]
@@ -106,7 +104,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			Publisher.Publish(new ConfigChange { Name = name, Action = ConfigChangeAction.Delete });
 
 			Log.Debug("Config '{0}' was deleted", name);
-			return new HttpResponseMessage(HttpStatusCode.NoContent);
+            return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 	}
 }
