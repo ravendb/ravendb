@@ -337,6 +337,8 @@ class editDocument extends viewModelBase {
                 nextIndex = 0;
             }
             this.pageToItem(nextIndex);
+        } else {
+            this.navigateToDocuments();
         }
     }
 
