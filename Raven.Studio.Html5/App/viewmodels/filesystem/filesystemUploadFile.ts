@@ -8,14 +8,15 @@ import viewModelBase = require("viewmodels/viewModelBase");
 
 class filesystemUploadFile extends viewModelBase {
 
-    fileName = ko.observable<File>();
-    uploadQueue = ko.observableArray();
+    localStorageKey: string;
+    files = ko.observable<File[]>();
+    uploadQueue = ko.observableArray<uploadItem>();
 
     constructor() {
         super();
-    }
 
-    activate(navigationArgs) {
+        this.uploadQueue.subscribe(x => this.updateLocalStorage(x));
+
         ko.bindingHandlers["fileUpload"] = {
             init: function (element, valueAccessor) {
             },
@@ -27,27 +28,80 @@ class filesystemUploadFile extends viewModelBase {
 
                 if (options) {
                     if (element.files.length) {
-                        var file = <File>element.files[0];
-                        var guid = system.guid();
-                        var item = new uploadItem(guid, file.name, "Queued");
-                        context.uploadQueue.push(item);
+                        var files = <File[]>element.files;
+                        for (var i = 0; i < files.length; i++) {
+                            var file = files[i];
+                            var guid = system.guid();
+                            var item = new uploadItem(guid, file.name, "Queued");
+                            context.uploadQueue.push(item);
 
-                        new uploadFileToFilesystemCommand(file, guid, filesystem, function (event: any) {
-                            if (event.lengthComputable) {
-                                var percentComplete = event.loaded / event.total;
-                                //do something
-                            }
-                        }, true).execute()
-                            .done(function () { item.status("Uploaded"); })
-                            .fail(function () { item.status("Failed"); });
+                            new uploadFileToFilesystemCommand(file, guid, filesystem, function (event: any) {
+                                if (event.lengthComputable) {
+                                    var percentComplete = event.loaded / event.total;
+                                    //do something
+                                }
+                            }, true).execute()
+                                .done((x: string) => {
+                                    context.updateQueueStatus(x, "Uploaded");
+                                })
+                                .fail((x: string) => {
+                                    context.updateQueueStatus(x, "Failed");
+                                });
 
-                        context.fileName(null);
 
-                        item.status("Uploading...");
+                            item.status("Uploading...");
+                            context.uploadQueue.notifySubscribers();
+                        }
                     }
+
+                    context.files(null);
                 }
             },
         }
+    }
+
+    activate(navigationArgs) {
+
+        this.localStorageKey = "ravenFs-uploadQueue." + this.activeFilesystem().name;
+
+        if (window.localStorage.getItem(this.localStorageKey)) {
+            this.uploadQueue(this.parseUploadQueue(window.localStorage.getItem(this.localStorageKey)));
+        }
+    }
+
+    updateQueueStatus(guid: string, status: string) {
+        var items = ko.utils.arrayFilter(this.uploadQueue(), (i: uploadItem) => {
+            return i.id() === guid
+        });
+        if (items) {
+            items[0].status(status);
+        }
+
+        
+    }
+
+    updateLocalStorage(x: uploadItem[]) {
+        window.localStorage.setItem(this.localStorageKey, this.stringifyUploadQueue(this.uploadQueue()));
+    }
+
+    stringifyUploadQueue(queue: uploadItem[]) : string {
+         return ko.toJSON(this.uploadQueue);
+    }
+
+    clearUploadQueue() {
+        window.localStorage.removeItem(this.localStorageKey);
+        this.uploadQueue.removeAll();
+    }
+
+    parseUploadQueue(queue: string) : uploadItem[] {
+        var stringArray: any[] = JSON.parse(queue);
+        var uploadQueue: uploadItem[] = [];
+
+        for (var i = 0; i < stringArray.length; i++) {
+            uploadQueue.push(new uploadItem(stringArray[i]["id"], stringArray[i]["fileName"], stringArray[i]["status"]));
+        }
+
+        return uploadQueue;
     }
 
     navigateToFiles() {

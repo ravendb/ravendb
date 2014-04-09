@@ -22,6 +22,8 @@ class uploadFileToFilesystemCommand extends commandBase {
             'RavenFS-Size': this.source.size
         };
 
+        var deferred = $.Deferred();
+
         var jQueryOptions: JQueryAjaxSettings = {
             headers: <any>customHeaders,
             processData: false,
@@ -44,11 +46,17 @@ class uploadFileToFilesystemCommand extends commandBase {
         var uploadTask = this.put(url, this.source, this.fs, jQueryOptions);
 
         if (this.reportUploadProgress) {
-            uploadTask.done(() => this.reportSuccess("Uploaded " + this.source.name));
-            uploadTask.fail((response: JQueryXHR) => this.reportError("Failed to upload " + this.source.name, response.responseText, response.statusText));
+            uploadTask.done(() => {
+                this.reportSuccess("Uploaded " + this.source.name)
+                return deferred.resolve(this.uploadId);
+            });
+            uploadTask.fail((response: JQueryXHR) => {
+                this.reportError("Failed to upload " + this.source.name, response.responseText, response.statusText)
+                return deferred.reject(this.uploadId);
+            });
         }
 
-        return uploadTask;
+        return deferred;
     }
 }
 
