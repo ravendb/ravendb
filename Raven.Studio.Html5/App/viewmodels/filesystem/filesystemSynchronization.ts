@@ -11,7 +11,10 @@ import getDestinationsCommand = require("commands/filesystem/getDestinationsComm
 import getFilesConflictsCommand = require("commands/filesystem/getFilesConflictsCommand");
 import getSyncOutgoingActivitiesCommand = require("commands/filesystem/getSyncOutgoingActivitiesCommand");
 import getSyncIncomingActivitiesCommand = require("commands/filesystem/getSyncIncomingActivitiesCommand");
-import saveFilesystemDestinationCommand = require("commands/filesystem/saveDestinationCommand");
+import saveDestinationCommand = require("commands/filesystem/saveDestinationCommand");
+import deleteDestinationCommand = require("commands/filesystem/deleteDestinationCommand");
+import synchronizeWithDestinationCommand = require("commands/filesystem/synchronizeWithDestinationCommand");
+
 import filesystemAddDestination = require("viewmodels/filesystem/filesystemAddDestination");
 
 class filesystemSynchronization extends viewModelBase {
@@ -55,13 +58,31 @@ class filesystemSynchronization extends viewModelBase {
 
     private addDestinationUrl(url: string) {
         var fs = this.activeFilesystem();
-        if (fs) {            
-            new saveFilesystemDestinationCommand(fs, url).execute(); 
+        if (fs) {        
+            var self = this;    
+            new saveDestinationCommand(fs, url).execute()
+                .done(x => self.forceModelPolling());
         }
     }
 
     synchronizeNow() {
 
+    }
+
+    synchronizeWithDestination(destination: string) {
+        var fs = this.activeFilesystem();
+        if (fs) {
+            new synchronizeWithDestinationCommand(fs, destination).execute();
+        }
+    }
+
+    deleteDestination(destination: string) {
+        var fs = this.activeFilesystem();
+        var self = this;
+        if (fs) {
+            new deleteDestinationCommand(fs, destination).execute()
+                .done(x => self.forceModelPolling());
+        }
     }
 
     modelPolling() {
