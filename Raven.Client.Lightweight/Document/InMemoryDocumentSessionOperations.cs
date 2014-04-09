@@ -309,8 +309,9 @@ namespace Raven.Client.Document
         {
             get
             {
+                var changesDescr=string.Empty;
                 return deletedEntities.Count > 0 ||
-                        entitiesAndMetadata.Any(pair => EntityChanged(pair.Key, pair.Value));
+                        entitiesAndMetadata.Any(pair => EntityChanged(pair.Key, pair.Value, ref changesDescr));
             }
         }
 
@@ -328,7 +329,8 @@ namespace Raven.Client.Document
             DocumentMetadata value;
             if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
                 return false;
-            return EntityChanged(entity, value);
+            var changesDescr = string.Empty;
+            return EntityChanged(entity, value, ref changesDescr);
         }
 
         public void IncrementRequestCount()
@@ -618,7 +620,8 @@ more responsive application.
             if (entitiesByKey.TryGetValue(id, out entity))
             {
                 // find if entity was changed on session or just inserted
-                if (EntityChanged(entity, entitiesAndMetadata[entity]))
+                var changesDescr = string.Empty;
+                if (EntityChanged(entity, entitiesAndMetadata[entity], ref changesDescr))
                 {
                     throw new InvalidOperationException("Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
                 }
@@ -936,13 +939,15 @@ more responsive application.
 
         private void PrepareForEntitiesPuts(SaveChangesData result)
         {
-            foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)).ToArray())
+            var changesDescr = string.Empty;
+            foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value, ref changesDescr)).ToArray())
             {
                 foreach (var documentStoreListener in theListeners.StoreListeners)
                 {
                     if (documentStoreListener.BeforeStore(entity.Value.Key, entity.Key, entity.Value.Metadata, entity.Value.OriginalValue))
                         EntityToJson.CachedJsonDocs.Remove(entity.Key);
                 }
+                result.FirstChangeDescriotion = changesDescr;
                 result.Entities.Add(entity.Key);
                 if (entity.Value.Key != null)
                     entitiesByKey.Remove(entity.Value.Key);
@@ -1044,7 +1049,7 @@ more responsive application.
         /// <param name="entity">The entity.</param>
         /// <param name="documentMetadata">The document metadata.</param>
         /// <returns></returns>
-        protected bool EntityChanged(object entity, DocumentMetadata documentMetadata)
+        protected bool EntityChanged(object entity, DocumentMetadata documentMetadata,ref string changesDescr)
         {
             if (documentMetadata == null)
                 return true;
@@ -1062,8 +1067,8 @@ more responsive application.
                 return false;
 
             var newObj = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
-            return RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue) == false ||
-                RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata) == false;
+            return RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, ref changesDescr) == false ||
+                RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, ref changesDescr) == false;
         }
 
         /// <summary>
@@ -1207,6 +1212,8 @@ more responsive application.
             /// </summary>
             /// <value>The entities.</value>
             public IList<object> Entities { get; set; }
+
+            public string FirstChangeDescriotion { get; set; }
         }
 
         protected void LogBatch(SaveChangesData data)

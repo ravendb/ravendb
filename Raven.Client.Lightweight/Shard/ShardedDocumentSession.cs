@@ -717,13 +717,13 @@ namespace Raven.Client.Shard
 		/// <summary>
 		/// Saves all the changes to the Raven server.
 		/// </summary>
-		void IDocumentSession.SaveChanges()
+		string IDocumentSession.SaveChanges()
 		{
 			using (EntityToJson.EntitiesToJsonCachingScope())
 			{
 				var data = PrepareForSaveChanges();
 				if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)
-					return; // nothing to do here
+					return null; // nothing to do here
 
 				IncrementRequestCount();
 				LogBatch(data);
@@ -744,6 +744,7 @@ namespace Raven.Client.Shard
 					var results = databaseCommands.Batch(shardAndObjects.Value.Commands);
 					UpdateBatchResults(results, shardAndObjects.Value);
 				}
+			    return data.FirstChangeDescriotion;
 			}
 		}
 

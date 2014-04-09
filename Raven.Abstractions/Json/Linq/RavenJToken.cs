@@ -8,7 +8,9 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
+using StringUtils = Raven.Json.Utilities.StringUtils;
+using System.Text;
 
 namespace Raven.Json.Linq
 {
@@ -179,7 +181,7 @@ namespace Raven.Json.Linq
 					return new RavenJValue(reader.Value);
 			}
 
-			throw new Exception("Error reading RavenJToken from JsonReader. Unexpected token: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
+			throw new Exception(StringUtils.FormatWith("Error reading RavenJToken from JsonReader. Unexpected token: {0}", CultureInfo.InvariantCulture, reader.TokenType));
 		}
 
 		/// <summary>
@@ -270,23 +272,33 @@ namespace Raven.Json.Linq
 			throw new NotSupportedException();
 		}
 
-		/// <summary>
-		/// Compares the values of two tokens, including the values of all descendant tokens.
-		/// </summary>
-		/// <param name="t1">The first <see cref="RavenJToken"/> to compare.</param>
-		/// <param name="t2">The second <see cref="RavenJToken"/> to compare.</param>
-		/// <returns>true if the tokens are equal; otherwise false.</returns>
-		public static bool DeepEquals(RavenJToken t1, RavenJToken t2)
-		{
-			return (t1 == t2 || (t1 != null && t2 != null && t1.DeepEquals(t2)));
-		}
+	    /// <summary>
+	    /// Compares the values of two tokens, including the values of all descendant tokens.
+	    /// </summary>
+	    /// <param name="t1">The first <see cref="RavenJToken"/> to compare.</param>
+	    /// <param name="t2">The second <see cref="RavenJToken"/> to compare.</param>
+        /// <param name="difference"> changes description</param>
+	    /// <returns>true if the tokens are equal; otherwise false.</returns>
+        public static bool DeepEquals(RavenJToken t1, RavenJToken t2, ref string difference)
+        {
+            return (t1 == t2 || (t1 != null && t2 != null && t1.DeepEquals(t2, ref difference)));
+        }
+        public static bool DeepEquals(RavenJToken t1, RavenJToken t2)
+        {
+            return (t1 == t2 || (t1 != null && t2 != null && t1.DeepEquals(t2)));
+        }
 
 		public static int GetDeepHashCode(RavenJToken t)
 		{
 			return t == null ? 0 : t.GetDeepHashCode();
 		}
 
-		internal virtual bool DeepEquals(RavenJToken other)
+	    internal virtual bool DeepEquals(RavenJToken other)
+	    {
+	        string changesDescr = string.Empty;
+	        return DeepEquals(other, ref changesDescr);
+	    }
+        internal virtual bool DeepEquals(RavenJToken other, ref string changesDescr)
 		{
 			if (other == null)
 				return false;
@@ -329,18 +341,43 @@ namespace Raven.Json.Linq
 						case JTokenType.Object:
 							var selfObj = (RavenJObject)curThisReader;
 							var otherObj = (RavenJObject)curOtherReader;
-							if (selfObj.Count != otherObj.Count)
-								return false;
+					        if (selfObj.Count != otherObj.Count)
+					        {
+                                var self_sb = GetJsonData(selfObj);
+                                var other_sb = GetJsonData(otherObj);
+					            if (selfObj.Count < otherObj.Count)
+					            {
+                                    changesDescr = string.Format("object/field removed : origin  {0} new {1}  ", other_sb,self_sb); 
+					            }
+
+					            if (selfObj.Count > otherObj.Count)
+					            {
+                                    changesDescr = string.Format("object/field added:  origin  {0} new {1}  ", other_sb, self_sb); 
+					            }
+                                    
+
+                                return false;
+					        }
+								
+
 
 							foreach (var kvp in selfObj.Properties)
 							{
 								RavenJToken token;
-								if (otherObj.TryGetValue(kvp.Key, out token) == false)
-									return false;
+							    if (otherObj.TryGetValue(kvp.Key, out token) == false)
+							    {
+							        changesDescr = string.Format("{0} doesn't exist in new one {1}", kvp.Key,otherObj);
+                                    return false;
+							    }
+									
 								if (kvp.Value == null)
 								{
-									if (token != null && token.Type != JTokenType.Null)
-										return false;
+								    if (token != null && token.Type != JTokenType.Null)
+								    {
+                                        changesDescr = string.Format("token {0} doesn't exist in original one key {1} object {2}", token, kvp.Key, selfObj);
+                                        return false;
+								    }
+										
 									continue;
 								}
 								switch (kvp.Value.Type)
@@ -367,14 +404,20 @@ namespace Raven.Json.Linq
 
 										break;
 									default:
-										if (!kvp.Value.DeepEquals(token))
-											return false;
+								        if (!kvp.Value.DeepEquals(token))
+								        {
+                                            changesDescr = string.Format("field {0} changed  original type {1}   original value {2} new type {3} new value  {4} ", kvp.Key, token.Type, token, kvp.Value.Type, kvp.Value);
+								            string foo=string.Empty;
+								            kvp.Value.DeepEquals(token, ref foo);
+                                            return false;
+								        }
+											
 										break;
 								}
 							}
 							break;
 						default:
-							if (!curOtherReader.DeepEquals(curThisReader))
+                            if (!curOtherReader.DeepEquals(curThisReader, ref changesDescr))
 								return false;
 							break;
 					}
@@ -400,7 +443,28 @@ namespace Raven.Json.Linq
 			return true;
 		}
 
-		internal virtual int GetDeepHashCode()
+	    private static StringBuilder GetJsonData(RavenJObject selfObj)
+	    {
+	        RavenJToken token;
+	        var sb = new StringBuilder();
+	        foreach (var kvp in selfObj.Properties)
+	        {
+	            sb.Append(kvp.Key).Append(" = ");
+	            if (selfObj.Properties.TryGetValue(kvp.Key, out token))
+	            {
+	                sb.Append(token).Append(" , ");
+	            }
+	            else
+	            {
+	                sb.Append("null").Append(" , ");
+	            }
+	        }
+            if (sb.Length>2)
+	            sb.Remove(sb.Length - 2, 1);
+	        return sb;
+	    }
+
+	    internal virtual int GetDeepHashCode()
 		{
 			var stack = new Stack<Tuple<int, RavenJToken>>();
 			int ret = 0;
@@ -832,7 +896,7 @@ namespace Raven.Json.Linq
 					return new RavenJValue(reader.Value);
 			}
 
-			throw new Exception("Error reading RavenJToken from JsonReader. Unexpected token: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
+			throw new Exception(StringUtils.FormatWith("Error reading RavenJToken from JsonReader. Unexpected token: {0}", CultureInfo.InvariantCulture, reader.TokenType));
 
 		}
 	}

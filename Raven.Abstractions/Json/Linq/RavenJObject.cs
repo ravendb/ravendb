@@ -93,13 +93,13 @@ namespace Raven.Json.Linq
 			Properties = snapshot;
 		}
 
-		internal override bool DeepEquals(RavenJToken other)
+		internal override bool DeepEquals(RavenJToken other, ref string changesDescr)
 		{
 			var t = other as RavenJObject;
 			if (t == null)
 				return false;
 
-			return base.DeepEquals(other);
+			return base.DeepEquals(other,ref changesDescr);
 		}
 
 		/// <summary>
