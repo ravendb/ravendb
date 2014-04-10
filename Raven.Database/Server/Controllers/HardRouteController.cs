@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Policy;
 using System.Web.Http;
 
 namespace Raven.Database.Server.Controllers
@@ -51,7 +52,7 @@ namespace Raven.Database.Server.Controllers
 				? Path.Combine(DatabasesLandlord.SystemConfiguration.VirtualDirectory, RootPath) : RootPath;
 
 			var result = InnerRequest.CreateResponse(HttpStatusCode.Found);
-			result.Headers.Location = new Uri(Path.Combine(DatabasesLandlord.SystemConfiguration.ServerUrl, location));
+			result.Headers.Location = new Uri(location, UriKind.Relative);
 
 			return result;
 		}
