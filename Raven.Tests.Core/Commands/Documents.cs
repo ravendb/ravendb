@@ -14,24 +14,24 @@ using System.Collections.Generic;
 
 namespace Raven.Tests.Core.Commands
 {
-	public class Crud : RavenCoreTestBase
-	{
-		[Fact]
-		public async Task CanPutUpdateAndDeleteDocument()
-		{
-			using (var store = GetDocumentStore())
-			{
+    public class Documents : RavenCoreTestBase
+    {
+        [Fact]
+        public async Task CanPutGetUpdateAndDeleteDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
                 var putResult = await store.AsyncDatabaseCommands.PutAsync(
                     "companies/1",
                     null,
                     RavenJObject.FromObject(new Company
-                        {
-                            Name = "testname",
-                            Phone = 1,
-                            Contacts = new List<Contact> { new Contact{}, new Contact{} },
-                            Address1 = "To be removed.",
-                            Address2 = "Address2"
-                        }),
+                    {
+                        Name = "testname",
+                        Phone = 1,
+                        Contacts = new List<Contact> { new Contact { }, new Contact { } },
+                        Address1 = "To be removed.",
+                        Address2 = "Address2"
+                    }),
                     new RavenJObject());
                 Assert.NotNull(await store.AsyncDatabaseCommands.GetAsync("companies/1"));
 
@@ -42,7 +42,7 @@ namespace Raven.Tests.Core.Commands
                 Assert.Equal(2, documents.Length);
 
                 await store.AsyncDatabaseCommands.PatchAsync(
-                    "companies/1", 
+                    "companies/1",
                     new[]
                         {
                             new PatchRequest 
@@ -115,99 +115,29 @@ namespace Raven.Tests.Core.Commands
 
                 await store.AsyncDatabaseCommands.DeleteDocumentAsync("users/2");
                 Assert.Null(await store.AsyncDatabaseCommands.GetAsync("users/2"));
-			}
-		}
+            }
+        }
 
-		[Fact]
-		public async Task CanPutUpdateMetadataAndDeleteAttachment()
-		{
-			using (var store = GetDocumentStore())
-			{
-                await store.AsyncDatabaseCommands.PutAttachmentAsync("items/1", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
-                await store.AsyncDatabaseCommands.PutAttachmentAsync("items/2", null, new MemoryStream(new byte[] { 4, 5, 6 }), new RavenJObject());
+        [Fact]
+        public async Task CanGetDocumentsWhoseIdStartsWithAPrefix()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company { Name = "Something with the desired prefix" });
+                    await session.StoreAsync(new Contact { Surname = "Something without the desired prefix" });
+                    await session.SaveChangesAsync();
+                }
 
-                Assert.NotNull(await store.AsyncDatabaseCommands.GetAttachmentAsync("items/1"));
-                Assert.NotNull(await store.AsyncDatabaseCommands.GetAttachmentAsync("items/2"));
+                var documents = await store.AsyncDatabaseCommands.StartsWithAsync("Companies", null, 0, 25);
+                Assert.Equal(1, documents.Length);
+            }
+        }
 
-                var attachments = await store.AsyncDatabaseCommands.GetAttachmentsAsync(Etag.Empty, 10);
-                Assert.Equal(2, attachments.Length);
-
-                await store.AsyncDatabaseCommands.UpdateAttachmentMetadataAsync("items/1", null, new RavenJObject() { { "attachment_key", "value" } });
-                await store.AsyncDatabaseCommands.UpdateAttachmentMetadataAsync("items/2", null, new RavenJObject() { { "attachment_key2", "value2" } });
-
-				var attachment = await store.AsyncDatabaseCommands.GetAttachmentAsync("items/1");
-				Assert.Equal("value", attachment.Metadata.Value<string>("attachment_key"));
-                var attachmentMetadata = await store.AsyncDatabaseCommands.HeadAttachmentAsync("items/1");
-                Assert.Equal("value", attachmentMetadata.Metadata.Value<string>("attachment_key"));
-
-                var attachmentsMetadata = await store.AsyncDatabaseCommands.GetAttachmentHeadersStartingWithAsync("items", 0, 5);
-                await attachmentsMetadata.MoveNextAsync();
-                Assert.Equal("value", attachmentsMetadata.Current.Metadata.Value<string>("attachment_key"));
-                await attachmentsMetadata.MoveNextAsync();
-                Assert.Equal("value2", attachmentsMetadata.Current.Metadata.Value<string>("attachment_key2"));
-
-				await store.AsyncDatabaseCommands.DeleteAttachmentAsync("items/1", null);
-				Assert.Null(await store.AsyncDatabaseCommands.GetAttachmentAsync("items/1"));
-			}
-		}
-
-		[Fact]
-		public async Task CanPutUpdateAndDeleteMapIndex()
-		{
-			using (var store = GetDocumentStore())
-			{
-				const string usersByname = "users/byName";
-
-				await store.AsyncDatabaseCommands.PutIndexAsync(usersByname, new IndexDefinition()
-				{
-					Map = "from user in docs.Users select new { user.Name }"
-				}, false);
-
-				var result = await store.AsyncDatabaseCommands.GetIndexAsync(usersByname);
-				Assert.Equal(usersByname, result.Name);
-
-				await store.AsyncDatabaseCommands.PutIndexAsync(usersByname, new IndexDefinition()
-				{
-					Map = "from user in docs.Users select new { user.FirstName, user.LastName }"
-				}, true);
-
-				var indexDefinition = await store.AsyncDatabaseCommands.GetIndexAsync(usersByname);
-
-				Assert.Equal("from user in docs.Users select new { user.FirstName, user.LastName }", indexDefinition.Map);
-
-				await store.AsyncDatabaseCommands.DeleteIndexAsync(usersByname);
-
-				Assert.Null(await store.AsyncDatabaseCommands.GetIndexAsync(usersByname));
-			}
-		}
-
-		[Fact]
-		public async Task CanPutUpdateAndDeleteTransformer()
-		{
-			using (var store = GetDocumentStore())
-			{
-				const string usersSelectNames = "users/selectName";
-
-				await store.AsyncDatabaseCommands.PutTransformerAsync(usersSelectNames, new TransformerDefinition()
-				{
-					Name = usersSelectNames,
-					TransformResults = "from user in results select new { Name = user.Name }"
-				});
-
-				await store.AsyncDatabaseCommands.PutTransformerAsync(usersSelectNames, new TransformerDefinition()
-				{
-					Name = usersSelectNames,
-					TransformResults = "from user in results select new { user.FirstName, user.LastName }"
-				});
-
-				var transformer = await store.AsyncDatabaseCommands.GetTransformerAsync(usersSelectNames);
-
-				Assert.Equal("from user in results select new { user.FirstName, user.LastName }", transformer.TransformResults);
-
-				await store.AsyncDatabaseCommands.DeleteTransformerAsync(usersSelectNames);
-
-				Assert.Null(await store.AsyncDatabaseCommands.GetTransformerAsync(usersSelectNames));
-			}
-		}
-	}
+        [Fact]
+        public async Task CanGetMultipleDocumentsWithIncludes()
+        {
+        }
+    }
 }

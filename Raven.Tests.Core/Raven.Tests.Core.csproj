@@ -99,8 +99,9 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="BulkInsert\SimpleBulkInsert.cs" />
-    <Compile Include="Commands\Crud.cs" />
-    <Compile Include="Commands\DocumentsRetrieving.cs" />
+    <Compile Include="Commands\Attachments.cs" />
+    <Compile Include="Commands\Documents.cs" />
+    <Compile Include="Commands\Indexes.cs" />
     <Compile Include="Replication\AttachmentReplication.cs" />
     <Compile Include="Replication\DocumentReplication.cs" />
     <Compile Include="Replication\RavenReplicationCoreTest.cs" />
