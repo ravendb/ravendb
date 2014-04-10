@@ -20,37 +20,40 @@ namespace Raven.Database.Counters.Controllers
              *If values are ABS larger
              *      Write delta
              *Store last ETag for servers we've successfully rpelicated to
-             */ 
+             */
+	        long lastEtag = 0;
             using (var writer = Storage.CreateWriter())
             {
-                foreach (var counter in replicationMessage.Counters)
-                {
-                    var currentCounter = writer.GetCounter(counter.CounterName);
-                    foreach (var serverValue in counter.Counter.ServerValues)
-                    {
-	                    var currentServerValue = currentCounter.ServerValues
-		                    .FirstOrDefault(x => x.SourceId == serverValue.SourceId) ??
-	                                             new Counter.PerServerValue
-	                                             {
-		                                             Negative = 0,
-													 Positive = 0,
-	                                             };
+	            foreach (var counter in replicationMessage.Counters)
+	            {
+		            lastEtag = Math.Max(counter.Counter.Etag, lastEtag);
+		            var currentCounter = writer.GetCounter(counter.CounterName);
+		            foreach (var serverValue in counter.Counter.ServerValues)
+		            {
+			            var currentServerValue = currentCounter.ServerValues
+				            .FirstOrDefault(x => x.SourceId == serverValue.SourceId) ??
+			                                     new Counter.PerServerValue
+			                                     {
+				                                     Negative = 0,
+				                                     Positive = 0,
+			                                     };
 
-	                    if (serverValue.Positive == currentServerValue.Positive &&
-							serverValue.Negative == currentServerValue.Negative) 
-							continue; 
+			            if (serverValue.Positive == currentServerValue.Positive &&
+			                serverValue.Negative == currentServerValue.Negative)
+				            continue;
 
-	                    writer.Store(replicationMessage.SendingServerName, 
-							counter.CounterName, 
-		                    Math.Max(serverValue.Positive, currentServerValue.Positive),
-		                    Math.Max(serverValue.Negative, currentServerValue.Negative)
-		                    );
+			            writer.Store(replicationMessage.SendingServerName,
+				            counter.CounterName,
+				            Math.Max(serverValue.Positive, currentServerValue.Positive),
+				            Math.Max(serverValue.Negative, currentServerValue.Negative)
+				            );
+		            }
+	            }
+	            
+				writer.RecordLastEtagFor(replicationMessage.SendingServerName, lastEtag);
 
-                    }
-                }
-                
-                writer.Commit();
-                return new HttpResponseMessage(HttpStatusCode.OK);
+	            writer.Commit();
+	            return new HttpResponseMessage(HttpStatusCode.OK);
             }
         }   
     }

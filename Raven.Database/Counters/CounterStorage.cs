@@ -43,6 +43,7 @@ namespace Raven.Database.Counters
 		{
 			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 			{
+				storageEnvironment.CreateTree(tx, "serversLastEtag");
 				storageEnvironment.CreateTree(tx, "counters");
 				storageEnvironment.CreateTree(tx, "countersGroups");
 
@@ -222,7 +223,7 @@ namespace Raven.Database.Counters
                     {
 	                    if (buffer.Length < it.GetCurrentDataSize())
 	                    {
-							buffer = new byte[Utils.NearestPowerOfTwo(it.GetCurrentDataSize());
+							buffer = new byte[Utils.NearestPowerOfTwo(it.GetCurrentDataSize())];
 	                    }
 	                    it.CreateReaderForCurrent().Read(buffer, 0, buffer.Length);
                         var counterName = Encoding.UTF8.GetString(buffer);
@@ -364,7 +365,7 @@ namespace Raven.Database.Counters
 					{serverId,server}
 				};
 				var servers = transaction.State.GetTree(transaction, "servers");
-				servers.Add(transaction, server, BitConverter.GetBytes(serverId));
+				servers.Add(transaction, server, EndianBitConverter.Big.GetBytes(serverId));
 				return serverId;
 			}
 
@@ -378,6 +379,14 @@ namespace Raven.Database.Counters
 				parent.LastWrite = SystemTime.UtcNow;
 				if (transaction != null)
 					transaction.Dispose();
+			}
+
+			public void RecordLastEtagFor(string server, long lastEtag)
+			{
+				var serverId = GetServerId(server);
+				var key = EndianBitConverter.Big.GetBytes(serverId);
+				var serversLastEtag = transaction.State.GetTree(transaction, "serversLastEtag");
+				serversLastEtag.Add(transaction, new Slice(key), EndianBitConverter.Big.GetBytes(lastEtag));
 			}
 		}
 
