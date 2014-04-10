@@ -856,7 +856,7 @@ namespace Raven.Database.Indexing
 
 	    public static void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQuery indexQuery, AbstractViewGenerator viewGenerator)
         {
-		    if (string.IsNullOrWhiteSpace(indexQuery.Query))
+		    if (string.IsNullOrWhiteSpace(indexQuery.Query) == false)
 		    {
 			    HashSet<string> hashSet = SimpleQueryParser.GetFields(indexQuery);
 			    foreach (string field in hashSet)
@@ -871,7 +871,7 @@ namespace Raven.Database.Indexing
 					    throw new ArgumentException("The field '" + f + "' is not indexed, cannot query on fields that are not indexed");
 			    }
 		    }
-		    if (indexQuery.SortedFields == null)
+		    if (indexQuery.SortedFields != null)
 		    {
 			    foreach (SortedField field in indexQuery.SortedFields)
 			    {
