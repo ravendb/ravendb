@@ -248,7 +248,6 @@ namespace Raven.Database.Counters
 			private readonly Tree counters, etagsCountersIx, countersEtagIx, countersGroups;
             private readonly byte[] storeBuffer;
 			private byte[] buffer = new byte[0];
-			private bool incrementedEtag;
 			private readonly byte[] etagBuffer = new byte[sizeof(long)];
 		    private readonly Reader reader;
 
@@ -301,45 +300,41 @@ namespace Raven.Database.Counters
 
 			private void Store(string server, string counter, Action<ReadResult> setStoreBuffer)
 			{
-				if (incrementedEtag == false)
-				{
-					parent.LastEtag++;
-					incrementedEtag = true;
-				}
+				parent.LastEtag++;
 				var serverId = GetServerId(server);
-				
+
 
 				var counterNameSize = Encoding.UTF8.GetByteCount(counter);
-				var requiredBufferSize = counterNameSize + sizeof(int);
+				var requiredBufferSize = counterNameSize + sizeof (int);
 				EnsureBufferSize(requiredBufferSize);
 
 				var end = Encoding.UTF8.GetBytes(counter, 0, counter.Length, buffer, 0);
 				EndianBitConverter.Big.CopyBytes(serverId, buffer, end);
 
-				var endOfGroupPrefix = Array.IndexOf(buffer, (byte)';', 0, counterNameSize);
-				if(endOfGroupPrefix == -1)
+				var endOfGroupPrefix = Array.IndexOf(buffer, (byte) ';', 0, counterNameSize);
+				if (endOfGroupPrefix == -1)
 					throw new InvalidOperationException("Could not find group name in counter, no ; separator");
 
-				var groupKeySlice = new Slice(buffer, (ushort)endOfGroupPrefix);
+				var groupKeySlice = new Slice(buffer, (ushort) endOfGroupPrefix);
 				if (countersGroups.Read(transaction, groupKeySlice) == null)
 				{
 					countersGroups.Add(transaction, groupKeySlice, new byte[0]);
 				}
 
 				Debug.Assert(requiredBufferSize < ushort.MaxValue);
-				var slice = new Slice(buffer, (ushort)requiredBufferSize);
+				var slice = new Slice(buffer, (ushort) requiredBufferSize);
 				var result = counters.Read(transaction, slice);
-			    
-                setStoreBuffer(result);
-                
+
+				setStoreBuffer(result);
+
 				counters.Add(transaction, slice, storeBuffer);
 
-				slice = new Slice(buffer, (ushort)counterNameSize);
+				slice = new Slice(buffer, (ushort) counterNameSize);
 				result = countersEtagIx.Read(transaction, slice);
 				var etagSlice = new Slice(etagBuffer);
 				if (result != null) // remove old etag entry
 				{
-					result.Reader.Read(etagBuffer, 0, sizeof(long));
+					result.Reader.Read(etagBuffer, 0, sizeof (long));
 					etagsCountersIx.Delete(transaction, etagSlice);
 				}
 				EndianBitConverter.Big.CopyBytes(parent.LastEtag, etagBuffer, 0);
