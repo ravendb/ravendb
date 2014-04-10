@@ -3,6 +3,7 @@ import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 import router = require("plugins/router");
 import app = require("durandal/app");
+import uploadItem = require("models/uploadItem");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
 
 /*
@@ -11,6 +12,7 @@ import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm
 class viewModelBase {
     public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
+    localStorageUploadQueueKey: string;
 
     private keyboardShortcutDomContainers: string[] = [];
     private modelPollingHandle: number;
@@ -36,6 +38,7 @@ class viewModelBase {
         }
 
         viewModelBase.isConfirmedUsingSystemDatabase = false;
+
         return true;
     }
 
@@ -43,6 +46,7 @@ class viewModelBase {
     * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
     */
     activate(args) {
+        this.localStorageUploadQueueKey = "ravenFs-uploadQueue.";
         var db = appUrl.getDatabase();
         var currentDb = this.activeDatabase();
         if (!!db && db !== null && (!currentDb || currentDb.name !== db.name)) {
@@ -181,6 +185,35 @@ class viewModelBase {
         app.showDialog(systemDbConfirm);
 
         return canNavTask;
+    }
+
+    stringifyUploadQueue(queue: uploadItem[]): string {
+        return ko.toJSON(queue);
+    }
+
+    parseUploadQueue(queue: string, fs : filesystem): uploadItem[] {
+        var stringArray: any[] = JSON.parse(queue);
+        var uploadQueue: uploadItem[] = [];
+
+        for (var i = 0; i < stringArray.length; i++) {
+            uploadQueue.push(new uploadItem(stringArray[i]["id"], stringArray[i]["fileName"],
+                stringArray[i]["status"], fs));
+        }
+
+        return uploadQueue;
+    }
+
+    updateLocalStorage(x: uploadItem[], fs : filesystem) {
+        window.localStorage.setItem(this.localStorageUploadQueueKey + fs.name, this.stringifyUploadQueue(x));
+    }
+
+    updateQueueStatus(guid: string, status: string, queue: uploadItem[]) {
+        var items = ko.utils.arrayFilter(queue, (i: uploadItem) => {
+            return i.id() === guid
+        });
+        if (items) {
+            items[0].status(status);
+        }
     }
 
 }

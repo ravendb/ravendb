@@ -1,6 +1,7 @@
 ﻿import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
 import appUrl = require("common/appUrl");
+import uploadItem = require("models/uploadItem");
 
 class uploadFileToFilesystemCommand extends commandBase {
 
@@ -11,7 +12,7 @@ class uploadFileToFilesystemCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<any> {
+    execute(): JQueryPromise<uploadItem> {
         if (this.reportUploadProgress) {
             this.reportInfo("File " + this.source.name + "queued for upload...");
         }
@@ -48,11 +49,11 @@ class uploadFileToFilesystemCommand extends commandBase {
         if (this.reportUploadProgress) {
             uploadTask.done(() => {
                 this.reportSuccess("Uploaded " + this.source.name)
-                return deferred.resolve(this.uploadId);
+                return deferred.resolve(new uploadItem(this.uploadId, this.source.name, "Uploaded", this.fs));
             });
             uploadTask.fail((response: JQueryXHR) => {
                 this.reportError("Failed to upload " + this.source.name, response.responseText, response.statusText)
-                return deferred.reject(this.uploadId);
+                return deferred.reject(new uploadItem(this.uploadId, this.source.name, "Failed", this.fs));
             });
         }
 
