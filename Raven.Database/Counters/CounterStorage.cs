@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
-using Amazon.ElasticBeanstalk.Model;
 using Raven.Abstractions;
 using Raven.Database.Config;
 using Voron;
@@ -27,8 +26,7 @@ namespace Raven.Database.Counters
 		private Dictionary<string, int> serverNamesToIds = new Dictionary<string, int>();
 		private Dictionary<int, string> serverIdstoName = new Dictionary<int, string>();
 
-
-		private long lastEtag;
+		public long LastEtag { get; private set; }
 
 		public CounterStorage(string name, InMemoryRavenConfiguration configuration)
 		{
@@ -92,7 +90,7 @@ namespace Raven.Database.Counters
 					{
 						if (it.Seek(Slice.AfterAllKeys))
 						{
-							lastEtag = it.CurrentKey.ToInt64();
+							LastEtag = it.CurrentKey.ToInt64();
 						}
 					}
 				}
@@ -137,16 +135,20 @@ namespace Raven.Database.Counters
 		public class Reader : IDisposable
 		{
 			private readonly Transaction transaction;
-			private readonly Tree counters, countersEtags, countersGroups;
+            private readonly Tree counters, countersEtags, countersGroups, etagsCounters;
 			private readonly byte[] serverIdBytes = new byte[sizeof(int)];
 
-			public Reader(StorageEnvironment storageEnvironment)
-			{
-				transaction = storageEnvironment.NewTransaction(TransactionFlags.Read);
-				counters = transaction.State.GetTree(transaction, "counters");
-				countersGroups = transaction.State.GetTree(transaction, "countersGroups");
-				countersEtags = transaction.State.GetTree(transaction, "counters->etags");
-			}
+            public Reader(StorageEnvironment storageEnvironment)
+                : this(storageEnvironment.NewTransaction(TransactionFlags.Read)) { }
+
+            public Reader(Transaction t)
+            {
+                transaction = t;
+                counters = transaction.State.GetTree(transaction, "counters");
+                countersGroups = transaction.State.GetTree(transaction, "countersGroups");
+                countersEtags = transaction.State.GetTree(transaction, "counters->etags");
+                etagsCounters = transaction.State.GetTree(transaction, "etags->counters");
+            }
 
 			public IEnumerable<string> GetCounterNames(string prefix)
 			{
@@ -175,7 +177,7 @@ namespace Raven.Database.Counters
 				}
 			}
 
-			public Counter GetCounter(string name)
+            public Counter GetCounter(Slice name)
 			{
 				Slice slice = name;
 				var etagResult = countersEtags.Read(transaction, slice);
@@ -206,6 +208,32 @@ namespace Raven.Database.Counters
 				}
 			}
 
+            public IEnumerable<ReplictionCounter> GetCountersSinceEtag(long etag)
+		    {
+                var buffer = new byte[sizeof(long)];
+                EndianBitConverter.Big.CopyBytes(etag, buffer, 0);
+		        var slice = new Slice(buffer);
+                var result = etagsCounters.Read(transaction, slice);
+                if (result == null) yield break;
+
+                
+                using (var it = etagsCounters.MultiRead(transaction, slice))
+                {
+                    if (it.Seek(Slice.BeforeAllKeys) == false)
+                        yield break;
+                    do
+                    {
+                        var counterName = Encoding.UTF8.GetString(result.Reader.ReadBytes(result.Reader.Length));
+                        yield return new ReplictionCounter
+                        {
+                            CounterName = counterName,
+                            Counter = GetCounter(counterName)
+                        };
+
+                    } while (it.MoveNext());    
+                }
+            }
+
 			public void Dispose()
 			{
 				if (transaction != null)
@@ -218,16 +246,18 @@ namespace Raven.Database.Counters
 			private readonly CounterStorage parent;
 			private readonly Transaction transaction;
 			private readonly Tree counters, etagsCountersIx, countersEtagIx, countersGroups;
-			private readonly byte[] storeBuffer;
+            private readonly byte[] storeBuffer;
 			private byte[] buffer = new byte[0];
 			private bool incrementedEtag;
 			private readonly byte[] etagBuffer = new byte[sizeof(long)];
+		    private readonly Reader reader;
 
 			public Writer(CounterStorage parent, StorageEnvironment storageEnvironment)
 			{
 				this.parent = parent;
-				transaction = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite);
-				counters = transaction.State.GetTree(transaction, "counters");
+                transaction = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite);
+                reader = new Reader(transaction);
+                counters = transaction.State.GetTree(transaction, "counters");
 				countersGroups = transaction.State.GetTree(transaction, "countersGroups");
 				etagsCountersIx = transaction.State.GetTree(transaction, "etags->counters");
 				countersEtagIx = transaction.State.GetTree(transaction, "counters->etags");
@@ -236,11 +266,44 @@ namespace Raven.Database.Counters
 									   sizeof(long)]; // negative
 			}
 
-			public void Store(string server, string counter, long delta)
+            public Counter GetCounter(string name)
+            {
+                return reader.GetCounter(name);
+            }
+
+		    public void Store(string server, string counter, long delta)
+		    {
+		        Store(server, counter, result =>
+		        {
+		            var valPos = delta > 0 ? 0 : 8;
+		            if (result == null)
+		            {
+		                EndianBitConverter.Big.CopyBytes(delta, storeBuffer, valPos);
+		                EndianBitConverter.Big.CopyBytes(0L, storeBuffer, delta > 0 ? 8 : 0);
+		            }
+		            else
+		            {
+		                result.Reader.Read(storeBuffer, 0, buffer.Length);
+		                delta += EndianBitConverter.Big.ToInt64(storeBuffer, valPos);
+		                EndianBitConverter.Big.CopyBytes(delta, storeBuffer, valPos);
+		            }
+		        });
+		    }
+
+            public void Store(string server, string counter, long positive, long negative)
+            {
+                Store(server, counter, result =>
+                {
+                    EndianBitConverter.Big.CopyBytes(positive, storeBuffer, 0);
+                    EndianBitConverter.Big.CopyBytes(negative, storeBuffer, 8);
+                });
+            }
+
+			private void Store(string server, string counter, Action<ReadResult> setStoreBuffer)
 			{
 				if (incrementedEtag == false)
 				{
-					parent.lastEtag++;
+					parent.LastEtag++;
 					incrementedEtag = true;
 				}
 				var serverId = GetServerId(server);
@@ -265,19 +328,10 @@ namespace Raven.Database.Counters
 
 				Debug.Assert(requiredBufferSize < ushort.MaxValue);
 				var slice = new Slice(buffer, (ushort)requiredBufferSize);
-				var valPos = delta > 0 ? 0 : 8;
 				var result = counters.Read(transaction, slice);
-				if (result == null)
-				{
-					EndianBitConverter.Big.CopyBytes(delta, storeBuffer, valPos);
-					EndianBitConverter.Big.CopyBytes(0L, storeBuffer, delta > 0 ? 8 : 0);
-				}
-				else
-				{
-					result.Reader.Read(storeBuffer, 0, buffer.Length);
-					delta += EndianBitConverter.Big.ToInt64(storeBuffer, valPos);
-					EndianBitConverter.Big.CopyBytes(delta, storeBuffer, valPos);
-				}
+			    
+                setStoreBuffer(result);
+                
 				counters.Add(transaction, slice, storeBuffer);
 
 				slice = new Slice(buffer, (ushort)counterNameSize);
@@ -288,7 +342,7 @@ namespace Raven.Database.Counters
 					result.Reader.Read(etagBuffer, 0, sizeof(long));
 					etagsCountersIx.Delete(transaction, etagSlice);
 				}
-				EndianBitConverter.Big.CopyBytes(parent.lastEtag, etagBuffer, 0);
+				EndianBitConverter.Big.CopyBytes(parent.LastEtag, etagBuffer, 0);
 				etagsCountersIx.Add(transaction, etagSlice, slice);
 				countersEtagIx.Add(transaction, slice, etagSlice);
 			}
@@ -337,5 +391,10 @@ namespace Raven.Database.Counters
 			serverIdstoName.TryGetValue(sourceId, out value);
 			return value;
 		}
+
+	    public IEnumerable<string> Servers
+	    {
+	        get { return serverNamesToIds.Keys; }
+	    } 
 	}
 }

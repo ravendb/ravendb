@@ -14,7 +14,6 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
-using NLog.LayoutRenderers;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;

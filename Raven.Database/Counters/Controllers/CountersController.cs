@@ -68,7 +68,5 @@ namespace Raven.Database.Counters.Controllers
 				public long Negative { get; set; }
 			}
 		}
-
-
 	}
 }
