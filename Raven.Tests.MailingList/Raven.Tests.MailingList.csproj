@@ -140,6 +140,7 @@
     <Compile Include="ChrisDNF.cs" />
     <Compile Include="ChrisH.cs" />
     <Compile Include="ChrisMarisic.cs" />
+    <Compile Include="Class7.cs" />
     <Compile Include="CoalescingOperatorWithStringARray.cs" />
     <Compile Include="ComplexIndexMerge.cs" />
     <Compile Include="CompoundOrQueryWithOrderByDescending .cs" />
