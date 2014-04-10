@@ -1,7 +1,7 @@
-﻿<div class="alert alert-danger">
-    <p>Note: not implemented yet</p>
-    <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2064">You can track progress here</a>
-</div>
+﻿<!--<div class="alert alert-danger">
+        <p>Note: not implemented yet</p>
+        <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2064">You can track progress here</a>
+    </div>-->
 
 <div class="filesystems-page">
 
@@ -30,6 +30,9 @@
                     <button id="hasMetadata" type="button" class="btn btn-default popover-html">Has metadata...</button>
                     <button id="inFolder" type="button" class="btn btn-default popover-html">In folder...</button>
                     <button id="lastModifiedBetween" type="button" class="btn btn-default popover-html">Last modified...</button>
+                    <button class="btn btn-default popover-html" data-bind="bootstrapPopover: {template: 'popoverTemplate', title: 'Oh Yea'}">
+                        Launch Simple Popover
+                    </button>
                 </div>
             </div>
         </div>
@@ -100,3 +103,8 @@
         </div>
     </form>
 </div>
+
+<script type="text/html" id="popoverTemplate">
+    <button class="close pull-right" type="button" data-dismiss="bootstrapPopover">×</button>
+    Hey I am some content in A popover
+</script>

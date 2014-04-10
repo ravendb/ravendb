@@ -1,0 +1,3 @@
+﻿interface KnockoutBindingHandlers {
+    bootstrapPopover: KnockoutBindingHandler;
+}

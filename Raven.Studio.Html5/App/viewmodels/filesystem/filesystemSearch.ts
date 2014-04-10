@@ -7,6 +7,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import searchByQueryCommand = require("commands/filesystem/searchByQueryCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import pagedList = require("common/pagedList");
+import bootstrapPopoverBindingHandler = require("common/bootstrapPopoverBindingHandler");
 
 class filesystemSearch extends viewModelBase {
 
@@ -16,12 +17,14 @@ class filesystemSearch extends viewModelBase {
     searchText = ko.observable("");
     allFilesPagedItems = ko.observable<pagedList>();
     selectedFilesIndices = ko.observableArray<number>();
-    //startsWithText = ko.observable("");
+    startsWithText = ko.observable("");
 
     static gridSelector = "#filesGrid";
 
     constructor() {
         super();
+
+        bootstrapPopoverBindingHandler.install();
 
         this.searchText.extend({ throttle: 200 }).subscribe(s => this.searchFiles(s));
         //this.startsWithText.extend({ throttle: 200 }).subscribe(s => this.fileNameStartsWithClauseBuilder(s));
@@ -35,7 +38,6 @@ class filesystemSearch extends viewModelBase {
         super.activate(args);
         //this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
        
-
         this.loadFiles(false);
     }
 
@@ -50,46 +52,46 @@ class filesystemSearch extends viewModelBase {
             });
         });
 
-        var popoverTemplate = '<div class="popover popover-lg"><div class="arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"><p></p></div></div></div>';
+        //var popoverTemplate = '<div class="popover popover-lg"><div class="arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"><p></p></div></div></div>';
 
-        ($('#fileNameEndsWith')).popover({
-            html: true,
-            content: () => $('#fileNameEndsWithContextMenu').html(),
-            placement: 'bottom'
-        });
+        //($('#fileNameEndsWith')).popover({
+        //    html: true,
+        //    content: () => $('#fileNameEndsWithContextMenu').html(),
+        //    placement: 'bottom'
+        //});
 
-        ($('#fileNameStartsWith')).popover({
-            html: true,
-            content: () => $('#fileNameStartsWithContextMenu').html(),
-            placement: 'bottom'
-        });
+        //($('#fileNameStartsWith')).popover({
+        //    html: true,
+        //    content: () => $('#fileNameStartsWithContextMenu').html(),
+        //    placement: 'bottom'
+        //});
 
-        ($('#fileSizeBetween')).popover({
-            html: true,
-            content: () => $('#fileSizeBetweenContextMenu').html(),
-            placement: 'bottom',
-            template: popoverTemplate
-        });
+        //($('#fileSizeBetween')).popover({
+        //    html: true,
+        //    content: () => $('#fileSizeBetweenContextMenu').html(),
+        //    placement: 'bottom',
+        //    template: popoverTemplate
+        //});
 
-        ($('#hasMetadata')).popover({
-            html: true,
-            content: () => $('#hasMetadataContextMenu').html(),
-            placement: 'bottom',
-            template: popoverTemplate
-        });
+        //($('#hasMetadata')).popover({
+        //    html: true,
+        //    content: () => $('#hasMetadataContextMenu').html(),
+        //    placement: 'bottom',
+        //    template: popoverTemplate
+        //});
 
-        ($('#inFolder')).popover({
-            html: true,
-            content: () => $('#inFolderContextMenu').html(),
-            placement: 'bottom'
-        });
+        //($('#inFolder')).popover({
+        //    html: true,
+        //    content: () => $('#inFolderContextMenu').html(),
+        //    placement: 'bottom'
+        //});
 
-        ($('#lastModifiedBetween')).popover({
-            html: true,
-            content: () => $('#lastModifiedBetweenContextMenu').html(),
-            placement: 'bottom',
-            template: popoverTemplate
-        });
+        //($('#lastModifiedBetween')).popover({
+        //    html: true,
+        //    content: () => $('#lastModifiedBetweenContextMenu').html(),
+        //    placement: 'bottom',
+        //    template: popoverTemplate
+        //});
     }
 
     searchFiles(query: string) {
