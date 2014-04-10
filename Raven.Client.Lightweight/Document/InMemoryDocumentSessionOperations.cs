@@ -992,6 +992,7 @@ more responsive application.
                     Etag = etag,
                     Key = key,
                 });
+                result.FirstChangeDescriotion = string.Format("Object {0} deleted",key);
             }
             deletedEntities.Clear();
         }

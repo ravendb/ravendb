@@ -329,8 +329,22 @@ namespace Raven.Json.Linq
 						case JTokenType.Array:
 							var selfArray = (RavenJArray)curThisReader;
 							var otherArray = (RavenJArray)curOtherReader;
-							if (selfArray.Length != otherArray.Length)
-								return false;
+					        if (selfArray.Length != otherArray.Length)
+					        {
+                                var self_sb = GetJsonData(selfArray);
+                                var other_sb = GetJsonData(otherArray);
+                                if (selfArray.Length < otherArray.Length)
+                                {
+                                    changesDescr = string.Format("Field removed : origin  {0} new {1}  ",  other_sb, self_sb);
+                                }
+
+                                if (selfArray.Length > otherArray.Length)
+                                {
+                                    changesDescr = string.Format("Field added:  origin  {0} new {1}  ",  other_sb, self_sb);
+                                }
+                                return false;
+					        }
+								
 
 							for (int i = 0; i < selfArray.Length; i++)
 							{
@@ -345,14 +359,16 @@ namespace Raven.Json.Linq
 					        {
                                 var self_sb = GetJsonData(selfObj);
                                 var other_sb = GetJsonData(otherObj);
+					           
+                                var descr = otherObj.Count == 0 ? "object" : "field";
 					            if (selfObj.Count < otherObj.Count)
 					            {
-                                    changesDescr = string.Format("object/field removed : origin  {0} new {1}  ", other_sb,self_sb); 
+                                    changesDescr = string.Format("{0} removed : origin  {1} new {2}  ", descr,other_sb, self_sb); 
 					            }
 
 					            if (selfObj.Count > otherObj.Count)
 					            {
-                                    changesDescr = string.Format("object/field added:  origin  {0} new {1}  ", other_sb, self_sb); 
+                                    changesDescr = string.Format("{0} added:  origin  {0} new {1}  ", descr, other_sb, self_sb); 
 					            }
                                     
 
@@ -417,8 +433,17 @@ namespace Raven.Json.Linq
 							}
 							break;
 						default:
-                            if (!curOtherReader.DeepEquals(curThisReader, ref changesDescr))
-								return false;
+					        if (!curOtherReader.DeepEquals(curThisReader, ref changesDescr))
+					        {
+					            string ss = curOtherReader.ToString();
+					            string ss1 = curOtherReader.Type.ToString();
+
+                                changesDescr = string.Format("field  changed  original type {0}   original value {1} new type {2} new value {3}  ", curOtherReader.Type.ToString(), curOtherReader.ToString(), 
+                                    curThisReader.Type.ToString(), curThisReader.ToString());
+
+                                return false;
+					        }
+								
 							break;
 					}
 				}
@@ -443,6 +468,20 @@ namespace Raven.Json.Linq
 			return true;
 		}
 
+
+        private static StringBuilder GetJsonData(RavenJArray selfObj)
+	    {
+	        RavenJToken token;
+	        var sb = new StringBuilder();
+	        foreach (var kvp in selfObj.Values())
+	        {
+                sb.Append(kvp).Append("  ").Append(" , "); 
+	
+	        }
+            if (sb.Length>2)
+	            sb.Remove(sb.Length - 2, 1);
+	        return sb;
+	    }
 	    private static StringBuilder GetJsonData(RavenJObject selfObj)
 	    {
 	        RavenJToken token;
