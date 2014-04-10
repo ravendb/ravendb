@@ -213,17 +213,19 @@ namespace Raven.Database.Counters
                 var buffer = new byte[sizeof(long)];
                 EndianBitConverter.Big.CopyBytes(etag, buffer, 0);
 		        var slice = new Slice(buffer);
-                var result = etagsCounters.Read(transaction, slice);
-                if (result == null) yield break;
-
                 
-                using (var it = etagsCounters.MultiRead(transaction, slice))
+                using (var it = etagsCounters.Iterate(transaction))
                 {
-                    if (it.Seek(Slice.BeforeAllKeys) == false)
+					if (it.Seek(slice) == false)
                         yield break;
                     do
                     {
-                        var counterName = Encoding.UTF8.GetString(result.Reader.ReadBytes(result.Reader.Length));
+	                    if (buffer.Length < it.GetCurrentDataSize())
+	                    {
+							buffer = new byte[Utils.NearestPowerOfTwo(it.GetCurrentDataSize());
+	                    }
+	                    it.CreateReaderForCurrent().Read(buffer, 0, buffer.Length);
+                        var counterName = Encoding.UTF8.GetString(buffer);
                         yield return new ReplictionCounter
                         {
                             CounterName = counterName,
@@ -302,7 +304,6 @@ namespace Raven.Database.Counters
 			{
 				parent.LastEtag++;
 				var serverId = GetServerId(server);
-
 
 				var counterNameSize = Encoding.UTF8.GetByteCount(counter);
 				var requiredBufferSize = counterNameSize + sizeof (int);
