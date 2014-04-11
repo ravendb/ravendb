@@ -24,15 +24,12 @@
             <h5>Add search filter</h5>
             <div class="row" style="padding: 0 10px 0 10px">
                 <div class="btn-group">
-                    <button id="fileNameStartsWith" type="button" class="btn btn-default popover-html">File name starts with...</button>
-                    <button id="fileNameEndsWith" type="button" class="btn btn-default popover-html">File name ends with...</button>
-                    <button id="fileSizeBetween" type="button" class="btn btn-default popover-html">File size...</button>
-                    <button id="hasMetadata" type="button" class="btn btn-default popover-html">Has metadata...</button>
-                    <button id="inFolder" type="button" class="btn btn-default popover-html">In folder...</button>
-                    <button id="lastModifiedBetween" type="button" class="btn btn-default popover-html">Last modified...</button>
-                    <button class="btn btn-default popover-html" data-bind="bootstrapPopover: {template: 'popoverTemplate', title: 'Oh Yea'}">
-                        Launch Simple Popover
-                    </button>
+                    <button id="fileNameStartsWith" type="button" class="btn btn-default" data-bind="click: fileNameStartsWith">File name starts with...</button>
+                    <button id="fileNameEndsWith" type="button" class="btn btn-default" data-bind="click: fileNameEndsWith">File name ends with...</button>
+                    <button id="fileSizeBetween" type="button" class="btn btn-default">File size...</button>
+                    <button id="hasMetadata" type="button" class="btn btn-default">Has metadata...</button>
+                    <button id="inFolder" type="button" class="btn btn-default">In folder...</button>
+                    <button id="lastModifiedBetween" type="button" class="btn btn-default">Last modified...</button>
                 </div>
             </div>
         </div>
@@ -40,15 +37,6 @@
             <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, gridSelector: '#filesGrid', isCopyAllowed: false }"></div>
         </div>
     </div>
-</div>
-
-<div id="fileNameStartsWithContextMenu" hidden>
-    <form class="form-inline" role="form">
-        <div class="form-group">
-            <label>Starts with: </label>
-            <input type="text" class="form-control" />
-        </div>
-    </form>
 </div>
 
 <div id="fileNameEndsWithContextMenu" hidden>
@@ -103,8 +91,3 @@
         </div>
     </form>
 </div>
-
-<script type="text/html" id="popoverTemplate">
-    <button class="close pull-right" type="button" data-dismiss="bootstrapPopover">×</button>
-    Hey I am some content in A popover
-</script>

@@ -99,8 +99,6 @@
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
-    <TypeScriptCompile Include="App\common\bootstrapPopoverBindingHandler.ts" />
-    <TypeScriptCompile Include="App\common\knockoutCustomBindings.d.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
@@ -136,10 +134,11 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\configuration.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemFiles.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystems.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemSearch.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\search.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemStatistics.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemSynchronization.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemUploadFile.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\singleInputSearchClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\backupDatabase.ts" />
@@ -226,9 +225,10 @@
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\filesystem\deleteFiles.html" />
-    <Content Include="App\views\filesystem\filesystemSearch.html" />
+    <Content Include="App\views\filesystem\search.html" />
     <Content Include="App\views\filesystem\filesystemSynchronization.html" />
     <Content Include="App\views\filesystem\filesystemEditFile.html" />
+    <Content Include="App\views\filesystem\singleInputSearchClause.html" />
     <Content Include="App\views\selectColumns.html" />
     <TypeScriptCompile Include="App\viewmodels\patch.ts" />
     <Content Include="App\views\patch.html" />
