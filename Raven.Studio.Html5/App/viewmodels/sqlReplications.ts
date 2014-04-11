@@ -41,7 +41,9 @@ class sqlReplications extends viewModelBase {
         return deferred;
     }
 
-    activate() {
+    activate(args) {
+        super.activate(args);
+
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.replications]);
         this.isSaveEnabled = ko.computed(function () {
             return viewModelBase.dirtyFlag().isDirty();
