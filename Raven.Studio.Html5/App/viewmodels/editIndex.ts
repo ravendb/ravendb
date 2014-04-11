@@ -29,6 +29,7 @@ class editIndex extends viewModelBase {
     statsUrl = ko.observable<string>();
     queryUrl = ko.observable<string>();
     editMaxIndexOutputsPerDocument = ko.observable<boolean>(false);
+    indexErrorsList = ko.observableArray<string>();
 
     constructor() {
         super();

@@ -24,6 +24,8 @@ class editDocument extends viewModelBase {
     metadata: KnockoutComputed<documentMetadata>;
     documentText = ko.observable('').extend({ required: true });
     metadataText = ko.observable('').extend({ required: true });
+    documentTextSubscription;
+    metadataTextSubscription;
     isEditingMetadata = ko.observable(false);
     isBusy = ko.observable(false);
     metaPropsToRestoreOnSave = [];
@@ -37,11 +39,11 @@ class editDocument extends viewModelBase {
     relatedDocumentHrefs=ko.observableArray<{id:string;href:string}>();
     docEditroHasFocus = ko.observable(true);
     documentMatchRegexp = /\w+\/\w+/ig;
+    lodaedDocumentName = ko.observable('');
+    isSaveEnabled: KnockoutComputed<Boolean>;
 
     static editDocSelector = "#editDocumentContainer";
     static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
-
-    private lodaedDocumentName : string;
 
     constructor() {
         super();
@@ -59,8 +61,8 @@ class editDocument extends viewModelBase {
         this.editedDocId.subscribe((docId: string)=> ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), docId)));
 
         // When we programmatically change the document text or meta text, push it into the editor.
-        this.metadataText.subscribe(() => this.updateDocEditorText());
-        this.documentText.subscribe(() => this.updateDocEditorText());
+        this.metadataTextSubscription = this.metadataText.subscribe(() => this.updateDocEditorText());
+        this.documentTextSubscription = this.documentText.subscribe(() => this.updateDocEditorText());
         this.isEditingMetadata.subscribe(() => this.updateDocEditorText());
     }
 
@@ -68,7 +70,6 @@ class editDocument extends viewModelBase {
     canActivate(args: any) {
         super.canActivate(args);
         if (args && args.id) {
-
             var canActivateResult = $.Deferred();
             new getDocumentWithMetadataCommand(args.id, appUrl.getDatabase())
                 .execute()
@@ -90,6 +91,13 @@ class editDocument extends viewModelBase {
 
     activate(navigationArgs) {
         super.activate(navigationArgs);
+
+        this.lodaedDocumentName(this.userSpecifiedId());
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
+        var self = this;
+        this.isSaveEnabled = ko.computed(function() {
+            return viewModelBase.dirtyFlag().isDirty() && !!self.userSpecifiedId();
+        });
 
         // Find the database and collection we're supposed to load.
         // Used for paging through items.
@@ -143,8 +151,8 @@ class editDocument extends viewModelBase {
     // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
         super.compositionComplete();
-        this.lodaedDocumentName = this.userSpecifiedId();
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
+        //this.lodaedDocumentName = this.userSpecifiedId();
+        //viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
     }
 
     saveInObservable() {
@@ -158,6 +166,7 @@ class editDocument extends viewModelBase {
         this.docEditor.setFontSize("16px");
         this.docEditor.getSession().setMode("ace/mode/json");
         $("#docEditor").on('blur', ".ace_text-input", () => this.storeDocEditorTextIntoObservable());
+        $("#docEditor").on('keyup', ".ace_text-input", () => this.storeDocEditorTextIntoObservable());
         this.updateDocEditorText();
     }
 
@@ -199,7 +208,7 @@ class editDocument extends viewModelBase {
         //the name of the document was changed and we have to save it as a new one
         var meta = JSON.parse(this.metadataText());
         var currentDocumentId = this.userSpecifiedId();
-        if (this.lodaedDocumentName && this.lodaedDocumentName != currentDocumentId) {
+        if (!!this.lodaedDocumentName() && this.lodaedDocumentName() != currentDocumentId) {
             this.isCreatingNewDocument(true);
         }
 
@@ -227,7 +236,7 @@ class editDocument extends viewModelBase {
             // Resync Changes
             viewModelBase.dirtyFlag().reset();
 
-            this.lodaedDocumentName = currentDocumentId;
+            this.lodaedDocumentName(currentDocumentId);
             this.isCreatingNewDocument(false);
             this.loadDocument(idAndEtag.Key);
             this.updateUrl(idAndEtag.Key);
@@ -327,6 +336,8 @@ class editDocument extends viewModelBase {
                 nextIndex = 0;
             }
             this.pageToItem(nextIndex);
+        } else {
+            this.navigateToDocuments();
         }
     }
 
@@ -392,7 +403,15 @@ class editDocument extends viewModelBase {
         if (this.docEditor) {
             var docEditorText = this.docEditor.getSession().getValue();
             var observableToUpdate = this.isEditingMetadata() ? this.metadataText : this.documentText;
+            var subscription = this.isEditingMetadata() ? this.metadataTextSubscription : this.documentTextSubscription;
+
+            subscription.dispose();
             observableToUpdate(docEditorText);
+            if (this.isEditingMetadata()) {
+                this.metadataTextSubscription = this.metadataText.subscribe(() => this.updateDocEditorText());
+            } else {
+                this.documentTextSubscription = this.documentText.subscribe(() => this.updateDocEditorText());
+            }
         }
     }
 

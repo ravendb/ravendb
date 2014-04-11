@@ -16,7 +16,7 @@ interface metadataAwareDto {
     '@metadata'?: documentMetadataDto;
 }
 interface documentChangeNotificationDto {
-    Type: string;
+    Type: documentChangeType;
     Id: string;
     CollectionName: string;
     TypeName: string;
@@ -515,4 +515,15 @@ interface patchDto {
     Script: string;
     SelectedItem: string;
     Values: Array<patchValueDto>;
+}
+
+enum documentChangeType {
+    None = 0,
+
+    Put = 1,
+    Delete = 2,
+    Common= 3,
+    BulkInsertStarted = 4,
+    BulkInsertEnded = 8,
+    BulkInsertError = 16
 }

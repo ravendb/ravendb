@@ -23,7 +23,6 @@ class selectColumns extends dialogViewModelBase {
     attached() {
         super.attached();
         this.form = $("#select-columns-form");
-        $('#qqq').attr("style", "overflow:auto;height:90px;width:500px");
     }
 
     cancel() {
