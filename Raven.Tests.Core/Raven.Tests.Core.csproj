@@ -65,6 +65,7 @@
   <ItemGroup>
     <None Include="app.config" />
     <None Include="packages.config" />
+    <Compile Include="Querying\Filtering.cs" />
   </ItemGroup>
   <Choose>
     <When Condition="('$(VisualStudioVersion)' == '10.0' or '$(VisualStudioVersion)' == '') and '$(TargetFrameworkVersion)' == 'v3.5'">
@@ -102,6 +103,10 @@
     <Compile Include="Commands\Attachments.cs" />
     <Compile Include="Commands\Documents.cs" />
     <Compile Include="Commands\Indexes.cs" />
+    <Compile Include="Querying\Linq.cs" />
+    <Compile Include="Querying\Paging.cs" />
+    <Compile Include="Querying\Projections.cs" />
+    <Compile Include="Querying\Sorting.cs" />
     <Compile Include="Replication\AttachmentReplication.cs" />
     <Compile Include="Replication\DocumentReplication.cs" />
     <Compile Include="Replication\RavenReplicationCoreTest.cs" />
