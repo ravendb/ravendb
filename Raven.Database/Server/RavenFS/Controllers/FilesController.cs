@@ -203,7 +203,9 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			StartSynchronizeDestinationsInBackground();
 
 			log.Debug("Metadata of a file '{0}' was updated", name);
-            return GetEmptyMessage(HttpStatusCode.NoContent);
+
+            //Hack needed by jquery on the client side. We need to find a better solution for this
+            return GetMessageWithString("", HttpStatusCode.NoContent);
 		}
 
 		[HttpPatch]
@@ -268,7 +270,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			StartSynchronizeDestinationsInBackground();
 
-            return GetEmptyMessage(HttpStatusCode.NoContent);
+            return GetMessageWithString("", HttpStatusCode.NoContent);
 		}
 
 		[HttpPut]

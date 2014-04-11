@@ -6,6 +6,7 @@ import ace = require("ace/ace");
 import filesystem = require("models/filesystem/filesystem");
 import pagedList = require("common/pagedList");
 import getFileCommand = require("commands/filesystem/getFileCommand");
+import updateFileMetadataCommand = require("commands/filesystem/updateFileMetadataCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
@@ -21,6 +22,7 @@ class filesystemEditFile extends viewModelBase {
     fileMetadataEditor: AceAjax.Editor;
     fileMetadataText = ko.observable<string>();
     isBusy = ko.observable(false);
+    metaPropsToRestoreOnSave = [];
 
     static editFileSelector = "#editFileContainer";
 
@@ -71,6 +73,10 @@ class filesystemEditFile extends viewModelBase {
     }
 
     storeFileEditorTextIntoObservable() {
+        if (this.fileMetadataEditor) {
+            var editorText = this.fileMetadataEditor.getSession().getValue();
+            this.fileMetadataText(editorText);
+        }
     }
 
     loadFile(fileName: string) {
@@ -84,9 +90,29 @@ class filesystemEditFile extends viewModelBase {
         router.navigate(filesUrl);
     }
 
-    saveFile() {
+    saveFileMetadata() {
+        //the name of the document was changed and we have to save it as a new one
+        var meta = JSON.parse(this.fileMetadataText());
+        var currentDocumentId = this.fileName();
+        //if (this.lodaedDocumentName && this.lodaedDocumentName != currentDocumentId) {
+        //    this.isCreatingNewDocument(true);
+        //}
 
+
+        this.metaPropsToRestoreOnSave.forEach(p => meta[p.name] = p.value);
+
+        var saveCommand = new updateFileMetadataCommand(this.fileName(), meta, this.activeFilesystem(), true);
+        var saveTask = saveCommand.execute();
+        saveTask.done(() => {
+            // Resync Changes
+            viewModelBase.dirtyFlag().reset();
+
+            this.loadFile(this.fileName());
+            //this.updateUrl(idAndEtag.Key);
+        });
     }
+
+
 
     downloadFile() {
         var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files/" + this.fileName();
@@ -95,6 +121,10 @@ class filesystemEditFile extends viewModelBase {
 
     refreshFile() {
         this.loadFile(this.fileName());
+    }
+
+    saveInObservable() {
+        this.storeFileEditorTextIntoObservable();
     }
 
     deleteFile() {
@@ -119,7 +149,7 @@ class filesystemEditFile extends viewModelBase {
 
             // We don't want to show certain reserved properties in the metadata text area.
             // Remove them from the DTO, restore them on save.
-            var metaPropsToRemove = ["@etag", "Origin", "Raven-Server-Build", "Raven-Client-Version", "Non-Authoritative-Information", "Raven-Timer-Request",
+            var metaPropsToRemove = ["Origin", "Raven-Server-Build", "Raven-Client-Version", "Non-Authoritative-Information", "Raven-Timer-Request",
                 "Raven-Authenticated-User", "Raven-Last-Modified", "Has-Api-Key", "Access-Control-Allow-Origin", "Access-Control-Max-Age", "Access-Control-Allow-Methods",
                 "Access-Control-Request-Headers", "Access-Control-Allow-Headers", "Reverse-Via", "Persistent-Auth", "Allow", "Content-Disposition", "Content-Encoding",
                 "Content-Language", "Content-Location", "Content-MD5", "Content-Range", "Content-Type", "Expires", "Last-Modified", "Content-Length", "Keep-Alive", "X-Powered-By",
@@ -127,12 +157,12 @@ class filesystemEditFile extends viewModelBase {
                 "From", "Host", "If-MatTemp-Index-Scorech", "If-Modified-Since", "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards", "Referer", "TE", "User-Agent", "Accept-Ranges",
                 "Age", "Allow", "ETag", "Location", "Retry-After", "Server", "Set-Cookie2", "Set-Cookie", "Vary", "Www-Authenticate", "Cache-Control", "Connection", "Date", "Pragma",
                 "Trailer", "Transfer-Encoding", "Upgrade", "Via", "Warning", "X-ARR-LOG-ID", "X-ARR-SSL", "X-Forwarded-For", "X-Original-URL",
-                "RavenFS-Size", "Raven-Synchronization-History", "Raven-Synchronization-Source", "Raven-Synchronization-Version"];
+                "RavenFS-Size", "Temp-Request-Time", "DNT"];
 
             for (var property in metaDto) {
                 if (metaDto.hasOwnProperty(property) && metaPropsToRemove.contains(property)) {
                     if (metaDto[property]) {
-                        //this.metaPropsToRestoreOnSave.push({ name: property, value: metaDto[property].toString() });
+                        this.metaPropsToRestoreOnSave.push({ name: property, value: metaDto[property].toString() });
                     }
                     delete metaDto[property];
                 }
