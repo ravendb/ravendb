@@ -1,4 +1,4 @@
-﻿import fileMetadata = require("models/fileMetadata");
+﻿import fileMetadata = require("models/filesystem/fileMetadata");
 
 class file implements documentBase {
     id: string;

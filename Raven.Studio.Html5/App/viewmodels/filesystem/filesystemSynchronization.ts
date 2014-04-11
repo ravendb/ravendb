@@ -16,16 +16,23 @@ import filesystemAddDestination = require("viewmodels/filesystem/filesystemAddDe
 
 class filesystemSynchronization extends viewModelBase {
 
-    destinations = ko.observableArray<string>();      
-    conflicts = ko.observable<string>();      
-    outgoingActivity = ko.observable<synchronizationDetails>();      
-    incomingActivity = ko.observable<synchronizationDetails>();          
+    destinations = ko.observableArray<string>();
+    isDestinationsVisible = ko.computed(() => this.destinations().length > 0); 
+
+    conflicts = ko.observableArray<string>();      
+    isConflictsVisible = ko.computed(() => this.conflicts().length > 0); 
+
+    outgoingActivity = ko.observableArray<synchronizationDetails>();   
+    isOutgoingActivityVisible = ko.computed(() => this.outgoingActivity().length > 0); 
+       
+    incomingActivity = ko.observableArray<synchronizationDetails>();      
+    isIncomingActivityVisible = ko.computed(() => this.incomingActivity().length > 0);     
           
     private router = router;
     synchronizationUrl = appUrl.forCurrentDatabase().filesystemSynchronization;
 
     constructor() {
-        super();
+        super();        
     }
 
     canActivate(args: any) {
@@ -73,6 +80,15 @@ class filesystemSynchronization extends viewModelBase {
             new getSyncIncomingActivitiesCommand(fs).execute()
                 .done(x => this.incomingActivity(x));
         }
+    }
+
+
+    collapseAll() {
+        $(".synchronization-group-content").collapse('hide');
+    }
+
+    expandAll() {
+        $(".synchronization-group-content").collapse('show');
     }
 }
 

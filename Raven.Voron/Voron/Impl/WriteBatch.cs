@@ -109,13 +109,21 @@ namespace Voron.Impl
 			_sliceEqualityComparer = new SliceEqualityComparer();
 		}
 
+		public void Add(Slice key, Slice value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
+		{
+			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
+			if (value == null) throw new ArgumentNullException("value");
+
+			var batchOperation = new BatchOperation(key, value, version, treeName, BatchOperationType.Add);
+			if (shouldIgnoreConcurrencyExceptions)
+				batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
+			AddOperation(batchOperation);
+		}
+
 		public void Add(Slice key, Stream value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
 		{
 			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
 			if (value == null) throw new ArgumentNullException("value");
-			//TODO : check up if adding empty values make sense in Voron --> in order to be consistent with existing behavior of Esent, this should be allowed
-			//			if (value.Length == 0)
-			//				throw new ArgumentException("Cannot add empty value");
 			if (value.Length > int.MaxValue)
 				throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 
