@@ -8,6 +8,7 @@ import searchByQueryCommand = require("commands/filesystem/searchByQueryCommand"
 import pagedResultSet = require("common/pagedResultSet");
 import pagedList = require("common/pagedList");
 import singleInputSearchClause = require("viewmodels/filesystem/singleInputSearchClause");
+import searchFileSizeRangeClause = require("viewmodels/filesystem/searchFileSizeRangeClause");
 
 class search extends viewModelBase {
 
@@ -84,6 +85,16 @@ class search extends viewModelBase {
                 .applyFilterTask
                 .done((input: string) => this.searchText("__rfileName:" + String.prototype.reverse(input) + "*"));
             app.showDialog(singleInputSearchClauseViewModel);
+        });
+    }
+
+    fileSizeBetween() {
+        require(["viewmodels/filesystem/searchFileSizeRangeClause"], searchFileSizeRangeClause => {
+            var searchFileSizeRangeClauseViewModel: searchFileSizeRangeClause = new searchFileSizeRangeClause();
+            searchFileSizeRangeClauseViewModel
+                .applyFilterTask
+                .done((input: string) => this.searchText(input));
+            app.showDialog(searchFileSizeRangeClauseViewModel);
         });
     }
 }

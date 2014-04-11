@@ -1,5 +1,4 @@
-﻿import app = require("durandal/app");
-import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+﻿import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
 
 class singleInputSearchClause extends dialogViewModelBase {
