@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using Voron.Impl;
 using Voron.Util;
+using Voron.Util.Conversion;
 
 namespace Voron
 {
@@ -75,7 +76,7 @@ namespace Voron
             return count;
         }
 
-        public int ReadInt32()
+        public int ReadLittleEndianInt32()
         {
             if (_len - _pos < sizeof(int))
                 throw new EndOfStreamException();
@@ -86,23 +87,48 @@ namespace Voron
             return BitConverter.ToInt32(buffer, 0);
         }
 
+
+		public long ReadLittleEndianInt64()
+		{
+			if (_len - _pos < sizeof(long))
+				throw new EndOfStreamException();
+			var buffer = EnsureTempBuffer(sizeof(long));
+
+			Read(buffer, 0, sizeof(long));
+
+			return BitConverter.ToInt64(buffer, 0);
+		}
+
+		public int ReadBigEndianInt32()
+		{
+			if (_len - _pos < sizeof(int))
+				throw new EndOfStreamException();
+			var buffer = EnsureTempBuffer(sizeof(int));
+
+			Read(buffer, 0, sizeof(int));
+
+			return EndianBitConverter.Big.ToInt32(buffer, 0);
+		}
+
+
+		public long ReadbigEndianInt64()
+		{
+			if (_len - _pos < sizeof(long))
+				throw new EndOfStreamException();
+			var buffer = EnsureTempBuffer(sizeof(long));
+
+			Read(buffer, 0, sizeof(long));
+
+			return EndianBitConverter.Big.ToInt64(buffer, 0);
+		}
+
+
 	    private byte[] EnsureTempBuffer(int size)
 	    {
 		    if (_tmpBuf != null && _tmpBuf.Length >= size)
 			    return _tmpBuf;
 		    return _tmpBuf = new byte[Utils.NearestPowerOfTwo(size)];
 	    }
-
-	    public long ReadInt64()
-        {
-            if (_len - _pos < sizeof(long))
-                throw new EndOfStreamException();
-		    var buffer = EnsureTempBuffer(sizeof (long));
-
-            Read(buffer, 0, sizeof(long));
-
-            return BitConverter.ToInt64(buffer, 0);
-        }
 
         public string ToStringValue()
         {
