@@ -148,13 +148,6 @@ class editDocument extends viewModelBase {
         this.focusOnEditor();
     }
 
-    // Called back after the entire composition has finished (parents and children included)
-    compositionComplete() {
-        super.compositionComplete();
-        //this.lodaedDocumentName = this.userSpecifiedId();
-        //viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
-    }
-
     initializeDocEditor() {
         // Startup the Ace editor with JSON syntax highlighting.
         this.docEditor = ace.edit("docEditor");
