@@ -53,7 +53,6 @@ class scriptedIndexes extends viewModelBase {
     attached() {
         this.addIndexScriptHelpPopover();
         this.addDeleteScriptHelpPopover();
-
         this.startupAceEditor();
     }
 
