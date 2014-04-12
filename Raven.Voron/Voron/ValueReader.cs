@@ -106,14 +106,16 @@ namespace Voron
 
         public string ToStringValue()
         {
-            return Encoding.UTF8.GetString(ReadBytes(_len - _pos));
+	        int length = _len - _pos;
+	        int used;
+	        return Encoding.UTF8.GetString(ReadBytes(length, out used), 0, used);
         }
 
-        public byte[] ReadBytes(int length)
+	    public byte[] ReadBytes(int length, out int used)
         {
             var size = Math.Min(length, _len - _pos);
 	        var buffer = EnsureTempBuffer(length);
-            Read(buffer, 0, size);
+			used = Read(buffer, 0, size);
             return buffer;
         }
 
