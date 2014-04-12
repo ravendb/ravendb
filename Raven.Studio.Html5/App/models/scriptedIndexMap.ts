@@ -41,6 +41,10 @@ class scriptedIndexMap {
         }
     }
 
+    deleteMarkToDeletedIndex(indexName: string) {
+        delete this.indexes[indexName];
+    }
+
     getIndexes(): Array<scriptedIndex> {
         return jQuery.map(this.indexes, function (value: scriptedIndex, index) {
             if (value) return value;

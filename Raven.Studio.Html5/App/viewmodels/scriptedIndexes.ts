@@ -54,16 +54,7 @@ class scriptedIndexes extends viewModelBase {
         this.addIndexScriptHelpPopover();
         this.addDeleteScriptHelpPopover();
 
-        
-        // Startup the Ace editor
-        $("#indexScriptEditor").on('keyup', ".ace_text-input", () => {
-            var value = ace.edit("indexScriptEditor").getSession().getValue();
-            this.scrIndex().indexScript(value);
-        });
-        $("#deleteScriptEditor").on('keyup', ".ace_text-input", () => {
-            var value = ace.edit("deleteScriptEditor").getSession().getValue();
-            this.scrIndex().deleteScript(value);
-        });
+        this.startupAceEditor();
     }
 
     fetchAllIndexes(db): JQueryPromise<any> {
@@ -129,24 +120,29 @@ class scriptedIndexes extends viewModelBase {
         var index = this.scrIndexes().getIndex(indexName);
         this.scrIndex(index);
 
-        if (index) {
-            // Startup the Ace editor
-            $("#indexScriptEditor").on('keyup', ".ace_text-input", () => {
-                var value = ace.edit("indexScriptEditor").getSession().getValue();
-                this.scrIndex().indexScript(value);
-            });
-            $("#deleteScriptEditor").on('keyup', ".ace_text-input", () => {
-                var value = ace.edit("deleteScriptEditor").getSession().getValue();
-                this.scrIndex().deleteScript(value);
-            });
+        if (index && !this.isFirstLoad) {
+            this.startupAceEditor();
+        } else {
+            this.isFirstLoad = false;
         }
+    }
+
+    startupAceEditor() {
+        // Startup the Ace editor
+        $("#indexScriptEditor").on('keyup', ".ace_text-input", () => {
+            var value = ace.edit("indexScriptEditor").getSession().getValue();
+            this.scrIndex().indexScript(value);
+        });
+        $("#deleteScriptEditor").on('keyup', ".ace_text-input", () => {
+            var value = ace.edit("deleteScriptEditor").getSession().getValue();
+            this.scrIndex().deleteScript(value);
+        });
     }
 
     saveChanges() {
         new saveScriptedIndexesCommand(this.scrIndexes(), this.activeDatabase())
             .execute()
             .done((result: bulkDocumentDto[]) => {
-                //remove mark to deleted indexes
                 this.updateIndexes(result);
                 // Resync Changes
                 viewModelBase.dirtyFlag().reset();
@@ -159,6 +155,9 @@ class scriptedIndexes extends viewModelBase {
             if (serverIndex && !serverIndex.Deleted) {
                 index.__metadata.etag = serverIndex.Etag;
                 index.__metadata.lastModified = serverIndex.Metadata['Last-Modified'];
+            }
+            else if (serverIndex && serverIndex.Deleted) { //remove mark to deleted indexes
+                this.scrIndexes().deleteMarkToDeletedIndex(serverIndex.Key);
             }
         });
     }
