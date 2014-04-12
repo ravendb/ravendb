@@ -257,7 +257,7 @@ namespace Raven.Client.Connection.Async
 
 			try
 			{
-				await webRequest.ExecuteRequestAsync();
+				await webRequest.ExecuteRequestAsync().ConfigureAwait(false);
 				if (overwrite == false)
 					throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 			}
@@ -276,8 +276,8 @@ namespace Raven.Client.Connection.Async
 			ErrorResponseException responseException;
 			try
 			{
-				await request.WriteAsync(serializeObject);
-				var result = await request.ReadResponseJsonAsync();
+                await request.WriteAsync(serializeObject).ConfigureAwait(false); ;
+                var result = await request.ReadResponseJsonAsync().ConfigureAwait(false); ;
 				return result.Value<string>("Index");
 			}
 			catch (ErrorResponseException e)
@@ -289,7 +289,7 @@ namespace Raven.Client.Connection.Async
 			var error =
 				await
 				responseException.TryReadErrorResponseObject(
-																	new { Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = "" });
+                                                                    new { Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = "" }).ConfigureAwait(false); ;
 			if (error == null)
 				throw responseException;
 
@@ -744,7 +744,7 @@ namespace Raven.Client.Connection.Async
 			Task<JsonDocument> resolveConflictTask;
 			try
 			{
-				var requestJson = await request.ReadResponseJsonAsync();
+                var requestJson = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				var docKey = request.ResponseHeaders.Get(Constants.DocumentIdFieldName) ?? key;
 				docKey = Uri.UnescapeDataString(docKey);
 				request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
@@ -2204,7 +2204,7 @@ namespace Raven.Client.Connection.Async
 			currentlyExecuting = true;
 			try
 			{
-				return await replicationInformer.ExecuteWithReplicationAsync(method, Url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, currentRequest, readStripingBase, operation);
+                return await replicationInformer.ExecuteWithReplicationAsync(method, Url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, currentRequest, readStripingBase, operation).ConfigureAwait(false);
 			}
 			finally
 			{

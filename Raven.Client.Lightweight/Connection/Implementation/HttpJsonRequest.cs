@@ -183,12 +183,12 @@ namespace Raven.Client.Connection
 			}
 
 			if (writeCalled)
-				return await ReadJsonInternalAsync();
+                return await ReadJsonInternalAsync().ConfigureAwait(false);
 
-			var result = await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url));
+            var result = await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)).ConfigureAwait(false);
 			if (result != null)
 				return result;
-			return await ReadJsonInternalAsync();
+            return await ReadJsonInternalAsync().ConfigureAwait(false); 
 		}
 
         private async Task<RavenJToken> SendRequestInternal(Func<HttpRequestMessage> getRequestMessage, bool readErrorString = true)
@@ -203,7 +203,7 @@ namespace Raven.Client.Connection
 				{
 					var requestMessage = getRequestMessage();
 					CopyHeadersToHttpRequestMessage(requestMessage);
-					Response = await httpClient.SendAsync(requestMessage);
+                    Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
 					SetResponseHeaders(Response);
 					ResponseStatusCode = Response.StatusCode;
 				}
@@ -213,8 +213,8 @@ namespace Raven.Client.Connection
 				}
 
 				// throw the conflict exception
-				return await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString);
-			});
+                return await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString).ConfigureAwait(false); ;
+            }).ConfigureAwait(false);
 		}
 
 		private async Task<T> RunWithAuthRetry<T>(Func<Task<T>> requestOperation)
@@ -225,7 +225,7 @@ namespace Raven.Client.Connection
 				ErrorResponseException responseException;
 				try
 				{
-					return await requestOperation();
+					return await requestOperation().ConfigureAwait(false);
 				}
 				catch (ErrorResponseException e)
 				{
@@ -329,7 +329,7 @@ namespace Raven.Client.Connection
 				}
 
 
-				using (var sr = new StreamReader(await Response.GetResponseStreamWithHttpDecompression()))
+				using (var sr = new StreamReader(await Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false)))
 				{
 					var readToEnd = sr.ReadToEnd();
 
@@ -454,7 +454,7 @@ namespace Raven.Client.Connection
 		{
 			HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
 
-			using (var responseStream = await Response.GetResponseStreamWithHttpDecompression())
+			using (var responseStream = await Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
 			{
 				var data = await RavenJToken.TryLoadAsync(responseStream);
 

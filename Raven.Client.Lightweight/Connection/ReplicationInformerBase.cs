@@ -337,7 +337,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 
 			if (ShouldExecuteUsing(primaryOperation.Url, currentRequest, method, true))
 			{
-				var tuple = await TryOperationAsync(operation, primaryOperation, null, !timeoutThrown && localReplicationDestinations.Count > 0);
+                var tuple = await TryOperationAsync(operation, primaryOperation, null, !timeoutThrown && localReplicationDestinations.Count > 0).ConfigureAwait(false);
 				if (tuple.Success)
 					return tuple.Result;
 				timeoutThrown = tuple.WasTimeout;
@@ -393,7 +393,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
             try
             {
 
-                var result = await operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials) : operationMetadata);
+                var result = await operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials) : operationMetadata).ConfigureAwait(false);
                 ResetFailureCount(operationMetadata.Url);
                 return new AsyncOperationResult<T>
                 {

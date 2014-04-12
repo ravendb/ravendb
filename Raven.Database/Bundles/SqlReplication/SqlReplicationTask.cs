@@ -44,7 +44,10 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private List<SqlReplicationConfig> replicationConfigs;
 		private readonly ConcurrentDictionary<string, SqlReplicationStatistics> statistics = new ConcurrentDictionary<string, SqlReplicationStatistics>(StringComparer.InvariantCultureIgnoreCase);
-
+		public ConcurrentDictionary<string, SqlReplicationStatistics> Statistics
+		{
+			get { return statistics; }
+		}
 		private PrefetchingBehavior prefetchingBehavior;
 
 		private Etag lastLatestEtag;

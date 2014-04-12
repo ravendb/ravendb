@@ -55,7 +55,7 @@ class query extends viewModelBase {
         return !!currentIndex && currentIndex.hasReduce == true;
     });
     contextName = ko.observable<string>();
-    didDynamicChangeIndex :KnockoutComputed<boolean>;
+    didDynamicChangeIndex: KnockoutComputed<boolean>;
 
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
 

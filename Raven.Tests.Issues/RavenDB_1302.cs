@@ -4,11 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-
+using System.Globalization;
+using System.Threading;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Tests.Common;
-
+using Raven.Tests.Common.Util;
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -48,6 +49,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void FirstShouldSetPageSizeToOne()
         {
+            using (new TemporaryCulture(CultureInfo.InvariantCulture))
             using (var store = NewRemoteDocumentStore())
             {
                 store.InitializeProfiling();
@@ -102,6 +104,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void SingleShouldSetPageSizeToTwoIfItHasNotBeenSet()
         {
+            using (new TemporaryCulture(CultureInfo.InvariantCulture))
             using (var store = NewRemoteDocumentStore())
             {
                 store.InitializeProfiling();
@@ -157,6 +160,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void FirstShouldSetPageSizeToOneIfItIsBigger()
         {
+            using (new TemporaryCulture(CultureInfo.InvariantCulture))
             using (var store = NewRemoteDocumentStore())
             {
                 store.InitializeProfiling();
@@ -213,6 +217,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void SingleShouldSetPageSizeToTwoIfItIsBigger()
         {
+            using (new TemporaryCulture(CultureInfo.InvariantCulture))
             using (var store = NewRemoteDocumentStore())
             {
                 store.InitializeProfiling();
@@ -270,6 +275,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void SingleShouldNotSetPageToTwoIfPageIsSmaller()
         {
+            using (new TemporaryCulture(CultureInfo.InvariantCulture))
             using (var store = NewRemoteDocumentStore())
             {
                 store.InitializeProfiling();
@@ -316,6 +322,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void FirstShouldThrowIfSequenceIsEmpty()
         {
+            using (new TemporaryCulture(CultureInfo.InvariantCulture))
             using (var store = NewDocumentStore())
             {
                 using (var session = store.OpenSession())
@@ -351,6 +358,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void SingleShouldThrowIfSequenceIsEmpty()
         {
+            using (new TemporaryCulture(CultureInfo.InvariantCulture))
             using (var store = NewDocumentStore())
             {
                 using (var session = store.OpenSession())
@@ -489,6 +497,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void SingleOrDefaultShouldThrowIfSequenceContainsTwoElements()
         {
+            using (new TemporaryCulture(CultureInfo.InvariantCulture))
             using (var store = NewDocumentStore())
             {
                 Fill(store, 2);
@@ -510,6 +519,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void SingleShouldThrowIfSequenceContainsTwoElements()
         {
+            using (new TemporaryCulture(CultureInfo.InvariantCulture))
             using (var store = NewDocumentStore())
             {
                 Fill(store, 2);

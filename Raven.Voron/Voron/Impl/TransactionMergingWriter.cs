@@ -169,7 +169,11 @@ namespace Voron.Impl
 		                switch (operation.Type)
 		                {
 			                case WriteBatch.BatchOperationType.Add:
-				                tree.Add(tx, operation.Key, operation.Value as Stream, operation.Version);
+				                var stream = operation.Value as Stream;
+				                if (stream != null)
+					                tree.Add(tx, operation.Key, stream, operation.Version);
+				                else
+					                tree.Add(tx, operation.Key, (Slice) operation.Value, operation.Version);
 				                actionType = DebugActionType.Add;
 				                break;
 			                case WriteBatch.BatchOperationType.Delete:
