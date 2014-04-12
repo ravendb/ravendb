@@ -9,11 +9,6 @@ namespace Voron.Impl.FreeSpace
             return null;
         }
 
-        public long GetFreePageCount()
-        {
-            return 0;
-        }
-
         public List<long> AllPages(Transaction tx)
         {
             return new List<long>();

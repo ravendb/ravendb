@@ -77,7 +77,7 @@ namespace Voron
                 TemporaryPage = new TemporaryPage();
                 _options = options;
                 _dataPager = options.DataPager;
-                _freeSpaceHandling = new FreeSpaceHandling(this);
+                _freeSpaceHandling = new FreeSpaceHandling();
                 _sliceComparer = NativeMethods.memcmp;
                 _headerAccessor = new HeaderAccessor(this);
                 var isNew = _headerAccessor.Initialize();
@@ -369,14 +369,13 @@ namespace Voron
                     }
                 }
 
-                long txId;
-                Transaction tx;
+	            Transaction tx;
 
                 _txCommit.EnterReadLock();
                 try
                 {
-                    txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
-                    tx = new Transaction(this, txId, flags, _freeSpaceHandling);
+	                long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
+	                tx = new Transaction(this, txId, flags, _freeSpaceHandling);
                 }
                 finally
                 {
@@ -461,7 +460,6 @@ namespace Voron
 
 			return new EnvironmentStats
 			{
-				FreePages = _freeSpaceHandling.GetFreePageCount(),
 				FreePagesOverhead = State.FreeSpaceRoot.State.PageCount,
 				RootPages = State.Root.State.PageCount,
 				UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,

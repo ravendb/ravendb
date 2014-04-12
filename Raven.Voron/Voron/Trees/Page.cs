@@ -6,7 +6,6 @@ using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
-using Voron.Util.Conversion;
 
 namespace Voron.Trees
 {
@@ -300,7 +299,7 @@ namespace Voron.Trees
             }
         }
 
-        public void Truncate(Transaction tx, int i)
+        public void Truncate(Transaction tx, int i, ushort pageSize)
         {
             if (i >= NumberOfEntries)
                 return;
@@ -316,7 +315,7 @@ namespace Voron.Trees
             }
             NativeMethods.memcpy(_base + Constants.PageHeaderSize,
                                  copy._base + Constants.PageHeaderSize,
-								 AbstractPager.PageSize - Constants.PageHeaderSize);
+								 pageSize - Constants.PageHeaderSize);
 
             Upper = copy.Upper;
             Lower = copy.Lower;
@@ -349,28 +348,28 @@ namespace Voron.Trees
             return sb.ToString();
         }
 
-        public bool HasSpaceFor(Transaction tx, int len)
+        public bool HasSpaceFor(Transaction tx, int len, ushort pageSize)
         {
             if (len <= SizeLeft)
                 return true;
             if (len > CalcSizeLeft())
                 return false;
 
-            Defrag(tx);
+            Defrag(tx, pageSize);
 
             Debug.Assert(len <= SizeLeft);
 
             return true;
         }
 
-        private void Defrag(Transaction tx)
+        private void Defrag(Transaction tx, ushort pageSize)
         {
             var tmp = tx.Environment.TemporaryPage.TempPage;
-            NativeMethods.memcpy(tmp.Base, Base, AbstractPager.PageSize);
+            NativeMethods.memcpy(tmp.Base, Base, pageSize);
 
             var numberOfEntries = NumberOfEntries;
 
-            Upper = AbstractPager.PageSize;
+            Upper = pageSize;
 
             for (int i = 0; i < numberOfEntries; i++)
             {
@@ -388,10 +387,10 @@ namespace Voron.Trees
             return len <= SizeLeft;
         }
 
-        public bool HasSpaceFor(Transaction tx, Slice key, int len)
+        public bool HasSpaceFor(Transaction tx, Slice key, int len, ushort pageSize)
         {
             var requiredSpace = GetRequiredSpace(key, len);
-            return HasSpaceFor(tx, requiredSpace);
+            return HasSpaceFor(tx, requiredSpace, pageSize);
         }
 
         private bool HasSpaceFor(Slice key, int len)
@@ -496,9 +495,9 @@ namespace Voron.Trees
             return sl;
         }
 
-        public void EnsureHasSpaceFor(Transaction tx, Slice key, int len)
+        public void EnsureHasSpaceFor(Transaction tx, Slice key, int len, ushort pageSize)
         {
-            if (HasSpaceFor(tx, key, len) == false)
+            if (HasSpaceFor(tx, key, len, pageSize) == false)
                 throw new InvalidOperationException("Could not ensure that we have enough space, this is probably a bug");
         }
     }

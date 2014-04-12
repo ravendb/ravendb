@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using Voron.Impl;
+using Voron.Util;
 
 namespace Voron
 {
@@ -9,6 +10,7 @@ namespace Voron
     {
         private readonly byte* _val;
         private readonly byte[] _buffer;
+	    private byte[] _tmpBuf;
         private readonly int _len;
         private int _pos;
         public int Length { get { return _len; } }
@@ -77,18 +79,25 @@ namespace Voron
         {
             if (_len - _pos < sizeof(int))
                 throw new EndOfStreamException();
-            var buffer = new byte[sizeof(int)];
+	        var buffer = EnsureTempBuffer(sizeof (int));
 
             Read(buffer, 0, sizeof (int));
 
             return BitConverter.ToInt32(buffer, 0);
         }
 
-        public long ReadInt64()
+	    private byte[] EnsureTempBuffer(int size)
+	    {
+		    if (_tmpBuf != null && _tmpBuf.Length >= size)
+			    return _tmpBuf;
+		    return _tmpBuf = new byte[Utils.NearestPowerOfTwo(size)];
+	    }
+
+	    public long ReadInt64()
         {
             if (_len - _pos < sizeof(long))
                 throw new EndOfStreamException();
-            var buffer = new byte[sizeof(long)];
+		    var buffer = EnsureTempBuffer(sizeof (long));
 
             Read(buffer, 0, sizeof(long));
 
@@ -103,7 +112,7 @@ namespace Voron
         public byte[] ReadBytes(int length)
         {
             var size = Math.Min(length, _len - _pos);
-            var buffer = new byte[size];
+	        var buffer = EnsureTempBuffer(length);
             Read(buffer, 0, size);
             return buffer;
         }

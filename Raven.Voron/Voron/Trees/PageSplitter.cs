@@ -166,7 +166,7 @@ namespace Voron.Trees
                     rightPage.CopyNodeDataToEndOfPage(node);
                 }
             }
-            _page.Truncate(_tx, splitIndex);
+            _page.Truncate(_tx, splitIndex, AbstractPager.PageSize);
 
             // actually insert the new key
             return (currentIndex > splitIndex || newPosition && currentIndex == splitIndex)
@@ -185,7 +185,7 @@ namespace Voron.Trees
 
         private void AddSeparatorToParentPage(Page rightPage, Slice seperatorKey)
         {
-            if (_parentPage.HasSpaceFor(_tx ,SizeOf.BranchEntry(seperatorKey) + Constants.NodeOffsetSize) == false)
+            if (_parentPage.HasSpaceFor(_tx ,SizeOf.BranchEntry(seperatorKey) + Constants.NodeOffsetSize, AbstractPager.PageSize) == false)
             {
                 var pageSplitter = new PageSplitter(_tx, _tree, _cmp, seperatorKey, -1, rightPage.PageNumber, NodeFlags.PageRef,
                     0, _cursor, _treeState);
