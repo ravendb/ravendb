@@ -106,7 +106,7 @@ namespace Voron.Trees
 		    }
 
 		    right.LastSearchPosition = previousSearchPosition; //previous position --> prevent mutation of parameter
-	        return left.HasSpaceFor(_tx, actualSpaceNeeded, AbstractPager.PageSize);
+	        return left.HasSpaceFor(_tx, actualSpaceNeeded);
 	    }
 
         private void MergePages(Page parentPage, Page left, Page right)
@@ -168,15 +168,15 @@ namespace Voron.Trees
 	        switch (fromNode->Flags)
 	        {
 				case NodeFlags.PageRef:
-	                to.EnsureHasSpaceFor(_tx, originalFromKeyStart, -1, AbstractPager.PageSize);
+	                to.EnsureHasSpaceFor(_tx, originalFromKeyStart, -1);
 					dataPos = to.AddPageRefNode(to.LastSearchPosition, originalFromKeyStart, fromNode->PageNumber);
 					break;
 				case NodeFlags.Data:
-	                to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromNode->DataSize, AbstractPager.PageSize);
+	                to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromNode->DataSize);
 			        dataPos = to.AddDataNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, nodeVersion);
 					break;
 				case NodeFlags.MultiValuePageRef:
-                    to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromNode->DataSize, AbstractPager.PageSize);
+                    to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromNode->DataSize);
                     dataPos = to.AddMultiValueNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, nodeVersion);
 					break;
 				default:
@@ -198,7 +198,7 @@ namespace Voron.Trees
                 pageNumber = from.PageNumber;
                 newKey = GetActualKey(from, 0);
             }
-            parentPage.EnsureHasSpaceFor(_tx, newKey, -1, AbstractPager.PageSize);
+            parentPage.EnsureHasSpaceFor(_tx, newKey, -1);
 			parentPage.AddPageRefNode(pos, newKey, pageNumber);
         }
 
@@ -207,7 +207,7 @@ namespace Voron.Trees
             Debug.Assert(from.IsBranch);
             var originalFromKeyStart = GetActualKey(from, from.LastSearchPositionOrLastEntry);
 
-            to.EnsureHasSpaceFor(_tx, originalFromKeyStart, -1, AbstractPager.PageSize);
+            to.EnsureHasSpaceFor(_tx, originalFromKeyStart, -1);
 
             var fromNode = from.GetNode(from.LastSearchPosition);
             long pageNum = fromNode->PageNumber;
@@ -234,7 +234,7 @@ namespace Voron.Trees
                 var rightPageNumber = from.GetNode(1)->PageNumber;
                 from.RemoveNode(0); // remove the original implicit node
                 from.RemoveNode(0); // remove the next node that we now turned into implicit
-                from.EnsureHasSpaceFor(_tx, Slice.BeforeAllKeys, -1, AbstractPager.PageSize);
+                from.EnsureHasSpaceFor(_tx, Slice.BeforeAllKeys, -1);
                 from.AddPageRefNode(0, Slice.BeforeAllKeys, rightPageNumber);
                 Debug.Assert(from.NumberOfEntries >= 2);
             }
@@ -252,7 +252,7 @@ namespace Voron.Trees
                 pageNumber = from.PageNumber;
                 newKey = GetActualKey(from, 0);
             }
-            parentPage.EnsureHasSpaceFor(_tx, newKey, -1, AbstractPager.PageSize);
+            parentPage.EnsureHasSpaceFor(_tx, newKey, -1);
 			parentPage.AddPageRefNode(pos, newKey, pageNumber);
         }
 

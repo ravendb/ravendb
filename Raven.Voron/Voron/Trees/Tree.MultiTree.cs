@@ -11,9 +11,80 @@ using Voron.Impl.FileHeaders;
 
 namespace Voron.Trees
 {
+	/* Multi tree behavior
+	 * -------------------
+	 * A multi tree is a tree that is used only with MultiRead, MultiAdd, MultiDelete
+	 * The common use case is a secondary index that allows duplicates. 
+	 * 
+	 * The API exposed goes like this:
+	 * 
+	 * MultiAdd("key", "val1"), MultiAdd("key", "val2"), MultiAdd("key", "val3") 
+	 * 
+	 * And then you can read it back with MultiRead("key") : IIterator
+	 * 
+	 * When deleting, you delete one value at a time: MultiDelete("key", "val1")
+	 * 
+	 * The actual values are stored as keys in a separate tree per key. In order to optimize
+	 * space usage, multi trees work in the following fashion.
+	 * 
+	 * If the totale size of the values per key is less than NodeMaxSize, we store them as an embedded
+	 * page inside the owning tree. If then are more than the node max size, we create a separate tree
+	 * for them and then only store the tree root infromation.
+	 */
 	public unsafe partial class Tree
 	{
 		public bool IsMultiValueTree { get; set; }
+
+		public void MultiAdd(Transaction tx, Slice key, Slice value, ushort? version = null)
+		{
+			if (value == null) throw new ArgumentNullException("value");
+			if (value.Size > tx.DataPager.MaxNodeSize)
+				throw new ArgumentException(
+					"Cannot add a value to child tree that is over " + tx.DataPager.MaxNodeSize + " bytes in size", "value");
+			if (value.Size == 0)
+				throw new ArgumentException("Cannot add empty value to child tree");
+
+			State.IsModified = true;
+
+			Lazy<Cursor> lazy;
+			var page = FindPageFor(tx, key, out lazy);
+			if ((page == null || page.LastMatch != 0))
+			{
+				var requiredPageSize = Constants.PageHeaderSize + Constants.NodeHeaderSize + Constants.NodeOffsetSize + value.Size;
+
+
+				var ptr = DirectAdd(tx, key, value.Size, version: version);
+				value.CopyTo(ptr);
+				return;
+			}
+
+			page = tx.ModifyPage(page.PageNumber, page);
+
+			var item = page.GetNode(page.LastSearchPosition);
+
+			CheckConcurrency(key, version, item->Version, TreeActionType.Add);
+			var existingValue = new Slice(DirectRead(tx, key), (ushort)item->DataSize);
+			if (existingValue.Compare(value, _cmp) == 0)
+				return; //nothing to do, the exact value is already there				
+
+
+			if (item->Flags == NodeFlags.MultiValuePageRef)
+			{
+				var tree = OpenOrCreateMultiValueTree(tx, key, item);
+				tree.DirectAdd(tx, value, 0);
+			}
+			else // need to turn to tree
+			{
+				var tree = Create(tx, _cmp, TreeFlags.MultiValue);
+				var current = NodeHeader.GetData(tx, item);
+				tree.DirectAdd(tx, current, 0);
+				tree.DirectAdd(tx, value, 0);
+				tx.AddMultiValueTree(this, key, tree);
+
+				// we need to record that we switched to tree mode here, so the next call wouldn't also try to create the tree again
+				DirectAdd(tx, key, sizeof(TreeRootHeader), NodeFlags.MultiValuePageRef);
+			}
+		}
 
 		public void MultiDelete(Transaction tx, Slice key, Slice value, ushort? version = null)
 		{
@@ -65,54 +136,6 @@ namespace Voron.Trees
 			else //the regular key->value pattern
 			{
 				Delete(tx, key, version);
-			}
-		}
-
-		public void MultiAdd(Transaction tx, Slice key, Slice value, ushort? version = null)
-		{
-			if (value == null) throw new ArgumentNullException("value");
-			if (value.Size > tx.DataPager.MaxNodeSize)
-				throw new ArgumentException(
-					"Cannot add a value to child tree that is over " + tx.DataPager.MaxNodeSize + " bytes in size", "value");
-			if (value.Size == 0)
-				throw new ArgumentException("Cannot add empty value to child tree");
-
-			State.IsModified = true;
-
-			Lazy<Cursor> lazy;
-			var page = FindPageFor(tx, key, out lazy);
-			if ((page == null || page.LastMatch != 0))
-			{
-				var ptr = DirectAdd(tx, key, value.Size, version: version);
-				value.CopyTo(ptr);
-				return;
-			}
-
-			page = tx.ModifyPage(page.PageNumber, page);
-
-			var item = page.GetNode(page.LastSearchPosition);
-
-			CheckConcurrency(key, version, item->Version, TreeActionType.Add);
-			var existingValue = new Slice(DirectRead(tx, key), (ushort)item->DataSize);
-			if (existingValue.Compare(value, _cmp) == 0)
-				return; //nothing to do, the exact value is already there				
-
-
-			if (item->Flags == NodeFlags.MultiValuePageRef)
-			{
-				var tree = OpenOrCreateMultiValueTree(tx, key, item);
-				tree.DirectAdd(tx, value, 0);
-			}
-			else // need to turn to tree
-			{
-				var tree = Create(tx, _cmp, TreeFlags.MultiValue);
-				var current = NodeHeader.GetData(tx, item);
-				tree.DirectAdd(tx, current, 0);
-				tree.DirectAdd(tx, value, 0);
-				tx.AddMultiValueTree(this, key, tree);
-
-				// we need to record that we switched to tree mode here, so the next call wouldn't also try to create the tree again
-				DirectAdd(tx, key, sizeof(TreeRootHeader), NodeFlags.MultiValuePageRef);
 			}
 		}
 

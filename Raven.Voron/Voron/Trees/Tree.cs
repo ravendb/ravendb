@@ -183,7 +183,7 @@ namespace Voron.Trees
 			}
 
 			byte* dataPos;
-			if (page.HasSpaceFor(tx, key, len, AbstractPager.PageSize) == false)
+			if (page.HasSpaceFor(tx, key, len) == false)
 			{
 			    var cursor = lazy.Value;
 			    cursor.Update(cursor.Pages.First, page);
