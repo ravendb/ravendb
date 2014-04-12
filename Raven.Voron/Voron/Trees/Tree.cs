@@ -176,7 +176,7 @@ namespace Voron.Trees
 		    }
 	    }
 
-		public void MultiAdd(Transaction tx, Slice key, Slice value, Stream stream = null, ushort? version = null)
+		public void MultiAdd(Transaction tx, Slice key, Slice value, ushort? version = null)
 		{
 			if (value == null) throw new ArgumentNullException("value");
 			if (value.Size > tx.DataPager.MaxNodeSize)
@@ -191,19 +191,6 @@ namespace Voron.Trees
 			var page = FindPageFor(tx, key, out lazy);
 			if ((page == null || page.LastMatch != 0)) 
 			{
-				if (stream != null)
-				{
-					// can only use this optimizastion if we don't have a stream to store, so have to 
-					// create a tree here anyway
-					var tree = Create(tx, _cmp, TreeFlags.MultiValue);
-					var pos = tree.DirectAdd(tx, value,  (int)stream.Length);
-					CopyStreamToPointer(tx, stream, pos);
-					tx.AddMultiValueTree(this, key, tree);
-
-					// we need to record that we switched to tree mode here, so the next call wouldn't also try to create the tree again
-					DirectAdd(tx, key, sizeof(TreeRootHeader), NodeFlags.MultiValuePageRef);
-					return;
-				}
 				var ptr = DirectAdd(tx, key, value.Size, version: version);
 				value.CopyTo(ptr);
 				return;
@@ -222,9 +209,7 @@ namespace Voron.Trees
 			if (item->Flags == NodeFlags.MultiValuePageRef)
 			{
 				var tree = OpenOrCreateMultiValueTree(tx, key, item);
-				var pos = tree.DirectAdd(tx, value, stream == null ? 0 : (int)stream.Length);
-				if(stream != null)
-					CopyStreamToPointer(tx, stream, pos);
+				tree.DirectAdd(tx, value, 0);
 			}
 			else // need to turn to tree
 			{
@@ -299,7 +284,7 @@ namespace Voron.Trees
 			}
 
 			byte* dataPos;
-			if (page.HasSpaceFor(tx, key, len) == false)
+			if (page.HasSpaceFor(tx, key, len, AbstractPager.PageSize) == false)
 			{
 			    var cursor = lazy.Value;
 			    cursor.Update(cursor.Pages.First, page);
