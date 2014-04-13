@@ -147,7 +147,6 @@ namespace Raven.Backup
                     Console.WriteLine("[{0}] {1}", msg.Timestamp, msg.Message);
                 }
             }
-            status.Messages.Clear();
         }
 
         public BackupStatus GetStatusDoc()

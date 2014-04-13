@@ -18,17 +18,13 @@ namespace Voron.Impl.Backup
 
 	    public static ConcurrentDictionary<string, List<StackTrace>> callsToInfoNotify = new ConcurrentDictionary<string, List<StackTrace>>();
 
-        //public  event Action<string> OnVoronBackupInformationalEvent;
-        //public  event Action<string> OnVoronBackupErrorsEvent;
         public static void VoronBackupInformationalNotify(string voronBackupInfo)
-       // public  void VoronBackupInformationalNotify(string voronBackupInfo)
         {
             var informationalEvent = OnVoronBackupInformationalEvent;
             if (informationalEvent != null)
                 informationalEvent(voronBackupInfo);
         }
         public static void VoronBackupErrorNotify(string voronBackupError)
-      //  public  void VoronBackupErrorNotify(string voronBackupError)
         {
             var errorEvent = OnVoronBackupErrorsEvent;
             if (errorEvent != null)
