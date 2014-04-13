@@ -51,9 +51,7 @@ class scriptedIndexes extends viewModelBase {
     }
 
     attached() {
-        this.addIndexScriptHelpPopover();
-        this.addDeleteScriptHelpPopover();
-        this.startupAceEditor();
+        this.initializeScriptsTextboxes();
     }
 
     fetchAllIndexes(db): JQueryPromise<any> {
@@ -89,6 +87,12 @@ class scriptedIndexes extends viewModelBase {
         }
     }
 
+    initializeScriptsTextboxes() {
+        this.addIndexScriptHelpPopover();
+        this.addDeleteScriptHelpPopover();
+        this.startupAceEditor();
+    }
+
     addIndexScriptHelpPopover() {
         $("#indexScriptLabel").popover({
             html: true,
@@ -120,9 +124,7 @@ class scriptedIndexes extends viewModelBase {
         this.scrIndex(index);
 
         if (index && !this.isFirstLoad) {
-            this.addIndexScriptHelpPopover();
-            this.addDeleteScriptHelpPopover();
-            this.startupAceEditor();
+            this.initializeScriptsTextboxes();
         } else {
             this.isFirstLoad = false;
         }
