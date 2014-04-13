@@ -99,7 +99,6 @@ namespace Raven.Backup
             uriString += url;
 
             var req = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, new OperationCredentials(ApiKey, CredentialCache.DefaultCredentials), store.Conventions));
-            Console.WriteLine("Request url - " + uriString);
             if (Timeout.HasValue)
             {
                 req.Timeout = TimeSpan.FromMilliseconds(Timeout.Value);
@@ -148,6 +147,7 @@ namespace Raven.Backup
                     Console.WriteLine("[{0}] {1}", msg.Timestamp, msg.Message);
                 }
             }
+            status.Messages.Clear();
         }
 
         public BackupStatus GetStatusDoc()
