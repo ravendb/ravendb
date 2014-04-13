@@ -1,3 +1,4 @@
+import ace = require("ace/ace");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
@@ -10,9 +11,11 @@ class scriptedIndexes extends viewModelBase {
 
     indexNames = ko.observableArray<string>();
     selectedIndex = ko.observable<string>();
-
-    scrIndexes = ko.observable<scriptedIndexMap>().extend({ required: true });
+    isSaveEnabled: KnockoutComputed<boolean>;
+    scrIndexes = ko.observable<scriptedIndexMap>();
     scrIndex = ko.observable<scriptedIndex>();
+    isScriptIndexVisible: KnockoutComputed<boolean>;
+    isFirstLoad: boolean = true;
 
     constructor() {
         super();
@@ -20,28 +23,64 @@ class scriptedIndexes extends viewModelBase {
         aceEditorBindingHandler.install();
     }
 
-    activate() {
-        this.fetchAllIndexes();
+    canActivate(args: any): any {
+        var deferred = $.Deferred();
+        var db = this.activeDatabase();
+        if (db) {
+            this.fetchAllIndexes(db)
+                .done(() => {
+                    this.fetchAllScriptedIndexes(db)
+                    .done(()=> {
+                        deferred.resolve({ can: true });
+                    });
+                });
+        }
+        return deferred;
     }
 
-    fetchAllIndexes(): JQueryPromise<any> {
-        return new getDatabaseStatsCommand(this.activeDatabase())
+    activate(args) {
+        super.activate(args);
+
+        this.isScriptIndexVisible = ko.computed(function() {
+            return this.scrIndex() && !this.scrIndex().isMarkedToDelete();
+        }, this);
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.scrIndexes().activeScriptedIndexes]);
+        this.isSaveEnabled = ko.computed(function () {
+            return viewModelBase.dirtyFlag().isDirty();
+        });
+    }
+
+    attached() {
+        this.addIndexScriptHelpPopover();
+        this.addDeleteScriptHelpPopover();
+
+        this.startupAceEditor();
+    }
+
+    fetchAllIndexes(db): JQueryPromise<any> {
+        var deferred = $.Deferred();
+        new getDatabaseStatsCommand(db)
             .execute()
-            .done((results: databaseStatisticsDto) => { this.performAllIndexesResult(results); });
+            .done((results: databaseStatisticsDto) => {
+                this.performAllIndexesResult(results);
+                deferred.resolve({ can: true });
+            });
+        return deferred;
     }
 
     performAllIndexesResult(results: databaseStatisticsDto) {
         this.indexNames(results.Indexes.map(i => i.PublicName));
-        this.fetchAllScriptedIndexes();
     }
 
-    fetchAllScriptedIndexes() {
-        new getScriptedIndexesCommand(this.activeDatabase())
+    fetchAllScriptedIndexes(db): JQueryPromise<any> {
+        var deferred = $.Deferred();
+        new getScriptedIndexesCommand(db)
             .execute()
             .done((indexes: scriptedIndex[])=> {
                 this.performAllScriptedIndexes(indexes);
-                viewModelBase.dirtyFlag = new ko.DirtyFlag([this.scrIndexes]);
-        });
+                deferred.resolve({ can: true });
+            });
+        return deferred;
     }
 
     performAllScriptedIndexes(indexes: scriptedIndex[]) {
@@ -49,11 +88,6 @@ class scriptedIndexes extends viewModelBase {
         if (this.indexNames().length > 0) {
             this.setSelectedIndex(this.indexNames.first());
         }
-    }
-
-    attached() {
-        this.addIndexScriptHelpPopover();
-        this.addDeleteScriptHelpPopover();
     }
 
     addIndexScriptHelpPopover() {
@@ -85,12 +119,30 @@ class scriptedIndexes extends viewModelBase {
     private getIndexForName(indexName: string) {
         var index = this.scrIndexes().getIndex(indexName);
         this.scrIndex(index);
+
+        if (index && !this.isFirstLoad) {
+            this.startupAceEditor();
+        } else {
+            this.isFirstLoad = false;
+        }
+    }
+
+    startupAceEditor() {
+        // Startup the Ace editor
+        $("#indexScriptEditor").on('keyup', ".ace_text-input", () => {
+            var value = ace.edit("indexScriptEditor").getSession().getValue();
+            this.scrIndex().indexScript(value);
+        });
+        $("#deleteScriptEditor").on('keyup', ".ace_text-input", () => {
+            var value = ace.edit("deleteScriptEditor").getSession().getValue();
+            this.scrIndex().deleteScript(value);
+        });
     }
 
     saveChanges() {
         new saveScriptedIndexesCommand(this.scrIndexes(), this.activeDatabase())
             .execute()
-            .done((result: bulkDocumentDto[])=> {
+            .done((result: bulkDocumentDto[]) => {
                 this.updateIndexes(result);
                 // Resync Changes
                 viewModelBase.dirtyFlag().reset();
@@ -103,6 +155,9 @@ class scriptedIndexes extends viewModelBase {
             if (serverIndex && !serverIndex.Deleted) {
                 index.__metadata.etag = serverIndex.Etag;
                 index.__metadata.lastModified = serverIndex.Metadata['Last-Modified'];
+            }
+            else if (serverIndex && serverIndex.Deleted) { //remove mark to deleted indexes
+                this.scrIndexes().deleteMarkToDeletedIndex(serverIndex.Key);
             }
         });
     }
