@@ -19,8 +19,8 @@ class sqlReplication extends document {
     name = ko.observable<string>().extend({ required: true });
     disabled = ko.observable<boolean>().extend({ required: true });
     parameterizeDeletesDisabled = ko.observable<boolean>();
-    ravenEntityName = ko.observable<string>('').extend({ required: true });
-    script = ko.observable<string>().extend({ required: true });
+    ravenEntityName = ko.observable<string>("").extend({ required: true });
+    script = ko.observable<string>("").extend({ required: true });
     factoryName = ko.observable<string>().extend({ required: true });
     connectionString = ko.observable<string>().extend({ required: true });
     connectionStringName = ko.observable<string>().extend({ required: true });
@@ -28,7 +28,7 @@ class sqlReplication extends document {
     sqlReplicationTables = ko.observableArray<sqlReplicationTable>().extend({ required: true });
 
     connectionStringType = ko.observable<string>().extend({ required: true });
-    connectionStringValue = ko.observable<string>('').extend({ required: true });
+    connectionStringValue = ko.observable<string>("").extend({ required: true });
 
 
     connectionStringSourceFieldName :KnockoutComputed<string>;
@@ -81,8 +81,8 @@ class sqlReplication extends document {
             Name: "",
             Disabled: true,
             ParameterizeDeletesDisabled: false,
-            RavenEntityName: null,
-            Script: null,
+            RavenEntityName: "",
+            Script: "",
             FactoryName: null,
             ConnectionString: null,
             ConnectionStringName: null,
@@ -110,7 +110,7 @@ class sqlReplication extends document {
     }
 
     private prepareConnectionString(expectedType: string): string {
-        return ((this.connectionStringType() === expectedType) ? this.connectionStringValue() : null);
+        return ((this.connectionStringType() === expectedType) ? this.connectionStringValue() : "");
     }
 
     enable() {

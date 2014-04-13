@@ -51,10 +51,7 @@ class scriptedIndexes extends viewModelBase {
     }
 
     attached() {
-        this.addIndexScriptHelpPopover();
-        this.addDeleteScriptHelpPopover();
-
-        this.startupAceEditor();
+        this.initializeScriptsTextboxes();
     }
 
     fetchAllIndexes(db): JQueryPromise<any> {
@@ -90,6 +87,12 @@ class scriptedIndexes extends viewModelBase {
         }
     }
 
+    initializeScriptsTextboxes() {
+        this.addIndexScriptHelpPopover();
+        this.addDeleteScriptHelpPopover();
+        this.startupAceEditor();
+    }
+
     addIndexScriptHelpPopover() {
         $("#indexScriptLabel").popover({
             html: true,
@@ -121,7 +124,7 @@ class scriptedIndexes extends viewModelBase {
         this.scrIndex(index);
 
         if (index && !this.isFirstLoad) {
-            this.startupAceEditor();
+            this.initializeScriptsTextboxes();
         } else {
             this.isFirstLoad = false;
         }
@@ -129,6 +132,9 @@ class scriptedIndexes extends viewModelBase {
 
     startupAceEditor() {
         // Startup the Ace editor
+        if ($("#indexScriptEditor").length > 0) {
+            ace.edit("indexScriptEditor").focus();
+        }
         $("#indexScriptEditor").on('keyup', ".ace_text-input", () => {
             var value = ace.edit("indexScriptEditor").getSession().getValue();
             this.scrIndex().indexScript(value);
