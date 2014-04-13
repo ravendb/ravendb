@@ -242,11 +242,11 @@ namespace Raven.Client.Connection
 
 				if (Response.StatusCode == HttpStatusCode.Forbidden)
 				{
-					await HandleForbiddenResponseAsync(Response);
+					await HandleForbiddenResponseAsync(Response).ConfigureAwait(false);
 					throw responseException;
 				}
 
-				if (await HandleUnauthorizedResponseAsync(Response) == false)
+				if (await HandleUnauthorizedResponseAsync(Response).ConfigureAwait(false) == false)
 					throw responseException;
 			}
 		}
@@ -395,9 +395,9 @@ namespace Raven.Client.Connection
 		{
 			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url), readErrorString: false);
 
-			using (var stream = await Response.GetResponseStreamWithHttpDecompression())
+			using (var stream = await Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
 			{
-				return await stream.ReadDataAsync();
+				return await stream.ReadDataAsync().ConfigureAwait(false);
 			}
 		}
 
@@ -420,7 +420,7 @@ namespace Raven.Client.Connection
 			if (unauthorizedResponseAsync == null)
 				return false;
 
-			RecreateHttpClient(await unauthorizedResponseAsync);
+			RecreateHttpClient(await unauthorizedResponseAsync.ConfigureAwait(false));
 			return true;
 		}
 
@@ -433,7 +433,7 @@ namespace Raven.Client.Connection
 			if (forbiddenResponseAsync == null)
 				return;
 
-			await forbiddenResponseAsync;
+			await forbiddenResponseAsync.ConfigureAwait(false);
 		}
 
 		private void RecreateHttpClient(Action<HttpClient> configureHttpClient)
@@ -636,13 +636,13 @@ namespace Raven.Client.Connection
 				Response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead);
 				SetResponseHeaders(Response);
 
-			    await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString: true);
+			    await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString: true).ConfigureAwait(false);
 
 				var stream = await Response.Content.ReadAsStreamAsync();
 				var observableLineStream = new ObservableLineStream(stream, () => Response.Dispose());
 				observableLineStream.Start();
 				return (IObservable<string>)observableLineStream;
-			});
+			}).ConfigureAwait(false);
 		}
 
         public async Task WriteAsync(RavenJToken tokenToWrite)
@@ -656,7 +656,7 @@ namespace Raven.Client.Connection
 		        {
 			        TransferEncodingChunked = true
 		        }
-	        });
+	        }).ConfigureAwait(false);
         }
 
 		public async Task WriteAsync(Stream streamToWrite)
@@ -667,7 +667,7 @@ namespace Raven.Client.Connection
 			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
 				Content = new CompressedStreamContent(streamToWrite, factory.DisableRequestCompression, disposeStream: false).SetContentType(headers)
-			});
+			}).ConfigureAwait(false);
 		}
 
 		public async Task WriteAsync(HttpContent content)
@@ -682,7 +682,7 @@ namespace Raven.Client.Connection
 				{
 					TransferEncodingChunked = true,
 				}
-			});
+			}).ConfigureAwait(false);
 		}
 
 		public async Task WriteAsync(string data)
@@ -698,7 +698,7 @@ namespace Raven.Client.Connection
 				};
 				request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
 				return request;
-			});
+			}).ConfigureAwait(false);
 		}
 
 		public async Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
@@ -709,7 +709,7 @@ namespace Raven.Client.Connection
 			};
 
 			CopyHeadersToHttpRequestMessage(rawRequestMessage);
-			var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead);
+			var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
 			await AssertNotFailingResponse(response);
 			return response;
 		}
@@ -719,7 +719,7 @@ namespace Raven.Client.Connection
 			var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
 			CopyHeadersToHttpRequestMessage(rawRequestMessage);
 			var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead);
-			await AssertNotFailingResponse(response);
+			await AssertNotFailingResponse(response).ConfigureAwait(false);
 			return response;
 		}
 
@@ -733,9 +733,9 @@ namespace Raven.Client.Connection
 			};
 
 			CopyHeadersToHttpRequestMessage(rawRequestMessage);
-			var response = await httpClient.SendAsync(rawRequestMessage);
+			var response = await httpClient.SendAsync(rawRequestMessage).ConfigureAwait(false);
 
-			await AssertNotFailingResponse(response);
+			await AssertNotFailingResponse(response).ConfigureAwait(false);
 			return response;
 		}
 
@@ -772,7 +772,7 @@ namespace Raven.Client.Connection
 					.Append(response.StatusCode)
 					.AppendLine();
 
-				using (var reader = new StreamReader(await response.GetResponseStreamWithHttpDecompression()))
+				using (var reader = new StreamReader(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false)))
 				{
 					string line;
 					while ((line = reader.ReadLine()) != null)
