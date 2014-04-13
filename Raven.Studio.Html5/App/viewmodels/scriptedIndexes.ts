@@ -120,6 +120,8 @@ class scriptedIndexes extends viewModelBase {
         this.scrIndex(index);
 
         if (index && !this.isFirstLoad) {
+            this.addIndexScriptHelpPopover();
+            this.addDeleteScriptHelpPopover();
             this.startupAceEditor();
         } else {
             this.isFirstLoad = false;
@@ -128,6 +130,9 @@ class scriptedIndexes extends viewModelBase {
 
     startupAceEditor() {
         // Startup the Ace editor
+        if ($("#indexScriptEditor").length > 0) {
+            ace.edit("indexScriptEditor").focus();
+        }
         $("#indexScriptEditor").on('keyup', ".ace_text-input", () => {
             var value = ace.edit("indexScriptEditor").getSession().getValue();
             this.scrIndex().indexScript(value);
