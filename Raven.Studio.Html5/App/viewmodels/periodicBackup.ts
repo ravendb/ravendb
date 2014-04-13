@@ -8,6 +8,7 @@ import appUrl = require("common/appUrl");
 class periodicBackup extends viewModelBase {
 
     backupSetup = ko.observable<periodicBackupSetup>();
+    isSaveEnabled: KnockoutComputed<boolean>;
     static containerId = "#periodicBackupContainer";
     private form: JQuery;
 
@@ -27,7 +28,9 @@ class periodicBackup extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-        
+        this.isSaveEnabled = ko.computed(function() {
+            return true;
+        });
         //viewModelBase.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
     }
 
@@ -58,12 +61,12 @@ class periodicBackup extends viewModelBase {
     }
 
     saveChanges() {
-        if ((<any>this.form[0]).checkValidity() === true) {
+        //if ((<any>this.form[0]).checkValidity() === true) {
             var db = this.activeDatabase();
             if (db) {
                 new savePeriodicBackupSetupCommand(this.backupSetup(), db).execute();
             }
-        }
+        //}
     }
 }
 

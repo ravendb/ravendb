@@ -41,7 +41,7 @@ class scriptedIndexes extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-        this.isScriptIndexVisible = ko.computed(function() {
+        this.isScriptIndexVisible = ko.computed(() => {
             return this.scrIndex() && !this.scrIndex().isMarkedToDelete();
         }, this);
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.scrIndexes().activeScriptedIndexes]);

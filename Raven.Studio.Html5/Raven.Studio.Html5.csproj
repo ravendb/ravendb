@@ -222,6 +222,7 @@
     <TypeScriptCompile Include="App\models\patchParam.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\deleteDocuments.html" />
     <Content Include="App\views\filesystem\deleteFiles.html" />
     <Content Include="App\views\filesystem\filesystemSearch.html" />
     <Content Include="App\views\filesystem\filesystemSynchronization.html" />

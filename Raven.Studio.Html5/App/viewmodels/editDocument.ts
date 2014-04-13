@@ -95,7 +95,7 @@ class editDocument extends viewModelBase {
         this.lodaedDocumentName(this.userSpecifiedId());
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
         var self = this;
-        this.isSaveEnabled = ko.computed(function() {
+        this.isSaveEnabled = ko.computed(()=> {
             return viewModelBase.dirtyFlag().isDirty() && !!self.userSpecifiedId();
         });
 

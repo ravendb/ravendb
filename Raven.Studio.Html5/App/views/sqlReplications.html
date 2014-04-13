@@ -1,12 +1,15 @@
 ﻿<div>
     <nav class="navbar navbar-default" role="navigation">
         <div class="collapse navbar-collapse">
-            <form class="navbar-form pull-right">
-                <button type="button" class="btn btn-default  use-bootstrap-tooltip" data-bind="click: addNewSqlReplication" title="New SQL Replication(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> New SQL Replication</button>
-                <button type="button" class="btn btn-primary  use-bootstrap-tooltip" data-bind="click: saveChanges, enable: isSaveEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+            <form class="navbar-form navbar-right">
+                <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: addNewSqlReplication" title="New SQL Replication(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> New SQL Replication</button>
+                <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveChanges, enable: isSaveEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
             </form>
         </div>
     </nav>
+    <div class="alert alert-warning" data-bind="visible: replications().length === 0">
+        You've got no sql replication set up.
+    </div>
     <div class="panel-group" id="accordion" data-bind="foreach: replications">
         <div class="panel panel-default" data-bind="css: { 'panel-info': !disabled(), 'panel-warning': disabled }">
             <div class="panel-heading">
@@ -68,57 +71,57 @@
                                 <input required type="text" class="form-control" data-bind="value: connectionStringValue, valueUpdate: 'keyup'" />
                             </div>
                         </div>
-                            <div class="form-group">
-                                <label class="col-sm-3 control-label">Source Document Collection</label>
-                                <div class="col-sm-9">
-                                    <input type="text" class="form-control" data-bind="value: ravenEntityName, valueUpdate: 'keyup'" />
-                                </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Source Document Collection</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" data-bind="value: ravenEntityName, valueUpdate: 'keyup'" />
                             </div>
-                            <div class="form-group">
-                                <label class="col-sm-3 control-label">SQL Replication Tables</label>
-                                <div class="col-sm-9">
-                                    <table class="table table-striped table-hover table-sql-replication-tables">
-                                        <thead>
-                                            <tr class="sql-replication-tables-header">
-                                                <td>Table Name</td>
-                                                <td>Document Key</td>
-                                                <td class="narrowest-column"><button type="button" style="display:inline-block;" class="close" data-bind="click: addNewTable" title="Add new table">+</button></td>
-                                            </tr>
-                                        </thead>
-                                        <tbody data-bind="foreach: sqlReplicationTables">
-                                            <tr>
-                                                <td>
-                                                    <div>
-                                                        <input type="text" class="form-control" data-bind="value: tableName, valueUpdate: 'keyup'" />
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div>
-                                                        <input type="text" class="form-control" data-bind="value: documentKeyColumn, valueUpdate: 'keyup'" />
-                                                    </div>
-                                                </td>
-                                                <td><button type="button" style="display:inline-block;" class="close" data-bind="click: $parent.removeTable.bind($parent)" title="Remove this table">×</button></td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">SQL Replication Tables</label>
+                            <div class="col-sm-9">
+                                <table class="table table-striped table-hover table-sql-replication-tables">
+                                    <thead>
+                                        <tr class="sql-replication-tables-header">
+                                            <td>Table Name</td>
+                                            <td>Document Key</td>
+                                            <td class="narrowest-column"><button type="button" style="display:inline-block;" class="close" data-bind="click: addNewTable" title="Add new table">+</button></td>
+                                        </tr>
+                                    </thead>
+                                    <tbody data-bind="foreach: sqlReplicationTables">
+                                        <tr>
+                                            <td>
+                                                <div>
+                                                    <input type="text" class="form-control" data-bind="value: tableName, valueUpdate: 'keyup'" />
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    <input type="text" class="form-control" data-bind="value: documentKeyColumn, valueUpdate: 'keyup'" />
+                                                </div>
+                                            </td>
+                                            <td><button type="button" style="display:inline-block;" class="close" data-bind="click: $parent.removeTable.bind($parent)" title="Remove this table">×</button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
-                            <div class="form-group sql-replication-script-container">
-                                <label class="col-sm-3 control-label script-label" data-placement="auto right" data-trigger="hover">
-                                    <span class="help-cursor">
-                                        Script
-                                        <i class="fa fa-info-circle text-info"></i>
-                                    </span>
-                                </label>
-                                <div class="col-sm-9">
-                                    <div class="row">
-                                        <div class="col-sm-12">
-                                            <pre class="form-control editor" data-bind="aceEditor: { code: script }"></pre>
-                                        </div>
+                        </div>
+                        <div class="form-group sql-replication-script-container">
+                            <label class="col-sm-3 control-label script-label" data-placement="auto right" data-trigger="hover">
+                                <span class="help-cursor">
+                                    Script
+                                    <i class="fa fa-info-circle text-info"></i>
+                                </span>
+                            </label>
+                            <div class="col-sm-9">
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <pre class="form-control editor" data-bind="aceEditor: { code: script }"></pre>
                                     </div>
                                 </div>
                             </div>
-</form>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

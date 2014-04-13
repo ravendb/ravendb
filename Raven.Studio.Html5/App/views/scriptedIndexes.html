@@ -21,7 +21,8 @@
                 </ul>
             </form>
             <form class="navbar-form navbar-right">
-                <button type="button" class="btn btn-primary  use-bootstrap-tooltip" title="Save Changes(Alt+S)" accesskey="S" data-bind="click: saveChanges, enable: isSaveEnabled()"><i class="fa fa-save"></i></button>
+                <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: createNewScript, visible: !isScriptIndexVisible()" title="Create Script"><i class="fa fa-plus"></i> Create Script</button>
+                <button type="button" class="btn btn-primary use-bootstrap-tooltip" title="Save Changes(Alt+S)" accesskey="S" data-bind="click: saveChanges, enable: isSaveEnabled()"><i class="fa fa-save"></i></button>
             </form>
         </div>
     </nav>
@@ -29,7 +30,7 @@
         <div class="panel-heading">
             <h3 class="panel-title">
                 <span data-bind="visible: !isScriptIndexVisible()">
-                    There is no Script for this index. <a href="#" data-bind="click: createNewScript" class="alert-link">Create Script</a>.
+                    There is no script for this index.
                 </span>
                 <span data-bind ="visible: isScriptIndexVisible()">
                     Scripted Index<span class="glyphicon glyphicon-remove remove-icon pull-right" data-bind="click: deleteScript" title="Remove this Scripted Index"></span>
@@ -67,3 +68,4 @@
             </form>
         </div>
     </div>
+</div>
