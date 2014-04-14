@@ -183,7 +183,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Saves all the changes to the Raven server.
 		/// </summary>
-		string SaveChanges();
+		void SaveChanges();
 
 		/// <summary>
 		/// Stores the specified entity with the specified etag

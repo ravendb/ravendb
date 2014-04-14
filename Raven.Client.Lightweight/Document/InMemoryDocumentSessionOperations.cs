@@ -309,9 +309,9 @@ namespace Raven.Client.Document
         {
             get
             {
-                var changesDescr=string.Empty;
+               
                 return deletedEntities.Count > 0 ||
-                        entitiesAndMetadata.Any(pair => EntityChanged(pair.Key, pair.Value, ref changesDescr));
+                        entitiesAndMetadata.Any(pair => EntityChanged(pair.Key, pair.Value,  null));
             }
         }
 
@@ -329,8 +329,7 @@ namespace Raven.Client.Document
             DocumentMetadata value;
             if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
                 return false;
-            var changesDescr = string.Empty;
-            return EntityChanged(entity, value, ref changesDescr);
+            return EntityChanged(entity, value, null);
         }
 
         public void IncrementRequestCount()
@@ -620,8 +619,8 @@ more responsive application.
             if (entitiesByKey.TryGetValue(id, out entity))
             {
                 // find if entity was changed on session or just inserted
-                var changesDescr = string.Empty;
-                if (EntityChanged(entity, entitiesAndMetadata[entity], ref changesDescr))
+              
+                if (EntityChanged(entity, entitiesAndMetadata[entity],  null))
                 {
                     throw new InvalidOperationException("Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
                 }
@@ -916,7 +915,7 @@ more responsive application.
         /// Prepares for save changes.
         /// </summary>
         /// <returns></returns>
-        protected SaveChangesData PrepareForSaveChanges()
+        protected SaveChangesData PrepareForSaveChanges(DocumentsChanges changes)
         {
             EntityToJson.CachedJsonDocs.Clear();
             var result = new SaveChangesData
@@ -931,31 +930,34 @@ more responsive application.
             if (documentStore.EnlistInDistributedTransactions)
                 TryEnlistInAmbientTransaction();
 #endif
-            PrepareForEntitiesDeletion(result);
-            PrepareForEntitiesPuts(result);
+            PrepareForEntitiesDeletion(result, changes);
+            PrepareForEntitiesPuts(result, changes);
 
             return result;
         }
 
-        private void PrepareForEntitiesPuts(SaveChangesData result)
+        private void PrepareForEntitiesPuts(SaveChangesData result, DocumentsChanges changes)
         {
-            var changesDescr = string.Empty;
-            foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value, ref changesDescr)).ToArray())
+            foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value,  changes)).ToArray())
             {
                 foreach (var documentStoreListener in theListeners.StoreListeners)
                 {
                     if (documentStoreListener.BeforeStore(entity.Value.Key, entity.Key, entity.Value.Metadata, entity.Value.OriginalValue))
                         EntityToJson.CachedJsonDocs.Remove(entity.Key);
                 }
-                result.FirstChangeDescriotion = changesDescr;
                 result.Entities.Add(entity.Key);
                 if (entity.Value.Key != null)
                     entitiesByKey.Remove(entity.Value.Key);
                 result.Commands.Add(CreatePutEntityCommand(entity.Key, entity.Value));
             }
+            if (result.Entities.Count == 0)
+            {
+                changes.DocumentId = string.Empty;
+                changes.Comment = "Nothing changed";
+            }
         }
 
-        private void PrepareForEntitiesDeletion(SaveChangesData result)
+        private void PrepareForEntitiesDeletion(SaveChangesData result, DocumentsChanges changes)
         {
             DocumentMetadata value = null;
 
@@ -992,8 +994,14 @@ more responsive application.
                     Etag = etag,
                     Key = key,
                 });
-                result.FirstChangeDescriotion = string.Format("Object {0} deleted",key);
-            }
+                if (!changes.Equals(null))
+                {
+                    changes.DocumentId = key;
+                    changes.FieldNewValue = string.Empty;
+                    changes.FieldOldValue = string.Empty; ;
+                    changes.Comment = "Object deleted"; 
+                }
+             }
             deletedEntities.Clear();
         }
 
@@ -1050,7 +1058,7 @@ more responsive application.
         /// <param name="entity">The entity.</param>
         /// <param name="documentMetadata">The document metadata.</param>
         /// <returns></returns>
-        protected bool EntityChanged(object entity, DocumentMetadata documentMetadata,ref string changesDescr)
+        protected bool EntityChanged(object entity, DocumentMetadata documentMetadata, DocumentsChanges changes)
         {
             if (documentMetadata == null)
                 return true;
@@ -1068,8 +1076,13 @@ more responsive application.
                 return false;
 
             var newObj = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
-            return RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, ref changesDescr) == false ||
-                RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, ref changesDescr) == false;
+            if (changes != null)
+            {
+                if (!changes.Comment.Equals( "Object deleted"))
+                    changes.DocumentId = documentMetadata.Key;
+            }
+            return RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue,  changes) == false ||
+                RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata,  changes) == false;
         }
 
         /// <summary>
@@ -1214,7 +1227,6 @@ more responsive application.
             /// <value>The entities.</value>
             public IList<object> Entities { get; set; }
 
-            public string FirstChangeDescriotion { get; set; }
         }
 
         protected void LogBatch(SaveChangesData data)

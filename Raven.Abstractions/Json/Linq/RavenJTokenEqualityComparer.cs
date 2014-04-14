@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Raven.Abstractions.Data;
 
 namespace Raven.Json.Linq
 {
@@ -18,9 +19,9 @@ namespace Raven.Json.Linq
 	    /// <returns>
 	    /// true if the specified objects are equal; otherwise, false.
 	    /// </returns>
-        public bool Equals(RavenJToken x, RavenJToken y,ref string difference)
+        public bool Equals(RavenJToken x, RavenJToken y, DocumentsChanges difference)
         {
-            return RavenJToken.DeepEquals(x, y, ref difference);
+            return RavenJToken.DeepEquals(x, y,  difference);
         }
         public bool Equals(RavenJToken x, RavenJToken y)
         {

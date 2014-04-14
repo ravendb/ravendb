@@ -717,13 +717,13 @@ namespace Raven.Client.Shard
 		/// <summary>
 		/// Saves all the changes to the Raven server.
 		/// </summary>
-		string IDocumentSession.SaveChanges()
+		void IDocumentSession.SaveChanges()
 		{
 			using (EntityToJson.EntitiesToJsonCachingScope())
 			{
-				var data = PrepareForSaveChanges();
+				var data = PrepareForSaveChanges(null);
 				if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)
-					return null; // nothing to do here
+					return; // nothing to do here
 
 				IncrementRequestCount();
 				LogBatch(data);
@@ -744,7 +744,7 @@ namespace Raven.Client.Shard
 					var results = databaseCommands.Batch(shardAndObjects.Value.Commands);
 					UpdateBatchResults(results, shardAndObjects.Value);
 				}
-			    return data.FirstChangeDescriotion;
+			    return ;
 			}
 		}
 
@@ -914,6 +914,11 @@ namespace Raven.Client.Shard
 		{
 			throw new NotSupportedException("Multi faceted searching is currently not supported by sharded document store");
 		}
+
+	    public DocumentsChanges WhatChanged()
+	    {
+	        throw new NotImplementedException();
+	    }
 	}
 }
 
