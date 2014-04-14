@@ -950,7 +950,7 @@ more responsive application.
                     entitiesByKey.Remove(entity.Value.Key);
                 result.Commands.Add(CreatePutEntityCommand(entity.Key, entity.Value));
             }
-            if (result.Entities.Count == 0)
+            if (result.Entities.Count == 0 && changes != null)
             {
                 changes.DocumentId = string.Empty;
                 changes.Comment = "Nothing changed";
