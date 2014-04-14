@@ -126,6 +126,8 @@
     <Compile Include="RavenCoreTestBase.cs" />
     <Compile Include="TestServerFixture.cs" />
     <Compile Include="Utils\Entities\UserWithoutId.cs" />
+    <Compile Include="Utils\Indexes\Companies_AllProperties.cs" />
+    <Compile Include="Utils\Indexes\Companies_CompanyByType.cs" />
     <Compile Include="Utils\Indexes\Users_ByName.cs" />
   </ItemGroup>
   <Choose>

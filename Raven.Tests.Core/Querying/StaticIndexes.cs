@@ -19,6 +19,7 @@ namespace Raven.Tests.Core.Querying
             using (var store = GetDocumentStore())
             {
                 new Companies_CompanyByType().Execute(store);
+                WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -55,7 +56,7 @@ namespace Raven.Tests.Core.Querying
                     session.SaveChanges();
                     WaitForIndexing(store);
 
-                    Companies_CompanyByType.ReduceResult[] companies = session.Query<Companies_CompanyByType.ReduceResult>("Companies/CompanyByType")
+                    Companies_CompanyByType.ReduceResult[] companies = session.Query<Companies_CompanyByType.ReduceResult, Companies_CompanyByType>()
                         .OrderBy(x => x.Type)
                         .ToArray();
                     Assert.Equal(2, companies.Length);
@@ -65,6 +66,30 @@ namespace Raven.Tests.Core.Querying
                     Assert.Equal(Company.CompanyType.Public, companies[1].Type);
                     Assert.Equal(6, companies[1].ContactsCount);
                     Assert.NotNull(companies[1].LastModified);
+                }
+            }
+        }
+
+        [Fact]
+        public void CreateAndQueryIndexContainingAllDocumentFields()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Companies_AllProperties().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "Name2", Address1 = "Address1" });
+                    session.Store(new Company { Name = "Name0", Address1 = "Some Address" });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+
+                    var companies = session.Query<Companies_AllProperties.Result, Companies_AllProperties>()
+                        .Where(x => x.Query == "Address1")
+                        .OfType<Company>()
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    Assert.Equal("Address1", companies[0].Address1);
                 }
             }
         }
