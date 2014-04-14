@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Configuration;
 
-namespace Raven.Tests.Common.Util
+namespace Raven.Tests.Helpers.Util
 {
 	public static class SettingsHelper
 	{
