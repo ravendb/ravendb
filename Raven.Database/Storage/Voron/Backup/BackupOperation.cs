@@ -6,7 +6,7 @@ using Voron.Impl.Backup;
 
 namespace Raven.Database.Storage.Voron.Backup
 {
-    public class BackupOperation : BaseBackupOperation
+    public class BackupOperation : BaseBackupOperation, IDisposable
     {
         private readonly StorageEnvironment env;
 
@@ -18,6 +18,8 @@ namespace Raven.Database.Storage.Voron.Backup
             if (env == null) throw new ArgumentNullException("env");
 
             this.env = env;
+            BackupMethods.OnVoronBackupInformationalEvent += UpdateInformationalBackupStatus;
+            BackupMethods.OnVoronBackupErrorsEvent += UpdateErrorBackupStatus;
         }
 
         protected override bool BackupAlreadyExists
@@ -33,6 +35,12 @@ namespace Raven.Database.Storage.Voron.Backup
                 BackupMethods.Incremental.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename));
             else
                 BackupMethods.Full.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename));
+        }
+
+        public void Dispose()
+        {
+            BackupMethods.OnVoronBackupInformationalEvent -= UpdateInformationalBackupStatus;
+            BackupMethods.OnVoronBackupErrorsEvent -= UpdateErrorBackupStatus;
         }
     }
 }
