@@ -26,6 +26,7 @@ using Raven.Database.Server;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Common.Util;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 

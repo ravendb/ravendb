@@ -34,12 +34,11 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Tests.Helpers;
 using Raven.Tests.Helpers.Util;
 
 using Xunit;
 using Xunit.Sdk;
-
-using CommonInitializationUtil = Raven.Tests.Common.Util.CommonInitializationUtil;
 
 namespace Raven.Tests.Common
 {

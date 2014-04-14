@@ -480,7 +480,7 @@ task PushNugetPackages {
 	}
 }
 
-task CreateNugetPackages -depends Compile, InitNuget {
+task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
 
 	Remove-Item $base_dir\RavenDB*.nupkg
 	
