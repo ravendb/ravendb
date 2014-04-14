@@ -49,6 +49,7 @@
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -108,6 +109,7 @@
     <Compile Include="Querying\Paging.cs" />
     <Compile Include="Querying\Projections.cs" />
     <Compile Include="Querying\Sorting.cs" />
+    <Compile Include="Querying\StaticIndexes.cs" />
     <Compile Include="Replication\AttachmentReplication.cs" />
     <Compile Include="Replication\DocumentReplication.cs" />
     <Compile Include="Replication\RavenReplicationCoreTest.cs" />
