@@ -122,6 +122,7 @@
     <Compile Include="Data\AttachmentInformation.cs" />
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Data\DatabaseMetrics.cs" />
+    <Compile Include="Data\DocumentsChanges.cs" />
     <Compile Include="Data\FacetQuery.cs" />
     <Compile Include="Data\FailoverServers.cs" />
     <Compile Include="Data\HighlightedField.cs" />

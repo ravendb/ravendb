@@ -4,11 +4,15 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Mono.CSharp;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
+using StringUtils = Raven.Json.Utilities.StringUtils;
+using System.Text;
 
 namespace Raven.Json.Linq
 {
@@ -179,7 +183,7 @@ namespace Raven.Json.Linq
 					return new RavenJValue(reader.Value);
 			}
 
-			throw new Exception("Error reading RavenJToken from JsonReader. Unexpected token: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
+			throw new Exception(StringUtils.FormatWith("Error reading RavenJToken from JsonReader. Unexpected token: {0}", CultureInfo.InvariantCulture, reader.TokenType));
 		}
 
 		/// <summary>
@@ -270,23 +274,36 @@ namespace Raven.Json.Linq
 			throw new NotSupportedException();
 		}
 
-		/// <summary>
-		/// Compares the values of two tokens, including the values of all descendant tokens.
-		/// </summary>
-		/// <param name="t1">The first <see cref="RavenJToken"/> to compare.</param>
-		/// <param name="t2">The second <see cref="RavenJToken"/> to compare.</param>
-		/// <returns>true if the tokens are equal; otherwise false.</returns>
-		public static bool DeepEquals(RavenJToken t1, RavenJToken t2)
-		{
-			return (t1 == t2 || (t1 != null && t2 != null && t1.DeepEquals(t2)));
-		}
+	    /// <summary>
+	    /// Compares the values of two tokens, including the values of all descendant tokens.
+	    /// </summary>
+	    /// <param name="t1">The first <see cref="RavenJToken"/> to compare.</param>
+	    /// <param name="t2">The second <see cref="RavenJToken"/> to compare.</param>
+        /// <param name="difference"> changes description</param>
+	    /// <returns>true if the tokens are equal; otherwise false.</returns>
+        public static bool DeepEquals(RavenJToken t1, RavenJToken t2, DocumentsChanges difference)
+        {
+            return (t1 == t2 || (t1 != null && t2 != null && t1.DeepEquals(t2,  difference)));
+        }
+        public static bool DeepEquals(RavenJToken t1, RavenJToken t2)
+        {
+            return (t1 == t2 || (t1 != null && t2 != null && t1.DeepEquals(t2)));
+        }
 
 		public static int GetDeepHashCode(RavenJToken t)
 		{
 			return t == null ? 0 : t.GetDeepHashCode();
 		}
 
-		internal virtual bool DeepEquals(RavenJToken other)
+	    internal virtual bool DeepEquals(RavenJToken other)
+	    {
+	        var obj = new DocumentsChanges();
+	        obj = null;
+	        return DeepEquals(other,obj);
+	    }
+
+	
+	    internal virtual bool DeepEquals(RavenJToken other, DocumentsChanges changes)
 		{
 			if (other == null)
 				return false;
@@ -294,6 +311,7 @@ namespace Raven.Json.Linq
 			if (Type != other.Type)
 				return false;
 
+	        var fieldName = string.Empty;
 			var otherStack = new Stack<RavenJToken>();
 			var thisStack = new Stack<RavenJToken>();
 
@@ -317,8 +335,33 @@ namespace Raven.Json.Linq
 						case JTokenType.Array:
 							var selfArray = (RavenJArray)curThisReader;
 							var otherArray = (RavenJArray)curOtherReader;
-							if (selfArray.Length != otherArray.Length)
-								return false;
+					        if (selfArray.Length != otherArray.Length)
+					        {
+					            if (changes!=null)
+					            {
+                                    var selfSb = GetJsonData(selfArray);
+                                    var otherSb = GetJsonData(otherArray);
+                                    var diffSb = CompareJsonArrays(selfArray, otherArray);
+                                    changes.FieldOldValue = otherSb.ToString().Trim();
+                                    changes.FieldOldType = otherArray.Type.ToString().Trim(); ;
+                                    changes.FieldNewValue = selfSb.ToString().Trim(); ;
+                                    changes.FieldNewType = selfArray.Type.ToString().Trim(); ;
+
+                                    if (selfArray.Length < otherArray.Length)
+                                    {
+                                        changes.Comment = "Field " + fieldName + " removed values: " + diffSb.ToString().Trim(); ;
+  
+                                    }
+
+                                    if (selfArray.Length > otherArray.Length)
+                                    {
+                                        changes.Comment = "Field " + fieldName + " added values: " + diffSb.ToString().Trim(); ;
+                                    }
+					            }
+                                
+                                return false;
+					        }
+								
 
 							for (int i = 0; i < selfArray.Length; i++)
 							{
@@ -329,18 +372,77 @@ namespace Raven.Json.Linq
 						case JTokenType.Object:
 							var selfObj = (RavenJObject)curThisReader;
 							var otherObj = (RavenJObject)curOtherReader;
-							if (selfObj.Count != otherObj.Count)
-								return false;
+					        if (selfObj.Count != otherObj.Count)
+					        {
+					            if (changes!=null)
+					            {
+                                    var selfSb = GetJsonData(selfObj);
+                                    var otherSb = GetJsonData(otherObj);
+					                StringBuilder diffSb=new StringBuilder();
+ 
+					                var descr = string.Empty;
+                                    if(otherObj.Count == 0)
+                                    {
+                                        descr = "object";
+                                        changes.FieldOldValue = "null";
+                                        changes.FieldOldType = "null";
+                                        changes.FieldNewValue = selfSb.ToString().Trim();
+                                        changes.FieldNewType = selfObj.Type.ToString(); ;
+                                    }
+                                    else
+                                    {
+                                        descr = "field" + fieldName  ;
+                                        changes.FieldOldValue = otherSb.ToString().Trim(); 
+                                        changes.FieldOldType = otherObj.Type.ToString(); 
+                                        changes.FieldNewValue = selfSb.ToString().Trim(); 
+                                        changes.FieldNewType = selfObj.Type.ToString(); 
+                                        diffSb = CompareJsonData(selfObj.Properties, otherObj.Properties);
+  
+                                    }
+                                    if (selfObj.Count < otherObj.Count)
+                                    {
+                                        changes.Comment = descr + fieldName + " removed: " + diffSb;
+
+                                    }
+
+                                    if (selfObj.Count > otherObj.Count)
+                                    {
+                                        changes.Comment = descr + " added: " + diffSb;
+                                    }
+                                    
+					            }
+					           
+
+                                return false;
+					        }
+								
+
 
 							foreach (var kvp in selfObj.Properties)
 							{
+							    fieldName = kvp.Key;
 								RavenJToken token;
-								if (otherObj.TryGetValue(kvp.Key, out token) == false)
-									return false;
+							    if (otherObj.TryGetValue(kvp.Key, out token) == false)
+							    {
+                                    if (changes != null)
+							        {
+							            changes.Comment = "doesn't exist in new one";
+							        }
+                                    return false;
+							    }
+									
 								if (kvp.Value == null)
 								{
-									if (token != null && token.Type != JTokenType.Null)
-										return false;
+								    if (token != null && token.Type != JTokenType.Null)
+								    {
+                                        if (changes != null)
+                                        {
+                                            changes.Comment = "doesn't exist in original one";
+                                        }
+                                        
+                                        return false;
+								    }
+										
 									continue;
 								}
 								switch (kvp.Value.Type)
@@ -367,15 +469,42 @@ namespace Raven.Json.Linq
 
 										break;
 									default:
-										if (!kvp.Value.DeepEquals(token))
-											return false;
+								        if (!kvp.Value.DeepEquals(token))
+								        {
+                                            if (changes != null)
+								            {
+                                                changes.FieldNewType = kvp.Value.Type.ToString();
+                                                changes.FieldOldType = token.Type.ToString();
+                                                changes.FieldNewValue = kvp.Value.ToString();
+                                                changes.FieldOldValue = token.ToString();
+								                changes.Comment = "field " +kvp.Key+ " changed";
+
+								            }
+									          
+                                            return false;
+								        }
+											
 										break;
 								}
 							}
 							break;
 						default:
-							if (!curOtherReader.DeepEquals(curThisReader))
-								return false;
+					        if (!curOtherReader.DeepEquals(curThisReader,  changes))
+					        {
+                                if (changes != null)
+					            {
+ 
+                                    changes.FieldNewType = curThisReader.Type.ToString();
+                                    changes.FieldOldType = curOtherReader.Type.ToString();
+                                    changes.FieldNewValue = curThisReader.ToString();
+                                    changes.FieldOldValue = curOtherReader.ToString();
+                                    changes.Comment = "field changed";
+
+					            }
+	
+                                return false;
+					        }
+								
 							break;
 					}
 				}
@@ -400,7 +529,84 @@ namespace Raven.Json.Linq
 			return true;
 		}
 
-		internal virtual int GetDeepHashCode()
+        private static StringBuilder CompareJsonArrays(IEnumerable<RavenJToken> selfObj, IEnumerable<RavenJToken> otherObj)
+        {
+            var sb = new StringBuilder();
+            var selfArr = selfObj.ToArray();
+            var otherArr = otherObj.ToArray();
+            var dif = selfArr.Except(otherArr);
+
+            if(selfArr.Length<otherArr.Length)
+            {
+                dif = otherArr.Except(selfArr);
+            }
+           
+            foreach (var val in dif)
+            {
+                sb.Append(val).Append("  ").Append(" , ");
+
+            }
+            if (sb.Length > 2)
+                sb.Remove(sb.Length - 2, 1);
+            return sb;
+        }
+        private static StringBuilder GetJsonData(RavenJArray selfObj)
+	    {
+	        RavenJToken token;
+	        var sb = new StringBuilder();
+	        foreach (var kvp in selfObj.Values())
+	        {
+                sb.Append(kvp).Append("  ").Append(" , "); 
+	
+	        }
+            if (sb.Length>2)
+	            sb.Remove(sb.Length - 2, 1);
+            
+	        return sb;
+	    }
+        private static StringBuilder GetJsonData(RavenJObject selfObj)
+        {
+            RavenJToken token;
+            var sb = new StringBuilder();
+            foreach (var kvp in selfObj.Properties)
+            {
+                sb.Append(kvp.Key).Append(" = ");
+                if (selfObj.Properties.TryGetValue(kvp.Key, out token))
+                {
+                    sb.Append(token).Append(" , ");
+                }
+               
+            }
+            if (sb.Length > 2)
+                sb.Remove(sb.Length - 2, 1);
+            return sb;
+        }
+        private static StringBuilder CompareJsonData(DictionaryWithParentSnapshot selfObj, DictionaryWithParentSnapshot otherObj)
+        {
+            RavenJToken token;
+            var sb = new StringBuilder();
+            string[] diffNames = selfObj.Keys.Except(otherObj.Keys).ToArray();
+            DictionaryWithParentSnapshot bigObj = selfObj;
+            if (selfObj.Keys.Count < otherObj.Keys.Count)
+            { 
+                diffNames = otherObj.Keys.Except(selfObj.Keys).ToArray();
+                bigObj = otherObj;
+            }
+            foreach (var kvp in diffNames)
+            {
+                sb.Append(kvp).Append(" = ");
+                if (bigObj.TryGetValue(kvp, out token))
+                {
+                    sb.Append(token).Append(" , ");
+                }
+               
+            }
+            if (sb.Length > 2)
+                sb.Remove(sb.Length - 2, 1);
+            return sb;
+        }
+
+	    internal virtual int GetDeepHashCode()
 		{
 			var stack = new Stack<Tuple<int, RavenJToken>>();
 			int ret = 0;
@@ -832,7 +1038,7 @@ namespace Raven.Json.Linq
 					return new RavenJValue(reader.Value);
 			}
 
-			throw new Exception("Error reading RavenJToken from JsonReader. Unexpected token: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
+			throw new Exception(StringUtils.FormatWith("Error reading RavenJToken from JsonReader. Unexpected token: {0}", CultureInfo.InvariantCulture, reader.TokenType));
 
 		}
 	}
