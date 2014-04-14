@@ -7,8 +7,9 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import searchByQueryCommand = require("commands/filesystem/searchByQueryCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import pagedList = require("common/pagedList");
-import singleInputSearchClause = require("viewmodels/filesystem/singleInputSearchClause");
+import searchSingleInputClause = require("viewmodels/filesystem/searchSingleInputClause");
 import searchFileSizeRangeClause = require("viewmodels/filesystem/searchFileSizeRangeClause");
+import searchHasMetadataClause = require("viewmodels/filesystem/searchHasMetadataClause");
 
 class search extends viewModelBase {
 
@@ -69,22 +70,22 @@ class search extends viewModelBase {
     }
 
     fileNameStartsWith() {
-        require(["viewmodels/filesystem/singleInputSearchClause"], singleInputSearchClause => {
-            var singleInputSearchClauseViewModel: singleInputSearchClause = new singleInputSearchClause("Filename starts with: ");
-            singleInputSearchClauseViewModel
+        require(["viewmodels/filesystem/searchSingleInputClause"], searchSingleInputClause => {
+            var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Filename starts with: ");
+            searchSingleInputClauseViewModel
                 .applyFilterTask
                 .done((input: string) => this.searchText("__fileName:" + input + "*"));
-            app.showDialog(singleInputSearchClauseViewModel);
+            app.showDialog(searchSingleInputClauseViewModel);
         });
     }
 
     fileNameEndsWith() {
-        require(["viewmodels/filesystem/singleInputSearchClause"], singleInputSearchClause => {
-            var singleInputSearchClauseViewModel: singleInputSearchClause = new singleInputSearchClause("Filename ends with: ");
-            singleInputSearchClauseViewModel
+        require(["viewmodels/filesystem/searchSingleInputClause"], searchSingleInputClause => {
+            var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Filename ends with: ");
+            searchSingleInputClauseViewModel
                 .applyFilterTask
                 .done((input: string) => this.searchText("__rfileName:" + String.prototype.reverse(input) + "*"));
-            app.showDialog(singleInputSearchClauseViewModel);
+            app.showDialog(searchSingleInputClauseViewModel);
         });
     }
 
@@ -95,6 +96,16 @@ class search extends viewModelBase {
                 .applyFilterTask
                 .done((input: string) => this.searchText(input));
             app.showDialog(searchFileSizeRangeClauseViewModel);
+        });
+    }
+
+    hasMetadata() {
+        require(["viewmodels/filesystem/searchHasMetadataClause"], searchHasMetadataClause => {
+            var searchHasMetadataClauseViewModel: searchHasMetadataClause = new searchHasMetadataClause();
+            searchHasMetadataClauseViewModel
+                .applyFilterTask
+                .done((input: string) => this.searchText(input));
+            app.showDialog(searchHasMetadataClauseViewModel);
         });
     }
 }

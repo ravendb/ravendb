@@ -135,12 +135,13 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\configuration.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemFiles.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystems.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\searchHasMetadataClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemStatistics.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemSynchronization.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemUploadFile.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchFileSizeRangeClause.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\singleInputSearchClause.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\searchSingleInputClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\backupDatabase.ts" />

@@ -1,7 +1,7 @@
 ﻿import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
 
-class singleInputSearchClause extends dialogViewModelBase {
+class searchSingleInputClause extends dialogViewModelBase {
 
     public applyFilterTask = $.Deferred();
     filterText = ko.observable("");
@@ -23,4 +23,4 @@ class singleInputSearchClause extends dialogViewModelBase {
     }
 }
 
-export = singleInputSearchClause;
+export = searchSingleInputClause;
