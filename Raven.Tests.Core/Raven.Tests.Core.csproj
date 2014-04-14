@@ -65,6 +65,7 @@
   <ItemGroup>
     <None Include="app.config" />
     <None Include="packages.config" />
+    <Compile Include="Querying\Aggregating.cs" />
     <Compile Include="Querying\Filtering.cs" />
   </ItemGroup>
   <Choose>
