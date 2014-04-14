@@ -6,6 +6,7 @@ import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 import synchronizationDetails = require("models/filesystem/synchronizationDetails");
+import synchronizationDestination = require("models/filesystem/synchronizationDestination");
 
 import getDestinationsCommand = require("commands/filesystem/getDestinationsCommand");
 import getFilesConflictsCommand = require("commands/filesystem/getFilesConflictsCommand");
@@ -13,6 +14,7 @@ import getSyncOutgoingActivitiesCommand = require("commands/filesystem/getSyncOu
 import getSyncIncomingActivitiesCommand = require("commands/filesystem/getSyncIncomingActivitiesCommand");
 import saveDestinationCommand = require("commands/filesystem/saveDestinationCommand");
 import deleteDestinationCommand = require("commands/filesystem/deleteDestinationCommand");
+import synchronizeNowCommand = require("commands/filesystem/synchronizeNowCommand");
 import synchronizeWithDestinationCommand = require("commands/filesystem/synchronizeWithDestinationCommand");
 
 import filesystemAddDestination = require("viewmodels/filesystem/filesystemAddDestination");
@@ -47,16 +49,17 @@ class filesystemSynchronization extends viewModelBase {
     }
 
     addDestination() {
+        var fs = this.activeFilesystem();
         require(["viewmodels/filesystem/filesystemAddDestination"], filesystemAddDestination => {
             var addDestinationViewModel: filesystemAddDestination = new filesystemAddDestination(this.destinations);
             addDestinationViewModel
                 .creationTask
-                .done((destinationUrl: string) => this.addDestinationUrl(destinationUrl));
+                .done((destinationUrl: string) => this.addDestinationUrl(new synchronizationDestination(fs, destinationUrl)));
             app.showDialog(addDestinationViewModel);
         });
     }
 
-    private addDestinationUrl(url: string) {
+    private addDestinationUrl(url: synchronizationDestination) {
         var fs = this.activeFilesystem();
         if (fs) {        
             var self = this;    
@@ -66,7 +69,10 @@ class filesystemSynchronization extends viewModelBase {
     }
 
     synchronizeNow() {
-
+        var fs = this.activeFilesystem();
+        if (fs) {
+            new synchronizeNowCommand(fs).execute();
+        }
     }
 
     synchronizeWithDestination(destination: string) {

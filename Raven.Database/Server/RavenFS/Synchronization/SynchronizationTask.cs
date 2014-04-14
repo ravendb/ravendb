@@ -69,6 +69,36 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			timer.Subscribe(tick => SynchronizeDestinationsAsync());
 		}
 
+        public Task<DestinationSyncResult> SynchronizeDestinationAsync(string filesystemDestination, bool forceSyncingContinuation = true)
+        {
+            foreach (var destination in GetSynchronizationDestinations())
+            {
+                if (string.Compare(filesystemDestination, destination.FileSystemUrl, StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    Log.Debug("Starting to synchronize a destination server {0}", destination.FileSystemUrl);
+
+                    if (!CanSynchronizeTo(destination.FileSystemUrl))
+                    {
+                        Log.Debug("Could not synchronize to {0} because no synchronization request was available", destination.FileSystemUrl);
+
+                        return (Task<DestinationSyncResult>)Task<DestinationSyncResult>.Run(() => 
+                            { 
+                                throw new SynchronizationException(
+                                    string.Format("No synchronization request was available for filesystem '{0}'", destination.FileSystem)); 
+                            });
+                    }
+                    
+                    return SynchronizeDestinationAsync(destination, forceSyncingContinuation);
+                }
+            }
+
+            return (Task<DestinationSyncResult>)Task<DestinationSyncResult>.Run(() => 
+            {
+                Log.Debug("Could not synchronize to {0} because no destination was configured for that url", filesystemDestination);
+                throw new ArgumentException("Filesystem destination does not exist", "filesystemDestination"); 
+            });
+        }
+
 		public Task<DestinationSyncResult[]> SynchronizeDestinationsAsync(bool forceSyncingContinuation = true)
 		{
 			var destinationSyncTasks = new List<Task<DestinationSyncResult>>();
