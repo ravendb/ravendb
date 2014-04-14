@@ -301,7 +301,10 @@ class editDocument extends viewModelBase {
         var doc = this.document();
         if (doc) {
             var viewModel = new deleteDocuments([doc]);
-            viewModel.deletionTask.done(() => this.nextDocumentOrFirst());
+            viewModel.deletionTask.done(() => {
+                this.docsList().invalidateCache();
+                this.nextDocumentOrFirst()
+            });
             app.showDialog(viewModel, editDocument.editDocSelector);
         }
 
