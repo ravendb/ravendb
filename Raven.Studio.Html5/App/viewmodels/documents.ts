@@ -84,6 +84,7 @@ class documents extends viewModelBase {
     //TODO: this binding has notification leak!
     selectedCollectionChanged(selected: collection) {
         if (selected) {
+            this.isSelectAll(false);
 
             var customColumnsCommand = selected.isAllDocuments ?
                 getCustomColumnsCommand.forAllDocuments(this.activeDatabase()) : getCustomColumnsCommand.forCollection(selected.name, this.activeDatabase());

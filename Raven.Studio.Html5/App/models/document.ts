@@ -85,7 +85,9 @@ class document implements documentBase {
         // TODO: is there a better/more reliable way to do this?
         var slashIndex = id.lastIndexOf('/');
         if (slashIndex >= 1) {
-            return id.substring(0, slashIndex);
+            return id.substring(0, slashIndex).replace(/^./, function (char) {
+                return char.toUpperCase();
+            });
         }
 
         return id;
