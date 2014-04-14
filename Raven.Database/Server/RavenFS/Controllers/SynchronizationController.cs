@@ -32,12 +32,19 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		private static readonly ConcurrentDictionary<Guid, ReaderWriterLockSlim> SynchronizationFinishLocks =
 			new ConcurrentDictionary<Guid, ReaderWriterLockSlim>();
 
-		[HttpPost]
+        [HttpPost]
         [Route("ravenfs/{fileSystemName}/synchronization/ToDestinations")]
-		public Task<DestinationSyncResult[]> ToDestinations(bool forceSyncingAll)
-		{
-			return SynchronizationTask.SynchronizeDestinationsAsync(forceSyncingAll);
-		}
+        public Task<DestinationSyncResult[]> ToDestinations(bool forceSyncingAll)
+        {
+            return SynchronizationTask.SynchronizeDestinationsAsync(forceSyncingAll);
+        }
+
+        [HttpPost]
+        [Route("ravenfs/{fileSystemName}/synchronization/ToDestination")]
+        public Task<DestinationSyncResult> ToDestination(string destination, bool forceSyncingAll)
+        {            
+            return SynchronizationTask.SynchronizeDestinationAsync(destination + "/ravenfs/" + this.FileSystemName, forceSyncingAll);
+        }
 
 		[HttpPost]
         [Route("ravenfs/{fileSystemName}/synchronization/start/{*fileName}")]

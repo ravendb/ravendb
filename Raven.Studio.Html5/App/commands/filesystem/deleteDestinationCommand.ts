@@ -2,6 +2,7 @@
 
 import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
+import synchronizationDestination = require("models/filesystem/synchronizationDestination");
 
 class deleteDestinationCommand extends commandBase {
 
@@ -9,19 +10,26 @@ class deleteDestinationCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<any> {
+    execute(): JQueryPromise<synchronizationDestinationDto[]> {
 
         var result = $.Deferred();
 
+        var dtos = [];
+
         this.query<any>("/config", { name: "Raven/Synchronization/Destinations" }, this.fs)
             .done(data => {
-                if (data) {
+
+                if (data && data.hasOwnProperty('destination')) {
 
                     // TODO: Review if the serialization method on the server is serializing this properly.
-                    if (!(data.url instanceof Array))
-                        data.url = [data.url];
+                    var value = data['destination'];
+                    if (!(value instanceof Array))
+                        value = [value];
 
-                    data.url = data.url.filter(x => x != this.destination);
+                    var dtos = value.map(x => <synchronizationDestinationDto> JSON.parse(x))
+                                    .filter(x => x.ServerUrl != this.destination);
+
+                    data.destination = dtos.map(x => JSON.stringify(x));
 
                     var url = "/config?name=" + encodeURIComponent("Raven/Synchronization/Destinations");
                     this.put(url, JSON.stringify(data), this.fs)

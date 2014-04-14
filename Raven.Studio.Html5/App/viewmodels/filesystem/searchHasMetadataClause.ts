@@ -19,12 +19,12 @@ class searchHasMetadataClause extends dialogViewModelBase {
 
     applyFilter() {
 
-        new searchByTermCommand(this.fs)
-            .execute()
-            .done();
+        //new searchByTermCommand(this.fs)
+        //    .execute()
+        //    .done();
 
-        this.applyFilterTask.resolve(filter);
-        dialog.close(this);
+        //this.applyFilterTask.resolve(filter);
+        //dialog.close(this);
     }
 }
 

@@ -8,7 +8,12 @@ class synchronizeWithDestinationCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        throw new Error("Not Implemented");
+        var synchronizeUrl = "/synchronization/ToDestination?destination=" + this.destination + "&forceSyncingAll=true";
+
+        return this.post(synchronizeUrl, null, this.fs)
+            .fail(x => {
+                    this.reportError("Synchronization endpoint returned with an error.")
+                });
     }
 }
 
