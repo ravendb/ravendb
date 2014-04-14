@@ -1,5 +1,6 @@
 ﻿using Raven.Client.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Raven.Tests.Core.Utils.Indexes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,7 +18,7 @@ namespace Raven.Tests.Core.Querying
         {
             using (var store = GetDocumentStore())
             {
-                IndexCreation.CreateIndexes(typeof(Companies_CompanyByType).Assembly, store);
+                new Companies_CompanyByType().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -65,37 +66,6 @@ namespace Raven.Tests.Core.Querying
                     Assert.Equal(6, companies[1].ContactsCount);
                     Assert.NotNull(companies[1].LastModified);
                 }
-            }
-        }
-
-        private class Companies_CompanyByType : AbstractIndexCreationTask<Company, Companies_CompanyByType.ReduceResult>
-        {
-            public class ReduceResult
-            {
-                public Company.CompanyType Type { get; set; }
-                public int ContactsCount { get; set; }
-                public DateTime LastModified { get; set; }
-            }
-
-            public Companies_CompanyByType()
-            {
-                Map = companies => from company in companies
-                                   select new
-                                   {
-                                       Type = company.Type,
-                                       ContactsCount = company.Contacts.Count,
-                                       LastModified = MetadataFor(company).Value<DateTime>("Last-Modified")
-                                   };
-
-                Reduce = results => from result in results
-                                    group result by result.Type
-                                        into g
-                                        select new
-                                        {
-                                            Type = g.Key,
-                                            ContactsCount = g.Sum(x => x.ContactsCount),
-                                            LastModified = g.Select(x => x.LastModified).First()
-                                        };
             }
         }
     }
