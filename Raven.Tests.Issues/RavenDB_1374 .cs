@@ -23,6 +23,13 @@ namespace Raven.Tests.Issues
 			public List<string> Bazes { get; set; }
 		}
 
+		public class MultimapItem
+		{
+			public string Foo { get; set; }
+			public int Bar { get; set; }
+			public List<string> Bazes { get; set; }
+		}
+
 		public class MaxNumberOfOutputs_MapIndex : AbstractIndexCreationTask<Item>
 		{
 			public MaxNumberOfOutputs_MapIndex()
@@ -137,6 +144,36 @@ namespace Raven.Tests.Issues
 				var stats = store.DatabaseCommands.GetStatistics().Indexes.First(x => x.PublicName == index.IndexName);
 
 				Assert.Equal(IndexingPriority.Normal, stats.Priority); // should not mark index as errored
+			}
+		}
+
+		public class MaxNumberOfOutputs_MultiMapIndex : AbstractMultiMapIndexCreationTask<Item>
+		{
+			public MaxNumberOfOutputs_MultiMapIndex()
+			{
+				AddMap<Item>(items => from item in items
+							   from baz in item.Bazes
+							   select new { item.Foo, baz });
+
+				AddMap<MultimapItem>(items => from item in items
+							   from baz in item.Bazes
+							   select new { item.Foo, baz });
+
+				MaxIndexOutputsPerDocument = 20;
+			}
+		}
+
+		[Fact]
+		public void CanSpecifyMaxNumberOfOutputsForMultiMapIndexByUsingIndexCreationTask()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var index = new MaxNumberOfOutputs_MultiMapIndex();
+				store.ExecuteIndex(index);
+
+				var indexDefinition = store.DatabaseCommands.GetIndex(index.IndexName);
+
+				Assert.Equal(20, indexDefinition.MaxIndexOutputsPerDocument);
 			}
 		}
 	}
