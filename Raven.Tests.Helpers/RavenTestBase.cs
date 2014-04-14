@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Primitives;
@@ -34,13 +35,12 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Server;
-using Raven.Tests.Helpers;
 using Raven.Tests.Helpers.Util;
 
 using Xunit;
 using Xunit.Sdk;
 
-namespace Raven.Tests.Common
+namespace Raven.Tests.Helpers
 {
 	public abstract class RavenTestBase : IDisposable
 	{
