@@ -1107,6 +1107,19 @@ declare module AceAjax {
         resize(force?: boolean);
 
         /**
+         * Enables automatic scrolling of the cursor into view when editor itself is inside scrollable element
+         * @param {Boolean} enable default true
+         **/
+        setAutoScrollEditorIntoView(enable?: boolean);
+
+        /**
+        * Setting an option for the editor
+        * @param {string} property name
+        * @param {number} property value
+        **/
+        setOption(name: string, value: number);
+
+        /**
          * {:VirtualRenderer.setTheme}
          * @param theme The path to a theme
         **/
