@@ -20,15 +20,18 @@ namespace Voron.Impl.Backup
 	public unsafe class FullBackup
 	{
   
-		public void ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal)
-		{			
+		public void ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal,
+			Action<string> infoNotify = null)
+		{
+			infoNotify = infoNotify ?? (s => { });
+
 			var dataPager = env.Options.DataPager;
 			var copier = new DataCopier(AbstractPager.PageSize * 16);
 			Transaction txr = null;
 			try
 			{
 
-                BackupMethods.VoronBackupInformationalNotify("Voron copy headers");
+				infoNotify("Voron copy headers");
                                            
 				using (var file = new FileStream(backupPath, FileMode.Create))
 				using (var package = new ZipArchive(file, ZipArchiveMode.Create))
@@ -94,7 +97,7 @@ namespace Voron.Impl.Backup
 							using (var stream = journalPart.Open())
 							{
 								copier.ToStream(journalFile, 0, pagesToCopy, stream);
-                                BackupMethods.VoronBackupInformationalNotify(string.Format("Voron copy journal file {0} ", journalFile  ));
+								infoNotify(string.Format("Voron copy journal file {0} ", journalFile));
 							}
                         
  						}
@@ -113,7 +116,7 @@ namespace Voron.Impl.Backup
 				if (txr != null)
 					txr.Dispose();
 			}
-            BackupMethods.VoronBackupInformationalNotify(string.Format("Voron backup db finished"));
+			infoNotify(string.Format("Voron backup db finished"));
 		}
 
 	    public void Restore(string backupPath, string voronDataDir, string journalDir = null)

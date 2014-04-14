@@ -168,14 +168,6 @@ namespace Raven.Database.Storage
             }
         }
 
-        protected void UpdateInformationalBackupStatus(string newMsg)
-        {
-            UpdateBackupStatus(newMsg, BackupStatus.BackupMessageSeverity.Informational);
-        }
-        protected void UpdateErrorBackupStatus(string newMsg)
-        {
-            UpdateBackupStatus(newMsg, BackupStatus.BackupMessageSeverity.Error);
-        }
         protected void UpdateBackupStatus(string newMsg, BackupStatus.BackupMessageSeverity severity)
         {
             try

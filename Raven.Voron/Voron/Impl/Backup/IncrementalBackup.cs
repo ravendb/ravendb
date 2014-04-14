@@ -31,8 +31,11 @@ namespace Voron.Impl.Backup
             }
         }
 
-        public long ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal)
+        public long ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal,
+			Action<string> infoNotify = null)
         {
+			infoNotify = infoNotify ?? (s => { });
+
             if (env.Options.IncrementalBackupEnabled == false)
                 throw new InvalidOperationException("Incremental backup is disabled for this storage");
 
@@ -115,7 +118,7 @@ namespace Voron.Impl.Backup
                             using (var stream = part.Open())
                             {
                                 copier.ToStream(journalFile, startBackupAt, pagesToCopy, stream);
-                                BackupMethods.VoronBackupInformationalNotify(string.Format("Voron Incr copy journal number {0}", num));
+                                infoNotify(string.Format("Voron Incr copy journal number {0}", num));
 
                             }
 
@@ -162,7 +165,7 @@ namespace Voron.Impl.Backup
                             jrnl.Release();
                         }
                     }
-                    BackupMethods.VoronBackupInformationalNotify(string.Format("Voron Incr Backup total {0} pages", numberOfBackedUpPages));
+                    infoNotify(string.Format("Voron Incr Backup total {0} pages", numberOfBackedUpPages));
                     return numberOfBackedUpPages;
                 }
             }

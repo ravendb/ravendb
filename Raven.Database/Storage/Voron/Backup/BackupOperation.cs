@@ -18,8 +18,6 @@ namespace Raven.Database.Storage.Voron.Backup
             if (env == null) throw new ArgumentNullException("env");
 
             this.env = env;
-            BackupMethods.OnVoronBackupInformationalEvent += UpdateInformationalBackupStatus;
-            BackupMethods.OnVoronBackupErrorsEvent += UpdateErrorBackupStatus;
         }
 
         protected override bool BackupAlreadyExists
@@ -32,15 +30,15 @@ namespace Raven.Database.Storage.Voron.Backup
             if (string.IsNullOrWhiteSpace(backupPath)) throw new ArgumentNullException("backupPath");
 
             if (isIncrementalBackup)
-                BackupMethods.Incremental.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename));
+                BackupMethods.Incremental.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename),
+					infoNotify: s => UpdateBackupStatus(s, BackupStatus.BackupMessageSeverity.Informational));
             else
-                BackupMethods.Full.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename));
+                BackupMethods.Full.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename),
+					infoNotify: s => UpdateBackupStatus(s, BackupStatus.BackupMessageSeverity.Informational));
         }
 
         public void Dispose()
         {
-            BackupMethods.OnVoronBackupInformationalEvent -= UpdateInformationalBackupStatus;
-            BackupMethods.OnVoronBackupErrorsEvent -= UpdateErrorBackupStatus;
         }
     }
 }
