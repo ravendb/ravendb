@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
+using Voron.Util;
 
 namespace Voron.Trees
 {
@@ -38,9 +39,10 @@ namespace Voron.Trees
 		public void MultiAdd(Transaction tx, Slice key, Slice value, ushort? version = null)
 		{
 			if (value == null) throw new ArgumentNullException("value");
-			if (value.Size > tx.DataPager.MaxNodeSize)
+			int maxNodeSize = tx.DataPager.MaxNodeSize;
+			if (value.Size > maxNodeSize)
 				throw new ArgumentException(
-					"Cannot add a value to child tree that is over " + tx.DataPager.MaxNodeSize + " bytes in size", "value");
+					"Cannot add a value to child tree that is over " + maxNodeSize + " bytes in size", "value");
 			if (value.Size == 0)
 				throw new ArgumentException("Cannot add empty value to child tree");
 
@@ -50,11 +52,7 @@ namespace Voron.Trees
 			var page = FindPageFor(tx, key, out lazy);
 			if ((page == null || page.LastMatch != 0))
 			{
-				var requiredPageSize = Constants.PageHeaderSize + Constants.NodeHeaderSize + Constants.NodeOffsetSize + value.Size;
-
-
-				var ptr = DirectAdd(tx, key, value.Size, version: version);
-				value.CopyTo(ptr);
+				MultiAddOnNewValue(tx, key, value, version, maxNodeSize);
 				return;
 			}
 
@@ -62,28 +60,123 @@ namespace Voron.Trees
 
 			var item = page.GetNode(page.LastSearchPosition);
 
-			CheckConcurrency(key, version, item->Version, TreeActionType.Add);
-			var existingValue = new Slice(DirectRead(tx, key), (ushort)item->DataSize);
-			if (existingValue.Compare(value, _cmp) == 0)
-				return; //nothing to do, the exact value is already there				
-
-
+			// already was turned into a multi tree, not much to do here
 			if (item->Flags == NodeFlags.MultiValuePageRef)
 			{
-				var tree = OpenOrCreateMultiValueTree(tx, key, item);
-				tree.DirectAdd(tx, value, 0);
+				var existingTree = OpenOrCreateMultiValueTree(tx, key, item);
+				existingTree.DirectAdd(tx, value, 0, version: version);
+				return;
 			}
-			else // need to turn to tree
+
+			var nestedPagePtr = NodeHeader.DirectAccess(tx, item);
+			var nestedPage = new Page(nestedPagePtr, "multi tree", (ushort) NodeHeader.GetDataSize(tx, item));
+
+			var existingItem = nestedPage.Search(value, NativeMethods.memcmp);
+			if (nestedPage.LastMatch != 0)
+				existingItem = null;// not an actual match, just greater than
+
+			ushort previousNodeRevision = existingItem != null ?  existingItem->Version : (ushort)0;
+			CheckConcurrency(value, version, previousNodeRevision, TreeActionType.Add);
+			
+			if (existingItem != null)
 			{
+				// maybe same value added twice?
+				var tmpKey = new Slice(item);
+				if (tmpKey.Compare(value, _cmp) == 0)
+					return; // already there, turning into a no-op
+				nestedPage.RemoveNode(nestedPage.LastSearchPosition);
+			}
+
+			if (nestedPage.HasSpaceFor(tx, value, 0))
+			{
+				// we are now working on top of the modified root page, we can just modify the memory directly
+				nestedPage.AddDataNode(nestedPage.LastSearchPosition, value, 0, previousNodeRevision);
+				return;
+			}
+
+			int pageSize = nestedPage.CalcSizeUsed() + Constants.PageHeaderSize;
+			var newRequiredSize = pageSize + nestedPage.GetRequiredSpace(value, 0);
+			if (newRequiredSize <= maxNodeSize)
+			{
+				// we can just expand the current value... no need to create a nested tree yet
+				var actualPageSize = (ushort)Math.Min(Utils.NearestPowerOfTwo(newRequiredSize), maxNodeSize);
+				ExpandMultiTreeNestedPageSize(tx, key, value, nestedPagePtr, actualPageSize, item->DataSize);
+
+				return;
+			}
+			// we now have to convert this into a tree instance, instead of just a nested page
+			var tree = Create(tx, _cmp, TreeFlags.MultiValue);
+			for (int i = 0; i < nestedPage.NumberOfEntries; i++)
+			{
+				var existingValue = nestedPage.GetNodeKey(i);
+				tree.DirectAdd(tx, existingValue, 0);
+			}
+			tree.DirectAdd(tx, value, 0, version: version);
+			tx.AddMultiValueTree(this, key, tree);
+			// we need to record that we switched to tree mode here, so the next call wouldn't also try to create the tree again
+			DirectAdd(tx, key, sizeof (TreeRootHeader), NodeFlags.MultiValuePageRef);
+		}
+
+		private void ExpandMultiTreeNestedPageSize(Transaction tx, Slice key, Slice value, byte* nestedPagePtr, ushort newSize, int currentSize)
+		{
+			Debug.Assert(newSize > currentSize);
+			var tempPagePointer = tx.Environment.TemporaryPage.TempPagePointer;
+			NativeMethods.memcpy(tempPagePointer, nestedPagePtr, currentSize);
+			Delete(tx, key); // release our current page
+			Page nestedPage = new Page(tempPagePointer, "multi tree", (ushort) currentSize);
+
+			var ptr = DirectAdd(tx, key, newSize);
+
+			var newNestedPage = new Page(ptr, "multi tree", newSize)
+			{
+				Lower = (ushort) Constants.PageHeaderSize,
+				Upper = newSize
+			};
+
+			Slice nodeKey = new Slice(SliceOptions.Key);
+			for (int i = 0; i < nestedPage.NumberOfEntries; i++)
+			{
+				var nodeHeader = nestedPage.GetNode(i);
+				nodeKey.Set(nodeHeader);
+				newNestedPage.AddDataNode(i, nodeKey, 0,
+					(ushort) (nodeHeader->Version - 1)); // we dec by one because AdddataNode will inc by one, and we don't want to change those values
+			}
+
+			newNestedPage.Search(key, _cmp);
+			newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, value, 0, 0);
+		}
+
+		private void MultiAddOnNewValue(Transaction tx, Slice key, Slice value, ushort? version, int maxNodeSize)
+		{
+			var requiredPageSize = Constants.PageHeaderSize + Constants.NodeHeaderSize + Constants.NodeOffsetSize + value.Size;
+			if (requiredPageSize > maxNodeSize)
+			{
+				// no choice, very big value, we might as well just put it in its own tree from the get go...
+				// otherwise, we would have to put this in overflow page, and that won't save us any space anyway
+
 				var tree = Create(tx, _cmp, TreeFlags.MultiValue);
-				var current = NodeHeader.GetData(tx, item);
-				tree.DirectAdd(tx, current, 0);
 				tree.DirectAdd(tx, value, 0);
 				tx.AddMultiValueTree(this, key, tree);
 
-				// we need to record that we switched to tree mode here, so the next call wouldn't also try to create the tree again
-				DirectAdd(tx, key, sizeof(TreeRootHeader), NodeFlags.MultiValuePageRef);
+				DirectAdd(tx, key, sizeof (TreeRootHeader), NodeFlags.MultiValuePageRef);
+				return;
 			}
+
+			var actualPageSize = (ushort) Math.Min(Utils.NearestPowerOfTwo(requiredPageSize), maxNodeSize);
+
+			var ptr = DirectAdd(tx, key, actualPageSize);
+
+			var nestedPage = new Page(ptr, "multi tree", actualPageSize)
+			{
+				Lower = (ushort) Constants.PageHeaderSize,
+				Upper = actualPageSize
+			};
+
+			CheckConcurrency(value, version, 0, TreeActionType.Add);
+
+			nestedPage.AddDataNode(0, value, 0, 0);
+
+			value.CopyTo(ptr);
 		}
 
 		public void MultiDelete(Transaction tx, Slice key, Slice value, ushort? version = null)
@@ -106,36 +199,26 @@ namespace Voron.Trees
 
 				tree.Delete(tx, value, version);
 
-				if (tree.State.EntriesCount > 1)
+				// previously, we would convert back to a simple model if we dropped to a single entry
+				// however, it doesn't really make sense, once you got enough values to go to an actual nested 
+				// tree, you are probably going to remain that way, or be removed completely.
+				if (tree.State.EntriesCount != 0) 
 					return;
-
-				if (tree.State.EntriesCount == 0)
-				{
-					tx.TryRemoveMultiValueTree(this, key);
-					tx.FreePage(tree.State.RootPageNumber);
-					return;
-				}
-
-				// convert back to simple key/val
-				var iterator = tree.Iterate(tx);
-				if (!iterator.Seek(Slice.BeforeAllKeys))
-					throw new InvalidDataException(
-						"MultiDelete() failed : sub-tree is empty where it should not be, this is probably a Voron bug.");
-
-				var dataToSave = iterator.CurrentKey;
-
-				if (iterator.Current->DataSize != 0)
-					return; // we can't move this to a key/value, it has a stream value
-
-				var ptr = DirectAdd(tx, key, dataToSave.Size);
-				dataToSave.CopyTo(ptr);
-
 				tx.TryRemoveMultiValueTree(this, key);
 				tx.FreePage(tree.State.RootPageNumber);
+				Delete(tx, key);
 			}
-			else //the regular key->value pattern
+			else // we use a nested page here
 			{
-				Delete(tx, key, version);
+				var nestedPage = new Page(NodeHeader.DirectAccess(tx, item), "multi tree", (ushort)NodeHeader.GetDataSize(tx, item));
+				var nestedItem = nestedPage.Search(value, NativeMethods.memcmp);
+				if (nestedItem == null) // value not found
+					return;
+
+				CheckConcurrency(value, version, nestedItem->Version, TreeActionType.Delete);
+				nestedPage.RemoveNode(nestedPage.LastSearchPosition);
+				if (nestedPage.NumberOfEntries == 0)
+					Delete(tx, key);
 			}
 		}
 
@@ -164,7 +247,9 @@ namespace Voron.Trees
 				return tree.Iterate(tx);
 			}
 
-			return new SingleEntryIterator(_cmp, item, tx);
+			var nestedPage = new Page(NodeHeader.DirectAccess(tx, item), "multi tree", (ushort)NodeHeader.GetDataSize(tx, item));
+				
+			return new PageIterator(_cmp, nestedPage);
 		}
 
 		internal Tree OpenOrCreateMultiValueTree(Transaction tx, Slice key, NodeHeader* item)

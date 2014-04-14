@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Security.Policy;
 using System.Text;
 using Voron.Debugging;
 using Voron.Impl;
@@ -67,22 +68,27 @@ namespace Voron.Trees
 				return GetNode(LastSearchPosition);
 			}
 
+			var pageKey = new Slice(SliceOptions.Key);
+			if (NumberOfEntries == 1)
+			{
+				pageKey.Set(GetNode(0));
+				LastMatch = key.Compare(pageKey, cmp);
+				LastSearchPosition = LastMatch > 0 ? 1 : 0;
+				return LastSearchPosition > NumberOfEntries ? null : GetNode(0);
+			}
+
 			int low = IsLeaf ? 0 : 1;
 			int high = NumberOfEntries - 1;
 			int position = 0;
 
-			var pageKey = new Slice(SliceOptions.Key);
-			bool matched = false;
-			NodeHeader* node = null;
 			while (low <= high)
 			{
 				position = (low + high) >> 1;
 
-				node = GetNode(position);
+				var node = GetNode(position);
 				pageKey.Set(node);
 
 				LastMatch = key.Compare(pageKey, cmp);
-				matched = true;
 				if (LastMatch == 0)
 					break;
 
@@ -90,11 +96,6 @@ namespace Voron.Trees
 					low = position + 1;
 				else
 					high = position - 1;
-			}
-
-			if (matched == false)
-			{
-				LastMatch = key.Compare(pageKey, cmp);
 			}
 
 			if (LastMatch > 0) // found entry less than key
@@ -257,7 +258,8 @@ namespace Voron.Trees
 
         private NodeHeader* AllocateNewNode(int index, Slice key, int nodeSize, ushort previousNodeVersion)
         {
-			if (previousNodeVersion + 1 > ushort.MaxValue)
+	        int newSize = previousNodeVersion + 1;
+	        if (newSize > ushort.MaxValue)
 				previousNodeVersion = 0;
 
             var newNodeOffset = (ushort)(_header->Upper - nodeSize);
