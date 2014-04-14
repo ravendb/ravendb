@@ -46,7 +46,7 @@ task Init -depends Verify40, Clean {
 	New-Item $build_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
 }
 
-task Compile -depends Init {
+task Compile -depends Init, CompileHtml5 {
 	
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
@@ -55,6 +55,11 @@ task Compile -depends Init {
 }
 
 task CompileHtml5 {
+	
+	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
+	
+	Write-Host "Compiling HTML5" -ForegroundColor Yellow
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
 	
 	Remove-Item $build_dir\Html5 -Force -Recurse -ErrorAction SilentlyContinue | Out-Null
 	Remove-Item $build_dir\Raven.Studio.Html5.zip -Force -ErrorAction SilentlyContinue | Out-Null
@@ -359,7 +364,6 @@ task ZipOutput {
 
 
 task DoReleasePart1 -depends Compile, `
-	CompileHtml5, `
 	CleanOutputDirectory, `
 	CreateOutpuDirectories, `
 	CopySmuggler, `
