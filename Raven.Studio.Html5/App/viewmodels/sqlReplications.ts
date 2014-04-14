@@ -4,6 +4,7 @@ import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import getSqlReplicationsCommand = require("commands/getSqlReplicationsCommand");
 import saveSqlReplicationsCommand = require("commands/saveSqlReplicationsCommand");
 import deleteDocumentsCommand = require("commands/deleteDocumentsCommand");
+import appUrl = require("common/appUrl");
 
 class sqlReplications extends viewModelBase {
 
@@ -12,10 +13,8 @@ class sqlReplications extends viewModelBase {
     lastIndex = ko.computed(function () {
         return this.isFirstload() ? -1 : this.replications().length - 1;
     }, this);
-    isSaveEnabled = ko.computed(function () {
-        this.replications();
-        return viewModelBase.dirtyFlag().isDirty();
-    }, this);
+    areAllSqlReplicationsValid: KnockoutComputed<boolean>;
+    isSaveEnabled: KnockoutComputed<boolean>;
     loadedSqlReplications = [];
 
     constructor() {
@@ -24,8 +23,33 @@ class sqlReplications extends viewModelBase {
         aceEditorBindingHandler.install();
     }
 
-    activate() {
-        this.fetchSqlReplications();
+    canActivate(args: any): JQueryPromise<any> {
+        var deferred = $.Deferred();
+        var db = this.activeDatabase();
+        if (db) {
+            new getSqlReplicationsCommand(db)
+                .execute()
+                .done(results => {
+                    for (var i = 0; i < results.length; i++) {
+                        this.loadedSqlReplications.push(results[i].getId());
+                    }
+                    this.replications(results);
+
+                    deferred.resolve({ can: true });
+                })
+                .fail(() => deferred.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) }));
+        }
+        return deferred;
+    }
+
+    activate(args) {
+        super.activate(args);
+
+        this.areAllSqlReplicationsValid = ko.computed(() => this.replications().every(k => k.isValid()));
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.replications]);
+        this.isSaveEnabled = ko.computed(()=> {
+            return viewModelBase.dirtyFlag().isDirty() && this.areAllSqlReplicationsValid();
+        });
     }
 
     attached() {
@@ -34,22 +58,6 @@ class sqlReplications extends viewModelBase {
             trigger: 'hover',
             content: 'Replication scripts use JScript.',
         });
-    }
-
-    private fetchSqlReplications() {
-        var db = this.activeDatabase();
-        if (db) {
-            new getSqlReplicationsCommand(db)
-                .execute()
-                .done( results => {
-                    for (var i = 0; i < results.length; i++) {
-                        this.loadedSqlReplications.push(results[i].getId());
-                    }
-                    viewModelBase.dirtyFlag = new ko.DirtyFlag([this.replications]);
-                    this.replications(results);
-                    viewModelBase.dirtyFlag().reset();
-            });
-        }
     }
 
     saveChanges() {

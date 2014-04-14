@@ -14,6 +14,7 @@ class indexErrors extends viewModelBase {
         super();
 
         this.updateCurrentNowTime();
+        
     }
 
     modelPolling() {

@@ -174,6 +174,7 @@ namespace Raven.Abstractions.Indexing
 					Equals(other.IndexId, IndexId) &&
 					Equals(other.Reduce, Reduce) &&
 					Equals(other.TransformResults, TransformResults) &&
+                    Equals(other.MaxIndexOutputsPerDocument, MaxIndexOutputsPerDocument) &&
 					DictionaryEquals(other.Stores, Stores) &&
 					DictionaryEquals(other.Indexes, Indexes) &&
 					DictionaryEquals(other.Analyzers, Analyzers) &&

@@ -31,6 +31,8 @@ import changesApi = require("common/changesApi");
 import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
 import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
 
+import changeSubscription = require('models/changeSubscription');
+
 
 class shell extends viewModelBase {
     private router = router;
@@ -55,10 +57,12 @@ class shell extends viewModelBase {
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
     goToDocumentSearch = ko.observable<string>();
-    goToDocumentSearchResults = ko.observableArray<string>();    
+    goToDocumentSearchResults = ko.observableArray<string>();
 
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
+
+    databasesChangeSubscription: changeSubscription;
 
     constructor() {
         super();
@@ -126,6 +130,24 @@ class shell extends viewModelBase {
         });
 
         shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+
+
+        this.databasesChangeSubscription = shell.globalChangesApi.watchDocPrefix((e: documentChangeNotificationDto) => {
+            if (!!e.Id && e.Id.indexOf("Raven/Databases") == 0 && 
+                (e.Type == documentChangeType.Put || e.Type == documentChangeType.Delete)) {
+
+                if (e.Type == documentChangeType.Delete) {
+                    var deletedDbName = e.Id.substring(16, e.Id.length);
+                    
+                    this.databases.remove((dbToRemove: database) => {
+                    
+                        return dbToRemove.name === deletedDbName;
+                    });
+                    
+                }
+                this.modelPolling();
+            }
+        }, "Raven/Databases");
     }
 
     showNavigationProgress(isNavigating: boolean) {

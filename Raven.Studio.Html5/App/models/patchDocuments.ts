@@ -6,8 +6,6 @@ class patchDocuments {
     selectedItem = ko.observable<string>();
     query = ko.observable<string>();
     script = ko.observable<string>();
-    beforePatch = ko.observable<string>();
-    afterPatch = ko.observable<string>();
     parameters = ko.observableArray<patchParam>();
 
     constructor(dto: patchDto) {

@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
+using Raven.Tests.Helpers.Util;
 
 namespace Raven.Tests.Common.Util
 {

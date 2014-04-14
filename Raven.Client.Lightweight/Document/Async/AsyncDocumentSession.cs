@@ -854,7 +854,7 @@ namespace Raven.Client.Document.Async
 
 			using (EntityToJson.EntitiesToJsonCachingScope())
 			{
-				var data = PrepareForSaveChanges();
+				var data = PrepareForSaveChanges(null);
 				if (data.Commands.Count == 0)
 					return;
 
@@ -956,7 +956,10 @@ namespace Raven.Client.Document.Async
 			return Conventions.GenerateDocumentKeyAsync(dbName, AsyncDatabaseCommands, entity);
 		}
 
-	   
-      
+
+	    public DocumentsChanges WhatChanged()
+	    {
+	        throw new NotImplementedException();
+	    }
 	}
 }

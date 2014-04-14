@@ -43,8 +43,8 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 
 					newDoc.Data = "Foo-Bar!";
-					Assert.DoesNotThrow(session.SaveChanges); //should not throw concurrency exception
-
+					
+                    Assert.DoesNotThrow(() => session.SaveChanges());//should not throw concurrency exception
 					transaction.Complete();
 				}
 			}
@@ -132,7 +132,7 @@ namespace Raven.Tests.Issues
 						x.CourseId = updatedCourse.Id;
 					});
 
-					Assert.DoesNotThrow(session.SaveChanges);
+					Assert.DoesNotThrow(()=>session.SaveChanges());
 
 					transaction.Complete();
 				}

@@ -1,19 +1,24 @@
 ﻿<div>
     <nav class="navbar navbar-default" role="navigation">
         <div class="collapse navbar-collapse">
-            <form class="navbar-form pull-right">
-                <button type="button" class="btn btn-default  use-bootstrap-tooltip" data-bind="click: addNewSqlReplication" title="New SQL Replication(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> New SQL Replication</button>
-                <button type="button" class="btn btn-primary  use-bootstrap-tooltip" data-bind="click: saveChanges, enable: isSaveEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+            <form class="navbar-form navbar-right">
+                <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: addNewSqlReplication" title="New SQL Replication(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> New SQL Replication</button>
+                <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveChanges, enable: isSaveEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
             </form>
         </div>
     </nav>
+    <div class="alert alert-warning" data-bind="visible: replications().length === 0">
+        You've got no sql replication set up.
+    </div>
     <div class="panel-group" id="accordion" data-bind="foreach: replications">
         <div class="panel panel-default" data-bind="css: { 'panel-info': !disabled(), 'panel-warning': disabled }">
             <div class="panel-heading">
-                <h3 class="panel-title">
-                    <a data-toggle="collapse" data-parent="#accordion" data-bind="attr: { 'href': '#sqlRelication' + $index() }"><span data-bind="text: name() ? name() : 'New SQL Replication ' + $root.itemNumber($index())"></span></a>
-                    <button type="button" style="display:inline-block;" class="close" data-bind="click: $root.removeSqlReplication.bind($root)" title="Remove this SQL replication">×</button>
-                </h3>
+                <a data-toggle="collapse" data-parent="#accordion" data-bind="attr: { 'href': '#sqlRelication' + $index() }">
+                    <h3 class="panel-title">
+                        <span data-bind="text: name() ? name() : 'New SQL Replication ' + $root.itemNumber($index())"></span>
+                        <span class="glyphicon glyphicon-remove remove-icon pull-right" data-bind="click: $root.removeSqlReplication.bind($root)" title="Remove this SQL replication"></span>
+                    </h3>
+                </a>
             </div>
             <div data-bind="attr: { 'id': 'sqlRelication' + $index() }, css: { 'collapse': ($index() !== $parent.lastIndex()), 'in': ($index() === $parent.lastIndex()) }" class="panel-collapse collapse">
                 <div class="panel-body sql-replication-panel-body">
@@ -45,9 +50,23 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <div class="col-sm-3">
-                                <select class="form-control" data-bind="options: availableConnectionStringTypes, optionsText: 'label', optionsValue: 'value', value: connectionStringType, valueUpdate: 'keyup'"></select>
+                            <label class="col-sm-3 control-label">Connection string source</label>
+                            <div class="col-sm-9">
+                                <div class="btn-group" data-toggle="buttons">
+                                    <label class="btn btn-primary" data-bind="click: function(){setConnectionStringType('cs'); return false;}, css: { active: connectionStringType() === 'cs' }">
+                                        <input type="radio" name="options"> Plain text
+                                    </label>
+                                    <label class="btn btn-primary" data-bind="click: function(){setConnectionStringType('csn'); return false;}, css: { active: connectionStringType() === 'csn'}">
+                                        <input type="radio" name="options"> Local machine settings
+                                    </label>
+                                    <label class="btn btn-primary" data-bind="click: function(){setConnectionStringType('cssn'); return false;}, css: { active: connectionStringType() === 'cssn'}">
+                                        <input type="radio" name="options"> In memory / remote settings
+                                    </label>
+                                </div>
                             </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label" data-bind="text:connectionStringSourceFieldName"></label>
                             <div class="col-sm-9">
                                 <input required type="text" class="form-control" data-bind="value: connectionStringValue, valueUpdate: 'keyup'" />
                             </div>

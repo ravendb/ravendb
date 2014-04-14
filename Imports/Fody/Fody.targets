@@ -83,7 +83,7 @@
   <Target
     AfterTargets="AfterBuild;NonWinFodyTarget"
     Name="CleanReferenceCopyLocalPaths" >
-    <Delete Files="@(ReferenceCopyLocalPaths->'$(OutDir)%(DestinationSubDirectory)%(Filename)%(Extension)')" Condition="%(Filename) != 'Raven.Database' AND ($(MSBuildProjectName) != 'Raven.Web' OR $([System.Text.RegularExpressions.Regex]::IsMatch(%(Filename), 'Owin', System.Text.RegularExpressions.RegexOptions.IgnoreCase)) == false)" />
+    <Delete Files="@(ReferenceCopyLocalPaths->'$(OutDir)%(DestinationSubDirectory)%(Filename)%(Extension)')" Condition="%(Filename) != 'Raven.Database' AND %(Filename) != 'Raven.Abstractions' AND ($(MSBuildProjectName) != 'Raven.Web' OR $([System.Text.RegularExpressions.Regex]::IsMatch(%(Filename), 'Owin', System.Text.RegularExpressions.RegexOptions.IgnoreCase)) == false)" />
   </Target>
 
   <!--Support for ncrunch-->

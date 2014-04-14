@@ -9,7 +9,7 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
-    <TypeScriptToolsVersion>1.0</TypeScriptToolsVersion>
+    <TypeScriptToolsVersion>0.9</TypeScriptToolsVersion>
     <UseIISExpress>true</UseIISExpress>
     <IISExpressSSLPort />
     <IISExpressAnonymousAuthentication />
@@ -144,6 +144,7 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemUploadFile.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchFileSizeRangeClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchSingleInputClause.ts" />
+    <TypeScriptCompile Include="App\viewmodels\licensingStatus.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\backupDatabase.ts" />
@@ -229,12 +230,14 @@
     <TypeScriptCompile Include="App\models\patchParam.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\deleteDocuments.html" />
     <Content Include="App\views\filesystem\deleteFiles.html" />
     <Content Include="App\views\filesystem\searchFileSizeRangeClause.html" />
     <Content Include="App\views\filesystem\search.html" />
     <Content Include="App\views\filesystem\filesystemSynchronization.html" />
     <Content Include="App\views\filesystem\filesystemEditFile.html" />
     <Content Include="App\views\filesystem\singleInputSearchClause.html" />
+    <Content Include="App\views\licensingStatus.html" />
     <Content Include="App\views\selectColumns.html" />
     <TypeScriptCompile Include="App\viewmodels\patch.ts" />
     <Content Include="App\views\patch.html" />

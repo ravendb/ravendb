@@ -220,7 +220,7 @@ class ctor {
 
     loadRowData() {
         if (this.items && this.firstVisibleRow) {
-
+            var that = this;
             // The scrolling has paused for a minute. See if we have all the data needed.
             var firstVisibleIndex = this.firstVisibleRow.rowIndex();
             var fetchTask = this.items.fetch(firstVisibleIndex, this.recycleRows().length);
@@ -300,6 +300,7 @@ class ctor {
         // Keep allocations to a minimum.
 
         var columnsNeeded = {};
+        
         if (this.settings.customColumns().hasOverrides()) {
             var colParams = this.settings.customColumns().columns();
             for (var i = 0; i < colParams.length; i++) {
@@ -334,6 +335,7 @@ class ctor {
 
         this.columns.remove(c => unneededColumns.contains(c.binding));
         this.columns.valueHasMutated();
+        this.settings.customColumns().columns.remove(c => unneededColumns.contains(c.binding()));
 
         var columnsCurrentTotalWidth = 0;
         for (var i = 2; i < this.columns().length; i++) {
@@ -366,9 +368,8 @@ class ctor {
 
             // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
             var newColumn = new column(binding, columnWidth, columnName);
-            if (binding === "Name") {
+            if ((binding === "Name") && (!this.settings.customColumns().customMode())){
                 this.columns.splice(2, 0, newColumn);
-                //} else if (this.columns().length < 9) {
             } else {
                 this.columns.push(newColumn);
             }
@@ -376,13 +377,17 @@ class ctor {
             var curColumnConfig = this.settings.customColumns().findConfigFor(binding);
             if (!curColumnConfig && !!firstRow) {
                 var curColumnTemplate: string = firstRow.getCellTemplate(binding);
-                this.settings.customColumns().columns.push(new customColumnParams({
+                var newCustomColumn = new customColumnParams({
                     Binding: binding,
                     Header: binding,
                     Template: curColumnTemplate,
                     DefaultWidth: availiableWidth > 0 ? Math.floor(columnWidth) : 0
-                }));
-
+                });
+                if ((binding === "Name") && (!this.settings.customColumns().customMode())) {
+                    this.settings.customColumns().columns.splice(0, 0, newCustomColumn);
+                } else {
+                    this.settings.customColumns().columns.push(newCustomColumn);
+                }
             }
         }
     }
@@ -456,7 +461,7 @@ class ctor {
             if (customConfig) {
                 return customConfig.template();
             }
-        } 
+        }
         return undefined;
     }
 
