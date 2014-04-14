@@ -84,8 +84,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.SlowTests", "Raven.Sl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.DtcTests", "Raven.DtcTests\Raven.DtcTests.csproj", "{85A32315-822F-45BE-BC57-C2CA4404E09A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiTester", "WebApiTester\WebApiTester.csproj", "{FE1C9DEC-0682-4A04-B15E-C49FBEA1C33D}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
