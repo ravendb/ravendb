@@ -135,7 +135,7 @@ namespace Raven.Client.Document.SessionOperations
 			var queryResult = currentQueryResults.CreateSnapshot();
 			foreach (var include in SerializationHelper.RavenJObjectsToJsonDocuments(queryResult.Includes))
 			{
-				sessionOperations.TrackIncludedDocumnet(include);
+				sessionOperations.TrackIncludedDocument(include);
 			}
 
 			var list = queryResult.Results

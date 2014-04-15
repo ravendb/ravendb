@@ -1374,12 +1374,9 @@ more responsive application.
             return instance;
         }
         
-        public void TrackIncludedDocumnet(JsonDocument include)
+        public void TrackIncludedDocument(JsonDocument include)
         {
             includedDocumentsByKey[include.Key] = include;
         }
-
-
-      
     }
 }
