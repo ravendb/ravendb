@@ -15,7 +15,7 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
     <TargetFrameworkProfile />
-    <FodyPath>..\..\packages\Fody.1.14.0</FodyPath>
+    <NuGetPackageImportStamp>cdcaea95</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -107,4 +107,5 @@
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
   <Target Name="AfterBuild">
   </Target>
+  <Import Project="..\..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
 </Project>
