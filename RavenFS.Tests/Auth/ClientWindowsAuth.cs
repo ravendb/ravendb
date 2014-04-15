@@ -135,7 +135,7 @@ namespace RavenFS.Tests.Auth
 
             await configClient.SetConfig("test-conf", new NameValueCollection() { { "key", "value" } });
 
-            var config = await configClient.GetConfig("test-conf");
+            var config = await configClient.GetConfig<NameValueCollection>("test-conf");
 
             Assert.Equal("value", config["key"]);
 

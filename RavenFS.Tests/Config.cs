@@ -11,7 +11,7 @@ namespace RavenFS.Tests
 		{
 			var client = NewClient();
 
-			Assert.Null(await client.Config.GetConfig("test"));
+            Assert.Null(await client.Config.GetConfig<NameValueCollection>("test"));
 		}
 
 		[Fact]
@@ -19,14 +19,14 @@ namespace RavenFS.Tests
 		{
 			var client = NewClient();
 
-			Assert.Null(await client.Config.GetConfig("test"));
+            Assert.Null(await client.Config.GetConfig<NameValueCollection>("test"));
 
 			await client.Config.SetConfig("test", new NameValueCollection
 				{
 					{"test", "there"},
 					{"hi", "you"}
 				});
-			var nameValueCollection = await client.Config.GetConfig("test");
+            var nameValueCollection = await client.Config.GetConfig<NameValueCollection>("test");
 			Assert.NotNull(nameValueCollection);
 
 			Assert.Equal("there", nameValueCollection["test"]);
@@ -40,7 +40,7 @@ namespace RavenFS.Tests
 		{
 			var client = NewClient();
 
-			Assert.Null(await client.Config.GetConfig("test"));
+            Assert.Null(await client.Config.GetConfig<NameValueCollection>("test"));
 
 			await client.Config.SetConfig("test", new NameValueCollection
 				{
@@ -62,18 +62,18 @@ namespace RavenFS.Tests
 		{
 			var client = NewClient();
 
-			Assert.Null(await client.Config.GetConfig("test"));
+            Assert.Null(await client.Config.GetConfig<NameValueCollection>("test"));
 
 			await client.Config.SetConfig("test", new NameValueCollection
 			{
 				{"test", "there"},
 				{"hi", "you"}
 			});
-			Assert.NotNull(await client.Config.GetConfig("test"));
+            Assert.NotNull(await client.Config.GetConfig<NameValueCollection>("test"));
 
 			await client.Config.DeleteConfig("test");
 
-			Assert.Null(await client.Config.GetConfig("test"));
+            Assert.Null(await client.Config.GetConfig<NameValueCollection>("test"));
 		}
 
 	    [Fact]

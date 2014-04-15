@@ -495,7 +495,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			{
 				var configs = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.SyncResultNamePrefix,
 																 Paging.PageSize * Paging.Start, Paging.PageSize);
-				var reports = configs.Select(config => config.AsObject<SynchronizationReport>()).ToList();
+				var reports = configs.Select(config => config.Value<SynchronizationReport>()).ToList();
 				page = new ListPage<SynchronizationReport>(reports, reports.Count);
 			});
 
@@ -531,12 +531,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			Storage.Batch(accessor =>
 			{
-				var conflicts =
-					accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.ConflictConfigNamePrefix,
-													   Paging.PageSize * Paging.Start,
-													   Paging.PageSize)
-							.Select(config => config.AsObject<ConflictItem>())
-							.ToList();
+				var conflicts = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.ConflictConfigNamePrefix,
+													               Paging.PageSize * Paging.Start,
+													               Paging.PageSize)
+                                        .Select(config => config.JsonDeserialization<ConflictItem>())
+							            .ToList();
 				page = new ListPage<ConflictItem>(conflicts, conflicts.Count);
 			});
 
@@ -682,8 +681,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			Storage.Batch(accessor =>
 			{
-				var conflict =
-					accessor.GetConfig(RavenFileNameHelper.ConflictConfigNameForFile(fileName)).AsObject<ConflictItem>();
+				var conflict = accessor.GetConfig(RavenFileNameHelper.ConflictConfigNameForFile(fileName)).Value<ConflictItem>();
 				var localMetadata = accessor.GetFile(fileName, 0, 0).Metadata;
 				var localHistory = Historian.DeserializeHistory(localMetadata);
 
@@ -712,7 +710,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				{
 					var localMetadata = accessor.GetFile(fileName, 0, 0).Metadata;
 					var conflictConfigName = RavenFileNameHelper.ConflictConfigNameForFile(fileName);
-					var conflictItem = accessor.GetConfig(conflictConfigName).AsObject<ConflictItem>();
+                    var conflictItem = accessor.GetConfig(conflictConfigName).JsonDeserialization<ConflictItem>();
 
 					var conflictResolution =
 						new ConflictResolution
@@ -741,7 +739,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		private void SaveSynchronizationReport(string fileName, IStorageActionsAccessor accessor, SynchronizationReport report)
 		{
 			var name = RavenFileNameHelper.SyncResultNameForFile(fileName);
-			accessor.SetConfig(name, report.AsConfig());
+			accessor.SetConfig(name, JsonExtensions.ToJObject(report));
 		}
 
 		private void DeleteSynchronizationReport(string fileName, IStorageActionsAccessor accessor)
@@ -761,7 +759,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 					try
 					{
 						var name = RavenFileNameHelper.SyncResultNameForFile(fileName);
-						preResult = accessor.GetConfig(name).AsObject<SynchronizationReport>();
+                        preResult = accessor.GetConfig(name).JsonDeserialization<SynchronizationReport>();
 					}
 					catch (FileNotFoundException)
 					{
@@ -798,9 +796,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			SourceSynchronizationInformation info;
 			try
 			{
-				info =
-					accessor.GetConfig(SynchronizationConstants.RavenSynchronizationSourcesBasePath + "/" + from).AsObject
-						<SourceSynchronizationInformation>();
+				info = accessor.GetConfig(SynchronizationConstants.RavenSynchronizationSourcesBasePath + "/" + from)
+                               .JsonDeserialization<SourceSynchronizationInformation>();
 			}
 			catch (FileNotFoundException)
 			{
@@ -814,12 +811,10 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			return info;
 		}
 
-		private void SaveSynchronizationSourceInformation(ServerInfo sourceServer, Guid lastSourceEtag,
-														  IStorageActionsAccessor accessor)
+		private void SaveSynchronizationSourceInformation(ServerInfo sourceServer, Guid lastSourceEtag, IStorageActionsAccessor accessor)
 		{
 			var lastSynchronizationInformation = GetLastSynchronization(sourceServer.Id, accessor);
-			if (Buffers.Compare(lastSynchronizationInformation.LastSourceFileEtag.ToByteArray(), lastSourceEtag.ToByteArray()) >
-				0)
+			if (Buffers.Compare(lastSynchronizationInformation.LastSourceFileEtag.ToByteArray(), lastSourceEtag.ToByteArray()) > 0)
 			{
 				return;
 			}
@@ -833,7 +828,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			var key = SynchronizationConstants.RavenSynchronizationSourcesBasePath + "/" + sourceServer.Id;
 
-			accessor.SetConfig(key, synchronizationSourceInfo.AsConfig());
+			accessor.SetConfig(key, JsonExtensions.ToJObject(synchronizationSourceInfo));
 
 			Log.Debug("Saved last synchronized file ETag {0} from {1} ({2})", lastSourceEtag, sourceServer.FileSystemUrl, sourceServer.Id);
 		}

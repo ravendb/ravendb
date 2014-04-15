@@ -5,47 +5,74 @@ using System.Text;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Abstractions.Extensions;
+using Raven.Json.Linq;
+using System.Collections;
 
 namespace Raven.Database.Server.RavenFS.Extensions
 {
 	public static class ConfigurationExtension
-	{
-		public static T GetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key)
-		{
-			var value = accessor.GetConfig(key)["value"];
-			var serializer = new JsonSerializer
-			{
-				Converters = { new NameValueCollectionJsonConverter() }
-			};
-			return serializer.Deserialize<T>(new JsonTextReader(new StringReader(value)));
-		}
+	{        
+        public static T GetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key)
+        {
+            var value = accessor.GetConfig(key);
 
-		public static bool TryGetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key, out T result)
-		{
-			try
-			{
-				result = GetConfigurationValue<T>(accessor, key);
-				return true;
-			}
-			catch (FileNotFoundException)
-			{
-				result = default(T);
-				return false;
-			}
-		}
+            if (typeof(NameValueCollection).IsAssignableFrom(typeof(T)))
+            {
+                RavenJToken token;
+                if (!value.TryGetValue("Data", out token))
+                    throw new JsonSerializationException();
 
-		public static void SetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key, T objectToSave)
-		{
-			var sb = new StringBuilder();
-			var jw = new JsonTextWriter(new StringWriter(sb));
-			var serializer = new JsonSerializer
-			{
-				Converters = { new NameValueCollectionJsonConverter() }
-			};
-			serializer.Serialize(jw, objectToSave);
-			var value = sb.ToString();
-			accessor.SetConfig(key, new NameValueCollection { { "value", value } });
-		}
+                var serializer = new JsonSerializer
+                {
+                    Converters = { new NameValueCollectionJsonConverter() }
+                };
+                return serializer.Deserialize<T>(new JsonTextReader(new StringReader(token.Value<string>())));
+            }
+            else
+            {
+                return JsonExtensions.JsonDeserialization<T>(value);
+            }            
+        }
+
+        public static bool TryGetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key, out T result)
+        {
+            try
+            {
+                result = GetConfigurationValue<T>(accessor, key);
+                return true;
+            }
+            catch (FileNotFoundException)
+            {
+                result = default(T);
+                return false;
+            }
+        }
+
+        public static void SetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key, T objectToSave)
+        {
+            if (objectToSave is NameValueCollection)
+            {
+                var sb = new StringBuilder();
+                var jw = new JsonTextWriter(new StringWriter(sb));
+                var serializer = new JsonSerializer
+                {
+                    Converters = { new NameValueCollectionJsonConverter() }
+                };
+                serializer.Serialize(jw, objectToSave);
+
+                var holder = new RavenJObject()
+                {
+					{"Data", sb.ToString()},
+                };
+
+                accessor.SetConfig(key, holder);
+            }
+            else
+            {
+                accessor.SetConfig(key, JsonExtensions.ToJObject(objectToSave));
+            }
+        }
 
 		public static NameValueCollection AsConfig<T>(this T @object) where T : class, new()
 		{

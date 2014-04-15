@@ -11,6 +11,7 @@ using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Util;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
+using Raven.Json.Linq;
 
 namespace RavenFS.Tests.Synchronization
 {
@@ -182,9 +183,7 @@ namespace RavenFS.Tests.Synchronization
 
 		    var fullDstUrl = destinationClient.ToSynchronizationDestination().FileSystemUrl;
 
-		    var synchronizationDetails =
-                sourceClient.Config.GetConfig(RavenFileNameHelper.SyncNameForFile("test.bin", fullDstUrl))
-				            .Result.AsObject<SynchronizationDetails>();
+            var synchronizationDetails = sourceClient.Config.GetConfig<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test.bin", fullDstUrl)).Result;
 
 			Assert.Equal("test.bin", synchronizationDetails.FileName);
             Assert.Equal(fullDstUrl, synchronizationDetails.DestinationUrl);
@@ -210,8 +209,7 @@ namespace RavenFS.Tests.Synchronization
 			// start synchronization again to force confirmation by source
 			await sourceClient.Synchronization.SynchronizeDestinationsAsync();
 
-			var shouldBeNull = await 
-				sourceClient.Config.GetConfig(RavenFileNameHelper.SyncNameForFile("test.bin", destinationClient.ServerUrl));
+			var shouldBeNull = await sourceClient.Config.GetConfig<SynchronizationDetails>(RavenFileNameHelper.SyncNameForFile("test.bin", destinationClient.ServerUrl));
 
 			Assert.Null(shouldBeNull);
 		}
@@ -222,8 +220,7 @@ namespace RavenFS.Tests.Synchronization
 			var sourceContent = new RandomStream(1);
 			var sourceClient = NewClient(0);
 
-			await sourceClient.Config.SetConfig(SynchronizationConstants.RavenSynchronizationLimit,
-			                              new NameValueCollection {{"value", "\"1\""}});
+            await sourceClient.Config.SetConfig(SynchronizationConstants.RavenSynchronizationLimit, new RavenJObject { { "value", "\"1\"" } });
 
 			var destinationClient = NewClient(1);
 

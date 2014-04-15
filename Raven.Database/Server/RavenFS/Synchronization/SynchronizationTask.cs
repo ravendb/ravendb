@@ -20,6 +20,8 @@ using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
 using SynchronizationClient = Raven.Client.RavenFS.RavenFileSystemClient.SynchronizationClient;
+using Raven.Abstractions.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -504,9 +506,9 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				storage.Batch(
 					accessor =>
 					{
-						configObjects =
-							accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.SyncNamePrefix + Uri.EscapeUriString(destination.FileSystemUrl), 0, 100)
-									.Select(config => config.AsObject<SynchronizationDetails>()).ToList();
+						configObjects = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.SyncNamePrefix + Uri.EscapeUriString(destination.FileSystemUrl), 0, 100)
+									            .Select(config => config.JsonDeserialization<SynchronizationDetails>())
+                                                .ToList();
 					});
 			}
 			catch (Exception e)
@@ -517,19 +519,21 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			return configObjects;
 		}
 
-        private void CreateSyncingConfiguration(string fileName, Guid etag, string destinationFileSystemUrl,
-												SynchronizationType synchronizationType)
+        private void CreateSyncingConfiguration(string fileName, Guid etag, string destinationFileSystemUrl, SynchronizationType synchronizationType)
 		{
 			try
 			{
 				var name = RavenFileNameHelper.SyncNameForFile(fileName, destinationFileSystemUrl);
-				storage.Batch(accessor => accessor.SetConfig(name, new SynchronizationDetails
+
+                var details = new SynchronizationDetails
 				{
 					DestinationUrl = destinationFileSystemUrl,
 					FileName = fileName,
 					FileETag = etag,
 					Type = synchronizationType
-				}.AsConfig()));
+				};
+
+				storage.Batch(accessor => accessor.SetConfig(name, JsonExtensions.ToJObject(details)));
 			}
 			catch (Exception e)
 			{
@@ -602,28 +606,29 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 			failedAttemptsToGetDestinationsConfig = 0;
 
-			var destinationsConfig = new NameValueCollection();
+			var destinationsConfig = new RavenJObject();
 
-			storage.Batch(
-				accessor => destinationsConfig = accessor.GetConfig(SynchronizationConstants.RavenSynchronizationDestinations));
+			storage.Batch(accessor => destinationsConfig = accessor.GetConfig(SynchronizationConstants.RavenSynchronizationDestinations));
 
-		    var destinationsStrings = destinationsConfig.GetValues("destination");
+            throw new NotImplementedException();
 
-			if (destinationsStrings == null)
-			{
-				Log.Warn("Empty " + SynchronizationConstants.RavenSynchronizationDestinations + " configuration");
-				return Enumerable.Empty<SynchronizationDestination>();
-			}
+            //var destinationsStrings = destinationsConfig.GetValues("destination");
 
-            var destinations = destinationsStrings.Select(JsonConvert.DeserializeObject<SynchronizationDestination>).ToArray();
+            //if (destinationsStrings == null)
+            //{
+            //    Log.Warn("Empty " + SynchronizationConstants.RavenSynchronizationDestinations + " configuration");
+            //    return Enumerable.Empty<SynchronizationDestination>();
+            //}
 
-            if (destinations.Length == 0)
-			{
-				Log.Warn("Configuration " + SynchronizationConstants.RavenSynchronizationDestinations +
-						 " does not contain any destination");
-			}
+            //var destinations = destinationsStrings.Select(JsonConvert.DeserializeObject<SynchronizationDestination>).ToArray();
 
-            return destinations;
+            //if (destinations.Length == 0)
+            //{
+            //    Log.Warn("Configuration " + SynchronizationConstants.RavenSynchronizationDestinations +
+            //             " does not contain any destination");
+            //}
+
+            //return destinations;
 		}
 
         private bool CanSynchronizeTo(string destinationFileSystemUrl)

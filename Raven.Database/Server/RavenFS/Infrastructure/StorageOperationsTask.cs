@@ -8,6 +8,7 @@ using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Microsoft.Isam.Esent.Interop;
 using NLog;
+using Raven.Abstractions.Extensions;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Notifications;
@@ -155,10 +156,9 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 					Log.Debug(string.Format("File '{0}' was renamed to '{1}' and marked as deleted",
 											fileName, deletingFileName));
 
-					var configName = RavenFileNameHelper.DeleteOperationConfigNameForFile(deletingFileName);
-					accessor.SetConfig(configName,
-									   new DeleteFileOperation { OriginalFileName = fileName, CurrentFileName = deletingFileName }.
-										   AsConfig());
+					var configName = RavenFileNameHelper.DeleteOperationConfigNameForFile(deletingFileName);                    
+                    var operation = new DeleteFileOperation { OriginalFileName = fileName, CurrentFileName = deletingFileName };
+                    accessor.SetConfig(configName, JsonExtensions.ToJObject(operation));
 
 					notificationPublisher.Publish(new ConfigChange { Name = configName, Action = ConfigChangeAction.Set });
 				}
@@ -180,11 +180,9 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 		{
 			var filesToDelete = new List<DeleteFileOperation>();
 
-			storage.Batch(
-				accessor =>
-				filesToDelete =
-				accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.DeleteOperationConfigPrefix, 0, 10).Select(
-					config => config.AsObject<DeleteFileOperation>()).ToList());
+			storage.Batch(accessor => filesToDelete = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.DeleteOperationConfigPrefix, 0, 10)
+                                                              .Select(config => config.JsonDeserialization<DeleteFileOperation>())
+                                                              .ToList());
 
 			if(filesToDelete.Count == 0)
 				return Task.FromResult<object>(null);
@@ -248,13 +246,11 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 		{
 			var filesToRename = new List<RenameFileOperation>();
 
-			storage.Batch(
-				accessor =>
+			storage.Batch(accessor =>
 				{
-					var renameOpConfigs =
-						accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.RenameOperationConfigPrefix, 0, 10);
+					var renameOpConfigs = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.RenameOperationConfigPrefix, 0, 10);
 
-					filesToRename = renameOpConfigs.Select(config => config.AsObject<RenameFileOperation>()).ToList();
+                    filesToRename = renameOpConfigs.Select(config => config.JsonDeserialization<RenameFileOperation>()).ToList();
 				});
 
 			if (filesToRename.Count == 0)

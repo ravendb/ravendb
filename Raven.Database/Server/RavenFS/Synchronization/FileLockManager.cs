@@ -1,11 +1,13 @@
 ﻿using System;
 using System.IO;
 using NLog;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.RavenFS;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -17,8 +19,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 		private TimeSpan SynchronizationTimeout(IStorageActionsAccessor accessor)
 		{
-			var timeoutConfigExists = accessor.TryGetConfigurationValue(
-				SynchronizationConstants.RavenSynchronizationLockTimeout, out configuredTimeout);
+			var timeoutConfigExists = accessor.TryGetConfigurationValue(SynchronizationConstants.RavenSynchronizationLockTimeout, out configuredTimeout);
 
 			return timeoutConfigExists ? configuredTimeout : defaultTimeout;
 		}
@@ -31,7 +32,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				FileLockedAt = DateTime.UtcNow
 			};
 
-			accessor.SetConfig(RavenFileNameHelper.SyncLockNameForFile(fileName), syncLock.AsConfig());
+            accessor.SetConfig(RavenFileNameHelper.SyncLockNameForFile(fileName), JsonExtensions.ToJObject(syncLock));
 
 			log.Debug("File '{0}' was locked", fileName);
 		}
@@ -48,8 +49,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 			try
 			{
-				syncLock =
-					accessor.GetConfig(RavenFileNameHelper.SyncLockNameForFile(fileName)).AsObject<SynchronizationLock>();
+                syncLock = accessor.GetConfig(RavenFileNameHelper.SyncLockNameForFile(fileName)).JsonDeserialization<SynchronizationLock>();				
 			}
 			catch (FileNotFoundException)
 			{

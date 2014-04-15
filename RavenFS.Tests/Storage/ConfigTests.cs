@@ -10,6 +10,9 @@ using System.Linq;
 using Xunit;
 using Xunit.Extensions;
 
+using Raven.Database.Server.RavenFS.Extensions;
+
+
 namespace RavenFS.Tests.Storage
 {
     public class ConfigTests : StorageAccessorTestBase
@@ -21,11 +24,11 @@ namespace RavenFS.Tests.Storage
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
                 storage.Batch(accessor => Assert.False(accessor.ConfigExists("config1")));
-                storage.Batch(accessor => accessor.SetConfig("config1", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config1", new NameValueCollection()));
 
                 storage.Batch(accessor => Assert.True(accessor.ConfigExists("config1")));
 
-                storage.Batch(accessor => accessor.SetConfig("config2", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config2", new NameValueCollection()));
                 storage.Batch(accessor => Assert.True(accessor.ConfigExists("config1")));
                 storage.Batch(accessor => Assert.True(accessor.ConfigExists("config2")));
             }
@@ -37,12 +40,12 @@ namespace RavenFS.Tests.Storage
         {
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
-                storage.Batch(accessor => accessor.SetConfig("config1", new NameValueCollection
+                storage.Batch(accessor => accessor.SetConfigurationValue("config1", new NameValueCollection
                                                                         {
                                                                             { "option1", "value1" }
                                                                         }));
 
-                storage.Batch(accessor => accessor.SetConfig("config2", new NameValueCollection
+                storage.Batch(accessor => accessor.SetConfigurationValue("config2", new NameValueCollection
                                                                         {
                                                                             { "option1", "value2" },
                                                                             { "option2", "value1" }
@@ -50,8 +53,8 @@ namespace RavenFS.Tests.Storage
 
                 storage.Batch(accessor =>
                 {
-                    var config1 = accessor.GetConfig("config1");
-                    var config2 = accessor.GetConfig("config2");
+                    var config1 = accessor.GetConfigurationValue<NameValueCollection>("config1");
+                    var config2 = accessor.GetConfigurationValue<NameValueCollection>("config2");
 
                     Assert.NotNull(config1);
                     Assert.Equal(1, config1.AllKeys.Length);
@@ -73,8 +76,8 @@ namespace RavenFS.Tests.Storage
             {
                 storage.Batch(accessor => accessor.DeleteConfig("config1"));
 
-                storage.Batch(accessor => accessor.SetConfig("config1", new NameValueCollection()));
-                storage.Batch(accessor => accessor.SetConfig("config2", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config1", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config2", new NameValueCollection()));
 
                 storage.Batch(accessor => Assert.True(accessor.ConfigExists("config1")));
                 storage.Batch(accessor => Assert.True(accessor.ConfigExists("config2")));
@@ -99,12 +102,12 @@ namespace RavenFS.Tests.Storage
             {
                 storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.GetConfig("config1")));
 
-                storage.Batch(accessor => accessor.SetConfig("config1", new NameValueCollection
+                storage.Batch(accessor => accessor.SetConfigurationValue("config1", new NameValueCollection
                                                                         {
                                                                             { "option1", "value1" }
                                                                         }));
 
-                storage.Batch(accessor => accessor.SetConfig("config2", new NameValueCollection
+                storage.Batch(accessor => accessor.SetConfigurationValue("config2", new NameValueCollection
                                                                         {
                                                                             { "option1", "value2" },
                                                                             { "option2", "value1" }
@@ -112,8 +115,8 @@ namespace RavenFS.Tests.Storage
 
                 storage.Batch(accessor =>
                 {
-                    var config1 = accessor.GetConfig("config1");
-                    var config2 = accessor.GetConfig("config2");
+                    var config1 = accessor.GetConfigurationValue<NameValueCollection>("config1");
+                    var config2 = accessor.GetConfigurationValue<NameValueCollection>("config2");
 
                     Assert.NotNull(config1);
                     Assert.Equal(1, config1.AllKeys.Length);
@@ -135,12 +138,12 @@ namespace RavenFS.Tests.Storage
             {
                 storage.Batch(accessor => Assert.Empty(accessor.GetConfigNames(0, 10).ToList()));
 
-                storage.Batch(accessor => accessor.SetConfig("config1", new NameValueCollection()));
-                storage.Batch(accessor => accessor.SetConfig("config2", new NameValueCollection()));
-                storage.Batch(accessor => accessor.SetConfig("config3", new NameValueCollection()));
-                storage.Batch(accessor => accessor.SetConfig("config4", new NameValueCollection()));
-                storage.Batch(accessor => accessor.SetConfig("config5", new NameValueCollection()));
-                storage.Batch(accessor => accessor.SetConfig("config6", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config1", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config2", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config3", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config4", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config5", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config6", new NameValueCollection()));
 
                 storage.Batch(accessor =>
                 {
@@ -199,16 +202,16 @@ namespace RavenFS.Tests.Storage
                 int total;
                 storage.Batch(accessor => Assert.Empty(accessor.GetConfigNamesStartingWithPrefix("config", 0, 10, out total).ToList()));
 
-                storage.Batch(accessor => accessor.SetConfig("config1", new NameValueCollection()));
-                storage.Batch(accessor => accessor.SetConfig("config2", new NameValueCollection()));
-                storage.Batch(accessor => accessor.SetConfig("config3", new NameValueCollection()));
-                storage.Batch(accessor => accessor.SetConfig("config4", new NameValueCollection()));
-                storage.Batch(accessor => accessor.SetConfig("config5", new NameValueCollection()));
-                storage.Batch(accessor => accessor.SetConfig("config6", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config1", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config2", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config3", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config4", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config5", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config6", new NameValueCollection()));
 
-                storage.Batch(accessor => accessor.SetConfig("a-config1", new NameValueCollection()));
-                storage.Batch(accessor => accessor.SetConfig("a-config2", new NameValueCollection()));
-                storage.Batch(accessor => accessor.SetConfig("a-config3", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("a-config1", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("a-config2", new NameValueCollection()));
+                storage.Batch(accessor => accessor.SetConfigurationValue("a-config3", new NameValueCollection()));
 
                 storage.Batch(accessor =>
                 {
@@ -271,16 +274,16 @@ namespace RavenFS.Tests.Storage
             {
                 storage.Batch(accessor => Assert.Empty(accessor.GetConfigsStartWithPrefix("config", 0, 10).ToList()));
 
-                storage.Batch(accessor => accessor.SetConfig("config1", new NameValueCollection { { "option1", "value1" } }));
-                storage.Batch(accessor => accessor.SetConfig("config2", new NameValueCollection { { "option2", "value1" } }));
-                storage.Batch(accessor => accessor.SetConfig("config3", new NameValueCollection { { "option3", "value1" } }));
-                storage.Batch(accessor => accessor.SetConfig("config4", new NameValueCollection { { "option4", "value1" } }));
-                storage.Batch(accessor => accessor.SetConfig("config5", new NameValueCollection { { "option5", "value1" } }));
-                storage.Batch(accessor => accessor.SetConfig("config6", new NameValueCollection { { "option6", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config1", new NameValueCollection { { "option1", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config2", new NameValueCollection { { "option2", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config3", new NameValueCollection { { "option3", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config4", new NameValueCollection { { "option4", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config5", new NameValueCollection { { "option5", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfigurationValue("config6", new NameValueCollection { { "option6", "value1" } }));
 
-                storage.Batch(accessor => accessor.SetConfig("a-config1", new NameValueCollection { { "option1", "value1" } }));
-                storage.Batch(accessor => accessor.SetConfig("a-config2", new NameValueCollection { { "option2", "value1" } }));
-                storage.Batch(accessor => accessor.SetConfig("a-config3", new NameValueCollection { { "option3", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfigurationValue("a-config1", new NameValueCollection { { "option1", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfigurationValue("a-config2", new NameValueCollection { { "option2", "value1" } }));
+                storage.Batch(accessor => accessor.SetConfigurationValue("a-config3", new NameValueCollection { { "option3", "value1" } }));
 
                 storage.Batch(accessor =>
                 {

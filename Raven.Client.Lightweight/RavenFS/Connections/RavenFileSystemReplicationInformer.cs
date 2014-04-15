@@ -11,6 +11,7 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using System.Collections.Specialized;
 
 namespace Raven.Client.RavenFS.Connections
 {
@@ -39,7 +40,7 @@ namespace Raven.Client.RavenFS.Connections
 
                 try
                 {
-                    var config = serverClient.Config.GetConfig(SynchronizationConstants.RavenSynchronizationDestinations).Result;
+                    var config = serverClient.Config.GetConfig<NameValueCollection>(SynchronizationConstants.RavenSynchronizationDestinations).Result;
                     failureCounts[serverClient.FileSystemUrl] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 
                     if (config != null)

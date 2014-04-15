@@ -449,7 +449,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             }
         }
 
-        public NameValueCollection GetConfig(string name)
+        public RavenJObject GetConfig(string name)
         {
             var key = CreateKey(name);
             ushort version;
@@ -457,17 +457,17 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             if (config == null)
                 throw new FileNotFoundException("Could not find config: " + name);
 
-            var metadata = config.Value<string>("metadata");
-            return HttpUtility.ParseQueryString(metadata);
+            var metadata = config.Value<RavenJObject>("metadata");
+            return metadata;
         }
 
-        public void SetConfig(string name, NameValueCollection metadata)
+        public void SetConfig(string name, RavenJObject metadata)
         {
             var key = CreateKey(name);
             ushort version;
             var config = LoadJson(storage.Config, key, writeBatch.Value, out version) ?? new RavenJObject();
 
-            config["metadata"] = ToQueryString(metadata);
+            config["metadata"] = metadata;
             config["name"] = name;
 
             storage.Config.Add(writeBatch.Value, key, config, version);
@@ -603,10 +603,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             return storage.Config.Contains(Snapshot, key, writeBatch.Value);
         }
 
-        public IList<NameValueCollection> GetConfigsStartWithPrefix(string prefix, int start, int take)
+        public IList<RavenJObject> GetConfigsStartWithPrefix(string prefix, int start, int take)
         {
             var key = CreateKey(prefix);
-            var result = new List<NameValueCollection>();
+            var result = new List<RavenJObject>();
 
             using (var iterator = storage.Config.Iterate(Snapshot, writeBatch.Value))
             {
@@ -617,18 +617,16 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
                 do
                 {
-                    var config = iterator
-                        .CreateReaderForCurrent()
-                        .AsStream()
-                        .ToJObject();
+                    var config = iterator.CreateReaderForCurrent()
+                                         .AsStream()
+                                         .ToJObject();
 
-                    var metadata = config.Value<string>("metadata");
+                    var metadata = config.Value<RavenJObject>("metadata");
                     var name = config.Value<string>("name");
-
                     if (name == null || name.StartsWith(key, StringComparison.InvariantCultureIgnoreCase) == false)
                         break;
 
-                    result.Add(HttpUtility.ParseQueryString(metadata));
+                    result.Add(metadata);
 
                     count++;
                 } while (iterator.MoveNext() && count < take);

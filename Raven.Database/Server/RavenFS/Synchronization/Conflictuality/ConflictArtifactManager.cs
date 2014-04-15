@@ -5,6 +5,7 @@ using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Search;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Util;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality
 {
@@ -27,7 +28,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality
 				accessor =>
 				{
 					metadata = accessor.GetFile(fileName, 0, 0).Metadata;
-					accessor.SetConfig(RavenFileNameHelper.ConflictConfigNameForFile(fileName), conflict.AsConfig());
+					accessor.SetConfig(RavenFileNameHelper.ConflictConfigNameForFile(fileName), JsonExtensions.ToJObject(conflict) );
 					metadata[SynchronizationConstants.RavenSynchronizationConflict] = "True";
 					accessor.UpdateFileMetadata(fileName, metadata);
 				});
@@ -42,12 +43,10 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Conflictuality
 
 			Action<IStorageActionsAccessor> delete = accessor =>
 			{
-				accessor.DeleteConfig(
-					RavenFileNameHelper.ConflictConfigNameForFile(fileName));
+				accessor.DeleteConfig(RavenFileNameHelper.ConflictConfigNameForFile(fileName));
 				metadata = accessor.GetFile(fileName, 0, 0).Metadata;
 				metadata.Remove(SynchronizationConstants.RavenSynchronizationConflict);
-				metadata.Remove(
-					SynchronizationConstants.RavenSynchronizationConflictResolution);
+				metadata.Remove(SynchronizationConstants.RavenSynchronizationConflictResolution);
 				accessor.UpdateFileMetadata(fileName, metadata);
 			};
 

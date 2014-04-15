@@ -8,11 +8,13 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
 using NameValueCollectionJsonConverter = Raven.Client.RavenFS.NameValueCollectionJsonConverter;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -35,9 +37,9 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			try
 			{
-				NameValueCollection nameValueCollection = null;
-				Storage.Batch(accessor => { nameValueCollection = accessor.GetConfig(name); });
-				return Request.CreateResponse(HttpStatusCode.OK, nameValueCollection);
+                RavenJObject config = null;
+                Storage.Batch(accessor => { config = accessor.GetConfig(name); });
+                return Request.CreateResponse(HttpStatusCode.OK, config);
 			}
 			catch (FileNotFoundException)
 			{
@@ -74,22 +76,22 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("ravenfs/{fileSystemName}/config")]
 		public async Task<HttpResponseMessage> Put(string name)
 		{
-			var jsonSerializer = new JsonSerializer
-			{
-				Converters =
-				{
-					new NameValueCollectionJsonConverter()
-				}
-			};
-			var contentStream = await Request.Content.ReadAsStreamAsync();
+            var jsonSerializer = new JsonSerializer
+            {
+                Converters =
+                {
+                    new NameValueCollectionJsonConverter()
+                }
+            };
+            var contentStream = await Request.Content.ReadAsStreamAsync();
 
-			var nameValueCollection = jsonSerializer.Deserialize<NameValueCollection>(new JsonTextReader(new StreamReader(contentStream)));
+            var nameValueCollection = jsonSerializer.Deserialize(new JsonTextReader(new StreamReader(contentStream)));
 
-			ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor => accessor.SetConfig(name, nameValueCollection)), ConcurrencyResponseException);
+            ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor => accessor.SetConfigurationValue(name, nameValueCollection)), ConcurrencyResponseException);
 
-			Publisher.Publish(new ConfigChange { Name = name, Action = ConfigChangeAction.Set });
+            Publisher.Publish(new ConfigChange { Name = name, Action = ConfigChangeAction.Set });
 
-			Log.Debug("Config '{0}' was inserted", name);
+            Log.Debug("Config '{0}' was inserted", name);
 
             return this.GetMessageWithObject(nameValueCollection, HttpStatusCode.Created);
 		}

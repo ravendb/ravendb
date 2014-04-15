@@ -19,6 +19,7 @@ using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Util.Streams;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -63,7 +64,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			var readingStream = StorageStream.Reading(Storage, name);
 			var result = StreamResult(name, readingStream);
-			MetadataExtensions.AddHeaders(result, fileAndPages);
+			Raven.Database.Server.RavenFS.Extensions.MetadataExtensions.AddHeaders(result, fileAndPages);
 			return result;
 		}
 
@@ -167,7 +168,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			}
 
 			var httpResponseMessage = GetEmptyMessage();
-			MetadataExtensions.AddHeaders(httpResponseMessage, fileAndPages);
+			Raven.Database.Server.RavenFS.Extensions.MetadataExtensions.AddHeaders(httpResponseMessage, fileAndPages);
 			return httpResponseMessage;
 		}
 
@@ -251,10 +252,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 														 Rename = rename,
 														 MetadataAfterOperation = metadata
 													 };
-
-													 accessor.SetConfig(
-														 RavenFileNameHelper.RenameOperationConfigNameForFile(name),
-														 operation.AsConfig());
+                                                     
+													 accessor.SetConfig( RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
 													 accessor.PulseTransaction(); // commit rename operation config
 
 													 StorageOperationsTask.RenameFile(operation);

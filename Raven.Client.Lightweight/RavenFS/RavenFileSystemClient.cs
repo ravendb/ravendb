@@ -837,14 +837,12 @@ namespace Raven.Client.RavenFS
                 });
             }
 
-            public Task SetConfig(string name, NameValueCollection data)
+            public Task SetConfig<T>(string name, T data)
             {
                 return ravenFileSystemClient.ExecuteWithReplication("PUT", async operation =>
                 {
                     var requestUriString = operation.Url + "/config?name=" + StringUtils.UrlEncode(name);
-                    var request =
-                    ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
-                        "PUT", operation.Credentials, convention));
+                    var request = ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, "PUT", operation.Credentials, convention));
 
                     using (var ms = new MemoryStream())
                     using (var streamWriter = new StreamWriter(ms))
@@ -898,7 +896,7 @@ namespace Raven.Client.RavenFS
                 });
             }
 
-            public Task<NameValueCollection> GetConfig(string name)
+            public Task<T> GetConfig<T>(string name)
             {
                 return ravenFileSystemClient.ExecuteWithReplication("GET", async operation =>
                 {
@@ -910,8 +908,9 @@ namespace Raven.Client.RavenFS
 
                     try
                     {
-                        var response = await request.ReadResponseJsonAsync();
-                        return jsonSerializer.Deserialize<NameValueCollection>(new RavenJTokenReader(response));
+                        var response = (RavenJObject)await request.ReadResponseJsonAsync();
+                        return JsonExtensions.JsonDeserialization<T>(response);
+                        //return jsonSerializer.Deserialize<T>(new RavenJTokenReader(response));
                     }
                     catch (Exception e)
                     {
@@ -920,7 +919,8 @@ namespace Raven.Client.RavenFS
                             throw;
 
                         if (responseException.StatusCode == HttpStatusCode.NotFound)
-                            return null;
+                            return default(T);
+
                         throw;
                     }
                 });

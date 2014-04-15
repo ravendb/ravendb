@@ -21,6 +21,9 @@ using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage.Exceptions;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc;
 using Raven.Database.Server.RavenFS.Util;
+using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Server.RavenFS.Storage.Esent
 {
@@ -591,28 +594,33 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 		    }
 		}
 
-		public NameValueCollection GetConfig(string name)
+        public RavenJObject GetConfig(string name)
 		{
 			Api.JetSetCurrentIndex(session, Config, "by_name");
-			Api.MakeKey(session, Config, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, Config, SeekGrbit.SeekEQ) == false)
+			Api.MakeKey(session, Config, name, Encoding.Unicode, MakeKeyGrbit.NewKey);			
+            if (Api.TrySeek(session, Config, SeekGrbit.SeekEQ) == false)
 				throw new FileNotFoundException("Could not find config: " + name);
-			var metadata = Api.RetrieveColumnAsString(session, Config, tableColumnsCache.ConfigColumns["metadata"],
-			                                          Encoding.Unicode);
-			return HttpUtility.ParseQueryString(metadata);
+			
+            var metadata = Api.RetrieveColumnAsString(session, Config, tableColumnsCache.ConfigColumns["metadata"], Encoding.Unicode);
+            return RavenJObject.Parse(metadata);
 		}
 
-		public void SetConfig(string name, NameValueCollection metadata)
+        public void SetConfig(string name, RavenJObject metadata)
 		{
-			Api.JetSetCurrentIndex(session, Config, "by_name");
+            var builder = new StringBuilder();
+            using (var writer = new JsonTextWriter(new StringWriter(builder)))
+                metadata.WriteTo(writer);
+
+            string metadataString = builder.ToString();            
+            
+            Api.JetSetCurrentIndex(session, Config, "by_name");
 			Api.MakeKey(session, Config, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			var prep = Api.TrySeek(session, Config, SeekGrbit.SeekEQ) ? JET_prep.Replace : JET_prep.Insert;
 
-			using (var update = new Update(session, Config, prep))
+			using (var update = new Update(session, Config, prep))            
 			{
 				Api.SetColumn(session, Config, tableColumnsCache.ConfigColumns["name"], name, Encoding.Unicode);
-				Api.SetColumn(session, Config, tableColumnsCache.ConfigColumns["metadata"], ToQueryString(metadata),
-				              Encoding.Unicode);
+                Api.SetColumn(session, Config, tableColumnsCache.ConfigColumns["metadata"], metadataString, Encoding.Unicode);
 
 				update.Save();
 			}
@@ -743,9 +751,9 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			return Api.TrySeek(session, Config, SeekGrbit.SeekEQ);
 		}
 
-		public IList<NameValueCollection> GetConfigsStartWithPrefix(string prefix, int start, int take)
+        public IList<RavenJObject> GetConfigsStartWithPrefix(string prefix, int start, int take)
 		{
-			var configs = new List<NameValueCollection>();
+            var configs = new List<RavenJObject>();
 
 			Api.JetSetCurrentIndex(session, Config, "by_name");
 
@@ -769,10 +777,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			{
 				do
 				{
-					var metadata = Api.RetrieveColumnAsString(session, Config, tableColumnsCache.ConfigColumns["metadata"],
-					                                          Encoding.Unicode);
-					configs.Add(HttpUtility.ParseQueryString(metadata));
-				} while (Api.TryMoveNext(session, Config) && configs.Count < take);
+					var metadata = Api.RetrieveColumnAsString(session, Config, tableColumnsCache.ConfigColumns["metadata"], Encoding.Unicode);
+                    configs.Add(RavenJObject.Parse(metadata));
+				} 
+                while (Api.TryMoveNext(session, Config) && configs.Count < take);
 			}
 
 			return configs;
