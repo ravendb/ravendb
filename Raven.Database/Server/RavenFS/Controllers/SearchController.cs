@@ -11,12 +11,13 @@ namespace Raven.Database.Server.RavenFS.Controllers
 	{
 		[HttpGet]
         [Route("ravenfs/{fileSystemName}/search/Terms")]		
-		public string[] Terms()
+		public string[] Terms(string query)
 		{
 			IndexSearcher searcher;
 			using (Search.GetSearcher(out searcher))
 			{
-				return searcher.IndexReader.GetFieldNames(IndexReader.FieldOption.ALL).ToArray();
+				return searcher.IndexReader.GetFieldNames(IndexReader.FieldOption.ALL)
+                               .Where(x => x.Contains(query.ToLower())).ToArray();
 			}
 		}
 

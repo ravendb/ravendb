@@ -236,7 +236,8 @@
     <Content Include="App\views\filesystem\search.html" />
     <Content Include="App\views\filesystem\filesystemSynchronization.html" />
     <Content Include="App\views\filesystem\filesystemEditFile.html" />
-    <Content Include="App\views\filesystem\singleInputSearchClause.html" />
+    <Content Include="App\views\filesystem\searchHasMetadataClause.html" />
+    <Content Include="App\views\filesystem\searchSingleInputClause.html" />
     <Content Include="App\views\licensingStatus.html" />
     <Content Include="App\views\selectColumns.html" />
     <TypeScriptCompile Include="App\viewmodels\patch.ts" />

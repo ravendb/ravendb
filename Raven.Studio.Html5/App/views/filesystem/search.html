@@ -27,7 +27,7 @@
                     <button id="fileNameStartsWith" type="button" class="btn btn-default" data-bind="click: fileNameStartsWith">File name starts with...</button>
                     <button id="fileNameEndsWith" type="button" class="btn btn-default" data-bind="click: fileNameEndsWith">File name ends with...</button>
                     <button id="fileSizeBetween" type="button" class="btn btn-default" data-bind="click: fileSizeBetween">File size...</button>
-                    <button id="hasMetadata" type="button" class="btn btn-default">Has metadata...</button>
+                    <button id="hasMetadata" type="button" class="btn btn-default" data-bind="click: hasMetadata">Has metadata...</button>
                     <button id="inFolder" type="button" class="btn btn-default">In folder...</button>
                     <button id="lastModifiedBetween" type="button" class="btn btn-default">Last modified...</button>
                 </div>
@@ -37,17 +37,6 @@
             <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, gridSelector: '#filesGrid', isCopyAllowed: false }"></div>
         </div>
     </div>
-</div>
-
-<div id="hasMetadataContextMenu" hidden>
-    <form class="form-inline" role="form">
-        <div class="form-group">
-            <label>Key: </label>
-            <input type="text" class="form-control" />
-            <label> value: </label>
-            <input type="text" class="form-control" />
-        </div>
-    </form>
 </div>
 
 <div id="inFolderContextMenu" hidden>

@@ -101,7 +101,7 @@ class search extends viewModelBase {
 
     hasMetadata() {
         require(["viewmodels/filesystem/searchHasMetadataClause"], searchHasMetadataClause => {
-            var searchHasMetadataClauseViewModel: searchHasMetadataClause = new searchHasMetadataClause();
+            var searchHasMetadataClauseViewModel: searchHasMetadataClause = new searchHasMetadataClause(this.activeFilesystem());
             searchHasMetadataClauseViewModel
                 .applyFilterTask
                 .done((input: string) => this.searchText(input));
