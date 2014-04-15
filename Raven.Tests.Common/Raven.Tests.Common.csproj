@@ -85,6 +85,8 @@
     <Compile Include="Analyzers\NGramTokenFilter.cs" />
     <Compile Include="Analyzers\NGramAnalyzer.cs" />
     <Compile Include="AssertAsync.cs" />
+    <Compile Include="Dto\Address.cs" />
+    <Compile Include="Dto\Person.cs" />
     <Compile Include="Util\CommonInitializationUtil.cs" />
     <Compile Include="Attributes\CriticalCulturesAttribute.cs" />
     <Compile Include="Dto\Faceted\Currency.cs" />
