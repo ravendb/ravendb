@@ -65,7 +65,7 @@ namespace Raven.Client.Document.SessionOperations
 			for (var i = 0; i < includeResults.Length; i++)
 			{
 				var include = includeResults[i];
-				sessionOperations.TrackIncludedDocumnet(include);
+				sessionOperations.TrackIncludedDocument(include);
 			}
 
 			var transformedResults = TransformResults().ToList();
