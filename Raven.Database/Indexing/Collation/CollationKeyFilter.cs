@@ -31,7 +31,7 @@ namespace Raven.Database.Indexing.Collation
 				int encodedLength = IndexableBinaryStringTools_UsingArrays.GetEncodedLength(collationKey);
 				if (encodedLength > termBuffer.Length)
 				{
-					termAtt.ResizeTermBuffer(encodedLength);
+					termBuffer = termAtt.ResizeTermBuffer(encodedLength);
 				}
 				termAtt.SetTermLength(encodedLength);
 				IndexableBinaryStringTools_UsingArrays.Encode(collationKey, termBuffer);
