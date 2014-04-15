@@ -137,7 +137,17 @@ namespace Raven.Storage.Esent
 
                 exceptionAggregator.Execute(() =>
                     {
-                        Api.JetTerm2(instance, TermGrbit.Complete);
+	                    try
+	                    {
+							Api.JetTerm2(instance, TermGrbit.Complete);
+	                    }
+						catch (EsentDiskIOException e)
+						{
+							log.ErrorException(
+								"Could not properly terminate Esent instance because of disk exception. Ignoring this error to allow to shutdown RavenDB instance.",
+								e);
+						}
+                        
                         GC.SuppressFinalize(this);
                     });
 
