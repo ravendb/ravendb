@@ -252,20 +252,32 @@ class editDocument extends viewModelBase {
 
     findRelatedDocuments(doc: documentBase): { id: string; href: string }[] {
         var results: { id: string; href: string }[] = [];
-        var documentFields = doc.getDocumentPropertyNames();
+        var initialDocumentFields = doc.getDocumentPropertyNames();
+        var documentNodesFlattenedList = [];
+
+        // get initial nodes list to work with
+        initialDocumentFields.forEach(curField => {
+            documentNodesFlattenedList.push(doc[curField]);
+        });
 
         
-
-        for (var key in documentFields) {
-            if (typeof doc[documentFields[key]] === "string" && this.documentMatchRegexp.test(doc[documentFields[key]])) {
-                results.push({
-                    id: doc[documentFields[key]].toString(),
-                    href: appUrl.forEditDoc(doc[documentFields[key]].toString(), null, null, this.activeDatabase())}
-                );
+        for (var documentNodesCursor = 0; documentNodesCursor < documentNodesFlattenedList.length; documentNodesCursor++) {
+            var curField = documentNodesFlattenedList[documentNodesCursor];
+            if (typeof curField === "string" && /\w+\/\w+/ig.test(curField)) {
+                
+                if (!results.first(x=>x.id==curField.toString())){
+                    results.push({
+                        id: curField.toString(),
+                        href: appUrl.forEditDoc(curField.toString(), null, null, this.activeDatabase())}
+                        );
+                }
             }
-            
+            else if (typeof curField == "object" && !!curField) {
+                    for (var curInnerField in curField) {
+                        documentNodesFlattenedList.push(curField[curInnerField]);
+                    }
+            }
         }
-
         return results;
     }
 
