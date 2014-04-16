@@ -45,6 +45,12 @@
                             <i class="fa fa-clipboard"></i>
                         </button>
                     </div>
+                    <div class="btn-group pull-right" data-bind="visible: staleView">
+                        <button type="button" class="btn btn-warning use-bootstrap-tooltip" data-bind="click: reloadData" title="There were some remote changes, your view is out of date. Click to refresh.">
+                            <i class="fa fa-refresh"></i> Stale view
+                        </button>
+                    </div>
+
                 </div>
             </div>
             <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, documentsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#documentsGrid' }"></div>
