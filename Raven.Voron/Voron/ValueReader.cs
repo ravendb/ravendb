@@ -100,6 +100,11 @@ namespace Voron
 			return Encoding.UTF8.GetString(ReadBytes(_len - _pos));
 		}
 
+		public override string ToString()
+		{
+			return ToStringValue();
+		}
+
 		public byte[] ReadBytes(int length)
 		{
 			var size = Math.Min(length, _len - _pos);
