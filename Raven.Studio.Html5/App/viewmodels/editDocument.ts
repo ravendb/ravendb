@@ -17,6 +17,7 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 import viewModelBase = require("viewmodels/viewModelBase");
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
+import verifyDocumentsIDsCommand = require("commands/verifyDocumentsIDsCommand");
 
 class editDocument extends viewModelBase {
 
@@ -76,7 +77,30 @@ class editDocument extends viewModelBase {
                 .done((document) => {
                     this.document(document);
                     canActivateResult.resolve({ can: true });
-                    this.relatedDocumentHrefs(this.findRelatedDocuments(document));
+
+                    var relatedDocumentsCandidates:string[] = this.findRelatedDocumentsCandidates(document);
+
+                    var docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.activeDatabase(), true, true);
+                    var response = docIDsVerifyCommand.execute();
+
+                    if (Object.toString.call(response) === '[object Array]') {
+                        this.relatedDocumentHrefs(response.map(verified => {
+                            return {
+                                id: verified.toString(),
+                                href: appUrl.forEditDoc(verified.toString(), null, null, this.activeDatabase())
+                            };
+                        }));
+                    } else {
+                        response.done(verifiedIDs => {
+                            this.relatedDocumentHrefs(verifiedIDs.map(verified => {
+                                return {
+                                    id: verified.toString(),
+                                    href: appUrl.forEditDoc(verified.toString(), null, null, this.activeDatabase())
+                                };
+                            }));
+                        });
+                    }
+                    
                 })
                 .fail(() => {
                     ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + args.id + " document", null));
@@ -250,22 +274,31 @@ class editDocument extends viewModelBase {
         this.isEditingMetadata(false);
     }
 
-    findRelatedDocuments(doc: documentBase): { id: string; href: string }[] {
-        var results: { id: string; href: string }[] = [];
-        var documentFields = doc.getDocumentPropertyNames();
+    findRelatedDocumentsCandidates(doc: documentBase): string[] {
+        var results: string[] = [];
+        var initialDocumentFields = doc.getDocumentPropertyNames();
+        var documentNodesFlattenedList = [];
+
+        // get initial nodes list to work with
+        initialDocumentFields.forEach(curField => {
+            documentNodesFlattenedList.push(doc[curField]);
+        });
 
         
-
-        for (var key in documentFields) {
-            if (typeof doc[documentFields[key]] === "string" && this.documentMatchRegexp.test(doc[documentFields[key]])) {
-                results.push({
-                    id: doc[documentFields[key]].toString(),
-                    href: appUrl.forEditDoc(doc[documentFields[key]].toString(), null, null, this.activeDatabase())}
-                );
+        for (var documentNodesCursor = 0; documentNodesCursor < documentNodesFlattenedList.length; documentNodesCursor++) {
+            var curField = documentNodesFlattenedList[documentNodesCursor];
+            if (typeof curField === "string" && /\w+\/\w+/ig.test(curField)) {
+                
+                if (!results.first(x=>x === curField.toString())){
+                    results.push(curField.toString());
+                }
             }
-            
+            else if (typeof curField == "object" && !!curField) {
+                    for (var curInnerField in curField) {
+                        documentNodesFlattenedList.push(curField[curInnerField]);
+                    }
+            }
         }
-
         return results;
     }
 
