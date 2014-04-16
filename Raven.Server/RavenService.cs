@@ -68,11 +68,11 @@ namespace Raven.Server
 								"Unhandled exception was thrown during stopping RavenDB service. Ignoring it to properly stop the service. Exception: {0}",
 								e.ToString());
 
-						LogManager.GetCurrentClassLogger().Warn(message);
+						LogManager.GetCurrentClassLogger().Error(message);
 
 						EventLog.WriteEntry(
 							message,
-							EventLogEntryType.Warning);
+							EventLogEntryType.Error);
 					}
 				}
 				return task;
@@ -108,9 +108,9 @@ namespace Raven.Server
 								"Unhandled exception was thrown during shutting down RavenDB service. Ignoring it to properly shutdown the service. Exception: {0}",
 								e.ToString());
 
-						LogManager.GetCurrentClassLogger().Warn(message);
+						LogManager.GetCurrentClassLogger().Error(message);
 
-						EventLog.WriteEntry(message, EventLogEntryType.Warning);
+						EventLog.WriteEntry(message, EventLogEntryType.Error);
 					}
 				}
 				return task;
