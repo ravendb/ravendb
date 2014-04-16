@@ -86,14 +86,7 @@ class editDocument extends viewModelBase {
                     var docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.activeDatabase(), true, true);
                     var response = docIDsVerifyCommand.execute();
 
-                    if (Object.toString.call(response) === '[object Array]') {
-                        this.relatedDocumentHrefs(response.map(verified => {
-                            return {
-                                id: verified.toString(),
-                                href: appUrl.forEditDoc(verified.toString(), null, null, this.activeDatabase())
-                            };
-                        }));
-                    } else {
+                    if (response.then) {
                         response.done(verifiedIDs => {
                             this.relatedDocumentHrefs(verifiedIDs.map(verified => {
                                 return {
@@ -102,6 +95,14 @@ class editDocument extends viewModelBase {
                                 };
                             }));
                         });
+                    } else {
+
+                        this.relatedDocumentHrefs(response.map(verified => {
+                            return {
+                                id: verified.toString(),
+                                href: appUrl.forEditDoc(verified.toString(), null, null, this.activeDatabase())
+                            };
+                        }));                        
                     }
                     
                 })

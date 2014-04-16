@@ -21,9 +21,8 @@ class verifyDocumentsIDsCommand extends commandBase {
 
     execute(): any {
         
-        var verifyResult = $.Deferred();
-        var idsToSendToServer = [];
-        var verifiedIDs: string[];
+        var verifyResult = $.Deferred();       
+        var verifiedIDs: string[] = [];
 
         // if required to check with locally stored document ids first, remove known non existing documet ids first and confirm verified ids later
         if (this.queryLocalStorage === true) {
@@ -36,31 +35,27 @@ class verifyDocumentsIDsCommand extends commandBase {
                 this.docIDs.forEach(curId => {
                     if (!!verifyDocumentsIDsCommand.IDsLocalStorage.first(x => x === curId)) {
                         verifiedIDs.push(curId);
-                    } else {
-                        idsToSendToServer.push(curId);
-                    }
+                    } 
                 });
 
                 this.docIDs.removeAll(verifyDocumentsIDsCommand.IDsLocalStorage);
             }
-        } else {
-            idsToSendToServer = this.docIDs;
-        }
+        } 
 
-        if (idsToSendToServer.length > 0) {
-            var postResult = this.post("/queries?metadata-only=true", JSON.stringify(idsToSendToServer), this.db);
+        if (this.docIDs.length > 0) {
+            var postResult = this.post("/queries?metadata-only=true", JSON.stringify(this.docIDs), this.db);
             postResult.fail(xhr => verifyResult.fail(xhr));
             postResult.done((queryResult: queryResultDto) => {
                 if (!!queryResult && !!queryResult.Results) {
                     queryResult.Results.forEach(curVerifiedID => {
-                        verifiedIDs.push(curVerifiedID['@id']);
+                        verifiedIDs.push(curVerifiedID['@metadata']['@id']);                        
                         if (this.queryLocalStorage === true) {
                             verifyDocumentsIDsCommand.IDsLocalStorage.push(curVerifiedID);
                         }
                     });
 
                     if (this.queryLocalStorage === true) {
-                        this.docIDs.removeAll(queryResult.Results.map(curResult => curResult['@id']));
+                        this.docIDs.removeAll(queryResult.Results.map(curResult => curResult['@metadata']['@id']));
                         verifyDocumentsIDsCommand.InvalidIDsLocal.pushAll(this.docIDs);
                     }
                 }

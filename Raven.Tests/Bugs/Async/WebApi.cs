@@ -33,6 +33,22 @@ namespace Raven.Tests.Bugs.Async
             }
         }
 
+        [IISExpressInstalledFact]
+        public void LoadDbInfo()
+        {
+            const int threadCount = 4;
+            var tasks = new List<Task>();
+
+            using (var _store = NewDocumentStore())
+            {
+                using (var session = _store.OpenSession())
+                {
+                    var dbInfo = session.Load<dynamic>("db/info");
+                }
+
+            }
+        }
+
 
         private void DoInsert(IDocumentStore store, int deviceId)
         {
