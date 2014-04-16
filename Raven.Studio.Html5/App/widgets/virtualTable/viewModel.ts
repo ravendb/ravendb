@@ -338,24 +338,21 @@ class ctor {
         var idCheckboxColumn = this.columns.first(x=> x.binding == "__IsChecked");
         var idCheckboxWidth = idCheckboxColumn ? idCheckboxColumn.width() : 0;
         var idColumnExists = idColumn ? 1 : 0;
-
+        var idColumnWidth = idColumnExists ? ctor.idColumnWidth : 0;
 
         var calculateWidth = ctor.idColumnWidth;
         var colCount = Object.keys(columnsNeeded).length;
-        if ((colCount + idColumnExists) * 200 + idCheckboxWidth > this.grid.width()) {
-            if (idColumn) {
-                idColumn.width(calculateWidth);
-            }
-        } else {
-            calculateWidth = this.grid.width() / (colCount + idColumnExists);
-        }
 
         if (idColumn) {
             idColumn.width(calculateWidth);
         }
 
-       
+        var elementBorderWidth = 3;
 
+        if (colCount * 200 + idColumnWidth + idCheckboxWidth < this.gridViewport.width()) {
+            // you can extend columns size
+            calculateWidth = Math.floor(((this.gridViewport.find(".ko-grid-viewport").width() - idColumnWidth - idCheckboxWidth - elementBorderWidth * colCount)) / colCount); 
+        }
 
         for (var binding in columnsNeeded) {
             var columnWidth = this.getColumnWidth(binding, calculateWidth);
