@@ -8,11 +8,11 @@
         <div class="modal-body form-inline">
             <div class="form-group">
                 <label>Key: </label>
-                <input id="keysAutocomplete" type="text" class="form-control" placeholder="Search key..." data-bind="value: keysSearch, valueUpdate: 'afterkeydown'" />
-                <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#keysAutocomplete', foreach: keysSearchResults">
+                <input id="keysAutocomplete" type="text" class="form-control" placeholder="Search key..." data-bind="value: key, valueUpdate: 'afterkeydown'" />
+                <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#keysAutocomplete', foreach: keySearchResults">
                     <li role="presentation">
                         <a role="menuitem" tabindex="-1" href="javascript:void(0)">
-                            <span data-bind="text: $data, click: $root.setKey"></span>
+                            <span data-bind="text: $data, click: $root.setKey.bind($root, $data)"></span>
                         </a>
                     </li>
                 </ul>

@@ -7,14 +7,14 @@ import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler")
 class searchHasMetadataClause extends dialogViewModelBase {
 
     public applyFilterTask = $.Deferred();
-    keysSearchResults = ko.observableArray<string>();
-    keysSearch = ko.observable<string>("");
+    keySearchResults = ko.observableArray<string>();
+    key = ko.observable<string>("");
     value = ko.observable<string>("");
 
     constructor(private fs: filesystem) {
         super();
 
-        this.keysSearch.throttle(250).subscribe(search => this.fetchKeySearchResults(search));
+        this.key.throttle(250).subscribe(search => this.fetchKeySearchResults(search));
         autoCompleteBindingHandler.install();
     }
 
@@ -23,18 +23,19 @@ class searchHasMetadataClause extends dialogViewModelBase {
     }
 
     applyFilter() {
-
+        this.applyFilterTask.resolve(this.key() + ":" + this.value());
+        dialog.close(this);
     }
 
     fetchKeySearchResults(query: string) {
         if (query.length >= 2) {
             new searchByTermCommand(this.fs, query).execute()
-                .done( x => this.keysSearchResults(x));
+                .done( x => this.keySearchResults(x));
         }
     }
 
     setKey(key: string) {
-        
+        this.key(key);
     }
 }
 

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Web.Http;
 using Lucene.Net.Index;
@@ -17,7 +18,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			using (Search.GetSearcher(out searcher))
 			{
 				return searcher.IndexReader.GetFieldNames(IndexReader.FieldOption.ALL)
-                               .Where(x => x.Contains(query.ToLower())).ToArray();
+                               .Where(x => x.IndexOf(query, 0, StringComparison.InvariantCultureIgnoreCase) != -1).ToArray();
 			}
 		}
 
