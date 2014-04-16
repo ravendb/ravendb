@@ -76,7 +76,7 @@ namespace Voron.Trees
 				existingItem = null;// not an actual match, just greater than
 
 			ushort previousNodeRevision = existingItem != null ?  existingItem->Version : (ushort)0;
-			CheckConcurrency(value, version, previousNodeRevision, TreeActionType.Add);
+			CheckConcurrency(key, value, version, previousNodeRevision, TreeActionType.Add);
 			
 			if (existingItem != null)
 			{
@@ -172,7 +172,7 @@ namespace Voron.Trees
 				Upper = actualPageSize
 			};
 
-			CheckConcurrency(value, version, 0, TreeActionType.Add);
+			CheckConcurrency(key, value, version, 0, TreeActionType.Add);
 
 			nestedPage.AddDataNode(0, value, 0, 0);
 
@@ -215,7 +215,7 @@ namespace Voron.Trees
 				if (nestedItem == null) // value not found
 					return;
 
-				CheckConcurrency(value, version, nestedItem->Version, TreeActionType.Delete);
+				CheckConcurrency(key, value, version, nestedItem->Version, TreeActionType.Delete);
 				nestedPage.RemoveNode(nestedPage.LastSearchPosition);
 				if (nestedPage.NumberOfEntries == 0)
 					Delete(tx, key);
