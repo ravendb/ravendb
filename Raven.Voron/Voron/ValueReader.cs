@@ -139,7 +139,10 @@ namespace Voron
 
 		public override string ToString()
 		{
-			return ToStringValue();
+			var old = _pos;
+			var stringValue = ToStringValue();
+			_pos = old;
+			return stringValue;
 		}
 
 	    public byte[] ReadBytes(int length, out int used)
