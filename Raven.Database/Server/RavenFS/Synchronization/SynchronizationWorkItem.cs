@@ -78,14 +78,16 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		protected ConflictItem CheckConflictWithDestination(NameValueCollection sourceMetadata,
 															NameValueCollection destinationMetadata, string localServerUrl)
 		{
-			var conflict = conflictDetector.CheckOnSource(FileName, sourceMetadata, destinationMetadata, localServerUrl);
-			var isConflictResolved = conflictResolver.IsResolved(destinationMetadata, conflict);
+            throw new NotImplementedException();
 
-			// optimization - conflict checking on source side before any changes pushed
-			if (conflict != null && !isConflictResolved)
-				return conflict;
+            //var conflict = conflictDetector.CheckOnSource(FileName, sourceMetadata, destinationMetadata, localServerUrl);
+            //var isConflictResolved = conflictResolver.IsResolved(destinationMetadata, conflict);
 
-			return null;
+            //// optimization - conflict checking on source side before any changes pushed
+            //if (conflict != null && !isConflictResolved)
+            //    return conflict;
+
+            //return null;
 		}
 
         protected async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, RavenFileSystemClient.SynchronizationClient destination,

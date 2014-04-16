@@ -94,7 +94,21 @@ namespace Raven.Database.Server.RavenFS.Extensions
 			return nameValueCollection;
 		}
 
-		public static T AsObject<T>(this NameValueCollection config) where T : class, new()
+        [Obsolete("This method is only intended as an stop-gap while getting rid of all NameValueCollection objects in RavenFS.")]
+        public static RavenJObject ToJObject(this NameValueCollection config)
+        {
+            var serializedObject = new StringBuilder();
+
+            new JsonSerializer
+            {
+                Converters = { new NameValueCollectionJsonConverter() }
+            }
+            .Serialize(new JsonTextWriter(new StringWriter(serializedObject)), config);
+
+            return RavenJObject.Parse(serializedObject.ToString());
+        }
+
+        public static T AsObject<T>(this NameValueCollection config) where T : class, new()
 		{
 			var result = new T();
 

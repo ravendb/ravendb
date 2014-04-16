@@ -15,6 +15,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Json.Linq;
+using System.Collections.Specialized;
 
 namespace Raven.Abstractions.Extensions
 {

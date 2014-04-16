@@ -19,7 +19,10 @@ namespace Raven.Database.Server.RavenFS.Storage
 
         int InsertPage(byte[] buffer, int size);
 
+        [Obsolete("Eventurally will be removed when the changes are done.")]
         void PutFile(string filename, long? totalSize, NameValueCollection metadata, bool tombstone = false);
+
+        void PutFile(string filename, long? totalSize, RavenJObject metadata, bool tombstone = false);
 
         void AssociatePage(string filename, int pageId, int pagePositionInFile, int pageSize);
 
@@ -35,6 +38,8 @@ namespace Raven.Database.Server.RavenFS.Storage
 
         void Delete(string filename);
 
+        [Obsolete("Eventurally will be removed when the changes are done.")]
+        void UpdateFileMetadata(string filename, RavenJObject metadata);
         void UpdateFileMetadata(string filename, NameValueCollection metadata);
 
         void CompleteFileUpload(string filename);

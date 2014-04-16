@@ -72,18 +72,18 @@ namespace RavenFS.Tests
 		}
 
 		[Fact]
-		public void Should_update_indexes_after_storage_cleanup()
+		public async Task Should_update_indexes_after_storage_cleanup()
 		{
 			var client = NewClient();
 			var rfs = GetRavenFileSystem();
 
-			client.UploadAsync("toDelete.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5})).Wait();
+            await client.UploadAsync("toDelete.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }));
 
 			rfs.StorageOperationsTask.IndicateFileToDelete("toDelete.bin");
 
-			rfs.StorageOperationsTask.CleanupDeletedFilesAsync().Wait();
+            await rfs.StorageOperationsTask.CleanupDeletedFilesAsync();
 
-			var searchResults = client.GetFilesAsync("/").Result;
+            var searchResults = await client.GetFilesAsync("/");
 
 			Assert.Equal(0, searchResults.FileCount);
 			Assert.Equal(0, searchResults.Files.Count());

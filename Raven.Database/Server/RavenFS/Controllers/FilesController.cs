@@ -20,6 +20,7 @@ using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Util.Streams;
 using Raven.Abstractions.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -93,41 +94,30 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 					StorageOperationsTask.IndicateFileToDelete(name);
 
-					if (
-						!name.EndsWith(RavenFileNameHelper.DownloadingFileSuffix) &&
-						// don't create a tombstone for .downloading file
-						metadata != null) // and if file didn't exist
+					if ( !name.EndsWith(RavenFileNameHelper.DownloadingFileSuffix) &&
+						    // don't create a tombstone for .downloading file
+						    metadata != null) // and if file didn't exist
 					{
-						var tombstoneMetadata = new NameValueCollection
-						{
-							{
-								SynchronizationConstants
-									.RavenSynchronizationHistory,
-								metadata[
-									SynchronizationConstants
-										.RavenSynchronizationHistory]
+                        var tombstoneMetadata = new RavenJObject 
+                        {
+                            {
+								SynchronizationConstants.RavenSynchronizationHistory, metadata[SynchronizationConstants.RavenSynchronizationHistory]
 							},
 							{
-								SynchronizationConstants
-									.RavenSynchronizationVersion,
-								metadata[
-									SynchronizationConstants
-										.RavenSynchronizationVersion]
+								SynchronizationConstants.RavenSynchronizationVersion, metadata[SynchronizationConstants.RavenSynchronizationVersion]
 							},
 							{
-								SynchronizationConstants
-									.RavenSynchronizationSource,
-								metadata[
-									SynchronizationConstants
-										.RavenSynchronizationSource]
+								SynchronizationConstants.RavenSynchronizationSource, metadata[SynchronizationConstants.RavenSynchronizationSource]
 							}
-						}.WithDeleteMarker();
+                        }.WithDeleteMarker();
 
 						Historian.UpdateLastModified(tombstoneMetadata);
-						accessor.PutFile(name, 0, tombstoneMetadata, true);
 
-						accessor.DeleteConfig(
-							RavenFileNameHelper.ConflictConfigNameForFile(name));
+                        throw new NotImplementedException();
+
+                        //accessor.PutFile(name, 0, tombstoneMetadata, true);
+
+                        accessor.DeleteConfig(RavenFileNameHelper.ConflictConfigNameForFile(name));
 						// delete conflict item too
 					}
 				}), ConcurrencyResponseException);
@@ -178,32 +168,35 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			name = RavenFileNameHelper.RavenPath(name);
 
-			var headers = Request.Headers.FilterHeaders();
-			Historian.UpdateLastModified(headers);
-			Historian.Update(name, headers);
+            var headers = InnerHeaders.FilterHeadersToObject();
 
-			try
-			{
-				ConcurrencyAwareExecutor.Execute(() =>
-												 Storage.Batch(accessor =>
-												 {
-													 AssertFileIsNotBeingSynced(name, accessor, true);
-													 accessor.UpdateFileMetadata(name, headers);
-												 }), ConcurrencyResponseException);
-			}
-			catch (FileNotFoundException)
-			{
-				log.Debug("Cannot update metadata because file '{0}' was not found", name);
-                return GetEmptyMessage(HttpStatusCode.NotFound);
-			}
+            Historian.UpdateLastModified(headers);
+            Historian.Update(name, headers);
 
-			Search.Index(name, headers);
+            throw new NotImplementedException();
 
-			Publisher.Publish(new FileChange { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
+            //try
+            //{
+            //    ConcurrencyAwareExecutor.Execute(() =>
+            //                                     Storage.Batch(accessor =>
+            //                                     {
+            //                                         AssertFileIsNotBeingSynced(name, accessor, true);
+            //                                         accessor.UpdateFileMetadata(name, headers);
+            //                                     }), ConcurrencyResponseException);
+            //}
+            //catch (FileNotFoundException)
+            //{
+            //    log.Debug("Cannot update metadata because file '{0}' was not found", name);
+            //    return GetEmptyMessage(HttpStatusCode.NotFound);
+            //}
 
-			StartSynchronizeDestinationsInBackground();
+            //Search.Index(name, headers);
 
-			log.Debug("Metadata of a file '{0}' was updated", name);
+            //Publisher.Publish(new FileChange { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
+
+            //StartSynchronizeDestinationsInBackground();
+
+            //log.Debug("Metadata of a file '{0}' was updated", name);
 
             //Hack needed by jquery on the client side. We need to find a better solution for this
             return GetMessageWithString("", HttpStatusCode.NoContent);
@@ -219,45 +212,40 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			try
 			{
 				ConcurrencyAwareExecutor.Execute(() =>
-												 Storage.Batch(accessor =>
-												 {
-													 AssertFileIsNotBeingSynced(name, accessor, true);
+					Storage.Batch(accessor =>
+					{
+						AssertFileIsNotBeingSynced(name, accessor, true);
 
-													 var metadata = accessor.GetFile(name, 0, 0).Metadata;
+						var metadata = accessor.GetFile(name, 0, 0).Metadata;
+						if (metadata.AllKeys.Contains(SynchronizationConstants.RavenDeleteMarker))
+						{
+							throw new FileNotFoundException();
+						}
 
-													 if (
-														 metadata.AllKeys.Contains(
-															 SynchronizationConstants.RavenDeleteMarker))
-													 {
-														 throw new FileNotFoundException();
-													 }
+						var existingHeader = accessor.ReadFile(rename);
+						if (existingHeader != null && !existingHeader.Metadata.AllKeys.Contains(SynchronizationConstants.RavenDeleteMarker))
+						{
+							throw new HttpResponseException(
+								Request.CreateResponse(HttpStatusCode.Forbidden,
+													new InvalidOperationException("Cannot rename because file " + rename + " already exists")));
+						}
 
-													 var existingHeader = accessor.ReadFile(rename);
-													 if (existingHeader != null &&
-														 !existingHeader.Metadata.AllKeys.Contains(
-															 SynchronizationConstants.RavenDeleteMarker))
-													 {
-														 throw new HttpResponseException(
-															 Request.CreateResponse(HttpStatusCode.Forbidden,
-																					new InvalidOperationException(
-																						"Cannot rename because file " + rename +
-																						" already exists")));
-													 }
+                        throw new NotImplementedException();
 
-													 Historian.UpdateLastModified(metadata);
+                        //Historian.UpdateLastModified(metadata);
 
-													 var operation = new RenameFileOperation
-													 {
-														 Name = name,
-														 Rename = rename,
-														 MetadataAfterOperation = metadata
-													 };
+                        //var operation = new RenameFileOperation
+                        //{
+                        //    Name = name,
+                        //    Rename = rename,
+                        //    MetadataAfterOperation = metadata
+                        //};
                                                      
-													 accessor.SetConfig( RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
-													 accessor.PulseTransaction(); // commit rename operation config
+                        //accessor.SetConfig( RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
+                        //accessor.PulseTransaction(); // commit rename operation config
 
-													 StorageOperationsTask.RenameFile(operation);
-												 }), ConcurrencyResponseException);
+                        //StorageOperationsTask.RenameFile(operation);
+					}), ConcurrencyResponseException);
 			}
 			catch (FileNotFoundException)
 			{
@@ -282,62 +270,61 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 				name = RavenFileNameHelper.RavenPath(name);
 
-				var headers = InnerHeaders.FilterHeaders();
-				Historian.UpdateLastModified(headers);
-				Historian.Update(name, headers);
+                var headers = InnerHeaders.FilterHeadersToObject();
 
-				SynchronizationTask.Cancel(name);
+                Historian.UpdateLastModified(headers);
+                Historian.Update(name, headers);
 
-				ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor =>
-				{
-					AssertFileIsNotBeingSynced(name, accessor, true);
-					StorageOperationsTask.IndicateFileToDelete(name);
-					
-					var contentLength = Request.Content.Headers.ContentLength;
-					var sizeHeader = GetHeader("RavenFS-size");
-					long? size;
-					long sizeForParse;
-					if (contentLength == 0 || long.TryParse(sizeHeader, out sizeForParse) == false)
-					{
-						size = contentLength;
-						if (Request.Headers.TransferEncodingChunked ?? false)
-						{
-							size = null;
-						}
-					}
-					else
-					{
-						size = sizeForParse;
-					}
-				
-					accessor.PutFile(name, size, headers);
+                SynchronizationTask.Cancel(name);
 
-					Search.Index(name, headers);
-				}));
+                ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor =>
+                {
+                    AssertFileIsNotBeingSynced(name, accessor, true);
+                    StorageOperationsTask.IndicateFileToDelete(name);
 
-				log.Debug("Inserted a new file '{0}' with ETag {1}", name, headers.Value<Guid>("ETag"));
+                    var contentLength = Request.Content.Headers.ContentLength;
+                    var sizeHeader = GetHeader("RavenFS-size");
+                    long? size;
+                    long sizeForParse;
+                    if (contentLength == 0 || long.TryParse(sizeHeader, out sizeForParse) == false)
+                    {
+                        size = contentLength;
+                        if (Request.Headers.TransferEncodingChunked ?? false)
+                        {
+                            size = null;
+                        }
+                    }
+                    else
+                    {
+                        size = sizeForParse;
+                    }
 
-				using (var contentStream = await Request.Content.ReadAsStreamAsync())
-				using (var readFileToDatabase = new ReadFileToDatabase(BufferPool, Storage, contentStream, name))
-				{
-					await readFileToDatabase.Execute();
+                    accessor.PutFile(name, size, headers);
+                    Search.Index(name, headers);                  
+                }));
 
-					Historian.UpdateLastModified(headers); // update with the final file size
+                log.Debug("Inserted a new file '{0}' with ETag {1}", name, headers.Value<Guid>("ETag"));
 
-					log.Debug("File '{0}' was uploaded. Starting to update file metadata and indexes", name);
+                using (var contentStream = await Request.Content.ReadAsStreamAsync())
+                using (var readFileToDatabase = new ReadFileToDatabase(BufferPool, Storage, contentStream, name))
+                {
+                    await readFileToDatabase.Execute();
 
-					headers["Content-MD5"] = readFileToDatabase.FileHash;
+                    Historian.UpdateLastModified(headers); // update with the final file size
 
-					Storage.Batch(accessor => accessor.UpdateFileMetadata(name, headers));
-					headers["Content-Length"] = readFileToDatabase.TotalSizeRead.ToString(CultureInfo.InvariantCulture);
-					Search.Index(name, headers);
-					Publisher.Publish(new FileChange { Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
+                    log.Debug("File '{0}' was uploaded. Starting to update file metadata and indexes", name);
 
-					log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name,
-							  headers.Value<Guid>("ETag"));
+                    headers["Content-MD5"] = readFileToDatabase.FileHash;
 
-					StartSynchronizeDestinationsInBackground();
-				}
+                    Storage.Batch(accessor => accessor.UpdateFileMetadata(name, headers));
+                    headers["Content-Length"] = readFileToDatabase.TotalSizeRead.ToString(CultureInfo.InvariantCulture);
+                    Search.Index(name, headers);
+                    Publisher.Publish(new FileChange { Action = FileChangeAction.Add, File = FilePathTools.Cannoicalise(name) });
+
+                    log.Debug("Updates of '{0}' metadata and indexes were finished. New file ETag is {1}", name, headers.Value<Guid>("ETag"));
+
+                    StartSynchronizeDestinationsInBackground();
+                }
 			}
 			catch (Exception ex)
 			{

@@ -8,6 +8,7 @@ using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -52,9 +53,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 					x.Metadata[SynchronizationConstants.RavenRenameFile] == name);
 		}
 
-		public SynchronizationWorkItem DetermineWork(string file, NameValueCollection localMetadata,
-													 NameValueCollection destinationMetadata, string localServerUrl,
-													 out NoSyncReason reason)
+        public SynchronizationWorkItem DetermineWork(string file, RavenJObject localMetadata, RavenJObject destinationMetadata, string localServerUrl, out NoSyncReason reason)
 		{
 			reason = NoSyncReason.Unknown;
 
@@ -64,9 +63,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				return null;
 			}
 
-			if (destinationMetadata != null &&
-				destinationMetadata[SynchronizationConstants.RavenSynchronizationConflict] != null
-				&& destinationMetadata[SynchronizationConstants.RavenSynchronizationConflictResolution] == null)
+			if (destinationMetadata != null && destinationMetadata[SynchronizationConstants.RavenSynchronizationConflict] != null && destinationMetadata[SynchronizationConstants.RavenSynchronizationConflictResolution] == null)
 			{
 				reason = NoSyncReason.DestinationFileConflicted;
 				return null;
@@ -78,45 +75,45 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				return null;
 			}
 
-			if (localMetadata[SynchronizationConstants.RavenDeleteMarker] != null)
-			{
-				var rename = localMetadata[SynchronizationConstants.RavenRenameFile];
+            throw new NotImplementedException();
 
-				if (rename != null)
-				{
-					if (destinationMetadata != null)
-						return new RenameWorkItem(file, rename, localServerUrl, storage);
+            //if (localMetadata[SynchronizationConstants.RavenDeleteMarker] != null)
+            //{
+            //    var rename = localMetadata[SynchronizationConstants.RavenRenameFile];
 
-					return new ContentUpdateWorkItem(rename, localServerUrl, storage, sigGenerator);
-					// we have a rename tombstone but file does not exists on destination
-				}
-				return new DeleteWorkItem(file, localServerUrl, storage);
-			}
+            //    if (rename != null)
+            //    {
+            //        if (destinationMetadata != null)
+            //            return new RenameWorkItem(file, rename, localServerUrl, storage);
 
-			if (destinationMetadata != null && Historian.IsDirectChildOfCurrent(localMetadata, destinationMetadata))
-			{
-				reason = NoSyncReason.ContainedInDestinationHistory;
-				return null;
-			}
+            //        return new ContentUpdateWorkItem(rename, localServerUrl, storage, sigGenerator);
+            //        // we have a rename tombstone but file does not exists on destination
+            //    }
+            //    return new DeleteWorkItem(file, localServerUrl, storage);
+            //}
 
-			if (destinationMetadata != null && localMetadata["Content-MD5"] == destinationMetadata["Content-MD5"])
-			// file exists on dest and has the same content
-			{
-				// check metadata to detect if any synchronization is needed
-				if (
-					localMetadata.AllKeys.Except(new[] { "ETag", "Last-Modified" })
-								 .Any(
-									 key => !destinationMetadata.AllKeys.Contains(key) || localMetadata[key] != destinationMetadata[key]))
-				{
-					return new MetadataUpdateWorkItem(file, localServerUrl, destinationMetadata, storage);
-				}
+            //if (destinationMetadata != null && Historian.IsDirectChildOfCurrent(localMetadata, destinationMetadata))
+            //{
+            //    reason = NoSyncReason.ContainedInDestinationHistory;
+            //    return null;
+            //}
 
-				reason = NoSyncReason.SameContentAndMetadata;
+            //// file exists on dest and has the same content
+            //if (destinationMetadata != null && localMetadata["Content-MD5"] == destinationMetadata["Content-MD5"])			
+            //{
+            //    // check metadata to detect if any synchronization is needed
+            //    if (localMetadata.AllKeys.Except(new[] { "ETag", "Last-Modified" })
+            //                     .Any(key => !destinationMetadata.AllKeys.Contains(key) || localMetadata[key] != destinationMetadata[key]))
+            //    {
+            //        return new MetadataUpdateWorkItem(file, localServerUrl, destinationMetadata, storage);
+            //    }
 
-				return null; // the same content and metadata - no need to synchronize
-			}
+            //    reason = NoSyncReason.SameContentAndMetadata;
 
-			return new ContentUpdateWorkItem(file, localServerUrl, storage, sigGenerator);
+            //    return null; // the same content and metadata - no need to synchronize
+            //}
+
+            //return new ContentUpdateWorkItem(file, localServerUrl, storage, sigGenerator);
 		}
 	}
 }

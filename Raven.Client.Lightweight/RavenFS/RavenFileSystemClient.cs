@@ -566,19 +566,6 @@ namespace Raven.Client.RavenFS
                 try
                 {
                     await request.WriteAsync(source);
-
-                    //using (var destination = await request.GetRequestStreamAsync())
-                    //{
-                    //	await source.CopyToAsync(destination, written =>
-                    //	{
-                    //		if (progress != null)
-                    //			progress(filename, written);
-                    //	}, cts.Token);
-
-                    //	using (await request.GetResponseAsync())
-                    //	{
-                    //	}
-                    //}
                 }
                 catch (Exception e)
                 {

@@ -99,20 +99,20 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             return newId;
         }
 
-        public void PutFile(string filename, long? totalSize, NameValueCollection metadata, bool tombstone = false)
+        public void PutFile(string filename, long? totalSize, RavenJObject metadata, bool tombstone = false)
         {
             var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
 
             var key = CreateKey(filename);
 
-            if (!metadata.AllKeys.Contains("ETag"))
+            if (!metadata.ContainsKey("ETag"))
                 throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
-			
-			ushort version;
-	        var existingFile = LoadJson(storage.Files, key, writeBatch.Value, out version);
 
-            var innerMetadata = new NameValueCollection(metadata);
-            var etag = innerMetadata.Value<Guid>("ETag");
+            ushort version;
+            var existingFile = LoadJson(storage.Files, key, writeBatch.Value, out version);
+
+            var innerMetadata = new RavenJObject(metadata);
+            var etag = Guid.Parse(innerMetadata.Value<string>("ETag").Trim('\"'));
             innerMetadata.Remove("ETag");
 
             var file = new RavenJObject
@@ -121,23 +121,66 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                            { "total_size", totalSize }, 
                            { "uploaded_size", 0 }, 
                            { "etag", etag.ToString() }, 
-                           { "metadata", ToQueryString(innerMetadata) }
+                           { "metadata", innerMetadata }
                        };
 
             storage.Files.Add(writeBatch.Value, key, file, version);
 
-	        if (existingFile != null)
-	        {
-		        filesByEtag.Delete(writeBatch.Value, CreateKey(existingFile.Value<string>("etag")));
-	        }
+            if (existingFile != null)
+            {
+                filesByEtag.Delete(writeBatch.Value, CreateKey(existingFile.Value<string>("etag")));
+            }
 
-	        filesByEtag.Add(writeBatch.Value, CreateKey(etag), key);
+            filesByEtag.Add(writeBatch.Value, CreateKey(etag), key);
 
             if (tombstone)
                 return;
 
             var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
             fileCount.Add(writeBatch.Value, key, key);
+        }
+
+        public void PutFile(string filename, long? totalSize, NameValueCollection metadata, bool tombstone = false)
+        {
+            PutFile(filename, totalSize, metadata.ToJObject(), tombstone);
+
+            //var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
+
+            //var key = CreateKey(filename);
+
+            //if (!metadata.AllKeys.Contains("ETag"))
+            //    throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
+
+            //ushort version;
+            //var existingFile = LoadJson(storage.Files, key, writeBatch.Value, out version);
+
+            //var innerMetadata = new NameValueCollection(metadata);
+            //var etag = innerMetadata.Value<Guid>("ETag");
+            //innerMetadata.Remove("ETag");
+
+            //var file = new RavenJObject
+            //           {
+            //               { "name", filename }, 
+            //               { "total_size", totalSize }, 
+            //               { "uploaded_size", 0 }, 
+            //               { "etag", etag.ToString() }, 
+            //               { "metadata", ToQueryString(innerMetadata) }
+            //           };
+
+            //storage.Files.Add(writeBatch.Value, key, file, version);
+
+            //if (existingFile != null)
+            //{
+            //    filesByEtag.Delete(writeBatch.Value, CreateKey(existingFile.Value<string>("etag")));
+            //}
+
+            //filesByEtag.Add(writeBatch.Value, CreateKey(etag), key);
+
+            //if (tombstone)
+            //    return;
+
+            //var fileCount = storage.Files.GetIndex(Tables.Files.Indices.Count);
+            //fileCount.Add(writeBatch.Value, key, key);
         }
 
         public void AssociatePage(string filename, int pageId, int pagePositionInFile, int pageSize)
@@ -318,7 +361,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             DeleteFile(filename);
         }
 
-        public void UpdateFileMetadata(string filename, NameValueCollection metadata)
+        public void UpdateFileMetadata(string filename, RavenJObject metadata)
         {
             var key = CreateKey(filename);
 
@@ -327,28 +370,64 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             if (file == null)
                 throw new FileNotFoundException(filename);
 
-            if (!metadata.AllKeys.Contains("ETag"))
+            if (!metadata.ContainsKey("ETag"))
                 throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
 
-            var innerMetadata = new NameValueCollection(metadata);
-            var etag = innerMetadata.Value<Guid>("ETag");
+            var innerMetadata = new RavenJObject(metadata);
+            var etag = Guid.Parse(innerMetadata.Value<string>("ETag").Trim('\"'));
             innerMetadata.Remove("ETag");
 
-            var existingMetadata = RetrieveMetadata(file);
-            if (existingMetadata.AllKeys.Contains("Content-MD5"))
+            var existingMetadata = (RavenJObject) file["metadata"];
+            if (existingMetadata.ContainsKey("Content-MD5"))
                 innerMetadata["Content-MD5"] = existingMetadata["Content-MD5"];
 
-	        var oldEtag = file.Value<string>("etag");
+            var oldEtag = file.Value<string>("etag");
 
             file["etag"] = etag.ToString();
-            file["metadata"] = ToQueryString(innerMetadata);
+            file["metadata"] = innerMetadata;
 
             storage.Files.Add(writeBatch.Value, key, file, version);
 
-			var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
+            var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
 
-			filesByEtag.Delete(writeBatch.Value, CreateKey(oldEtag));
-			filesByEtag.Add(writeBatch.Value, CreateKey(etag), key);
+            filesByEtag.Delete(writeBatch.Value, CreateKey(oldEtag));
+            filesByEtag.Add(writeBatch.Value, CreateKey(etag), key);
+        }
+        
+        [Obsolete]
+        public void UpdateFileMetadata(string filename, NameValueCollection metadata)
+        {
+            UpdateFileMetadata(filename, metadata.ToJObject());
+
+            //var key = CreateKey(filename);
+
+            //ushort version;
+            //var file = LoadJson(storage.Files, key, writeBatch.Value, out version);
+            //if (file == null)
+            //    throw new FileNotFoundException(filename);
+
+            //if (!metadata.AllKeys.Contains("ETag"))
+            //    throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
+
+            //var innerMetadata = new NameValueCollection(metadata);
+            //var etag = innerMetadata.Value<Guid>("ETag");
+            //innerMetadata.Remove("ETag");
+
+            //var existingMetadata = RetrieveMetadata(file);
+            //if (existingMetadata.AllKeys.Contains("Content-MD5"))
+            //    innerMetadata["Content-MD5"] = existingMetadata["Content-MD5"];
+
+            //var oldEtag = file.Value<string>("etag");
+
+            //file["etag"] = etag.ToString();
+            //file["metadata"] = ToQueryString(innerMetadata);
+
+            //storage.Files.Add(writeBatch.Value, key, file, version);
+
+            //var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
+
+            //filesByEtag.Delete(writeBatch.Value, CreateKey(oldEtag));
+            //filesByEtag.Add(writeBatch.Value, CreateKey(etag), key);
         }
 
         public void CompleteFileUpload(string filename)
@@ -853,11 +932,14 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         private static NameValueCollection RetrieveMetadata(RavenJObject file)
         {
-            var metadataAsString = file.Value<string>("metadata");
-            var metadata = HttpUtility.ParseQueryString(metadataAsString);
-            metadata["ETag"] = "\"" + Guid.Parse(file.Value<string>("etag")) + "\"";
+            var result = new NameValueCollection();
 
-            return metadata;
+            var lookup = ((RavenJObject)file["metadata"]).ToLookup(x => x.Key);
+            foreach ( var holder in lookup)
+                foreach ( var item in holder )
+                    result.Add( item.Key, item.Value.Value<string>());
+
+            return result;
         }
 
     }

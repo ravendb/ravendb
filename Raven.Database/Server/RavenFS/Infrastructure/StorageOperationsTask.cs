@@ -18,6 +18,7 @@ using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Storage.Exceptions;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Infrastructure
 {
@@ -118,8 +119,9 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 					return;
 				}
 
-				var metadata = new NameValueCollection(existingFileHeader.Metadata).WithDeleteMarker();
-
+				//var metadata = new NameValueCollection(existingFileHeader.Metadata).WithDeleteMarker();
+                var metadata = JsonExtensions.ToJObject(existingFileHeader.Metadata).WithDeleteMarker();
+                
 				var renameSucceeded = false;
 
 				var deleteVersion = 0;
@@ -147,25 +149,25 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 					}
 				} while (!renameSucceeded && deleteVersion < 128);
 
-				if (renameSucceeded)
-				{
-					accessor.UpdateFileMetadata(deletingFileName, metadata);
-					accessor.DecrementFileCount(deletingFileName);
+                throw new NotImplementedException();
+                //if (renameSucceeded)
+                //{
+                //    accessor.UpdateFileMetadata(deletingFileName, metadata);
+                //    accessor.DecrementFileCount(deletingFileName);
 
-					Log.Debug(string.Format("File '{0}' was renamed to '{1}' and marked as deleted",
-											fileName, deletingFileName));
+                //    Log.Debug(string.Format("File '{0}' was renamed to '{1}' and marked as deleted", fileName, deletingFileName));
 
-					var configName = RavenFileNameHelper.DeleteOperationConfigNameForFile(deletingFileName);                    
-                    var operation = new DeleteFileOperation { OriginalFileName = fileName, CurrentFileName = deletingFileName };
-                    accessor.SetConfig(configName, JsonExtensions.ToJObject(operation));
+                //    var configName = RavenFileNameHelper.DeleteOperationConfigNameForFile(deletingFileName);                    
+                //    var operation = new DeleteFileOperation { OriginalFileName = fileName, CurrentFileName = deletingFileName };
+                //    accessor.SetConfig(configName, JsonExtensions.ToJObject(operation));
 
-					notificationPublisher.Publish(new ConfigChange { Name = configName, Action = ConfigChangeAction.Set });
-				}
-				else
-				{
-					Log.Warn("Could not rename a file '{0}' when a delete operation was performed",
-							 fileName);
-				}
+                //    notificationPublisher.Publish(new ConfigChange { Name = configName, Action = ConfigChangeAction.Set });
+                //}
+                //else
+                //{
+                //    Log.Warn("Could not rename a file '{0}' when a delete operation was performed",
+                //             fileName);
+                //}
 			});
 
 			if (fileExists)

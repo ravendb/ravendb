@@ -16,6 +16,7 @@ using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Extensions
 {
@@ -53,29 +54,6 @@ namespace Raven.Database.Server.RavenFS.Extensions
 			}
 		}
 
-        public static NameValueCollection FilterHeaders(this HttpHeaders self)
-        {
-            var metadata = new NameValueCollection();
-            foreach (KeyValuePair<string, IEnumerable<string>> header in self)
-            {
-                if (header.Key.StartsWith("Temp"))
-                    continue;
-                if (HeadersToIgnoreClient.Contains(header.Key))
-                    continue;
-                var values = header.Value;
-                var headerName = CaptureHeaderName(header.Key);
-
-                if (values == null)
-                    continue;
-
-                foreach (var value in values)
-                {
-                    metadata.Add(headerName, value);
-                }
-            }
-            return metadata;
-        }
-
 		public static NameValueCollection WithETag(this NameValueCollection metadata, Guid etag)
 		{
 			metadata["ETag"] = "\"" + etag + "\"";
@@ -98,7 +76,7 @@ namespace Raven.Database.Server.RavenFS.Extensions
 			return metadata;
 		}
 
-		public static NameValueCollection WithDeleteMarker(this NameValueCollection metadata)
+        public static RavenJObject WithDeleteMarker(this RavenJObject metadata)
 		{
 			metadata[SynchronizationConstants.RavenDeleteMarker] = "true";
 
