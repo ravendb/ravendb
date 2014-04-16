@@ -347,11 +347,12 @@ class ctor {
             idColumn.width(calculateWidth);
         }
 
-        var elementBorderWidth = 3;
+        var scrollBarWidth = 18;
 
         if (colCount * 200 + idColumnWidth + idCheckboxWidth < this.gridViewport.width()) {
             // you can extend columns size
-            calculateWidth = Math.floor(((this.gridViewport.find(".ko-grid-viewport").width() - idColumnWidth - idCheckboxWidth - elementBorderWidth * colCount)) / colCount); 
+            var totalColCount = colCount + idColumnExists + (idCheckboxColumn ? 1 : 0);
+            calculateWidth = Math.floor(((this.gridViewport.find(".ko-grid-viewport").width() - idColumnWidth - idCheckboxWidth - scrollBarWidth)) / colCount); 
         }
 
         for (var binding in columnsNeeded) {
