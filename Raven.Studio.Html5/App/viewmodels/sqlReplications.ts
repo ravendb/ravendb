@@ -48,7 +48,7 @@ class sqlReplications extends viewModelBase {
         this.areAllSqlReplicationsValid = ko.computed(() => this.replications().every(k => k.isValid()));
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.replications]);
         this.isSaveEnabled = ko.computed(()=> {
-            return viewModelBase.dirtyFlag().isDirty() && this.areAllSqlReplicationsValid();
+            return viewModelBase.dirtyFlag().isDirty();
         });
     }
 

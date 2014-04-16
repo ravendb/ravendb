@@ -151,13 +151,18 @@ class query extends viewModelBase {
         });        
         ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexQueryRawData(this.activeDatabase(), this.selectedIndex()));
 
-        var docEditor: AceAjax.Editor;
-        docEditor = ace.edit("queryEditor");
-        docEditor.setAutoScrollEditorIntoView();
-        docEditor.setOption("minLines", 7);
-        docEditor.setOption("maxLines", 20);
+        //var docEditor: AceAjax.Editor;
+        //var editor = ace.edit("queryEditor");
+        
+        //docEditor.resize(true);
+        //docEditor.setAutoScrollEditorIntoView();
+        //docEditor.setOption("minLines", 7);
+        //docEditor.setOption("maxLines", 20);
     }
 
+    compositionComplete() {
+        super.compositionComplete();
+    }
     focusOnQuery() {
         var editorElement = $("#queryEditor").length == 1 ? $("#queryEditor")[0] : null;
         if (editorElement) {
