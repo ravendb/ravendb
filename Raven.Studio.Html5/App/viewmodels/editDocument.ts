@@ -260,7 +260,7 @@ class editDocument extends viewModelBase {
     }
 
     attachReservedMetaProperties(id: string, target: documentMetadataDto) {
-        target['@etag'] = '00000000-0000-0000-0000-000000000000';
+        target['@etag'] = '';
         target['Raven-Entity-Name'] = document.getEntityNameFromId(id);
         target['@id'] = id;
     }
