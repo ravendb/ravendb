@@ -237,7 +237,34 @@ namespace Raven.Database.Counters
                 }
             }
 
-			public void Dispose()
+		    public IEnumerable<ServerEtag> GetServerEtags()
+		    {
+                var buffer = new byte[sizeof(long)];
+                var serversLastEtag = transaction.State.GetTree(transaction, "serversLastEtag");
+                using (var it = serversLastEtag.Iterate(transaction))
+                {
+                    if (it.Seek(Slice.BeforeAllKeys) == false)
+                        yield break;
+                    do
+                    {
+                        if (buffer.Length < it.GetCurrentDataSize())
+                        {
+                            buffer = new byte[Utils.NearestPowerOfTwo(it.GetCurrentDataSize())];
+                        }
+
+                        it.CurrentKey.CopyTo(0, serverIdBytes, 0, 4);
+                        it.CreateReaderForCurrent().Read(buffer, 0, buffer.Length);                        
+                        yield return new ServerEtag
+                        {
+                            SourceId = EndianBitConverter.Big.ToInt32(serverIdBytes, 0),
+                            Etag = EndianBitConverter.Big.ToInt64(buffer, 0),
+                        };
+
+                    } while (it.MoveNext());
+                }
+		    }
+
+            public void Dispose()
 			{
 				if (transaction != null)
 					transaction.Dispose();
@@ -387,7 +414,7 @@ namespace Raven.Database.Counters
 				var key = EndianBitConverter.Big.GetBytes(serverId);
 				var serversLastEtag = transaction.State.GetTree(transaction, "serversLastEtag");
 				serversLastEtag.Add(transaction, new Slice(key), EndianBitConverter.Big.GetBytes(lastEtag));
-			}
+			}		    
 		}
 
 		public string ServerNameFor(int sourceId)
@@ -397,9 +424,22 @@ namespace Raven.Database.Counters
 			return value;
 		}
 
+        public int SourceIdFor(string serverName)
+        {
+            int value;
+            serverNamesToIds.TryGetValue(serverName, out value);
+            return value;
+        }
+
 	    public IEnumerable<string> Servers
 	    {
 	        get { return serverNamesToIds.Keys; }
-	    } 
+	    }
+
+	    public class ServerEtag
+	    {
+	        public int SourceId { get; set; }
+	        public long Etag { get; set; }
+	    }
 	}
 }
