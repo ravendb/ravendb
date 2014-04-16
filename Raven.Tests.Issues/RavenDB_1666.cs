@@ -82,7 +82,7 @@ namespace Raven.Tests.Issues
             RegisterRouteForOnlySysDb<RdcController>(a => a.Signatures(string.Empty));
             RegisterRouteForOnlySysDb<RdcController>(a => a.Stats());
             RegisterRouteForOnlySysDb<RdcController>(a => a.Manifest(string.Empty));
-            RegisterRouteForOnlySysDb<SearchController>(a => a.Terms());
+            RegisterRouteForOnlySysDb<SearchController>(a => a.Terms(string.Empty));
             RegisterRouteForOnlySysDb<SearchController>(a => a.Get(string.Empty, new string[] {}));
             RegisterRouteForOnlySysDb<StaticFSController>(a => a.ClientAccessPolicy());
             RegisterRouteForOnlySysDb<StaticFSController>(a => a.RavenStudioXap());

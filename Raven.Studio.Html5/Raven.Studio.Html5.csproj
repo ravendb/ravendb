@@ -143,6 +143,7 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemSynchronization.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemUploadFile.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchFileSizeRangeClause.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\searchLastModifiedBetweenClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchSingleInputClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\licensingStatus.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
@@ -237,6 +238,7 @@
     <Content Include="App\views\filesystem\filesystemSynchronization.html" />
     <Content Include="App\views\filesystem\filesystemEditFile.html" />
     <Content Include="App\views\filesystem\searchHasMetadataClause.html" />
+    <Content Include="App\views\filesystem\searchLastModifiedBetweenClause.html" />
     <Content Include="App\views\filesystem\searchSingleInputClause.html" />
     <Content Include="App\views\licensingStatus.html" />
     <Content Include="App\views\selectColumns.html" />

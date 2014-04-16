@@ -10,6 +10,7 @@ import pagedList = require("common/pagedList");
 import searchSingleInputClause = require("viewmodels/filesystem/searchSingleInputClause");
 import searchFileSizeRangeClause = require("viewmodels/filesystem/searchFileSizeRangeClause");
 import searchHasMetadataClause = require("viewmodels/filesystem/searchHasMetadataClause");
+import searchLastModifiedBetweenClause = require("viewmodels/filesystem/searchLastModifiedBetweenClause");
 
 class search extends viewModelBase {
 
@@ -106,6 +107,26 @@ class search extends viewModelBase {
                 .applyFilterTask
                 .done((input: string) => this.searchText(input));
             app.showDialog(searchHasMetadataClauseViewModel);
+        });
+    }
+
+    inFolder() {
+        require(["viewmodels/filesystem/searchSingleInputClause"], searchSingleInputClause => {
+            var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Folder path: ");
+            searchSingleInputClauseViewModel
+                .applyFilterTask
+                .done((input: string) => this.searchText("__directory:" + input));
+            app.showDialog(searchSingleInputClauseViewModel);
+        });
+    }
+
+    lastModifiedBetween() {
+        require(["viewmodels/filesystem/searchLastModifiedBetweenClause"], searchLastModifiedBetweenClause => {
+            var searchLastModifiedBetweenClauseViewModel: searchLastModifiedBetweenClause = new searchLastModifiedBetweenClause();
+            searchLastModifiedBetweenClauseViewModel
+                .applyFilterTask
+                .done((input: string) => this.searchText(input));
+            app.showDialog(searchLastModifiedBetweenClauseViewModel);
         });
     }
 }
