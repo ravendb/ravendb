@@ -175,8 +175,6 @@ namespace Voron.Trees
 			CheckConcurrency(key, value, version, 0, TreeActionType.Add);
 
 			nestedPage.AddDataNode(0, value, 0, 0);
-
-			value.CopyTo(ptr);
 		}
 
 		public void MultiDelete(Transaction tx, Slice key, Slice value, ushort? version = null)
