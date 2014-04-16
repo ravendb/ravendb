@@ -82,16 +82,20 @@ class viewModelBase {
         // Resync Changes
         viewModelBase.dirtyFlag().reset();
 
-        $("pre").resizable({
-            handles: "e, s, se",
-            resize: function (event, ui) {
-                debugger;
-                var editor = ace.edit(this);
-                editor.resize();
-            }
+        $("pre").each(function() {
+            var editor = ace.edit(this);
+            editor.setOption('vScrollBarAlwaysVisible', true);
+            editor.setOption('hScrollBarAlwaysVisible', true);
+            $(this).resizable({
+                minHeight: 100,
+                maxWidth: $(this).width() > 150 ? ($(this).width() + 26) : $(".panel-title").width() - 265,
+                handles: "e, s, se",
+                resize: function (event, ui) {
+                    editor.resize();
+                    //$('.ui-resizable-se').css({ 'right': '3px', 'bottom': '3px' });
+                }
+            })
         });
-
-        //$('.ui-resizable-se').css({ 'height': '32px', 'width': '32px' });
     }
 
     /*

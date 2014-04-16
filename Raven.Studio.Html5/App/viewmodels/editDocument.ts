@@ -18,6 +18,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
 import verifyDocumentsIDsCommand = require("commands/verifyDocumentsIDsCommand");
+import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class editDocument extends viewModelBase {
 
@@ -48,6 +49,8 @@ class editDocument extends viewModelBase {
 
     constructor() {
         super();
+        aceEditorBindingHandler.install();
+
         this.metadata = ko.computed(() => this.document() ? this.document().__metadata : null);
 
         this.document.subscribe(doc => {
