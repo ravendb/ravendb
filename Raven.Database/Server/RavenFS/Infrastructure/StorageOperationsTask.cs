@@ -76,8 +76,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 				accessor.UpdateFileMetadata(operation.Rename, operation.MetadataAfterOperation);
 
 				// copy renaming file metadata and set special markers
-				var tombstoneMetadata =
-					new NameValueCollection(operation.MetadataAfterOperation).WithRenameMarkers(operation.Rename);
+				var tombstoneMetadata = new NameValueCollection(operation.MetadataAfterOperation).WithRenameMarkers(operation.Rename);
 
 				accessor.PutFile(operation.Name, 0, tombstoneMetadata, true); // put rename tombstone
 

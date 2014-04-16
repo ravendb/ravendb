@@ -152,8 +152,7 @@ namespace RavenFS.Tests.Synchronization
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
-			ZeroTimeoutTest(destinationClient,
-			                () => destinationClient.UploadAsync("test.bin", EmptyData, new MemoryStream()).Wait());
+			ZeroTimeoutTest(destinationClient, () => destinationClient.UploadAsync("test.bin", EmptyData, new MemoryStream()).Wait());
 		}
 
 		[Fact]

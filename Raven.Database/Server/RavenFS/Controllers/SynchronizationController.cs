@@ -357,20 +357,20 @@ namespace Raven.Database.Server.RavenFS.Controllers
 						StorageOperationsTask.IndicateFileToDelete(fileName);
 
 						var tombstoneMetadata = new NameValueCollection
-								                                      {
-									                                      {
-										                                      SynchronizationConstants.RavenSynchronizationHistory,
-										                                      localMetadata[SynchronizationConstants.RavenSynchronizationHistory]
-									                                      },
-									                                      {
-										                                      SynchronizationConstants.RavenSynchronizationVersion,
-										                                      localMetadata[SynchronizationConstants.RavenSynchronizationVersion]
-									                                      },
-									                                      {
-										                                      SynchronizationConstants.RavenSynchronizationSource,
-										                                      localMetadata[SynchronizationConstants.RavenSynchronizationSource]
-									                                      }
-								                                      }.WithDeleteMarker();
+								                    {
+									                    {
+										                    SynchronizationConstants.RavenSynchronizationHistory,
+										                    localMetadata[SynchronizationConstants.RavenSynchronizationHistory]
+									                    },
+									                    {
+										                    SynchronizationConstants.RavenSynchronizationVersion,
+										                    localMetadata[SynchronizationConstants.RavenSynchronizationVersion]
+									                    },
+									                    {
+										                    SynchronizationConstants.RavenSynchronizationSource,
+										                    localMetadata[SynchronizationConstants.RavenSynchronizationSource]
+									                    }
+								                    }.WithDeleteMarker();
 
 						Historian.UpdateLastModified(tombstoneMetadata);
 						accessor.PutFile(fileName, 0, tombstoneMetadata, true);
@@ -383,9 +383,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			{
 				report.Exception = ex;
 
-				Log.WarnException(
-					string.Format("Error was occured during deletion synchronization of file '{0}' from {1}", fileName,
-								  sourceServerInfo), ex);
+				Log.WarnException(string.Format("Error was occured during deletion synchronization of file '{0}' from {1}", fileName, sourceServerInfo), ex);
 			}
 			finally
 			{
@@ -437,8 +435,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				{
 					Name = fileName,
 					Rename = rename,
-					MetadataAfterOperation =
-						sourceMetadata.WithETag(sourceFileETag).DropRenameMarkers()
+					MetadataAfterOperation = sourceMetadata.WithETag(sourceFileETag).DropRenameMarkers()
 				});
 			}
 			catch (Exception ex)
@@ -495,7 +492,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			{
 				var configs = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.SyncResultNamePrefix,
 																 Paging.PageSize * Paging.Start, Paging.PageSize);
-				var reports = configs.Select(config => config.Value<SynchronizationReport>()).ToList();
+				var reports = configs.Select(config => config.JsonDeserialization<SynchronizationReport>()).ToList();
 				page = new ListPage<SynchronizationReport>(reports, reports.Count);
 			});
 
@@ -531,11 +528,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			Storage.Batch(accessor =>
 			{
-				var conflicts = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.ConflictConfigNamePrefix,
-													               Paging.PageSize * Paging.Start,
-													               Paging.PageSize)
-                                        .Select(config => config.JsonDeserialization<ConflictItem>())
-							            .ToList();
+                var conflicts = accessor.GetConfigurationValuesStartWithPrefix<ConflictItem>(
+                                                    RavenFileNameHelper.ConflictConfigNamePrefix,
+													Paging.PageSize * Paging.Start,
+													Paging.PageSize).ToList();
+
 				page = new ListPage<ConflictItem>(conflicts, conflicts.Count);
 			});
 
@@ -663,8 +660,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			});
 		}
 
-		private void PublishSynchronizationNotification(string fileName, ServerInfo sourceServer, SynchronizationType type,
-														SynchronizationAction action)
+		private void PublishSynchronizationNotification(string fileName, ServerInfo sourceServer, SynchronizationType type, SynchronizationAction action)
 		{
 			Publisher.Publish(new SynchronizationUpdate
 			{
@@ -681,14 +677,12 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			Storage.Batch(accessor =>
 			{
-				var conflict = accessor.GetConfig(RavenFileNameHelper.ConflictConfigNameForFile(fileName)).Value<ConflictItem>();
+                var conflict = accessor.GetConfigurationValue<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile(fileName));
 				var localMetadata = accessor.GetFile(fileName, 0, 0).Metadata;
 				var localHistory = Historian.DeserializeHistory(localMetadata);
 
 				// incorporate remote version history into local
-				foreach (
-					var remoteHistoryItem in
-						conflict.RemoteHistory.Where(remoteHistoryItem => !localHistory.Contains(remoteHistoryItem)))
+				foreach (var remoteHistoryItem in conflict.RemoteHistory.Where(remoteHistoryItem => !localHistory.Contains(remoteHistoryItem)))
 				{
 					localHistory.Add(remoteHistoryItem);
 				}

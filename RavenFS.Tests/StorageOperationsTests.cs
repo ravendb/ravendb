@@ -10,6 +10,7 @@ using Raven.Database.Server.RavenFS.Util;
 using RavenFS.Tests.Synchronization;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
+using Raven.Json.Linq;
 
 namespace RavenFS.Tests
 {

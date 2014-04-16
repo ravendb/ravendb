@@ -586,12 +586,10 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		}
 
 		private IEnumerable<SynchronizationDestination> GetSynchronizationDestinations()
-		{
-			var destinationsConfigExists = false;
-			storage.Batch(
-				accessor =>
-				destinationsConfigExists = accessor.ConfigExists(SynchronizationConstants.RavenSynchronizationDestinations));
-
+		{			
+            var destinationsConfigExists = false;
+			storage.Batch(accessor => destinationsConfigExists = accessor.ConfigExists(SynchronizationConstants.RavenSynchronizationDestinations));
+         
 			if (!destinationsConfigExists)
 			{
 				if (failedAttemptsToGetDestinationsConfig < 3 || failedAttemptsToGetDestinationsConfig % 10 == 0)
@@ -601,7 +599,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 				failedAttemptsToGetDestinationsConfig++;
 
-				return Enumerable.Empty<SynchronizationDestination>();
+                yield break;
 			}
 
 			failedAttemptsToGetDestinationsConfig = 0;
@@ -610,25 +608,22 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 			storage.Batch(accessor => destinationsConfig = accessor.GetConfig(SynchronizationConstants.RavenSynchronizationDestinations));
 
-            throw new NotImplementedException();
-
-            //var destinationsStrings = destinationsConfig.GetValues("destination");
-
-            //if (destinationsStrings == null)
-            //{
-            //    Log.Warn("Empty " + SynchronizationConstants.RavenSynchronizationDestinations + " configuration");
-            //    return Enumerable.Empty<SynchronizationDestination>();
-            //}
-
-            //var destinations = destinationsStrings.Select(JsonConvert.DeserializeObject<SynchronizationDestination>).ToArray();
-
-            //if (destinations.Length == 0)
-            //{
-            //    Log.Warn("Configuration " + SynchronizationConstants.RavenSynchronizationDestinations +
-            //             " does not contain any destination");
-            //}
-
-            //return destinations;
+            var destinationsStrings = destinationsConfig.Value<RavenJArray>("Destinations");
+            if (destinationsStrings == null)
+            {
+                Log.Warn("Empty " + SynchronizationConstants.RavenSynchronizationDestinations + " configuration");
+                yield break;
+            }
+            if (destinationsStrings.Count() == 0)
+            {
+                Log.Warn("Configuration " + SynchronizationConstants.RavenSynchronizationDestinations + " does not contain any destination");
+                yield break;
+            }
+            
+            foreach ( var token in destinationsStrings )
+            {
+                yield return JsonExtensions.JsonDeserialization<SynchronizationDestination>((RavenJObject)token);
+            }
 		}
 
         private bool CanSynchronizeTo(string destinationFileSystemUrl)

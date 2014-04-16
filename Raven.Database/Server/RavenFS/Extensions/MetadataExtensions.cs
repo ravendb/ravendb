@@ -53,28 +53,28 @@ namespace Raven.Database.Server.RavenFS.Extensions
 			}
 		}
 
-		public static NameValueCollection FilterHeaders(this HttpHeaders self)
-		{
-			var metadata = new NameValueCollection();
-			foreach (KeyValuePair<string, IEnumerable<string>> header in self)
-			{
-				if (header.Key.StartsWith("Temp"))
-					continue;
-				if (HeadersToIgnoreClient.Contains(header.Key))
-					continue;
-				var values = header.Value;
-				var headerName = CaptureHeaderName(header.Key);
+        public static NameValueCollection FilterHeaders(this HttpHeaders self)
+        {
+            var metadata = new NameValueCollection();
+            foreach (KeyValuePair<string, IEnumerable<string>> header in self)
+            {
+                if (header.Key.StartsWith("Temp"))
+                    continue;
+                if (HeadersToIgnoreClient.Contains(header.Key))
+                    continue;
+                var values = header.Value;
+                var headerName = CaptureHeaderName(header.Key);
 
-				if (values == null)
-					continue;
+                if (values == null)
+                    continue;
 
-				foreach (var value in values)
-				{
-					metadata.Add(headerName, value);
-				}
-			}
-			return metadata;
-		}
+                foreach (var value in values)
+                {
+                    metadata.Add(headerName, value);
+                }
+            }
+            return metadata;
+        }
 
 		public static NameValueCollection WithETag(this NameValueCollection metadata, Guid etag)
 		{

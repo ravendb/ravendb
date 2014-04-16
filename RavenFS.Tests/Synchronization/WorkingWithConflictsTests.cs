@@ -317,13 +317,11 @@ namespace RavenFS.Tests.Synchronization
 			destinationClient.UploadAsync("test.bin", new NameValueCollection {{"key", "value"}},
 			                              new MemoryStream(new byte[] {1, 2, 3, 4})).Wait();
 
-			var webRequest =
-				(HttpWebRequest) WebRequest.Create(destinationClient.ServerUrl + "/ravenfs/" + destinationClient.FileSystemName + "/synchronization/updatemetadata/test.bin");
+			var webRequest = (HttpWebRequest) WebRequest.Create(destinationClient.ServerUrl + "/ravenfs/" + destinationClient.FileSystemName + "/synchronization/updatemetadata/test.bin");
 			webRequest.ContentLength = 0;
 			webRequest.Method = "POST";
 
-			webRequest.Headers.Add(SyncingMultipartConstants.SourceServerInfo,
-			                       new ServerInfo {Id = Guid.Empty, FileSystemUrl = "http://localhost:12345"}.AsJson());
+			webRequest.Headers.Add(SyncingMultipartConstants.SourceServerInfo, new ServerInfo {Id = Guid.Empty, FileSystemUrl = "http://localhost:12345"}.AsJson());
 			webRequest.Headers.Add("ETag", "\"" + new Guid() + "\"");
 			webRequest.Headers.Add("MetadataKey", "MetadataValue");
 

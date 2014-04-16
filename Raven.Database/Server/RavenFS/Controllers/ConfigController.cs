@@ -15,6 +15,7 @@ using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
 using NameValueCollectionJsonConverter = Raven.Client.RavenFS.NameValueCollectionJsonConverter;
 using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -39,11 +40,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			{
                 RavenJObject config = null;
                 Storage.Batch(accessor => { config = accessor.GetConfig(name); });
-                return Request.CreateResponse(HttpStatusCode.OK, config);
+                return this.GetMessageWithObject( config, HttpStatusCode.OK );
 			}
 			catch (FileNotFoundException)
 			{
-				return Request.CreateResponse(HttpStatusCode.NotFound);
+                return this.GetEmptyMessage(HttpStatusCode.NotFound);
 			}
 		}
 
@@ -76,24 +77,15 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("ravenfs/{fileSystemName}/config")]
 		public async Task<HttpResponseMessage> Put(string name)
 		{
-            var jsonSerializer = new JsonSerializer
-            {
-                Converters =
-                {
-                    new NameValueCollectionJsonConverter()
-                }
-            };
-            var contentStream = await Request.Content.ReadAsStreamAsync();
+            var json = await ReadJsonAsync();
 
-            var nameValueCollection = jsonSerializer.Deserialize(new JsonTextReader(new StreamReader(contentStream)));
-
-            ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor => accessor.SetConfigurationValue(name, nameValueCollection)), ConcurrencyResponseException);
+            ConcurrencyAwareExecutor.Execute(() => Storage.Batch(accessor => accessor.SetConfig(name, json)), ConcurrencyResponseException);
 
             Publisher.Publish(new ConfigChange { Name = name, Action = ConfigChangeAction.Set });
 
             Log.Debug("Config '{0}' was inserted", name);
 
-            return this.GetMessageWithObject(nameValueCollection, HttpStatusCode.Created);
+            return this.GetMessageWithObject(json, HttpStatusCode.Created);
 		}
 
 		[HttpDelete]

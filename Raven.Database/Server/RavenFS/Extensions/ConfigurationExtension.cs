@@ -2,37 +2,37 @@
 using System.Collections.Specialized;
 using System.IO;
 using System.Text;
+using System.Linq;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace Raven.Database.Server.RavenFS.Extensions
 {
 	public static class ConfigurationExtension
-	{        
+	{
         public static T GetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key)
         {
             var value = accessor.GetConfig(key);
+            if (typeof(T).IsValueType || typeof(T) == typeof(string))
+                return value.Value<T>("Value");
 
-            if (typeof(NameValueCollection).IsAssignableFrom(typeof(T)))
+            return JsonExtensions.JsonDeserialization<T>(value);
+        }
+
+        public static IEnumerable<T> GetConfigurationValuesStartWithPrefix<T>(this IStorageActionsAccessor accessor, string prefix, int start, int take)
+        {
+            var values = accessor.GetConfigsStartWithPrefix(prefix, start, take);
+            if (typeof(T).IsValueType || typeof(T) == typeof(string))
             {
-                RavenJToken token;
-                if (!value.TryGetValue("Data", out token))
-                    throw new JsonSerializationException();
-
-                var serializer = new JsonSerializer
-                {
-                    Converters = { new NameValueCollectionJsonConverter() }
-                };
-                return serializer.Deserialize<T>(new JsonTextReader(new StringReader(token.Value<string>())));
+                return values.Select(x => x.Value<T>("Value"));
             }
-            else
-            {
-                return JsonExtensions.JsonDeserialization<T>(value);
-            }            
+
+            return values.Select(x => JsonExtensions.JsonDeserialization<T>(x));
         }
 
         public static bool TryGetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key, out T result)
@@ -51,27 +51,7 @@ namespace Raven.Database.Server.RavenFS.Extensions
 
         public static void SetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key, T objectToSave)
         {
-            if (objectToSave is NameValueCollection)
-            {
-                var sb = new StringBuilder();
-                var jw = new JsonTextWriter(new StringWriter(sb));
-                var serializer = new JsonSerializer
-                {
-                    Converters = { new NameValueCollectionJsonConverter() }
-                };
-                serializer.Serialize(jw, objectToSave);
-
-                var holder = new RavenJObject()
-                {
-					{"Data", sb.ToString()},
-                };
-
-                accessor.SetConfig(key, holder);
-            }
-            else
-            {
-                accessor.SetConfig(key, JsonExtensions.ToJObject(objectToSave));
-            }
+            accessor.SetConfig(key, JsonExtensions.ToJObject(objectToSave));
         }
 
 		public static NameValueCollection AsConfig<T>(this T @object) where T : class, new()
