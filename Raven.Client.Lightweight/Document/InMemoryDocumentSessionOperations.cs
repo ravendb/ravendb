@@ -994,7 +994,7 @@ more responsive application.
                     Etag = etag,
                     Key = key,
                 });
-                if (!changes.Equals(null))
+				if (changes != null)
                 {
                     changes.DocumentId = key;
                     changes.FieldNewValue = string.Empty;
