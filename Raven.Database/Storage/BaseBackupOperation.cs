@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Raven.Abstractions;
@@ -14,6 +15,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Backup;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
+using Voron.Impl.Backup;
 
 namespace Raven.Database.Storage
 {

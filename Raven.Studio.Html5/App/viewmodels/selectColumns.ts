@@ -50,10 +50,12 @@ class selectColumns extends dialogViewModelBase {
 
     insertNewRow() {
         this.customColumns.columns.push(customColumnParams.empty());
+        this.alignBoxVertically();
     }
 
     deleteRow(row: customColumnParams) {
         this.customColumns.columns.remove(row);
+        this.alignBoxVertically();
     }
 
     moveUp(row: customColumnParams) {
@@ -74,13 +76,15 @@ class selectColumns extends dialogViewModelBase {
 
     customScheme(val: boolean) {
         this.customColumns.customMode(val);
+        this.alignBoxVertically();
+    }
 
+    alignBoxVertically() {
         var messageBoxHeight = parseInt($(".messageBox").css('height'), 10);
         var windowHeight = $(window).height();
         var messageBoxMarginTop = parseInt($(".messageBox").css('margin-top'), 10);
         var newTopPercent = Math.floor(((windowHeight - messageBoxHeight) / 2 - messageBoxMarginTop) / windowHeight * 100);
         var newTopPercentString = newTopPercent.toString() + '%';
-
         $(".modalHost").css('top', newTopPercentString);
     }
 

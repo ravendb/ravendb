@@ -8,14 +8,15 @@ import viewModelBase = require("viewmodels/viewModelBase");
 
 class filesystemUploadFile extends viewModelBase {
 
-    fileName = ko.observable<File>();
-    uploadQueue = ko.observableArray();
+    localStorageUploadQueueKey: string;
+    files = ko.observable<File[]>();
+    uploadQueue = ko.observableArray<uploadItem>();
 
     constructor() {
         super();
-    }
 
-    activate(navigationArgs) {
+        this.uploadQueue.subscribe(x => this.updateLocalStorage(x, this.activeFilesystem()));
+
         ko.bindingHandlers["fileUpload"] = {
             init: function (element, valueAccessor) {
             },
@@ -27,27 +28,54 @@ class filesystemUploadFile extends viewModelBase {
 
                 if (options) {
                     if (element.files.length) {
-                        var file = <File>element.files[0];
-                        var guid = system.guid();
-                        var item = new uploadItem(guid, file.name, "Queued");
-                        context.uploadQueue.push(item);
+                        var files = <File[]>element.files;
+                        for (var i = 0; i < files.length; i++) {
+                            var file = files[i];
+                            var guid = system.guid();
+                            var item = new uploadItem(guid, file.name, "Queued", context.activeFilesystem());
+                            context.uploadQueue.push(item);
 
-                        new uploadFileToFilesystemCommand(file, guid, filesystem, function (event: any) {
-                            if (event.lengthComputable) {
-                                var percentComplete = event.loaded / event.total;
-                                //do something
-                            }
-                        }, true).execute()
-                            .done(function () { item.status("Uploaded"); })
-                            .fail(function () { item.status("Failed"); });
+                            new uploadFileToFilesystemCommand(file, guid, filesystem, function (event: any) {
+                                if (event.lengthComputable) {
+                                    var percentComplete = event.loaded / event.total;
+                                    //do something
+                                }
+                            }, true).execute()
+                                .done((x: uploadItem) => {
+                                    ko.postbox.publish("UploadFileStatusChanged", x);
+                                    context.updateQueueStatus(x.id(), "Uploaded", context.uploadQueue());
+                                })
+                                .fail((x: uploadItem) => {
+                                    ko.postbox.publish("UploadFileStatusChanged", x);
+                                    context.updateQueueStatus(x.id(), "Failed", context.uploadQueue());
+                                });
 
-                        context.fileName(null);
 
-                        item.status("Uploading...");
+                            item.status("Uploading...");
+                            context.uploadQueue.notifySubscribers(context.uploadQueue());
+                        }
                     }
+
+                    context.files(null);
                 }
             },
         }
+    }
+
+    activate(navigationArgs) {
+        super.activate(navigationArgs);
+
+        var storageKeyForFs = this.localStorageUploadQueueKey + this.activeFilesystem().name;
+        if (window.localStorage.getItem(storageKeyForFs)) {
+            this.uploadQueue(
+                this.parseUploadQueue(
+                    window.localStorage.getItem(storageKeyForFs), this.activeFilesystem()));
+        }
+    }
+
+    clearUploadQueue() {
+        window.localStorage.removeItem(this.localStorageUploadQueueKey + this.activeFilesystem().name);
+        this.uploadQueue.removeAll();
     }
 
     navigateToFiles() {

@@ -327,7 +327,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 					// if it is failing, ignore that, and move to the master or any of the replicas
 					if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex].Url, currentRequest, method, false))
 					{
-						var tuple = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true);
+                        var tuple = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true).ConfigureAwait(false);
 						if (tuple.Success)
 							return tuple.Result;
 						timeoutThrown = tuple.WasTimeout;
@@ -344,7 +344,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 
 				if (!timeoutThrown && IsFirstFailure(primaryOperation.Url))
 				{
-					tuple = await TryOperationAsync(operation, primaryOperation, null, localReplicationDestinations.Count > 0);
+                    tuple = await TryOperationAsync(operation, primaryOperation, null, localReplicationDestinations.Count > 0).ConfigureAwait(false);
 					if (tuple.Success)
 						return tuple.Result;
 					timeoutThrown = tuple.WasTimeout;
@@ -358,14 +358,14 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 				if (ShouldExecuteUsing(replicationDestination.Url, currentRequest, method, false) == false)
 					continue;
 
-				var tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, !timeoutThrown);
+                var tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, !timeoutThrown).ConfigureAwait(false);
 				if (tuple.Success)
 					return tuple.Result;
 				timeoutThrown = tuple.WasTimeout;
 
 				if (!timeoutThrown && IsFirstFailure(replicationDestination.Url))
 				{
-					tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, localReplicationDestinations.Count > i + 1);
+                    tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, localReplicationDestinations.Count > i + 1).ConfigureAwait(false);
 					if (tuple.Success)
 						return tuple.Result;
 					timeoutThrown = tuple.WasTimeout;

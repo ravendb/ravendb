@@ -1,7 +1,7 @@
-﻿<div class="alert alert-danger">
-    <p>Note: not implemented yet</p>
-    <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2064">You can track progress here</a>
-</div>
+﻿<!--<div class="alert alert-danger">
+        <p>Note: not implemented yet</p>
+        <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2064">You can track progress here</a>
+    </div>-->
 
 <div class="filesystems-page">
 
@@ -24,12 +24,12 @@
             <h5>Add search filter</h5>
             <div class="row" style="padding: 0 10px 0 10px">
                 <div class="btn-group">
-                    <button id="fileNameStartsWith" type="button" class="btn btn-default popover-html">File name starts with...</button>
-                    <button id="fileNameEndsWith" type="button" class="btn btn-default popover-html">File name ends with...</button>
-                    <button id="fileSizeBetween" type="button" class="btn btn-default popover-html">File size...</button>
-                    <button id="hasMetadata" type="button" class="btn btn-default popover-html">Has metadata...</button>
-                    <button id="inFolder" type="button" class="btn btn-default popover-html">In folder...</button>
-                    <button id="lastModifiedBetween" type="button" class="btn btn-default popover-html">Last modified...</button>
+                    <button id="fileNameStartsWith" type="button" class="btn btn-default" data-bind="click: fileNameStartsWith">File name starts with...</button>
+                    <button id="fileNameEndsWith" type="button" class="btn btn-default" data-bind="click: fileNameEndsWith">File name ends with...</button>
+                    <button id="fileSizeBetween" type="button" class="btn btn-default" data-bind="click: fileSizeBetween">File size...</button>
+                    <button id="hasMetadata" type="button" class="btn btn-default">Has metadata...</button>
+                    <button id="inFolder" type="button" class="btn btn-default">In folder...</button>
+                    <button id="lastModifiedBetween" type="button" class="btn btn-default">Last modified...</button>
                 </div>
             </div>
         </div>
@@ -37,35 +37,6 @@
             <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, gridSelector: '#filesGrid', isCopyAllowed: false }"></div>
         </div>
     </div>
-</div>
-
-<div id="fileNameStartsWithContextMenu" hidden>
-    <form class="form-inline" role="form">
-        <div class="form-group">
-            <label>Starts with: </label>
-            <input type="text" class="form-control" />
-        </div>
-    </form>
-</div>
-
-<div id="fileNameEndsWithContextMenu" hidden>
-    <form class="form-inline" role="form">
-        <div class="form-group">
-            <label>Ends with: </label>
-            <input type="text" class="form-control" />
-        </div>
-    </form>
-</div>
-
-<div id="fileSizeBetweenContextMenu" hidden>
-    <form class="form-inline" role="form">
-        <div class="form-group">
-            <label>Between: </label>
-            <input type="text" class="form-control" />
-            <label> and: </label>
-            <input type="text" class="form-control" />
-        </div>
-    </form>
 </div>
 
 <div id="hasMetadataContextMenu" hidden>

@@ -56,8 +56,8 @@
             <div class="clearfix"></div>
         </div>
         <div class="panel-body" data-bind="with: replicationsSetup">
-            <div class="alert alert-info" data-bind="visible: destinations().length === 0">
-                You've got no replication destinations set up. <a href="#" data-bind="click: $root.createNewDestination.bind($root)" class="alert-link">Add one now</a>.
+            <div class="alert alert-warning" data-bind="visible: destinations().length === 0">
+                You've got no replication destinations set up.
             </div>
             <div data-bind="foreach: destinations">
                 <div class="panel replication-destination-card" data-bind="css: { 'panel-danger': !isValid(), 'panel-info': isValid() && !disabled(), 'panel-warning': isValid() && disabled() }">

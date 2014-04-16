@@ -82,22 +82,22 @@ namespace Voron
                 throw new EndOfStreamException();
 	        var buffer = EnsureTempBuffer(sizeof (int));
 
-            Read(buffer, 0, sizeof (int));
+			Read(buffer, 0, sizeof(int));
 
             return BitConverter.ToInt32(buffer, 0);
         }
 
 
 		public long ReadLittleEndianInt64()
-		{
-			if (_len - _pos < sizeof(long))
-				throw new EndOfStreamException();
+        {
+            if (_len - _pos < sizeof(long))
+                throw new EndOfStreamException();
 			var buffer = EnsureTempBuffer(sizeof(long));
 
-			Read(buffer, 0, sizeof(long));
+            Read(buffer, 0, sizeof(long));
 
-			return BitConverter.ToInt64(buffer, 0);
-		}
+            return BitConverter.ToInt64(buffer, 0);
+        }
 
 		public int ReadBigEndianInt32()
 		{
@@ -137,6 +137,11 @@ namespace Voron
 	        return Encoding.UTF8.GetString(ReadBytes(length, out used), 0, used);
         }
 
+		public override string ToString()
+		{
+			return ToStringValue();
+		}
+
 	    public byte[] ReadBytes(int length, out int used)
         {
             var size = Math.Min(length, _len - _pos);
@@ -156,5 +161,39 @@ namespace Voron
                 stream.Write(buffer, 0, read);
             }
         }
+
+		public int CompareTo(ValueReader other)
+		{
+			var r = CompareData(other, Math.Min(Length, other.Length));
+			if (r != 0)
+				return r;
+			return Length - other.Length;
+		}
+
+		private int CompareData(ValueReader other, int len)
+		{
+			if (_buffer != null)
+			{
+				fixed (byte* a = _buffer)
+				{
+					if (other._buffer != null)
+					{
+						fixed (byte* b = other._buffer)
+						{
+							return NativeMethods.memcmp(a, b, len);
+						}
+					}
+					return NativeMethods.memcmp(a, other._val, len);
+				}
+			}
+			if (other._buffer != null)
+			{
+				fixed (byte* b = other._buffer)
+				{
+					return NativeMethods.memcmp(_val, b, len);
+				}
+			}
+			return NativeMethods.memcmp(_val, other._val, len);
+		}
     }
 }

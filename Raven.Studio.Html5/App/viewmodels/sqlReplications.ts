@@ -13,6 +13,7 @@ class sqlReplications extends viewModelBase {
     lastIndex = ko.computed(function () {
         return this.isFirstload() ? -1 : this.replications().length - 1;
     }, this);
+    areAllSqlReplicationsValid: KnockoutComputed<boolean>;
     isSaveEnabled: KnockoutComputed<boolean>;
     loadedSqlReplications = [];
 
@@ -33,7 +34,7 @@ class sqlReplications extends viewModelBase {
                         this.loadedSqlReplications.push(results[i].getId());
                     }
                     this.replications(results);
-                    
+
                     deferred.resolve({ can: true });
                 })
                 .fail(() => deferred.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) }));
@@ -41,10 +42,13 @@ class sqlReplications extends viewModelBase {
         return deferred;
     }
 
-    activate() {
+    activate(args) {
+        super.activate(args);
+
+        this.areAllSqlReplicationsValid = ko.computed(() => this.replications().every(k => k.isValid()));
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.replications]);
-        this.isSaveEnabled = ko.computed(function () {
-            return viewModelBase.dirtyFlag().isDirty();
+        this.isSaveEnabled = ko.computed(()=> {
+            return viewModelBase.dirtyFlag().isDirty() && this.areAllSqlReplicationsValid();
         });
     }
 

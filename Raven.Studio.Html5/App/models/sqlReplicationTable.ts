@@ -21,6 +21,11 @@ class sqlReplicationTable {
             DocumentKeyColumn: this.documentKeyColumn()
         };
     }
+
+    isValid(): boolean {
+        var requiredValues = [this.tableName(), this.documentKeyColumn()];
+        return requiredValues.every(v => v != null && v.length > 0);
+    }
 }
 
 export = sqlReplicationTable;

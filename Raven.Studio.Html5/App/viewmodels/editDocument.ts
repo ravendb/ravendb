@@ -95,7 +95,7 @@ class editDocument extends viewModelBase {
         this.lodaedDocumentName(this.userSpecifiedId());
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
         var self = this;
-        this.isSaveEnabled = ko.computed(function() {
+        this.isSaveEnabled = ko.computed(()=> {
             return viewModelBase.dirtyFlag().isDirty() && !!self.userSpecifiedId();
         });
 
@@ -148,24 +148,12 @@ class editDocument extends viewModelBase {
         this.focusOnEditor();
     }
 
-    // Called back after the entire composition has finished (parents and children included)
-    compositionComplete() {
-        super.compositionComplete();
-        //this.lodaedDocumentName = this.userSpecifiedId();
-        //viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
-    }
-
-    saveInObservable() {
-        this.storeDocEditorTextIntoObservable();
-    }
-
     initializeDocEditor() {
         // Startup the Ace editor with JSON syntax highlighting.
         this.docEditor = ace.edit("docEditor");
         this.docEditor.setTheme("ace/theme/github");
         this.docEditor.setFontSize("16px");
         this.docEditor.getSession().setMode("ace/mode/json");
-        $("#docEditor").on('blur', ".ace_text-input", () => this.storeDocEditorTextIntoObservable());
         $("#docEditor").on('keyup', ".ace_text-input", () => this.storeDocEditorTextIntoObservable());
         this.updateDocEditorText();
     }

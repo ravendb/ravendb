@@ -575,7 +575,7 @@ namespace Raven.Json.Linq
 			return d1.CompareTo(d2);
 		}
 
-		internal override bool DeepEquals(RavenJToken node)
+        internal override bool DeepEquals(RavenJToken node, DocumentsChanges changes)
 		{
 			if (Type == JTokenType.Null && node == null)
 				return true;

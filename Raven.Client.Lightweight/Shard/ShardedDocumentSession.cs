@@ -721,7 +721,7 @@ namespace Raven.Client.Shard
 		{
 			using (EntityToJson.EntitiesToJsonCachingScope())
 			{
-				var data = PrepareForSaveChanges();
+				var data = PrepareForSaveChanges(null);
 				if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)
 					return; // nothing to do here
 
@@ -744,6 +744,7 @@ namespace Raven.Client.Shard
 					var results = databaseCommands.Batch(shardAndObjects.Value.Commands);
 					UpdateBatchResults(results, shardAndObjects.Value);
 				}
+			    return ;
 			}
 		}
 
@@ -913,6 +914,11 @@ namespace Raven.Client.Shard
 		{
 			throw new NotSupportedException("Multi faceted searching is currently not supported by sharded document store");
 		}
+
+	    public DocumentsChanges WhatChanged()
+	    {
+	        throw new NotImplementedException();
+	    }
 	}
 }
 

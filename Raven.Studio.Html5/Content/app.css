@@ -654,9 +654,27 @@ footer ul {
   top: -40px;
   right: 25px;
 }
+#editFileContainer:focus {
+  outline: 0;
+}
+#editFileContainer #fileMetadataEditor {
+  height: 500px;
+}
+#editFileContainer .document-addition-data {
+  margin-top: 95px;
+  padding-top: 10px;
+  padding-bottom: 40px;
+}
+#editFileContainer hr {
+  border-color: red;
+  margin-top: 5px;
+}
 .remove-icon{
     color: #d2322d;
     border-color: #ac2925;
     cursor: pointer;
+}
+.fa-plus{
+    color: green;
 }
 /*# sourceMappingURL=app.css.map */
