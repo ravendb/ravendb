@@ -41,7 +41,7 @@ class editDocument extends viewModelBase {
     static editDocSelector = "#editDocumentContainer";
     static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
 
-    private lodaedDocumentName : string;
+    private loadedDocumentName : string;
 
     constructor() {
         super();
@@ -127,12 +127,11 @@ class editDocument extends viewModelBase {
             }
 
             ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), navigationArgs.id));
-            return true;
         } else {
             this.editNewDocument();
         }
 
-        this.lodaedDocumentName = this.userSpecifiedId();
+        this.loadedDocumentName = this.userSpecifiedId();
     }
 
     // Called when the view is attached to the DOM.
@@ -200,7 +199,7 @@ class editDocument extends viewModelBase {
         //the name of the document was changed and we have to save it as a new one
         var meta = JSON.parse(this.metadataText());
         var currentDocumentId = this.userSpecifiedId();
-        if (this.lodaedDocumentName && this.lodaedDocumentName != currentDocumentId) {
+        if (this.loadedDocumentName && this.loadedDocumentName != currentDocumentId) {
             this.isCreatingNewDocument(true);
         }
 
@@ -217,6 +216,8 @@ class editDocument extends viewModelBase {
             this.metaPropsToRestoreOnSave.forEach(p => meta[p.name] = p.value);
         }
 
+        this.docsList().invalidateCache();
+
         var newDoc = new document(updatedDto);
         var saveCommand = new saveDocumentCommand(currentDocumentId, newDoc, appUrl.getDatabase());
         var saveTask = saveCommand.execute();
@@ -224,7 +225,7 @@ class editDocument extends viewModelBase {
             // Resync Changes
             viewModelBase.dirtyFlag().reset();
 
-            this.lodaedDocumentName = currentDocumentId;
+            this.loadedDocumentName = currentDocumentId;
             this.isCreatingNewDocument(false);
             this.loadDocument(idAndEtag.Key);
             this.updateUrl(idAndEtag.Key);
@@ -276,6 +277,8 @@ class editDocument extends viewModelBase {
 
             // Resync Changes
             viewModelBase.dirtyFlag().reset();
+            this.loadedDocumentName = document.getId();
+
         });
         loadDocTask.fail(response => this.failedToLoadDoc(id, response));
         loadDocTask.always(() => this.isBusy(false));
