@@ -7,13 +7,14 @@ using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
 
 namespace Raven.Database.Counters.Controllers
 {
     public class CounterReplicationController : RavenCountersApiController
     {
-        [Route("counters/replication")]
+        [Route("counters/{counterName}/replication")]
         public HttpResponseMessage Post(ReplicationMessage replicationMessage)
         {
             /*Read Current Counter Value for CounterName - Need ReaderWriter Lock
@@ -22,16 +23,17 @@ namespace Raven.Database.Counters.Controllers
              *Store last ETag for servers we've successfully rpelicated to
              */
 	        long lastEtag = 0;
+            bool wroteCounter = false;
             using (var writer = Storage.CreateWriter())
             {
 	            foreach (var counter in replicationMessage.Counters)
 	            {
-		            lastEtag = Math.Max(counter.Counter.Etag, lastEtag);
+		            lastEtag = Math.Max(counter.Etag, lastEtag);
 		            var currentCounter = writer.GetCounter(counter.CounterName);
-		            foreach (var serverValue in counter.Counter.ServerValues)
+		            foreach (var serverValue in counter.ServerValues)
 		            {
 			            var currentServerValue = currentCounter.ServerValues
-				            .FirstOrDefault(x => x.SourceId == serverValue.SourceId) ??
+				            .FirstOrDefault(x => x.SourceId == Storage.SourceIdFor(serverValue.ServerName)) ??
 			                                     new Counter.PerServerValue
 			                                     {
 				                                     Negative = 0,
@@ -42,6 +44,7 @@ namespace Raven.Database.Counters.Controllers
 			                serverValue.Negative == currentServerValue.Negative)
 				            continue;
 
+		                wroteCounter = true;
 			            writer.Store(replicationMessage.SendingServerName,
 				            counter.CounterName,
 				            Math.Max(serverValue.Positive, currentServerValue.Positive),
@@ -49,17 +52,20 @@ namespace Raven.Database.Counters.Controllers
 				            );
 		            }
 	            }
-	            
-				writer.RecordLastEtagFor(replicationMessage.SendingServerName, lastEtag);
 
-	            writer.Commit();
+                if (wroteCounter)
+                {
+                    writer.RecordLastEtagFor(replicationMessage.SendingServerName, lastEtag);
+                    writer.Commit(); 
+                }
 	            return new HttpResponseMessage(HttpStatusCode.OK);
             }
         }
 
-        [Route("counters/{server}/lastEtag")]
+        [Route("counters/{counterName}/lastEtag/{server}")]
         public HttpResponseMessage GetLastEtag(string server)
         {
+            server = Storage.Name.Replace(RavenCounterReplication.GetServerNameForWire(Storage.Name), server); //HACK: nned a wire firendly name or fix Owin impl to allow url on query string or just send back all etags
             var sourceId = Storage.SourceIdFor(server);
             using (var reader = Storage.CreateReader())
             {
@@ -69,19 +75,22 @@ namespace Raven.Database.Counters.Controllers
         }
     }
 
-    public class CounterWorkContext
+    public class RavenCounterReplication
     {
-        public event Action CounterUpdated = () => { };
-    }
-    //bah - this is not a controller, but I need access to storage. move that around later.
-    public class RavenCounterReplication : RavenCountersApiController
-    {
+        public static string GetServerNameForWire(string server)
+        {
+            var uri = new Uri(server);
+            return uri.Host + ":" + uri.Port;
+        }
+
+        private readonly CounterStorage storage;
         private readonly CancellationTokenSource cancellation;
         private long lastEtag;
 
-        RavenCounterReplication(CounterWorkContext workContext)
+        public RavenCounterReplication(CounterStorage storage)
         {
-            workContext.CounterUpdated += workContext_CounterUpdated;
+            this.storage = storage;
+            this.storage.CounterUpdated += workContext_CounterUpdated;
             cancellation = new CancellationTokenSource();
         }
 
@@ -99,18 +108,19 @@ namespace Raven.Database.Counters.Controllers
         public async void Replicate()
         {
             var tasks =
-                Storage.Servers
+                storage.Servers
+                    .Where(x => x != storage.Name) //skip "this" server
                     .Select(async server =>
                     {
                         var http = new HttpClient();
-                        var etagResult = await http.GetStringAsync(string.Format("{0}/counters/{0}/lastEtag", server));
+                        var etagResult = await http.GetStringAsync(string.Format("{0}/lastEtag/{1}", server, GetServerNameForWire(storage.Name)));
                         var etag = int.Parse(etagResult);
-                        var message = new ReplicationMessage {SendingServerName = Storage.Name};
-                        using (var reader = Storage.CreateReader())
+                        var message = new ReplicationMessage {SendingServerName = storage.Name};
+                        using (var reader = storage.CreateReader())
                         {
                            message.Counters = reader.GetCountersSinceEtag(etag).Take(1024).ToList(); //TODO: Capped this...how to get remaining values?
                         }
-                        var url = string.Format("{0}/counters/replication", server);
+                        var url = string.Format("{0}/replication", server);
                         return message.Counters.Count > 0 ?
                             new HttpClient().PostAsync(url, message, new JsonMediaTypeFormatter()) :
                             Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotModified)); //HACK: could do something else here
