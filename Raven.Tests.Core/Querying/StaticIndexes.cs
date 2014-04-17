@@ -93,5 +93,45 @@ namespace Raven.Tests.Core.Querying
                 }
             }
         }
+
+        [Fact]
+        public void CreateAndQuerySimpleIndexWithSortingAndCustomCollateral()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Companies_SortByName().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "C" });
+                    session.Store(new Company { Name = "a" });
+                    session.Store(new Company { Name = "ć" });
+                    session.Store(new Company { Name = "ą" });
+                    session.Store(new Company { Name = "A" });
+                    session.Store(new Company { Name = "c" });
+                    session.Store(new Company { Name = "Ą" });
+                    session.Store(new Company { Name = "D" });
+                    session.Store(new Company { Name = "d" });
+                    session.Store(new Company { Name = "b" });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+
+                    var companies = session.Query<Company, Companies_SortByName>()
+                        .OrderBy(c => c.Name)
+                        .ToArray();
+                    Assert.Equal(10, companies.Length);
+                    Assert.Equal("a", companies[0].Name);
+                    Assert.Equal("A", companies[1].Name);
+                    Assert.Equal("ą", companies[2].Name);
+                    Assert.Equal("Ą", companies[3].Name);
+                    Assert.Equal("b", companies[4].Name);
+                    Assert.Equal("c", companies[5].Name);
+                    Assert.Equal("C", companies[6].Name);
+                    Assert.Equal("ć", companies[7].Name);
+                    Assert.Equal("d", companies[8].Name);
+                    Assert.Equal("D", companies[9].Name);
+                }
+            }
+        }
     }
 }
