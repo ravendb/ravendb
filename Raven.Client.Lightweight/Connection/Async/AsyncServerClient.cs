@@ -67,6 +67,7 @@ namespace Raven.Client.Connection.Async
 		private int requestCount;
 		private int readStripingBase;
 
+	    private const int MaxGetQuerryLen = 14000; //15000 bad 16000 bad 8000 ok; //works 2000; not 32760
 		public string Url
 		{
 			get { return url; }
@@ -1239,7 +1240,7 @@ namespace Raven.Client.Connection.Async
 		/// <returns></returns>
 		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
-			var method = query.Query != null && query.Query.Length > 32760 ? "POST" : "GET";
+            var method = query.Query != null && query.Query.Length > MaxGetQuerryLen ? "POST" : "GET"; //32760
 
 			return ExecuteWithReplication(method, async operationMetadata =>
 			{
@@ -1711,16 +1712,30 @@ namespace Raven.Client.Connection.Async
 #else
 		public Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
 		{
-		    return ExecuteWithReplication("GET", operationMetadata => DirectStreamQueryAsync(index, query, queryHeaderInfo, operationMetadata));
+            var method = query.Query != null && query.Query.Length > MaxGetQuerryLen ? "POST" : "GET";//32760
+            return ExecuteWithReplication(method, operationMetadata => DirectStreamQueryAsync(index, query, queryHeaderInfo, operationMetadata));
+           // return ExecuteWithReplication("GET", operationMetadata => DirectStreamQueryAsync(index, query, queryHeaderInfo, operationMetadata));
 		}
 
         private async Task<IAsyncEnumerator<RavenJObject>> DirectStreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo, OperationMetadata operationMetadata)
 	    {
-            var method = query.Query != null && query.Query.Length > 32760 ? "POST" : "GET";
+          //  var method = query.Query != null && query.Query.Length > MaxGetQuerryLen ? "POST" : "GET";//32760
 
             EnsureIsNotNullOrEmpty(index, "index");
-            string path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: method == "GET");
-
+            //string getPath = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: method == "GET");
+            //string postPath = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: method == "POST");
+            //string path = getPath.Length < MaxGetQuerryLen ? getPath : postPath;
+            var method = string.Empty;
+            var path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: true);
+            if (path.Length < MaxGetQuerryLen)
+            {
+                method = query.Query != null && query.Query.Length > MaxGetQuerryLen ? "POST" : "GET";
+            }
+            else
+            {
+                path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: false);
+                method = "POST";
+            }
             if (method == "POST")
                 path += "&postQuery=true";
 
