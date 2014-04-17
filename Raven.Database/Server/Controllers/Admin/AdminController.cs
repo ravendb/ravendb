@@ -10,12 +10,17 @@ using System.Web.Http;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
 using Raven.Database.Actions;
+using Raven.Database.Backup;
 using Raven.Database.Config;
-using Raven.Database.Data;
 using System.Net.Http;
+
+using Raven.Database.Plugins;
+using Raven.Database.Plugins.Builtins;
 using Raven.Database.Server.RavenFS;
+using Raven.Database.Server.Security;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -24,6 +29,14 @@ namespace Raven.Database.Server.Controllers.Admin
 	[RoutePrefix("")]
 	public class AdminController : BaseAdminController
 	{
+		private static readonly HashSet<string> TasksToFilterOut = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		                                                           {
+			                                                          typeof(AuthenticationForCommercialUseOnly).FullName,
+																	  typeof(RemoveBackupDocumentStartupTask).FullName,
+																	  typeof(CreateFolderIcon).FullName,
+																	  typeof(DeleteRemovedIndexes).FullName
+		                                                           };
+
 		[HttpPost]
 		[Route("admin/backup")]
 		[Route("databases/{databaseName}/admin/backup")]
@@ -355,9 +368,6 @@ namespace Raven.Database.Server.Controllers.Admin
                 return p.ProcessName;
         });
 
-
-      
-
 		[HttpGet]
 		[Route("admin/detailed-storage-breakdown")]
 		[Route("databases/{databaseName}/admin/detailed-storage-breakdown")]
@@ -397,5 +407,18 @@ namespace Raven.Database.Server.Controllers.Admin
 		    RavenGC.CollectGarbage(true, afterCollect);
             return GetMessageWithString("LOH GC Done");
         }
+
+		[HttpGet]
+		[Route("admin/tasks")]
+		[Route("databases/{databaseName}/admin/tasks")]
+		public HttpResponseMessage Tasks()
+		{
+			return GetMessageWithObject(FilterOutTasks(Database.StartupTasks));
+		}
+
+		private static IEnumerable<string> FilterOutTasks(OrderedPartCollection<IStartupTask> tasks)
+		{
+			return tasks.Select(task => task.GetType().FullName).Where(t => !TasksToFilterOut.Contains(t)).ToList();
+		}
 	}
 }

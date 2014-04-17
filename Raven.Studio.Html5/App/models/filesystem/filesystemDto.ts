@@ -110,3 +110,12 @@ interface filesystemListPageDto<T> {
     TotalCount: number;
     Items: T[];
 }
+
+interface synchronizationDestinationDto {
+    ServerUrl: string;
+    FileSystem: string;
+    Username: string;
+    Password: string;
+    Domain: string;
+    ApiKey: string;
+}

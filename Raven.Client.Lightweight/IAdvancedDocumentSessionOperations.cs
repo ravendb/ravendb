@@ -153,5 +153,7 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name="entity">The entity.</param>
 		void ExplicitlyVersion(object entity);
+
+	    DocumentsChanges WhatChanged();
 	}
 }

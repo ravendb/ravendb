@@ -2,6 +2,7 @@
 <Weavers>
   <Costura IncludeDebugSymbols='false'>
 	<ExcludeAssemblies>
+	  Raven.Abstractions
       Raven.Database
     </ExcludeAssemblies>
   </Costura>

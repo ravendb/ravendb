@@ -9,6 +9,7 @@ using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
+using Raven.Abstractions.Data;
 
 namespace Raven.Json.Linq
 {
@@ -93,13 +94,13 @@ namespace Raven.Json.Linq
 			Properties = snapshot;
 		}
 
-		internal override bool DeepEquals(RavenJToken other)
+        internal override bool DeepEquals(RavenJToken other, DocumentsChanges changes)
 		{
 			var t = other as RavenJObject;
 			if (t == null)
 				return false;
 
-			return base.DeepEquals(other);
+			return base.DeepEquals(other, changes);
 		}
 
 		/// <summary>

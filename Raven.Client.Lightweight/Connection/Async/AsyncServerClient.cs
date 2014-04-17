@@ -2097,26 +2097,28 @@ namespace Raven.Client.Connection.Async
 
 		private async Task<IAsyncEnumerator<Attachment>> DirectGetAttachmentHeadersStartingWith(string method, string idPrefix, int start, int pageSize, OperationMetadata operationMetadata)
 		{
-			var webRequest =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-																																									 operationMetadata.Url + "/static/?startsWith=" +
-																																									 idPrefix + "&start=" + start + "&pageSize=" +
-																																									 pageSize, method, operationMetadata.Credentials, convention))
-																																									 .AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+			var webRequest = jsonRequestFactory
+				.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/?startsWith=" + idPrefix + "&start=" + start + "&pageSize=" + pageSize, method, operationMetadata.Credentials, convention))
+				.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
             RavenJToken result = await webRequest.ReadResponseJsonAsync().ConfigureAwait(false);
 
-			List<Attachment> attachments =
-					convention.CreateSerializer().Deserialize<Attachment[]>(new RavenJTokenReader(result))
-							.Select(x => new Attachment
-							{
-								Etag = x.Etag,
-								Metadata = x.Metadata,
-								Size = x.Size,
-								Key = x.Key,
-								Data =
-										() => { throw new InvalidOperationException("Cannot get attachment data from an attachment header"); }
-							}).ToList();
+			List<Attachment> attachments = convention
+				.CreateSerializer()
+				.Deserialize<Attachment[]>(new RavenJTokenReader(result))
+				.Select(x => new Attachment
+				             {
+					             Etag = x.Etag, 
+								 Metadata = x.Metadata.WithCaseInsensitivePropertyNames(), 
+								 Size = x.Size, 
+								 Key = x.Key, 
+								 Data = () =>
+								 {
+									 throw new InvalidOperationException("Cannot get attachment data from an attachment header");
+								 }
+				             })
+				.ToList();
+
 			return new AsyncEnumeratorBridge<Attachment>(attachments.GetEnumerator());
 
 		}

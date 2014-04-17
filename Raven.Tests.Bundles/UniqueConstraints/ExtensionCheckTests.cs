@@ -58,7 +58,7 @@ namespace Raven.Tests.Bundles.UniqueConstraints
 				Assert.True(checkResult.ConstraintsAreFree());
 
 				session.Store(checkUser);
-				Assert.DoesNotThrow(session.SaveChanges);
+			    Assert.DoesNotThrow(() => session.SaveChanges());
 			}
 		}
 

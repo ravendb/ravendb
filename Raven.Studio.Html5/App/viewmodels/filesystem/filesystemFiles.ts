@@ -95,6 +95,15 @@ class filesystemFiles extends viewModelBase {
         }
     }
 
+    downloadSelectedFiles() {
+        var grid = this.getFilesGrid();
+        if (grid) {
+            var selectedItem = <documentBase>grid.getSelectedItems(1).first();
+            var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files/" + selectedItem.getId();
+            window.location.assign(url);
+        }
+    }
+
     uploadFile() {
         router.navigate(appUrl.forFilesystemUploadFile(this.activeFilesystem()));
     }
