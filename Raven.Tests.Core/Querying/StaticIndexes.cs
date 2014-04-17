@@ -1,4 +1,5 @@
-﻿using Raven.Client.Indexes;
+﻿using Raven.Client;
+using Raven.Client.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Indexes;
 using System;
@@ -327,6 +328,31 @@ namespace Raven.Tests.Core.Querying
                         .ToArray();
                     Assert.Equal(1, companies.Length);
 
+
+                    session.Store(new Company
+                    {
+                        Id = "companies/2",
+                        Name = "The lazy dogs, Bob@hotmail.com lazy 123432 lazy dogs."
+                    });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+
+                    FieldHighlightings highlightings;
+                    companies = session.Advanced.LuceneQuery<Company>("Companies/CustomAnalyzers")
+                        .Highlight("Name", 128, 1, out highlightings)
+                        .Search("Name", "lazy")
+                        .ToArray();
+                    Assert.Equal(2, companies.Length);
+                    
+                    var fragments = highlightings.GetFragments(companies[0].Id);
+                    Assert.Equal(
+                        "The <b style=\"background:yellow\">lazy</b> dogs, Bob@hotmail.com <b style=\"background:yellow\">lazy</b> 123432 <b style=\"background:yellow\">lazy</b> dogs.", 
+                        fragments.First()
+                        ); fragments = highlightings.GetFragments(companies[1].Id);
+                    Assert.Equal(
+                        "The <b style=\"background:yellow\">lazy</b> dogs, Bob@hotmail.com 123432.",
+                        fragments.First()
+                        );
                 }
             }
         }

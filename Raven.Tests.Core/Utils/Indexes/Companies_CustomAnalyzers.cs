@@ -38,6 +38,8 @@ namespace Raven.Tests.Core.Utils.Indexes
             Stores.Add(c => c.Desc, FieldStorage.Yes);
 
             Indexes.Add(c => c.Email, FieldIndexing.NotAnalyzed);
+
+            TermVectors.Add(c => c.Name, FieldTermVector.WithPositionsAndOffsets);
         }
     }
 }
