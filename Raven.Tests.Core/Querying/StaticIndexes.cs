@@ -338,7 +338,7 @@ namespace Raven.Tests.Core.Querying
                     WaitForIndexing(store);
 
                     FieldHighlightings highlightings;
-                    companies = session.Advanced.LuceneQuery<Company>("Companies/CustomAnalyzers")
+                    companies = session.Advanced.DocumentQuery<Company>("Companies/CustomAnalyzers")
                         .Highlight("Name", 128, 1, out highlightings)
                         .Search("Name", "lazy")
                         .ToArray();
@@ -353,6 +353,34 @@ namespace Raven.Tests.Core.Querying
                         "The <b style=\"background:yellow\">lazy</b> dogs, Bob@hotmail.com 123432.",
                         fragments.First()
                         );
+                }
+            }
+        }
+
+        [Fact]
+        public void CreateAndQuerySimpleIndexWithRecurse()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Posts_Recurse().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var post1 = new Post { Title = "Post1", Desc = "Post1 desc" };
+                    var post2 = new Post { Title = "Post2", Desc = "Post2 desc", Comments = new Post[] {post1} };
+                    var post3 = new Post { Title = "Post3", Desc = "Post3 desc", Comments = new Post[] {post2} };
+                    var post4 = new Post { Title = "Post4", Desc = "Post4 desc", Comments = new Post[] {post3} };
+                    session.Store(post4);
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+
+                    var posts = session.Query<Post, Posts_Recurse>()
+                        .ToArray();
+                    Assert.Equal(1, posts.Length);
+                    Assert.Equal("Post4", posts[0].Title);
+                    Assert.Equal("Post3", posts[0].Comments[0].Title);
+                    Assert.Equal("Post2", posts[0].Comments[0].Comments[0].Title);
+                    Assert.Equal("Post1", posts[0].Comments[0].Comments[0].Comments[0].Title);
                 }
             }
         }

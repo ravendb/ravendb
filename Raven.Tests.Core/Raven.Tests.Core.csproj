@@ -130,6 +130,7 @@
     <Compile Include="Streaming\DocumentStreaming.cs" />
     <Compile Include="Streaming\QueryStreaming.cs" />
     <Compile Include="Utils\Entities\Company.cs" />
+    <Compile Include="Utils\Entities\Post.cs" />
     <Compile Include="Utils\Entities\User.cs" />
     <Compile Include="RavenCoreTestBase.cs" />
     <Compile Include="TestServerFixture.cs" />
@@ -138,6 +139,7 @@
     <Compile Include="Utils\Indexes\Companies_CompanyByType.cs" />
     <Compile Include="Utils\Indexes\Companies_CustomAnalyzers.cs" />
     <Compile Include="Utils\Indexes\Companies_SortByName.cs" />
+    <Compile Include="Utils\Indexes\Posts_Recurse.cs" />
     <Compile Include="Utils\Indexes\Users_ByName.cs" />
   </ItemGroup>
   <Choose>
