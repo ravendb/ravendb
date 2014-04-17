@@ -1,4 +1,5 @@
 using System;
+using System.Runtime;
 using Raven.Abstractions;
 using Raven.Database.Config;
 using System.Linq;
@@ -35,6 +36,10 @@ namespace Raven.Database.Indexing
 		{
 			try
 			{
+				//if we are low on memory, on next blocking GC also compact the LOH
+				if (MemoryStatistics.AvailableMemory < context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+					GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+
 				if (ReduceBatchSizeIfCloseToMemoryCeiling())
 					return;
 				if (ConsiderDecreasingBatchSize(amountOfItemsToIndex, indexingDuration))
