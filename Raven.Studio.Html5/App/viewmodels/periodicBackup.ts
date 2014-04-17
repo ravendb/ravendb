@@ -57,7 +57,8 @@ class periodicBackup extends viewModelBase {
     }
 
     activatePeriodicBackup() {
-        this.backupSetup().activated(true);
+        var action: boolean = !this.backupSetup().activated();
+        this.backupSetup().activated(action);
     }
 
     saveChanges() {

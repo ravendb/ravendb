@@ -9,24 +9,19 @@
                     <button type="button" class="btn btn-default use-bootstrap-tooltip" title="Activate Periodic Backup" data-bind="click: $root.activatePeriodicBackup.bind($root), visible: !activated()">
                         <i class="fa fa-unlock"></i> Activate Periodic Backup
                     </button>
-                    <button type="button" class="btn btn-default use-bootstrap-tooltip" title="Activate Periodic Backup" data-bind="click: $root.activatePeriodicBackup.bind($root), visible: activated()">
+                    <button type="button" class="btn btn-default use-bootstrap-tooltip" title="Deactivate Periodic Backup" data-bind="click: $root.activatePeriodicBackup.bind($root), visible: activated()">
                         <i class="fa fa-lock"></i> Deactivate Periodic Backup
                     </button>
                     <button type="button" class="btn btn-primary use-bootstrap-tooltip" title="Save replication destinations (Alt+S)" data-bind="click: $root.saveChanges.bind($root), enable: $root.isSaveEnabled()" accesskey="S"><i class="fa fa-save"></i></button>
                 </form>
             </div>
         </nav>
-    </div>
-    
-    
-    
-    
 
-
-    <div class="alert alert-warning" data-bind="visible: !unsupported()">
-        There is no Periodic Backup set for this database.
+        <div class="alert alert-warning" data-bind="slideVisible: !activated()">
+            There is no Periodic Backup set for this database.
+        </div>
     </div>
-    <div data-bind="slideVisible: !unsupported()" id="periodicBackupContainer">
+    <div data-bind="slideVisible: activated()" id="periodicBackupContainer">
         <div data-bind="slideVisible: !activated()">
             <nav class="navbar navbar-default" role="navigation">
                 <div class="collapse navbar-collapse">
