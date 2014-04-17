@@ -2,7 +2,7 @@
     <div class="btn-toolbar" role="toolbar">
         <div class="btn-group">
             <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-placement="right" data-toggle="dropdown">
-                <!-- ko with: patchDocuments -->
+                <!-- ko with: patchDocument -->
                 <span data-bind="text: patchOnOption"></span>
                 <!-- /ko -->
                 <span class="caret"></span>
@@ -17,8 +17,8 @@
             <a class="btn btn-default use-bootstrap-tooltip" title="Test the patch script on the selected document"><i class="fa fa-question-circle"></i> Test</a>
         </div>
         <div class="btn-group">
-            <a class="btn btn-default use-bootstrap-tooltip" title="Save the current Patch"><i class="fa fa-save"></i> Save</a>
-            <a class="btn btn-default use-bootstrap-tooltip" title="Load a saved Patch"><i class="fa fa-arrow-up"></i> Load</a>
+            <a class="btn btn-default use-bootstrap-tooltip" title="Save the current Patch" data-bind="click: savePatch"><i class="fa fa-save"></i> Save</a>
+            <a class="btn btn-default use-bootstrap-tooltip" title="Load a saved Patch" data-bind="click: loadPatch"><i class="fa fa-arrow-up"></i> Load</a>
         </div>
         <div class="btn-group">
             <a class="btn btn-default use-bootstrap-tooltip" title="Execute Patch"><i class="fa fa-play"></i> Patch</a>
@@ -27,7 +27,7 @@
         </div>
     </div>
     <br/>
-    <div class="form-horizontal" data-bind="with: patchDocuments">
+    <div class="form-horizontal" data-bind="with: patchDocument">
         <div class="form-group" data-bind="visible: isDocumentPatch()">
             <div class="row">
                 <label for="documentToPatch" class="col-md-2 control-label">Document to patch:</label>

@@ -11,6 +11,13 @@ class patchParam {
     static empty() {
         return new patchParam({Key: "", Value: ""});
     }
+
+    toDto(): patchValueDto {
+        return {
+            Key: this.key(),
+            Value: this.value()
+        };
+    }
 }
 
 export = patchParam;

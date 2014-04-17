@@ -16,7 +16,7 @@ class scriptedIndex extends document {
     }
 
     static emptyForIndex(indexName: string): scriptedIndex {
-        var meta = [];
+        var meta = {};
         meta['@id'] = "Raven/ScriptedIndexResults/" + indexName;
         meta['Raven-Entity-Name'] = 'ScriptedIndexResults';
         return new scriptedIndex({
