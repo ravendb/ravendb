@@ -112,6 +112,8 @@ namespace Raven.Client.Connection.Async
 			this.replicationInformerGetter = replicationInformerGetter;
 			this.replicationInformer = replicationInformerGetter(databaseName);
 			this.readStripingBase = replicationInformer.GetReadStripingBase();
+
+			this.replicationInformer.UpdateReplicationInformationIfNeeded(this);
 		}
 
 		/// <summary>
