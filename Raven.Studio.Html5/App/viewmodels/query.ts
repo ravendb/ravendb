@@ -151,20 +151,8 @@ class query extends viewModelBase {
         });        
         ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexQueryRawData(this.activeDatabase(), this.selectedIndex()));
 
-        //var docEditor: AceAjax.Editor = ace.edit("queryEditor");
-        
-        //var editor = ace.edit("queryEditor");
-        
-        //docEditor.resize(true);
-        //docEditor.setAutoScrollEditorIntoView();
-        //docEditor.setOption("minLines", 7);
-        //docEditor.setOption("maxLines", 100);
-    }
-
-    compositionComplete() {
-        super.compositionComplete();
-        var editor = "#queryEditor";
-        $(editor).height($(editor).resizable("option", "minHeight"));
+        //super.compositionComplete();
+        this.focusOnQuery();
     }
 
     focusOnQuery() {

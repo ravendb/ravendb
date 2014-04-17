@@ -84,17 +84,21 @@ class viewModelBase {
 
         $("pre").each(function() {
             var editor = ace.edit(this);
-            editor.setOption('vScrollBarAlwaysVisible', true);
-            editor.setOption('hScrollBarAlwaysVisible', true);
+            //editor.setOption('vScrollBarAlwaysVisible', true);
+            //editor.setOption('hScrollBarAlwaysVisible', true);
+            var minHeight = 100;
             $(this).resizable({
-                minHeight: 100,
+                minHeight: minHeight,
+                minWidth: minHeight * 5,
                 maxWidth: $(this).width() > 150 ? ($(this).width() + 26) : $(".panel-title").width() - 265,
                 handles: "e, s, se",
                 resize: function (event, ui) {
                     editor.resize();
-                    //$('.ui-resizable-se').css({ 'right': '3px', 'bottom': '3px' });
                 }
-            })
+            });
+            if ($(this).height() < minHeight) {
+                $(this).height(minHeight);
+            }
         });
     }
 
