@@ -133,5 +133,202 @@ namespace Raven.Tests.Core.Querying
                 }
             }
         }
+
+        [Fact]
+        public void CreateAndQuerySimpleIndexWithCustomAnalyzersAndFieldOptions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Companies_CustomAnalyzers().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.MaxNumberOfRequestsPerSession = 100;
+
+                    session.Store(new Company 
+                    {
+                        Name = "The lazy dogs, Bob@hotmail.com 123432.",
+                        Desc = "The lazy dogs, Bob@hotmail.com 123432.",
+                        Email = "test Bob@hotmail.com",
+                        Address1 = "The lazy dogs, Bob@hotmail.com 123432.",
+                        Address2 = "The lazy dogs, Bob@hotmail.com 123432.",
+                        Address3 = "The lazy dogs, Bob@hotmail.com 123432.",
+                        Phone = 111222333
+                    });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+
+                    //StandardAnalyzer
+                    var companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Name == "lazy")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Name == "the")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Name == "bob")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Name == "bob@hotmail.com")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Name == "123432")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+
+                    //StopAnalyzer
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Desc == "the")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Desc == "lazy")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Desc == "bob")
+                        .ToArray();
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Desc == "bob@hotmail.com")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Desc == "com")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Desc == "123432")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+
+
+                    //should not be analyzed
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Email == "bob")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Email == "test")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Email == "test Bob@hotmail.com")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+
+                    //SimpleAnalyzer
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address1 == "the")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address1 == "lazy")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address1 == "dogs")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address1 == "the lazy dogs")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address1 == "bob")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address1 == "hotmail")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address1 == "com")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address1 == "bob@hotmail.com")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address1 == "123432")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+
+                    //WhitespaceAnalyzer
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address2 == "the")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address2 == "lazy")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address2 == "dogs")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address2 == "dogs,")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address2 == "bob")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address2 == "hotmail")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address2 == "com")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address2 == "Bob@hotmail.com")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address2 == "123432")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address2 == "123432.")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+
+
+                    //KeywordAnalyzer
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address3 == "123432.")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address3 == "the")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address3 == "lazy")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address3 == "dogs")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address3 == "Bob@hotmail.com")
+                        .ToArray();
+                    Assert.Equal(0, companies.Length);
+                    companies = session.Query<Company, Companies_CustomAnalyzers>()
+                        .Where(c => c.Address3 == "The lazy dogs, Bob@hotmail.com 123432.")
+                        .ToArray();
+                    Assert.Equal(1, companies.Length);
+
+                }
+            }
+        }
     }
 }
