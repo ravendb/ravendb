@@ -1,4 +1,7 @@
-﻿using Raven.Abstractions.Replication;
+﻿using System.Threading.Tasks;
+
+using Raven.Abstractions.Replication;
+using Raven.Client.Connection.Async;
 
 namespace Raven.Client.Connection
 {
@@ -8,5 +11,15 @@ namespace Raven.Client.Connection
 		/// Failover servers set manually in config file or when document store was initialized
 		/// </summary>
 		ReplicationDestination[] FailoverServers { get; set; }
+
+		/// <summary>
+		/// Updates replication information if needed
+		/// </summary>
+		Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient);
+
+		/// <summary>
+		/// Updates replication information
+		/// </summary>
+		void RefreshReplicationInformation(AsyncServerClient serverClient);
 	}
 }
