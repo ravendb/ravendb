@@ -84,11 +84,6 @@ namespace Voron.Trees
 		    CopyStreamToPointer(tx, value, pos);
 		}
 
-
-		    
-		    CopyStreamToPointer(tx, value, pos);
-		}
-
 		public void Add(Transaction tx, Slice key, byte[] value, ushort? version = null)
 		{
 			if (value == null) throw new ArgumentNullException("value");
