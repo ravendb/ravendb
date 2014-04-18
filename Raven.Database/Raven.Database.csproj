@@ -257,6 +257,7 @@
     <Compile Include="Client\EmbeddableDocumentStore.cs" />
     <Compile Include="Client\EmbeddedDocumentStore.cs" />
     <Compile Include="Counters\Controllers\CounterReplicationController.cs" />
+    <Compile Include="Counters\Controllers\RavenCounterReplication.cs" />
     <Compile Include="Counters\Controllers\RavenCountersApiController.cs" />
     <Compile Include="Counters\ReplicationMessage.cs" />
     <Compile Include="Counters\Counter.cs" />
