@@ -15,9 +15,10 @@ namespace Voron
 		public static Slice Empty = new Slice(new byte[0]);
 
 		private ushort _size;
-		public SliceOptions Options;
 		private readonly byte[] _array;
 		private byte* _pointer;
+
+		public SliceOptions Options;
 
 		public ushort Size
 		{

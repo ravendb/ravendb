@@ -10,6 +10,8 @@ import createDatabase = require("viewmodels/createDatabase");
 import createDatabaseCommand = require("commands/createDatabaseCommand");
 import createEncryption = require("viewmodels/createEncryption");
 import createEncryptionConfirmation = require("viewmodels/createEncryptionConfirmation");
+import changeSubscription = require('models/changeSubscription');
+import shell = require('viewmodels/shell');
 
 class databases extends viewModelBase {
 
@@ -19,6 +21,7 @@ class databases extends viewModelBase {
     systemDb: database;
     initializedStats: boolean;
     docsForSystemUrl: string;
+    databasesChangeSubscription: changeSubscription;
 
     constructor() {
         super();
@@ -35,7 +38,26 @@ class databases extends viewModelBase {
 
     attached() {
         ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
+        this.databasesChangeSubscription = shell.globalChangesApi.watchDocPrefix((e: documentChangeNotificationDto) => {
+            if (!!e.Id && e.Id.indexOf("Raven/Databases") == 0 &&
+                (e.Type == documentChangeType.Put || e.Type == documentChangeType.Delete)) {
+                if (e.Type == documentChangeType.Delete) {
+                    this.onDatabaseDeleted(new database(e.Id));
+                }
+
+                this.modelPolling();
+            }
+        }, "Raven/Databases");
     }
+
+
+
+    deactivate() {
+        super.deactivate();
+        this.databasesChangeSubscription.off();
+
+    }
+
 
     modelPolling() {
         new getDatabasesCommand()

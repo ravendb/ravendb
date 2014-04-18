@@ -4,7 +4,7 @@ import database = require("models/database");
 class getReplicationsCommand extends getDocumentWithMetadataCommand {
 
     constructor(db: database) {
-        super("Raven/Replication/Destinations", db, true);
+        super("Raven/Replication/Destinations", db);
     }
 
     execute(): JQueryPromise<replicationsDto> {

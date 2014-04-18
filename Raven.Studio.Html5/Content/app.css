@@ -431,7 +431,7 @@ body {
   text-overflow: ellipsis;
 }
 #shellHeader {
-  /* When the screen width < 1150, shrink down the padding between the nav bar items. */
+  /* When the screen width < 1070, shrink down the padding between the nav bar items. */
   /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
 }
 #shellHeader .container-fluid {
@@ -441,7 +441,7 @@ body {
 #shellHeader #goToDocInput {
   width: 10em;
 }
-@media (max-width: 1150px) {
+@media (max-width: 1130px) {
   #shellHeader .nav li a {
     padding-left: 8px;
     padding-right: 8px;
@@ -506,14 +506,6 @@ body {
 }
 @media (max-width: 767px) {
   #shellFooter {
-    display: none;
-  }
-}
-@media (max-width: 1150px) {
-  #shellFooter .status-link {
-    display: none;
-  }
-  #shellFooter .server-build-link {
     display: none;
   }
 }
@@ -661,5 +653,28 @@ footer ul {
   position: absolute;
   top: -40px;
   right: 25px;
+}
+#editFileContainer:focus {
+  outline: 0;
+}
+#editFileContainer #fileMetadataEditor {
+  height: 500px;
+}
+#editFileContainer .document-addition-data {
+  margin-top: 95px;
+  padding-top: 10px;
+  padding-bottom: 40px;
+}
+#editFileContainer hr {
+  border-color: red;
+  margin-top: 5px;
+}
+.remove-icon{
+    color: #d2322d;
+    border-color: #ac2925;
+    cursor: pointer;
+}
+.fa-plus{
+    color: green;
 }
 /*# sourceMappingURL=app.css.map */

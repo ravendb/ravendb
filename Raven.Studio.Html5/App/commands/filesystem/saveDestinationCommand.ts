@@ -1,33 +1,45 @@
 ﻿import appUrl = require("common/appUrl");
 import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
+import synchronizationDestination = require("models/filesystem/synchronizationDestination");
 
 class saveFilesystemConfigurationCommand extends commandBase {
 
-    constructor(private fs: filesystem, private url: string) {
+    constructor(private fs: filesystem, private destination: synchronizationDestination) {
         super();
     }
 
-    execute(): JQueryPromise<any> {
+    execute(): JQueryPromise<synchronizationDestinationDto[]> {
 
         var result = $.Deferred();
 
-        var doc = { url: [this.url] };
+        var dtos = [];
 
-        var keys: string[] = [this.url];
-
-        this.query<any>("/config", { name: "Raven/Synchronization/Destinations" }, this.fs)
+        this.query<synchronizationDestinationDto[]>("/config", { name: "Raven/Synchronization/Destinations" }, this.fs)
             .done(data => {
-                if (data) {                                                                               
-                    data.url = [].concat(this.url).concat(data.url);
-                    doc = data;
+                dtos = dtos.concat(this.destination);
+                if (data && data.hasOwnProperty('destination')) {      
+
+                    var value = data['destination'];
+                    if (!(value instanceof Array))
+                        value = [value];
+                                                                                         
+                    dtos = dtos.concat(value.map(x => <synchronizationDestinationDto> JSON.parse(x)));                    
                 }
             })
             .always(x => {
-                var url = "/config?name=" + encodeURIComponent("Raven/Synchronization/Destinations");
-        
-                result = this.put(url, JSON.stringify(doc), this.fs)
-                    .done(y => { result.resolve(doc); });
+                var url = "/config?name=" + encodeURIComponent("Raven/Synchronization/Destinations");       
+
+                var doc = {
+                    destination: dtos.map(x => JSON.stringify(x))
+                };
+
+                var docAsString = JSON.stringify(doc);
+
+                this.put(url, docAsString, this.fs)
+                    .done(y => {
+                        result.resolve(dtos);
+                    });
             });
 
         return result;

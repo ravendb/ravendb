@@ -6,7 +6,7 @@ import getFilesystemFilesCommand = require("commands/filesystem/getFilesCommand"
 import pagedResultSet = require("common/pagedResultSet");
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
-import file = require("models/file");
+import file = require("models/filesystem/file");
 
 class filesystemFiles extends viewModelBase {
 
@@ -91,7 +91,16 @@ class filesystemFiles extends viewModelBase {
     deleteSelectedFiles() {
         var grid = this.getFilesGrid();
         if (grid) {
-            grid.deleteSelectedDocs();
+            grid.deleteSelectedItems();
+        }
+    }
+
+    downloadSelectedFiles() {
+        var grid = this.getFilesGrid();
+        if (grid) {
+            var selectedItem = <documentBase>grid.getSelectedItems(1).first();
+            var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files/" + selectedItem.getId();
+            window.location.assign(url);
         }
     }
 

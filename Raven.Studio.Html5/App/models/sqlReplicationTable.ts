@@ -1,7 +1,7 @@
 class sqlReplicationTable {
 
-    tableName = ko.observable<string>();
-    documentKeyColumn = ko.observable<string>();
+    tableName = ko.observable<string>().extend({ required: true });
+    documentKeyColumn = ko.observable<string>().extend({ required: true });
 
     constructor(dto: sqlReplicationTableDto) {
         this.tableName(dto.TableName);
@@ -20,6 +20,11 @@ class sqlReplicationTable {
             TableName: this.tableName(),
             DocumentKeyColumn: this.documentKeyColumn()
         };
+    }
+
+    isValid(): boolean {
+        var requiredValues = [this.tableName(), this.documentKeyColumn()];
+        return requiredValues.every(v => v != null && v.length > 0);
     }
 }
 

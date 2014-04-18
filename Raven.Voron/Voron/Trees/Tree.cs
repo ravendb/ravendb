@@ -79,8 +79,12 @@ namespace Voron.Trees
 		        throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 
 		    State.IsModified = true;
+			var pos = DirectAdd(tx, key, (int)value.Length, version: version);
+		    
+		    CopyStreamToPointer(tx, value, pos);
+		}
 
-		    var pos = DirectAdd(tx, key, (int) value.Length, version: version);
+
 		    
 		    CopyStreamToPointer(tx, value, pos);
 		}
@@ -106,7 +110,7 @@ namespace Voron.Trees
 			State.IsModified = true;
 
 			var dst = DirectAdd(tx, key, value.Size, version: version);
-
+		    
 			value.CopyTo(dst);
 		}
 

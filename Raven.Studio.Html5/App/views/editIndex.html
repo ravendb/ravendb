@@ -18,6 +18,7 @@
                 <li class="use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addField" title="Add a field (Alt+G)" accesskey="G"><a href="#">Field</a></li>
                 <li class="use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addTransform, visible: !hasExistingTransform()" title="Add a transform function (Alt+T) - deprecated. Use Result Transformers instead" accesskey="T"><a class="text-muted" href="#">Transform</a></li>
                 <li class="use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: addSpatialField" title="Add a spatial field (Alt+P)" accesskey="P"><a href="#">Spatial Field</a></li>
+                <li class="use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: function() {$root.editMaxIndexOutputsPerDocument(true); return false;}"><a href="#">Max Index Outputs</a></li>
             </ul>
         </div>
 
@@ -57,11 +58,11 @@
         <br />
         <form class="form-horizontal" role="form" data-bind="with: editedIndex">
             <div class="form-group">
-                <label for="indexName" class="col-md-1 control-label use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right"  title=" index name (alt+i)">Name</label>
+                <label for="indexName" class="col-md-1 control-label use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" title=" index name (alt+i)">Name</label>
                 <div class="col-md-11">
                     <div class="row">
                         <div class="col-md-11">
-                            <input type="text" class="form-control" id="indexName" placeholder="Index name" accesskey="I" data-bind="value: name, valueUpdate: 'afterkeyup'"/>
+                            <input type="text" class="form-control" id="indexName" placeholder="Index name" accesskey="I" data-bind="value: name, valueUpdate: 'afterkeyup'" />
                         </div>
                     </div>
                 </div>
@@ -221,6 +222,13 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+            <div class="form-group" data-bind="visible: maxIndexOutputsPerDocument() > 0 || $root.editMaxIndexOutputsPerDocument() == true">
+
+                <label class="col-sm-1 control-label">Max Index Outputs Per Document</label>
+                <div class="col-md-2">
+                    <input class="form-control" required type="number" data-bind="value: maxIndexOutputsPerDocument" min="0" />
                 </div>
             </div>
         </form>

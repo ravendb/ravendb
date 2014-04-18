@@ -19,8 +19,7 @@
         </li>-->
     </ul>
 
-<div class="documents-page">
-    <div class="row">
+    <div class="documents-page">
         <div class="col-md-12">
             <div class="row">
                 <div class="btn-toolbar" role="toolbar">
@@ -41,11 +40,13 @@
                         <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: deleteSelectedFiles" title="Delete selected documents (DEL)">
                             <i class="fa fa-trash-o"></i>
                         </button>
+                        <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: downloadSelectedFiles" title="Download selected document">
+                            <i class="fa fa-download"></i>
+                        </button>
+                    </div>
                     </div>
                 </div>
+                <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, gridSelector: '#filesGrid', isCopyAllowed: false }"></div>
             </div>
-            <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, gridSelector: '#filesGrid', isCopyAllowed: false }"></div>
         </div>
-    </div>
-</div>
 </div>

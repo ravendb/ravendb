@@ -58,10 +58,10 @@ class createFilesystem extends dialogViewModelBase {
         var errorMessage = "";
 
         if (filesystemName == null) {
-            errorMessage = "Please fill out the Database Name field";
+            errorMessage = "Please fill out the Filesystem Name field";
         }
         else if (this.isFilesystemNameExists(filesystemName, this.filesystems()) === true) {
-            errorMessage = "Database Name Already Exists!";
+            errorMessage = "Filesystem Name Already Exists!";
         }
         else if ((errorMessage = this.CheckInput(filesystemName)) != null) { }
 
