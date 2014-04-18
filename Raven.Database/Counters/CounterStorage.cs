@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using Raven.Abstractions;
 using Raven.Database.Config;
+using Raven.Database.Counters.Controllers;
 using Voron;
 using Voron.Impl;
 using Voron.Trees;
@@ -18,24 +19,27 @@ namespace Raven.Database.Counters
 {
 	public class CounterStorage : IDisposable
 	{
-		public string Name { get; private set; }
-		private readonly StorageEnvironment storageEnvironment;
-		public Guid Id { get; private set; }
+	    public string Name { get; private set; }
+        private readonly StorageEnvironment storageEnvironment;
+        private readonly RavenCounterReplication replication;
+        public Guid Id { get; private set; }
 		public DateTime LastWrite { get; private set; }
 
 		private Dictionary<string, int> serverNamesToIds = new Dictionary<string, int>();
 		private Dictionary<int, string> serverIdstoName = new Dictionary<int, string>();
+	    
+	    public long LastEtag { get; private set; }
 
-		public long LastEtag { get; private set; }
+        public event Action CounterUpdated = () => { };
 
 		public CounterStorage(string name, InMemoryRavenConfiguration configuration)
 		{
-			Name = name;
+		    Name = name;
 			var options = configuration.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
 				: CreateStorageOptionsFromConfiguration(configuration.CountersDataDirectory, configuration.Settings);
 
 			storageEnvironment = new StorageEnvironment(options);
-
+            replication = new RavenCounterReplication(this);
 			Initialize(name);
 		}
 
@@ -61,6 +65,23 @@ namespace Raven.Database.Counters
 					serverIdstoName[0] = name;
 					metadata.Add(tx, "id", Id.ToByteArray());
 					metadata.Add(tx, "name", Encoding.UTF8.GetBytes(name));
+
+                    //HACK: setup replication peer
+				    if (name.Contains(":8080"))
+				    {
+				        name = name.Replace(":8080", ":8081");
+				    }
+				    else
+				    {
+                        name = name.Replace(":8081", ":8080");
+				    }
+
+				    servers.Add(tx, name, BitConverter.GetBytes(1));
+				    serverNamesToIds[name] = 1;
+				    serverIdstoName[1] = name;
+				    
+
+                    tx.Commit();
 				}
 				else // existing db
 				{
@@ -118,7 +139,7 @@ namespace Raven.Database.Counters
 
 		public Reader CreateReader()
 		{
-			return new Reader(storageEnvironment);
+			return new Reader(this, storageEnvironment);
 		}
 
 		public Writer CreateWriter()
@@ -127,23 +148,32 @@ namespace Raven.Database.Counters
 			return new Writer(this, storageEnvironment);
 		}
 
+	    public void Notify()
+	    {
+	        CounterUpdated();
+	    }
+
 		public void Dispose()
 		{
 			if (storageEnvironment != null)
 				storageEnvironment.Dispose();
+
+            replication.ShutDown(); //TODO: make this IDisposable instead?
 		}
 
 		public class Reader : IDisposable
 		{
-			private readonly Transaction transaction;
+		    private readonly CounterStorage parent;
+		    private readonly Transaction transaction;
             private readonly Tree counters, countersEtags, countersGroups, etagsCounters;
 			private readonly byte[] serverIdBytes = new byte[sizeof(int)];
 
-            public Reader(StorageEnvironment storageEnvironment)
-                : this(storageEnvironment.NewTransaction(TransactionFlags.Read)) { }
+            public Reader(CounterStorage parent, StorageEnvironment storageEnvironment)
+                : this(parent, storageEnvironment.NewTransaction(TransactionFlags.Read)) { }
 
-            public Reader(Transaction t)
+            public Reader(CounterStorage parent, Transaction t)
             {
+                this.parent = parent;
                 transaction = t;
                 counters = transaction.State.GetTree(transaction, "counters");
                 countersGroups = transaction.State.GetTree(transaction, "countersGroups");
@@ -209,7 +239,7 @@ namespace Raven.Database.Counters
 				}
 			}
 
-            public IEnumerable<ReplictionCounter> GetCountersSinceEtag(long etag)
+            public IEnumerable<ReplicationCounter> GetCountersSinceEtag(long etag)
 		    {
                 var buffer = new byte[sizeof(long)];
                 EndianBitConverter.Big.CopyBytes(etag, buffer, 0);
@@ -227,17 +257,51 @@ namespace Raven.Database.Counters
 	                    }
 	                    it.CreateReaderForCurrent().Read(buffer, 0, buffer.Length);
                         var counterName = Encoding.UTF8.GetString(buffer);
-                        yield return new ReplictionCounter
+                        var counter = GetCounter(counterName);
+                        yield return new ReplicationCounter
                         {
                             CounterName = counterName,
-                            Counter = GetCounter(counterName)
+                            Etag = counter.Etag,
+                            ServerValues = counter.ServerValues.Select(x => new ReplicationCounter.PerServerValue
+                            {
+                                ServerName = parent.ServerNameFor(x.SourceId),
+                                Positive = x.Positive,
+                                Negative = x.Negative
+                            }).ToList()
                         };
 
                     } while (it.MoveNext());    
                 }
             }
 
-			public void Dispose()
+		    public IEnumerable<ServerEtag> GetServerEtags()
+		    {
+                var buffer = new byte[sizeof(long)];
+                var serversLastEtag = transaction.State.GetTree(transaction, "serversLastEtag");
+                using (var it = serversLastEtag.Iterate(transaction))
+                {
+                    if (it.Seek(Slice.BeforeAllKeys) == false)
+                        yield break;
+                    do
+                    {
+                        if (buffer.Length < it.GetCurrentDataSize())
+                        {
+                            buffer = new byte[Utils.NearestPowerOfTwo(it.GetCurrentDataSize())];
+                        }
+
+                        it.CurrentKey.CopyTo(0, serverIdBytes, 0, 4);
+                        it.CreateReaderForCurrent().Read(buffer, 0, buffer.Length);                        
+                        yield return new ServerEtag
+                        {
+                            SourceId = EndianBitConverter.Big.ToInt32(serverIdBytes, 0),
+                            Etag = EndianBitConverter.Big.ToInt64(buffer, 0),
+                        };
+
+                    } while (it.MoveNext());
+                }
+		    }
+
+            public void Dispose()
 			{
 				if (transaction != null)
 					transaction.Dispose();
@@ -258,7 +322,7 @@ namespace Raven.Database.Counters
 			{
 				this.parent = parent;
                 transaction = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite);
-                reader = new Reader(transaction);
+                reader = new Reader(parent, transaction);
                 counters = transaction.State.GetTree(transaction, "counters");
 				countersGroups = transaction.State.GetTree(transaction, "countersGroups");
 				etagsCountersIx = transaction.State.GetTree(transaction, "etags->counters");
@@ -372,6 +436,7 @@ namespace Raven.Database.Counters
 			public void Commit()
 			{
 				transaction.Commit();
+                parent.Notify();
 			}
 
 			public void Dispose()
@@ -387,7 +452,7 @@ namespace Raven.Database.Counters
 				var key = EndianBitConverter.Big.GetBytes(serverId);
 				var serversLastEtag = transaction.State.GetTree(transaction, "serversLastEtag");
 				serversLastEtag.Add(transaction, new Slice(key), EndianBitConverter.Big.GetBytes(lastEtag));
-			}
+			}		    
 		}
 
 		public string ServerNameFor(int sourceId)
@@ -397,9 +462,22 @@ namespace Raven.Database.Counters
 			return value;
 		}
 
+        public int SourceIdFor(string serverName)
+        {
+            int value;
+            serverNamesToIds.TryGetValue(serverName, out value);
+            return value;
+        }
+
 	    public IEnumerable<string> Servers
 	    {
 	        get { return serverNamesToIds.Keys; }
-	    } 
+	    }
+
+	    public class ServerEtag
+	    {
+	        public int SourceId { get; set; }
+	        public long Etag { get; set; }
+	    }
 	}
 }

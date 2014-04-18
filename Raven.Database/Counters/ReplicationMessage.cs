@@ -5,12 +5,25 @@ namespace Raven.Database.Counters
     public class ReplicationMessage
     {
         public string SendingServerName { get; set; }
-        public List<ReplictionCounter> Counters { get; set; }
+        public List<ReplicationCounter> Counters { get; set; }
     }
 
-    public class ReplictionCounter
+    public class ReplicationCounter
     {
         public string CounterName { get; set; }
-        public Counter Counter { get; set; }
+        public long Etag;
+        public List<PerServerValue> ServerValues { get; set; }
+
+        public ReplicationCounter()
+        {
+            ServerValues = new List<PerServerValue>();
+        }
+
+        public class PerServerValue
+        {
+            public string ServerName { get; set; }
+            public long Positive { get; set; }
+            public long Negative { get; set; }
+        }
     }
 }
