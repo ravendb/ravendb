@@ -23,13 +23,32 @@ class documentMetadata {
             this.etag = dto['@etag'];
 
             for (var property in dto) {
-                if (property !== 'Raven-Entity-Name' && property !== 'Raven-Clr-Type' && property !== 'Non-Authoritative-Information' && property !== '@id' && property !== 'Temp-Index-Score' && property !== 'Last-Modified' && property !== 'Raven-Last-Modified' && property !== '@etag') {
+                if (this.shouldBeIncluded(property)) {
                     this.nonStandardProps = this.nonStandardProps || [];
                     this[property] = dto[property];
                     this.nonStandardProps.push(property);
                 }
             }
         }
+    }
+
+    private shouldBeIncluded(property): boolean {
+        // skip all properties which are included directly
+        var directlyIncluded = [
+            'Raven-Entity-Name',
+            'Raven-Clr-Type',
+            'Non-Authoritative-Information',
+            '@id',
+            'Temp-Index-Score',
+            'Last-Modified',
+            'Raven-Last-Modified',
+            '@etag'
+        ];
+        var extraSkipped = [
+            'Raven-Replication-History'
+        ];
+        var skipped = jQuery.merge(directlyIncluded, extraSkipped);
+        return (jQuery.inArray(property, skipped) === -1);
     }
 
     toDto(): documentMetadataDto {
@@ -45,7 +64,9 @@ class documentMetadata {
         };
 
         if (this.nonStandardProps) {
-            this.nonStandardProps.forEach(p => dto[p] = this[p]);
+            this.nonStandardProps.forEach(p => {
+                dto[p] = this[p];
+            });
         }
 
         return dto;
