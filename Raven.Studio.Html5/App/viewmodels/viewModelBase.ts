@@ -5,6 +5,7 @@ import router = require("plugins/router");
 import app = require("durandal/app");
 import uploadItem = require("models/uploadItem");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
+import ace = require("ace/ace");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -84,6 +85,21 @@ class viewModelBase {
     compositionComplete() {
         // Resync Changes
         viewModelBase.dirtyFlag().reset();
+
+        $("pre").each(function() {
+            var editor = ace.edit(this);
+            editor.setOption('vScrollBarAlwaysVisible', true);
+            editor.setOption('hScrollBarAlwaysVisible', true);
+            $(this).resizable({
+                minHeight: 100,
+                maxWidth: $(this).width() > 150 ? ($(this).width() + 26) : $(".panel-title").width() - 265,
+                handles: "e, s, se",
+                resize: function (event, ui) {
+                    editor.resize();
+                    //$('.ui-resizable-se').css({ 'right': '3px', 'bottom': '3px' });
+                }
+            })
+        });
     }
 
     /*

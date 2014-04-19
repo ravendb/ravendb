@@ -210,7 +210,7 @@ namespace Voron.Impl
 			}
 		}
 
-		public class BatchOperation
+		public class BatchOperation : IComparable<BatchOperation>
 		{
 #if DEBUG
 			private readonly StackTrace stackTrace;
@@ -223,6 +223,7 @@ namespace Voron.Impl
 			private readonly long originalStreamPosition;
 			private readonly HashSet<Type> exceptionTypesToIgnore = new HashSet<Type>();
 			private readonly Action reset = delegate { };
+			private readonly Slice valSlice;
 
 			public BatchOperation(Slice key, Stream value, ushort? version, string treeName, BatchOperationType type)
 				: this(key, value as object, version, treeName, type)
@@ -245,6 +246,7 @@ namespace Voron.Impl
 			{
 				if (value != null)
 				{
+					valSlice = value;
 					originalStreamPosition = 0;
 					ValueSize = value.Size;
 				}
@@ -293,6 +295,24 @@ namespace Voron.Impl
 				where T : Exception
 			{
 				ExceptionTypesToIgnore.Add(typeof(T));
+			}
+
+			public unsafe int CompareTo(BatchOperation other)
+			{
+				var r = SliceEqualityComparer.Instance.Compare(Key, other.Key);
+				if (r != 0)
+					return r;
+				if (valSlice != null)
+				{
+					if (other.valSlice == null)
+						return -1;
+					return valSlice.Compare(other.valSlice, NativeMethods.memcmp);
+				}
+				else if (other.valSlice != null)
+				{
+					return 1;
+				}
+				return 0;
 			}
 		}
 
