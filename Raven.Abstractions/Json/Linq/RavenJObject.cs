@@ -94,7 +94,7 @@ namespace Raven.Json.Linq
 			Properties = snapshot;
 		}
 
-        internal override bool DeepEquals(RavenJToken other, DocumentsChanges changes)
+        internal override bool DeepEquals(RavenJToken other, List<DocumentsChanges> changes)
 		{
 			var t = other as RavenJObject;
 			if (t == null)
