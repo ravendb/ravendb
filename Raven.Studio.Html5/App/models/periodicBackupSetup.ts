@@ -4,7 +4,7 @@ class periodicBackupSetup {
     activated = ko.observable<boolean>(false);
 
     type = ko.observable<string>();
-    mainValue = ko.observable<string>().extend({ required: true });
+    mainValue = ko.observable<string>();
 
     awsAccessKey = ko.observable<string>();
     awsSecretKey = ko.observable<string>();
@@ -58,24 +58,24 @@ class periodicBackupSetup {
     }, this);
 
     fromDto(dto: periodicBackupSetupDto) {
-
         this.awsRegionEndpoint(dto.AwsRegionEndpoint);
 
         this.setupTypeAndMainValue(dto);
 
         var incr = this.prepareBackupInterval(dto.IntervalMilliseconds);
-        this.incrementalBackupInterval(incr[0]);
+        this.incrementalBackupInterval(incr[0].toString());
         this.incrementalBackupIntervalUnit(incr[1]);
 
         var full = this.prepareBackupInterval(dto.FullBackupIntervalMilliseconds);
-        this.fullBackupInterval(full[0]);
+        this.fullBackupInterval(full[0].toString());
         this.fullBackupIntervalUnit(full[1]);
 
-        this.activated(true);
+        this.activated(dto.Activated);
     }
 
     toDto(): periodicBackupSetupDto {
         return {
+            Activated: this.activated(),
             GlacierVaultName: this.prepareMainValue(this.GLACIER_VAULT),
             S3BucketName: this.prepareMainValue(this.S3_BUCKET),
             AwsRegionEndpoint: this.awsRegionEndpoint(),

@@ -15,6 +15,7 @@ interface KnockoutObservableArray<T> {
 
 interface KnockoutStatic {
     DirtyFlag(any): void;
+    numericObservable(string): number;
 }
 
 interface Function {
@@ -267,6 +268,22 @@ ko.bindingHandlers['slideVisible'] = {
         var value = valueAccessor();
         ko.unwrap(value) ? jQuery(element).slideDown() : jQuery(element).slideUp();
     }
+};
+
+ko.numericObservable = function (initialValue) {
+    var _actual = ko.observable(initialValue);
+
+    var result = ko.dependentObservable({
+        read: function () {
+            return _actual();
+        },
+        write: function (newValue) {
+            var parsedValue = parseFloat(newValue);
+            _actual(isNaN(parsedValue) ? newValue : parsedValue);
+        }
+    });
+
+    return result;
 };
 
 class Pair<T1, T2> {

@@ -150,8 +150,8 @@ class scriptedIndexes extends viewModelBase {
             .execute()
             .done((result: bulkDocumentDto[]) => {
                 this.updateIndexes(result);
-                // Resync Changes
-                viewModelBase.dirtyFlag().reset();
+                
+                viewModelBase.dirtyFlag().reset(); //Resync Changes
         });
     }
 

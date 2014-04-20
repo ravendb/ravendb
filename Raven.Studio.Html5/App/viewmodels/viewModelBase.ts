@@ -81,6 +81,10 @@ class viewModelBase {
         ko.postbox.publish("SetRawJSONUrl", "");
     }
 
+    attached() {
+        webshims.polyfill();
+    }
+
     // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
         // Resync Changes
