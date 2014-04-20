@@ -12,6 +12,7 @@ namespace Raven.Abstractions.Data
 	{
 		public const string RavenDocumentKey = "Raven/Backup/Periodic/Setup";
 
+		public bool Activated { get; set; }
 		public string GlacierVaultName { get; set; }
 		public string S3BucketName { get; set; }
 		public string AwsRegionEndpoint { get; set; }
@@ -25,7 +26,8 @@ namespace Raven.Abstractions.Data
 
 		protected bool Equals(PeriodicBackupSetup other)
 		{
-			return string.Equals(GlacierVaultName, other.GlacierVaultName) && string.Equals(S3BucketName, other.S3BucketName) &&
+			return string.Equals(Activated, other.Activated) &&
+				   string.Equals(GlacierVaultName, other.GlacierVaultName) && string.Equals(S3BucketName, other.S3BucketName) &&
 			       string.Equals(AwsRegionEndpoint, other.AwsRegionEndpoint) &&
 			       string.Equals(AzureStorageContainer, other.AzureStorageContainer) &&
 			       string.Equals(LocalFolderName, other.LocalFolderName) && 
@@ -44,7 +46,8 @@ namespace Raven.Abstractions.Data
 		{
 			unchecked
 			{
-				var hashCode = (GlacierVaultName != null ? GlacierVaultName.GetHashCode() : 0);
+				var hashCode = (Activated != null ? Activated.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ (GlacierVaultName != null ? GlacierVaultName.GetHashCode() : 0);
 				hashCode = (hashCode*397) ^ (S3BucketName != null ? S3BucketName.GetHashCode() : 0);
 				hashCode = (hashCode*397) ^ (AwsRegionEndpoint != null ? AwsRegionEndpoint.GetHashCode() : 0);
 				hashCode = (hashCode*397) ^ (AzureStorageContainer != null ? AzureStorageContainer.GetHashCode() : 0);
