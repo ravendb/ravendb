@@ -32,12 +32,19 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		private static readonly ConcurrentDictionary<Guid, ReaderWriterLockSlim> SynchronizationFinishLocks =
 			new ConcurrentDictionary<Guid, ReaderWriterLockSlim>();
 
-		[HttpPost]
+        [HttpPost]
         [Route("ravenfs/{fileSystemName}/synchronization/ToDestinations")]
-		public Task<DestinationSyncResult[]> ToDestinations(bool forceSyncingAll)
-		{
-			return SynchronizationTask.SynchronizeDestinationsAsync(forceSyncingAll);
-		}
+        public Task<DestinationSyncResult[]> ToDestinations(bool forceSyncingAll)
+        {
+            return SynchronizationTask.SynchronizeDestinationsAsync(forceSyncingAll);
+        }
+
+        [HttpPost]
+        [Route("ravenfs/{fileSystemName}/synchronization/ToDestination")]
+        public Task<DestinationSyncResult> ToDestination(string destination, bool forceSyncingAll)
+        {            
+            return SynchronizationTask.SynchronizeDestinationAsync(destination + "/ravenfs/" + this.FileSystemName, forceSyncingAll);
+        }
 
 		[HttpPost]
         [Route("ravenfs/{fileSystemName}/synchronization/start/{*fileName}")]
@@ -551,7 +558,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				StrategyAsGetRemote(fileName);
 			}
 
-			return new HttpResponseMessage(HttpStatusCode.OK);
+            return GetEmptyMessage(HttpStatusCode.OK);
 		}
 
 		[HttpPatch]
@@ -605,7 +612,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				"Conflict applied for a file '{0}' (remote version: {1}, remote server id: {2}).", filename, remoteVersion,
 				remoteServerId);
 
-			return new HttpResponseMessage(HttpStatusCode.NoContent);
+            return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpGet]
@@ -645,7 +652,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				SynchronizationFinishLocks.GetOrAdd(sourceServerId, new ReaderWriterLockSlim()).ExitWriteLock();
 			}
 
-			return Request.CreateResponse(HttpStatusCode.OK);
+            return GetEmptyMessage(HttpStatusCode.OK);
 		}
 
 		private void PublishFileNotification(string fileName, FileChangeAction action)

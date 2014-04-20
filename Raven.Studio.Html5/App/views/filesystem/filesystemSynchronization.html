@@ -49,21 +49,21 @@
                         </h4>
                     </div>
 
-                    <div class="synchronization-group-content panel-collapse in" data-bind="attr: { id: 'destinationsCollapse' }" id="destinationsCollapse">
+                    <div class="synchronization-group-content panel-collapse in" data-bind="attr: { id: 'destinationsCollapse' }">
                         <div class="panel panel-default" style="overflow: visible;">
-                            <div class="panel-body" data-bind="foreach: destinations">
+                            <div class="panel-body" data-bind="foreach: $root.destinations">
                                 <div class="synchronization panel panel-default">
                                     <div class="panel-body">
                                         <h4 class="pull-left">
                                             <a class="use-bootstrap-tooltip">
-                                                <span data-bind="text: $data"></span>
+                                                <span data-bind="text: $data.ServerUrl"></span>
                                             </a>
                                         </h4>
-                                        <div class="pull-right synchronization-actions-container">
-                                            <button class="btn btn-danger use-bootstrap-tooltip" title="" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-original-title="Delete the destination">
+                                        <div class="pull-right">
+                                            <button class="btn btn-danger use-bootstrap-tooltip" data-bind="click: $root.deleteDestination.bind($root, $data.ServerUrl)" title="Delete destination">
                                                 <i class="fa fa-trash-o"></i>
                                             </button>
-                                            <button class="btn btn-warning indexes-controls use-bootstrap-tooltip" title="" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-original-title="Synchronize Now">
+                                            <button class="btn btn-success use-bootstrap-tooltip" data-bind="click: $root.synchronizeWithDestination.bind($root, $data.ServerUrl)" title="Synchronize Now">
                                                 <i class="fa fa-refresh"></i>
                                             </button>
                                         </div>
@@ -85,7 +85,7 @@
                         </h4>
                     </div>
 
-                    <div class="synchronization-group-content panel-collapse in" data-bind="attr: { id: 'conflictsCollapse' }" id="conflictsCollapse">
+                    <div class="synchronization-group-content panel-collapse in" data-bind="attr: { id: 'conflictsCollapse' }">
                         <div class="panel panel-default" style="overflow: visible;">
                             <div class="panel-body" data-bind="foreach: conflicts">
                                 <div class="synchronization panel panel-default">

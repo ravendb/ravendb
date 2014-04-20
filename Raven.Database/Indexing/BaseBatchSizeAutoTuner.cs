@@ -1,4 +1,5 @@
 using System;
+using System.Runtime;
 using Raven.Abstractions;
 using Raven.Database.Config;
 using System.Linq;
@@ -124,7 +125,7 @@ namespace Raven.Database.Indexing
 			// * The system is over the configured limit, and there is a strong likelihood that this is us causing this
 			// * By forcing a GC, we ensure that we use less memory, and it is not frequent enough to cause perf problems
 
-			RavenGC.CollectGarbage(1, GCCollectionMode.Optimized);
+			RavenGC.CollectGarbage(compactLoh: true, afterCollect: null);
 
 			// let us check again after the GC call, do we still need to reduce the batch size?
 

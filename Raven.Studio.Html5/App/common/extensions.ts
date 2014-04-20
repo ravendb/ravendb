@@ -46,7 +46,7 @@ subscribableFn.where = function (predicate: (item) => boolean) {
         }
     });
     return matches;
-}
+};
 
 // observable.distinctUntilChanged
 subscribableFn.distinctUntilChanged = function () {
@@ -60,13 +60,13 @@ subscribableFn.distinctUntilChanged = function () {
         }
     });
     return matches;
-}
+};
 
 // observable.throttled
 subscribableFn.throttle = function (throttleTimeMs: number) {
     var observable = this;
     return ko.computed(() => observable()).extend({ throttle: throttleTimeMs });
-}
+};
 
 // observable.select
 subscribableFn.select = function (selector: (any) => any) {
@@ -74,34 +74,34 @@ subscribableFn.select = function (selector: (any) => any) {
     var selectedResults = ko.observable();
     observable.subscribe(val => selectedResults(selector(val)));
     return selectedResults;
-}
+};
 
 // observable.toggle
 subscribableFn.toggle = function () {
     var observable: KnockoutObservable<boolean> = this;
     observable(!observable());
     return observable;
-}
+};
 
 // observableArray.pushAll
 observableArrayFn.pushAll = function (items: Array<any>) {
     this.push.apply(this, items);
-}
+};
 
 // observableArray.contains
 observableArrayFn.contains = function (item: any) {
     return this.indexOf(item) !== -1;
-}
+};
 
 // observableArray.first
 observableArrayFn.first = function (filter?: (item) => boolean) {
     return this().first(filter);
-}
+};
 
 // observableArray.last
 observableArrayFn.last = function (filter?: (item) => boolean) {
     return this().last(filter);
-}
+};
 
 // Function.memoize
 var functionPrototype: any = Function.prototype;
@@ -114,8 +114,8 @@ functionPrototype.memoize = function (thisVal) {
         } else {
             return cache[arg] = self.call(thisVal, arg);
         }
-    }
-}
+    };
+};
 
 // Array extensions
 
@@ -139,7 +139,7 @@ arrayPrototype.remove = function (item) {
         self.splice(index, 1);
     }
     return index;
-}
+};
 
 // Array.removeAll
 arrayPrototype.removeAll = function (items: Array<any>) {
@@ -152,7 +152,7 @@ arrayPrototype.removeAll = function (items: Array<any>) {
             items.splice(itemsIndex);
         }
     }
-}
+};
 
 // Array.first
 arrayPrototype.first = function (filter?: (item) => boolean) {
@@ -167,7 +167,7 @@ arrayPrototype.first = function (filter?: (item) => boolean) {
     }
 
     return null;
-}
+};
 
 // Array.last
 arrayPrototype.last = function (filter?: (item) => boolean) {
@@ -184,18 +184,18 @@ arrayPrototype.last = function (filter?: (item) => boolean) {
     }
 
     return null;
-}
+};
 
 // Array.pushAll
 arrayPrototype.pushAll = function (items: Array<any>) {
     this.push.apply(this, items);
-}
+};
 
 // Array.contains
 arrayPrototype.contains = function (item: any) {
     var self: any[] = this;
     return self.indexOf(item) !== -1;
-}
+};
 
 // Array.count
 arrayPrototype.count = function (filter?: (item) => boolean) {
@@ -212,7 +212,7 @@ arrayPrototype.count = function (filter?: (item) => boolean) {
     }
 
     return self.length;
-}
+};
 
 // Array.count
 arrayPrototype.distinct = function () {
@@ -225,12 +225,13 @@ arrayPrototype.distinct = function () {
     }
 
     return distinctElements;
-}
+};
 
 // String extensions
 interface String {
     hashCode: () => number;
     replaceAll: (find, replace) => string;
+    reverse: (input) => string;
 }
 
 String.prototype.hashCode = function () {
@@ -246,7 +247,15 @@ String.prototype.hashCode = function () {
 
 String.prototype.replaceAll = function (find, replace) {
     return this.replace(new RegExp(find, 'g'), replace);
-}
+};
+
+String.prototype.reverse = (input: string) => {
+    var chars = new Array;
+    if (input != null) {
+        chars = input.split('');
+    }
+    return chars.reverse().join('');
+};
 
 // TODO: this should really be in its own file, similiar to common/aceEditorBindingHandler
 ko.bindingHandlers['slideVisible'] = {

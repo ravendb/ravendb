@@ -508,7 +508,7 @@ namespace Raven.Database.Server.Controllers
             }
             catch (Exception e)
             {
-                var msg = "Could open database named: " + tenantId;
+                var msg = "Could not open database named: " + tenantId;
                 Logger.WarnException(msg, e);
                 throw new HttpException(503, msg, e);
             }
@@ -542,7 +542,7 @@ namespace Raven.Database.Server.Controllers
                     {
                         exceptionMessage = aggregateException.ExtractSingleInnerException().Message;
                     }
-                    var msg = "Could open database named: " + tenantId + Environment.NewLine + exceptionMessage;
+                    var msg = "Could not open database named: " + tenantId + Environment.NewLine + exceptionMessage;
 
                     Logger.WarnException(msg, e);
                     throw new HttpException(503, msg, e);

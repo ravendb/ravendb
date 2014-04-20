@@ -23,7 +23,7 @@
             this.etag = dto['ETag'];
 
             for (var property in dto) {
-                if (this.standardProps.contains(property)) {
+                if (!this.standardProps.contains(property)) {
                     this.nonStandardProps = this.nonStandardProps || [];
                     this[property] = dto[property];
                     this.nonStandardProps.push(property);
@@ -35,7 +35,7 @@
     toDto(): fileMetadataDto {
         var dto: any = {
             'Last-Modified': this.lastModified,
-            '@etag': this.etag,
+            'ETag': this.etag,
             'Raven-Synchronization-History': this.ravenSynchronizationHistory,
             'Raven-Synchronization-Version': this.ravenSynchronizationVersion,
             'Raven-Synchronization-Source': this.ravenSynchronizationSource,
