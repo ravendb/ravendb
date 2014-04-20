@@ -87,27 +87,8 @@ class viewModelBase {
 
     // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
-        // Resync Changes
-        viewModelBase.dirtyFlag().reset();
-
-        $("pre").each(function() {
-            var editor = ace.edit(this);
-            //editor.setOption('vScrollBarAlwaysVisible', true);
-            //editor.setOption('hScrollBarAlwaysVisible', true);
-            var minHeight = 100;
-            $(this).resizable({
-                minHeight: minHeight,
-                minWidth: minHeight * 5,
-                maxWidth: $(this).width() > 150 ? ($(this).width() + 26) : $(".panel-title").width() - 265,
-                handles: "e, s, se",
-                resize: function (event, ui) {
-                    editor.resize();
-                }
-            });
-            if ($(this).height() < minHeight) {
-                $(this).height(minHeight);
-            }
-        });
+        this.createResizableTextBoxes();
+        viewModelBase.dirtyFlag().reset(); //Resync Changes
     }
 
     /*
@@ -129,6 +110,27 @@ class viewModelBase {
         this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
+    }
+
+    createResizableTextBoxes() {
+        $("pre").each(function () {
+            var editor = ace.edit(this);
+            //editor.setOption('vScrollBarAlwaysVisible', true);
+            //editor.setOption('hScrollBarAlwaysVisible', true);
+            var minHeight = 100;
+            $(this).resizable({
+                minHeight: minHeight,
+                minWidth: minHeight * 5,
+                maxWidth: $(this).width() > 150 ? ($(this).width() + 26) : $(".panel-title").width() - 265,
+                handles: "e, s, se",
+                resize: function (event, ui) {
+                    editor.resize();
+                }
+            });
+            if ($(this).height() < minHeight) {
+                $(this).height(minHeight);
+            }
+        });
     }
 
     /*
