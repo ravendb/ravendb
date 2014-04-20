@@ -75,7 +75,7 @@
                 <div data-bind="foreach: maps" class="col-md-11">
                     <div class="row">
                         <div class="col-md-11">
-                            <pre id="indexEditor" class="form-control map" data-bind="aceEditor: { code: $data, getFocus: true }"></pre>
+                            <pre id="indexEditor" class="form-control map" data-bind="aceEditor: { code: $data, getFocus: true, completer:$root.indexCompleter }"></pre>
                         </div>
                         <button type="button" class="close pull-left use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind=" visible: $index() !== 0 || $root.hasMultipleMaps(), click: $root.removeMap.bind($root, $index())" aria-hidden="true" title="Remove this map from the index">&times;</button>
                     </div>

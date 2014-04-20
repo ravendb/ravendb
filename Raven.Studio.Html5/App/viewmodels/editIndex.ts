@@ -43,6 +43,11 @@ class editIndex extends viewModelBase {
         this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
     }
 
+
+    indexCompleter(editor: any, session: any, pos: number, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {      
+        callback(null, [{ name: "a", value: "a", score: 10, meta: "trash" }, { name: "b", value: "b", score: 10, meta: "smash" }, { name: "c", value: "c", score: 10, meta: "trash" }]);
+    }
+
     canActivate(indexToEditName: string) {
         if (indexToEditName) {
             var canActivateResult = $.Deferred();
