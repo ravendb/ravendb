@@ -5,7 +5,12 @@ var oop = require("../lib/oop");
 var lang = require("../lib/lang");
 var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 
-var LuceneHighlightRules = function() {
+var LuceneHighlightRules = function () {
+
+    var keywordMapper = this.createKeywordMapper({        
+        "logics": "AND|OR|NOT"
+    }, "identifier");
+
     this.$rules = {
         "start" : [
             {
