@@ -35,6 +35,7 @@ class periodicBackup extends viewModelBase {
     }
 
     attached() {
+        //super.attached();
         this.form = $("#save-periodic-backup-form");
     }
 

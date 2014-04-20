@@ -4,7 +4,7 @@ class periodicBackupSetup {
     activated = ko.observable<boolean>(false);
 
     type = ko.observable<string>();
-    mainValue = ko.observable<string>();
+    mainValue = ko.observable<string>().extend({ required: true });
 
     awsAccessKey = ko.observable<string>();
     awsSecretKey = ko.observable<string>();
