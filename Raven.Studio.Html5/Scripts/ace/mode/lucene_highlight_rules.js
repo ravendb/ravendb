@@ -36,13 +36,50 @@ var LuceneHighlightRules = function () {
                 regex : "[\\)]"
             }, {
                 token : "keyword",
-                regex : "[\\S]+:"
+                regex: "[\\S]+:",
+                next: "value"
             }, {
                 token : "string",           // " string
                 regex : '".*?"'
             }, {
                 token : "text",
                 regex : "\\s+"
+            }
+        ],
+        "value": [
+            {
+                token: "value",                
+                regex: '\\s+'
+            },
+            {
+                token: "value",
+                //regex: '(\\"[^\\"]*\\")|([^\\s\\"]+\\s)',
+                regex: '[\\"]',
+                next: "valueQuotCont"
+            },
+            {
+                token: "value",
+                //regex: '(\\"[^\\"]*\\")|([^\\s\\"]+\\s)',
+                regex: '[^\\"\\s]',
+                next: "valueNonQuotCont"
+            }
+        ],
+        "valueQuotCont": [
+            {
+                token: "value",
+                regex: '[^\\"]+'
+            },
+            {
+                token: "value",
+                regex: '[\\"]',
+                next: "start"
+            }
+        ],
+        "valueNonQuotCont": [           
+            {
+                token: "value23",
+                regex: '[^\\"\\s]*',
+                next: "start"
             }
         ]
     };
