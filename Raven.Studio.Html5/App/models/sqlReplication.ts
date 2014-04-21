@@ -132,6 +132,8 @@ class sqlReplication extends document {
     }
 
     isValid(): boolean {
+        var arr = new Array();
+
         var requiredValues = [this.name(), this.factoryName(), this.connectionStringType(), this.connectionStringValue(), this.ravenEntityName(), this.script()];
         var fieldsCheck = requiredValues.every(v=> v != null && v.length > 0);
         var replicationTablesCheck = this.sqlReplicationTables().every(v=> v.isValid());

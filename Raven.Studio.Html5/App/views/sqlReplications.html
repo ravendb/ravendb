@@ -85,7 +85,7 @@
                                         <tr class="sql-replication-tables-header">
                                             <td>Table Name</td>
                                             <td>Document Key</td>
-                                            <td class="narrowest-column"><button type="button" style="display:inline-block;" class="close" data-bind="click: addNewTable" title="Add new table">+</button></td>
+                                            <td class="narrowest-column"><button type="button" style="display:inline-block;" class="close" data-bind="click: addNewTable" title="Add new table"><i class="fa fa-plus"></i></button></td>
                                         </tr>
                                     </thead>
                                     <tbody data-bind="foreach: sqlReplicationTables">
@@ -100,7 +100,7 @@
                                                     <input type="text" class="form-control" data-bind="value: documentKeyColumn, valueUpdate: 'keyup'" />
                                                 </div>
                                             </td>
-                                            <td><button type="button" style="display:inline-block;" class="close" data-bind="click: $parent.removeTable.bind($parent)" title="Remove this table">×</button></td>
+                                            <td><button type="button" style="display:inline-block;" class="close" data-bind="click: $parent.removeTable.bind($parent)" title="Remove this table"><span class="glyphicon glyphicon-remove remove-icon"></span></button></td>
                                         </tr>
                                     </tbody>
                                 </table>

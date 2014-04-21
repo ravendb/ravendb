@@ -994,7 +994,7 @@ more responsive application.
                     Etag = etag,
                     Key = key,
                 });
-                if (!changes.Equals(null))
+				if (changes != null)
                 {
                     changes.DocumentId = key;
                     changes.FieldNewValue = string.Empty;
@@ -1374,12 +1374,9 @@ more responsive application.
             return instance;
         }
         
-        public void TrackIncludedDocumnet(JsonDocument include)
+        public void TrackIncludedDocument(JsonDocument include)
         {
             includedDocumentsByKey[include.Key] = include;
         }
-
-
-      
     }
 }

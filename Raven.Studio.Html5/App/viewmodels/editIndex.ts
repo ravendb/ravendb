@@ -85,6 +85,7 @@ class editIndex extends viewModelBase {
     // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
         super.compositionComplete();
+
     }
 
     /*saveInObservable() {
