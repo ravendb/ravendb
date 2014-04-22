@@ -337,6 +337,10 @@
       <Project>{381234cc-8aa7-41ff-8cad-22330e15f993}</Project>
       <Name>Raven.Tests.Common</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
+      <Project>{1B88473F-743B-4F6B-8E5E-97BB816E6C68}</Project>
+      <Name>Raven.Tests.Helpers</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.MailingList\Raven.Tests.MailingList.csproj">
       <Project>{EA32FD05-8537-4A31-879E-20A0F2C87479}</Project>
       <Name>Raven.Tests.MailingList</Name>

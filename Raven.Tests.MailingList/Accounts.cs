@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 

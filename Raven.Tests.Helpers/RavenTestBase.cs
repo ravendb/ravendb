@@ -107,7 +107,7 @@ namespace Raven.Tests.Helpers
 				Configuration =
 				{
 					DefaultStorageTypeName = storageType,
-					DataDirectory = dataDirectory,
+					DataDirectory = Path.Combine(dataDirectory, "System"),
 					FileSystemDataDirectory = Path.Combine(dataDirectory, "FileSystem"),
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
@@ -240,7 +240,7 @@ namespace Raven.Tests.Helpers
 			var ravenConfiguration = new RavenConfiguration
 			{
 				Port = port,
-				DataDirectory = directory,
+				DataDirectory = Path.Combine(directory, "System"),
 				FileSystemDataDirectory = Path.Combine(directory, "FileSystem"),
 				RunInMemory = runInMemory,
 #if DEBUG

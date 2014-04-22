@@ -1,6 +1,8 @@
+using System;
 using System.Linq;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
+using Raven.Tests.Helpers;
+
 using Xunit;
 
 namespace Raven.Tests.MailingList
@@ -33,28 +35,33 @@ namespace Raven.Tests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Query<Person, PersonIndex>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
-                        .OrderByDescending(x=>x.Surname)
-                        .ToList();
-					Assert.True(results[0] == personB);
-                    Assert.True(results[1] == personA);
+	                var e = Assert.Throws<InvalidOperationException>(() =>
+	                {
+						var results = session.Query<Person, PersonIndex>()
+							.Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+							.OrderByDescending(x => x.Surname)
+							.ToList();
+	                });
+
+					Assert.Equal("Query failed. See inner exception for details.", e.Message);
+					Assert.Contains("The field 'Surname' is not indexed, cannot sort on fields that are not indexed", e.InnerException.Message);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Advanced.LuceneQuery<Person, PersonIndex>()
-                        .WaitForNonStaleResultsAsOfNow()
-                        .OrderByDescending(x => x.Surname)
-                        .ToList();
-					Assert.True(results[0] == personB);
-					Assert.True(results[1] == personA);
+					var e = Assert.Throws<InvalidOperationException>(() =>
+					{
+						var results = session.Advanced.DocumentQuery<Person, PersonIndex>()
+						   .WaitForNonStaleResultsAsOfNow()
+						   .OrderByDescending(x => x.Surname)
+						   .ToList();
+					});
+
+					Assert.Equal("Query failed. See inner exception for details.", e.Message);
+					Assert.Contains("The field 'Surname' is not indexed, cannot sort on fields that are not indexed", e.InnerException.Message);
                 }
             }
         }
-
-
-
 
 		public class Person
 		{

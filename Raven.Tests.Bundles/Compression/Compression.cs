@@ -16,7 +16,7 @@ namespace Raven.Tests.Bundles.Compression
 		private readonly RavenDbServer ravenDbServer;
 		protected readonly DocumentStore documentStore;
 
-		public Compression()
+		protected Compression()
 		{
 			// This will be disposed by the RavenTestBase.Dispose method
 			path = NewDataPath("Compression");

@@ -986,6 +986,10 @@
       <Project>{381234cc-8aa7-41ff-8cad-22330e15f993}</Project>
       <Name>Raven.Tests.Common</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
+      <Project>{1B88473F-743B-4F6B-8E5E-97BB816E6C68}</Project>
+      <Name>Raven.Tests.Helpers</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
       <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
       <Name>Voron</Name>
