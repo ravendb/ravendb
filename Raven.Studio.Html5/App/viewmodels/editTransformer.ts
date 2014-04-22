@@ -60,7 +60,7 @@ class editTransformer extends viewModelBase {
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults]);
     }
 
-    saveInObservable() {
+    saveInObservable() {//TODO: CHANGE!!!
         var docEditor = ko.utils.domData.get($("#transformerAceEditor")[0], "aceEditor");
         var docEditorText = docEditor.getSession().getValue();
         this.editedTransformer().transformResults(docEditorText);

@@ -105,17 +105,21 @@ var ScrollBarH = function(parent, renderer) {
 (function() {
     oop.implement(this, EventEmitter);
 
-    this.setVisible = function(show) {
+    this.setVisible = function (show) {
         if (show) {
-            this.element.style.display = "";
-            if (this.fullWidth)
+            this.element.style.visibility = "visible";
+            /*if (this.fullWidth)
                 this.width = this.fullWidth;
             if (this.fullHeight)
-                this.height = this.fullHeight;
+                this.height = this.fullHeight;*/
         } else {
-            this.element.style.display = "none";
-            this.height = this.width = 0;
+            this.element.style.visibility = "hidden";
+            /*this.height = this.width = 0;*/
         }
+        if (this.fullWidth)
+            this.width = this.fullWidth;
+        if (this.fullHeight)
+            this.height = this.fullHeight;
     };
     
     /**
@@ -123,14 +127,16 @@ var ScrollBarH = function(parent, renderer) {
      * @event scroll
      * @param {Object} e Contains one property, `"data"`, which indicates the current scroll top position
      **/
-    this.onScrollV = function() {
+    this.onScrollV = function () {
+        $(this.element.children).trigger('change');
         if (!this.skipEvent) {
             this.scrollTop = this.element.scrollTop;
             this._emit("scroll", {data: this.scrollTop});
         }
         this.skipEvent = false;
     };
-    this.onScrollH = function() {
+    this.onScrollH = function () {
+        $(this.element.children).trigger('change');
         if (!this.skipEvent) {
             this.scrollLeft = this.element.scrollLeft;
             this._emit("scroll", {data: this.scrollLeft});
