@@ -935,9 +935,9 @@ more responsive application.
 
             return result;
         }
+
         protected void GetDataChanges(IDictionary<string, DocumentsChanges[]> changes)
         {
-
             PrepareForEntitiesDeletion(null, changes);
             GetAllEntitiesChanges(changes);
 
@@ -957,19 +957,13 @@ more responsive application.
                     entitiesByKey.Remove(entity.Value.Key);
                 result.Commands.Add(CreatePutEntityCommand(entity.Key, entity.Value));
             }
-            //if (result.Entities.Count == 0 && changes != null)
-            //{
-            //    changes.DocumentId = string.Empty;
-            //    changes.Comment = "Nothing changed";
-            //}
         }
 
         private void GetAllEntitiesChanges(IDictionary<string, DocumentsChanges[]> changes)
         {
-           // var docChanges = new List<DocumentsChanges>();
-            foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value, changes)).ToArray())
+            foreach (var pair in entitiesAndMetadata)
             {
-              //  changes.Add(docChanges.ToArray());
+                EntityChanged(pair.Key, pair.Value, changes);
             }
         }
 
@@ -1110,8 +1104,6 @@ more responsive application.
             if (changes != null)
             {
                 var changedData = new List<DocumentsChanges>();
-                //if (!changes.Comment.Equals("Object deleted"))
-                //    changes.DocumentId = documentMetadata.Key;
                 if ((RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData) == false) ||
                     (RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData) == false))
                 {

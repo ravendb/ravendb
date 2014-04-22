@@ -18,8 +18,6 @@ namespace Raven.Tests.Issues
 {
     public class RavenDb_1977: RavenTest
     {
-
-      
         [Fact]
         public void CanDetectObjectChanges() //add, delete, change 
         {
