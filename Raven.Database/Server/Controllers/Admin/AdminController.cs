@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime;
 using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -404,7 +405,10 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		    Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
             Action afterCollect = () => DatabasesLandlord.ForAllDatabases(clearCaches);
-		    RavenGC.CollectGarbage(true, afterCollect);
+			
+			GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+			RavenGC.CollectGarbage(true, afterCollect);
+
             return GetMessageWithString("LOH GC Done");
         }
 

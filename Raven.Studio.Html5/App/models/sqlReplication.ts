@@ -58,15 +58,15 @@ class sqlReplication extends document {
     }
 
     private setupConnectionString(dto: sqlReplicationDto) {
-        if (dto.ConnectionString) {
-            this.connectionStringType(this.CONNECTION_STRING);
-            this.connectionStringValue(dto.ConnectionString);
-        } else if (dto.ConnectionStringName) {
+        if (dto.ConnectionStringName) {
             this.connectionStringType(this.CONNECTION_STRING_NAME);
             this.connectionStringValue(dto.ConnectionStringName);
         } else if (dto.ConnectionStringSettingName) {
             this.connectionStringType(this.CONNECTION_STRING_SETTING_NAME);
             this.connectionStringValue(dto.ConnectionStringSettingName);
+        } else { //(dto.ConnectionString)
+            this.connectionStringType(this.CONNECTION_STRING);
+            this.connectionStringValue(dto.ConnectionString);
         }
     }
 
