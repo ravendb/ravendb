@@ -43,16 +43,15 @@ class aceEditorBindingHandler {
 
     static currentEditor;
 
-    static customCompleters: { editorType: string; completer: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void }[] = [];
+    static customCompleters: { editorType: string; containingViewModel:any; completer: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void }[] = [];
 
     static autoCompleteHub(editor: any, session: any, pos: AceAjax.Position,prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void): void {
         var curEditorType = editor.getOption("editorType");
-        var completerPair = aceEditorBindingHandler.customCompleters.first(x=> x.editorType === curEditorType);
+        var completerThreesome = aceEditorBindingHandler.customCompleters.first(x=> x.editorType === curEditorType);
 
-        if (!!completerPair) {
-            completerPair.completer(editor, session, pos, prefix, callback);
+        if (!!completerThreesome) {
+            completerThreesome.completer.call(completerThreesome.containingViewModel,editor, session, pos, prefix, callback);
         }
-        
     }
         
     // Called by Knockout a single time when the binding handler is setup.
@@ -66,6 +65,7 @@ class aceEditorBindingHandler {
             readOnly?: boolean;
             completer?: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void;
             typeName?: string;
+            containigViewModel?:any;
         },
         allBindings,
         viewModel,
@@ -78,6 +78,7 @@ class aceEditorBindingHandler {
         var typeName = bindingValues.typeName;
         var code = typeof bindingValues.code === "function" ? bindingValues.code : bindingContext.$rawData;
         var langTools = null;
+        var containingViewModel = bindingValues.containigViewModel;
         
 
         if (typeof code !== "function") {
@@ -104,7 +105,7 @@ class aceEditorBindingHandler {
 
             if (!!langTools) {
                 if (!aceEditorBindingHandler.customCompleters.first(x=> x.editorType === typeName)) {
-                    aceEditorBindingHandler.customCompleters.push({ editorType: typeName, completer: bindingValues.completer});
+                    aceEditorBindingHandler.customCompleters.push({ editorType: typeName, containingViewModel: containingViewModel , completer: bindingValues.completer});
                 }
                 if (!!aceEditor.completers) {
                     var completersList: { getComplitions: any; moduleId?: string }[] = aceEditor.completers;
@@ -120,7 +121,8 @@ class aceEditorBindingHandler {
                 
         // When we lose focus, push the value into the observable.
         var aceFocusElement = ".ace_text-input";
-        $(element).on('blur', aceFocusElement, () => code(aceEditor.getSession().getValue()));
+        //$(element).on('blur', aceFocusElement, () => code(aceEditor.getSession().getValue()));
+        $(element).on('keyup', aceFocusElement, () => code(aceEditor.getSession().getValue()));
         $(element).on('focus', aceFocusElement, () => aceEditorBindingHandler.currentEditor = aceEditor);
 
         // When the element is removed from the DOM, unhook our blur event handler, lest we leak memory.
