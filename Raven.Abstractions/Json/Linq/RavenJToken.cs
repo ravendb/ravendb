@@ -357,17 +357,17 @@ namespace Raven.Json.Linq
 
                                     if (selfArray.Length < otherArray.Length)
                                     {
-                                        changes.Comment = "Field removed values";
+                                        changes.Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldRemoved);
                                         changes.FieldName = fieldName;
                                     }
 
                                     if (selfArray.Length > otherArray.Length)
                                     {
-                                        changes.Comment = "Field added values";
+                                        changes.Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldAdded);
+
                                         changes.FieldName = fieldName;
                                     }
                                     docChanges.Add(changes);
-                                    isEqual = false;
                                 }
                                 return false;
                             }
@@ -401,16 +401,15 @@ namespace Raven.Json.Linq
                                         {
                                             changes.FieldNewValue = token1.ToString();
                                             changes.FieldNewType = token1.Type.ToString();
-                                            changes.Comment = string.Format("Added field");
+                                            changes.Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldAdded);
+
                                             changes.FieldName = kvp.Key;
                                         }
 
-                                        descr = "object";
                                         changes.FieldOldValue = "null";
                                         changes.FieldOldType = "null";
 
                                         docChanges.Add(changes);
-                                        isEqual = false;
                                     }
 
                                     return false;
@@ -428,13 +427,14 @@ namespace Raven.Json.Linq
 
                                     if (selfObj.Count < otherObj.Count)
                                     {
-                                        changes.Comment = descr + " removed ";
+                                        changes.Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldRemoved);
+
                                         changes.FieldOldValue = diffData[key];
                                     }
 
                                     else
                                     {
-                                        changes.Comment = descr + " added ";
+                                        changes.Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldAdded);
                                         changes.FieldNewValue = diffData[key];
                                     }
                                     docChanges.Add(changes);
@@ -455,7 +455,8 @@ namespace Raven.Json.Linq
 
                                     var changes = new DocumentsChanges
                                     {
-                                        Comment = string.Format("Field {0} doesn't exist in new one", fieldName)
+                                       Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.DoesntExistInNew)
+
                                     };
                                     docChanges.Add(changes);
                                     isEqual = false;
@@ -470,7 +471,8 @@ namespace Raven.Json.Linq
 
                                         var changes = new DocumentsChanges
                                         {
-                                            Comment = "doesn't exist in original one"
+                                          Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.DoesntExistInOriginal)
+                                           
                                         };
                                         docChanges.Add(changes);
                                         isEqual = false;
@@ -513,7 +515,7 @@ namespace Raven.Json.Linq
                                                 FieldOldType = token.Type.ToString(),
                                                 FieldNewValue = kvp.Value.ToString(),
                                                 FieldOldValue = token.ToString(),
-                                                Comment = "field changed",
+                                                Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldChanged),
                                                 FieldName = kvp.Key
                                             };
                                             docChanges.Add(changes);
@@ -535,7 +537,7 @@ namespace Raven.Json.Linq
                                     FieldOldType = curOtherReader.Type.ToString(),
                                     FieldNewValue = curThisReader.ToString(),
                                     FieldOldValue = curOtherReader.ToString(),
-                                    Comment = "field changed",
+                                    Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldChanged),
                                     FieldName = fieldName
                                 };
                                 docChanges.Add(changes);

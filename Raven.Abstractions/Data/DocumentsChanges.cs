@@ -1,14 +1,36 @@
-﻿namespace Raven.Abstractions.Data
+﻿using System;
+namespace Raven.Abstractions.Data
 {
-	public class DocumentsChanges
-	{
-		public string FieldOldValue { get; set; }
-		public string FieldNewValue { get; set; }
-		public string FieldOldType { get; set; }
-		public string FieldNewType { get; set; }
+    public class DocumentsChanges
+    {
+        public string FieldOldValue { get; set; }
+        public string FieldNewValue { get; set; }
+        public string FieldOldType { get; set; }
+        public string FieldNewType { get; set; }
         public string Comment { get; set; }
         public string FieldName { get; set; }
 
+        public enum CommentType
+        {
+            FieldChanged, DoesntExistInOriginal, DoesntExistInNew,FieldAdded,FieldRemoved
+         }
+  
+   
+        public static String CommentAsText( CommentType comment)
+        {
+              switch(comment)
+              {
+                    case CommentType.FieldAdded: return "field added ";
+                    case CommentType.FieldRemoved: return "field removed ";
+                    case CommentType.DoesntExistInNew: return "doesn't exist in new one ";
+                    case CommentType.DoesntExistInOriginal: return "doesn't exist in original one ";
+                    case CommentType.FieldChanged: return "field changed ";
+                  default:
+                      return string.Empty;
+
+              }
+        }
+    
 		protected bool Equals(DocumentsChanges other)
 		{
 			return string.Equals(FieldOldValue, other.FieldOldValue)
@@ -41,4 +63,5 @@
 			return Equals((DocumentsChanges) obj);
 		}
 	}
+    
 }
