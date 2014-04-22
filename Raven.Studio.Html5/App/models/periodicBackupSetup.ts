@@ -63,11 +63,11 @@ class periodicBackupSetup {
         this.setupTypeAndMainValue(dto);
 
         var incr = this.prepareBackupInterval(dto.IntervalMilliseconds);
-        this.incrementalBackupInterval(incr[0].toString());
+        this.incrementalBackupInterval(incr[0] ? incr[0].toString() : incr[0]);
         this.incrementalBackupIntervalUnit(incr[1]);
 
         var full = this.prepareBackupInterval(dto.FullBackupIntervalMilliseconds);
-        this.fullBackupInterval(full[0].toString());
+        this.fullBackupInterval(full[0] ? full[0].toString() : full[0]);
         this.fullBackupIntervalUnit(full[1]);
 
         this.activated(dto.Activated);
