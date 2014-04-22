@@ -313,6 +313,7 @@ namespace Raven.Json.Linq
             var fieldName = string.Empty;
             var otherStack = new Stack<RavenJToken>();
             var thisStack = new Stack<RavenJToken>();
+            var FieldNameStack = new Stack<string>();
             var isEqual = true;
             thisStack.Push(this);
             otherStack.Push(other);
@@ -321,6 +322,13 @@ namespace Raven.Json.Linq
             {
                 var curOtherReader = otherStack.Pop();
                 var curThisReader = thisStack.Pop();
+                string fieldArrName = string.Empty;
+                if (FieldNameStack.Count > 0)
+                {
+                    fieldArrName = FieldNameStack.Pop();
+                    fieldName = fieldArrName;
+                }
+                  
 
                 if (curOtherReader == null && curThisReader == null)
                     continue; // shouldn't happen, but we got an error report from a user about this
@@ -350,33 +358,41 @@ namespace Raven.Json.Linq
                                 {
                                     var changes = new DocumentsChanges
                                     {
-                                        FieldNewValue = dif.ToString(),
-                                        FieldNewType = dif.Type.ToString()
+                                        FieldName = fieldArrName
                                     };
 
 
                                     if (selfArray.Length < otherArray.Length)
                                     {
                                         changes.Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldRemoved);
-                                        changes.FieldName = fieldName;
+                                        changes.FieldOldValue = dif.ToString();
+                                        changes.FieldOldType = dif.Type.ToString();
                                     }
 
                                     if (selfArray.Length > otherArray.Length)
                                     {
                                         changes.Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldAdded);
+                                        changes.FieldNewValue = dif.ToString();
+                                        changes.FieldNewType = dif.Type.ToString();
 
-                                        changes.FieldName = fieldName;
+
                                     }
                                     docChanges.Add(changes);
                                 }
-                                return false;
+
+                                isEqual = false;
                             }
 
-
-                            for (var i = 0; i < selfArray.Length; i++)
+                            else
                             {
-                                thisStack.Push(selfArray[i]);
-                                otherStack.Push(otherArray[i]);
+
+
+                                for (var i = 0; i < selfArray.Length; i++)
+                                {
+                                    thisStack.Push(selfArray[i]);
+                                    otherStack.Push(otherArray[i]);
+                                    FieldNameStack.Push(fieldName);
+                                }
                             }
                             break;
                         case JTokenType.Object:
@@ -412,7 +428,7 @@ namespace Raven.Json.Linq
                                         docChanges.Add(changes);
                                     }
 
-                                    return false;
+                                    isEqual = false;
                                 }
                                 CompareJsonData(selfObj.Properties, otherObj.Properties, diffData);
 
@@ -439,130 +455,137 @@ namespace Raven.Json.Linq
                                     }
                                     docChanges.Add(changes);
                                 }
+                                isEqual = false;
 
-
-                                return false;
+                                // return false;
                             }
 
-                            foreach (var kvp in selfObj.Properties)
+
+                            else
                             {
-                                fieldName = kvp.Key;
-                                RavenJToken token;
-                                if (otherObj.TryGetValue(kvp.Key, out token) == false)
+                                foreach (var kvp in selfObj.Properties)
                                 {
-                                    if (docChanges == null)
-                                        return false;
-
-                                    var changes = new DocumentsChanges
-                                    {
-                                       Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.DoesntExistInNew)
-
-                                    };
-                                    docChanges.Add(changes);
-                                    isEqual = false;
-                                }
-
-                                if (kvp.Value == null)
-                                {
-                                    if (token != null && token.Type != JTokenType.Null)
+                                    fieldName = kvp.Key;
+                                    RavenJToken token;
+                                    if (otherObj.TryGetValue(kvp.Key, out token) == false)
                                     {
                                         if (docChanges == null)
                                             return false;
 
                                         var changes = new DocumentsChanges
                                         {
-                                          Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.DoesntExistInOriginal)
-                                           
+                                            Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.DoesntExistInNew)
+
                                         };
                                         docChanges.Add(changes);
                                         isEqual = false;
                                     }
 
-                                    continue;
-                                }
-                                switch (kvp.Value.Type)
-                                {
-                                    case JTokenType.Array:
-                                    case JTokenType.Object:
-                                        otherStack.Push(token);
-                                        thisStack.Push(kvp.Value);
-                                        break;
-                                    case JTokenType.Bytes:
-                                        var bytes = kvp.Value.Value<byte[]>();
-                                        var tokenBytes = token.Type == JTokenType.String
-                                            ? Convert.FromBase64String(token.Value<string>())
-                                            : token.Value<byte[]>();
-                                        if (tokenBytes == null)
-                                            return false;
-                                        if (bytes.Length != tokenBytes.Length)
-                                            return false;
-
-                                        if (tokenBytes.Where((t, i) => t != bytes[i]).Any())
-                                        {
-                                            return false;
-                                        }
-
-                                        break;
-                                    default:
-                                        if (!kvp.Value.DeepEquals(token))
+                                    if (kvp.Value == null)
+                                    {
+                                        if (token != null && token.Type != JTokenType.Null)
                                         {
                                             if (docChanges == null)
                                                 return false;
-                                            var changes = new DocumentsChanges
 
+                                            var changes = new DocumentsChanges
                                             {
-                                                FieldNewType = kvp.Value.Type.ToString(),
-                                                FieldOldType = token.Type.ToString(),
-                                                FieldNewValue = kvp.Value.ToString(),
-                                                FieldOldValue = token.ToString(),
-                                                Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldChanged),
-                                                FieldName = kvp.Key
+                                                Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.DoesntExistInOriginal)
+
                                             };
                                             docChanges.Add(changes);
                                             isEqual = false;
                                         }
 
-                                        break;
-                                }
+                                        continue;
+                                    }
+                                    switch (kvp.Value.Type)
+                                    {
+                                        case JTokenType.Array:
+                                        case JTokenType.Object:
+                                            otherStack.Push(token);
+                                            thisStack.Push(kvp.Value);
+                                            FieldNameStack.Push(kvp.Key);
+                                            break;
+                                        case JTokenType.Bytes:
+                                            var bytes = kvp.Value.Value<byte[]>();
+                                            var tokenBytes = token.Type == JTokenType.String
+                                                ? Convert.FromBase64String(token.Value<string>())
+                                                : token.Value<byte[]>();
+                                            if (tokenBytes == null)
+                                                return false;
+                                            if (bytes.Length != tokenBytes.Length)
+                                                return false;
+
+                                            if (tokenBytes.Where((t, i) => t != bytes[i]).Any())
+                                            {
+                                                return false;
+                                            }
+
+                                            break;
+                                        default:
+                                            if (!kvp.Value.DeepEquals(token))
+                                            {
+                                                if (docChanges == null)
+                                                    return false;
+                                                var changes = new DocumentsChanges
+
+                                                {
+                                                    FieldNewType = kvp.Value.Type.ToString(),
+                                                    FieldOldType = token.Type.ToString(),
+                                                    FieldNewValue = kvp.Value.ToString(),
+                                                    FieldOldValue = token.ToString(),
+                                                    Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldChanged),
+                                                    FieldName = kvp.Key
+                                                };
+                                                docChanges.Add(changes);
+                                                isEqual = false;
+                                            }
+
+                                            break;
+                                    }
+                                } //for
                             }
                             break;
-                        default:
-                            if (!curOtherReader.DeepEquals(curThisReader))
-                            {
-                                if (docChanges == null)
-                                    return false;
-                                var changes = new DocumentsChanges
+                            default:
+                                if (!curOtherReader.DeepEquals(curThisReader))
                                 {
-                                    FieldNewType = curThisReader.Type.ToString(),
-                                    FieldOldType = curOtherReader.Type.ToString(),
-                                    FieldNewValue = curThisReader.ToString(),
-                                    FieldOldValue = curOtherReader.ToString(),
-                                    Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldChanged),
-                                    FieldName = fieldName
-                                };
-                                docChanges.Add(changes);
-                                return false;
+                                    if (docChanges == null)
+                                        return false;
+                                    var changes = new DocumentsChanges
+                                    {
+                                        FieldNewType = curThisReader.Type.ToString(),
+                                        FieldOldType = curOtherReader.Type.ToString(),
+                                        FieldNewValue = curThisReader.ToString(),
+                                        FieldOldValue = curOtherReader.ToString(),
+                                        Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldChanged),
+                                        FieldName = fieldName
+                                    };
+                                    docChanges.Add(changes);
+                                    isEqual = false;
+                                }
+
+                                break;
                             }
 
-                            break;
                     }
-                }
                 else
-                {
-                    switch (curThisReader.Type)
                     {
-                        case JTokenType.Guid:
-                            if (curOtherReader.Type != JTokenType.String)
-                                return false;
+                        switch (curThisReader.Type)
+                        {
+                            case JTokenType.Guid:
+                                if (curOtherReader.Type != JTokenType.String)
+                                    return false;
 
-                            if (curThisReader.Value<string>() != curOtherReader.Value<string>())
-                                return false;
+                                if (curThisReader.Value<string>() != curOtherReader.Value<string>())
+                                    return false;
 
-                            break;
-                        default:
-                            return false;
+                                break;
+                            default:
+                                return false;
+                        }
                     }
-                }
+                
             }
 
             return isEqual;
