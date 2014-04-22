@@ -39,13 +39,13 @@ namespace Raven.Tests.Issues
 
                 var webException = Assert.Throws<WebException>(() =>
                 {
-                    replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
+                    replicationInformer.ExecuteWithReplicationAsync("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, async url =>
                     {
                         urlsTried.Add(url.Url);
                         throw new WebException("Timeout", WebExceptionStatus.Timeout);
 
                         return 1;
-                    });
+                    }).Wait();
                 });
 
                 Assert.Equal(2, urlsTried.Count);
@@ -76,13 +76,13 @@ namespace Raven.Tests.Issues
 
                 var webException = Assert.Throws<WebException>(() =>
                 {
-                    replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
+                    replicationInformer.ExecuteWithReplicationAsync("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, async url =>
                     {
                         urlsTried.Add(url.Url);
                         throw new WebException("Timeout", WebExceptionStatus.Timeout);
 
                         return 1;
-                    });
+                    }).Wait();
                 });
 
                 Assert.Equal(2, urlsTried.Count);
