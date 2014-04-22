@@ -36,6 +36,15 @@ class appUrl {
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
         scriptedIndexes: ko.computed(() => appUrl.forScriptedIndexes(appUrl.currentDatabase())),
 
+        statusDebug: ko.computed(() => appUrl.forStatusDebug(appUrl.currentDatabase())),
+        statusDebugChanges: ko.computed(() => appUrl.forStatusDebugChanges(appUrl.currentDatabase())),
+        statusDebugMetrics: ko.computed(() => appUrl.forStatusDebugMetrics(appUrl.currentDatabase())),
+        statusDebugConfig: ko.computed(() => appUrl.forStatusDebugConfig(appUrl.currentDatabase())),
+        statusDebugDocrefs: ko.computed(() => appUrl.forStatusDebugDocrefs(appUrl.currentDatabase())),
+        statusDebugCurrentlyIndexing: ko.computed(() => appUrl.forStatusDebugCurrentlyIndexing(appUrl.currentDatabase())),
+        statusDebugQueries: ko.computed(() => appUrl.forStatusDebugQueries(appUrl.currentDatabase())),
+        statusDebugTasks: ko.computed(() => appUrl.forStatusDebugTasks(appUrl.currentDatabase())),
+
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
         databasesManagement: ko.computed(() => "#databases?database=" + appUrl.getEncodedDbPart(appUrl.currentDatabase()))
 	};
@@ -69,6 +78,38 @@ class appUrl {
 	*/
 	static forStatus(db: database): string {
 		return "#status?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebug(db: database): string {
+        return "#status/debug?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugChanges(db: database): string {
+        return "#status/debug?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugMetrics(db: database): string {
+        return "#status/debug/metrics?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugConfig(db: database): string {
+        return "#status/debug/config?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugDocrefs(db: database): string {
+        return "#status/debug/docrefs?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugCurrentlyIndexing(db: database): string {
+        return "#status/debug/currentlyIndexing?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugQueries(db: database): string {
+        return "#status/debug/queries?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugTasks(db: database): string {
+        return "#status/debug/tasks?" + appUrl.getEncodedDbPart(db);
     }
 
     static forSettings(db: database): string {

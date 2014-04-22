@@ -64,7 +64,7 @@ class viewModelBase {
 
         this.notifications = this.createNotifications();
 
-        this.modelPollingStart(); //TODO: delete polling
+        this.modelPollingStart();
 
         window.onbeforeunload = (e: any) => {
             this.saveInObservable();
@@ -108,7 +108,7 @@ class viewModelBase {
     deactivate() {
         this.activeDatabase.unsubscribeFrom("ActivateDatabase");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
-        this.modelPollingStop(); //TODO: delete polling
+        this.modelPollingStop();
         this.cleanupNotifications();
     }
 
@@ -156,19 +156,20 @@ class viewModelBase {
         router.navigate(url, options);
     }
 
-    modelPolling() {  //TODO: delete polling
+    modelPolling() { 
     }
 
-    forceModelPolling() {  //TODO: delete polling
+    forceModelPolling() {  
         this.modelPolling();
     }
 
-    private modelPollingStart() {  //TODO: delete polling
+    private modelPollingStart() {
         this.modelPolling();
+        this.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
         this.activeDatabase.subscribe(() => this.forceModelPolling());
     }
 
-    private modelPollingStop() {  //TODO: delete polling
+    private modelPollingStop() {
         clearInterval(this.modelPollingHandle);
     }
 

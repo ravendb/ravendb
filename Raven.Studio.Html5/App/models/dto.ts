@@ -514,3 +514,91 @@ interface patchDto extends documentDto {
     SelectedItem: string;
     Values: Array<patchValueDto>;
 }
+
+interface statusDebugChangesDto {
+    Id: string;
+    Connected: boolean;
+    WatchAllDocuments: boolean;
+    WatchAllIndexes: boolean;
+    WatchConfig: boolean;
+    WatchConflicts: boolean;
+    WatchSync: boolean;
+    WatchCancellations: boolean;
+    WatchDocumentPrefixes: Array<string>;
+    WatchDocumentsInCollection: Array<string>;
+    WatchIndexes: Array<string>;
+    WatchDocuments: Array<string>;
+    WatchedFolders: Array<string>;
+}
+
+interface statusDebugMetricsDto {
+    DocsWritesPerSecond: number;
+    IndexedPerSecond: number;
+    ReducedPerSecond: number;
+    RequestsPerSecond: number;
+    Requests: statusDebugMetricsRequestsDto;
+    RequestsDuration: statusDebugMetricsRequestsDurationDto;
+}
+
+interface statusDebugMetricsRequestsDto {
+    Count: number;
+    MeanRate: number;
+    OneMinuteRate: number;
+    FiveMinuteRate: number;
+    FifteenMinuteRate: number;
+}
+
+interface statusDebugMetricsRequestsDurationDto {
+    Counter: number;
+    Max: number;
+    Min: number;
+    Mean: number;
+    Stdev: number;
+    Percentiles: any;
+}
+
+interface statusDebugDocrefsDto {
+    TotalCount: number;
+    Results: Array<string>;
+}
+
+interface statusDebugCurrentlyIndexingDto {
+    NumberOfCurrentlyWorkingIndexes: number;
+    Indexes: Array<statusDebugIndexDto>;
+}
+
+interface statusDebugIndexDto {
+    IndexName: string;
+    IsMapReduce: boolean;
+    CurrentOperations: Array<statusDebugIndexOperationDto>;
+    Priority: string;
+    OverallIndexingRate: Array<statusDebugIndexRateDto>;
+}
+
+interface statusDebugIndexOperationDto {
+    Operation: string;
+    NumberOfProcessingItems: number;
+}
+
+interface statusDebugIndexRateDto {
+    Operation: string;
+    Rate: string;
+}
+
+interface statusDebugQueriesGroupDto {
+    IndexName: string;
+    Queries: Array<statusDebugQueriesQueryDto>;
+}
+
+interface statusDebugQueriesQueryDto {
+    StartTime: string;
+    QueryInfo: KnockoutObservable<any>;
+}
+
+interface taskMetadataDto {
+    Id: any;
+    IndexId: number;
+    IndexName: string;
+    AddedTime: string;
+    Type: string;
+}

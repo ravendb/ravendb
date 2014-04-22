@@ -162,6 +162,13 @@
     <TypeScriptCompile Include="App\commands\getCustomColumnsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getPatchesCommand.ts" />
     <TypeScriptCompile Include="App\commands\savePatchCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getStatusDebugChangesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getStatusDebugMetricsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getStatusDebugConfigCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getDocRefsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getStatusDebugCurrentlyIndexingCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getStatusDebugQueriesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getStatusDebugTasksCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
     <TypeScriptCompile Include="App\viewmodels\conflicts.ts" />
     <TypeScriptCompile Include="App\models\conflict.ts" />
@@ -183,6 +190,26 @@
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\loadPatch.html" />
     <Content Include="App\views\savePatch.html" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebug.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugChanges.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugMetrics.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugConfig.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugDocrefs.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugCurrentlyIndexing.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugQueries.ts" />
+    <TypeScriptCompile Include="App\models\statusDebugQueriesGroup.ts" />
+    <TypeScriptCompile Include="App\models\statusDebugQueriesQuery.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugTasks.ts" />
+    <Content Include="App\views\alerts.html" />
+    <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\statusDebugTasks.html" />
+    <Content Include="App\views\statusDebugQueries.html" />
+    <Content Include="App\views\statusDebugCurrentlyIndexing.html" />
+    <Content Include="App\views\statusDebugDocrefs.html" />
+    <Content Include="App\views\statusDebugConfig.html" />
+    <Content Include="App\views\statusDebugMetrics.html" />
+    <Content Include="App\views\statusDebugChanges.html" />
+    <Content Include="App\views\statusDebug.html" />
     <Content Include="App\views\selectColumns.html" />
     <TypeScriptCompile Include="App\viewmodels\patch.ts" />
     <Content Include="App\views\alerts.html" />
@@ -238,7 +265,7 @@
     <Content Include="App\views\viewSystemDatabaseConfirm.html" />
     <Content Include="App\views\windowsAuth.html" />
     <Content Include="Content\app.min.css">
-      <DependentUpon>app.css</DependentUpon>
+      <DependentUpon>app.less</DependentUpon>
     </Content>
     <Content Include="Content\bootstrap-theme.css" />
     <Content Include="Content\bootstrap-theme.min.css" />
