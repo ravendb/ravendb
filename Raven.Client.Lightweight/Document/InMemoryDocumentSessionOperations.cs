@@ -947,9 +947,9 @@ more responsive application.
             }
         }
        
-        private void PrepareForEntitiesPuts(SaveChangesData result )
+        private void PrepareForEntitiesPuts(SaveChangesData result)
         {
-            foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value,  null)).ToArray())
+            foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)).ToArray())
             {
                 foreach (var documentStoreListener in theListeners.StoreListeners)
                 {
@@ -1086,8 +1086,7 @@ more responsive application.
         /// <param name="documentMetadata">The document metadata.</param>
         /// <returns></returns>
        // protected bool EntityChanged(object entity, DocumentMetadata documentMetadata, List< DocumentsChanges> changes)
-        protected bool EntityChanged(object entity, DocumentMetadata documentMetadata, IDictionary<string, DocumentsChanges[]> changes)
-             
+        protected bool EntityChanged(object entity, DocumentMetadata documentMetadata, IDictionary<string, DocumentsChanges[]> changes = null)
         {
             if (documentMetadata == null)
                 return true;
