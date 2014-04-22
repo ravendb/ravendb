@@ -50,6 +50,7 @@ declare module AceAjax {
     export interface TokenInfo {
 
         value: string;
+        type: any;
     }
 
     export interface Position {

@@ -1,3 +1,4 @@
+/// <reference path="../../Scripts/typings/ace/ace.d.ts" />
 import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
@@ -256,8 +257,19 @@ class query extends viewModelBase {
     }
         
 
-    queryCompleter(editor: any, session: any,pos:number, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
+    queryCompleter(editor: any, session: any,pos:AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
         debugger;
+        var currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
+
+        if (typeof currentToken.type == "string") {
+            if (currentToken.value == "text") {
+                //todo: treat column name
+            }
+            else if (currentToken.type == "keywork" || currentToken.type == "value") {
+                //todo: treat column value
+            }
+        }
+        
         callback(null, [{ name: "a", value: "a", score: 10, meta: "trash" }, { name: "b", value: "b", score: 10, meta: "smash" }, { name: "c", value: "c", score: 10, meta: "trash" }]);
     }
 

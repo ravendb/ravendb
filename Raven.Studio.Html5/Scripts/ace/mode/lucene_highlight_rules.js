@@ -77,7 +77,7 @@ var LuceneHighlightRules = function () {
         ],
         "valueNonQuotCont": [           
             {
-                token: "value23",
+                token: "value",
                 regex: '[^\\"\\s]*',
                 next: "start"
             }
