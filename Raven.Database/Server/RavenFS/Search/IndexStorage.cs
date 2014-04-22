@@ -97,7 +97,7 @@ namespace Raven.Database.Server.RavenFS.Search
 			return topDocs;
 		}
 
-        [Obsolete("Eventurally will be removed when the changes are done.")]
+        [Obsolete("Eventually will be removed when the changes are done.")]
         public virtual void Index(string key, NameValueCollection metadata)
         {
             Index(key, metadata.ToJObject());
@@ -138,8 +138,8 @@ namespace Raven.Database.Server.RavenFS.Search
                 foreach ( var metadataKey in lookup )
                 {
                     foreach ( var metadataHolder in metadataKey )
-                    {
-                        doc.Add(new Field(metadataHolder.Key, metadataHolder.Value.Value<string>(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
+                    {                        
+                        doc.Add(new Field(metadataHolder.Key, metadataHolder.Value.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
                     }
                 }
 

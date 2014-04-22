@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -28,41 +29,32 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 			this.synchronizationHiLo = synchronizationHiLo;
 		}
 
-		public void Update(string fileName, RavenJObject nameValueCollection)
+		public void Update(string fileName, RavenJObject sourceMetadata)
 		{
-			var metadata = GetMetadata(fileName);
-            var serverId = metadata.Value<string>(SynchronizationConstants.RavenSynchronizationSource);
+			var fileMetadata = GetMetadata(fileName);
+            var serverId = fileMetadata.Value<string>(SynchronizationConstants.RavenSynchronizationSource);
 			var history = new List<HistoryItem>();
 			// if there is RavenReplicationVersion metadata it means that file is not new and we have to add a new item to the history
 			if (!String.IsNullOrEmpty(serverId))
 			{
-				var currentVersion = metadata.Value<long>(SynchronizationConstants.RavenSynchronizationVersion);
-				history = DeserializeHistory(metadata);
+				var currentVersion = fileMetadata.Value<long>(SynchronizationConstants.RavenSynchronizationVersion);               
+                history = DeserializeHistory(fileMetadata);
 				history.Add(new HistoryItem { ServerId = serverId, Version = currentVersion });
 			}
 
 			if (history.Count > SynchronizationConstants.ChangeHistoryLength)
 				history.RemoveAt(0);
 
-			nameValueCollection[SynchronizationConstants.RavenSynchronizationHistory] = SerializeHistory(history);
-			nameValueCollection[SynchronizationConstants.RavenSynchronizationVersion] = synchronizationHiLo.NextId().ToString(CultureInfo.InvariantCulture);
-			nameValueCollection[SynchronizationConstants.RavenSynchronizationSource] = storage.Id.ToString();
+            sourceMetadata[SynchronizationConstants.RavenSynchronizationHistory] = SerializeHistory(history);            
+			sourceMetadata[SynchronizationConstants.RavenSynchronizationVersion] = synchronizationHiLo.NextId().ToString(CultureInfo.InvariantCulture);
+			sourceMetadata[SynchronizationConstants.RavenSynchronizationSource] = storage.Id.ToString();
 		}
 
-
-        //public void UpdateLastModified(NameValueCollection nameValueCollection)
-        //{
-        //    // internally keep last modified date with millisecond precision
-        //    nameValueCollection["Last-Modified"] = DateTime.UtcNow.ToString("d MMM yyyy H:m:s.fffff 'GMT'",
-        //                                                                    CultureInfo.InvariantCulture);
-        //    nameValueCollection["ETag"] = "\"" + uuidGenerator.CreateSequentialUuid() + "\"";
-        //}
-
-        public void UpdateLastModified(RavenJObject nameValueCollection)
+        public void UpdateLastModified(RavenJObject metadata)
         {
             // internally keep last modified date with millisecond precision
-            nameValueCollection["Last-Modified"] = DateTime.UtcNow.ToString("d MMM yyyy H:m:s.fffff 'GMT'", CultureInfo.InvariantCulture);
-            nameValueCollection["ETag"] = uuidGenerator.CreateSequentialUuid().ToString();
+            metadata["Last-Modified"] = DateTime.UtcNow.ToString("d MMM yyyy H:m:s.fffff 'GMT'", CultureInfo.InvariantCulture);
+            metadata["ETag"] = new RavenJValue(uuidGenerator.CreateSequentialUuid());
         }
 
         private RavenJObject GetMetadata(string fileName)
@@ -71,7 +63,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
             {
                 FileAndPages fileAndPages = null;
                 storage.Batch(accessor => fileAndPages = accessor.GetFile(fileName, 0, 0));
-                return fileAndPages.Metadata.ToJObject();
+                return fileAndPages.Metadata;
             }
             catch (FileNotFoundException)
             {
@@ -79,21 +71,23 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
             }
 		}
 
-		public static List<HistoryItem> DeserializeHistory(RavenJObject nameValueCollection)
-		{
-            throw new NotImplementedException();
+        public static List<HistoryItem> DeserializeHistory(RavenJObject metadata)
+        {
+            var history = new List<HistoryItem>();
+            if (metadata.ContainsKey(SynchronizationConstants.RavenSynchronizationHistory))
+            {
+                var array = (RavenJArray) metadata[SynchronizationConstants.RavenSynchronizationHistory];
+                var items = array.Values<RavenJObject>().Select(x => JsonExtensions.JsonDeserialization<HistoryItem>(x));
+                return new List<HistoryItem>(items);
+            }
 
-            //var serializedHistory = nameValueCollection[SynchronizationConstants.RavenSynchronizationHistory];
-            //return serializedHistory == null ? null : new JsonSerializer().Deserialize<List<HistoryItem>>(new JsonTextReader(new StringReader(serializedHistory)));
-		}
+            return history;
+        }
 
-		public static string SerializeHistory(List<HistoryItem> history)
-		{
-			var sb = new StringBuilder();
-			var jw = new JsonTextWriter(new StringWriter(sb));
-			new JsonSerializer().Serialize(jw, history);
-			return sb.ToString();
-		}
+        public static RavenJArray SerializeHistory(List<HistoryItem> history)
+        {
+            return JsonExtensions.ToJArray(history);
+        }
 
         public static bool IsDirectChildOfCurrent(RavenJObject destinationMetadata, RavenJObject sourceMetadata)
 		{
@@ -102,7 +96,7 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 
 			var version = new HistoryItem { ServerId = destServerId, Version = destVersion };
 
-			var history = DeserializeHistory(sourceMetadata) ?? new List<HistoryItem>();
+			var history = DeserializeHistory(sourceMetadata);
             long sourceVersion = sourceMetadata.Value<long>(SynchronizationConstants.RavenSynchronizationVersion);
 			var sourceServerId = sourceMetadata.Value<string>(SynchronizationConstants.RavenSynchronizationSource);
 

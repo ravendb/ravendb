@@ -135,28 +135,25 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
             RavenJObject destinationMetadata;
 
-            throw new NotImplementedException();
+            try
+            {
+                destinationMetadata = await destinationClient.GetMetadataForAsync(fileName);
+            }
+            catch (Exception ex)
+            {
+                var exceptionMessage = "Could not get metadata details for " + fileName + " from " + destination.FileSystemUrl;
+                Log.WarnException(exceptionMessage, ex);
 
-            //try
-            //{
-            //    destinationMetadata = await destinationClient.GetMetadataForAsync(fileName);
-            //}
-            //catch (Exception ex)
-            //{
-            //    var exceptionMessage = "Could not get metadata details for " + fileName + " from " + destination.FileSystemUrl;
-            //    Log.WarnException(exceptionMessage, ex);
-
-            //    return new SynchronizationReport(fileName, Guid.Empty, SynchronizationType.Unknown)
-            //    {
-            //        Exception = new SynchronizationException(exceptionMessage, ex)
-            //    };
-            //}
+                return new SynchronizationReport(fileName, Guid.Empty, SynchronizationType.Unknown)
+                {
+                    Exception = new SynchronizationException(exceptionMessage, ex)
+                };
+            }
 
             RavenJObject localMetadata = GetLocalMetadata(fileName);
 
 			NoSyncReason reason;
-			SynchronizationWorkItem work = synchronizationStrategy.DetermineWork(fileName, localMetadata, destinationMetadata,
-																				 FileSystemUrl, out reason);
+			SynchronizationWorkItem work = synchronizationStrategy.DetermineWork(fileName, localMetadata, destinationMetadata, FileSystemUrl, out reason);
 
 			if (work == null)
 			{
@@ -302,20 +299,18 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 				RavenJObject destinationMetadata;
 
-                throw new NotImplementedException();
+                try
+                {
+                    destinationMetadata = await destination.GetMetadataForAsync(file);
+                }
+                catch (Exception ex)
+                {
+                    Log.WarnException(
+                        string.Format("Could not retrieve a metadata of a file '{0}' from {1} in order to determine needed synchronization type", file,
+                            destination.FileSystemUrl), ex);
 
-                //try
-                //{
-                //    destinationMetadata = await destination.GetMetadataForAsync(file);
-                //}
-                //catch (Exception ex)
-                //{
-                //    Log.WarnException(
-                //        string.Format("Could not retrieve a metadata of a file '{0}' from {1} in order to determine needed synchronization type", file,
-                //            destination.FileSystemUrl), ex);
-
-                //    continue;
-                //}
+                    continue;
+                }
 
 				NoSyncReason reason;
 				var work = synchronizationStrategy.DetermineWork(file, localMetadata, destinationMetadata, FileSystemUrl, out reason);
@@ -562,30 +557,28 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
         private RavenJObject GetLocalMetadata(string fileName)
 		{
-            throw new NotImplementedException();
-            //NameValueCollection result = null;
-            //try
-            //{
-            //    storage.Batch(
-            //        accessor => { result = accessor.GetFile(fileName, 0, 0).Metadata; });
-            //}
-            //catch (FileNotFoundException)
-            //{
-            //    return null;
-            //}
-            //FileAndPages fileAndPages = null;
-            //{
-            //    try
-            //    {
-            //        storage.Batch(accessor => fileAndPages  = accessor.GetFile(fileName, 0, 0));
-            //    }
-            //    catch (FileNotFoundException)
-            //    {
-					
-            //    }
-            //}
+            RavenJObject result = null;
+            try
+            {
+                storage.Batch(accessor => { result = accessor.GetFile(fileName, 0, 0).Metadata; });
+            }
+            catch (FileNotFoundException)
+            {
+                return null;
+            }
+            FileAndPages fileAndPages = null;
+            {
+                try
+                {
+                    storage.Batch(accessor => fileAndPages = accessor.GetFile(fileName, 0, 0));
+                }
+                catch (FileNotFoundException)
+                {
 
-            //return result;
+                }
+            }
+
+            return result;
 		}
 
 		private IEnumerable<SynchronizationDestination> GetSynchronizationDestinations()

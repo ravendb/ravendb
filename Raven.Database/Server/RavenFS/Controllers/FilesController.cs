@@ -30,7 +30,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 		[HttpGet]
         [Route("ravenfs/{fileSystemName}/files")]
-		public List<FileHeader> Get()
+        public HttpResponseMessage Get()
 		{
             int results;
             var keys = Search.Query(null, null, Paging.Start, Paging.PageSize, out results);
@@ -38,12 +38,12 @@ namespace Raven.Database.Server.RavenFS.Controllers
             var list = new List<FileHeader>();
             Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
 
-            return list;
+            return this.GetMessageWithObject(list, HttpStatusCode.OK);
 		}
 
 		[HttpGet]
         [Route("ravenfs/{fileSystemName}/files/{*name}")]
-		public HttpResponseMessage Get(string name)
+        public HttpResponseMessage Get(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
 			FileAndPages fileAndPages = null;
@@ -57,7 +57,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				throw new HttpResponseException(HttpStatusCode.NotFound);
 			}
 
-			if (fileAndPages.Metadata.AllKeys.Contains(SynchronizationConstants.RavenDeleteMarker))
+            if (fileAndPages.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
 			{
 				log.Debug("File '{0}' is not accessible to get (Raven-Delete-Marker set)", name);
 				throw new HttpResponseException(HttpStatusCode.NotFound);
@@ -85,9 +85,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 					var metadata = fileAndPages.Metadata;
 
-					if (
-						metadata.AllKeys.Contains(
-							SynchronizationConstants.RavenDeleteMarker))
+					if (metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
 					{
 						throw new FileNotFoundException();
 					}
@@ -113,10 +111,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 						Historian.UpdateLastModified(tombstoneMetadata);
 
-                        throw new NotImplementedException();
-
-                        //accessor.PutFile(name, 0, tombstoneMetadata, true);
-
+                        accessor.PutFile(name, 0, tombstoneMetadata, true);
                         accessor.DeleteConfig(RavenFileNameHelper.ConflictConfigNameForFile(name));
 						// delete conflict item too
 					}
@@ -151,7 +146,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				return new HttpResponseMessage(HttpStatusCode.NotFound);
 			}
 
-			if (fileAndPages.Metadata.AllKeys.Contains(SynchronizationConstants.RavenDeleteMarker))
+			if (fileAndPages.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
 			{
 				log.Debug("Cannot get metadata of a file '{0}' because file was deleted", name);
 				return new HttpResponseMessage(HttpStatusCode.NotFound);
@@ -173,30 +168,28 @@ namespace Raven.Database.Server.RavenFS.Controllers
             Historian.UpdateLastModified(headers);
             Historian.Update(name, headers);
 
-            throw new NotImplementedException();
+            try
+            {
+                ConcurrencyAwareExecutor.Execute(() =>
+                                                 Storage.Batch(accessor =>
+                                                 {
+                                                     AssertFileIsNotBeingSynced(name, accessor, true);
+                                                     accessor.UpdateFileMetadata(name, headers);
+                                                 }), ConcurrencyResponseException);
+            }
+            catch (FileNotFoundException)
+            {
+                log.Debug("Cannot update metadata because file '{0}' was not found", name);
+                return GetEmptyMessage(HttpStatusCode.NotFound);
+            }
 
-            //try
-            //{
-            //    ConcurrencyAwareExecutor.Execute(() =>
-            //                                     Storage.Batch(accessor =>
-            //                                     {
-            //                                         AssertFileIsNotBeingSynced(name, accessor, true);
-            //                                         accessor.UpdateFileMetadata(name, headers);
-            //                                     }), ConcurrencyResponseException);
-            //}
-            //catch (FileNotFoundException)
-            //{
-            //    log.Debug("Cannot update metadata because file '{0}' was not found", name);
-            //    return GetEmptyMessage(HttpStatusCode.NotFound);
-            //}
+            Search.Index(name, headers);
 
-            //Search.Index(name, headers);
+            Publisher.Publish(new FileChange { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
 
-            //Publisher.Publish(new FileChange { File = FilePathTools.Cannoicalise(name), Action = FileChangeAction.Update });
+            StartSynchronizeDestinationsInBackground();
 
-            //StartSynchronizeDestinationsInBackground();
-
-            //log.Debug("Metadata of a file '{0}' was updated", name);
+            log.Debug("Metadata of a file '{0}' was updated", name);
 
             //Hack needed by jquery on the client side. We need to find a better solution for this
             return GetMessageWithString("", HttpStatusCode.NoContent);
@@ -217,34 +210,32 @@ namespace Raven.Database.Server.RavenFS.Controllers
 						AssertFileIsNotBeingSynced(name, accessor, true);
 
 						var metadata = accessor.GetFile(name, 0, 0).Metadata;
-						if (metadata.AllKeys.Contains(SynchronizationConstants.RavenDeleteMarker))
+						if (metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
 						{
 							throw new FileNotFoundException();
 						}
 
 						var existingHeader = accessor.ReadFile(rename);
-						if (existingHeader != null && !existingHeader.Metadata.AllKeys.Contains(SynchronizationConstants.RavenDeleteMarker))
+						if (existingHeader != null && !existingHeader.Metadata.ContainsKey(SynchronizationConstants.RavenDeleteMarker))
 						{
 							throw new HttpResponseException(
 								Request.CreateResponse(HttpStatusCode.Forbidden,
 													new InvalidOperationException("Cannot rename because file " + rename + " already exists")));
 						}
 
-                        throw new NotImplementedException();
+                        Historian.UpdateLastModified(metadata);
 
-                        //Historian.UpdateLastModified(metadata);
+                        var operation = new RenameFileOperation
+                        {
+                            Name = name,
+                            Rename = rename,
+                            MetadataAfterOperation = metadata
+                        };
 
-                        //var operation = new RenameFileOperation
-                        //{
-                        //    Name = name,
-                        //    Rename = rename,
-                        //    MetadataAfterOperation = metadata
-                        //};
-                                                     
-                        //accessor.SetConfig( RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
-                        //accessor.PulseTransaction(); // commit rename operation config
+                        accessor.SetConfig(RavenFileNameHelper.RenameOperationConfigNameForFile(name), JsonExtensions.ToJObject(operation));
+                        accessor.PulseTransaction(); // commit rename operation config
 
-                        //StorageOperationsTask.RenameFile(operation);
+                        StorageOperationsTask.RenameFile(operation);
 					}), ConcurrencyResponseException);
 			}
 			catch (FileNotFoundException)

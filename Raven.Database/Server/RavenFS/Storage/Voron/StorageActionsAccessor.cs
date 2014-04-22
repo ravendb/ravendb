@@ -112,7 +112,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             var existingFile = LoadJson(storage.Files, key, writeBatch.Value, out version);
 
             var innerMetadata = new RavenJObject(metadata);
-            var etag = Guid.Parse(innerMetadata.Value<string>("ETag").Trim('\"'));
+            var etag = innerMetadata.Value<Guid>("ETag");
             innerMetadata.Remove("ETag");
 
             var file = new RavenJObject
@@ -120,7 +120,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                            { "name", filename }, 
                            { "total_size", totalSize }, 
                            { "uploaded_size", 0 }, 
-                           { "etag", etag.ToString() }, 
+                           { "etag", new RavenJValue(etag) }, 
                            { "metadata", innerMetadata }
                        };
 
@@ -128,7 +128,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
             if (existingFile != null)
             {
-                filesByEtag.Delete(writeBatch.Value, CreateKey(existingFile.Value<string>("etag")));
+                filesByEtag.Delete(writeBatch.Value, CreateKey(existingFile.Value<Guid>("etag")));
             }
 
             filesByEtag.Add(writeBatch.Value, CreateKey(etag), key);
@@ -303,6 +303,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             return fileInformation;
         }
 
+
         public IEnumerable<FileHeader> ReadFiles(int start, int size)
         {
             using (var iterator = storage.Files.Iterate(Snapshot, writeBatch.Value))
@@ -374,16 +375,16 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                 throw new InvalidOperationException(string.Format("Metadata of file {0} does not contain 'ETag' key", filename));
 
             var innerMetadata = new RavenJObject(metadata);
-            var etag = Guid.Parse(innerMetadata.Value<string>("ETag").Trim('\"'));
+            var etag = innerMetadata.Value<Guid>("ETag");
             innerMetadata.Remove("ETag");
 
             var existingMetadata = (RavenJObject) file["metadata"];
             if (existingMetadata.ContainsKey("Content-MD5"))
                 innerMetadata["Content-MD5"] = existingMetadata["Content-MD5"];
 
-            var oldEtag = file.Value<string>("etag");
+            var oldEtag = file.Value<Guid>("etag");
 
-            file["etag"] = etag.ToString();
+            file["etag"] = new RavenJValue(etag);
             file["metadata"] = innerMetadata;
 
             storage.Files.Add(writeBatch.Value, key, file, version);
@@ -483,7 +484,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
 			var filesByEtag = storage.Files.GetIndex(Tables.Files.Indices.ByEtag);
 
-			filesByEtag.Add(writeBatch.Value, CreateKey(file.Value<string>("etag")), renameKey);
+			filesByEtag.Add(writeBatch.Value, CreateKey(file.Value<Guid>("ETag")), renameKey);
         }
 
         private void RenameUsage(string fileName, string rename, bool commitPeriodically)
@@ -897,12 +898,15 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         private static FileHeader ConvertToFile(RavenJObject file)
         {
+            var metadata = (RavenJObject)file["metadata"];
+            metadata["ETag"] = file["etag"];
+
             return new FileHeader
                    {
                        Name = file.Value<string>("name"),
                        TotalSize = file.Value<long?>("total_size"),
                        UploadedSize = file.Value<long>("uploaded_size"),
-                       Metadata = RetrieveMetadata(file)
+                       Metadata = metadata,
                    };
         }
 
@@ -928,18 +932,6 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                 sb.Length = sb.Length - 1;
 
             return sb.ToString();
-        }
-
-        private static NameValueCollection RetrieveMetadata(RavenJObject file)
-        {
-            var result = new NameValueCollection();
-
-            var lookup = ((RavenJObject)file["metadata"]).ToLookup(x => x.Key);
-            foreach ( var holder in lookup)
-                foreach ( var item in holder )
-                    result.Add( item.Key, item.Value.Value<string>());
-
-            return result;
         }
 
     }

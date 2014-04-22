@@ -2,15 +2,14 @@
 using System.Collections.Specialized;
 using Raven.Database.Server.RavenFS.Storage;
 using Xunit;
+using Raven.Json.Linq;
+using Raven.Database.Server.RavenFS.Extensions;
 
 namespace RavenFS.Tests.Bugs
 {
 	public class ReadingFileIfFileWithGreaterNameExists : StorageTest
 	{
-		private readonly NameValueCollection metadataWithEtag = new NameValueCollection
-			                                                        {
-				                                                        {"ETag", "\"" + Guid.Empty + "\""}
-			                                                        };
+		private readonly RavenJObject metadataWithEtag = new RavenJObject().WithETag(Guid.Empty);
 
 		[Fact]
 		public void Should_work()

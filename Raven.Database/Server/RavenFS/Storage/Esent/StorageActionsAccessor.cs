@@ -342,9 +342,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 				       {
 					       Name = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
 					       TotalSize = GetTotalSize(),
-					       UploadedSize =
-						       BitConverter.ToInt64(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"]), 0),
-					       Metadata = RetrieveMetadataAsNameValueCollection()
+					       UploadedSize = BitConverter.ToInt64(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"]), 0),
+					       Metadata = RetrieveMetadata()
 				       };
 		}
 
@@ -358,10 +357,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			var fileInformation = new FileAndPages
 				                      {
 					                      TotalSize = GetTotalSize(),
-					                      UploadedSize =
-						                      BitConverter.ToInt64(
-							                      Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"]), 0),
-					                      Metadata = RetrieveMetadataAsNameValueCollection(),
+					                      UploadedSize = BitConverter.ToInt64(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"]), 0),
+					                      Metadata = RetrieveMetadata(),
 					                      Name = filename,
 					                      Start = start
 				                      };
@@ -384,12 +381,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 
 						fileInformation.Pages.Add(new PageInformation
 							                          {
-								                          Size =
-									                          Api.RetrieveColumnAsInt32(session, Usage, tableColumnsCache.UsageColumns["page_size"])
-									                             .Value,
-								                          Id =
-									                          Api.RetrieveColumnAsInt32(session, Usage, tableColumnsCache.UsageColumns["page_id"])
-									                             .Value
+								                          Size = Api.RetrieveColumnAsInt32(session, Usage, tableColumnsCache.UsageColumns["page_size"]).Value,
+								                          Id = Api.RetrieveColumnAsInt32(session, Usage, tableColumnsCache.UsageColumns["page_id"]).Value
 							                          });
 					} while (Api.TryMoveNext(session, Usage) && fileInformation.Pages.Count < pagesToLoad);
 				}
@@ -421,13 +414,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			{
 				yield return new FileHeader
 					             {
-						             Name =
-							             Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
+						             Name = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
 						             TotalSize = GetTotalSize(),
-						             UploadedSize =
-							             BitConverter.ToInt64(
-								             Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"]), 0),
-						             Metadata = RetrieveMetadataAsNameValueCollection()
+						             UploadedSize = BitConverter.ToInt64(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"]), 0),
+						             Metadata = RetrieveMetadata()
 					             };
 			} while (++index < size && Api.TryMoveNext(session, Files));
 		}
@@ -437,16 +427,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
             var metadataAsString = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode);
 
             var metadata = RavenJObject.Parse(metadataAsString);
-            metadata["ETag"] = "\"" + Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting() + "\"";
+            metadata["ETag"] = new RavenJValue(Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting());
             
-            return metadata;
-        }
-
-        private NameValueCollection RetrieveMetadataAsNameValueCollection()
-        {
-            var metadataAsString = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode);
-            var metadata = HttpUtility.ParseQueryString(metadataAsString);
-            metadata["ETag"] = "\"" + Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting() + "\"";
             return metadata;
         }
 
@@ -464,13 +446,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			{
 				result.Add(new FileHeader
 					           {
-						           Name =
-							           Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
+						           Name = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
 						           TotalSize = GetTotalSize(),
-						           UploadedSize =
-							           BitConverter.ToInt64(
-								           Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"]), 0),
-						           Metadata = RetrieveMetadataAsNameValueCollection()
+						           UploadedSize = BitConverter.ToInt64( Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["uploaded_size"]), 0),
+						           Metadata = RetrieveMetadata()
 					           });
 			} while (++index < take && Api.TryMoveNext(session, Files));
 

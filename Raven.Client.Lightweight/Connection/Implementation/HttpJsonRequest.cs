@@ -800,9 +800,17 @@ namespace Raven.Client.Connection
 			httpClient.DefaultRequestHeaders.Range = new RangeHeaderValue(from, to);
 		}
 
+        public void AddHeaders(RavenJObject headers)
+        {
+            foreach (var item in headers)
+            {
+                AddHeader(item.Key, item.Value.ToString());
+            }
+        }
+
 		public void AddHeaders(NameValueCollection nameValueHeaders)
 		{
-			foreach (var key in nameValueHeaders.AllKeys)
+            foreach (var key in nameValueHeaders.AllKeys)
 			{
 				AddHeader(key, nameValueHeaders[key]);
 			}

@@ -25,14 +25,13 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 		private readonly string fileName;
 		private readonly IList<RdcNeed> needList;
 		private readonly ServerInfo serverInfo;
-		private readonly NameValueCollection sourceMetadata;
+        private readonly RavenJObject sourceMetadata;
 		private readonly Stream sourceStream;
 		private readonly string syncingBoundary;
 		private HttpJsonRequest request;
 
         public SynchronizationMultipartRequest(RavenFileSystemClient.SynchronizationClient destination, ServerInfo serverInfo, string fileName,
-											   NameValueCollection sourceMetadata, Stream sourceStream,
-											   IList<RdcNeed> needList)
+                                               RavenJObject sourceMetadata, Stream sourceStream, IList<RdcNeed> needList)
 		{
 			this.destination = destination;
 			this.serverInfo = serverInfo;
@@ -55,10 +54,9 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 				throw new Exception("Stream does not support reading");
 			}
 
-			request =
-				destination.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-					destination.FileSystemUrl + "/synchronization/MultipartProceed",
-					"POST", destination.Credentials, destination.Convention));
+			request = destination.JsonRequestFactory.CreateHttpJsonRequest(
+                                    new CreateHttpJsonRequestParams(this, destination.FileSystemUrl + "/synchronization/MultipartProceed",
+					                                                "POST", destination.Credentials, destination.Convention));
 
 			//request.SendChunked = true;
 			//request.AllowWriteStreamBuffering = false;

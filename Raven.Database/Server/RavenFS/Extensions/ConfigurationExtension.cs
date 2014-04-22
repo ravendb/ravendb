@@ -54,45 +54,73 @@ namespace Raven.Database.Server.RavenFS.Extensions
             accessor.SetConfig(key, JsonExtensions.ToJObject(objectToSave));
         }
 
-		public static NameValueCollection AsConfig<T>(this T @object) where T : class, new()
-		{
-			var nameValueCollection = new NameValueCollection();
 
-			foreach (var propertyInfo in @object.GetType().GetProperties())
-			{
-				if (propertyInfo.CanRead)
-				{
-					var pName = propertyInfo.Name;
-					var pValue = propertyInfo.GetValue(@object, null);
-					if (pValue != null)
-					{
-						var propertyType = propertyInfo.PropertyType;
-						if (propertyType.IsPrimitive || propertyType.IsEnum || propertyType == typeof(string) ||
-							propertyType == typeof(Guid) || propertyType == typeof(DateTime))
-						{
-							nameValueCollection.Add(pName, pValue.ToString());
-						}
-						else
-						{
-							var serializedObject = new StringBuilder();
 
-							new JsonSerializer
-							{
-								Converters = { new NameValueCollectionJsonConverter() }
-							}.Serialize(new JsonTextWriter(new StringWriter(serializedObject)), pValue);
 
-							nameValueCollection.Add(pName, serializedObject.ToString());
-						}
-					}
-					else
-					{
-						nameValueCollection.Add(pName, string.Empty);
-					}
-				}
-			}
+        //[Obsolete("This method is only intended as an stop-gap while getting rid of all NameValueCollection objects in RavenFS.")]
+        //public static NameValueCollection AsConfig<T>(this T @object) where T : class, new()
+        //{
+        //    var nameValueCollection = new NameValueCollection();
 
-			return nameValueCollection;
-		}
+        //    foreach (var propertyInfo in @object.GetType().GetProperties())
+        //    {
+        //        if (propertyInfo.CanRead)
+        //        {
+        //            var pName = propertyInfo.Name;
+        //            var pValue = propertyInfo.GetValue(@object, null);
+        //            if (pValue != null)
+        //            {
+        //                var propertyType = propertyInfo.PropertyType;
+        //                if (propertyType.IsPrimitive || propertyType.IsEnum || propertyType == typeof(string) ||
+        //                    propertyType == typeof(Guid) || propertyType == typeof(DateTime))
+        //                {
+        //                    nameValueCollection.Add(pName, pValue.ToString());
+        //                }
+        //                else
+        //                {
+        //                    var serializedObject = new StringBuilder();
+
+        //                    new JsonSerializer
+        //                    {
+        //                        Converters = { new NameValueCollectionJsonConverter() }
+        //                    }.Serialize(new JsonTextWriter(new StringWriter(serializedObject)), pValue);
+
+        //                    nameValueCollection.Add(pName, serializedObject.ToString());
+        //                }
+        //            }
+        //            else
+        //            {
+        //                nameValueCollection.Add(pName, string.Empty);
+        //            }
+        //        }
+        //    }
+
+        //    return nameValueCollection;
+        //}
+
+        [Obsolete("This method is only intended as an stop-gap while getting rid of all NameValueCollection objects in RavenFS.")]
+        public static NameValueCollection ToNameValueCollection(this RavenJObject @object)
+        {
+            var result = new NameValueCollection();            
+
+            foreach( var item in @object )
+            {                
+                if ( item.Value is RavenJArray )
+                {
+                    var array = item.Value as RavenJArray;
+                    foreach (var itemInArray in array)
+                    {
+                        result.Add(item.Key, itemInArray.ToString());
+                    }
+                }
+                else if ( item.Value is RavenJValue )
+                {
+                    result.Add(item.Key, item.Value.ToString());
+                }
+            }
+
+            return result;
+        }
 
         [Obsolete("This method is only intended as an stop-gap while getting rid of all NameValueCollection objects in RavenFS.")]
         public static RavenJObject ToJObject(this NameValueCollection config)

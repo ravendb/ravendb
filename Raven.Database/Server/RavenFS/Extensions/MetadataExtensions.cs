@@ -17,6 +17,7 @@ using Newtonsoft.Json;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Extensions
 {
@@ -28,39 +29,49 @@ namespace Raven.Database.Server.RavenFS.Extensions
 	{
 		public static void AddHeaders(HttpResponseMessage context, FileAndPages fileAndPages)
 		{
-			foreach (var key in fileAndPages.Metadata.AllKeys)
-			{
-				var values = fileAndPages.Metadata.GetValues(key);
-				if (values == null)
-					continue;
-				if (key == "ETag" && values.Length > 0)
-				{
-					context.Headers.ETag = new EntityTagHeaderValue(values[0]);
-				}
-				else
-				{
-					foreach (var value in values)
-					{
-						if (key == "Last-Modified")
-						{
-							context.Content.Headers.Add(key, new Regex("\\.\\d{5}").Replace(value, string.Empty)); // HTTP does not provide milliseconds, so remove it
-						}
-						else
-						{
-							context.Content.Headers.Add(key, value);
-						}
-					}
-				}
-			}
+            foreach (var item in fileAndPages.Metadata)
+            {
+                if (item.Key == "ETag")
+                {
+                    var etag = item.Value.Value<Guid>();
+                    if (etag == null)
+                        continue;
+
+                    context.Headers.ETag = new EntityTagHeaderValue(@"""" + etag + @"""");
+                }
+                else
+                {                                        
+                    if (item.Key == "Last-Modified")
+                    {
+                        string value = item.Value.Value<string>();
+                        context.Content.Headers.Add(item.Key, new Regex("\\.\\d{5}").Replace(value, string.Empty)); // HTTP does not provide milliseconds, so remove it
+                    }
+                    else
+                    {
+                        string value;
+                        switch( item.Value.Type )
+                        {
+                            case JTokenType.Object:
+                            case JTokenType.Array: 
+                                value = item.Value.ToString(Imports.Newtonsoft.Json.Formatting.None);
+                                break;
+                            default:
+                                value = item.Value.Value<string>();
+                                break;
+                        }                      
+                        context.Content.Headers.Add(item.Key, value);
+                    }
+                }
+            }
 		}
 
-		public static NameValueCollection WithETag(this NameValueCollection metadata, Guid etag)
-		{
-			metadata["ETag"] = "\"" + etag + "\"";
-			return metadata;
-		}
+        public static RavenJObject WithETag(this RavenJObject metadata, Guid etag)
+        {
+            metadata["ETag"] = new RavenJValue(etag);
+            return metadata;
+        }
 
-		public static NameValueCollection DropRenameMarkers(this NameValueCollection metadata)
+        public static RavenJObject DropRenameMarkers(this RavenJObject metadata)
 		{
 			metadata.Remove(SynchronizationConstants.RavenDeleteMarker);
 			metadata.Remove(SynchronizationConstants.RavenRenameFile);
@@ -68,7 +79,7 @@ namespace Raven.Database.Server.RavenFS.Extensions
 			return metadata;
 		}
 
-		public static NameValueCollection WithRenameMarkers(this NameValueCollection metadata, string rename)
+        public static RavenJObject WithRenameMarkers(this RavenJObject metadata, string rename)
 		{
 			metadata[SynchronizationConstants.RavenDeleteMarker] = "true";
 			metadata[SynchronizationConstants.RavenRenameFile] = rename;
@@ -89,19 +100,27 @@ namespace Raven.Database.Server.RavenFS.Extensions
 			return new JsonSerializer().Deserialize<T>(new JsonTextReader(new StringReader(value)));
 		}
 
-		public static void AddHeaders(this HttpWebRequest request, NameValueCollection metadata)
-		{
-			foreach (var key in metadata.AllKeys)
-			{
-				var values = metadata.GetValues(key);
-				if (values == null)
-					continue;
-				foreach (var value in values)
-				{
-					request.Headers[key] = value;
-				}
-			}
-		}
+        public static void AddHeaders(this HttpWebRequest request, RavenJObject metadata)
+        {
+            foreach (var item in metadata)
+            {
+                request.Headers[item.Key] = item.Value.ToString();
+            }
+        }
+
+        public static void AddHeaders(this HttpWebRequest request, NameValueCollection metadata)
+        {
+            foreach (var key in metadata.AllKeys)
+            {
+                var values = metadata.GetValues(key);
+                if (values == null)
+                    continue;
+                foreach (var value in values)
+                {
+                    request.Headers[key] = value;
+                }
+            }
+        }
 
 		private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{

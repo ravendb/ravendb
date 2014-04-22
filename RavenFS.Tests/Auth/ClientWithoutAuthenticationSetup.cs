@@ -30,7 +30,7 @@ namespace RavenFS.Tests.Auth
                     }
                 });
 
-                await client.UploadAsync("a", new NameValueCollection(), new MemoryStream(new byte[] {1, 2}));
+                await client.UploadAsync("a", new MemoryStream(new byte[] { 1, 2 }));
 
                 var ms = new MemoryStream();
                 await client.DownloadAsync("a", ms);

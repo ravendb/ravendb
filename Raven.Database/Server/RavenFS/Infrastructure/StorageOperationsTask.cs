@@ -73,18 +73,18 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 					accessor.Delete(previousRenameTombstone.Name);
 				}
 
-				accessor.RenameFile(operation.Name, operation.Rename, true);
-				accessor.UpdateFileMetadata(operation.Rename, operation.MetadataAfterOperation);
+                accessor.RenameFile(operation.Name, operation.Rename, true);
+                accessor.UpdateFileMetadata(operation.Rename, operation.MetadataAfterOperation);
 
-				// copy renaming file metadata and set special markers
-				var tombstoneMetadata = new NameValueCollection(operation.MetadataAfterOperation).WithRenameMarkers(operation.Rename);
+                // copy renaming file metadata and set special markers
+                var tombstoneMetadata = new RavenJObject(operation.MetadataAfterOperation).WithRenameMarkers(operation.Rename);
 
-				accessor.PutFile(operation.Name, 0, tombstoneMetadata, true); // put rename tombstone
+                accessor.PutFile(operation.Name, 0, tombstoneMetadata, true); // put rename tombstone
 
-				accessor.DeleteConfig(configName);
+                accessor.DeleteConfig(configName);
 
-				search.Delete(operation.Name);
-				search.Index(operation.Rename, operation.MetadataAfterOperation);
+                search.Delete(operation.Name);
+                search.Index(operation.Rename, operation.MetadataAfterOperation);
 			});
 
 			notificationPublisher.Publish(new ConfigChange { Name = configName, Action = ConfigChangeAction.Set });
@@ -119,12 +119,11 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 					return;
 				}
 
-				//var metadata = new NameValueCollection(existingFileHeader.Metadata).WithDeleteMarker();
-                var metadata = JsonExtensions.ToJObject(existingFileHeader.Metadata).WithDeleteMarker();
+                var metadata = new RavenJObject(existingFileHeader.Metadata).WithDeleteMarker();
                 
 				var renameSucceeded = false;
 
-				var deleteVersion = 0;
+				int deleteVersion = 0;
 
 				do
 				{
@@ -149,25 +148,23 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 					}
 				} while (!renameSucceeded && deleteVersion < 128);
 
-                throw new NotImplementedException();
-                //if (renameSucceeded)
-                //{
-                //    accessor.UpdateFileMetadata(deletingFileName, metadata);
-                //    accessor.DecrementFileCount(deletingFileName);
+                if (renameSucceeded)
+                {
+                    accessor.UpdateFileMetadata(deletingFileName, metadata);
+                    accessor.DecrementFileCount(deletingFileName);
 
-                //    Log.Debug(string.Format("File '{0}' was renamed to '{1}' and marked as deleted", fileName, deletingFileName));
+                    Log.Debug(string.Format("File '{0}' was renamed to '{1}' and marked as deleted", fileName, deletingFileName));
 
-                //    var configName = RavenFileNameHelper.DeleteOperationConfigNameForFile(deletingFileName);                    
-                //    var operation = new DeleteFileOperation { OriginalFileName = fileName, CurrentFileName = deletingFileName };
-                //    accessor.SetConfig(configName, JsonExtensions.ToJObject(operation));
+                    var configName = RavenFileNameHelper.DeleteOperationConfigNameForFile(deletingFileName);
+                    var operation = new DeleteFileOperation { OriginalFileName = fileName, CurrentFileName = deletingFileName };
+                    accessor.SetConfig(configName, JsonExtensions.ToJObject(operation));
 
-                //    notificationPublisher.Publish(new ConfigChange { Name = configName, Action = ConfigChangeAction.Set });
-                //}
-                //else
-                //{
-                //    Log.Warn("Could not rename a file '{0}' when a delete operation was performed",
-                //             fileName);
-                //}
+                    notificationPublisher.Publish(new ConfigChange { Name = configName, Action = ConfigChangeAction.Set });
+                }
+                else
+                {
+                    Log.Warn("Could not rename a file '{0}' when a delete operation was performed", fileName);
+                }
 			});
 
 			if (fileExists)

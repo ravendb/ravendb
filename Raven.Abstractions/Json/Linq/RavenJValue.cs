@@ -146,7 +146,7 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="value">The value.</param>
 		public RavenJValue(Guid value)
-			: this(value, JTokenType.String)
+			: this(value, JTokenType.Guid)
 		{
 		}
 

@@ -221,10 +221,7 @@ namespace RavenFS.Tests
 				                        {
 					                        Name = fileName,
 					                        Rename = rename,
-					                        MetadataAfterOperation = new NameValueCollection
-						                                                {
-							                                                {"ETag", "\"" + Guid.Empty + "\""}
-						                                                }
+                                            MetadataAfterOperation = new RavenJObject().WithETag(Guid.Empty)
 				                        };
 
             rfs.Storage.Batch(accessor => accessor.SetConfigurationValue(renameOpConfig, renameOperation));
@@ -263,10 +260,7 @@ namespace RavenFS.Tests
 				                    {
 					                    Name = fileName,
 					                    Rename = rename,
-					                    MetadataAfterOperation = new NameValueCollection
-						                                            {
-							                                            {"ETag", "\"" + Guid.Empty + "\""}
-						                                            }
+                                        MetadataAfterOperation = new RavenJObject().WithETag(Guid.Empty)
 				                    };
 
             rfs.Storage.Batch(accessor => accessor.SetConfigurationValue(renameOpConfig, renameOperation ));

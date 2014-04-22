@@ -7,6 +7,7 @@ using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
+using Raven.Json.Linq;
 
 namespace RavenFS.Tests.Synchronization
 {
@@ -22,7 +23,7 @@ namespace RavenFS.Tests.Synchronization
 		    var server3 = NewClient(2);
 
 			content.Position = 0;
-			server1.UploadAsync("test.bin", new NameValueCollection {{"test", "value"}}, content).Wait();
+            server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content).Wait();
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
@@ -71,7 +72,7 @@ namespace RavenFS.Tests.Synchronization
             var server3 = NewClient(2);
 
 			content.Position = 0;
-			server1.UploadAsync("test.bin", new NameValueCollection {{"test", "value"}}, content).Wait();
+            server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content).Wait();
 			
 			Assert.Equal(1, server1.StatsAsync().Result.FileCount);
 
@@ -143,7 +144,7 @@ namespace RavenFS.Tests.Synchronization
             var server3 = NewClient(2);
 
 			content.Position = 0;
-			server1.UploadAsync("test.bin", new NameValueCollection {{"test", "value"}}, content).Wait();
+            server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content).Wait();
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
@@ -188,7 +189,7 @@ namespace RavenFS.Tests.Synchronization
             var server3 = NewClient(2);
 
 			content.Position = 0;
-			server1.UploadAsync("test.bin", new NameValueCollection {{"test", "value"}}, content).Wait();
+            server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content).Wait();
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
@@ -200,7 +201,7 @@ namespace RavenFS.Tests.Synchronization
 
 			SyncTestUtils.TurnOffSynchronization(server1);
 
-			server1.UpdateMetadataAsync("test.bin", new NameValueCollection {{"new_test", "new_value"}}).Wait();
+            server1.UpdateMetadataAsync("test.bin", new RavenJObject { { "new_test", "new_value" } }).Wait();
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 

@@ -94,7 +94,7 @@ namespace RavenFS.Tests.Auth
 
             Assert.NotEqual(Guid.Empty, guid);
 
-            await client.UpdateMetadataAsync("/dir/sm.bin", new NameValueCollection() { { "Meta", "Data" } });
+            await client.UpdateMetadataAsync("/dir/sm.bin", new RavenJObject() { { "Meta", "Data" } });
 
             var results = await client.SearchAsync("Meta:Data");
 

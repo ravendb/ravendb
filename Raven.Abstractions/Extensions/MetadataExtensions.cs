@@ -152,39 +152,39 @@ namespace Raven.Abstractions.Extensions
 			return filterHeaders;
 		}
 
-		/// <summary>
-		/// Filters the headers from unwanted headers
-		/// </summary>
-		/// <param name="self">The self.</param>
-		/// <returns></returns>public static RavenJObject FilterHeadersToObject(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static RavenJObject FilterHeadersToObject(this NameValueCollection self)
-		{
-			var metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase);
-			foreach (string header in self)
-			{
-				try
-				{
-					if (prefixesInHeadersToIgnoreClient.Any(prefix => header.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
-						continue;
-					if (headersToIgnoreClient.Contains(header))
-						continue;
-					var valuesNonDistinct = self.GetValues(header);
-					if (valuesNonDistinct == null)
-						continue;
-					var values = new HashSet<string>(valuesNonDistinct);
-					var headerName = CaptureHeaderName(header);
-					if (values.Count == 1)
-						metadata[headerName] = GetValue(values.First());
-					else
-						metadata[headerName] = new RavenJArray(values.Select(GetValue).Take(15));
-				}
-				catch (Exception exc)
-				{
-					throw new JsonReaderException(string.Concat("Unable to Filter Header: ", header), exc);
-				}
-			}
-			return metadata;
-		}
+        /// <summary>
+        /// Filters the headers from unwanted headers
+        /// </summary>
+        /// <param name="self">The self.</param>
+        /// <returns></returns>public static RavenJObject FilterHeadersToObject(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+        public static RavenJObject FilterHeadersToObject(this NameValueCollection self)
+        {
+            var metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase);
+            foreach (string header in self)
+            {
+                try
+                {
+                    if (prefixesInHeadersToIgnoreClient.Any(prefix => header.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+                        continue;
+                    if (headersToIgnoreClient.Contains(header))
+                        continue;
+                    var valuesNonDistinct = self.GetValues(header);
+                    if (valuesNonDistinct == null)
+                        continue;
+                    var values = new HashSet<string>(valuesNonDistinct);
+                    var headerName = CaptureHeaderName(header);
+                    if (values.Count == 1)
+                        metadata[headerName] = GetValue(values.First());
+                    else
+                        metadata[headerName] = new RavenJArray(values.Select(GetValue).Take(15));
+                }
+                catch (Exception exc)
+                {
+                    throw new JsonReaderException(string.Concat("Unable to Filter Header: ", header), exc);
+                }
+            }
+            return metadata;
+        }
 
 		public static RavenJObject FilterHeadersAttachment(this HttpHeaders self)
 		{
@@ -231,6 +231,58 @@ namespace Raven.Abstractions.Extensions
 			}
 			return metadata;
 		}
+
+
+        public static RavenJObject HeadersToObject(this NameValueCollection self)
+        {
+            var metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase);
+            foreach (string header in self)
+            {
+                try
+                {
+                    var valuesNonDistinct = self.GetValues(header);
+                    if (valuesNonDistinct == null)
+                        continue;
+                    var values = new HashSet<string>(valuesNonDistinct);
+                    var headerName = CaptureHeaderName(header);
+                    if (values.Count == 1)
+                        metadata[headerName] = GetValue(values.First());
+                    else
+                        metadata[headerName] = new RavenJArray(values.Select(GetValue).Take(15));
+                }
+                catch (Exception exc)
+                {
+                    throw new JsonReaderException(string.Concat("Unable to build header: ", header), exc);
+                }
+            }
+            return metadata;
+        }
+
+        public static RavenJObject HeadersToObject(this HttpHeaders self)
+        {
+            var metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase);
+            foreach (var a in self)
+            {
+                var header = a.Key;
+                try
+                {
+                    var valuesNonDistinct = a.Value;
+                    if (valuesNonDistinct == null)
+                        continue;
+                    var values = new HashSet<string>(valuesNonDistinct);
+                    var headerName = CaptureHeaderName(header);
+                    if (values.Count == 1)
+                        metadata[headerName] = GetValue(values.First());
+                    else
+                        metadata[headerName] = new RavenJArray(values.Select(GetValue).Take(15));
+                }
+                catch (Exception exc)
+                {
+                    throw new JsonReaderException(string.Concat("Unable to build header: ", header), exc);
+                }
+            }
+            return metadata;
+        }
 
 		private static string CaptureHeaderName(string header)
 		{
