@@ -666,10 +666,5 @@ namespace Raven.Client.Shard
 	    {
 	        throw new NotImplementedException();
 	    }
-
-        public IDictionary<string, DocumentsChanges[]> WhatChanged()
-	    {
-	        throw new NotImplementedException();
-	    }
 	}
 }

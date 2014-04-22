@@ -914,11 +914,6 @@ namespace Raven.Client.Shard
 		{
 			throw new NotSupportedException("Multi faceted searching is currently not supported by sharded document store");
 		}
-
-        public IDictionary<string, DocumentsChanges[]> WhatChanged()
-	    {
-	        throw new NotImplementedException();
-	    }
 	}
 }
 

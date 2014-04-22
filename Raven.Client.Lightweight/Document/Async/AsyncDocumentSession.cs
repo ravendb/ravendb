@@ -955,11 +955,5 @@ namespace Raven.Client.Document.Async
 		{
 			return Conventions.GenerateDocumentKeyAsync(dbName, AsyncDatabaseCommands, entity);
 		}
-
-      
-        public IDictionary<string, DocumentsChanges[]>  WhatChanged()
-	    {
-	        throw new NotImplementedException();
-	    }
 	}
 }

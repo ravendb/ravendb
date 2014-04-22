@@ -936,11 +936,15 @@ more responsive application.
             return result;
         }
 
-        protected void GetDataChanges(IDictionary<string, DocumentsChanges[]> changes)
+        public IDictionary<string, DocumentsChanges[]> WhatChanged()
         {
-            PrepareForEntitiesDeletion(null, changes);
-            GetAllEntitiesChanges(changes);
-
+            using (EntityToJson.EntitiesToJsonCachingScope())
+            {
+                var changes = new Dictionary<string, DocumentsChanges[]>();
+                PrepareForEntitiesDeletion(null, changes);
+                GetAllEntitiesChanges(changes);
+                return changes;
+            }
         }
        
         private void PrepareForEntitiesPuts(SaveChangesData result )

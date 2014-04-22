@@ -671,20 +671,6 @@ namespace Raven.Client.Document
             }
         }
 
-        public IDictionary<string, DocumentsChanges[]> WhatChanged()
-        {
-
-            var changes = new Dictionary<string, DocumentsChanges[]>();
-
-            using (EntityToJson.EntitiesToJsonCachingScope())
-            {
-                GetDataChanges(changes);
-            }
-
-            return changes;
-
-        }
-
         /// <summary>
         /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
         /// </summary>
