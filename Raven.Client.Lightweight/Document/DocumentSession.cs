@@ -653,16 +653,13 @@ namespace Raven.Client.Document
         /// <summary>
         /// Saves all the changes to the Raven server.
         /// </summary>
-        public void SaveChanges()
-        {
-            SaveChanges(null);
-        }
+       
 
-        private void SaveChanges(DocumentsChanges changes)
+        public void SaveChanges()
         {
             using (EntityToJson.EntitiesToJsonCachingScope())
             {
-                var data = PrepareForSaveChanges(changes);
+                var data = PrepareForSaveChanges();
 
                 if (data.Commands.Count == 0)
                     return;
@@ -674,19 +671,16 @@ namespace Raven.Client.Document
             }
         }
 
-        public DocumentsChanges WhatChanged()
+        public IDictionary<string, DocumentsChanges[]> WhatChanged()
         {
-            var changes = new DocumentsChanges()
-            {
-                Comment = string.Empty,
-                FieldNewType = string.Empty,
-                FieldNewValue = string.Empty,
-                FieldOldType = string.Empty,
-                FieldOldValue = string.Empty,
-                DocumentId = string.Empty
 
-            };
-            SaveChanges(changes);
+            var changes = new Dictionary<string, DocumentsChanges[]>();
+
+            using (EntityToJson.EntitiesToJsonCachingScope())
+            {
+                GetDataChanges(changes);
+            }
+
             return changes;
 
         }

@@ -589,7 +589,7 @@ namespace Raven.Client.Shard
 												 var cachingScope = EntityToJson.EntitiesToJsonCachingScope();
 												 try
 												 {
-													 var data = PrepareForSaveChanges(null);
+													 var data = PrepareForSaveChanges();
 													 if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)
 													 {
 														 cachingScope.Dispose();
@@ -667,7 +667,7 @@ namespace Raven.Client.Shard
 	        throw new NotImplementedException();
 	    }
 
-	    public DocumentsChanges WhatChanged()
+        public IDictionary<string, DocumentsChanges[]> WhatChanged()
 	    {
 	        throw new NotImplementedException();
 	    }
