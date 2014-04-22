@@ -43,9 +43,9 @@ class aceEditorBindingHandler {
 
     static currentEditor;
 
-    static customCompleters: { editorType: string; completer: (editor: any, session: any, pos: number, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void }[] = [];
+    static customCompleters: { editorType: string; completer: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void }[] = [];
 
-    static autoCompleteHub(editor: any, session: any, pos: number,prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void): void {
+    static autoCompleteHub(editor: any, session: any, pos: AceAjax.Position,prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void): void {
         var curEditorType = editor.getOption("editorType");
         var completerPair = aceEditorBindingHandler.customCompleters.first(x=> x.editorType === curEditorType);
 
@@ -64,7 +64,7 @@ class aceEditorBindingHandler {
             lang?: string;
             getFocus?: boolean;
             readOnly?: boolean;
-            completer?: (editor: any, session: any, pos: number, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void;
+            completer?: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void;
             typeName?: string;
         },
         allBindings,
