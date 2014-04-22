@@ -5,6 +5,7 @@ import getSqlReplicationsCommand = require("commands/getSqlReplicationsCommand")
 import saveSqlReplicationsCommand = require("commands/saveSqlReplicationsCommand");
 import deleteDocumentsCommand = require("commands/deleteDocumentsCommand");
 import appUrl = require("common/appUrl");
+import ace = require("ace/ace");
 
 class sqlReplications extends viewModelBase {
 
@@ -145,6 +146,9 @@ class sqlReplications extends viewModelBase {
     addNewSqlReplication() {
         this.isFirstload(false);
         this.replications.push(sqlReplication.empty());
+
+        var lastElement = $('pre').last()[0];
+        super.createResizableTextBox(lastElement);
     }
 
     removeSqlReplication(repl: sqlReplication) {

@@ -113,24 +113,29 @@ class viewModelBase {
     }
 
     createResizableTextBoxes() {
+        var self = this;
         $("pre").each(function () {
-            var editor = ace.edit(this);
-            //editor.setOption('vScrollBarAlwaysVisible', true);
-            //editor.setOption('hScrollBarAlwaysVisible', true);
-            var minHeight = 100;
-            $(this).resizable({
-                minHeight: minHeight,
-                minWidth: minHeight * 5,
-                maxWidth: $(this).width() > 150 ? ($(this).width() + 26) : $(".panel-title").width() - 265,
-                handles: "e, s, se",
-                resize: function (event, ui) {
-                    editor.resize();
-                }
-            });
-            if ($(this).height() < minHeight) {
-                $(this).height(minHeight);
+            self.createResizableTextBox(this);
+        });
+    }
+
+    createResizableTextBox(element) {
+        var editor = ace.edit(element);
+        //editor.setOption('vScrollBarAlwaysVisible', true);
+        //editor.setOption('hScrollBarAlwaysVisible', true);
+        var minHeight = 100;
+        $(element).resizable({
+            minHeight: minHeight,
+            minWidth: minHeight * 5,
+            maxWidth: $(element).width() > 150 ? ($(element).width() + 26) : $(".panel-title").width() - 265,
+            handles: "e, s, se",
+            resize: function (event, ui) {
+                editor.resize();
             }
         });
+        if ($(element).height() < minHeight) {
+            $(element).height(minHeight);
+        }
     }
 
     /*

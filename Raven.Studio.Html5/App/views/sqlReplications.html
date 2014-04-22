@@ -1,28 +1,28 @@
 ﻿<div>
-    <nav class="navbar navbar-default" role="navigation">
-        <div class="collapse navbar-collapse">
-            <form class="navbar-form navbar-right">
-                <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: addNewSqlReplication" title="New SQL Replication(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> New SQL Replication</button>
-                <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveChanges, enable: isSaveEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
-            </form>
-        </div>
-    </nav>
-    <div class="alert alert-warning" data-bind="visible: replications().length === 0">
-        You've got no sql replication set up.
-    </div>
-    <div class="panel-group" id="accordion" data-bind="foreach: replications">
-        <div class="panel panel-default" data-bind="css: { 'panel-info': !disabled(), 'panel-warning': disabled }">
-            <div class="panel-heading">
-                <a data-toggle="collapse" data-parent="#accordion" data-bind="attr: { 'href': '#sqlRelication' + $index() }">
-                    <h3 class="panel-title">
-                        <span data-bind="text: name() ? name() : 'New SQL Replication ' + $root.itemNumber($index())"></span>
-                        <span class="glyphicon glyphicon-remove remove-icon pull-right" data-bind="click: $root.removeSqlReplication.bind($root)" title="Remove this SQL replication"></span>
-                    </h3>
-                </a>
+    <form data-bind="submit: saveChanges" class=" form-horizontal" role="form">
+        <nav class="navbar navbar-default" role="navigation">
+            <div class="collapse navbar-collapse">
+                <div class="navbar-form navbar-right">
+                    <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: addNewSqlReplication" title="New SQL Replication(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> New SQL Replication</button>
+                    <button type="submit" class="btn btn-primary use-bootstrap-tooltip" data-bind="enable: isSaveEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+                </div>
             </div>
-            <div data-bind="attr: { 'id': 'sqlRelication' + $index() }, css: { 'collapse': ($index() !== $parent.lastIndex()), 'in': ($index() === $parent.lastIndex()) }" class="panel-collapse collapse">
-                <div class="panel-body sql-replication-panel-body">
-                    <form class="form-horizontal" role="form">
+        </nav>
+        <div class="alert alert-warning" data-bind="visible: replications().length === 0">
+            You've got no sql replication set up.
+        </div>
+        <div class="panel-group" id="accordion" data-bind="foreach: replications">
+            <div class="panel panel-default" data-bind="css: { 'panel-info': !disabled(), 'panel-warning': disabled }">
+                <div class="panel-heading">
+                    <a data-toggle="collapse" data-parent="#accordion" data-bind="attr: { 'href': '#sqlRelication' + $index() }">
+                        <h3 class="panel-title">
+                            <span data-bind="text: name() ? name() : 'New SQL Replication ' + $root.itemNumber($index())"></span>
+                            <span class="glyphicon glyphicon-remove remove-icon pull-right" data-bind="click: $root.removeSqlReplication.bind($root)" title="Remove this SQL replication"></span>
+                        </h3>
+                    </a>
+                </div>
+                <div data-bind="attr: { 'id': 'sqlRelication' + $index() }, css: { 'collapse': ($index() !== $parent.lastIndex()), 'in': ($index() === $parent.lastIndex()) }" class="panel-collapse collapse">
+                    <div class="panel-body sql-replication-panel-body">
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Name</label>
                             <div class="col-sm-9">
@@ -45,7 +45,7 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">SQL Provider</label>
                             <div class="col-sm-9">
-                                <select class="form-control"
+                                <select required class="form-control"
                                         data-bind="options: ['System.Data.SqlClient','System.Data.SqlServerCe.4.0','System.Data.OleDb','System.Data.OracleClient','MySql.Data.MySqlClient','System.Data.SqlServerCe.3.5','Npgsql'], optionsCaption: '', value: factoryName"></select>
                             </div>
                         </div>
@@ -74,7 +74,7 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Source Document Collection</label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" data-bind="value: ravenEntityName, valueUpdate: 'keyup'" />
+                                <input required type="text" class="form-control" data-bind="value: ravenEntityName, valueUpdate: 'keyup'" />
                             </div>
                         </div>
                         <div class="form-group">
@@ -92,12 +92,12 @@
                                         <tr>
                                             <td>
                                                 <div>
-                                                    <input type="text" class="form-control" data-bind="value: tableName, valueUpdate: 'keyup'" />
+                                                    <input required type="text" class="form-control" data-bind="value: tableName, valueUpdate: 'keyup'" />
                                                 </div>
                                             </td>
                                             <td>
                                                 <div>
-                                                    <input type="text" class="form-control" data-bind="value: documentKeyColumn, valueUpdate: 'keyup'" />
+                                                    <input required type="text" class="form-control" data-bind="value: documentKeyColumn, valueUpdate: 'keyup'" />
                                                 </div>
                                             </td>
                                             <td><button type="button" style="display:inline-block;" class="close" data-bind="click: $parent.removeTable.bind($parent)" title="Remove this table"><span class="glyphicon glyphicon-remove remove-icon"></span></button></td>
@@ -121,9 +121,9 @@
                                 </div>
                             </div>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </form>
 </div>
