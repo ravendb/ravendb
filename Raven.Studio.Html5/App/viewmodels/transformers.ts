@@ -62,12 +62,8 @@ class Transformers extends viewModelBase {
         }
     }
 
-    collapseAll() {
-        $(".index-group-content").collapse('hide');
-    }
-
-    expandAll() {
-        $(".index-group-content").collapse('show');
+    toggleExpandAll() {
+        $(".index-group-content").collapse('toggle');
     }
 
     deleteAllTransformers() {

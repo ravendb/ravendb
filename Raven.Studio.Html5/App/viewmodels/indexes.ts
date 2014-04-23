@@ -44,7 +44,7 @@ class indexes extends viewModelBase {
 
     attached() {
         // Alt+Minus and Alt+Plus are already setup. Since laptops don't have a dedicated key for plus, we'll also use the equal sign key (co-opted for plus).
-        this.createKeyboardShortcut("Alt+=", () => this.expandAll(), this.containerSelector);
+        //this.createKeyboardShortcut("Alt+=", () => this.toggleExpandAll(), this.containerSelector);
         ko.postbox.publish("SetRawJSONUrl",  appUrl.forIndexesRawData(this.activeDatabase()));
     }
 
@@ -106,13 +106,9 @@ class indexes extends viewModelBase {
             }
         }
     }
-
-    collapseAll() {
-        $(".index-group-content").collapse('hide');
-    }
-
-    expandAll() {
-        $(".index-group-content").collapse('show');
+    
+    toggleExpandAll() {
+        $(".index-group-content").collapse('toggle');
     }
 
     deleteIdleIndexes() {
