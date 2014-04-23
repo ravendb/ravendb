@@ -7,10 +7,10 @@ import appUrl = require("common/appUrl");
 
 class periodicBackup extends viewModelBase {
 
-    backupSetup = ko.observable<periodicBackupSetup>();
+    backupSetup = ko.observable<periodicBackupSetup>().extend({ required: true });
     isSaveEnabled: KnockoutComputed<boolean>;
-    static containerId = "#periodicBackupContainer";
-    private form: JQuery;
+    backupStatusDirtyFlag = new ko.DirtyFlag([]);
+    backupConfigDirtyFlag = new ko.DirtyFlag([]);
 
     canActivate(args: any): any {
         super.canActivate(args);
@@ -28,14 +28,17 @@ class periodicBackup extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-        this.isSaveEnabled = ko.computed(function() {
-            return true;
+        
+        this.backupStatusDirtyFlag = new ko.DirtyFlag([this.backupSetup().activated]);
+        this.backupConfigDirtyFlag = new ko.DirtyFlag([this.backupSetup]);
+        
+        var self = this;
+        this.isSaveEnabled = ko.computed(function () {
+            return (self.backupConfigDirtyFlag().isDirty()) &&
+                    (self.backupSetup().activated() || (!self.backupSetup().activated() && self.backupStatusDirtyFlag().isDirty()));
         });
-        //viewModelBase.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
-    }
 
-    attached() {
-        this.form = $("#save-periodic-backup-form");
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.isSaveEnabled]);
     }
 
     fetchPeriodicBackupSetup(db): JQueryPromise<any> {
@@ -57,16 +60,19 @@ class periodicBackup extends viewModelBase {
     }
 
     activatePeriodicBackup() {
-        this.backupSetup().activated(true);
+        var action: boolean = !this.backupSetup().activated();
+        this.backupSetup().activated(action);
     }
 
     saveChanges() {
-        //if ((<any>this.form[0]).checkValidity() === true) {
-            var db = this.activeDatabase();
-            if (db) {
-                new savePeriodicBackupSetupCommand(this.backupSetup(), db).execute();
-            }
-        //}
+        var db = this.activeDatabase();
+        if (db) {
+            var saveTask = new savePeriodicBackupSetupCommand(this.backupSetup(), db).execute();
+            saveTask.done(() => {
+                this.backupStatusDirtyFlag().reset(); //Resync Changes
+                this.backupConfigDirtyFlag().reset(); //Resync Changes
+            });
+        }
     }
 }
 

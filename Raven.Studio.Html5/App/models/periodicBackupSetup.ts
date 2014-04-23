@@ -58,24 +58,24 @@ class periodicBackupSetup {
     }, this);
 
     fromDto(dto: periodicBackupSetupDto) {
-
         this.awsRegionEndpoint(dto.AwsRegionEndpoint);
 
         this.setupTypeAndMainValue(dto);
 
         var incr = this.prepareBackupInterval(dto.IntervalMilliseconds);
-        this.incrementalBackupInterval(incr[0]);
+        this.incrementalBackupInterval(incr[0] ? incr[0].toString() : incr[0]);
         this.incrementalBackupIntervalUnit(incr[1]);
 
         var full = this.prepareBackupInterval(dto.FullBackupIntervalMilliseconds);
-        this.fullBackupInterval(full[0]);
+        this.fullBackupInterval(full[0] ? full[0].toString() : full[0]);
         this.fullBackupIntervalUnit(full[1]);
 
-        this.activated(true);
+        this.activated(dto.Activated);
     }
 
     toDto(): periodicBackupSetupDto {
         return {
+            Activated: this.activated(),
             GlacierVaultName: this.prepareMainValue(this.GLACIER_VAULT),
             S3BucketName: this.prepareMainValue(this.S3_BUCKET),
             AwsRegionEndpoint: this.awsRegionEndpoint(),

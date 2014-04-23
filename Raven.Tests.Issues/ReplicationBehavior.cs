@@ -34,14 +34,14 @@ namespace Raven.Tests.Issues
 			for (int i = 0; i < 5000; i++)
 			{
 				var req = i + 1;
-				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), req, 1, url =>
+				replicationInformer.ExecuteWithReplicationAsync("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), req, 1,async url =>
 				{
 					urlsTried.Add(Tuple.Create(req, url.Url));
 					if (url.Url.EndsWith("1"))
 						throw new WebException("bad", WebExceptionStatus.ConnectFailure);
 
 					return 1;
-				});
+				}).Wait();
 			}
 			var expectedUrls = GetExpectedUrlForFailure().Take(urlsTried.Count).ToList();
 
@@ -68,11 +68,11 @@ namespace Raven.Tests.Issues
 			for (int i = 0; i < 10; i++)
 			{
 				var req = i + 1;
-				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), req, req, url =>
+				replicationInformer.ExecuteWithReplicationAsync("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), req, req, async url =>
 				{
 					urlsTried.Add(Tuple.Create(req, url.Url));
 					return 1;
-				});
+				}).Wait();
 			}
 			var expectedUrls = GetExpectedUrlForReadStriping().Take(urlsTried.Count).ToList();
 

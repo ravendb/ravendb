@@ -33,7 +33,7 @@
             <div class="col-md-11">
                 <div class="row">
                     <div class="col-md-11">
-                        <pre id="transformerAceEditor" class="form-control transformer" data-bind="aceEditor: { code: transformResults, getFocus: true}"></pre>
+                        <pre id="transformerAceEditor" class="form-control transformer" data-bind="aceEditor: { code: transformResults, getFocus: true}, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 59 }"></pre>
                     </div>
                 </div>
                 <br />
