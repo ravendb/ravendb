@@ -169,6 +169,8 @@
     <TypeScriptCompile Include="App\commands\getStatusDebugCurrentlyIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugQueriesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugTasksCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getStatusDebugRoutesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getStatusDebugRequestTracingCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
     <TypeScriptCompile Include="App\viewmodels\conflicts.ts" />
     <TypeScriptCompile Include="App\models\conflict.ts" />
@@ -186,8 +188,12 @@
     <TypeScriptCompile Include="App\models\patchParam.ts" />
     <TypeScriptCompile Include="App\viewmodels\savePatch.ts" />
     <TypeScriptCompile Include="App\viewmodels\loadPatch.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugRoutes.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugRequestTracing.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\statusDebugRequestTracing.html" />
+    <Content Include="App\views\statusDebugRoutes.html" />
     <Content Include="App\views\loadPatch.html" />
     <Content Include="App\views\savePatch.html" />
     <TypeScriptCompile Include="App\viewmodels\statusDebug.ts" />

@@ -44,6 +44,8 @@ class appUrl {
         statusDebugCurrentlyIndexing: ko.computed(() => appUrl.forStatusDebugCurrentlyIndexing(appUrl.currentDatabase())),
         statusDebugQueries: ko.computed(() => appUrl.forStatusDebugQueries(appUrl.currentDatabase())),
         statusDebugTasks: ko.computed(() => appUrl.forStatusDebugTasks(appUrl.currentDatabase())),
+        statusDebugRoutes: ko.computed(() => appUrl.forStatusDebugRoutes(appUrl.currentDatabase())),
+        statusDebugRequestTracing: ko.computed(() => appUrl.forStatusDebugRequestTracing(appUrl.currentDatabase())),
 
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
         databasesManagement: ko.computed(() => "#databases?database=" + appUrl.getEncodedDbPart(appUrl.currentDatabase()))
@@ -110,6 +112,14 @@ class appUrl {
 
     static forStatusDebugTasks(db: database): string {
         return "#status/debug/tasks?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugRoutes(db): string {
+        return "#status/debug/routes?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugRequestTracing(db): string {
+        return "#status/debug/requestTracing?" + appUrl.getEncodedDbPart(db);
     }
 
     static forSettings(db: database): string {

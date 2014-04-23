@@ -602,3 +602,17 @@ interface taskMetadataDto {
     AddedTime: string;
     Type: string;
 }
+
+interface requestTracingDto {
+    Uri: string;
+    Method: string;
+    StatusCode: number;
+    RequestHeaders: requestHeaderDto[];
+    ExecutionTime: string;
+    AdditionalInfo: string;
+}
+
+interface requestHeaderDto {
+    Name: string;
+    Values: string[];
+}

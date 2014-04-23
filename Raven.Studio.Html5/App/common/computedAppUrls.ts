@@ -32,6 +32,8 @@ interface computedAppUrls {
     statusDebugCurrentlyIndexing: KnockoutComputed<string>;
     statusDebugQueries: KnockoutComputed<string>;
     statusDebugTasks: KnockoutComputed<string>;
+    statusDebugRoutes: KnockoutComputed<string>;
+    statusDebugRequestTracing: KnockoutComputed<string>;
 
 
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
