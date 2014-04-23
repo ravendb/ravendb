@@ -359,6 +359,23 @@ namespace Raven.Tests.Helpers
 		    Assert.True(spinUntil, "Indexes took took long to become unstale");
 		}
 
+
+		public void WaitForPeriodicBackup(DocumentDatabase db, PeriodicBackupStatus previousStatus, Func<PeriodicBackupStatus, Etag> compareSelector)
+		{
+			PeriodicBackupStatus currentStatus = null;
+			var done = SpinWait.SpinUntil(() =>
+			{
+				currentStatus = GetPerodicBackupStatus(db);
+				return compareSelector(currentStatus) != compareSelector(previousStatus);
+			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
+			Assert.True(done);
+			previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
+			previousStatus.LastAttachmentsEtag = currentStatus.LastAttachmentsEtag;
+			previousStatus.LastDocsDeletionEtag = currentStatus.LastDocsDeletionEtag;
+			previousStatus.LastAttachmentDeletionEtag = currentStatus.LastAttachmentDeletionEtag;
+
+		}
+
 		public static void WaitForIndexing(DocumentDatabase db)
 		{
 			Assert.True(SpinWait.SpinUntil(() => db.Statistics.StaleIndexes.Length == 0, TimeSpan.FromMinutes(5)));
