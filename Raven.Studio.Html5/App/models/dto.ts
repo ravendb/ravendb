@@ -246,7 +246,7 @@ interface spatialIndexSuggestionDto {
 }
 
 interface periodicBackupSetupDto {
-    Activated: boolean;
+    Disabled: boolean;
     GlacierVaultName: string;
     S3BucketName: string;
     AwsRegionEndpoint: string;
