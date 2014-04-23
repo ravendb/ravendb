@@ -46,6 +46,9 @@ class appUrl {
         statusDebugTasks: ko.computed(() => appUrl.forStatusDebugTasks(appUrl.currentDatabase())),
         statusDebugRoutes: ko.computed(() => appUrl.forStatusDebugRoutes(appUrl.currentDatabase())),
         statusDebugRequestTracing: ko.computed(() => appUrl.forStatusDebugRequestTracing(appUrl.currentDatabase())),
+        statusDebugSqlReplication: ko.computed(() => appUrl.forStatusDebugSqlReplication(appUrl.currentDatabase())),
+        statusDebugIndexFields: ko.computed(() => appUrl.forStatusDebugIndexFields(appUrl.currentDatabase())),
+        statusDebugSlowDocCounts: ko.computed(() => appUrl.forStatusDebugSlowDocCounts(appUrl.currentDatabase())),
 
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
         databasesManagement: ko.computed(() => "#databases?database=" + appUrl.getEncodedDbPart(appUrl.currentDatabase()))
@@ -120,6 +123,18 @@ class appUrl {
 
     static forStatusDebugRequestTracing(db): string {
         return "#status/debug/requestTracing?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugSqlReplication(db: database): string {
+        return "#status/debug/sqlReplication?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugIndexFields(db: database): string {
+        return "#status/debug/indexFields?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugSlowDocCounts(db: database): string {
+        return "#status/debug/slowDocCounts?" + appUrl.getEncodedDbPart(db);
     }
 
     static forSettings(db: database): string {

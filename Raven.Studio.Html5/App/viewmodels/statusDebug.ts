@@ -27,6 +27,9 @@ class statusDebug extends viewModelBase {
                 { route: 'status/debug/tasks',              moduleId: 'viewmodels/statusDebugTasks',             title: 'Tasks',              nav: true, hash: appUrl.forCurrentDatabase().statusDebugTasks },
                 { route: 'status/debug/routes',             moduleId: 'viewmodels/statusDebugRoutes',            title: 'Routes',             nav: true, hash: appUrl.forCurrentDatabase().statusDebugRoutes },
                 { route: 'status/debug/requestTracing',     moduleId: 'viewmodels/statusDebugRequestTracing',    title: 'Request tracing',    nav: true, hash: appUrl.forCurrentDatabase().statusDebugRequestTracing },
+                { route: 'status/debug/sqlReplication',     moduleId: 'viewmodels/statusDebugSqlReplication',    title: 'Sql Replication',    nav: true, hash: appUrl.forCurrentDatabase().statusDebugSqlReplication },
+                { route: 'status/debug/indexFields',        moduleId: 'viewmodels/statusDebugIndexFields',       title: 'Index fields',       nav: true, hash: appUrl.forCurrentDatabase().statusDebugIndexFields },
+                { route: 'status/debug/slowDocCounts',      moduleId: 'viewmodels/statusDebugSlowDocCounts',     title: 'Slow doc counts',    nav: true, hash: appUrl.forCurrentDatabase().statusDebugSlowDocCounts },
             ])
             .buildNavigationModel();
 

@@ -616,3 +616,26 @@ interface requestHeaderDto {
     Name: string;
     Values: string[];
 }
+
+interface sqlReplicationStatisticsDto {
+    Name: string;
+    LastErrorTime: string;
+    ScriptErrorCount: number;
+    ScriptSuccessCount: number;
+    WriteErrorCount: number;
+    SuccessCount: number;
+    LastAlert: alertDto;
+}
+
+interface statusDebugIndexFieldsDto {
+    FieldNames: string[];
+}
+
+interface debugDocumentStatsDto {
+    Total: number;
+    Tombstones: number;
+    System: number;
+    NoCollection: number;
+    Collections: dictionary<number>;
+    TimeToGenerate: string;
+}

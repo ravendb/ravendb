@@ -171,6 +171,9 @@
     <TypeScriptCompile Include="App\commands\getStatusDebugTasksCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugRoutesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugRequestTracingCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getStatusDebugSqlReplicationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getStatusDebugIndexFieldsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getStatusDebugSlowDocCountsCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
     <TypeScriptCompile Include="App\viewmodels\conflicts.ts" />
     <TypeScriptCompile Include="App\models\conflict.ts" />
@@ -190,8 +193,15 @@
     <TypeScriptCompile Include="App\viewmodels\loadPatch.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugRoutes.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugRequestTracing.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugSqlReplication.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugIndexFields.ts" />
+    <TypeScriptCompile Include="App\models\debugDocumentStats.ts" />
+    <TypeScriptCompile Include="App\viewmodels\statusDebugSlowDocCounts.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\statusDebugSlowDocCounts.html" />
+    <Content Include="App\views\statusDebugIndexFields.html" />
+    <Content Include="App\views\statusDebugSqlReplication.html" />
     <Content Include="App\views\statusDebugRequestTracing.html" />
     <Content Include="App\views\statusDebugRoutes.html" />
     <Content Include="App\views\loadPatch.html" />
