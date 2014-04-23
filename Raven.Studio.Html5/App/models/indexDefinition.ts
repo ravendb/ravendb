@@ -20,7 +20,7 @@ class indexDefinition {
     termVectors: any;
     transformResults = ko.observable<string>().extend({ required: true });
     type: string;
-    maxIndexOutputsPerDocument = ko.observable<number>(0);
+    maxIndexOutputsPerDocument = ko.observable<number>(0).extend({ required: true });
 
     // This is an amalgamation of several properties from the index (Fields, Stores, Indexes, SortOptions, Analyzers, Suggestions, TermVectors) 
     // Stored as multiple luceneFields for the sake of data binding.

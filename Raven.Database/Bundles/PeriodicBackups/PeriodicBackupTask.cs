@@ -225,7 +225,10 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 							try
 							{
-                                UploadToServer(exportResult.FilePath, localBackupConfigs, fullBackup);
+								if (localBackupConfigs.Activated)
+								{
+									UploadToServer(exportResult.FilePath, localBackupConfigs, fullBackup);
+								}
 							}
 							finally
 							{
@@ -291,18 +294,18 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
         private void UploadToServer(string backupPath, PeriodicBackupSetup localBackupConfigs, bool isFullBackup)
 	    {
-	        if (!string.IsNullOrWhiteSpace(localBackupConfigs.GlacierVaultName))
-	        {
-                UploadToGlacier(backupPath, localBackupConfigs, isFullBackup);
-	        }
-	        else if (!string.IsNullOrWhiteSpace(localBackupConfigs.S3BucketName))
-	        {
-                UploadToS3(backupPath, localBackupConfigs, isFullBackup);
-	        }
-	        else if (!string.IsNullOrWhiteSpace(localBackupConfigs.AzureStorageContainer))
-	        {
-                UploadToAzure(backupPath, localBackupConfigs, isFullBackup);
-	        }
+			if (!string.IsNullOrWhiteSpace(localBackupConfigs.GlacierVaultName))
+			{
+				UploadToGlacier(backupPath, localBackupConfigs, isFullBackup);
+			}
+			else if (!string.IsNullOrWhiteSpace(localBackupConfigs.S3BucketName))
+			{
+				UploadToS3(backupPath, localBackupConfigs, isFullBackup);
+			}
+			else if (!string.IsNullOrWhiteSpace(localBackupConfigs.AzureStorageContainer))
+			{
+				UploadToAzure(backupPath, localBackupConfigs, isFullBackup);
+			}
 	    }
 
         private void UploadToS3(string backupPath, PeriodicBackupSetup localBackupConfigs, bool isFullBackup)

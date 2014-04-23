@@ -81,25 +81,14 @@ class viewModelBase {
         ko.postbox.publish("SetRawJSONUrl", "");
     }
 
+    attached() {
+        webshims.polyfill();
+    }
+
     // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
-        // Resync Changes
-        viewModelBase.dirtyFlag().reset();
-
-        $("pre").each(function() {
-            var editor = ace.edit(this);
-            editor.setOption('vScrollBarAlwaysVisible', true);
-            editor.setOption('hScrollBarAlwaysVisible', true);
-            $(this).resizable({
-                minHeight: 100,
-                maxWidth: $(this).width() > 150 ? ($(this).width() + 26) : $(".panel-title").width() - 265,
-                handles: "e, s, se",
-                resize: function (event, ui) {
-                    editor.resize();
-                    //$('.ui-resizable-se').css({ 'right': '3px', 'bottom': '3px' });
-                }
-            })
-        });
+        this.createResizableTextBoxes();
+        viewModelBase.dirtyFlag().reset(); //Resync Changes
     }
 
     /*
@@ -121,6 +110,32 @@ class viewModelBase {
         this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
+    }
+
+    createResizableTextBoxes() {
+        var self = this;
+        $("pre").each(function () {
+            self.createResizableTextBox(this);
+        });
+    }
+
+    createResizableTextBox(element) {
+        var editor = ace.edit(element);
+        //editor.setOption('vScrollBarAlwaysVisible', true);
+        //editor.setOption('hScrollBarAlwaysVisible', true);
+        var minHeight = 100;
+        $(element).resizable({
+            minHeight: minHeight,
+            minWidth: minHeight * 5,
+            maxWidth: $(element).width() > 150 ? ($(element).width() + 26) : $(".panel-title").width() - 265,
+            handles: "e, s, se",
+            resize: function (event, ui) {
+                editor.resize();
+            }
+        });
+        if ($(element).height() < minHeight) {
+            $(element).height(minHeight);
+        }
     }
 
     /*

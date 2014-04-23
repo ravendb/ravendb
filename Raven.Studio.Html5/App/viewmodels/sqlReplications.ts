@@ -5,6 +5,7 @@ import getSqlReplicationsCommand = require("commands/getSqlReplicationsCommand")
 import saveSqlReplicationsCommand = require("commands/saveSqlReplicationsCommand");
 import deleteDocumentsCommand = require("commands/deleteDocumentsCommand");
 import appUrl = require("common/appUrl");
+import ace = require("ace/ace");
 
 class sqlReplications extends viewModelBase {
 
@@ -53,11 +54,14 @@ class sqlReplications extends viewModelBase {
     }
 
     attached() {
-        $(".script-label").popover({
+        super.attached();
+        var popOverSettings = {
             html: true,
             trigger: 'hover',
             content: 'Replication scripts use JScript.',
-        });
+            selector: '.script-label',
+        }
+        $('body').popover(popOverSettings);
     }
 
     saveChanges() {
@@ -142,6 +146,9 @@ class sqlReplications extends viewModelBase {
     addNewSqlReplication() {
         this.isFirstload(false);
         this.replications.push(sqlReplication.empty());
+
+        var lastElement = $('pre').last()[0];
+        super.createResizableTextBox(lastElement);
     }
 
     removeSqlReplication(repl: sqlReplication) {
