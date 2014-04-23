@@ -156,7 +156,7 @@ namespace Voron.Impl.Backup
                         {
                             if (backupSuccess) // if backup succeeded we can remove journals
                             {
-                                if (jrnl.Number != lastWrittenLogFile) // prevent deletion of the current journal
+                                if (jrnl.Number < lastWrittenLogFile) // prevent deletion of the current journal and journals with a greater number
                                 {
                                     jrnl.DeleteOnClose = true;
                                 }
