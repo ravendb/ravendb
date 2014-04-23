@@ -225,7 +225,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 							try
 							{
-								if (localBackupConfigs.Activated)
+								if (!localBackupConfigs.Disabled)
 								{
 									UploadToServer(exportResult.FilePath, localBackupConfigs, fullBackup);
 								}
