@@ -75,7 +75,7 @@ class search extends viewModelBase {
             var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Filename starts with: ");
             searchSingleInputClauseViewModel
                 .applyFilterTask
-                .done((input: string) => this.searchText("__fileName:" + input + "*"));
+                .done((input: string) => this.addToSearchInput("__fileName:" + input + "*"));
             app.showDialog(searchSingleInputClauseViewModel);
         });
     }
@@ -85,7 +85,7 @@ class search extends viewModelBase {
             var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Filename ends with: ");
             searchSingleInputClauseViewModel
                 .applyFilterTask
-                .done((input: string) => this.searchText("__rfileName:" + String.prototype.reverse(input) + "*"));
+                .done((input: string) => this.addToSearchInput("__rfileName:" + String.prototype.reverse(input) + "*"));
             app.showDialog(searchSingleInputClauseViewModel);
         });
     }
@@ -95,7 +95,7 @@ class search extends viewModelBase {
             var searchFileSizeRangeClauseViewModel: searchFileSizeRangeClause = new searchFileSizeRangeClause();
             searchFileSizeRangeClauseViewModel
                 .applyFilterTask
-                .done((input: string) => this.searchText(input));
+                .done((input: string) => this.addToSearchInput(input));
             app.showDialog(searchFileSizeRangeClauseViewModel);
         });
     }
@@ -105,7 +105,7 @@ class search extends viewModelBase {
             var searchHasMetadataClauseViewModel: searchHasMetadataClause = new searchHasMetadataClause(this.activeFilesystem());
             searchHasMetadataClauseViewModel
                 .applyFilterTask
-                .done((input: string) => this.searchText(input));
+                .done((input: string) => this.addToSearchInput(input));
             app.showDialog(searchHasMetadataClauseViewModel);
         });
     }
@@ -115,7 +115,7 @@ class search extends viewModelBase {
             var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Folder path: ");
             searchSingleInputClauseViewModel
                 .applyFilterTask
-                .done((input: string) => this.searchText("__directory:" + input));
+                .done((input: string) => this.addToSearchInput("__directory:" + input));
             app.showDialog(searchSingleInputClauseViewModel);
         });
     }
@@ -125,9 +125,16 @@ class search extends viewModelBase {
             var searchLastModifiedBetweenClauseViewModel: searchLastModifiedBetweenClause = new searchLastModifiedBetweenClause();
             searchLastModifiedBetweenClauseViewModel
                 .applyFilterTask
-                .done((input: string) => this.searchText(input));
+                .done((input: string) => this.addToSearchInput(input));
             app.showDialog(searchLastModifiedBetweenClauseViewModel);
         });
+    }
+
+    addToSearchInput(input: string) {
+        var currentSearchText = this.searchText();
+        if (currentSearchText != null && currentSearchText.trim().length > 0)
+            currentSearchText += " AND ";
+        this.searchText(currentSearchText + input);
     }
 }
 

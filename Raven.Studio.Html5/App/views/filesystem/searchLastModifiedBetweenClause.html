@@ -8,11 +8,11 @@
         <div class="modal-body form-inline">
             <div class="form-group">
                 <label>Between: </label>
-                <input type="text" class="form-control" />
-                <button class="btn btn-default"><i class="fa fa-calendar"></i></button>
+                <input type="text" class="form-control" data-bind="value: fromDateText" />
+                <button class="btn btn-default" data-bind="clickBubble: false, datePicker: fromDate, datepickerOptions: {autoclose: true, endDate: '+0d' }"><i class="fa fa-calendar"></i></button>
                 <label> and: </label>
-                <input type="text" class="form-control" />
-                <button class="btn btn-default"><i class="fa fa-calendar"></i></button>
+                <input type="text" class="form-control" data-bind="value: toDateText" />
+                <button class="btn btn-default" data-bind="clickBubble: false, datePicker: toDate, datepickerOptions: {autoclose: true, endDate: '+0d' }"><i class="fa fa-calendar"></i></button>
             </div>
         </div>
         <div class="modal-footer">
