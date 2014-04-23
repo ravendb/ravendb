@@ -38,7 +38,7 @@ class sqlReplications extends viewModelBase {
 
                     deferred.resolve({ can: true });
                 })
-                .fail(() => deferred.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) }));
+                .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
         }
         return deferred;
     }
