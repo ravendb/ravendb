@@ -132,7 +132,7 @@ namespace Raven.Tests.Issues
                     Assert.True(changes3.ContainsKey("UserData/2"));
                     var supposedChanges = new DocumentsChanges
                     {
-                        Comment =DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldChanged),
+                        Change  = DocumentsChanges.ChangeType.FieldChanged,
                         FieldName = "Id",
                         FieldNewType = "Integer",
                         FieldNewValue = "556",
@@ -254,7 +254,7 @@ namespace Raven.Tests.Issues
                     Assert.True(changes3.ContainsKey("UserData/2"));
                     var supposedChanges = new DocumentsChanges
                     {
-                        Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldChanged),
+                        Change = DocumentsChanges.ChangeType.FieldChanged,
                         FieldName = "Id",
                         FieldNewType = "Integer",
                         FieldNewValue = "556",

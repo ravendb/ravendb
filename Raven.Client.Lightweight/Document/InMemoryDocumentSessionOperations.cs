@@ -991,7 +991,7 @@ more responsive application.
                     {
                         FieldNewValue = string.Empty,
                         FieldOldValue = string.Empty,
-                        Comment = "Object deleted"
+                        Change = DocumentsChanges.ChangeType.DocumentDeleted
                     };
                     
                     docChanges.Add(change);

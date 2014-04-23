@@ -380,7 +380,7 @@ namespace Raven.Json.Linq
                                         if (docChanges == null)
                                             return false;
 
-                                        isEqual = docChanges.AddChanges(DocumentsChanges.CommentType.DoesntExistInNew);
+                                        isEqual = docChanges.AddChanges(DocumentsChanges.ChangeType.RemovedField);
                                        
                                     }
 
@@ -391,7 +391,7 @@ namespace Raven.Json.Linq
                                             if (docChanges == null)
                                                 return false;
 
-                                            isEqual = docChanges.AddChanges(DocumentsChanges.CommentType.DoesntExistInOriginal);
+                                            isEqual = docChanges.AddChanges(DocumentsChanges.ChangeType.NewField);
 
                                            
                                         }

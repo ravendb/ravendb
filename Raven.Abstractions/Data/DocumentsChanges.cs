@@ -7,30 +7,19 @@ namespace Raven.Abstractions.Data
         public string FieldNewValue { get; set; }
         public string FieldOldType { get; set; }
         public string FieldNewType { get; set; }
-        public string Comment { get; set; }
+        public ChangeType Change { get; set; }
         public string FieldName { get; set; }
 
-        public enum CommentType
-        {
-            FieldChanged, DoesntExistInOriginal, DoesntExistInNew,FieldAdded,FieldRemoved
-         }
-  
-   
-        public static String CommentAsText( CommentType comment)
-        {
-              switch(comment)
-              {
-                    case CommentType.FieldAdded: return "field added ";
-                    case CommentType.FieldRemoved: return "field removed ";
-                    case CommentType.DoesntExistInNew: return "doesn't exist in new one ";
-                    case CommentType.DoesntExistInOriginal: return "doesn't exist in original one ";
-                    case CommentType.FieldChanged: return "field changed ";
-                  default:
-                      return string.Empty;
+	    public enum ChangeType
+	    {
+			DocumentDeleted,
+		    FieldChanged,
+		    NewField,
+		    RemovedField,
+		    ArrayValueAdded,
+		    ArrayValueRemoved
+	    }
 
-              }
-        }
-    
 		protected bool Equals(DocumentsChanges other)
 		{
 			return string.Equals(FieldOldValue, other.FieldOldValue)
@@ -38,7 +27,7 @@ namespace Raven.Abstractions.Data
 			       && string.Equals(FieldOldType, other.FieldOldType)
                    && string.Equals(FieldName, other.FieldName)
                    && string.Equals(FieldNewType, other.FieldNewType)
-                   && string.Equals(Comment, other.Comment);
+                   && Change ==  other.Change;
 		}
 
 		public override int GetHashCode()
@@ -50,7 +39,7 @@ namespace Raven.Abstractions.Data
 				hashCode = (hashCode*397) ^ (FieldOldType != null ? FieldOldType.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (FieldNewType != null ? FieldNewType.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (FieldName != null ? FieldName.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (Comment != null ? Comment.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Change.GetHashCode());
 				return hashCode;
 			}
 		}
