@@ -1,13 +1,24 @@
-﻿namespace Raven.Abstractions.Data
+﻿using System;
+namespace Raven.Abstractions.Data
 {
-	public class DocumentsChanges
-	{
-		public string FieldOldValue { get; set; }
-		public string FieldNewValue { get; set; }
-		public string FieldOldType { get; set; }
-		public string FieldNewType { get; set; }
-        public string Comment { get; set; }
+    public class DocumentsChanges
+    {
+        public string FieldOldValue { get; set; }
+        public string FieldNewValue { get; set; }
+        public string FieldOldType { get; set; }
+        public string FieldNewType { get; set; }
+        public ChangeType Change { get; set; }
         public string FieldName { get; set; }
+
+	    public enum ChangeType
+	    {
+			DocumentDeleted,
+		    FieldChanged,
+		    NewField,
+		    RemovedField,
+		    ArrayValueAdded,
+		    ArrayValueRemoved
+	    }
 
 		protected bool Equals(DocumentsChanges other)
 		{
@@ -16,7 +27,7 @@
 			       && string.Equals(FieldOldType, other.FieldOldType)
                    && string.Equals(FieldName, other.FieldName)
                    && string.Equals(FieldNewType, other.FieldNewType)
-                   && string.Equals(Comment, other.Comment);
+                   && Change ==  other.Change;
 		}
 
 		public override int GetHashCode()
@@ -28,7 +39,7 @@
 				hashCode = (hashCode*397) ^ (FieldOldType != null ? FieldOldType.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (FieldNewType != null ? FieldNewType.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (FieldName != null ? FieldName.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (Comment != null ? Comment.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Change.GetHashCode());
 				return hashCode;
 			}
 		}
@@ -41,4 +52,5 @@
 			return Equals((DocumentsChanges) obj);
 		}
 	}
+    
 }

@@ -29,13 +29,13 @@ class periodicBackup extends viewModelBase {
     activate(args) {
         super.activate(args);
         
-        this.backupStatusDirtyFlag = new ko.DirtyFlag([this.backupSetup().activated]);
+        this.backupStatusDirtyFlag = new ko.DirtyFlag([this.backupSetup().disabled]);
         this.backupConfigDirtyFlag = new ko.DirtyFlag([this.backupSetup]);
         
         var self = this;
         this.isSaveEnabled = ko.computed(function () {
             return (self.backupConfigDirtyFlag().isDirty()) &&
-                    (self.backupSetup().activated() || (!self.backupSetup().activated() && self.backupStatusDirtyFlag().isDirty()));
+                (!self.backupSetup().disabled() || (self.backupSetup().disabled() && self.backupStatusDirtyFlag().isDirty()));
         });
 
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.isSaveEnabled]);
@@ -60,8 +60,8 @@ class periodicBackup extends viewModelBase {
     }
 
     activatePeriodicBackup() {
-        var action: boolean = !this.backupSetup().activated();
-        this.backupSetup().activated(action);
+        var action: boolean = !this.backupSetup().disabled();
+        this.backupSetup().disabled(action);
     }
 
     saveChanges() {

@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 

@@ -3,6 +3,7 @@ using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 

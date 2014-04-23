@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 

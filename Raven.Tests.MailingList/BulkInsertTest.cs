@@ -3,6 +3,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 

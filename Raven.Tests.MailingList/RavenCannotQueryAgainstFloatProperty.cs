@@ -10,6 +10,7 @@ using System;
 using System.Linq;
 
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 

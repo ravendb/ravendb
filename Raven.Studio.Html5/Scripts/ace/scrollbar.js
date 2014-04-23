@@ -106,6 +106,7 @@ var ScrollBarH = function(parent, renderer) {
     oop.implement(this, EventEmitter);
 
     this.setVisible = function (show) {
+        /* Changed in order to allow showing a resize button */
         if (show) {
             this.element.style.visibility = "visible";
             /*if (this.fullWidth)

@@ -110,7 +110,6 @@
     <Compile Include="Attributes\InlineValueAttribute.cs" />
     <Compile Include="NoDisposalNeeded.cs" />
     <Compile Include="RavenTest.cs" />
-    <Compile Include="RavenTestBase.cs" />
     <Compile Include="ReplicationBase.cs" />
     <Compile Include="Util\TemporaryCulture.cs" />
     <Compile Include="Attributes\TimeBombedFactAttribute.cs" />
@@ -128,10 +127,6 @@
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41ac479e-1eb2-4d23-aaf2-e4c8df1bc2ba}</Project>
       <Name>Raven.Abstractions</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Client.Embedded\Raven.Client.Embedded.csproj">
-      <Project>{0f5287ad-37b3-4375-ba3e-3ced64b1fc5b}</Project>
-      <Name>Raven.Client.Embedded</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
       <Project>{4e087ecb-e7ca-4891-ac3c-3c76702715b6}</Project>

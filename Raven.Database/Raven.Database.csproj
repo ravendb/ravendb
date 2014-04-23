@@ -1078,8 +1078,8 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Server\WebUI\raven-data.ico" />
-    <Content Include="Server\WebUI\studio.html" />
-    <Content Include="Server\WebUI\studio_not_found.html" />
+    <EmbeddedResource Include="Server\WebUI\studio.html" />
+    <EmbeddedResource Include="Server\WebUI\studio_not_found.html" />
     <EmbeddedResource Include="Server\WebUI\Raven.Studio.xap" />
     <EmbeddedResource Include="Json\ToJson.js" />
     <EmbeddedResource Include="Json\RavenDB.js" />
