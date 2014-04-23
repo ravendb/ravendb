@@ -446,6 +446,9 @@ class editDocument extends viewModelBase {
         if (recentDocumentsForCurDb) {
             var value = recentDocumentsForCurDb
                 .recentDocuments()
+                .filter((x:string) => {
+                  return x !== this.userSpecifiedId();
+                })
                 .slice(0, 5)
                 .map((docId: string) => {
                     return {

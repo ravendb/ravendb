@@ -414,22 +414,22 @@ body {
 #editDocumentContainer .query-metadata {
   padding-top: 20px;
 }
-#editDocumentContainer .related-document-container {
+#editDocumentContainer .documents-links-container {
   -webkit-column-count: 2;
   /* Chrome, Safari, Opera */
   -moz-column-count: 2;
   /* Firefox */
   column-count: 2;
-  -webkit-column-gap: 50px;
+  -webkit-column-gap: 30px;
   /* Chrome, Safari, Opera */
-  -moz-column-gap: 50px;
+  -moz-column-gap: 30px;
   /* Firefox */
-  column-gap: 50px;
-  -moz-column-width: 30px;
-  -webkit-column-width: 30px;
-  column-width: 30px;
+  column-gap: 30px;
+  -moz-column-width: 10px;
+  -webkit-column-width: 10px;
+  column-width: 10px;
 }
-#editDocumentContainer .related-document-container .related-document {
+#editDocumentContainer .documents-links-container .document-link {
   width: 80%;
   overflow: hidden;
   white-space: nowrap;
