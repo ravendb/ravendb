@@ -253,8 +253,7 @@ namespace RavenFS.Tests.Synchronization
 
 			await sourceClient.UploadAsync("test.txt", sourceContent);
 
-			await
-				sourceClient.Config.SetDestinationsConfig(destination1Client.ToSynchronizationDestination(), destination2Client.ToSynchronizationDestination());
+			await sourceClient.Config.SetDestinationsConfig(destination1Client.ToSynchronizationDestination(), destination2Client.ToSynchronizationDestination());
 
 			// push file to all destinations
 			await sourceClient.Synchronization.SynchronizeDestinationsAsync();
@@ -279,8 +278,11 @@ namespace RavenFS.Tests.Synchronization
 				}
 			}
 
-			Assert.Equal("shouldBeSynchronized", destination1Client.GetMetadataForAsync("test.txt").Result["value"]);
-			Assert.Equal("shouldBeSynchronized", destination2Client.GetMetadataForAsync("test.txt").Result["value"]);
+            var metadata1 = await destination1Client.GetMetadataForAsync("test.txt");
+            var metadata2 = await destination2Client.GetMetadataForAsync("test.txt");
+
+            Assert.Equal("shouldBeSynchronized", metadata1.Value<string>("value"));
+			Assert.Equal("shouldBeSynchronized", metadata2.Value<string>("value"));
 		}
 
 		[Fact]

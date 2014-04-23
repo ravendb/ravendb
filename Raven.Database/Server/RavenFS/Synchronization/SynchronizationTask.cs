@@ -634,8 +634,8 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 		private int LimitOfConcurrentSynchronizations()
 		{
-			var limit = false;
-			var configuredLimit = 0;
+			bool limit = false;
+			int configuredLimit = 0;
 
 			storage.Batch(
 				accessor =>

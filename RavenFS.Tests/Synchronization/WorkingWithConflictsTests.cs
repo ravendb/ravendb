@@ -322,7 +322,7 @@ namespace RavenFS.Tests.Synchronization
 			webRequest.Method = "POST";
 
 			webRequest.Headers.Add(SyncingMultipartConstants.SourceServerInfo, new ServerInfo {Id = Guid.Empty, FileSystemUrl = "http://localhost:12345"}.AsJson());
-			webRequest.Headers.Add("ETag", "\"" + new Guid() + "\"");
+			webRequest.Headers.Add("ETag", new Guid().ToString());
 			webRequest.Headers.Add("MetadataKey", "MetadataValue");
 
 			var sb = new StringBuilder();
@@ -448,8 +448,8 @@ namespace RavenFS.Tests.Synchronization
 			var shouldNotBeConflict = await server1.Synchronization.StartAsync("test", server2);
 
 			Assert.Null(shouldNotBeConflict.Exception);
-			Assert.Equal(server1.GetMetadataForAsync("test").Result["Content-Md5"],
-			             server2.GetMetadataForAsync("test").Result["Content-Md5"]);
+			Assert.Equal(server1.GetMetadataForAsync("test").Result.Value<string>("Content-Md5"),
+			             server2.GetMetadataForAsync("test").Result.Value<string>("Content-Md5"));
 		}
 
 		[Fact]

@@ -993,16 +993,18 @@ namespace Raven.Client.RavenFS
 
             public async Task<DestinationSyncResult[]> SynchronizeDestinationsAsync(bool forceSyncingAll = false)
             {
-                var requestUriString = String.Format("{0}/synchronization/ToDestinations?forceSyncingAll={1}", FileSystemUrl,
-                                                         forceSyncingAll);
+                var requestUriString = String.Format("{0}/synchronization/ToDestinations?forceSyncingAll={1}", FileSystemUrl, forceSyncingAll);
 
-                var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
-                                                                                                       "POST", credentials, convention));
+                var request = jsonRequestFactory.CreateHttpJsonRequest(
+                                                    new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+                                                                                    "POST", credentials, convention));
 
                 try
                 {
-                    var response = await request.ReadResponseJsonAsync();
-                    return new JsonSerializer().Deserialize<DestinationSyncResult[]>(new RavenJTokenReader(response));
+                    var response = (RavenJArray) await request.ReadResponseJsonAsync();
+                    return response.Select(x => ((RavenJObject)x).JsonDeserialization<DestinationSyncResult>()).ToArray();
+                    //return response.JsonDeserialization<DestinationSyncResult[]>();
+                    //return new JsonSerializer().Deserialize<DestinationSyncResult[]>(new RavenJTokenReader(response));
                 }
                 catch (Exception e)
                 {
@@ -1233,10 +1235,11 @@ namespace Raven.Client.RavenFS
 
                 try
                 {
-                    var response = await request.ReadResponseJsonAsync();
-                    var preResult =
-                        new JsonSerializer().Deserialize<ListPage<ConflictItem>>(new RavenJTokenReader(response));
-                    return preResult;
+                    var response = (RavenJObject)await request.ReadResponseJsonAsync();
+                    return response.JsonDeserialization<ListPage<ConflictItem>>();
+                    //var preResult =
+                    //    new JsonSerializer().Deserialize<ListPage<ConflictItem>>(new RavenJTokenReader(response));
+                    //return preResult;
                 }
                 catch (Exception e)
                 {
@@ -1323,12 +1326,14 @@ namespace Raven.Client.RavenFS
 
             public async Task<SynchronizationReport> UpdateMetadataAsync(string fileName, RavenJObject metadata, ServerInfo sourceServer)
             {
+                // REVIEW: (Oren) The ETag is always rewritten by this method as If-None-Match. Maybe a convention from the Database, but found it quite difficult to debug.  
                 var request = jsonRequestFactory.CreateHttpJsonRequest(
-                                    new CreateHttpJsonRequestParams(this, FileSystemUrl + "/synchronization/updatemetadata?fileName=" + Uri.EscapeDataString(fileName),
-                                                                    "POST", credentials, convention));
-
-                request.AddHeaders(metadata);                
+                                    new CreateHttpJsonRequestParams(this, FileSystemUrl + "/synchronization/UpdateMetadata/" + Uri.EscapeDataString(fileName),
+                                                                    "POST", metadata, credentials, convention));
+  
                 request.AddHeader(SyncingMultipartConstants.SourceServerInfo, sourceServer.AsJson());
+                // REVIEW: (Oren) and also causes this.
+                request.AddHeader("ETag", "\"" + metadata.Value<string>("ETag") + "\"");
 
                 try
                 {

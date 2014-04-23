@@ -52,23 +52,21 @@ namespace RavenFS.Tests
 		}
 
 		[Fact]
-		public void Should_remove_file_deletion_config_after_storage_cleanup()
+		public async void Should_remove_file_deletion_config_after_storage_cleanup()
 		{
 			var client = NewClient();
 			var rfs = GetRavenFileSystem();
 
-			client.UploadAsync("toDelete.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5})).Wait();
+			await client.UploadAsync("toDelete.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5}));
 
 			rfs.StorageOperationsTask.IndicateFileToDelete("toDelete.bin");
 
-			rfs.StorageOperationsTask.CleanupDeletedFilesAsync().Wait();
+			await rfs.StorageOperationsTask.CleanupDeletedFilesAsync();
 
 			IEnumerable<string> configNames = null;
 			rfs.Storage.Batch(accessor => configNames = accessor.GetConfigNames(0, 10).ToArray());
 
-			Assert.DoesNotContain(
-				RavenFileNameHelper.DeleteOperationConfigNameForFile(RavenFileNameHelper.DeletingFileName("toDelete.bin")),
-				configNames);
+			Assert.DoesNotContain(RavenFileNameHelper.DeleteOperationConfigNameForFile(RavenFileNameHelper.DeletingFileName("toDelete.bin")), configNames);
 		}
 
 		[Fact]
@@ -90,7 +88,7 @@ namespace RavenFS.Tests
 		}
 
 		[Fact]
-		public void Should_remove_deleting_file_and_its_pages_after_storage_cleanup()
+		public async void Should_remove_deleting_file_and_its_pages_after_storage_cleanup()
 		{
 			const int numberOfPages = 10;
 
@@ -100,16 +98,14 @@ namespace RavenFS.Tests
 			var bytes = new byte[numberOfPages*StorageConstants.MaxPageSize];
 			new Random().NextBytes(bytes);
 
-			client.UploadAsync("toDelete.bin", new MemoryStream(bytes)).Wait();
+			await client.UploadAsync("toDelete.bin", new MemoryStream(bytes));
 
 			rfs.StorageOperationsTask.IndicateFileToDelete("toDelete.bin");
 
-			rfs.StorageOperationsTask.CleanupDeletedFilesAsync().Wait();
+			await rfs.StorageOperationsTask.CleanupDeletedFilesAsync();
 
 			Assert.Throws(typeof (FileNotFoundException),
-			              () =>
-			              rfs.Storage.Batch(
-				              accessor => accessor.GetFile(RavenFileNameHelper.DeletingFileName("toDelete.bin"), 0, 10)));
+			              () => rfs.Storage.Batch(accessor => accessor.GetFile(RavenFileNameHelper.DeletingFileName("toDelete.bin"), 0, 10)));
 
 			for (var i = 1; i <= numberOfPages; i++)
 			{

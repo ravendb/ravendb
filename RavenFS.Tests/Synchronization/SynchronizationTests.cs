@@ -55,7 +55,9 @@ namespace RavenFS.Tests.Synchronization
 			using (var resultFileContent = new MemoryStream())
 			{
 				var metadata = destinationClient.DownloadAsync("test.txt", resultFileContent).Result;
-				Assert.Equal("some-value", metadata.Value<string>("SomeTest-metadata"));
+
+                // REVIEW: (Oren) The xxx-yyy-zzz headers are being transformed to: Xxx-Yyy-Zzz by the underlying implementation of HTTP Client. Is that OK? The old test was able to handle it "case insensitively".
+				Assert.Equal("some-value", metadata.Value<string>("SomeTest-Metadata"));
 				resultFileContent.Position = 0;
 				resultMd5 = resultFileContent.GetMD5Hash();
 				resultFileContent.Position = 0;
@@ -333,13 +335,13 @@ namespace RavenFS.Tests.Synchronization
 		{
 			var sourceContent1 = new RandomStream(10);
 			var sourceClient = NewClient(1);
-			sourceClient.UploadAsync("test.bin", sourceContent1).Wait();
+            await sourceClient.UploadAsync("test.bin", sourceContent1);
             var historySerialized = (RavenJArray)sourceClient.GetMetadataForAsync("test.bin").Result[SynchronizationConstants.RavenSynchronizationHistory];
             var history = historySerialized.Select(x => JsonExtensions.JsonDeserialization<HistoryItem>((RavenJObject)x));
 
 			Assert.Equal(0, history.Count());
 
-			sourceClient.UploadAsync("test.bin", sourceContent1).Wait();
+            await sourceClient.UploadAsync("test.bin", sourceContent1);
             historySerialized = (RavenJArray)sourceClient.GetMetadataForAsync("test.bin").Result[SynchronizationConstants.RavenSynchronizationHistory];
             history = historySerialized.Select(x => JsonExtensions.JsonDeserialization<HistoryItem>((RavenJObject)x));
 
@@ -435,14 +437,13 @@ namespace RavenFS.Tests.Synchronization
 			var sourceClient = NewClient(0);
 			var destinationClient = NewClient(1);
 
-			await sourceClient.Config.SetConfig(SynchronizationConstants.RavenSynchronizationLimit, new RavenJObject {{"value", "\"-1\""}});
+            await sourceClient.Config.SetConfig(SynchronizationConstants.RavenSynchronizationLimit, -1);
 
 			await sourceClient.UploadAsync("test.bin", sourceContent);
 
 			var synchronizationReport = await sourceClient.Synchronization.StartAsync("test.bin", destinationClient);
 
-			Assert.Contains(
-				"The limit of active synchronizations to " + destinationClient.ServerUrl, synchronizationReport.Exception.Message);
+			Assert.Contains("The limit of active synchronizations to " + destinationClient.ServerUrl, synchronizationReport.Exception.Message);
             Assert.Contains("server has been achieved. Cannot process a file 'test.bin'.", synchronizationReport.Exception.Message);
 		}
 
@@ -572,7 +573,8 @@ namespace RavenFS.Tests.Synchronization
 			{
 				var metadata = await destination.DownloadAsync("empty.test", ms);
 
-				Assert.Equal("true", metadata.Value<string>("should-be-transferred"));
+                // REVIEW: (Oren) The xxx-yyy-zzz headers are being transformed to: Xxx-Yyy-Zzz by the underlying implementation of HTTP Client. Is that OK? The old test was able to handle it "case insensitively".
+                Assert.Equal("true", metadata.Value<string>("Should-Be-Transferred"));
 				Assert.Equal(0, ms.Length);
 			}
 		}

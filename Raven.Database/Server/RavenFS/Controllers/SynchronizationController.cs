@@ -78,7 +78,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
             var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First());
 
-			var report = new SynchronizationReport(fileName, sourceFileETag, SynchronizationType.ContentUpdate);
+            var report = new SynchronizationReport(fileName, sourceFileETag, SynchronizationType.ContentUpdate);
 
 			Log.Debug("Starting to process multipart synchronization request of a file '{0}' with ETag {1} from {2}", fileName, sourceFileETag, sourceServerInfo);
 
@@ -192,8 +192,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             return this.GetMessageWithObject(report, HttpStatusCode.OK);
 		}
 
-		private void FinishSynchronization(string fileName, SynchronizationReport report, ServerInfo sourceServer,
-										   Guid sourceFileETag)
+		private void FinishSynchronization(string fileName, SynchronizationReport report, ServerInfo sourceServer, Guid sourceFileETag)
 		{
 			try
 			{
@@ -260,9 +259,10 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public HttpResponseMessage UpdateMetadata(string fileName)
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-			var sourceFileETag = InnerHeaders.Value<Guid>("ETag");
+            // REVIEW: (Oren) It works, but it seems to me it is not an scalable solution. 
+            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First().Trim('\"'));
 
-			Log.Debug("Starting to update a metadata of file '{0}' with ETag {1} from {2} because of synchronization", fileName,
+            Log.Debug("Starting to update a metadata of file '{0}' with ETag {1} from {2} because of synchronization", fileName,
 					  sourceFileETag, sourceServerInfo);
 
 			var report = new SynchronizationReport(fileName, sourceFileETag, SynchronizationType.MetadataUpdate);
@@ -280,7 +280,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				Storage.Batch(accessor => StartupProceed(fileName, accessor));
 
 				var localMetadata = GetLocalMetadata(fileName);
-                var sourceMetadata = InnerHeaders.FilterHeadersToObject();
+                var sourceMetadata = InnerHeaders.HeadersToObject();
 
                 bool isConflictResolved;
 
@@ -328,10 +328,9 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public HttpResponseMessage Delete(string fileName)
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-			var sourceFileETag = InnerHeaders.Value<Guid>("ETag");
+            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First());
 
-			Log.Debug("Starting to delete a file '{0}' with ETag {1} from {2} because of synchronization", fileName,
-					  sourceFileETag, sourceServerInfo);
+            Log.Debug("Starting to delete a file '{0}' with ETag {1} from {2} because of synchronization", fileName, sourceFileETag, sourceServerInfo);
 
 			var report = new SynchronizationReport(fileName, sourceFileETag, SynchronizationType.Delete);
 
@@ -410,7 +409,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public HttpResponseMessage Rename(string fileName, string rename)
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-			var sourceFileETag = InnerHeaders.Value<Guid>("ETag");
+			var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First());
             var sourceMetadata = InnerHeaders.FilterHeadersToObject();
 
 			Log.Debug("Starting to rename a file '{0}' to '{1}' with ETag {2} from {3} because of synchronization", fileName,

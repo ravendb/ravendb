@@ -189,7 +189,7 @@ namespace RavenFS.Tests.Synchronization
             var server3 = NewClient(2);
 
 			content.Position = 0;
-            server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content).Wait();
+            await server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content);
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
@@ -201,7 +201,7 @@ namespace RavenFS.Tests.Synchronization
 
 			SyncTestUtils.TurnOffSynchronization(server1);
 
-            server1.UpdateMetadataAsync("test.bin", new RavenJObject { { "new_test", "new_value" } }).Wait();
+            await server1.UpdateMetadataAsync("test.bin", new RavenJObject { { "new_test", "new_value" } });
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
@@ -214,13 +214,13 @@ namespace RavenFS.Tests.Synchronization
 			Assert.Equal(SynchronizationType.MetadataUpdate, secondServer2Synchronization[0].Reports.ToArray()[0].Type);
 
 			// On all servers should be file named "rename.bin"
-			var server1Metadata = server1.GetMetadataForAsync("test.bin").Result;
-			var server2Metadata = server2.GetMetadataForAsync("test.bin").Result;
-			var server3Metadata = server3.GetMetadataForAsync("test.bin").Result;
+			var server1Metadata = await server1.GetMetadataForAsync("test.bin");
+			var server2Metadata = await server2.GetMetadataForAsync("test.bin");
+			var server3Metadata = await server3.GetMetadataForAsync("test.bin");
 
-			Assert.Equal("new_value", server1Metadata["new_test"]);
-			Assert.Equal("new_value", server2Metadata["new_test"]);
-			Assert.Equal("new_value", server3Metadata["new_test"]);
+            Assert.Equal("new_value", server1Metadata.Value<string>("new_test"));
+			Assert.Equal("new_value", server2Metadata.Value<string>("new_test"));
+			Assert.Equal("new_value", server3Metadata.Value<string>("new_test"));
 		}
 	}
 }
