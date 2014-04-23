@@ -107,6 +107,23 @@ class query extends viewModelBase {
         this.selectedIndex.subscribe(index => this.onIndexChanged(index));
     }
 
+    attached() {
+        super.attached();
+        this.createKeyboardShortcut("F2", () => this.editSelectedIndex(), query.containerSelector);
+        this.createKeyboardShortcut("ctrl+enter", () => this.runQuery(), query.containerSelector);
+        this.createKeyboardShortcut("alt+c", () => this.focusOnQuery(), query.containerSelector);
+        $("#indexQueryLabel").popover({
+            html: true,
+            trigger: 'hover',
+            container: '.form-horizontal',
+            content: 'Queries use Lucene syntax. Examples:<pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
+        });
+        ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexQueryRawData(this.activeDatabase(), this.selectedIndex()));
+
+        super.createResizableTextBoxes();
+        this.focusOnQuery();
+    }
+
     onIndexChanged(newIndexName: string) {
         var command = getCustomColumnsCommand.forIndex(newIndexName, this.activeDatabase());
         this.contextName(command.docName);
@@ -137,34 +154,6 @@ class query extends viewModelBase {
                 this.runRecentQuery(matchingQuery);
             }
         }
-    }
-
-    attached() {
-        this.createKeyboardShortcut("F2", () => this.editSelectedIndex(), query.containerSelector);
-        this.createKeyboardShortcut("ctrl+enter", () => this.runQuery(), query.containerSelector);
-        this.createKeyboardShortcut("alt+c", () => this.focusOnQuery(), query.containerSelector);
-        $("#indexQueryLabel").popover({
-            html: true,
-            trigger: 'hover',
-            container: '.form-horizontal',
-            content: 'Queries use Lucene syntax. Examples:<pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
-        });        
-        ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexQueryRawData(this.activeDatabase(), this.selectedIndex()));
-
-        //var docEditor: AceAjax.Editor = ace.edit("queryEditor");
-        
-        //var editor = ace.edit("queryEditor");
-        
-        //docEditor.resize(true);
-        //docEditor.setAutoScrollEditorIntoView();
-        //docEditor.setOption("minLines", 7);
-        //docEditor.setOption("maxLines", 100);
-    }
-
-    compositionComplete() {
-        super.compositionComplete();
-        var editor = "#queryEditor";
-        $(editor).height($(editor).resizable("option", "minHeight"));
     }
 
     focusOnQuery() {

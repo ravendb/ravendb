@@ -3,101 +3,79 @@
         <div class="alert alert-danger">Too many periodic backup types found. This isn't a supported scenario for the UI.</div>
     </div>
     <div data-bind="visible: !unsupported()">
-        <nav class="navbar navbar-default" role="navigation">
-            <div class="collapse navbar-collapse">
-                <form class="navbar-form navbar-right">
-                    <button type="button" class="btn btn-default use-bootstrap-tooltip" title="Activate Periodic Backup" data-bind="click: $root.activatePeriodicBackup.bind($root), visible: !activated()">
-                        <i class="fa fa-unlock"></i> Activate Periodic Backup
-                    </button>
-                    <button type="button" class="btn btn-default use-bootstrap-tooltip" title="Activate Periodic Backup" data-bind="click: $root.activatePeriodicBackup.bind($root), visible: activated()">
-                        <i class="fa fa-lock"></i> Deactivate Periodic Backup
-                    </button>
-                    <button type="button" class="btn btn-primary use-bootstrap-tooltip" title="Save replication destinations (Alt+S)" data-bind="click: $root.saveChanges.bind($root), enable: $root.isSaveEnabled()" accesskey="S"><i class="fa fa-save"></i></button>
-                </form>
-            </div>
-        </nav>
-    </div>
-    
-    
-    
-    
-
-
-    <div class="alert alert-warning" data-bind="visible: !unsupported()">
-        There is no Periodic Backup set for this database.
-    </div>
-    <div data-bind="slideVisible: !unsupported()" id="periodicBackupContainer">
-        <div data-bind="slideVisible: !activated()">
+        <form data-bind="submit: $root.saveChanges.bind($root)" id="save-periodic-backup-form" class="form-horizontal" role="form">
             <nav class="navbar navbar-default" role="navigation">
                 <div class="collapse navbar-collapse">
-                    <p class="navbar-text">There is no Periodic Backup set for this database.</p>
-                    <form class="navbar-form navbar-right">
-                        <button type="button" class="btn btn-default use-bootstrap-tooltip" title="Activate Periodic Backup" data-bind="click: $root.activatePeriodicBackup.bind($root)"><i class="fa fa-unlock"></i> Activate Periodic Backup</button>
-                        <button type="button" class="btn btn-primary use-bootstrap-tooltip" title="Save replication destinations (Alt+S)" data-bind="click: $root.saveChanges.bind($root)" accesskey="S"><i class="fa fa-save"></i></button>
-                    </form>
+                    <div class="navbar-form navbar-right">
+                        <button type="button" class="btn btn-default use-bootstrap-tooltip" title="Activate Periodic Backup" data-bind="click: $root.activatePeriodicBackup.bind($root), visible: !activated()">
+                            <i class="fa fa-unlock"></i> Activate Periodic Backup
+                        </button>
+                        <button type="button" class="btn btn-default use-bootstrap-tooltip" title="Deactivate Periodic Backup" data-bind="click: $root.activatePeriodicBackup.bind($root), visible: activated()">
+                            <i class="fa fa-lock"></i> Deactivate Periodic Backup
+                        </button>
+                        <button type="submit" class="btn btn-primary use-bootstrap-tooltip" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled()" accesskey="S"><i class="fa fa-save"></i></button>
+                    </div>
                 </div>
             </nav>
-        </div>
-        <form id="save-periodic-backup-form" class="form-horizontal" role="form" data-bind="slideVisible: activated">
-            <div class="form-group">
-                <div class="col-sm-3">
-                    <select class="form-control" data-bind="options: availablePeriodicBackups, optionsText: 'label', optionsValue: 'value', value: type"></select>
-                </div>
-                <div class="col-sm-3">
-                    <input required type="text" class="form-control" data-bind="value: mainValue" />
-                </div>
+            <div class="alert alert-warning" data-bind="slideVisible: !activated()">
+                There is no Periodic Backup set for this database.
             </div>
-            <div class="form-group" data-bind="slideVisible: additionalAwsInfoRequired">
-                <label for="awsAccessKey" class="col-sm-3 control-label">AWS Access Key:</label>
-                <div class="col-sm-3">
-                    <input id="awsAccessKey" type="text" class="form-control" data-bind="value: awsAccessKey" />
+            <div data-bind="slideVisible: activated()" id="periodicBackupContainer">
+                <div class="form-group">
+                    <div class="col-sm-3">
+                        <select class="form-control" data-bind="options: availablePeriodicBackups, optionsText: 'label', optionsValue: 'value', value: type"></select>
+                    </div>
+                    <div class="col-sm-3">
+                        <input required type="text" class="form-control" data-bind="value: mainValue, valueUpdate: 'afterkeydown'" />
+                    </div>
                 </div>
-            </div>
-            <div class="form-group" data-bind="slideVisible: additionalAwsInfoRequired">
-                <label for="awsSecretKey" class="col-sm-3 control-label">AWS Secret Key:</label>
-                <div class="col-sm-3">
-                    <input id="awsSecretKey" type="password" autocomplete="off" class="form-control" data-bind="value: awsSecretKey" />
+                <div class="form-group" data-bind="if: additionalAwsInfoRequired, slideVisible: additionalAwsInfoRequired">
+                    <label for="awsAccessKey" class="col-sm-3 control-label">AWS Access Key:</label>
+                    <div class="col-sm-3">
+                        <input required id="awsAccessKey" type="text" class="form-control" data-bind="value: awsAccessKey, valueUpdate: 'afterkeydown'" />
+                    </div>
                 </div>
-            </div>
-            <div class="form-group" data-bind="slideVisible: additionalAwsInfoRequired">
-                <label for="awsRegionEndpoint" class="col-sm-3 control-label">AWS Region Endpoint:</label>
-                <div class="col-sm-3">
-                    <select id="awsRegionEndpoint" class="form-control" data-bind="options: availableAwsRegionEndpoints, optionsText: 'label', optionsValue: 'value', optionsCaption: '', value: awsRegionEndpoint"></select>
+                <div class="form-group" data-bind="if: additionalAwsInfoRequired, slideVisible: additionalAwsInfoRequired">
+                    <label for="awsSecretKey" class="col-sm-3 control-label">AWS Secret Key:</label>
+                    <div class="col-sm-3">
+                        <input required id="awsSecretKey" type="password" autocomplete="off" class="form-control" data-bind="value: awsSecretKey, valueUpdate: 'afterkeydown'" />
+                    </div>
                 </div>
-            </div>
-            <div class="form-group" data-bind="slideVisible: additionalAzureInfoRequired">
-                <label for="azureStorageAccount" class="col-sm-3 control-label">Azure Storage Account:</label>
-                <div class="col-sm-3">
-                    <input id="azureStorageAccount" type="text" class="form-control" data-bind="value: azureStorageAccount" />
+                <div class="form-group" data-bind="if: additionalAwsInfoRequired, slideVisible: additionalAwsInfoRequired">
+                    <label for="awsRegionEndpoint" class="col-sm-3 control-label">AWS Region Endpoint:</label>
+                    <div class="col-sm-3">
+                        <select required id="awsRegionEndpoint" class="form-control" data-bind="options: availableAwsRegionEndpoints, optionsText: 'label', optionsValue: 'value', optionsCaption: '', value: awsRegionEndpoint"></select>
+                    </div>
                 </div>
-            </div>
-            <div class="form-group" data-bind="slideVisible: additionalAzureInfoRequired">
-                <label for="azureStorageKey" class="col-sm-3 control-label">Azure Storage Key:</label>
-                <div class="col-sm-3">
-                    <input id="azureStorageKey" type="password" autocomplete="off" class="form-control" data-bind="value: azureStorageKey" />
+                <div class="form-group" data-bind="if: additionalAzureInfoRequired, slideVisible: additionalAzureInfoRequired">
+                    <label for="azureStorageAccount" class="col-sm-3 control-label">Azure Storage Account:</label>
+                    <div class="col-sm-3">
+                        <input required id="azureStorageAccount" type="text" class="form-control" data-bind="value: azureStorageAccount, valueUpdate: 'afterkeydown'" />
+                    </div>
                 </div>
-            </div>
-            <div class="form-group">
-                <label for="incrementalBackupInterval" class="col-sm-3 control-label">Incremental Backup Interval:</label>
-                <div class="col-sm-1">
-                    <input id="incrementalBackupInterval" type="number" class="form-control" min="0" data-bind="value: incrementalBackupInterval" />
+                <div class="form-group" data-bind="if: additionalAzureInfoRequired, slideVisible: additionalAzureInfoRequired">
+                    <label for="azureStorageKey" class="col-sm-3 control-label">Azure Storage Key:</label>
+                    <div class="col-sm-3">
+                        <input required id="azureStorageKey" type="password" autocomplete="off" class="form-control" data-bind="value: azureStorageKey, valueUpdate: 'afterkeydown'" />
+                    </div>
                 </div>
-                <div class="col-sm-2">
-                    <select class="form-control" data-bind="options: availableIntervalUnits, value: incrementalBackupIntervalUnit"></select>
+                <div class="form-group">
+                    <label for="incrementalBackupInterval" class="col-sm-3 control-label">Incremental Backup Interval:</label>
+                    <div class="col-sm-1">
+                        <input id="incrementalBackupInterval" required type="number" class="form-control" min="0" data-bind="value: incrementalBackupInterval, valueUpdate: 'afterkeydown'" />
+                    </div>
+                    <div class="col-sm-2">
+                        <select class="form-control" data-bind="options: availableIntervalUnits, value: incrementalBackupIntervalUnit"></select>
+                    </div>
                 </div>
-            </div>
-            <div class="form-group">
-                <label for="fullBackupInterval" class="col-sm-3 control-label">Full Backup Interval:</label>
-                <div class="col-sm-1">
-                    <input id="fullBackupInterval" type="number" class="form-control" min="0" data-bind="value: fullBackupInterval" />
-                </div>
-                <div class="col-sm-2">
-                    <select class="form-control" data-bind="options: availableIntervalUnits, value: fullBackupIntervalUnit"></select>
-                </div>
-            </div>
-            <div class="form-group">
-                <div class="col-sm-offset-3 col-sm-6">
-                    <button type="submit" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: $root.saveChanges.bind($root)" title="Save Changes(Alt+S)" accesskey="S"><i class="fa fa-save"></i> Save Changes</button>
+                <div class="form-group">
+                    <label for="fullBackupInterval" class="col-sm-3 control-label">Full Backup Interval:</label>
+                    <div class="col-sm-1">
+                        <input id="fullBackupInterval" required type="number" class="form-control" min="0" data-bind="value: fullBackupInterval, valueUpdate: 'afterkeydown'" />
+                    </div>
+                    <div class="col-sm-2">
+                        <select class="form-control" data-bind="options: availableIntervalUnits, value: fullBackupIntervalUnit"></select>
+                    </div>
                 </div>
             </div>
         </form>

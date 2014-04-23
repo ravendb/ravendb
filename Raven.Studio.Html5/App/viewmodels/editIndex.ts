@@ -70,22 +70,21 @@ class editIndex extends viewModelBase {
             this.priority(indexPriority.normal);
             this.editedIndex(this.createNewIndexDefinition());
         }
+
+        var indexDef = this.editedIndex();
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.fields, indexDef.transformResults, indexDef.spatialFields, indexDef.maxIndexOutputsPerDocument]);
+        //need to add more fields like: this.editedIndex().luceneFields()[0].name, this.editedIndex().luceneFields()[0].indexing()
     }
 
     attached() {
         this.addMapHelpPopover();
         this.addReduceHelpPopover();
         this.addTransformHelpPopover();
-
-        var indexDef = this.editedIndex();
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.fields, indexDef.transformResults, indexDef.spatialFields]);
-        //need to add more fields like: this.editedIndex().luceneFields()[0].name, this.editedIndex().luceneFields()[0].indexing()
     }
 
     // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
         super.compositionComplete();
-
     }
 
     /*saveInObservable() {
