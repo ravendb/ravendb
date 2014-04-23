@@ -79,6 +79,13 @@ html, body {
     }
 }
 
+.dropdown-menu{
+    .selected{
+        color: #555;
+        background-color: #e7e7e7;
+    }
+}
+
 .panel span {
     overflow: hidden;
     -ms-text-overflow: ellipsis;
@@ -545,6 +552,28 @@ html, body {
     .query-metadata {
         padding-top: 20px;
     }
+
+
+    .related-document-container {
+        -webkit-column-count: 2; /* Chrome, Safari, Opera */
+        -moz-column-count: 2; /* Firefox */
+        column-count: 2;
+        -webkit-column-gap: 50px; /* Chrome, Safari, Opera */
+        -moz-column-gap: 50px; /* Firefox */
+        column-gap: 50px;
+        -moz-column-width: 30px;
+        -webkit-column-width: 30px;
+        column-width: 30px;
+
+        .related-document{
+            width:80%;
+            overflow: hidden;
+            white-space: nowrap;
+            -ms-text-overflow: ellipsis;
+            -o-text-overflow: ellipsis;
+            text-overflow: ellipsis;
+        }
+    }
 }
 
 .keyboard-shortcut {
@@ -682,6 +711,7 @@ html, body {
 #editTransformerContainer .transformer {
     height: 600px;
 }
+
 
 .auto-complete {
     background-color: white;

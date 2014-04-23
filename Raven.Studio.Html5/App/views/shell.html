@@ -116,7 +116,7 @@
                         </li>
                     </ul>
                     <form class="navbar-form pull-left hidden-xs hidden-sm col-sm-2">
-                        <input id="goToDocInput" type="text" class="form-control" placeholder="Go to document" data-bind="value: goToDocumentSearch, valueUpdate: 'afterkeydown'" />
+                        <input id="goToDocInput" type="text" class="form-control" placeholder="Go to document" data-bind="value: goToDocumentSearch, valueUpdate: 'afterkeydown'" autocomplete="off" />
                         <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#goToDocInput', foreach: goToDocumentSearchResults">
                             <li role="presentation" data-bind="click: $root.goToDoc.bind($root, $data)">
                                 <a role="menuitem" tabindex="-1" href="#">
