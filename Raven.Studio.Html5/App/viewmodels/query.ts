@@ -1,3 +1,4 @@
+/// <reference path="../../Scripts/typings/ace/ace.d.ts" />
 import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
@@ -23,6 +24,9 @@ import customColumns = require('models/customColumns');
 import selectColumns = require('viewmodels/selectColumns');
 import getCustomColumnsCommand = require('commands/getCustomColumnsCommand');
 import ace = require("ace/ace");
+import getDocumentsByEntityNameCommand = require("commands/getDocumentsByEntityNameCommand");
+import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
+import getIndexTermsCommand = require("commands/getIndexTermsCommand");
 
 class query extends viewModelBase {
 
@@ -255,6 +259,70 @@ class query extends viewModelBase {
 
         return null;
     }
+        
+
+    queryCompleter(editor: any, session: any,pos:AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
+        var currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
+
+        if (!currentToken || typeof currentToken.type == "string") {
+            // if in beginning of text or in free text token
+            if (!currentToken || currentToken.type == "text") {
+                callback(null, this.indexFields().map(curColumn => {
+                    return { name: curColumn, value: curColumn, score: 10, meta: "field" };
+                }));
+            }
+            // if right after, or a whitespace after keyword token ([column name]:)
+            else if (currentToken.type == "keyword" || currentToken.type == "value") {
+
+                // first, calculate and validate the column name
+                var currentColumnName: string = null;
+                var currentValue:string = "";
+
+                if (currentToken.type == "keyword") {
+                    currentColumnName = currentToken.value.substring(0, currentToken.value.length - 1);
+                } else {
+                    currentValue = currentToken.value.trim();
+                    var rowTokens: any[] = session.getTokens(pos.row);
+                    if (!!rowTokens && rowTokens.length > 1) {
+                        currentColumnName = rowTokens[rowTokens.length - 2].value.trim();
+                        currentColumnName = currentColumnName.substring(0, currentColumnName.length - 1);
+                    }
+                }
+
+                // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
+                
+                if (!!currentColumnName && !!this.indexFields.first(x=> x === currentColumnName)) {
+
+                    if (this.selectedIndex().indexOf("dynamic/") !== 0) {
+                        new getIndexTermsCommand(this.selectedIndex(), currentColumnName, this.activeDatabase())
+                            .execute()
+                            .done(terms => {
+                                if (!!terms && terms.length > 0) {
+                                    callback(null, terms.map(curVal => {
+                                        return { name: curVal, value: curVal, score: 10, meta: "value" };
+                                    }));
+                                }
+                        });
+                    } else {
+
+                        if (currentValue.length > 0) {
+                            new getDocumentsMetadataByIDPrefixCommand(currentValue, 10, this.activeDatabase())
+                                .execute()
+                                .done((results: string[]) => {
+                                    if (!!results && results.length > 0) {
+                                        callback(null, results.map(curVal => {
+                                            return { name: curVal['@metadata']['@id'], value: curVal['@metadata']['@id'], score: 10, meta: "value" };
+                                        }));
+                                    }
+                                });
+                        } else {
+                            callback([{ error: "notext" }], null);
+                        }
+                    }
+            }
+            }
+        }
+    }
 
     recordQueryRun(indexName: string, queryText: string, sorts: string[], transformer: string, showFields: boolean, indexEntries: boolean, useAndOperator: boolean) {
         var newQuery: storedQueryDto = {
@@ -323,11 +391,28 @@ class query extends viewModelBase {
         // Fields don't show for All Documents.
         var isAllDocumentsDynamicQuery = indexName === "All Documents";
         if (!isAllDocumentsDynamicQuery) {
-            new getIndexDefinitionCommand(indexQuery, this.activeDatabase())
-                .execute()
-                .done((result: indexDefinitionContainerDto) => {
-                    this.indexFields(result.Index.Fields);
+
+            //if index is dynamic, get columns using index definition, else get it using first index result
+            if (indexName.indexOf('dynamic/') == 0) {
+                var collectionName = indexName.substring(8);
+                new getDocumentsByEntityNameCommand(new collection(collectionName, this.activeDatabase()), 0, 1)
+                    .execute()
+                    .done((result: pagedResultSet) => {
+                        if (!!result && result.totalResultCount >0) {
+                            var dynamicIndexPattern: document = new document(result.items[0]);
+                            if (!!dynamicIndexPattern) {
+                                this.indexFields(dynamicIndexPattern.getDocumentPropertyNames());
+                            }
+
+                        }
                 });
+            } else {
+                new getIndexDefinitionCommand(indexQuery, this.activeDatabase())
+                    .execute()
+                    .done((result: indexDefinitionContainerDto) => {
+                        this.indexFields(result.Index.Fields);
+                    });
+            }
         }
     }
 

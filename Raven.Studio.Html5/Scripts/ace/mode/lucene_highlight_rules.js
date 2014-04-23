@@ -5,7 +5,12 @@ var oop = require("../lib/oop");
 var lang = require("../lib/lang");
 var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 
-var LuceneHighlightRules = function() {
+var LuceneHighlightRules = function () {
+
+    var keywordMapper = this.createKeywordMapper({        
+        "logics": "AND|OR|NOT"
+    }, "identifier");
+
     this.$rules = {
         "start" : [
             {
@@ -31,13 +36,50 @@ var LuceneHighlightRules = function() {
                 regex : "[\\)]"
             }, {
                 token : "keyword",
-                regex : "[\\S]+:"
+                regex: "[\\S]+:",
+                next: "value"
             }, {
                 token : "string",           // " string
                 regex : '".*?"'
             }, {
                 token : "text",
                 regex : "\\s+"
+            }
+        ],
+        "value": [
+            {
+                token: "value",                
+                regex: '\\s+'
+            },
+            {
+                token: "value",
+                //regex: '(\\"[^\\"]*\\")|([^\\s\\"]+\\s)',
+                regex: '[\\"]',
+                next: "valueQuotCont"
+            },
+            {
+                token: "value",
+                //regex: '(\\"[^\\"]*\\")|([^\\s\\"]+\\s)',
+                regex: '[^\\"\\s]',
+                next: "valueNonQuotCont"
+            }
+        ],
+        "valueQuotCont": [
+            {
+                token: "value",
+                regex: '[^\\"]+'
+            },
+            {
+                token: "value",
+                regex: '[\\"]',
+                next: "start"
+            }
+        ],
+        "valueNonQuotCont": [           
+            {
+                token: "value",
+                regex: '[^\\"\\s]*',
+                next: "start"
             }
         ]
     };

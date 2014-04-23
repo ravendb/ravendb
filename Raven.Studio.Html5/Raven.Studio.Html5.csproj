@@ -1067,6 +1067,8 @@
     <Content Include="Scripts\webshim\shims\track.js" />
     <Content Include="Scripts\jwerty-0.3.js" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.amd.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\ace\ace.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\ace\aceExt.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jqueryui\jqueryui.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery\jquery.d.ts" />
