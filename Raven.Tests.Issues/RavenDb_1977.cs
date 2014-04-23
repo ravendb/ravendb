@@ -15,9 +15,9 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanDetectObjectAddChanges()
         {
-            using (EmbeddableDocumentStore store = NewDocumentStore())
+            using (var store = NewDocumentStore())
             {
-                using (IDocumentSession session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new UserData
                     {
@@ -75,9 +75,9 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanDetectManyObjectChanges() 
         {
-            using (EmbeddableDocumentStore store = NewDocumentStore())
+            using (var store = NewDocumentStore())
             {
-                using (IDocumentSession session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new UserData
                     {
@@ -132,7 +132,7 @@ namespace Raven.Tests.Issues
                     Assert.True(changes3.ContainsKey("UserData/2"));
                     var supposedChanges = new DocumentsChanges
                     {
-                        Comment = "field changed",
+                        Comment =DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldChanged),
                         FieldName = "Id",
                         FieldNewType = "Integer",
                         FieldNewValue = "556",
@@ -204,9 +204,9 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanDetectObjectUpdateChanges() 
         {
-            using (EmbeddableDocumentStore store = NewDocumentStore())
+            using (var store = NewDocumentStore())
             {
-                using (IDocumentSession session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new UserData
                     {
@@ -235,7 +235,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                using (IDocumentSession session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var userdata2 = session.Load<UserData>("UserData/2");
                     userdata2.Id = 556;
@@ -283,9 +283,9 @@ namespace Raven.Tests.Issues
          [Fact]
         public void CanDetectObjectDeleteChanges() 
         {
-            using (EmbeddableDocumentStore store = NewDocumentStore())
+            using (var store = NewDocumentStore())
             {
-                using (IDocumentSession session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new UserData
                     {
@@ -314,7 +314,7 @@ namespace Raven.Tests.Issues
                       session.SaveChanges();
                  }
 
-                using (IDocumentSession session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var userdata1 = session.Load<UserData>("UserData/1");
                     int numToRemove = 99;
@@ -351,9 +351,9 @@ namespace Raven.Tests.Issues
          [Fact]
          public void CanDetectAddMetadataChanges()
          {
-             using (EmbeddableDocumentStore store = NewDocumentStore())
+             using (var store = NewDocumentStore())
              {
-                 using (IDocumentSession session = store.OpenSession())
+                 using (var session = store.OpenSession())
                  {
                      session.Store(new UserData
                      {
@@ -379,7 +379,7 @@ namespace Raven.Tests.Issues
                      session.SaveChanges();
                  }
 
-                 using (IDocumentSession session = store.OpenSession())
+                 using (var session = store.OpenSession())
                  {
                      var userdata3 = session.Load<UserData>("UserData/3");
                      RavenJObject metadata3 = session.Advanced.GetMetadataFor(userdata3);
@@ -392,10 +392,10 @@ namespace Raven.Tests.Issues
                      Assert.Equal(supposedChangesNumber, changes3.Count);
                      Assert.True(changes3.ContainsKey("UserData/3"));
   
-                     DocumentsChanges[] data_3 = { };
-                     if (changes3.TryGetValue("UserData/3", out data_3))
+                     DocumentsChanges[] data3 = { };
+                     if (changes3.TryGetValue("UserData/3", out data3))
                      {
-                         Assert.Equal(data_3.Length, 3);
+                         Assert.Equal(data3.Length, 3);
                      }
                          session.SaveChanges();
                  }
@@ -404,9 +404,9 @@ namespace Raven.Tests.Issues
          [Fact]
          public void CanDetectUpdateMetadataChanges()
          {
-             using (EmbeddableDocumentStore store = NewDocumentStore())
+             using (var store = NewDocumentStore())
              {
-                 using (IDocumentSession session = store.OpenSession())
+                 using (var session = store.OpenSession())
                  {
                      session.Store(new UserData
                      {
@@ -432,15 +432,15 @@ namespace Raven.Tests.Issues
                      session.SaveChanges();
                  }
 
-                 using (IDocumentSession session = store.OpenSession())
+                 using (var session = store.OpenSession())
                  {
    
                      var userdata2 = session.Load<UserData>("UserData/2");
                      RavenJObject metadata2 = session.Advanced.GetMetadataFor(userdata2);
-                     KeyValuePair<string, RavenJToken> data2 = metadata2.ElementAt(2);
-                     metadata2[data2.Key] = "changes";
-                     KeyValuePair<string, RavenJToken> data3 = metadata2.ElementAt(3);
-                     metadata2[data3.Key] = "add changes";
+                     KeyValuePair<string, RavenJToken> mdata2 = metadata2.ElementAt(2);
+                     metadata2[mdata2.Key] = "changes";
+                     KeyValuePair<string, RavenJToken> mdata3 = metadata2.ElementAt(3);
+                     metadata2[mdata3.Key] = "add changes";
                    
                      int supposedChangesNumber = 1;
                      IDictionary<string, DocumentsChanges[]> changes3 = session.Advanced.WhatChanged();
@@ -448,10 +448,10 @@ namespace Raven.Tests.Issues
                      Assert.Equal(supposedChangesNumber, changes3.Count);
                      Assert.True(changes3.ContainsKey("UserData/2"));
 
-                     DocumentsChanges[] data_3 = { };
-                       if (changes3.TryGetValue("UserData/2", out data_3))
+                     DocumentsChanges[] data3 = { };
+                       if (changes3.TryGetValue("UserData/2", out data3))
                      {
-                         Assert.Equal(data_3.Length, 2);
+                         Assert.Equal(data3.Length, 2);
                      }
                        session.SaveChanges();
                  }
@@ -460,9 +460,9 @@ namespace Raven.Tests.Issues
          [Fact]
          public void CanDetectDeleteMetadataChanges()
          {
-             using (EmbeddableDocumentStore store = NewDocumentStore())
+             using (var store = NewDocumentStore())
              {
-                 using (IDocumentSession session = store.OpenSession())
+                 using (var session = store.OpenSession())
                  {
                      session.Store(new UserData
                      {
@@ -488,7 +488,7 @@ namespace Raven.Tests.Issues
                      session.SaveChanges();
                  }
 
-                 using (IDocumentSession session = store.OpenSession())
+                 using (var session = store.OpenSession())
                  {
   
 
@@ -504,10 +504,10 @@ namespace Raven.Tests.Issues
                      Assert.Equal(supposedChangesNumber, changes3.Count);
                      Assert.True(changes3.ContainsKey("UserData/1"));
 
-                     DocumentsChanges[] data_3 = { };
-                      if (changes3.TryGetValue("UserData/1", out data_3))
+                     DocumentsChanges[] data3 = { };
+                      if (changes3.TryGetValue("UserData/1", out data3))
                      {
-                         Assert.Equal(data_3.Length, 2);
+                         Assert.Equal(data3.Length, 2);
                      }
                      session.SaveChanges();
                  }

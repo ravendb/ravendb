@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -293,12 +294,11 @@ namespace Raven.Json.Linq
         {
             return t == null ? 0 : t.GetDeepHashCode();
         }
-
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal virtual bool DeepEquals(RavenJToken other)
         {
-            var obj = new List<DocumentsChanges>();
-            obj = null;
-            return DeepEquals(other, obj);
+            return DeepEquals(other, (List<DocumentsChanges>)null);
         }
 
 
@@ -313,7 +313,7 @@ namespace Raven.Json.Linq
             var fieldName = string.Empty;
             var otherStack = new Stack<RavenJToken>();
             var thisStack = new Stack<RavenJToken>();
-            var FieldNameStack = new Stack<string>();
+            var fieldNameStack = new Stack<string>();
             var isEqual = true;
             thisStack.Push(this);
             otherStack.Push(other);
@@ -323,9 +323,9 @@ namespace Raven.Json.Linq
                 var curOtherReader = otherStack.Pop();
                 var curThisReader = thisStack.Pop();
                 string fieldArrName = string.Empty;
-                if (FieldNameStack.Count > 0)
+                if (fieldNameStack.Count > 0)
                 {
-                    fieldArrName = FieldNameStack.Pop();
+                    fieldArrName = fieldNameStack.Pop();
                     fieldName = fieldArrName;
                 }
                   
@@ -347,51 +347,15 @@ namespace Raven.Json.Linq
                                 if (docChanges == null)
                                     return false;
 
-
-                                var differences = selfArray.Except(otherArray);
-
-                                if (selfArray.Length < otherArray.Length)
-                                {
-                                    differences = otherArray.Except(selfArray);
-                                }
-                                foreach (var dif in differences)
-                                {
-                                    var changes = new DocumentsChanges
-                                    {
-                                        FieldName = fieldArrName
-                                    };
-
-
-                                    if (selfArray.Length < otherArray.Length)
-                                    {
-                                        changes.Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldRemoved);
-                                        changes.FieldOldValue = dif.ToString();
-                                        changes.FieldOldType = dif.Type.ToString();
-                                    }
-
-                                    if (selfArray.Length > otherArray.Length)
-                                    {
-                                        changes.Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldAdded);
-                                        changes.FieldNewValue = dif.ToString();
-                                        changes.FieldNewType = dif.Type.ToString();
-
-
-                                    }
-                                    docChanges.Add(changes);
-                                }
-
-                                isEqual = false;
+                                isEqual = docChanges.CompareRavenJArrayData(selfArray, otherArray, fieldArrName);
                             }
-
                             else
                             {
-
-
                                 for (var i = 0; i < selfArray.Length; i++)
                                 {
                                     thisStack.Push(selfArray[i]);
                                     otherStack.Push(otherArray[i]);
-                                    FieldNameStack.Push(fieldName);
+                                    fieldNameStack.Push(fieldName);
                                 }
                             }
                             break;
@@ -402,65 +366,9 @@ namespace Raven.Json.Linq
                             {
                                 if (docChanges == null)
                                     return false;
-
-
-                                var diffData = new Dictionary<string, string>();
-                                var descr = string.Empty;
-                                RavenJToken token1;
-                                if (otherObj.Count == 0)
-                                {
-                                    foreach (var kvp in selfObj.Properties)
-                                    {
-                                        var changes = new DocumentsChanges();
-
-                                        if (selfObj.Properties.TryGetValue(kvp.Key, out token1))
-                                        {
-                                            changes.FieldNewValue = token1.ToString();
-                                            changes.FieldNewType = token1.Type.ToString();
-                                            changes.Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldAdded);
-
-                                            changes.FieldName = kvp.Key;
-                                        }
-
-                                        changes.FieldOldValue = "null";
-                                        changes.FieldOldType = "null";
-
-                                        docChanges.Add(changes);
-                                    }
-
-                                    isEqual = false;
-                                }
-                                CompareJsonData(selfObj.Properties, otherObj.Properties, diffData);
-
-                                foreach (var key in diffData.Keys)
-                                {
-                                    var changes = new DocumentsChanges();
-
-                                    descr = "field" + fieldName;
-                                    changes.FieldOldType = otherObj.Type.ToString();
-                                    changes.FieldNewType = selfObj.Type.ToString();
-                                    changes.FieldName = key;
-
-                                    if (selfObj.Count < otherObj.Count)
-                                    {
-                                        changes.Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldRemoved);
-
-                                        changes.FieldOldValue = diffData[key];
-                                    }
-
-                                    else
-                                    {
-                                        changes.Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldAdded);
-                                        changes.FieldNewValue = diffData[key];
-                                    }
-                                    docChanges.Add(changes);
-                                }
-                                isEqual = false;
-
-                                // return false;
+                               isEqual= docChanges.CompareDifferentLengthRavenJObjectData( otherObj, selfObj, fieldName);
+                                
                             }
-
-
                             else
                             {
                                 foreach (var kvp in selfObj.Properties)
@@ -472,13 +380,8 @@ namespace Raven.Json.Linq
                                         if (docChanges == null)
                                             return false;
 
-                                        var changes = new DocumentsChanges
-                                        {
-                                            Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.DoesntExistInNew)
-
-                                        };
-                                        docChanges.Add(changes);
-                                        isEqual = false;
+                                        isEqual = docChanges.AddChanges(DocumentsChanges.CommentType.DoesntExistInNew);
+                                       
                                     }
 
                                     if (kvp.Value == null)
@@ -488,13 +391,9 @@ namespace Raven.Json.Linq
                                             if (docChanges == null)
                                                 return false;
 
-                                            var changes = new DocumentsChanges
-                                            {
-                                                Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.DoesntExistInOriginal)
+                                            isEqual = docChanges.AddChanges(DocumentsChanges.CommentType.DoesntExistInOriginal);
 
-                                            };
-                                            docChanges.Add(changes);
-                                            isEqual = false;
+                                           
                                         }
 
                                         continue;
@@ -505,7 +404,7 @@ namespace Raven.Json.Linq
                                         case JTokenType.Object:
                                             otherStack.Push(token);
                                             thisStack.Push(kvp.Value);
-                                            FieldNameStack.Push(kvp.Key);
+                                            fieldNameStack.Push(kvp.Key);
                                             break;
                                         case JTokenType.Bytes:
                                             var bytes = kvp.Value.Value<byte[]>();
@@ -528,23 +427,13 @@ namespace Raven.Json.Linq
                                             {
                                                 if (docChanges == null)
                                                     return false;
-                                                var changes = new DocumentsChanges
-
-                                                {
-                                                    FieldNewType = kvp.Value.Type.ToString(),
-                                                    FieldOldType = token.Type.ToString(),
-                                                    FieldNewValue = kvp.Value.ToString(),
-                                                    FieldOldValue = token.ToString(),
-                                                    Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldChanged),
-                                                    FieldName = kvp.Key
-                                                };
-                                                docChanges.Add(changes);
-                                                isEqual = false;
+                                                isEqual = docChanges.AddChanges( kvp, token);
+                                               
                                             }
 
                                             break;
                                     }
-                                } //for
+                                } 
                             }
                             break;
                             default:
@@ -552,17 +441,8 @@ namespace Raven.Json.Linq
                                 {
                                     if (docChanges == null)
                                         return false;
-                                    var changes = new DocumentsChanges
-                                    {
-                                        FieldNewType = curThisReader.Type.ToString(),
-                                        FieldOldType = curOtherReader.Type.ToString(),
-                                        FieldNewValue = curThisReader.ToString(),
-                                        FieldOldValue = curOtherReader.ToString(),
-                                        Comment = DocumentsChanges.CommentAsText(DocumentsChanges.CommentType.FieldChanged),
-                                        FieldName = fieldName
-                                    };
-                                    docChanges.Add(changes);
-                                    isEqual = false;
+                                    isEqual = docChanges.AddChanges( curThisReader, curOtherReader, fieldName);
+                                   
                                 }
 
                                 break;
@@ -591,51 +471,8 @@ namespace Raven.Json.Linq
             return isEqual;
         }
 
-        private static StringBuilder CompareJsonArrays(IEnumerable<RavenJToken> selfObj, IEnumerable<RavenJToken> otherObj)
-        {
-            var sb = new StringBuilder();
-            var selfArr = selfObj.ToArray();
-            var otherArr = otherObj.ToArray();
-            var dif = selfArr.Except(otherArr);
+      
 
-            if (selfArr.Length < otherArr.Length)
-            {
-                dif = otherArr.Except(selfArr);
-            }
-
-            foreach (var val in dif)
-            {
-                sb.Append(val).Append("  ").Append(" , ");
-            }
-            if (sb.Length > 2)
-                sb.Remove(sb.Length - 2, 1);
-            return sb;
-        }
-
-
-        private static void CompareJsonData(DictionaryWithParentSnapshot selfObj, DictionaryWithParentSnapshot otherObj, Dictionary<string, string> diffData)
-        {
-            RavenJToken token;
-            var sb = new StringBuilder();
-            var diffNames = selfObj.Keys.Except(otherObj.Keys).ToArray();
-            var bigObj = selfObj;
-            if (diffData == null)
-            {
-                diffData = new Dictionary<string, string>();
-            }
-            if (selfObj.Keys.Count < otherObj.Keys.Count)
-            {
-                diffNames = otherObj.Keys.Except(selfObj.Keys).ToArray();
-                bigObj = otherObj;
-            }
-            foreach (var kvp in diffNames)
-            {
-                if (bigObj.TryGetValue(kvp, out token))
-                {
-                    diffData[kvp] = token.ToString();
-                }
-            }
-        }
 
         internal virtual int GetDeepHashCode()
         {
