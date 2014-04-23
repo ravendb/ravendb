@@ -7,20 +7,20 @@
             <nav class="navbar navbar-default" role="navigation">
                 <div class="collapse navbar-collapse">
                     <div class="navbar-form navbar-right">
-                        <button type="button" class="btn btn-default use-bootstrap-tooltip" title="Activate Periodic Backup" data-bind="click: $root.activatePeriodicBackup.bind($root), visible: !activated()">
+                        <button type="button" class="btn btn-default use-bootstrap-tooltip" title="Activate Periodic Backup" data-bind="click: $root.activatePeriodicBackup.bind($root), visible: disabled()">
                             <i class="fa fa-unlock"></i> Activate Periodic Backup
                         </button>
-                        <button type="button" class="btn btn-default use-bootstrap-tooltip" title="Deactivate Periodic Backup" data-bind="click: $root.activatePeriodicBackup.bind($root), visible: activated()">
+                        <button type="button" class="btn btn-default use-bootstrap-tooltip" title="Deactivate Periodic Backup" data-bind="click: $root.activatePeriodicBackup.bind($root), visible: !disabled()">
                             <i class="fa fa-lock"></i> Deactivate Periodic Backup
                         </button>
                         <button type="submit" class="btn btn-primary use-bootstrap-tooltip" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled()" accesskey="S"><i class="fa fa-save"></i></button>
                     </div>
                 </div>
             </nav>
-            <div class="alert alert-warning" data-bind="slideVisible: !activated()">
+            <div class="alert alert-warning" data-bind="slideVisible: disabled()">
                 There is no Periodic Backup set for this database.
             </div>
-            <div data-bind="slideVisible: activated()" id="periodicBackupContainer">
+            <div data-bind="slideVisible: !disabled()" id="periodicBackupContainer">
                 <div class="form-group">
                     <div class="col-sm-3">
                         <select class="form-control" data-bind="options: availablePeriodicBackups, optionsText: 'label', optionsValue: 'value', value: type"></select>
