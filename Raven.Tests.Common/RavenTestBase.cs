@@ -418,6 +418,22 @@ namespace Raven.Tests.Common
 
         }
 
+		public void WaitForPeriodicBackup(DocumentDatabase db, PeriodicBackupStatus previousStatus, Func<PeriodicBackupStatus, Etag> compareSelector)
+		{
+			PeriodicBackupStatus currentStatus = null;
+			var done = SpinWait.SpinUntil(() =>
+			{
+				currentStatus = GetPerodicBackupStatus(db);
+				return compareSelector(currentStatus) != compareSelector(previousStatus);
+			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
+			Assert.True(done);
+			previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
+			previousStatus.LastAttachmentsEtag = currentStatus.LastAttachmentsEtag;
+			previousStatus.LastDocsDeletionEtag = currentStatus.LastDocsDeletionEtag;
+			previousStatus.LastAttachmentDeletionEtag = currentStatus.LastAttachmentDeletionEtag;
+
+		}
+
 		protected void WaitForBackup(DocumentDatabase db, bool checkError)
 		{
 			WaitForBackup(key => db.Documents.Get(key, null), checkError);
