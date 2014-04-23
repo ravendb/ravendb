@@ -61,9 +61,9 @@ class editTransformer extends viewModelBase {
     }
 
     saveInObservable() {//TODO: CHANGE!!!
-        var docEditor = ko.utils.domData.get($("#transformerAceEditor")[0], "aceEditor");
-        var docEditorText = docEditor.getSession().getValue();
-        this.editedTransformer().transformResults(docEditorText);
+        //var docEditor = ko.utils.domData.get($("#transformerAceEditor")[0], "aceEditor");
+        //var docEditorText = docEditor.getSession().getValue();
+        //this.editedTransformer().transformResults(docEditorText);
     }
 
     addTransformerHelpPopover() {

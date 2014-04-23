@@ -31,6 +31,8 @@ class sqlReplication extends document {
     connectionStringSourceFieldName: KnockoutComputed<string>;
     parameterizeDeletesDisabled = ko.observable<boolean>();
 
+    isFocused = ko.observable(false);
+
     constructor(dto: sqlReplicationDto) {
         super(dto);
 
@@ -75,6 +77,9 @@ class sqlReplication extends document {
     }
 
     static empty(): sqlReplication {
+        var newTable: sqlReplicationTable = sqlReplicationTable.empty();
+        var sqlReplicationTables = [];
+        sqlReplicationTables.push(newTable);
         return new sqlReplication({
             Name: "",
             Disabled: true,
@@ -85,7 +90,7 @@ class sqlReplication extends document {
             ConnectionString: null,
             ConnectionStringName: null,
             ConnectionStringSettingName: null,
-            SqlReplicationTables: []
+            SqlReplicationTables: sqlReplicationTables
         });
     }
 

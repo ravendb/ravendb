@@ -45,9 +45,9 @@ class aceEditorBindingHandler {
         aceEditor.getSession().setMode(lang);
         aceEditor.setReadOnly(readOnly);
 
-        // When we lose focus, push the value into the observable.
+        // When the text changes, push the value into the observable.
         var aceFocusElement = ".ace_text-input";
-        $(element).on('blur', aceFocusElement, () => code(aceEditor.getSession().getValue()));
+        $(element).on('keyup', aceFocusElement, () => code(aceEditor.getSession().getValue()));
 
         // When the element is removed from the DOM, unhook our blur event handler, lest we leak memory.
         ko.utils.domNodeDisposal.addDisposeCallback(element, () => $(element).off('blur', aceFocusElement));
