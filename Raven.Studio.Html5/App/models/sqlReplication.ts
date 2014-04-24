@@ -65,7 +65,8 @@ class sqlReplication extends document {
                 var annotations = currentEditor.getSession().getAnnotations();
                 var isErrorExists = false;
                 for (var i = 0; i < annotations.length; i++) {
-                    if (annotations[i].type === "error") {
+                    var annotationType = annotations[i].type;
+                    if (annotationType === "error" || annotationType === "warning") {
                         isErrorExists = true;
                         break;
                     }
