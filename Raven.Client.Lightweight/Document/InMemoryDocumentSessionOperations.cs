@@ -765,7 +765,7 @@ more responsive application.
 			if (entity is IDynamicMetaObjectProvider)
 			{
 				string id;
-				if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out id) || id == null)
+				if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out id))
 					return CompletedTask.With(id);
 				
 				return GenerateKeyAsync(entity)
