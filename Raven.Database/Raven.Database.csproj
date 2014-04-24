@@ -266,6 +266,9 @@
     <Compile Include="Indexing\PrecomputedIndexing.cs" />
     <Compile Include="Embedded\OwinEmbeddedHost.cs" />
     <Compile Include="Embedded\OwinClientHandler.cs" />
+    <Compile Include="Bundles\ScriptedIndexResults\ScriptedIndexResultsJsonPatcherScope.cs" />
+    <Compile Include="Json\ScriptedJsonPatcherOperationScope.cs" />
+    <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcherOperationScope.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyDeleteTrigger.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyPutTrigger.cs" />
     <Compile Include="Linq\Ast\TransformDynamicInvocationExpressions.cs" />

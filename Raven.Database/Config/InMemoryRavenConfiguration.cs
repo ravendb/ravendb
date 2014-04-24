@@ -208,7 +208,10 @@ namespace Raven.Database.Config
 
 			HttpCompression = ravenSettings.HttpCompression.Value;
 
-			AccessControlAllowOrigin = ravenSettings.AccessControlAllowOrigin.Value;
+			if (ravenSettings.AccessControlAllowOrigin.Value == null)
+				AccessControlAllowOrigin = new HashSet<string>();
+			else
+				AccessControlAllowOrigin = new HashSet<string>(ravenSettings.AccessControlAllowOrigin.Value.Split());
 			AccessControlMaxAge = ravenSettings.AccessControlMaxAge.Value;
 			AccessControlAllowMethods = ravenSettings.AccessControlAllowMethods.Value;
 			AccessControlRequestHeaders = ravenSettings.AccessControlRequestHeaders.Value;
@@ -543,7 +546,7 @@ namespace Raven.Database.Config
 		/// Indicates the URL of a site trusted to make cross-domain requests to this server.
 		/// Allowed values: null (don't send the header), *, http://example.org (space separated if multiple sites)
 		/// </summary>
-		public string AccessControlAllowOrigin { get; set; }
+		public HashSet<string> AccessControlAllowOrigin { get; set; }
 
 		/// <summary>
 		/// Determine the value of the Access-Control-Max-Age header sent by the server.
