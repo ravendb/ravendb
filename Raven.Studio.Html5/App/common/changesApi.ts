@@ -100,6 +100,20 @@ class changesApi {
         });
     }
 
+    watchBulks(onChange: (e: documentChangeNotificationDto) => void) {
+        var callback = new changesCallback<documentChangeNotificationDto>(onChange);
+        if (this.allDocsHandlers().length == 0) {
+            this.send('watch-bulk-operation');
+        }
+        this.allDocsHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allDocsHandlers.remove(callback);
+            if (this.allDocsHandlers().length == 0) {
+                this.send('unwatch-bulk-operation');
+            }
+        });
+    }
+
     watchDocPrefix(onChange: (e: documentChangeNotificationDto) => void, prefix?:string) {
         var callback = new changesCallback<documentChangeNotificationDto>(onChange);
         if (this.allDocsHandlers().length == 0) {
@@ -109,7 +123,7 @@ class changesApi {
         return new changeSubscription(() => {
             this.allDocsHandlers.remove(callback);
             if (this.allDocsHandlers().length == 0) {
-                this.send('watch-prefix', prefix);
+                this.send('unwatch-prefix', prefix);
             }
         });
     }

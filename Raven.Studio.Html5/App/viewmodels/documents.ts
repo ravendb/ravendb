@@ -14,6 +14,9 @@ import virtualTable = require("widgets/virtualTable/viewModel");
 import customColumnParams = require('models/customColumnParams');
 import customColumns = require('models/customColumns');
 import selectColumns = require('viewmodels/selectColumns');
+import changesApi = require("common/changesApi");
+import changeSubscription = require('models/changeSubscription');
+import shell = require("viewmodels/shell");
 
 
 class documents extends viewModelBase {
@@ -30,6 +33,7 @@ class documents extends viewModelBase {
     hasAnyDocumentsSelected: KnockoutComputed<boolean>;
     contextName = ko.observable<string>('');
     currentCollection = ko.observable<collection>();
+    currentDBDocChangesSubscription: changeSubscription;
     
 
     static gridSelector = "#documentsGrid";
@@ -43,6 +47,42 @@ class documents extends viewModelBase {
     activate(args) {
         super.activate(args);
 
+        // treat document put/delete events
+        this.currentDBDocChangesSubscription = shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
+            var collections = this.collections();
+            var curCollection = this.collections.first(x => x.name === e.CollectionName);
+
+            if (!curCollection) {
+                var systemDocumentsCollection = this.collections.first(x => x.isSystemDocuments === true);
+                if (!!systemDocumentsCollection && (!!e.CollectionName || (!!e.Id && e.Id.indexOf("Raven/Databases/") == 0))) {
+                    curCollection = systemDocumentsCollection;
+                }
+            }
+
+            // for put event, if collection is recognized, increment collection and allDocuments count, if not, create new one also
+            if (e.Type == documentChangeType.Put) {
+                if (!!curCollection)
+                {
+                    curCollection.documentCount(curCollection.documentCount() + 1);
+                } else {
+                    curCollection = new collection(e.CollectionName, this.activeDatabase());
+                    curCollection.documentCount(1);
+                    this.collections.push(curCollection);
+                }
+                this.allDocumentsCollection.documentCount(this.allDocumentsCollection.documentCount() + 1);
+                // for delete event, if collection is recognized, decrease collection and allDocuments count, if left with zero documents, delete collection
+            } else if (e.Type == documentChangeType.Delete) {
+                if (!!curCollection) {
+                    if (curCollection.documentCount() == 1) {
+                        this.collections.remove(curCollection);
+                    } else {
+                        curCollection.documentCount(curCollection.documentCount() - 1);
+                    }
+
+                    this.allDocumentsCollection.documentCount(this.allDocumentsCollection.documentCount() - 1);
+                }
+            }
+        });
         // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo&database="blahDb"
         this.collectionToSelectName = args ? args.collection : null;
         this.fetchCollections(appUrl.getDatabase());
@@ -54,6 +94,11 @@ class documents extends viewModelBase {
         (<any>$('.document-collections')).contextmenu({
             target: '#collections-context-menu'
         });
+    }
+
+    deactivate() {
+        super.deactivate();
+        this.currentDBDocChangesSubscription.off();
     }
 
 
