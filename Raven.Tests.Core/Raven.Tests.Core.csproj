@@ -89,6 +89,8 @@
     <None Include="packages.config" />
     <Compile Include="Commands\Admin.cs" />
     <Compile Include="Commands\GlobalAdmin.cs" />
+    <Compile Include="Indexing\CustomAnalyzers.cs" />
+    <Compile Include="Indexing\ResultTransformers.cs" />
     <Compile Include="Querying\Aggregating.cs" />
     <Compile Include="Querying\Filtering.cs" />
   </ItemGroup>
@@ -117,6 +119,7 @@
   <ItemGroup>
     <Folder Include="Auth\" />
     <Folder Include="BackupRestore\" />
+    <Folder Include="ChangesApi\" />
     <Folder Include="Facets\" />
     <Folder Include="Patching\" />
     <Folder Include="Shard\" />

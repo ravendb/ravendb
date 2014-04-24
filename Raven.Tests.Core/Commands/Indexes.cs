@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
@@ -75,5 +76,75 @@ namespace Raven.Tests.Core.Commands
                 Assert.Null(await store.AsyncDatabaseCommands.GetTransformerAsync(usersSelectNames));
             }
         }
+
+		[Fact]
+		public void CanGetTermsForIndex()
+		{
+			using (var store = GetDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					for (int i = 0; i < 15; i++)
+					{
+						s.Store(new User { Name = "user" + i.ToString("000") });
+					}
+					s.SaveChanges();
+				}
+
+				store.DatabaseCommands.PutIndex("test",
+												new IndexDefinition
+												{
+													Map = "from doc in docs select new { doc.Name }"
+												});
+
+				WaitForIndexing(store);
+
+				var terms = store.DatabaseCommands.GetTerms("test", "Name", null, 10)
+					.OrderBy(x => x)
+					.ToArray();
+
+				Assert.Equal(10, terms.Length);
+
+				for (int i = 0; i < 10; i++)
+				{
+					Assert.Equal("user" + i.ToString("000"), terms.ElementAt(i));
+				}
+			}
+		}
+
+		[Fact]
+		public void CanGetTermsForIndex_WithPaging()
+		{
+			using (var store = GetDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					for (int i = 0; i < 15; i++)
+					{
+						s.Store(new User { Name = "user" + i.ToString("000") });
+					}
+					s.SaveChanges();
+				}
+
+				store.DatabaseCommands.PutIndex("test",
+												new IndexDefinition
+												{
+													Map = "from doc in docs select new { doc.Name }"
+												});
+
+				WaitForIndexing(store);
+
+				var terms = store.DatabaseCommands.GetTerms("test", "Name", "user009", 10)
+					.OrderBy(x => x)
+					.ToArray();
+
+				Assert.Equal(5, terms.Count());
+
+				for (int i = 10; i < 15; i++)
+				{
+					Assert.Equal("user" + i.ToString("000"), terms.ElementAt(i - 10));
+				}
+			}
+		}
     }
 }
