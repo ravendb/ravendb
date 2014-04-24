@@ -200,7 +200,7 @@ namespace Raven.Database.Config
 
 			if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
 			{
-				Port = PortUtil.GetPort(ravenSettings.Port.Value);
+				Port = PortUtil.GetPort(ravenSettings.Port.Value, RunInMemory);
 				UseSsl = ravenSettings.UseSsl.Value;
 			}
 

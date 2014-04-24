@@ -163,6 +163,7 @@ namespace Raven.Server
 				{
 					ravenConfiguration.Settings["Raven/RunInMemory"] = "true";
 					ravenConfiguration.RunInMemory = true;
+					ravenConfiguration.Initialize();
 					actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.Admin, ravenConfiguration, launchBrowser, noLog);		
 				}},
 				{"debug", "Runs RavenDB in debug mode", key => actionToTake = () => RunInDebugMode(null, ravenConfiguration, launchBrowser, noLog)},

@@ -4,14 +4,41 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
+
+using Raven.Abstractions.Util.Encryptors;
 
 namespace Raven.Database.Indexing
 {
 	public class IndexingUtil
 	{
+		public static string FixupIndexName(string indexName, string path)
+		{
+			if (indexName.EndsWith("=")) //allready encoded
+				return indexName;
+
+			indexName = indexName.Trim();
+
+			if (path.Length + indexName.Length <= 230 && Encoding.Unicode.GetByteCount(indexName) < 255)
+				return indexName;
+
+			string prefix = null;
+			if (indexName.StartsWith("Temp/") || indexName.StartsWith("Auto/"))
+				prefix = indexName.Substring(0, 5);
+
+			var bytes = Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(indexName));
+			var result = prefix + Convert
+									  .ToBase64String(bytes)
+									  .Replace("+", "-"); // replacing + because it will cause IIS errors (double encoding)
+
+			if (path.Length + result.Length > 230)
+				throw new InvalidDataException("index name with the given path is too long even after encoding: " + indexName);
+
+			return result;
+		}
+
 		public static int StableInvariantIgnoreCaseStringHash(string s)
 		{
 			return s.Aggregate(11, (current, ch) => (char.ToUpperInvariant(ch).GetHashCode() * 397) ^ current);

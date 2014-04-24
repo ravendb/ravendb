@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 using Raven.Client;
-using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 

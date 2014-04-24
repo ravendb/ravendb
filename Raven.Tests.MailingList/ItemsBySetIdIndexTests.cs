@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 

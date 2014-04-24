@@ -589,7 +589,7 @@ namespace Raven.Client.Shard
 												 var cachingScope = EntityToJson.EntitiesToJsonCachingScope();
 												 try
 												 {
-													 var data = PrepareForSaveChanges(null);
+													 var data = PrepareForSaveChanges();
 													 if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)
 													 {
 														 cachingScope.Dispose();
@@ -664,12 +664,7 @@ namespace Raven.Client.Shard
 
 	    public Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync()
 	    {
-	        throw new NotImplementedException();
-	    }
-
-	    public DocumentsChanges WhatChanged()
-	    {
-	        throw new NotImplementedException();
+	        throw new NotSupportedException("Async kazy requests are not supported for sharded store");
 	    }
 	}
 }

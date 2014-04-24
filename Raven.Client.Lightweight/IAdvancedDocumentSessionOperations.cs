@@ -154,6 +154,6 @@ namespace Raven.Client
 		/// <param name="entity">The entity.</param>
 		void ExplicitlyVersion(object entity);
 
-	    DocumentsChanges WhatChanged();
+	    IDictionary<string, DocumentsChanges[]> WhatChanged();
 	}
 }
