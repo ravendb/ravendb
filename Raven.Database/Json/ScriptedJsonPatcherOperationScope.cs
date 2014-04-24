@@ -303,7 +303,7 @@ namespace Raven.Database.Json
 
 		public override void DeleteDocument(string documentKey)
 		{
-			throw new NotSupportedException();
+			throw new NotSupportedException("Deleting documents is not supported.");
 		}
 
 		public override void Dispose()
