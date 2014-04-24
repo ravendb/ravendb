@@ -46,7 +46,7 @@ class databaseSettings extends viewModelBase {
     }
 
     attached() {
-        //this.initializeDbDocEditor();
+        this.initializeDbDocEditor();
         //this.docEditor.getSession().setValue(this.documentText());
         //this.fetchDatabaseSettings();
         //this.createKeyboardShortcut("F2", () => this.navigateToDatabaseSettingDocument(), databaseSettings.containerId);
@@ -59,6 +59,7 @@ class databaseSettings extends viewModelBase {
         this.isSaveEnabled = ko.computed(() => {
             return viewModelBase.dirtyFlag().isDirty();
         });
+        this.initializeDbDocEditor();
     }
 
     private initializeDbDocEditor() {
@@ -67,7 +68,7 @@ class databaseSettings extends viewModelBase {
         this.docEditor.setTheme("ace/theme/github");
         this.docEditor.setFontSize("16px");
         this.docEditor.getSession().setMode("ace/mode/json");
-        this.docEditor.setReadOnly(false);
+        this.docEditor.setReadOnly(true);
     }
 
     private getDatabaseSettingsDocumentId(db: database) {
@@ -85,13 +86,13 @@ class databaseSettings extends viewModelBase {
     }
 
     navigateToDatabaseSettingDocument() {
-        /*var db = this.activeDatabase();
+        var db = this.activeDatabase();
         if (db) {
             var documentId = this.getDatabaseSettingsDocumentId(db);
             var systemDatabase = appUrl.getSystemDatabase();
             var dbSettingsUrl = appUrl.forEditDoc(documentId, null, null, systemDatabase);
             router.navigate(dbSettingsUrl);
-        }*/
+        }
     }
 }
 

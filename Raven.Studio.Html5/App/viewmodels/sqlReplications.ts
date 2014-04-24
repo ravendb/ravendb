@@ -54,16 +54,20 @@ class sqlReplications extends viewModelBase {
     }
 
     attached() {
-        super.attached();
         var popOverSettings = {
             html: true,
             trigger: 'hover',
             content: 'Replication scripts use JScript.',
             selector: '.script-label',
-        }
+        };
         $('body').popover(popOverSettings);
 
-
+        
+        $('#accordion').on('shown.bs.collapse', function() {
+            //var element = $(this).find('pre');
+            //var width = element.width();
+            //element.resizable({ minWidth: width, maxWidth: width });
+        });
 
 
         var self = this;
