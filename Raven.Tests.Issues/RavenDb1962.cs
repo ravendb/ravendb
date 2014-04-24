@@ -4,8 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Tests.Bugs;
 using Raven.Tests.Common;
+using Raven.Tests.Common.Dto;
 using Xunit;
 
 namespace Raven.Tests.Issues

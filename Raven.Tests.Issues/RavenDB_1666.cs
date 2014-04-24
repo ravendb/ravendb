@@ -92,6 +92,7 @@ namespace Raven.Tests.Issues
             RegisterRouteForOnlySysDb<StatsController>(a => a.Get());
             RegisterRouteForOnlySysDb<StorageController>(a => a.RetryRenaming());
             RegisterRouteForOnlySysDb<StorageController>(a => a.CleanUp());
+			RegisterRouteForOnlySysDb<SynchronizationController>(a => a.ToDestination(null, false));
             RegisterRouteForOnlySysDb<SynchronizationController>(a => a.ToDestinations(false));
             RegisterRouteForOnlySysDb<SynchronizationController>(a => a.Start(string.Empty));
             RegisterRouteForOnlySysDb<SynchronizationController>(a => a.MultipartProceed());
