@@ -12,12 +12,14 @@ namespace Raven.Tests.Core
 	public class TestServerFixture : IDisposable
 	{
 		public const int Port = 8079;
+		public const string ServerName = "Raven.Tests.Core.Server";
 
 		public TestServerFixture()
 		{
 			Server = new RavenDbServer(new RavenConfiguration()
 			{
-				Port = Port
+				Port = Port,
+				ServerName = ServerName
 			})
 			{
 				RunInMemory = true,

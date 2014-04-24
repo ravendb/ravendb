@@ -3,9 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.IO;
 using System.Threading.Tasks;
-using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Xunit;
 using Raven.Tests.Core.Utils.Entities;

@@ -5,12 +5,9 @@
 // -----------------------------------------------------------------------
 using System.IO;
 using System.Threading.Tasks;
-using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Xunit;
-using Raven.Tests.Core.Utils.Entities;
 using Raven.Abstractions.Data;
-using System.Collections.Generic;
 
 namespace Raven.Tests.Core.Commands
 {
