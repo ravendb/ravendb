@@ -3,22 +3,25 @@ using Jint;
 using Jint.Native;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Json;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
 	public class SqlReplicationScriptedJsonPatcher : ScriptedJsonPatcher
 	{
+		private readonly ScriptedJsonPatcherOperationScope scope;
+
 		private readonly ConversionScriptResult scriptResult;
 		private readonly SqlReplicationConfig config;
 		private readonly string docId;
 
 		public SqlReplicationScriptedJsonPatcher(DocumentDatabase database,
+												 ScriptedJsonPatcherOperationScope scope,
 		                                         ConversionScriptResult scriptResult,
 												 SqlReplicationConfig config,
 		                                         string docId)
 			: base(database)
 		{
+			this.scope = scope;
 			this.scriptResult = scriptResult;
 			this.config = config;
 			this.docId = docId;
@@ -60,13 +63,13 @@ namespace Raven.Database.Bundles.SqlReplication
 			itemToReplicates.Add(new ItemToReplicate
 			{
 				DocumentId = docId,
-				Columns = ToRavenJObject(cols)
+				Columns = scope.ToRavenJObject(cols)
 			});
 		}
 
-		protected override RavenJObject ConvertReturnValue(JsObject jsObject)
-		{
-			return null;// we don't use / need the return value
-		}
+		//protected override RavenJObject ConvertReturnValue(JsObject jsObject)
+		//{
+		//	return null;// we don't use / need the return value
+		//}
 	}
 }
