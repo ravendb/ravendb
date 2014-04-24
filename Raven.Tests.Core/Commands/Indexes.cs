@@ -69,7 +69,7 @@ namespace Raven.Tests.Core.Commands
                 Assert.Equal("from user in results select new { Name = user.Name }", transformer.TransformResults);
 
                 var transformers = await store.AsyncDatabaseCommands.GetTransformersAsync(0, 5);
-                Assert.Equal(2, transformers.Length);
+                Assert.Equal(1, transformers.Length);
 
                 await store.AsyncDatabaseCommands.DeleteTransformerAsync(usersSelectNames);
                 Assert.Null(await store.AsyncDatabaseCommands.GetTransformerAsync(usersSelectNames));
