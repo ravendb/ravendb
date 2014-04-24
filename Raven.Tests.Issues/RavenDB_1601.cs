@@ -465,10 +465,9 @@ PutDocument(docId, type);
                     s.SaveChanges();
                 }
 
-				using (var scope = new ScriptedIndexResultsIndexTrigger.Batcher.ScriptedIndexResultsJsonPatcher.ScriptedIndexResultsJsonPatcherScope(store.DocumentDatabase, new HashSet<string> { "dogs" }))
+				var patcher = new ScriptedJsonPatcher(store.DocumentDatabase);
+				using (var scope = new ScriptedIndexResultsJsonPatcherScope(store.DocumentDatabase, new HashSet<string> { "dogs" }))
 				{
-					var patcher = new ScriptedIndexResultsIndexTrigger.Batcher.ScriptedIndexResultsJsonPatcher(store.DocumentDatabase);
-
 					patcher.Apply(scope, new RavenJObject(), new ScriptedPatchRequest
 					{
 						Script =

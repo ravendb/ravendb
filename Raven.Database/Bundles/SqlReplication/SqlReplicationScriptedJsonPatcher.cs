@@ -66,10 +66,5 @@ namespace Raven.Database.Bundles.SqlReplication
 				Columns = scope.ToRavenJObject(cols)
 			});
 		}
-
-		//protected override RavenJObject ConvertReturnValue(JsObject jsObject)
-		//{
-		//	return null;// we don't use / need the return value
-		//}
 	}
 }

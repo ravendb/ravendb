@@ -83,8 +83,8 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
             public override void Dispose()
             {
-				var patcher = new ScriptedIndexResultsJsonPatcher(database);
-	            using (var scope = new ScriptedIndexResultsJsonPatcher.ScriptedIndexResultsJsonPatcherScope(database, forEntityNames))
+				var patcher = new ScriptedJsonPatcher(database);
+	            using (var scope = new ScriptedIndexResultsJsonPatcherScope(database, forEntityNames))
 	            {
 		            if (string.IsNullOrEmpty(scriptedIndexResults.DeleteScript) == false)
 		            {
@@ -165,85 +165,6 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 			            }
 		            });
 	            }
-            }
-
-            public class ScriptedIndexResultsJsonPatcher : ScriptedJsonPatcher
-            {
-                public ScriptedIndexResultsJsonPatcher(DocumentDatabase database)
-                    : base(database)
-                {
-                }
-
-				//protected override void CustomizeEngine(Jint.JintEngine jintEngine)
-				//{
-				//	jintEngine.SetFunction("DeleteDocument", ((Action<string>)(DeleteFromContext)));
-				//}
-
-				//protected override void RemoveEngineCustomizations(Jint.JintEngine jintEngine)
-				//{
-				//	jintEngine.RemoveParameter("DeleteDocument");
-				//}
-
-				public class ScriptedIndexResultsJsonPatcherScope : DefaultScriptedJsonPatcherOperationScope
-				{
-					private readonly HashSet<string> entityNames;
-
-					public ScriptedIndexResultsJsonPatcherScope(DocumentDatabase database, HashSet<string> entityNames)
-						: base(database)
-					{
-						this.entityNames = entityNames;
-					}
-
-					public override JsObject LoadDocument(string documentKey, IGlobal global)
-					{
-						throw new NotImplementedException();
-					}
-
-					public override void PutDocument(string documentKey, JsObject data, JsObject meta)
-					{
-						throw new NotImplementedException();
-					}
-
-					public override void DeleteDocument(string documentKey)
-					{
-						throw new NotImplementedException();
-					}
-
-					public override void Clear()
-					{
-						throw new NotImplementedException();
-					}
-
-					public override void Dispose()
-					{
-						throw new NotImplementedException();
-					}
-
-					protected override void ValidateDocument(JsonDocument newDocument)
-					{
-						if (newDocument.Metadata == null)
-							return;
-						var entityName = newDocument.Metadata.Value<string>(Constants.RavenEntityName);
-						if (string.IsNullOrEmpty(entityName))
-						{
-							if (entityNames.Count == 0)
-								throw new InvalidOperationException(
-									"Invalid Script Index Results Recursion!\r\n" +
-									"The scripted index result doesn't have an entity name, but the index apply to all documents.\r\n" +
-									"Scripted Index Results cannot create documents that will be indexed by the same document that created them, " +
-									"since that would create a infinite loop of indexing/creating documents.");
-							return;
-						}
-						if (entityNames.Contains(entityName))
-						{
-							throw new InvalidOperationException(
-								"Invalid Script Index Results Recursion!\r\n" +
-								"The scripted index result have an entity name of " + entityName + ", but the index apply to documents with that entity name.\r\n" +
-								"Scripted Index Results cannot create documents that will be indexed by the same document that created them, " +
-								"since that would create a infinite loop of indexing/creating documents.");
-						}
-					}
-				}
             }
 
             private static RavenJObject CreateJsonDocumentFromLuceneDocument(Document document)

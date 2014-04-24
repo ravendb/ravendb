@@ -472,7 +472,7 @@ namespace Raven.Database.Bundles.SqlReplication
 						continue;
 				}
 
-				using (var scope = new DefaultScriptedJsonPatcherOperationScope(Database))
+				using (var scope = new SqlReplicationScriptedJsonPatcherOperationScope(Database))
 				{
 					var patcher = new SqlReplicationScriptedJsonPatcher(Database, scope, result, cfg, jsonDocument.Key);
 					try

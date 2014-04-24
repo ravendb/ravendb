@@ -36,8 +36,6 @@ namespace Raven.Database.Json
 
 		public abstract void DeleteDocument(string documentKey);
 
-		public abstract void Clear();
-
 		public abstract void Dispose();
 
 		public RavenJObject ToRavenJObject(JsObject jsObject)
@@ -213,7 +211,7 @@ namespace Raven.Database.Json
 			return jsArr;
 		}
 
-		public RavenJObject ConvertReturnValue(JsObject jsObject)
+		public virtual RavenJObject ConvertReturnValue(JsObject jsObject)
 		{
 			return ToRavenJObject(jsObject);
 		}
@@ -222,18 +220,15 @@ namespace Raven.Database.Json
 
 	public class DefaultScriptedJsonPatcherOperationScope : ScriptedJsonPatcherOperationScope
 	{
-		private readonly Func<string, RavenJObject> loadDocument;
-
 		private readonly Dictionary<string, JsonDocument> documentKeyContext = new Dictionary<string, JsonDocument>();
 		private readonly List<JsonDocument> incompleteDocumentKeyContext = new List<JsonDocument>();
 
-		private static readonly string[] EtagKeyNames = new[]
-	    {
-	        "etag",
-	        "@etag",
-	        "Etag",
-	        "ETag",
-	    };
+		private static readonly string[] EtagKeyNames = {
+			                                                "etag",
+			                                                "@etag",
+			                                                "Etag",
+			                                                "ETag"
+		                                                };
 
 		public DefaultScriptedJsonPatcherOperationScope(DocumentDatabase database = null)
 			: base(database)
@@ -313,12 +308,6 @@ namespace Raven.Database.Json
 
 		public override void Dispose()
 		{
-			throw new NotImplementedException();
-		}
-
-		public override void Clear()
-		{
-			throw new NotImplementedException();
 		}
 
 		protected void AddToContext(string key, JsonDocument document)
@@ -336,12 +325,12 @@ namespace Raven.Database.Json
 
 		public IEnumerable<ScriptedJsonPatcher.Operation> GetOperations()
 		{
-			return documentKeyContext.Select(x => new ScriptedJsonPatcher.Operation()
+			return documentKeyContext.Select(x => new ScriptedJsonPatcher.Operation
 			{
 				Type = x.Value != null ? ScriptedJsonPatcher.OperationType.Put : ScriptedJsonPatcher.OperationType.Delete,
 				DocumentKey = x.Key,
 				Document = x.Value
-			}).Union(incompleteDocumentKeyContext.Select(x => new ScriptedJsonPatcher.Operation()
+			}).Union(incompleteDocumentKeyContext.Select(x => new ScriptedJsonPatcher.Operation
 			{
 				Type = ScriptedJsonPatcher.OperationType.Put,
 				DocumentKey = x.Key,

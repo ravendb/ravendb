@@ -67,7 +67,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void T1()
+		public void ScriptedIndexResultsPatcherShouldNotPatchDocumentsThatAreIndirectlyReferencedByIndex()
 		{
 			using (var store = NewDocumentStore(activeBundles: "ScriptedIndexResults"))
 			{
@@ -90,14 +90,20 @@ if(customer.StoredTotal != this.TotalOrderItems){
 
 				using (var session = store.OpenSession())
 				{
-					session.Store(new Customer { Name = "Customer1", StoredTotal = 0 });
+					session.Store(new Customer { Name = "Customer1", StoredTotal = 100, Id = "customers/1"});
 					session.SaveChanges();
 
 					session.Store(new Order { Customers = new List<string> { "customers/1" }, OrderItems = 10 });
 					session.SaveChanges();
 				}
 
-				WaitForIndexing(store, timeout: TimeSpan.FromHours(1));
+				WaitForIndexing(store);
+
+				using (var session = store.OpenSession())
+				{
+					var customer = session.Load<Customer>("customers/1");
+					Assert.Equal(100, customer.StoredTotal);
+				}
 			}
 		}
 	}
