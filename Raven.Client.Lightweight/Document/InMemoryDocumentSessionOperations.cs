@@ -1419,5 +1419,14 @@ more responsive application.
         {
             includedDocumentsByKey[include.Key] = include;
         }
+        public string CreateDynamicIndexName<T>()
+        {
+            var indexName = "dynamic";
+            if (typeof(T).IsEntityType())
+            {
+                indexName += "/" + Conventions.GetTypeTagName(typeof(T));
+            }
+            return indexName;
+        }
     }
 }
