@@ -1,7 +1,6 @@
 ﻿class fileMetadata {
 
-    standardProps = ["RavenFs-Size",
-        "Raven-Synchronization-History", "Raven-Synchronization-Version", "Raven-Synchronization-Source", "Last-Modified", "ETag"];
+    standardProps = ["RavenFs-Size","Raven-Synchronization-History", "Raven-Synchronization-Version", "Raven-Synchronization-Source", "Last-Modified", "ETag"];
 
     ravenFSSize: string;
     ravenSynchronizationHistory: string;

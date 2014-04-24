@@ -1,32 +1,26 @@
-﻿import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+﻿import searchDialogViewModel = require("viewmodels/filesystem/searchDialogViewModel");
 import dialog = require("plugins/dialog");
 import searchByTermCommand = require("commands/filesystem/searchByTermCommand");
 import filesystem = require("models/filesystem/filesystem");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 
 
-class searchHasMetadataClause extends dialogViewModelBase {
+class searchHasMetadataClause extends searchDialogViewModel {
 
-    public static ExcludedMetadataFields = ["Content-Length", "Last-Modified", "Content-MD5", "RavenFS-Size"];
+    public static ExcludedMetadataFields = ["Content-Length", "Last-Modified", "Content-MD5", "RavenFS-Size", "Origin"];
     public applyFilterTask = $.Deferred();
     keySearchResults = ko.observableArray<string>();
-    key = ko.observable<string>("");
-    value = ko.observable<string>("");
 
     constructor(private fs: filesystem) {
-        super();
+        super([ko.observable<string>(""), ko.observable<string>("")]);
 
-        this.key.throttle(250).subscribe(search => this.fetchKeySearchResults(search));
+        this.inputs[0].throttle(250).subscribe(search => this.fetchKeySearchResults(search));
         autoCompleteBindingHandler.install();
     }
 
-    cancel() {
-        dialog.close(this);
-    }
-
     applyFilter() {
-        this.applyFilterTask.resolve(this.key() + ":" + this.value());
-        dialog.close(this);
+        this.applyFilterTask.resolve(this.inputs[0]() + ":" + this.inputs[1]());
+        this.close();
     }
 
     fetchKeySearchResults(query: string) {
@@ -44,8 +38,9 @@ class searchHasMetadataClause extends dialogViewModelBase {
     }
 
     setKey(key: string) {
-        this.key(key);
+        this.inputs[0](key);
     }
+
 }
 
 export = searchHasMetadataClause;

@@ -35,14 +35,23 @@ class search extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-        //this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
+        this.activeFilesystem.subscribe((fs: filesystem) => {
+            this.searchFiles("");
+            this.searchText("");
+        });
        
         this.loadFiles(false);
     }
 
     attached() {
+    }
 
+    clear() {
+        this.searchText("");
+    }
 
+    search() {
+        this.searchFiles(this.searchText());
     }
 
     searchFiles(query: string) {

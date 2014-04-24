@@ -1,10 +1,10 @@
 ﻿import filesystem = require("models/filesystem/filesystem");
 import datePickerBindingHandler = require("common/datePickerBindingHandler");
-import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import searchDialogViewModel = require("viewmodels/filesystem/searchDialogViewModel");
 import dialog = require("plugins/dialog");
 import moment = require("moment");
 
-class searchLastModifiedBetweenClause extends dialogViewModelBase {
+class searchLastModifiedBetweenClause extends searchDialogViewModel {
 
     public applyFilterTask = $.Deferred();
     fromDate = ko.observable<Moment>();
@@ -12,22 +12,20 @@ class searchLastModifiedBetweenClause extends dialogViewModelBase {
     fromDateText: KnockoutComputed<string>;
     toDateText: KnockoutComputed<string>;
 
-    constructor(private fs: filesystem) {
-        super();
+    constructor() {
+        super([]);
 
-        this.fromDateText = ko.computed(function () {
+        this.inputs.push(<KnockoutComputed<string>> ko.computed(function () {
+            $("#fromDate").focus();
             return this.fromDate() != null ? this.fromDate().format("YYYY/MM/DD") : "";
-        }, this);
+        }, this));
 
-        this.toDateText = ko.computed(function () {
+        this.inputs.push(<KnockoutComputed<string>> ko.computed(function () {
+            $("#toDate").focus();
             return this.toDate() != null ? this.toDate().format("YYYY/MM/DD") : "";
-        }, this);
+        }, this));
 
         datePickerBindingHandler.install();
-    }
-
-    cancel() {
-        dialog.close(this);
     }
 
     applyFilter() {
@@ -36,7 +34,8 @@ class searchLastModifiedBetweenClause extends dialogViewModelBase {
         var dates = "__modified:[" + this.fromDate().format("YYYY/MM/DD").replaceAll("/", "-")
             + "_00-00-00" + " TO " + this.toDate().format("YYYY/MM/DD").replaceAll("/", "-") + "_23-59-59" + "]";
         this.applyFilterTask.resolve(dates);
-        dialog.close(this);
+        
+        this.close()
     }
 }
 
