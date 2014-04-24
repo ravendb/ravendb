@@ -85,6 +85,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Utils\Transformers\CompanyFullAddressTransformer.cs" />
+    <Compile Include="Utils\Transformers\PostWithContentTransformer.cs" />
+    <Compile Include="Utils\Transformers\UsersWithCustomDataAndInclude.cs" />
     <None Include="app.config" />
     <None Include="packages.config" />
     <Compile Include="Commands\Admin.cs" />
