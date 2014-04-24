@@ -261,7 +261,7 @@ class editDocument extends viewModelBase {
 
     attachReservedMetaProperties(id: string, target: documentMetadataDto) {
         target['@etag'] = '';
-        target['Raven-Entity-Name'] = document.getEntityNameFromId(id);
+        target['Raven-Entity-Name'] = !target['Raven-Entity-Name'] ? document.getEntityNameFromId(id) : target['Raven-Entity-Name'];
         target['@id'] = id;
     }
 
@@ -347,10 +347,11 @@ class editDocument extends viewModelBase {
     }
 
     formatDocument() {
-        var docText = this.documentText();
-        var tempDoc = JSON.parse(docText);
+        var docEditorText = this.docEditor.getSession().getValue();
+        var observableToUpdate = this.isEditingMetadata() ? this.metadataText : this.documentText;
+        var tempDoc = JSON.parse(docEditorText);
         var formatted = this.stringify(tempDoc);
-        this.documentText(formatted);
+        observableToUpdate(formatted);
     }
 
     nextDocumentOrFirst() {
@@ -446,6 +447,9 @@ class editDocument extends viewModelBase {
         if (recentDocumentsForCurDb) {
             var value = recentDocumentsForCurDb
                 .recentDocuments()
+                .filter((x:string) => {
+                  return x !== this.userSpecifiedId();
+                })
                 .slice(0, 5)
                 .map((docId: string) => {
                     return {
