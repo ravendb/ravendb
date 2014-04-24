@@ -26,7 +26,7 @@ namespace RavenFS.Tests.Auth
                     Id = "Raven/FileSystem/" + client.FileSystemName,
                     Settings =
                     {
-                        {"Raven/FileSystem/DataDir", Path.Combine("~", Path.Combine("FileSystems", client.FileSystemName))}
+                        {"Raven/FileSystem/DataDir", Path.Combine("FileSystems", client.FileSystemName)}
                     }
                 });
 

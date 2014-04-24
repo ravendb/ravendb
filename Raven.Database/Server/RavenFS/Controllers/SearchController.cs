@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Web.Http;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Database.Server.RavenFS.Storage;
-using System.Net;
 using System.Net.Http;
 
 namespace Raven.Database.Server.RavenFS.Controllers
@@ -13,12 +13,14 @@ namespace Raven.Database.Server.RavenFS.Controllers
 	{
 		[HttpGet]
         [Route("ravenfs/{fileSystemName}/search/Terms")]
-        public HttpResponseMessage Terms()
+        public HttpResponseMessage Terms(string query)
 		{
 			IndexSearcher searcher;
 			using (Search.GetSearcher(out searcher))
 			{
-				string[] result = searcher.IndexReader.GetFieldNames(IndexReader.FieldOption.ALL).ToArray();
+				string[] result = searcher.IndexReader.GetFieldNames(IndexReader.FieldOption.ALL)
+                                    .Where(x => x.IndexOf(query, 0, StringComparison.InvariantCultureIgnoreCase) != -1).ToArray();
+
                 return this.GetMessageWithObject(result);
 			}
 		}
@@ -34,7 +36,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
 
-            var result = new SearchResults
+			var result = new SearchResults
 			{
 				Start = Paging.Start,
 				PageSize = Paging.PageSize,

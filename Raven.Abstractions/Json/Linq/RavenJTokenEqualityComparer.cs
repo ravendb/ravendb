@@ -19,7 +19,7 @@ namespace Raven.Json.Linq
 	    /// <returns>
 	    /// true if the specified objects are equal; otherwise, false.
 	    /// </returns>
-        public bool Equals(RavenJToken x, RavenJToken y, DocumentsChanges difference)
+        public bool Equals(RavenJToken x, RavenJToken y, List<DocumentsChanges> difference)
         {
             return RavenJToken.DeepEquals(x, y,  difference);
         }

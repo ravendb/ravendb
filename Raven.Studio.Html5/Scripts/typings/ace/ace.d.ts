@@ -50,6 +50,7 @@ declare module AceAjax {
     export interface TokenInfo {
 
         value: string;
+        type: any;
     }
 
     export interface Position {
@@ -1117,7 +1118,7 @@ declare module AceAjax {
         * @param {string} property name
         * @param {number} property value
         **/
-        setOption(name: string, value: number);
+        setOption(name: string, value: any);
 
         /**
          * {:VirtualRenderer.setTheme}

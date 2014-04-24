@@ -5,6 +5,7 @@ import router = require("plugins/router");
 import app = require("durandal/app");
 import uploadItem = require("models/uploadItem");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
+import ace = require("ace/ace");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -80,10 +81,14 @@ class viewModelBase {
         ko.postbox.publish("SetRawJSONUrl", "");
     }
 
+    attached() {
+        webshims.polyfill();
+    }
+
     // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
-        // Resync Changes
-        viewModelBase.dirtyFlag().reset();
+        this.createResizableTextBoxes();
+        viewModelBase.dirtyFlag().reset(); //Resync Changes
     }
 
     /*
@@ -105,6 +110,44 @@ class viewModelBase {
         this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
+    }
+
+    createResizableTextBoxes() {
+        var self = this;
+        $("pre").each(function () {
+            self.createResizableTextBox(this);
+        });
+
+        //adjust the minWidth and maxWidth for the accordion element
+        $('#accordion').on('shown.bs.collapse', function () {
+            var element = $(this).find('pre');
+            //var width = element.width();
+            //element.resizable({ minWidth: width, maxWidth: width });
+        })
+    }
+
+    createResizableTextBox(element) {
+        var editor = ace.edit(element);
+        //editor.setOption('vScrollBarAlwaysVisible', true);
+        //editor.setOption('hScrollBarAlwaysVisible', true);
+        var minHeight = 100;
+        if ($(element).height() < 150) {
+            $(element).height(minHeight);
+        }
+        $(element).resizable({
+            minHeight: minHeight,
+            handles: "s, se",
+            grid: [10000000000000000, 1],
+            resize: function (event, ui) {
+                editor.resize();
+            }
+        });
+        $(element).find('.ui-resizable-se').removeClass('ui-icon-gripsmall-diagonal-se');
+        $(element).find('.ui-resizable-se').addClass('ui-icon-carat-1-s');
+        $('.ui-resizable-se').css('cursor', 's-resize');
+        window.onresize = function (event) {
+            editor.resize();
+        };
     }
 
     /*

@@ -1065,104 +1065,102 @@ namespace Raven.Database
                 .Apply(initialization => initialization.SecondStageInit());
         }
 
-        private class DocumentDatabaseInitializer
-        {
-            private readonly DocumentDatabase database;
+		private class DocumentDatabaseInitializer
+		{
+			private readonly DocumentDatabase database;
 
-            private readonly InMemoryRavenConfiguration configuration;
+			private readonly InMemoryRavenConfiguration configuration;
 
-            private ValidateLicense validateLicense;
+			private ValidateLicense validateLicense;
 
-            public DocumentDatabaseInitializer(DocumentDatabase database, InMemoryRavenConfiguration configuration)
-            {
-                this.database = database;
-                this.configuration = configuration;
-                }
+			public DocumentDatabaseInitializer(DocumentDatabase database, InMemoryRavenConfiguration configuration)
+			{
+				this.database = database;
+				this.configuration = configuration;
+			}
 
-            public void ValidateLicense()
-                {
-                if (configuration.IsTenantDatabase)
-                    return;
+			public void ValidateLicense()
+			{
+				if (configuration.IsTenantDatabase)
+					return;
 
-                validateLicense = new ValidateLicense();
-                validateLicense.Execute(configuration);
-                }
+				validateLicense = new ValidateLicense();
+				validateLicense.Execute(configuration);
+			}
 
-            public void Dispose()
-            {
-                if (validateLicense != null)
-                    validateLicense.Dispose();
-        }
+			public void Dispose()
+			{
+				if (validateLicense != null)
+					validateLicense.Dispose();
+			}
 
-            public void SubscribeToDomainUnloadOrProcessExit()
-        {
-                AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
-                AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
-                                }
+			public void SubscribeToDomainUnloadOrProcessExit()
+			{
+				AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
+				AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
+			}
 
-            public void UnsubscribeToDomainUnloadOrProcessExit()
-                                {
-                AppDomain.CurrentDomain.DomainUnload -= DomainUnloadOrProcessExit;
-                AppDomain.CurrentDomain.ProcessExit -= DomainUnloadOrProcessExit;
-                            }
+			public void UnsubscribeToDomainUnloadOrProcessExit()
+			{
+				AppDomain.CurrentDomain.DomainUnload -= DomainUnloadOrProcessExit;
+				AppDomain.CurrentDomain.ProcessExit -= DomainUnloadOrProcessExit;
+			}
 
-            public void InitializeEncryption()
-                        {
-                string fipsAsString;
-                bool fips;
-                if (Commercial.ValidateLicense.CurrentLicense.Attributes.TryGetValue("fips", out fipsAsString) && bool.TryParse(fipsAsString, out fips))
-                            {
-                    if (!fips && configuration.UseFips)
-                        throw new InvalidOperationException("Your license does not allow you to use FIPS compliant encryption on the server.");
-                        }
-
-                Encryptor.Initialize(configuration.UseFips);
-                Cryptography.FIPSCompliant = configuration.UseFips;
-                    }
-
-            private void DomainUnloadOrProcessExit(object sender, EventArgs eventArgs)
-                {
-                Dispose();
-        }
-
-            public void ExecuteAlterConfiguration()
-        {
-                foreach (var alterConfiguration in configuration.Container.GetExportedValues<IAlterConfiguration>())
-        {
-                    alterConfiguration.AlterConfiguration(configuration);
-        }
-            }
-
-            public void SatisfyImportsOnce()
-        {
-                configuration.Container.SatisfyImportsOnce(database);
-        }
-
-            public void InitializeTransactionalStorage(IUuidGenerator uuidGenerator)
-        {
-                var storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
-                if (string.Equals(InMemoryRavenConfiguration.VoronTypeName, storageEngineTypeName, StringComparison.OrdinalIgnoreCase) == false)
-							{
-                    if (Directory.Exists(configuration.DataDirectory) && Directory.EnumerateFileSystemEntries(configuration.DataDirectory).Any())
-                        throw new InvalidOperationException(string.Format("We do not allow to run on a storage engine other then Voron, while we are in the early pre-release phase of RavenDB 3.0. You are currently running on {0}", storageEngineTypeName));
-
-                    Trace.WriteLine("Forcing database to run on Voron - pre release behavior only, mind " + Path.GetFileName(Path.GetDirectoryName(configuration.DataDirectory)));
-                    storageEngineTypeName = InMemoryRavenConfiguration.VoronTypeName;
-        }
-
-                database.TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, database.WorkContext.HandleWorkNotifications);
-                database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
-                    }
-
-            public void InitializeIndexStorage()
-					{
-                database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, configuration.Container.GetExportedValues<AbstractViewGenerator>(), database.Extensions);
-                database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
+			public void InitializeEncryption()
+			{
+				string fipsAsString;
+				bool fips;
+				if (Commercial.ValidateLicense.CurrentLicense.Attributes.TryGetValue("fips", out fipsAsString) && bool.TryParse(fipsAsString, out fips))
+				{
+					if (!fips && configuration.UseFips)
+						throw new InvalidOperationException("Your license does not allow you to use FIPS compliant encryption on the server.");
 				}
+
+				Encryptor.Initialize(configuration.UseFips);
+				Cryptography.FIPSCompliant = configuration.UseFips;
+			}
+
+			private void DomainUnloadOrProcessExit(object sender, EventArgs eventArgs)
+			{
+				Dispose();
+			}
+
+			public void ExecuteAlterConfiguration()
+			{
+				foreach (var alterConfiguration in configuration.Container.GetExportedValues<IAlterConfiguration>())
+				{
+					alterConfiguration.AlterConfiguration(configuration);
+				}
+			}
+
+			public void SatisfyImportsOnce()
+			{
+				configuration.Container.SatisfyImportsOnce(database);
+			}
+
+			public void InitializeTransactionalStorage(IUuidGenerator uuidGenerator)
+			{
+				var storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
+				if (string.Equals(InMemoryRavenConfiguration.VoronTypeName, storageEngineTypeName, StringComparison.OrdinalIgnoreCase) == false)
+				{
+					if (Directory.Exists(configuration.DataDirectory) && Directory.EnumerateFileSystemEntries(configuration.DataDirectory).Any())
+						throw new InvalidOperationException(string.Format("We do not allow to run on a storage engine other then Voron, while we are in the early pre-release phase of RavenDB 3.0. You are currently running on {0}", storageEngineTypeName));
+
+					Trace.WriteLine("Forcing database to run on Voron - pre release behavior only, mind " + Path.GetFileName(Path.GetDirectoryName(configuration.DataDirectory)));
+					storageEngineTypeName = InMemoryRavenConfiguration.VoronTypeName;
+				}
+
+				database.TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, database.WorkContext.HandleWorkNotifications);
+				database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
+			}
+
+			public void InitializeIndexStorage()
+			{
+				database.IndexDefinitionStorage = new IndexDefinitionStorage(configuration, database.TransactionalStorage, configuration.DataDirectory, configuration.Container.GetExportedValues<AbstractViewGenerator>(), database.Extensions);
+				database.IndexStorage = new IndexStorage(database.IndexDefinitionStorage, configuration, database);
+			}
 		}
 
-        private DisposableAction exitDocumentSerialLock;
-        }
-
-    
+		private DisposableAction exitDocumentSerialLock;
+	}
 }

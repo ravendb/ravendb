@@ -16,6 +16,7 @@ using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 

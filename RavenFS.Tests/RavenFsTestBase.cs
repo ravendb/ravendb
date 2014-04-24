@@ -24,7 +24,6 @@ using Raven.Database.Server;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.Security;
 using Raven.Server;
-using Xunit;
 
 namespace RavenFS.Tests
 {
@@ -49,6 +48,7 @@ namespace RavenFS.Tests
             {
 				Port = port,
 				DataDirectory = directory,
+				FileSystemDataDirectory = Path.Combine(directory, "FileSystem"),
 				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 #if DEBUG
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
@@ -138,7 +138,7 @@ namespace RavenFS.Tests
 
         protected string NormalizeFileSystemName(string fileSystemName)
         {
-            if (string.IsNullOrEmpty(fileSystemName)) 
+            if (string.IsNullOrEmpty(fileSystemName))
                 return null;
 
             if (fileSystemName.Length < 50)

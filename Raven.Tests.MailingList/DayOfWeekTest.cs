@@ -7,6 +7,7 @@ using System;
 using System.Linq;
 using Raven.Client.Document;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 

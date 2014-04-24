@@ -31,6 +31,8 @@ class sqlReplication extends document {
     connectionStringSourceFieldName: KnockoutComputed<string>;
     parameterizeDeletesDisabled = ko.observable<boolean>();
 
+    isFocused = ko.observable(false);
+
     constructor(dto: sqlReplicationDto) {
         super(dto);
 
@@ -58,15 +60,15 @@ class sqlReplication extends document {
     }
 
     private setupConnectionString(dto: sqlReplicationDto) {
-        if (dto.ConnectionString) {
-            this.connectionStringType(this.CONNECTION_STRING);
-            this.connectionStringValue(dto.ConnectionString);
-        } else if (dto.ConnectionStringName) {
+        if (dto.ConnectionStringName) {
             this.connectionStringType(this.CONNECTION_STRING_NAME);
             this.connectionStringValue(dto.ConnectionStringName);
         } else if (dto.ConnectionStringSettingName) {
             this.connectionStringType(this.CONNECTION_STRING_SETTING_NAME);
             this.connectionStringValue(dto.ConnectionStringSettingName);
+        } else { //(dto.ConnectionString)
+            this.connectionStringType(this.CONNECTION_STRING);
+            this.connectionStringValue(dto.ConnectionString);
         }
     }
 
@@ -75,6 +77,9 @@ class sqlReplication extends document {
     }
 
     static empty(): sqlReplication {
+        var newTable: sqlReplicationTable = sqlReplicationTable.empty();
+        var sqlReplicationTables = [];
+        sqlReplicationTables.push(newTable);
         return new sqlReplication({
             Name: "",
             Disabled: true,
@@ -85,7 +90,7 @@ class sqlReplication extends document {
             ConnectionString: null,
             ConnectionStringName: null,
             ConnectionStringSettingName: null,
-            SqlReplicationTables: []
+            SqlReplicationTables: sqlReplicationTables
         });
     }
 
@@ -132,6 +137,8 @@ class sqlReplication extends document {
     }
 
     isValid(): boolean {
+        var arr = new Array();
+
         var requiredValues = [this.name(), this.factoryName(), this.connectionStringType(), this.connectionStringValue(), this.ravenEntityName(), this.script()];
         var fieldsCheck = requiredValues.every(v=> v != null && v.length > 0);
         var replicationTablesCheck = this.sqlReplicationTables().every(v=> v.isValid());
