@@ -24,6 +24,10 @@ interface documentChangeNotificationDto {
     Message: string;
 }
 
+interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
+    OperationId: string;
+}
+
 interface indexChangeNotificationDto {
     Type: string;
     Name: string;

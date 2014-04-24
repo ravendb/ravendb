@@ -312,10 +312,9 @@ class shell extends viewModelBase {
         shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
             if (this.modelPollingTimeoutFlag === true) {
                 this.modelPollingTimeoutFlag = false;
-                this.modelPolling();
-            } else {
                 setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
-            }
+                this.modelPolling();
+            } 
         });
 
         shell.currentDbChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => {
