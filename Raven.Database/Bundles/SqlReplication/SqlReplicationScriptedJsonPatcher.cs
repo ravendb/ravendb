@@ -8,20 +8,16 @@ namespace Raven.Database.Bundles.SqlReplication
 {
 	public class SqlReplicationScriptedJsonPatcher : ScriptedJsonPatcher
 	{
-		private readonly ScriptedJsonPatcherOperationScope scope;
-
 		private readonly ConversionScriptResult scriptResult;
 		private readonly SqlReplicationConfig config;
 		private readonly string docId;
 
 		public SqlReplicationScriptedJsonPatcher(DocumentDatabase database,
-												 ScriptedJsonPatcherOperationScope scope,
 		                                         ConversionScriptResult scriptResult,
 												 SqlReplicationConfig config,
 		                                         string docId)
 			: base(database)
 		{
-			this.scope = scope;
 			this.scriptResult = scriptResult;
 			this.config = config;
 			this.docId = docId;
@@ -37,22 +33,22 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		protected override void CustomizeEngine(JintEngine jintEngine)
+		protected override void CustomizeEngine(JintEngine jintEngine, ScriptedJsonPatcherOperationScope scope)
 		{
 			jintEngine.SetParameter("documentId", docId);
-			jintEngine.SetFunction("replicateTo", new Action<string,JsObject>(ReplicateToFunction));
+			jintEngine.SetFunction("replicateTo", new Action<string,JsObject>((tableName, cols) => ReplicateToFunction(tableName, cols, scope)));
 			foreach (var sqlReplicationTable in config.SqlReplicationTables)
 			{
 				var current = sqlReplicationTable;
 				jintEngine.SetFunction("replicateTo" + sqlReplicationTable.TableName, (Action<JsObject>)(cols =>
 				{
 					var tableName = current.TableName;
-					ReplicateToFunction(tableName, cols);
+					ReplicateToFunction(tableName, cols, scope);
 				}));
 			}
 		}
 
-		private void ReplicateToFunction(string tableName, JsObject cols)
+		private void ReplicateToFunction(string tableName, JsObject cols, ScriptedJsonPatcherOperationScope scope)
 		{
 			if (tableName == null)
 				throw new ArgumentException("tableName parameter is mandatory");

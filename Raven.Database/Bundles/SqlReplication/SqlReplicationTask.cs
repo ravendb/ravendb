@@ -472,9 +472,9 @@ namespace Raven.Database.Bundles.SqlReplication
 						continue;
 				}
 
+				var patcher = new SqlReplicationScriptedJsonPatcher(Database, result, cfg, jsonDocument.Key);
 				using (var scope = new SqlReplicationScriptedJsonPatcherOperationScope(Database))
 				{
-					var patcher = new SqlReplicationScriptedJsonPatcher(Database, scope, result, cfg, jsonDocument.Key);
 					try
 					{
 						DocumentRetriever.EnsureIdInMetadata(jsonDocument);

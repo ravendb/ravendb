@@ -91,7 +91,7 @@ namespace Raven.Database.Json
 
 			try
 			{
-			    CustomizeEngine(jintEngine);
+			    CustomizeEngine(jintEngine, scope);
 				jintEngine.SetFunction("PutDocument", (Action<string, JsObject, JsObject>)(scope.PutDocument));
 				jintEngine.SetFunction("LoadDocument", (Func<string, JsObject>)(key => scope.LoadDocument(key, jintEngine.Global)));
 				jintEngine.SetFunction("DeleteDocument", (Action<string>)(scope.DeleteDocument));
@@ -205,7 +205,7 @@ function ExecutePatchScript(docInner){{
 			jintEngine.Run(GetFromResources(ravenDatabaseJsonMapJs));
 		}
 
-		protected virtual void CustomizeEngine(JintEngine jintEngine)
+		protected virtual void CustomizeEngine(JintEngine jintEngine, ScriptedJsonPatcherOperationScope scope)
 		{
 		}
 
