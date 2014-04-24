@@ -229,6 +229,7 @@
     <Compile Include="Bugs\TransformationsUnitTest.cs" />
     <Compile Include="Bundles\Encryption\Crud.cs" />
     <Compile Include="Faceted\LazyFacets.cs" />
+    <Compile Include="Issues\RavenDB_2183.cs" />
     <Compile Include="Issues\WaitForStaleOnAbandonedIndexShouldWork.cs" />
     <Compile Include="Issues\RavenDB_1761.cs" />
     <Compile Include="Issues\RavenDb-1934.cs" />

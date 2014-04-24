@@ -267,6 +267,11 @@ namespace Raven.Abstractions.Linq
 			return items.LastIndexOf(item, index, count);
 		}
 
+		public IEnumerable<dynamic> Take(int count)
+		{
+			return new DynamicList(Enumerate().Take(count));
+		}
+
 		/// <summary>
 		/// Gets the length.
 		/// </summary>
