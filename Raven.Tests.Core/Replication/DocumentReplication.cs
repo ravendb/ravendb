@@ -17,8 +17,8 @@ namespace Raven.Tests.Core.Replication
 		[Fact]
 		public async Task CanReplicateDocument()
 		{
-			using (var source = GetDocumentStore(dbSuffixIdentifier: "1"))
-			using (var destination = GetDocumentStore(dbSuffixIdentifier: "2"))
+			using (var source = GetDocumentStore())
+			using (var destination = GetDocumentStore())
 			{
 				SetupReplication(source, destinations: destination);
 
@@ -46,8 +46,8 @@ namespace Raven.Tests.Core.Replication
 		[Fact]
 		public void CanReplicateDocumentDeletion()
 		{
-			using (var source = GetDocumentStore(dbSuffixIdentifier: "1"))
-			using (var destination = GetDocumentStore(dbSuffixIdentifier: "2"))
+			using (var source = GetDocumentStore())
+			using (var destination = GetDocumentStore())
 			{
 				SetupReplication(source, destinations: destination);
 
@@ -73,8 +73,8 @@ namespace Raven.Tests.Core.Replication
 		[Fact]
 		public void ShouldCreateConflictThenResolveIt()
 		{
-			using (var source = GetDocumentStore(dbSuffixIdentifier: "1"))
-			using (var destination = GetDocumentStore(dbSuffixIdentifier: "2"))
+			using (var source = GetDocumentStore())
+			using (var destination = GetDocumentStore())
 			{
 				source.DatabaseCommands.Put("docs/1", null, new RavenJObject() {{"Key", "Value"}}, new RavenJObject());
 				destination.DatabaseCommands.Put("docs/1", null, new RavenJObject() {{"Key", "Value"}}, new RavenJObject());

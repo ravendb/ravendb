@@ -116,6 +116,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Auth\" />
+    <Folder Include="BackupRestore\" />
     <Folder Include="Facets\" />
     <Folder Include="Patching\" />
     <Folder Include="Shard\" />
@@ -134,6 +135,7 @@
     <Compile Include="Querying\Sorting.cs" />
     <Compile Include="Querying\StaticIndexes.cs" />
     <Compile Include="Replication\AttachmentReplication.cs" />
+    <Compile Include="Replication\AutomaticConflictResolution.cs" />
     <Compile Include="Replication\DocumentReplication.cs" />
     <Compile Include="Replication\RavenReplicationCoreTest.cs" />
     <Compile Include="Session\Crud.cs" />

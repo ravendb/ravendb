@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -23,7 +24,8 @@ namespace Raven.Tests.Core.Replication
 															string dbSuffixIdentifier = null,
 															Action<DatabaseDocument> modifyDatabaseDocument = null)
 		{
-			return base.GetDocumentStore(databaseName, dbSuffixIdentifier, modifyDatabaseDocument: doc => doc.Settings.Add("Raven/ActiveBundles", "replication"));
+			return base.GetDocumentStore(databaseName, dbSuffixIdentifier ?? createdStores.Count.ToString(CultureInfo.InvariantCulture), 
+											modifyDatabaseDocument: doc => doc.Settings.Add("Raven/ActiveBundles", "replication"));
 		}
 
 		protected void SetupReplication(DocumentStore source, params DocumentStore[] destinations)

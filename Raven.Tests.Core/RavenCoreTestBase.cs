@@ -19,7 +19,7 @@ namespace Raven.Tests.Core
 	public class RavenCoreTestBase : IUseFixture<TestServerFixture>, IDisposable
 	{
 		private readonly List<string> createdDbs = new List<string>();
-		private readonly List<DocumentStore> createdStores = new List<DocumentStore>();
+		protected readonly List<DocumentStore> createdStores = new List<DocumentStore>();
 
 		protected RavenDbServer Server { get; private set; }
 

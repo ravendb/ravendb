@@ -17,8 +17,8 @@ namespace Raven.Tests.Core.Replication
 		[Fact]
 		public void CanReplicateAttachments()
 		{
-			using (var source = GetDocumentStore(dbSuffixIdentifier: "1"))
-			using (var destination = GetDocumentStore(dbSuffixIdentifier: "2"))
+			using (var source = GetDocumentStore())
+			using (var destination = GetDocumentStore())
 			{
 				SetupReplication(source, destinations: destination);
 
@@ -41,8 +41,8 @@ namespace Raven.Tests.Core.Replication
 		[Fact]
 		public void CanReplicateAttachmentDeletion()
 		{
-			using (var source = GetDocumentStore(dbSuffixIdentifier: "1"))
-			using (var destination = GetDocumentStore(dbSuffixIdentifier: "2"))
+			using (var source = GetDocumentStore())
+			using (var destination = GetDocumentStore())
 			{
 				SetupReplication(source, destinations: destination);
 
@@ -68,8 +68,8 @@ namespace Raven.Tests.Core.Replication
 		[Fact]
 		public void ShouldCreateConflictThenResolveIt()
 		{
-			using (var source = GetDocumentStore(dbSuffixIdentifier: "1"))
-			using (var destination = GetDocumentStore(dbSuffixIdentifier: "2"))
+			using (var source = GetDocumentStore())
+			using (var destination = GetDocumentStore())
 			{
 				source.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 				destination.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 3, 2, 1 }), new RavenJObject());
