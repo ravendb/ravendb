@@ -9,6 +9,9 @@ using System.Linq;
 
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
+using Raven.Database.Bundles.ScriptedIndexResults;
+using Raven.Database.Json;
+using Raven.Json.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -75,14 +78,15 @@ namespace Raven.Tests.Issues
 
 				using (var session = store.OpenSession())
 				{
-					session.Store(new ScriptedIndexResults { 
-						Id = ScriptedIndexResults.IdPrefix + (new CustomerOrderTotal().IndexName), 
+					session.Store(new ScriptedIndexResults
+					{
+						Id = ScriptedIndexResults.IdPrefix + (new CustomerOrderTotal().IndexName),
 						IndexScript = @"var customer = LoadDocument(this.CustomerId)
 if(customer == null) return;
 if(customer.StoredTotal != this.TotalOrderItems){
   customer.StoredTotal = this.TotalOrderItems;
   PutDocument(this.CustomerId, customer);
-}" 
+}"
 					});
 
 					session.SaveChanges();
@@ -90,7 +94,7 @@ if(customer.StoredTotal != this.TotalOrderItems){
 
 				using (var session = store.OpenSession())
 				{
-					session.Store(new Customer { Name = "Customer1", StoredTotal = 100, Id = "customers/1"});
+					session.Store(new Customer { Name = "Customer1", StoredTotal = 100, Id = "customers/1" });
 					session.SaveChanges();
 
 					session.Store(new Order { Customers = new List<string> { "customers/1" }, OrderItems = 10 });
@@ -106,5 +110,42 @@ if(customer.StoredTotal != this.TotalOrderItems){
 				}
 			}
 		}
+
+		[Fact]
+		public void ScriptedIndexResultsPatcherShouldNotPatchDocumentsThatAreIndirectlyReferencedByIndexRaw()
+		{
+			using (var store = NewDocumentStore(activeBundles: "ScriptedIndexResults"))
+			{
+				new CustomerOrderTotal().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Customer { Name = "Customer1", StoredTotal = 100, Id = "customers/1" });
+					session.SaveChanges();
+
+					session.Store(new Order { Customers = new List<string> { "customers/1" }, OrderItems = 10 });
+					session.SaveChanges();
+				}
+
+				WaitForIndexing(store);
+
+				var patcher = new ScriptedJsonPatcher(store.DocumentDatabase);
+				using (var scope = new ScriptedIndexResultsJsonPatcherScope(store.DocumentDatabase, new HashSet<string> { "Orders" }))
+				{
+					var e = Assert.Throws<InvalidOperationException>(() => patcher.Apply(scope, new RavenJObject(), new ScriptedPatchRequest
+					{
+						Script = @"var customer = LoadDocument('customers/1')
+if(customer == null) return;
+if(customer.StoredTotal != this.TotalOrderItems){
+  customer.StoredTotal = this.TotalOrderItems;
+  PutDocument('customers/1', customer);
+}"
+					}));
+
+					Assert.Equal("Cannot PUT document 'customers/1' to prevent infinite indexing loop. Avoid modifying documents that could be indirectly referenced by index.", e.InnerException.Message);
+				}
+			}
+		}
+
 	}
 }
