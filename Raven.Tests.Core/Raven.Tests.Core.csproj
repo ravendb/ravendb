@@ -133,7 +133,7 @@
     <Compile Include="Querying\Paging.cs" />
     <Compile Include="Querying\Projections.cs" />
     <Compile Include="Querying\Sorting.cs" />
-    <Compile Include="Querying\StaticIndexes.cs" />
+    <Compile Include="Indexing\StaticIndexes.cs" />
     <Compile Include="Replication\AttachmentReplication.cs" />
     <Compile Include="Replication\AutomaticConflictResolution.cs" />
     <Compile Include="Replication\DocumentReplication.cs" />
@@ -148,6 +148,7 @@
     <Compile Include="Streaming\QueryStreaming.cs" />
     <Compile Include="Utils\Entities\Company.cs" />
     <Compile Include="Utils\Entities\Post.cs" />
+    <Compile Include="Utils\Entities\PostContent.cs" />
     <Compile Include="Utils\Entities\User.cs" />
     <Compile Include="RavenCoreTestBase.cs" />
     <Compile Include="TestServerFixture.cs" />
@@ -156,6 +157,7 @@
     <Compile Include="Utils\Indexes\Companies_CompanyByType.cs" />
     <Compile Include="Utils\Indexes\Companies_CustomAnalyzers.cs" />
     <Compile Include="Utils\Indexes\Companies_SortByName.cs" />
+    <Compile Include="Utils\Indexes\Posts_ByContent.cs" />
     <Compile Include="Utils\Indexes\Posts_Recurse.cs" />
     <Compile Include="Utils\Indexes\Users_ByName.cs" />
   </ItemGroup>
