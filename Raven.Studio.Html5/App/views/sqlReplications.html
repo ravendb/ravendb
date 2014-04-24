@@ -26,7 +26,7 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Name</label>
                             <div class="col-sm-9">
-                                <input required type="text" class="form-control" data-bind="value: name, valueUpdate: 'keyup', attr: { placeholder: 'New SQL Replication ' + $root.itemNumber($index()) }" />
+                                <input required type="text" class="form-control" data-bind="value: name, valueUpdate: 'keyup', attr: { placeholder: 'New SQL Replication ' + $root.itemNumber($index()) }, hasFocus: isFocused" />
                             </div>
                         </div>
                         <div class="form-group">
@@ -100,7 +100,7 @@
                                                     <input required type="text" class="form-control" data-bind="value: documentKeyColumn, valueUpdate: 'keyup'" />
                                                 </div>
                                             </td>
-                                            <td><button type="button" style="display:inline-block;" class="close" data-bind="click: $parent.removeTable.bind($parent)" title="Remove this table"><span class="glyphicon glyphicon-remove remove-icon"></span></button></td>
+                                            <td><button type="button" style="display:inline-block;" class="close" data-bind="if: $parent.sqlReplicationTables().length > 1,click: $parent.removeTable.bind($parent)" title="Remove this table"><span class="glyphicon glyphicon-remove remove-icon"></span></button></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -116,7 +116,7 @@
                             <div class="col-sm-9">
                                 <div class="row">
                                     <div class="col-sm-12">
-                                        <pre class="form-control editor" data-bind="aceEditor: { code: script }"></pre>
+                                        <pre class="form-control editor" data-bind="aceEditor: { code: script, lang: 'ace/mode/javascript' }"></pre>
                                     </div>
                                 </div>
                             </div>

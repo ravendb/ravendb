@@ -7,7 +7,8 @@ var Tokenizer = require("../tokenizer").Tokenizer;
 var LuceneHighlightRules = require("./lucene_highlight_rules").LuceneHighlightRules;
 
 var Mode = function() {
-    this.$tokenizer =  new Tokenizer(new LuceneHighlightRules().getRules());
+//    this.$tokenizer = new Tokenizer(new LuceneHighlightRules().getRules());
+    this.HighlightRules = LuceneHighlightRules;
 };
 
 oop.inherits(Mode, TextMode);

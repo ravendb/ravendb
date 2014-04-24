@@ -10,6 +10,7 @@ using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Shard;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 using System.Linq;

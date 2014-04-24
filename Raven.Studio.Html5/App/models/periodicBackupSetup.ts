@@ -1,7 +1,7 @@
 class periodicBackupSetup {
 
     unsupported = ko.observable<boolean>(false);
-    activated = ko.observable<boolean>(false);
+    disabled = ko.observable<boolean>(true);
 
     type = ko.observable<string>();
     mainValue = ko.observable<string>();
@@ -70,12 +70,12 @@ class periodicBackupSetup {
         this.fullBackupInterval(full[0] ? full[0].toString() : full[0]);
         this.fullBackupIntervalUnit(full[1]);
 
-        this.activated(dto.Activated);
+        this.disabled(dto.Disabled);
     }
 
     toDto(): periodicBackupSetupDto {
         return {
-            Activated: this.activated(),
+            Disabled: this.disabled(),
             GlacierVaultName: this.prepareMainValue(this.GLACIER_VAULT),
             S3BucketName: this.prepareMainValue(this.S3_BUCKET),
             AwsRegionEndpoint: this.awsRegionEndpoint(),

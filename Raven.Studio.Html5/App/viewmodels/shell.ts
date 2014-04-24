@@ -394,6 +394,8 @@ class shell extends viewModelBase {
                         this.goToDocumentSearchResults(results);
                     }
                 });
+        } else if (query.length == 0) {
+            this.goToDocumentSearchResults.removeAll();
         }
     }
 

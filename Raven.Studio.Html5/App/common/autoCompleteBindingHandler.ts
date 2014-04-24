@@ -45,6 +45,51 @@ class autoCompleteBindingHandler {
 
         // Leaving the textbox should hide the auto complete list.
         input.on('blur', (args) => setTimeout(() => element.style.display = "none", 200));
+        
+        input.on('keydown', (args: JQueryEventObject) => {
+            var lis, curSelected;
+            if (args.which == 40 || args.which == 38 || args.which == 13) {
+                lis = $element.children("li");
+                curSelected = $element.find('.selected');
+            }
+
+            if (args.which == 40) {
+                if (curSelected.length > 0) {
+                    curSelected.removeClass("selected");
+                    var nextSelected = curSelected.next();
+
+                    if (nextSelected.length) {
+                        nextSelected.addClass("selected");
+                    } else {
+                        lis.first().addClass('selected');
+                    }
+
+                } else {
+                    curSelected = lis.first().addClass("selected");
+                }
+            } else if (args.which == 38) {
+                if (curSelected.length > 0) {
+                    curSelected.removeClass("selected");
+                    var prevSelected = curSelected.prev();
+
+                    if (prevSelected.length) {
+                        prevSelected.addClass("selected");
+                    } else {
+                        lis.last().addClass('selected');
+                    }
+
+                } else {
+                    curSelected = lis.last().addClass("selected");
+                }
+            }
+            else if (args.which == 13) {
+                if (curSelected.length) {
+                    curSelected.click();
+
+                }
+            }
+            
+        });
 
         // When the results change and we have 1 or more, display the auto complete container.
         var results: KnockoutObservableArray<any> = allBindings()['foreach'];
@@ -59,6 +104,7 @@ class autoCompleteBindingHandler {
         ko.utils.domNodeDisposal.addDisposeCallback(element, () => {
             input.off('blur');
             $element.off('click');
+            input.off('keydown');
             subscription.dispose();
         });
     }

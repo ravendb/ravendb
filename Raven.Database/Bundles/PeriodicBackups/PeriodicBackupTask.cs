@@ -3,6 +3,7 @@ using System.ComponentModel.Composition;
 using System.Globalization;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Glacier.Transfer;
 using Amazon.S3.Model;
@@ -225,7 +226,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 							try
 							{
-								if (localBackupConfigs.Activated)
+								if (!localBackupConfigs.Disabled)
 								{
 									UploadToServer(exportResult.FilePath, localBackupConfigs, fullBackup);
 								}
@@ -285,7 +286,9 @@ namespace Raven.Database.Bundles.PeriodicBackups
 						}
 					}
 				})
-				.ContinueWith(_ =>
+				.Unwrap();
+
+				currentTask.ContinueWith(_ =>
 				{
 					currentTask = null;
 				});

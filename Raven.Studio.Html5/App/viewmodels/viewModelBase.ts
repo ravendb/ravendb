@@ -117,6 +117,13 @@ class viewModelBase {
         $("pre").each(function () {
             self.createResizableTextBox(this);
         });
+
+        //adjust the minWidth and maxWidth for the accordion element
+        $('#accordion').on('shown.bs.collapse', function () {
+            var element = $(this).find('pre');
+            //var width = element.width();
+            //element.resizable({ minWidth: width, maxWidth: width });
+        })
     }
 
     createResizableTextBox(element) {
@@ -124,18 +131,23 @@ class viewModelBase {
         //editor.setOption('vScrollBarAlwaysVisible', true);
         //editor.setOption('hScrollBarAlwaysVisible', true);
         var minHeight = 100;
+        if ($(element).height() < 150) {
+            $(element).height(minHeight);
+        }
         $(element).resizable({
             minHeight: minHeight,
-            minWidth: minHeight * 5,
-            maxWidth: $(element).width() > 150 ? ($(element).width() + 26) : $(".panel-title").width() - 265,
-            handles: "e, s, se",
+            handles: "s, se",
+            grid: [10000000000000000, 1],
             resize: function (event, ui) {
                 editor.resize();
             }
         });
-        if ($(element).height() < minHeight) {
-            $(element).height(minHeight);
-        }
+        $(element).find('.ui-resizable-se').removeClass('ui-icon-gripsmall-diagonal-se');
+        $(element).find('.ui-resizable-se').addClass('ui-icon-carat-1-s');
+        $('.ui-resizable-se').css('cursor', 's-resize');
+        window.onresize = function (event) {
+            editor.resize();
+        };
     }
 
     /*

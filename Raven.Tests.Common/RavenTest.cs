@@ -13,6 +13,7 @@ using Raven.Client.Embedded;
 using Raven.Database;
 using Raven.Database.Util;
 using Raven.Server;
+using Raven.Tests.Helpers;
 
 using Xunit;
 
