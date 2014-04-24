@@ -100,12 +100,12 @@ namespace Raven.Tests.Storage
 		public void CanAddAndReadAttachmentsAfterReopen()
 		{
 			string dataDir = NewDataPath();
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
 				tx.Batch(accessor => accessor.Attachments.AddAttachment("Ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject()));
 			}
 
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
 				Attachment attachment = null;
 				tx.Batch(viewer =>

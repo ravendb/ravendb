@@ -11,6 +11,7 @@ using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Common;
 using Raven.Tests.Document;
+using Raven.Tests.Helpers;
 using Raven.Tests.Notifications;
 using Xunit;
 

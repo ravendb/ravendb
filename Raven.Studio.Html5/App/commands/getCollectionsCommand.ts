@@ -24,7 +24,9 @@ class getCollectionsCommand extends commandBase {
         };
 
         var resultsSelector = (collectionNames: string[]) => collectionNames.map(n => new collection(n, this.ownerDb));
-        return this.query("/terms/Raven/DocumentsByEntityName", args, this.ownerDb, resultsSelector);
+        return this.query("/terms/Raven/DocumentsByEntityName", args, this.ownerDb, resultsSelector)
+            .fail(() => this.reportError("Raven/DocumentsByEntityName index not found",
+                        "In order to enjoy the studio interface, please recreate the index: \n" + "index definition: \n" + 'Name: Raven/DocumentsByEntityName \n'+'Map: from doc in docs let Tag = doc["@metadata"]["Raven-Entity-Name"] select new { Tag, LastModified = (DateTime)doc["@metadata"]["Last-Modified"] };'));
     }
 }
 

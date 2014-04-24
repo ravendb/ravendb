@@ -10,7 +10,6 @@ class row {
     collectionClass = ko.observable("");
     editUrl = ko.observable("");
     isChecked = ko.observable(false);
-    static documentMatchRegexp = /\w+\/\w+/ig;
 
     constructor(addIdCell: boolean, public viewModel: viewModel) {
         if (addIdCell) {
@@ -52,7 +51,7 @@ class row {
     }
 
     addOrUpdateCellMap(propertyName: string, data: any) {
-        if (!this.cellMap[propertyName]) {            
+        if (!this.cellMap[propertyName]) {
             this.cellMap[propertyName] = new cell(data, this.getCellTemplateName(propertyName, data));
         } else {
             var cellVal: cell = this.cellMap[propertyName];
@@ -78,15 +77,27 @@ class row {
         return null;
     }
 
-    getCellTemplateName(propertyName: string, data:any): string {
+    getCellTemplateName(propertyName: string, data: any): string {
         if (propertyName === "Id") {
             return cell.idTemplate;
-        }else if (propertyName === "__IsChecked") {
+        } else if (propertyName === "__IsChecked") {
             return cell.checkboxTemplate;
         }
         else if (!!data) {
-            if (!!data[propertyName] && typeof data[propertyName] == "string" && row.documentMatchRegexp.test(data[propertyName])  ||
-                typeof data == "string" && row.documentMatchRegexp.test(data[propertyName])) {
+            if (typeof data == "string") {
+                var cleanData = data.replace('/\t+/g', '')
+                    .replace(/\s+/g, '')
+                    .replace('/\n+/g', '');
+                if (/^\[{"[a-zA-Z0-9_-]+":/.test(cleanData) ||
+                    //this handy REGEX for testing URLs was taken from http://stackoverflow.com/questions/8188645/javascript-regex-to-match-a-url-in-a-field-of-text
+                    /(http|ftp|https):\/\/[\w-]+(\.[\w-]+)+([\w.,@?^=%&amp;:\/~+#-]*[\w@?^=%&amp;\/~+#-])?/.test(cleanData))
+                    return cell.defaultTemplate;
+                if (/\w+\/\w+/ig.test(data))
+                    return cell.externalIdTemplate;
+            }
+            else if (!!data[propertyName] &&
+                typeof data[propertyName] == "string" &&
+                /\w+\/\w+/ig.test(data[propertyName])) {
                 return cell.externalIdTemplate;
             }
         }

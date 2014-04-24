@@ -1,7 +1,7 @@
 import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
 import database = require("models/database");
-import filesystem = require("models/filesystem");
+import filesystem = require("models/filesystem/filesystem");
 import resource = require("models/resource");
 import appUrl = require("common/appUrl");
 
@@ -61,7 +61,38 @@ class commandBase {
                 var transformedResults = resultsSelector(results);
                 task.resolve(transformedResults);
             });
-            ajax.fail((request, status, error) => task.reject(request, status, error));
+            ajax.fail((request, status, error) => {
+                task.reject(request, status, error);
+                });
+            return task;
+        } else {
+            return ajax;
+        }
+    }
+
+    head<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T): JQueryPromise<T> {
+        var ajax = this.ajax(relativeUrl, args, "HEAD", resource);
+        if (resultsSelector) {
+            var task = $.Deferred();
+            ajax.done((results, status, xhr) => {
+                var allHeaders = xhr.getAllResponseHeaders();
+                if (allHeaders) {
+                    var headersObject = {};
+                    var headersArray = xhr.getAllResponseHeaders().trim().split(/\r?\n/);
+                    for (var n = 0; n < headersArray.length; n++) {
+                        var keyValue = headersArray[n].split(": ");
+                        if (keyValue.length == 2) {
+                            keyValue[1] = keyValue[1].replaceAll("\"", "");
+                            headersObject[keyValue[0]] = keyValue[1];
+                        }
+                    }
+                    var transformedResults = resultsSelector(headersObject);
+                    task.resolve(transformedResults);
+                }
+            });
+            ajax.fail((request, status, error) => {
+                task.reject(request, status, error);
+                });
             return task;
         } else {
             return ajax;
@@ -71,14 +102,6 @@ class commandBase {
     put(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
         return this.ajax(relativeUrl, args, "PUT", resource, options);
     }
-
-    //putBinary(relativeUrl: string, content: any, contentLenght: number, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
-    //    var request = new XMLHttpRequest();
-    //    request.open("PUT", appUrl.forResouceQuery(resource) + relativeUrl, true);
-    //    request.setRequestHeader("Content-Length", contentLenght.toString());
-
-    //    request.send(content);
-    //}
 
     reset(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
         return this.ajax(relativeUrl, args, "RESET", resource, options);

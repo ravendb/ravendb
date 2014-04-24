@@ -1,9 +1,11 @@
 import appUrl = require("common/appUrl");
 import database = require("models/database");
-import filesystem = require("models/filesystem");
+import filesystem = require("models/filesystem/filesystem");
 import router = require("plugins/router");
 import app = require("durandal/app");
+import uploadItem = require("models/uploadItem");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
+import ace = require("ace/ace");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -11,7 +13,8 @@ import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm
 class viewModelBase {
     public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
-               
+    localStorageUploadQueueKey: string;
+
     private keyboardShortcutDomContainers: string[] = [];
     private modelPollingHandle: number;
     static dirtyFlag = new ko.DirtyFlag([]);
@@ -25,9 +28,9 @@ class viewModelBase {
      * p.s. from Judah: a big scary prompt when loading the system DB is a bit heavy-handed, no? 
      */
     canActivate(args: any): any {
-        var database = appUrl.getDatabase();
-                
-        if (database != null && database.isSystem) {
+        var database = (appUrl.getDatabase()!=null) ? appUrl.getDatabase() : appUrl.getSystemDatabase(); //TODO: temporary fix for routing problem for system databse - remove this when fixed
+
+        if (database.isSystem) {
             if (viewModelBase.isConfirmedUsingSystemDatabase) {
                 return true;
             }
@@ -36,6 +39,7 @@ class viewModelBase {
         }
 
         viewModelBase.isConfirmedUsingSystemDatabase = false;
+
         return true;
     }
 
@@ -43,7 +47,7 @@ class viewModelBase {
     * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
     */
     activate(args) {
-
+        this.localStorageUploadQueueKey = "ravenFs-uploadQueue.";
         var db = appUrl.getDatabase();
         var currentDb = this.activeDatabase();
         if (!!db && db !== null && (!currentDb || currentDb.name !== db.name)) {
@@ -55,11 +59,11 @@ class viewModelBase {
         if (!currentFilesystem || currentFilesystem.name !== fs.name) {
             ko.postbox.publish("ActivateFilesystemWithName", fs.name);
         }
-		
+
         this.modelPollingStart();
 
         window.onbeforeunload = (e: any) => {
-            this.saveInObservable();
+            //this.saveInObservable();
             var isDirty = viewModelBase.dirtyFlag().isDirty();
             if (isDirty) {
                 var message = "You have unsaved data.";
@@ -77,14 +81,18 @@ class viewModelBase {
         ko.postbox.publish("SetRawJSONUrl", "");
     }
 
+    attached() {
+        webshims.polyfill();
+    }
+
     // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
-        // Resync Changes
-        viewModelBase.dirtyFlag().reset();
+        this.createResizableTextBoxes();
+        viewModelBase.dirtyFlag().reset(); //Resync Changes
     }
 
     /*
-    * Called by Durandal before deactivate in order to detemine whether removing from the DOM is necessary.
+    * Called by Durandal before deactivate in order to determine whether removing from the DOM is necessary.
     */
     canDeactivate(isClose): any {
         var isDirty = viewModelBase.dirtyFlag().isDirty();
@@ -102,6 +110,44 @@ class viewModelBase {
         this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
+    }
+
+    createResizableTextBoxes() {
+        var self = this;
+        $("pre").each(function () {
+            self.createResizableTextBox(this);
+        });
+
+        //adjust the minWidth and maxWidth for the accordion element
+        $('#accordion').on('shown.bs.collapse', function () {
+            var element = $(this).find('pre');
+            //var width = element.width();
+            //element.resizable({ minWidth: width, maxWidth: width });
+        })
+    }
+
+    createResizableTextBox(element) {
+        var editor = ace.edit(element);
+        //editor.setOption('vScrollBarAlwaysVisible', true);
+        //editor.setOption('hScrollBarAlwaysVisible', true);
+        var minHeight = 100;
+        if ($(element).height() < 150) {
+            $(element).height(minHeight);
+        }
+        $(element).resizable({
+            minHeight: minHeight,
+            handles: "s, se",
+            grid: [10000000000000000, 1],
+            resize: function (event, ui) {
+                editor.resize();
+            }
+        });
+        $(element).find('.ui-resizable-se').removeClass('ui-icon-gripsmall-diagonal-se');
+        $(element).find('.ui-resizable-se').addClass('ui-icon-carat-1-s');
+        $('.ui-resizable-se').css('cursor', 's-resize');
+        window.onresize = function (event) {
+            editor.resize();
+        };
     }
 
     /*
@@ -122,9 +168,9 @@ class viewModelBase {
 
     //A method to save the current value in the observables from text boxes and inputs before a refresh/page close.
     //Should be implemented on the inheriting class.
-    saveInObservable() {
+    //saveInObservable() {
 
-    }
+    //}
 
     private removeKeyboardShortcuts(elementSelector: string) {
         $(elementSelector).unbind('keydown.jwerty');
@@ -155,7 +201,7 @@ class viewModelBase {
         this.modelPolling();
     }
 
-    modelPollingStart() {
+    private modelPollingStart() {
         this.modelPolling();
         this.activeDatabase.subscribe(() => this.forceModelPolling());
         this.activeFilesystem.subscribe(() => this.forceModelPolling());
@@ -182,6 +228,35 @@ class viewModelBase {
         app.showDialog(systemDbConfirm);
 
         return canNavTask;
+    }
+
+    stringifyUploadQueue(queue: uploadItem[]): string {
+        return ko.toJSON(queue);
+    }
+
+    parseUploadQueue(queue: string, fs : filesystem): uploadItem[] {
+        var stringArray: any[] = JSON.parse(queue);
+        var uploadQueue: uploadItem[] = [];
+
+        for (var i = 0; i < stringArray.length; i++) {
+            uploadQueue.push(new uploadItem(stringArray[i]["id"], stringArray[i]["fileName"],
+                stringArray[i]["status"], fs));
+        }
+
+        return uploadQueue;
+    }
+
+    updateLocalStorage(x: uploadItem[], fs : filesystem) {
+        window.localStorage.setItem(this.localStorageUploadQueueKey + fs.name, this.stringifyUploadQueue(x));
+    }
+
+    updateQueueStatus(guid: string, status: string, queue: uploadItem[]) {
+        var items = ko.utils.arrayFilter(queue, (i: uploadItem) => {
+            return i.id() === guid
+        });
+        if (items) {
+            items[0].status(status);
+        }
     }
 
 }

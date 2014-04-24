@@ -89,7 +89,8 @@ namespace Raven.Tests.Bundles.Authorization
 				client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(s, UserId, "Company/Rename");
 				s.Load<Company>(company.Id).Name = "Stampeding Rhinos";
 
-				Assert.DoesNotThrow(s.SaveChanges);
+            
+                Assert.DoesNotThrow(() => s.SaveChanges());
 			}
 		}
 
@@ -131,7 +132,7 @@ namespace Raven.Tests.Bundles.Authorization
 				client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(s, UserId.ToLower(), "Company/Rename");
 				s.Load<Company>(company.Id).Name = "Stampeding Rhinos";
 
-				Assert.DoesNotThrow(s.SaveChanges);
+                Assert.DoesNotThrow(() =>  s.SaveChanges());
 			}
 		}
 	}

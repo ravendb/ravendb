@@ -37,16 +37,16 @@ namespace Raven.Tests.Issues
             {
                 var urlsTried = new List<string>();
 
-                var webException = Assert.Throws<WebException>(() =>
+                var webException = (WebException)Assert.Throws<AggregateException>(() =>
                 {
-                    replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
+                    replicationInformer.ExecuteWithReplicationAsync("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, async url =>
                     {
                         urlsTried.Add(url.Url);
                         throw new WebException("Timeout", WebExceptionStatus.Timeout);
 
                         return 1;
-                    });
-                });
+                    }).Wait();
+                }).ExtractSingleInnerException();
 
                 Assert.Equal(2, urlsTried.Count);
                 Assert.Equal("http://localhost:1", urlsTried[0]);
@@ -74,16 +74,16 @@ namespace Raven.Tests.Issues
             {
                 var urlsTried = new List<string>();
 
-                var webException = Assert.Throws<WebException>(() =>
+                var webException = (WebException) Assert.Throws<AggregateException>(() =>
                 {
-                    replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
+                    replicationInformer.ExecuteWithReplicationAsync("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, async url =>
                     {
                         urlsTried.Add(url.Url);
                         throw new WebException("Timeout", WebExceptionStatus.Timeout);
 
                         return 1;
-                    });
-                });
+                    }).Wait();
+                }).ExtractSingleInnerException();
 
                 Assert.Equal(2, urlsTried.Count);
                 Assert.Equal("http://localhost:3", urlsTried[0]); // striped

@@ -1,5 +1,5 @@
 import database = require("models/database");
-import filesystem = require("models/filesystem");
+import filesystem = require("models/filesystem/filesystem");
 import resource = require("models/resource");
 import pagedList = require("common/pagedList");
 import router = require("plugins/router");
@@ -51,6 +51,8 @@ class appUrl {
         filesystemSynchronization: ko.computed(() => appUrl.forFilesystemSynchronization(appUrl.currentFilesystem())),
         filesystemConfiguration: ko.computed(() => appUrl.forFilesystemConfiguration(appUrl.currentFilesystem())),
     };
+
+  
 
     static checkIsAreaActive(routeRoot: string): boolean {
 
@@ -105,7 +107,8 @@ class appUrl {
     }
 
     static forSettings(db: database): string {
-        return "#databases/settings?" + appUrl.getEncodedDbPart(db);
+        var path = (db && db.isSystem) ? "#databases/settings/apiKeys" : "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
+        return path;
     }
 
     static forLogs(db: database): string {
@@ -143,7 +146,7 @@ class appUrl {
     }
 
     static forPeriodicBackup(db: database): string {
-        return "#databases/settings/periodicBackup?" + appUrl.getEncodedDbPart(db);
+        return "#databases/settings/periodicBackups?" + appUrl.getEncodedDbPart(db);
     }
 
     static forReplications(db: database): string {
@@ -337,11 +340,11 @@ class appUrl {
     */
     static getResource(): resource {
         var appFilesystem = appUrl.getFilesystem()
-        if (appFilesystem != appUrl.getDefaultFilesystem()) {
+        if (!appFilesystem.isDefault) {
             return appFilesystem;
         }
         else {
-            return appUrl.getDefaultFilesystem();
+            return appUrl.getDatabase();
         }
     }
 

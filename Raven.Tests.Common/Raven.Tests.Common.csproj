@@ -9,10 +9,11 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Raven.Tests.Common</RootNamespace>
     <AssemblyName>Raven.Tests.Common</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -85,6 +86,8 @@
     <Compile Include="Analyzers\NGramTokenFilter.cs" />
     <Compile Include="Analyzers\NGramAnalyzer.cs" />
     <Compile Include="AssertAsync.cs" />
+    <Compile Include="Dto\Address.cs" />
+    <Compile Include="Dto\Person.cs" />
     <Compile Include="Util\CommonInitializationUtil.cs" />
     <Compile Include="Attributes\CriticalCulturesAttribute.cs" />
     <Compile Include="Dto\Faceted\Currency.cs" />
@@ -107,9 +110,7 @@
     <Compile Include="Attributes\InlineValueAttribute.cs" />
     <Compile Include="NoDisposalNeeded.cs" />
     <Compile Include="RavenTest.cs" />
-    <Compile Include="RavenTestBase.cs" />
     <Compile Include="ReplicationBase.cs" />
-    <Compile Include="Util\SettingsHelper.cs" />
     <Compile Include="Util\TemporaryCulture.cs" />
     <Compile Include="Attributes\TimeBombedFactAttribute.cs" />
     <Compile Include="TransactionalStorageTestBase.cs" />
@@ -127,10 +128,6 @@
       <Project>{41ac479e-1eb2-4d23-aaf2-e4c8df1bc2ba}</Project>
       <Name>Raven.Abstractions</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Client.Embedded\Raven.Client.Embedded.csproj">
-      <Project>{0f5287ad-37b3-4375-ba3e-3ced64b1fc5b}</Project>
-      <Name>Raven.Client.Embedded</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
       <Project>{4e087ecb-e7ca-4891-ac3c-3c76702715b6}</Project>
       <Name>Raven.Client.Lightweight</Name>
@@ -138,6 +135,10 @@
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823cd-25e1-41ac-92d1-d6df4d53fc85}</Project>
       <Name>Raven.Database</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
+      <Project>{1B88473F-743B-4F6B-8E5E-97BB816E6C68}</Project>
+      <Name>Raven.Tests.Helpers</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
       <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>

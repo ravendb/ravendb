@@ -10,6 +10,8 @@ import createDatabase = require("viewmodels/createDatabase");
 import createDatabaseCommand = require("commands/createDatabaseCommand");
 import createEncryption = require("viewmodels/createEncryption");
 import createEncryptionConfirmation = require("viewmodels/createEncryptionConfirmation");
+import changeSubscription = require('models/changeSubscription');
+import shell = require('viewmodels/shell');
 
 class databases extends viewModelBase {
 
@@ -19,6 +21,7 @@ class databases extends viewModelBase {
     systemDb: database;
     initializedStats: boolean;
     docsForSystemUrl: string;
+    databasesChangeSubscription: changeSubscription;
 
     constructor() {
         super();
@@ -35,7 +38,26 @@ class databases extends viewModelBase {
 
     attached() {
         ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
+        this.databasesChangeSubscription = shell.globalChangesApi.watchDocPrefix((e: documentChangeNotificationDto) => {
+            if (!!e.Id && e.Id.indexOf("Raven/Databases") == 0 &&
+                (e.Type == documentChangeType.Put || e.Type == documentChangeType.Delete)) {
+                if (e.Type == documentChangeType.Delete) {
+                    this.onDatabaseDeleted(new database(e.Id));
+                }
+
+                this.modelPolling();
+            }
+        }, "Raven/Databases");
     }
+
+
+
+    deactivate() {
+        super.deactivate();
+        this.databasesChangeSubscription.off();
+
+    }
+
 
     modelPolling() {
         new getDatabasesCommand()
@@ -133,7 +155,7 @@ class databases extends viewModelBase {
         }
 
         deferred.done(() => {
-            //this.createDB(databaseName, bundles, advancedSettings, securedSettings)
+            //var self = this; // Note: no reason to use self. If you want to use 'this' in a callback, put the callback in a lambda, e.g. .done(() => this.Foobar())
             new createDatabaseCommand(databaseName, settings, securedSettings)
                 .execute()
                 .done(() => {
@@ -144,19 +166,6 @@ class databases extends viewModelBase {
                     }
                 });
         });
-    }
-
-    private createDB(databaseName: string, bundles: string[], securedSettings: {}) {
-        //var self = this; // Note: no reason to use self. If you want to use 'this' in a callback, put the callback in a lambda, e.g. .done(() => this.Foobar())
-        return new createDatabaseCommand(databaseName, bundles, securedSettings)
-            .execute()
-            .fail(response=> {
-                //self.creationTask.reject(response);
-            })
-            .done(result=> {
-                //self.creationTask.resolve(databaseName);
-                //dialog.close(self);
-            });
     }
 
     private isEmptyStringOrWhitespace(str: string) {
@@ -204,6 +213,12 @@ class databases extends viewModelBase {
             var isMatch = !filter || (d.name.toLowerCase().indexOf(filterLower) >= 0);
             d.isVisible(isMatch);
         });
+
+        var selectedDatabase = this.selectedDatabase();
+        if (selectedDatabase && !selectedDatabase.isVisible()) {
+            selectedDatabase.isSelected(false);
+            this.selectedDatabase(null);
+        }
     }
 
     deleteSelectedDatabase() {
@@ -219,7 +234,10 @@ class databases extends viewModelBase {
 
     onDatabaseDeleted(db: database) {
         this.databases.remove(db);
-        if (this.selectedDatabase() === db) {
+        this.databases.valueHasMutated();
+        if (this.databases.length === 0)
+            this.selectDatabase(this.systemDb);
+        else if (this.databases.contains(this.selectedDatabase()) === false) {
             this.selectDatabase(this.databases().first());
         }
     }

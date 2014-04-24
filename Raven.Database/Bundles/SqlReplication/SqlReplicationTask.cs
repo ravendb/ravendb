@@ -44,7 +44,10 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		private List<SqlReplicationConfig> replicationConfigs;
 		private readonly ConcurrentDictionary<string, SqlReplicationStatistics> statistics = new ConcurrentDictionary<string, SqlReplicationStatistics>(StringComparer.InvariantCultureIgnoreCase);
-
+		public ConcurrentDictionary<string, SqlReplicationStatistics> Statistics
+		{
+			get { return statistics; }
+		}
 		private PrefetchingBehavior prefetchingBehavior;
 
 		private Etag lastLatestEtag;
@@ -385,6 +388,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					writer.DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled, identifiers);
 				}
 				writer.Commit();
+				log.Debug("Replicated deletes of {0} for config {1}", string.Join(", ", identifiers), cfg.Name);
 			}
 
 			return true;
@@ -422,9 +426,15 @@ namespace Raven.Database.Bundles.SqlReplication
 				using (var writer = new RelationalDatabaseWriter(Database, cfg, replicationStats))
 				{
 					if (writer.Execute(scriptResult))
+					{
+						log.Debug("Replicated changes of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
 						replicationStats.CompleteSuccess(countOfItems);
+					}
 					else
+					{
+						log.Debug("Replicated changes (with some errors) of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
 						replicationStats.Success(countOfItems);
+					}
 				}
 				return true;
 			}

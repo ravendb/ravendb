@@ -17,6 +17,8 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 import viewModelBase = require("viewmodels/viewModelBase");
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
+import verifyDocumentsIDsCommand = require("commands/verifyDocumentsIDsCommand");
+import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class editDocument extends viewModelBase {
 
@@ -24,6 +26,8 @@ class editDocument extends viewModelBase {
     metadata: KnockoutComputed<documentMetadata>;
     documentText = ko.observable('').extend({ required: true });
     metadataText = ko.observable('').extend({ required: true });
+    documentTextSubscription;
+    metadataTextSubscription;
     isEditingMetadata = ko.observable(false);
     isBusy = ko.observable(false);
     metaPropsToRestoreOnSave = [];
@@ -37,12 +41,16 @@ class editDocument extends viewModelBase {
     relatedDocumentHrefs=ko.observableArray<{id:string;href:string}>();
     docEditroHasFocus = ko.observable(true);
     documentMatchRegexp = /\w+\/\w+/ig;
+    lodaedDocumentName = ko.observable('');
+    isSaveEnabled: KnockoutComputed<Boolean>;
 
     static editDocSelector = "#editDocumentContainer";
-    static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string>}>();
+    static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
 
     constructor() {
         super();
+        aceEditorBindingHandler.install();
+
         this.metadata = ko.computed(() => this.document() ? this.document().__metadata : null);
 
         this.document.subscribe(doc => {
@@ -57,8 +65,8 @@ class editDocument extends viewModelBase {
         this.editedDocId.subscribe((docId: string)=> ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), docId)));
 
         // When we programmatically change the document text or meta text, push it into the editor.
-        this.metadataText.subscribe(() => this.updateDocEditorText());
-        this.documentText.subscribe(() => this.updateDocEditorText());
+        this.metadataTextSubscription = this.metadataText.subscribe(() => this.updateDocEditorText());
+        this.documentTextSubscription = this.documentText.subscribe(() => this.updateDocEditorText());
         this.isEditingMetadata.subscribe(() => this.updateDocEditorText());
     }
 
@@ -66,14 +74,37 @@ class editDocument extends viewModelBase {
     canActivate(args: any) {
         super.canActivate(args);
         if (args && args.id) {
-
             var canActivateResult = $.Deferred();
-            new getDocumentWithMetadataCommand(args.id, this.activeDatabase())
+            new getDocumentWithMetadataCommand(args.id, appUrl.getDatabase())
                 .execute()
                 .done((document) => {
                     this.document(document);
                     canActivateResult.resolve({ can: true });
-                    this.relatedDocumentHrefs(this.findRelatedDocuments(document));
+
+                    var relatedDocumentsCandidates:string[] = this.findRelatedDocumentsCandidates(document);
+
+                    var docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.activeDatabase(), true, true);
+                    var response = docIDsVerifyCommand.execute();
+
+                    if (response.then) {
+                        response.done(verifiedIDs => {
+                            this.relatedDocumentHrefs(verifiedIDs.map(verified => {
+                                return {
+                                    id: verified.toString(),
+                                    href: appUrl.forEditDoc(verified.toString(), null, null, this.activeDatabase())
+                                };
+                            }));
+                        });
+                    } else {
+
+                        this.relatedDocumentHrefs(response.map(verified => {
+                            return {
+                                id: verified.toString(),
+                                href: appUrl.forEditDoc(verified.toString(), null, null, this.activeDatabase())
+                            };
+                        }));                        
+                    }
+                    
                 })
                 .fail(() => {
                     ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + args.id + " document", null));
@@ -88,6 +119,13 @@ class editDocument extends viewModelBase {
 
     activate(navigationArgs) {
         super.activate(navigationArgs);
+
+        this.lodaedDocumentName(this.userSpecifiedId());
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
+        var self = this;
+        this.isSaveEnabled = ko.computed(()=> {
+            return viewModelBase.dirtyFlag().isDirty() && !!self.userSpecifiedId();
+        });
 
         // Find the database and collection we're supposed to load.
         // Used for paging through items.
@@ -138,23 +176,13 @@ class editDocument extends viewModelBase {
         this.focusOnEditor();
     }
 
-    // Called back after the entire composition has finished (parents and children included)
-    compositionComplete() {
-        //this.userSpecifiedId(''); // Don't clear this out: it will remove the ID of the document we're editing.
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
-    }
-
-    saveInObservable() {
-        this.storeDocEditorTextIntoObservable();
-    }
-
     initializeDocEditor() {
         // Startup the Ace editor with JSON syntax highlighting.
         this.docEditor = ace.edit("docEditor");
         this.docEditor.setTheme("ace/theme/github");
         this.docEditor.setFontSize("16px");
         this.docEditor.getSession().setMode("ace/mode/json");
-        $("#docEditor").on('blur', ".ace_text-input", () => this.storeDocEditorTextIntoObservable());
+        $("#docEditor").on('keyup', ".ace_text-input", () => this.storeDocEditorTextIntoObservable());
         this.updateDocEditorText();
     }
 
@@ -193,27 +221,38 @@ class editDocument extends viewModelBase {
     }
 
     saveDocument() {
-        var updatedDto = JSON.parse(this.documentText());
+        //the name of the document was changed and we have to save it as a new one
         var meta = JSON.parse(this.metadataText());
+        var currentDocumentId = this.userSpecifiedId();
+        if (!!this.lodaedDocumentName() && this.lodaedDocumentName() != currentDocumentId) {
+            this.isCreatingNewDocument(true);
+        }
+
+        var updatedDto = JSON.parse(this.documentText());
         updatedDto['@metadata'] = meta;
 
         // Fix up the metadata: if we're a new doc, attach the expected reserved properties like ID, ETag, and RavenEntityName.
         // AFAICT, Raven requires these reserved meta properties in order for the doc to be seen as a member of a collection.
         if (this.isCreatingNewDocument()) {
-            this.attachReservedMetaProperties(this.userSpecifiedId(), meta);
+            this.attachReservedMetaProperties(currentDocumentId, meta);
         } else {
             // If we're editing a document, we hide some reserved properties from the user.
             // Restore these before we save.
-            this.metaPropsToRestoreOnSave.forEach(p => meta[p.name] = p.value);
+            this.metaPropsToRestoreOnSave.forEach(p => {
+                if (p.name !== "Origin"){
+                    meta[p.name] = p.value;
+                }
+            });
         }
 
         var newDoc = new document(updatedDto);
-        var saveCommand = new saveDocumentCommand(this.userSpecifiedId(), newDoc, appUrl.getDatabase());
+        var saveCommand = new saveDocumentCommand(currentDocumentId, newDoc, appUrl.getDatabase());
         var saveTask = saveCommand.execute();
         saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
             // Resync Changes
             viewModelBase.dirtyFlag().reset();
 
+            this.lodaedDocumentName(currentDocumentId);
             this.isCreatingNewDocument(false);
             this.loadDocument(idAndEtag.Key);
             this.updateUrl(idAndEtag.Key);
@@ -221,8 +260,8 @@ class editDocument extends viewModelBase {
     }
 
     attachReservedMetaProperties(id: string, target: documentMetadataDto) {
-        target['@etag'] = '00000000-0000-0000-0000-000000000000';
-        target['Raven-Entity-Name'] = document.getEntityNameFromId(id);
+        target['@etag'] = '';
+        target['Raven-Entity-Name'] = !target['Raven-Entity-Name'] ? document.getEntityNameFromId(id) : target['Raven-Entity-Name'];
         target['@id'] = id;
     }
 
@@ -239,22 +278,31 @@ class editDocument extends viewModelBase {
         this.isEditingMetadata(false);
     }
 
-    findRelatedDocuments(doc: documentBase): { id: string; href: string }[] {
-        var results: { id: string; href: string }[] = [];
-        var documentFields = doc.getDocumentPropertyNames();
+    findRelatedDocumentsCandidates(doc: documentBase): string[] {
+        var results: string[] = [];
+        var initialDocumentFields = doc.getDocumentPropertyNames();
+        var documentNodesFlattenedList = [];
+
+        // get initial nodes list to work with
+        initialDocumentFields.forEach(curField => {
+            documentNodesFlattenedList.push(doc[curField]);
+        });
 
         
-
-        for (var key in documentFields) {
-            if (typeof doc[documentFields[key]] === "string" && this.documentMatchRegexp.test(doc[documentFields[key]])) {
-                results.push({
-                    id: doc[documentFields[key]].toString(),
-                    href: appUrl.forEditDoc(doc[documentFields[key]].toString(), null, null, this.activeDatabase())}
-                );
+        for (var documentNodesCursor = 0; documentNodesCursor < documentNodesFlattenedList.length; documentNodesCursor++) {
+            var curField = documentNodesFlattenedList[documentNodesCursor];
+            if (typeof curField === "string" && /\w+\/\w+/ig.test(curField)) {
+                
+                if (!results.first(x=>x === curField.toString())){
+                    results.push(curField.toString());
+                }
             }
-            
+            else if (typeof curField == "object" && !!curField) {
+                    for (var curInnerField in curField) {
+                        documentNodesFlattenedList.push(curField[curInnerField]);
+                    }
+            }
         }
-
         return results;
     }
 
@@ -299,10 +347,11 @@ class editDocument extends viewModelBase {
     }
 
     formatDocument() {
-        var docText = this.documentText();
-        var tempDoc = JSON.parse(docText);
+        var docEditorText = this.docEditor.getSession().getValue();
+        var observableToUpdate = this.isEditingMetadata() ? this.metadataText : this.documentText;
+        var tempDoc = JSON.parse(docEditorText);
         var formatted = this.stringify(tempDoc);
-        this.documentText(formatted);
+        observableToUpdate(formatted);
     }
 
     nextDocumentOrFirst() {
@@ -313,6 +362,8 @@ class editDocument extends viewModelBase {
                 nextIndex = 0;
             }
             this.pageToItem(nextIndex);
+        } else {
+            this.navigateToDocuments();
         }
     }
 
@@ -378,7 +429,15 @@ class editDocument extends viewModelBase {
         if (this.docEditor) {
             var docEditorText = this.docEditor.getSession().getValue();
             var observableToUpdate = this.isEditingMetadata() ? this.metadataText : this.documentText;
+            var subscription = this.isEditingMetadata() ? this.metadataTextSubscription : this.documentTextSubscription;
+
+            subscription.dispose();
             observableToUpdate(docEditorText);
+            if (this.isEditingMetadata()) {
+                this.metadataTextSubscription = this.metadataText.subscribe(() => this.updateDocEditorText());
+            } else {
+                this.documentTextSubscription = this.documentText.subscribe(() => this.updateDocEditorText());
+            }
         }
     }
 
@@ -388,6 +447,9 @@ class editDocument extends viewModelBase {
         if (recentDocumentsForCurDb) {
             var value = recentDocumentsForCurDb
                 .recentDocuments()
+                .filter((x:string) => {
+                  return x !== this.userSpecifiedId();
+                })
                 .slice(0, 5)
                 .map((docId: string) => {
                     return {

@@ -309,8 +309,9 @@ namespace Raven.Client.Document
         {
             get
             {
+               
                 return deletedEntities.Count > 0 ||
-                        entitiesAndMetadata.Any(pair => EntityChanged(pair.Key, pair.Value));
+                        entitiesAndMetadata.Any(pair => EntityChanged(pair.Key, pair.Value,  null));
             }
         }
 
@@ -328,7 +329,7 @@ namespace Raven.Client.Document
             DocumentMetadata value;
             if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
                 return false;
-            return EntityChanged(entity, value);
+            return EntityChanged(entity, value, null);
         }
 
         public void IncrementRequestCount()
@@ -618,7 +619,8 @@ more responsive application.
             if (entitiesByKey.TryGetValue(id, out entity))
             {
                 // find if entity was changed on session or just inserted
-                if (EntityChanged(entity, entitiesAndMetadata[entity]))
+              
+                if (EntityChanged(entity, entitiesAndMetadata[entity],  null))
                 {
                     throw new InvalidOperationException("Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
                 }
@@ -928,12 +930,23 @@ more responsive application.
             if (documentStore.EnlistInDistributedTransactions)
                 TryEnlistInAmbientTransaction();
 #endif
-            PrepareForEntitiesDeletion(result);
+            PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
 
             return result;
         }
 
+        public IDictionary<string, DocumentsChanges[]> WhatChanged()
+        {
+            using (EntityToJson.EntitiesToJsonCachingScope())
+            {
+                var changes = new Dictionary<string, DocumentsChanges[]>();
+                PrepareForEntitiesDeletion(null, changes);
+                GetAllEntitiesChanges(changes);
+                return changes;
+            }
+        }
+       
         private void PrepareForEntitiesPuts(SaveChangesData result)
         {
             foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)).ToArray())
@@ -950,7 +963,15 @@ more responsive application.
             }
         }
 
-        private void PrepareForEntitiesDeletion(SaveChangesData result)
+        private void GetAllEntitiesChanges(IDictionary<string, DocumentsChanges[]> changes)
+        {
+            foreach (var pair in entitiesAndMetadata)
+            {
+                EntityChanged(pair.Key, pair.Value, changes);
+            }
+        }
+
+        private void PrepareForEntitiesDeletion(SaveChangesData result, IDictionary<string, DocumentsChanges[]> changes)
         {
             DocumentMetadata value = null;
 
@@ -963,32 +984,52 @@ more responsive application.
 
             foreach (var key in keysToDelete)
             {
-                Etag etag = null;
-                object existingEntity;
-                DocumentMetadata metadata = null;
-                if (entitiesByKey.TryGetValue(key, out existingEntity))
+                if (changes != null)
                 {
-                    if (entitiesAndMetadata.TryGetValue(existingEntity, out metadata))
-                        etag = metadata.ETag;
-                    entitiesAndMetadata.Remove(existingEntity);
-                    entitiesByKey.Remove(key);
+                    var docChanges = new List<DocumentsChanges>(){};
+                    var change = new DocumentsChanges()
+                    {
+                        FieldNewValue = string.Empty,
+                        FieldOldValue = string.Empty,
+                        Change = DocumentsChanges.ChangeType.DocumentDeleted
+                    };
+                    
+                    docChanges.Add(change);
+                    changes[key] = docChanges.ToArray();
                 }
-
-                etag = UseOptimisticConcurrency ? etag : null;
-                result.Entities.Add(existingEntity);
-
-                foreach (var deleteListener in theListeners.DeleteListeners)
+                else
                 {
-                    deleteListener.BeforeDelete(key, existingEntity, metadata != null ? metadata.Metadata : null);
+                    
+               
+                    Etag etag = null;
+                    object existingEntity;
+                    DocumentMetadata metadata = null;
+                    if (entitiesByKey.TryGetValue(key, out existingEntity))
+                    {
+                        if (entitiesAndMetadata.TryGetValue(existingEntity, out metadata))
+                            etag = metadata.ETag;
+                        entitiesAndMetadata.Remove(existingEntity);
+                        entitiesByKey.Remove(key);
+                    }
+
+                    etag = UseOptimisticConcurrency ? etag : null;
+                    result.Entities.Add(existingEntity);
+
+                    foreach (var deleteListener in theListeners.DeleteListeners)
+                    {
+                        deleteListener.BeforeDelete(key, existingEntity, metadata != null ? metadata.Metadata : null);
+                    }
+
+                    result.Commands.Add(new DeleteCommandData
+                    {
+                        Etag = etag,
+                        Key = key,
+                    });
                 }
-
-                result.Commands.Add(new DeleteCommandData
-                {
-                    Etag = etag,
-                    Key = key,
-                });
-            }
-            deletedEntities.Clear();
+				
+             }
+            if (changes == null)
+                deletedEntities.Clear();
         }
 
 #if !NETFX_CORE
@@ -1044,7 +1085,8 @@ more responsive application.
         /// <param name="entity">The entity.</param>
         /// <param name="documentMetadata">The document metadata.</param>
         /// <returns></returns>
-        protected bool EntityChanged(object entity, DocumentMetadata documentMetadata)
+       // protected bool EntityChanged(object entity, DocumentMetadata documentMetadata, List< DocumentsChanges> changes)
+        protected bool EntityChanged(object entity, DocumentMetadata documentMetadata, IDictionary<string, DocumentsChanges[]> changes = null)
         {
             if (documentMetadata == null)
                 return true;
@@ -1062,9 +1104,27 @@ more responsive application.
                 return false;
 
             var newObj = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
-            return RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue) == false ||
-                RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata) == false;
-        }
+            if (changes != null)
+            {
+                var changedData = new List<DocumentsChanges>();
+                if ((RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData) == false) ||
+                    (RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData) == false))
+                {
+                    changes[documentMetadata.Key] = changedData.ToArray();
+                    return false;
+                }
+                else
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                return RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, null) == false ||
+                    RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, null) == false;
+ 
+            }
+          }
 
         /// <summary>
         /// Evicts the specified entity from the session.
@@ -1207,6 +1267,7 @@ more responsive application.
             /// </summary>
             /// <value>The entities.</value>
             public IList<object> Entities { get; set; }
+
         }
 
         protected void LogBatch(SaveChangesData data)
@@ -1354,12 +1415,9 @@ more responsive application.
             return instance;
         }
         
-        public void TrackIncludedDocumnet(JsonDocument include)
+        public void TrackIncludedDocument(JsonDocument include)
         {
             includedDocumentsByKey[include.Key] = include;
         }
-
-
-      
     }
 }

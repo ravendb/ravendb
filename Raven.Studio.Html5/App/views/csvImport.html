@@ -1,4 +1,9 @@
-﻿<div id="csvImportContainer" class="panel panel-default">
+﻿<div class="alert alert-danger">
+    <p>Note: not implemented yet</p>
+    <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2060">You can track progress here</a>
+</div>
+<div id="csvImportContainer" class="panel panel-default not-implemented-yet">
+
     <div class="panel-heading">
         <h3 class="panel-title">Csv Import</h3>
     </div>
@@ -10,20 +15,17 @@
             </div>
         </div>
         <div id="addfileContainer">
-            <form id="sendFileForm" action="/" enctype="multipart/form-data" >
+            <form id="sendFileForm" action="/" enctype="multipart/form-data">
                 <div class="fileinputs">
-                    <input id="uploadedCsv" type="file" class="file" />
                     <div class="fakefile">
                         <button class="btn btn-primary">
                             <span class="glyphicon glyphicon-floppy-save"></span>
                             <span>Csv Import</span>
                         </button>
                     </div>
-
-                    <input id="submit" type="submit" />
                 </div>
             </form>
         </div>
 
-</div>
+    </div>
 </div>

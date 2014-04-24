@@ -717,7 +717,7 @@ namespace Raven.SlowTests.Issues
             {
                 VetoTransfer = (totalRead, buffer) =>
                 {
-                    if (alreadyReset == false && totalRead > 30000)
+                    if (alreadyReset == false && totalRead > 25000)
                     {
                         alreadyReset = true;
                         return true;
@@ -753,23 +753,22 @@ namespace Raven.SlowTests.Issues
 
                 try
                 {
-                    exportResult = dumper.ExportData(new SmugglerExportOptions
+                    exportResult = await dumper.ExportData(new SmugglerExportOptions
                     {
                         ToFile = backupPath,
 						From = new RavenConnectionStringOptions
 						{
-							Url = "http://localhost:8070",
+                            Url = "http://localhost:8070",
 							DefaultDatabase = databaseName,
 						}
-                    }, options).Result;
+                    }, options);
                     Assert.False(true, "Previous op should throw.");
                 }
-                catch (AggregateException e)
+                catch (SmugglerExportException e)
                 {
-                    var inner = (SmugglerExportException)e.ExtractSingleInnerException();
                     exportResult = new ExportDataResult
                     {
-                        FilePath = inner.File
+                        FilePath = e.File
                     };
                 }
 

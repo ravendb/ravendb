@@ -72,7 +72,11 @@ namespace Voron.Impl.Journal
 			}
 			_segments[pages.Length].Buffer = null; // null terminating
 
-			WriteFileGather(_handle, _segments, (uint) pages.Length*4096, IntPtr.Zero, _nativeOverlapped);
+			var operationCompleted = WriteFileGather(_handle, _segments, (uint) pages.Length*4096, IntPtr.Zero, _nativeOverlapped);
+
+			if (operationCompleted) 
+				return;
+
 			switch (Marshal.GetLastWin32Error())
 			{
 				case ErrorSuccess:

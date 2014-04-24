@@ -292,7 +292,7 @@ namespace Raven.Database.Server.Controllers
 			SpatialUnits units;
 			var unitsSpecified = Enum.TryParse(GetQueryStringValue("spatialUnits"), out units);
 			double distanceErrorPct;
-			if (!double.TryParse(GetQueryStringValue("distErrPrc"), out distanceErrorPct))
+			if (!double.TryParse(GetQueryStringValue("distErrPrc"), NumberStyles.Any, CultureInfo.InvariantCulture, out distanceErrorPct))
 				distanceErrorPct = Constants.DefaultSpatialDistanceErrorPct;
 			SpatialRelation spatialRelation;
 			
@@ -508,7 +508,7 @@ namespace Raven.Database.Server.Controllers
             }
             catch (Exception e)
             {
-                var msg = "Could open database named: " + tenantId;
+                var msg = "Could not open database named: " + tenantId;
                 Logger.WarnException(msg, e);
                 throw new HttpException(503, msg, e);
             }
@@ -542,7 +542,7 @@ namespace Raven.Database.Server.Controllers
                     {
                         exceptionMessage = aggregateException.ExtractSingleInnerException().Message;
                     }
-                    var msg = "Could open database named: " + tenantId + Environment.NewLine + exceptionMessage;
+                    var msg = "Could not open database named: " + tenantId + Environment.NewLine + exceptionMessage;
 
                     Logger.WarnException(msg, e);
                     throw new HttpException(503, msg, e);

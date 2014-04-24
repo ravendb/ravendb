@@ -22,4 +22,10 @@ declare module 'ace/ace' {
      * @param mode {:modeParam}
     **/
     export function createEditSession(text: string, mode: AceAjax.TextMode): AceAjax.IEditSession;
+
+    /**
+    * Bind ace editor to an extention or addin
+    * @param moduleName the name of the extention module to be added to ace editor
+    **/
+    export function require(moduleName: string): any;
 }

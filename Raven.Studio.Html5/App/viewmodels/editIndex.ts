@@ -28,6 +28,8 @@ class editIndex extends viewModelBase {
     termsUrl = ko.observable<string>();
     statsUrl = ko.observable<string>();
     queryUrl = ko.observable<string>();
+    editMaxIndexOutputsPerDocument = ko.observable<boolean>(false);
+    indexErrorsList = ko.observableArray<string>();
 
     constructor() {
         super();
@@ -39,6 +41,11 @@ class editIndex extends viewModelBase {
         this.hasExistingReduce = ko.computed(() => this.editedIndex() && this.editedIndex().reduce());
         this.hasExistingTransform = ko.computed(() => this.editedIndex() && this.editedIndex().transformResults());
         this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
+    }
+
+
+    indexCompleter(editor: any, session: any, pos: number, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {      
+        callback(null, [{ name: "indexa", value: "indexa", score: 10, meta: "trash" }, { name: "indexb", value: "indexb", score: 10, meta: "smashindex" }, { name: "indexc", value: "indexc", score: 10, meta: "indextrash" }]);
     }
 
     canActivate(indexToEditName: string) {
@@ -68,16 +75,16 @@ class editIndex extends viewModelBase {
             this.priority(indexPriority.normal);
             this.editedIndex(this.createNewIndexDefinition());
         }
+
+        var indexDef = this.editedIndex();
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.fields, indexDef.transformResults, indexDef.spatialFields, indexDef.maxIndexOutputsPerDocument]);
+        //need to add more fields like: this.editedIndex().luceneFields()[0].name, this.editedIndex().luceneFields()[0].indexing()
     }
 
     attached() {
         this.addMapHelpPopover();
         this.addReduceHelpPopover();
         this.addTransformHelpPopover();
-
-        var indexDef = this.editedIndex();
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.fields, indexDef.transformResults, indexDef.spatialFields]);
-        //need to add more fields like: this.editedIndex().luceneFields()[0].name, this.editedIndex().luceneFields()[0].indexing()
     }
 
     // Called back after the entire composition has finished (parents and children included)
@@ -126,7 +133,10 @@ class editIndex extends viewModelBase {
     fetchIndexToEdit(indexName: string) : JQueryPromise<any>{
         return new getIndexDefinitionCommand(indexName, this.activeDatabase())
             .execute()
-            .done((results: indexDefinitionContainerDto) => this.editedIndex(new indexDefinition(results.Index)));
+            .done((results: indexDefinitionContainerDto) => {
+                this.editedIndex(new indexDefinition(results.Index));
+                this.editMaxIndexOutputsPerDocument(results.Index.MaxIndexOutputsPerDocument ? results.Index.MaxIndexOutputsPerDocument > 0 ? true : false : false);
+        });
     }
 
     fetchIndexPriority(indexName: string) {

@@ -8,7 +8,7 @@ import document = require("models/document");
 import collection = require("models/collection");
 import database = require("models/database");
 import pagedResultSet = require("common/pagedResultSet");
-import deleteDocuments = require("viewmodels/deleteDocuments");
+import deleteItems = require("viewmodels/deleteItems");
 import copyDocuments = require("viewmodels/copyDocuments");
 import row = require("widgets/virtualTable/row");
 import column = require("widgets/virtualTable/column");
@@ -35,8 +35,6 @@ class ctor {
     firstVisibleRow: row = null;
     itemsSourceSubscription: KnockoutSubscription = null;
     isIndexMapReduce: KnockoutObservable<boolean>;
-    isCopyAllowed: KnockoutObservable<boolean>;
-
 
     settings: {
         itemsSource: KnockoutObservable<pagedList>;
@@ -50,7 +48,7 @@ class ctor {
         maxHeight: string;
         customColumnParams: { [column: string]: customColumnParams };
         isIndexMapReduce: KnockoutObservable<boolean>;
-        isCopyAllowed: KnockoutObservable<boolean>;
+        isCopyAllowed: boolean;
         customColumns: KnockoutObservable<customColumns>;
     }
 
@@ -65,7 +63,7 @@ class ctor {
             maxHeight: 'none',
             customColumnParams: {},
             isIndexMapReduce: ko.observable<boolean>(true),
-            isCopyAllowed: ko.observable<boolean>(true),
+            isCopyAllowed: true,
             customColumns: ko.observable(customColumns.empty())
         };
         this.settings = $.extend(defaults, settings);
@@ -80,14 +78,14 @@ class ctor {
         this.items = this.settings.itemsSource();
         this.focusableGridSelector = this.settings.gridSelector + " .ko-grid";
         this.virtualHeight = ko.computed(() => this.rowHeight * this.virtualRowCount());
-        this.isCopyAllowed = this.settings.isCopyAllowed;
 
         this.refreshIdAndCheckboxColumn();
 
         this.itemsSourceSubscription = this.settings.itemsSource.subscribe(list => {
             this.recycleRows().forEach(r => {
-                r.resetCells();this.recycleRows.valueHasMutated();
- +                    this.columns.valueHasMutated();
+                r.resetCells();
+                this.recycleRows.valueHasMutated();
+                this.columns.valueHasMutated();
                 r.isInUse(false);
             });
             this.items = list;
@@ -172,7 +170,7 @@ class ctor {
     }
 
     setupKeyboardShortcuts() {
-        this.setupKeyboardShortcut("DELETE", () => this.deleteSelectedDocs());
+        this.setupKeyboardShortcut("DELETE", () => this.deleteSelectedItems());
         this.setupKeyboardShortcut("Ctrl+C,D", () => this.copySelectedDocs());
         this.setupKeyboardShortcut("Ctrl+C,I", () => this.copySelectedDocIds());
     }
@@ -222,7 +220,7 @@ class ctor {
 
     loadRowData() {
         if (this.items && this.firstVisibleRow) {
-
+            var that = this;
             // The scrolling has paused for a minute. See if we have all the data needed.
             var firstVisibleIndex = this.firstVisibleRow.rowIndex();
             var fetchTask = this.items.fetch(firstVisibleIndex, this.recycleRows().length);
@@ -234,8 +232,10 @@ class ctor {
                     this.ensureColumnsForRows(resultSet.items);
                     this.recycleRows.valueHasMutated();
                     this.columns.valueHasMutated();
-                }
 
+                    var rows = this.recycleRows();
+                    var columns = this.columns();
+                }
                 this.recycleRows.valueHasMutated();
             });
         }
@@ -272,14 +272,14 @@ class ctor {
         return collection.getCollectionCssClass(this.getEntityName(doc));
     }
 
-    getColumnWidth(binding: string, defaultColumnWidth: number = 200): number {
-        var customConfig = this.settings.customColumns().findConfigFor(binding);
-        if (customConfig) {
+    getColumnWidth(binding: string, defaultColumnWidth: number = 100): number {
+        var customColumns = this.settings.customColumns();
+        var customConfig = customColumns.findConfigFor(binding);
+        if (customConfig && customColumns.customMode() === true) {
             return customConfig.width();
         }
 
-        var columnWidth = defaultColumnWidth;
-        if (binding === "Id")  {
+        if (binding === "Id" && defaultColumnWidth > ctor.idColumnWidth) {
             return ctor.idColumnWidth;
         }
         return defaultColumnWidth;
@@ -299,14 +299,8 @@ class ctor {
         // This is called when items finish loading and are ready for display.
         // Keep allocations to a minimum.
 
-        // Enforce a max number of columns. Having many columns is unweildy to the user
-        // and greatly slows down scroll speed.
-        var maxColumns = 10;
-        if (this.columns().length >= maxColumns) {
-            return;
-        }
-
         var columnsNeeded = {};
+        
         if (this.settings.customColumns().hasOverrides()) {
             var colParams = this.settings.customColumns().columns();
             for (var i = 0; i < colParams.length; i++) {
@@ -332,30 +326,68 @@ class ctor {
         var idColumn = this.columns.first(x=> x.binding == "Id");
         var idColumnExists = idColumn ? 1 : 0;
 
-        var calculateWidth = ctor.idColumnWidth;
-        var colCount = Object.keys(columnsNeeded).length;
-        if ((colCount + idColumnExists) * 200 > this.grid.width()) {
-            if (idColumn) {
-                idColumn.width(calculateWidth);
+        var unneededColumns = new Array<string>();
+        ko.utils.arrayForEach(this.columns(), col => {
+            if (col.binding !== "Id" && col.binding !== "__IsChecked" &&
+                rows.every(row => !row.getDocumentPropertyNames().contains(col.binding)))
+                unneededColumns.push(col.binding);
+        });
+
+        this.columns.remove(c => unneededColumns.contains(c.binding));
+        this.columns.valueHasMutated();
+        this.settings.customColumns().columns.remove(c => unneededColumns.contains(c.binding()));
+
+        var columnsCurrentTotalWidth = 0;
+        for (var i = 2; i < this.columns().length; i++) {
+            columnsCurrentTotalWidth += this.columns()[i].width();
+        }
+
+        var availiableWidth = this.grid.width() - 200 * idColumnExists - columnsCurrentTotalWidth;
+        var freeWidth = availiableWidth;
+        var fontSize = parseInt(this.grid.css("font-size"));
+        var columnCount = 0;
+        for (var binding in columnsNeeded) {
+            var curColWidth = (binding.length + 2) * fontSize;
+            if (freeWidth - curColWidth < 0) {
+                break;
             }
-        } else {
-            calculateWidth = this.grid.width() / (colCount + idColumnExists);
+            freeWidth -= curColWidth;
+            columnCount++;
         }
+        var freeWidthPerColumn = (freeWidth / (columnCount + 1));
 
-        if (idColumn) {
-            idColumn.width(calculateWidth);
-        }
-
-        for (var binding  in columnsNeeded) {
-            var columnWidth = this.getColumnWidth(binding, calculateWidth);
+        var firstRow = this.recycleRows().length > 0 ? this.recycleRows()[0] : null;
+        for (var binding in columnsNeeded) {
+            var curColWidth = (binding.length + 2) * fontSize + freeWidthPerColumn;
+            var columnWidth = this.getColumnWidth(binding, curColWidth);
+            availiableWidth -= columnWidth;
+            if (availiableWidth <= 0) {
+                break;
+            }
             var columnName = this.getColumnName(binding);
 
             // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
             var newColumn = new column(binding, columnWidth, columnName);
-            if (binding === "Name") {
+            if ((binding === "Name") && (!this.settings.customColumns().customMode())){
                 this.columns.splice(2, 0, newColumn);
-            } else if (this.columns().length < 10) {
+            } else {
                 this.columns.push(newColumn);
+            }
+
+            var curColumnConfig = this.settings.customColumns().findConfigFor(binding);
+            if (!curColumnConfig && !!firstRow) {
+                var curColumnTemplate: string = firstRow.getCellTemplate(binding);
+                var newCustomColumn = new customColumnParams({
+                    Binding: binding,
+                    Header: binding,
+                    Template: curColumnTemplate,
+                    DefaultWidth: availiableWidth > 0 ? Math.floor(columnWidth) : 0
+                });
+                if ((binding === "Name") && (!this.settings.customColumns().customMode())) {
+                    this.settings.customColumns().columns.splice(0, 0, newCustomColumn);
+                } else {
+                    this.settings.customColumns().columns.push(newCustomColumn);
+                }
             }
         }
     }
@@ -429,7 +461,7 @@ class ctor {
             if (customConfig) {
                 return customConfig.template();
             }
-        } 
+        }
         return undefined;
     }
 
@@ -504,15 +536,16 @@ class ctor {
         return this.items.getCachedItemsAt(maxSelectedIndices);
     }
 
-    deleteSelectedDocs() {
+    deleteSelectedItems() {
         var documents = this.getSelectedItems();
-        var deleteDocsVm = new deleteDocuments(documents, this.focusableGridSelector);
+        var deleteDocsVm = new deleteItems(documents, this.focusableGridSelector);
+        var self = this;
         deleteDocsVm.deletionTask.done(() => {
-            var deletedDocIndices = documents.map(d => this.items.indexOf(d));
-            deletedDocIndices.forEach(i => this.settings.selectedIndices.remove(i));
-            this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
-            this.items.invalidateCache(); // Causes the cache of items to be discarded.
-            this.onGridScrolled(); // Forces a re-fetch of the rows in view.
+            var deletedDocIndices = documents.map(d => self.items.indexOf(d));
+            deletedDocIndices.forEach(i => self.settings.selectedIndices.remove(i));
+            self.recycleRows().forEach(r => r.isChecked(self.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
+            self.items.invalidateCache(); // Causes the cache of items to be discarded.
+            self.onGridScrolled(); // Forces a re-fetch of the rows in view.
         });
 
         app.showDialog(deleteDocsVm);
@@ -528,3 +561,4 @@ class ctor {
 }
 
 export = ctor;
+

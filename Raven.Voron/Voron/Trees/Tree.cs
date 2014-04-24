@@ -78,24 +78,52 @@ namespace Voron.Trees
 		    if (value.Length > int.MaxValue)
 		        throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 
-		    State.IsModified = true;
-
-		    var pos = DirectAdd(tx, key, (int) value.Length, version: version);
+			State.IsModified = true;
+			var pos = DirectAdd(tx, key, (int)value.Length, version: version);
 		    
-		    var temporaryPage = tx.Environment.TemporaryPage;
-		    var tempPageBuffer = temporaryPage.TempPageBuffer;
-		    var tempPagePointer = temporaryPage.TempPagePointer;
-            while (true)
-		    {
-		        var read = value.Read(tempPageBuffer, 0, AbstractPager.PageSize);
-		        if (read == 0)
-		            break;
-		        NativeMethods.memcpy(pos , tempPagePointer, read);
-                pos += read;
-		    }
+		    CopyStreamToPointer(tx, value, pos);
 		}
 
-	    public void MultiDelete(Transaction tx, Slice key, Slice value, ushort? version = null)
+
+		public void Add(Transaction tx, Slice key, byte[] value, ushort? version = null)
+		{
+			if (value == null) throw new ArgumentNullException("value");
+
+			State.IsModified = true;
+			var pos = DirectAdd(tx, key, (int)value.Length, version: version);
+
+			fixed (byte* src = value)
+			{
+				NativeMethods.memcpy(pos, src, value.Length);
+			}
+		}
+
+		public void Add(Transaction tx, Slice key, Slice value, ushort? version = null)
+		{
+			if (value == null) throw new ArgumentNullException("value");
+
+			State.IsModified = true;
+			var pos = DirectAdd(tx, key, value.Size, version: version);
+
+			value.CopyTo(pos);
+		}
+
+		private static void CopyStreamToPointer(Transaction tx, Stream value, byte* pos)
+		{
+			var temporaryPage = tx.Environment.TemporaryPage;
+			var tempPageBuffer = temporaryPage.TempPageBuffer;
+			var tempPagePointer = temporaryPage.TempPagePointer;
+			while (true)
+			{
+				var read = value.Read(tempPageBuffer, 0, AbstractPager.PageSize);
+				if (read == 0)
+					break;
+				NativeMethods.memcpy(pos, tempPagePointer, read);
+				pos += read;
+			}
+		}
+
+		public void MultiDelete(Transaction tx, Slice key, Slice value, ushort? version = null)
 	    {
 		    State.IsModified = true;
 			Lazy<Cursor> lazy;
@@ -117,6 +145,14 @@ namespace Voron.Trees
 
 			    if (tree.State.EntriesCount > 1)
 				    return;
+
+			    if (tree.State.EntriesCount == 0)
+			    {
+					tx.TryRemoveMultiValueTree(this, key);
+					tx.FreePage(tree.State.RootPageNumber);
+				    return;
+			    }
+
 			    // convert back to simple key/val
 			    var iterator = tree.Iterate(tx);
 			    if (!iterator.Seek(Slice.BeforeAllKeys))
@@ -124,6 +160,9 @@ namespace Voron.Trees
 					    "MultiDelete() failed : sub-tree is empty where it should not be, this is probably a Voron bug.");
 
 			    var dataToSave = iterator.CurrentKey;
+
+			    if (iterator.Current->DataSize != 0)
+				    return; // we can't move this to a key/value, it has a stream value
 
 			    var ptr = DirectAdd(tx, key, dataToSave.Size);
 			    dataToSave.CopyTo(ptr);
@@ -137,7 +176,7 @@ namespace Voron.Trees
 		    }
 	    }
 
-		public void MultiAdd(Transaction tx, Slice key, Slice value, ushort? version = null)
+		public void MultiAdd(Transaction tx, Slice key, Slice value, Stream stream = null, ushort? version = null)
 		{
 			if (value == null) throw new ArgumentNullException("value");
 			if (value.Size > tx.DataPager.MaxNodeSize)
@@ -147,11 +186,24 @@ namespace Voron.Trees
 				throw new ArgumentException("Cannot add empty value to child tree");
 
 			State.IsModified = true;
+
 			Lazy<Cursor> lazy;
 			var page = FindPageFor(tx, key, out lazy);
-
-			if (page == null || page.LastMatch != 0)
+			if ((page == null || page.LastMatch != 0)) 
 			{
+				if (stream != null)
+				{
+					// can only use this optimizastion if we don't have a stream to store, so have to 
+					// create a tree here anyway
+					var tree = Create(tx, _cmp, TreeFlags.MultiValue);
+					var pos = tree.DirectAdd(tx, value,  (int)stream.Length);
+					CopyStreamToPointer(tx, stream, pos);
+					tx.AddMultiValueTree(this, key, tree);
+
+					// we need to record that we switched to tree mode here, so the next call wouldn't also try to create the tree again
+					DirectAdd(tx, key, sizeof(TreeRootHeader), NodeFlags.MultiValuePageRef);
+					return;
+				}
 				var ptr = DirectAdd(tx, key, value.Size, version: version);
 				value.CopyTo(ptr);
 				return;
@@ -166,10 +218,13 @@ namespace Voron.Trees
 			if (existingValue.Compare(value, _cmp) == 0)
 				return; //nothing to do, the exact value is already there				
 
+
 			if (item->Flags == NodeFlags.MultiValuePageRef)
 			{
 				var tree = OpenOrCreateMultiValueTree(tx, key, item);
-				tree.DirectAdd(tx, value, 0);
+				var pos = tree.DirectAdd(tx, value, stream == null ? 0 : (int)stream.Length);
+				if(stream != null)
+					CopyStreamToPointer(tx, stream, pos);
 			}
 			else // need to turn to tree
 			{

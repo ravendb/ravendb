@@ -3,9 +3,13 @@ import createSampleDataCommand = require("commands/createSampleDataCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 class createSampleData extends viewModelBase{
+    isBusy = ko.observable(false);
 
     generateSampleData() {
-        var createSampleDataCmd = new createSampleDataCommand(this.activeDatabase()).execute();
+        this.isBusy(true);
+        new createSampleDataCommand(this.activeDatabase())
+            .execute()
+            .always(() => this.isBusy(false));
     }
 }
 

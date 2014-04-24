@@ -26,7 +26,6 @@ namespace Raven.Database.Server
         public static void ExtractEmbeddedAssemblies()
         {
             var assemblies = new HashSet<string> { 
-                typeof(SystemTime).Assembly.GetName().Name, 
                 typeof(Field).Assembly.GetName().Name 
             };
 

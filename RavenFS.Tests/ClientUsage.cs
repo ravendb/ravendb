@@ -567,18 +567,13 @@ namespace RavenFS.Tests
 	    }
 
 	    [Fact]
-	    public async Task Will_not_contain_stats_of_inactive_file_systems()
+	    public async Task Will_not_return_stats_of_inactive_file_systems()
 	    {
             var client = NewClient(); // will create a file system but it remain inactive until any request will go there
 
-            var stats = (await client.Admin.GetFileSystemsStats()).First();
+            var stats = (await client.Admin.GetFileSystemsStats()).FirstOrDefault();
 
-            Assert.NotNull(stats);
-            Assert.Equal(client.FileSystemName, stats.Name);
-
-            Assert.Null(stats.Metrics);
-            Assert.Null(stats.ActiveSyncs);
-            Assert.Null(stats.PendingSyncs);
+            Assert.Null(stats);
 	    }
 
 	    private static MemoryStream PrepareTextSourceStream()

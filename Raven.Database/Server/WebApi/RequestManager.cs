@@ -247,11 +247,6 @@ namespace Raven.Database.Server.WebApi
 			Interlocked.Increment(ref physicalRequestsCount);
 		}
 
-		public void DecrementRequestCount()
-		{
-			Interlocked.Decrement(ref physicalRequestsCount);
-		}
-
         private void FinalizeRequestProcessing(RavenBaseApiController controller, HttpResponseMessage response, Stopwatch sw)
 		{
 			LogHttpRequestStatsParams logHttpRequestStatsParam = null;
@@ -278,7 +273,7 @@ namespace Raven.Database.Server.WebApi
 		            GetHeaders(controller.InnerHeaders), 
 		            controller.InnerRequest.Method.Method,
 		            response != null ? (int) response.StatusCode : 500,
-		            controller.InnerRequest.RequestUri.PathAndQuery,
+		            controller.InnerRequest.RequestUri.ToString(),
 		            sb != null ? sb.ToString() : null
 		            );
 		    }
@@ -294,7 +289,7 @@ namespace Raven.Database.Server.WebApi
 
 		    controller.MarkRequestDuration(sw.ElapsedMilliseconds);
 
-			LogHttpRequestStats(logHttpRequestStatsParam, controller.TenantName);
+			LogHttpRequestStats(controller,logHttpRequestStatsParam, controller.TenantName);
 
 			TraceRequest(logHttpRequestStatsParam, controller.TenantName);
 
@@ -338,9 +333,12 @@ namespace Raven.Database.Server.WebApi
 			return result;
 		}
 
-		private void LogHttpRequestStats(LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName)
+		private void LogHttpRequestStats(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName)
 		{
 			if (Logger.IsDebugEnabled == false)
+				return;
+
+			if (controller is StudioController || controller is HardRouteController || controller is SilverlightController)
 				return;
 
 			// we filter out requests for the UI because they fill the log with information

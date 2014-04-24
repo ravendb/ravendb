@@ -1,15 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <ProjectGuid>{D020BECD-AADD-44FC-96C7-BD58354413DF}</ProjectGuid>
     <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <OutputPath>bin</OutputPath>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
-    <TypeScriptToolsVersion>0.9</TypeScriptToolsVersion>
+    <TypeScriptToolsVersion>1.0</TypeScriptToolsVersion>
     <UseIISExpress>true</UseIISExpress>
     <IISExpressSSLPort />
     <IISExpressAnonymousAuthentication />
@@ -20,36 +20,44 @@
     <TargetFrameworkProfile />
   </PropertyGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="App\commands\changesApiCommand.ts" />
     <TypeScriptCompile Include="App\commands\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
-    <TypeScriptCompile Include="App\commands\createFilesystemCommand.ts" />
-    <TypeScriptCompile Include="App\commands\createFilesystemDestinationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\createFilesystemFolderCommand.ts" />
-    <TypeScriptCompile Include="App\commands\deleteFilesystemConfigurationKeyCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\deleteDestinationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\deleteFilesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getConfigurationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFilesConflictsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getSyncIncomingActivitiesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getSyncOutgoingActivitiesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\saveDestinationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\deleteConfigurationKeyCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentCommand.ts" />
-    <TypeScriptCompile Include="App\commands\downloadFileFromFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\downloadFileFromFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\synchronizeNowCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getFilesystemConfigurationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getFilesystemConfigurationByKeyCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getFilesystemDestinationsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getFilesystemFilesCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getFilesystemsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getFilesystemStatsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getFilesystemSynchronizationStatusCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getConfigurationByKeyCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getDestinationsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFilesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemStatsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getSyncStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\exportDatabaseCommand.ts" />
-    <TypeScriptCompile Include="App\commands\saveFilesystemConfigurationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\saveConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\queryFacetsCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveTransformerCommand.ts" />
-    <TypeScriptCompile Include="App\commands\searchFilesystemByQueryCommand.ts" />
-    <TypeScriptCompile Include="App\commands\searchFilesystemByTermCommand.ts" />
-    <TypeScriptCompile Include="App\commands\searchFilesystemConfigurationByPrefixCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\searchByQueryCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\searchByTermCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\searchConfigurationByPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\startRestoreCommand.ts" />
     <TypeScriptCompile Include="App\commands\startIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\backupDatabaseCommand.ts" />
@@ -90,19 +98,27 @@
     <TypeScriptCompile Include="App\commands\saveIndexAsPersistentCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexLockModeCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexDefinitionCommand.ts" />
-    <TypeScriptCompile Include="App\commands\uploadFileToFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\verifyDocumentsIDsCommand.ts" />
     <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
-    <TypeScriptCompile Include="App\models\filesystemCollection.ts" />
-    <TypeScriptCompile Include="App\models\filesystemConfigurationKeyCollection.ts" />
-    <TypeScriptCompile Include="App\models\file.ts" />
-    <TypeScriptCompile Include="App\models\fileMetadata.ts" />
-    <TypeScriptCompile Include="App\models\filesystemDto.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\configurationKey.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\conflictHistory.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\conflictItem.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\filesystem.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\filesystemCollection.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\file.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\fileMetadata.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\filesystemDto.ts" />
     <TypeScriptCompile Include="App\models\facet.ts" />
-    <TypeScriptCompile Include="App\models\filesystem.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\searchResults.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\synchronizationDestination.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\synchronizationDetail.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\synchronizationDetails.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\synchronizationReport.ts" />
     <TypeScriptCompile Include="App\models\index.ts" />
     <TypeScriptCompile Include="App\models\indexDefinition.ts" />
     <TypeScriptCompile Include="App\models\indexPriority.ts" />
@@ -115,13 +131,21 @@
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
-    <TypeScriptCompile Include="App\viewmodels\createFilesystem.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystemAddDestination.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystemConfiguration.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystemFiles.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystems.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystemStatistics.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystemUploadFile.ts" />
+    <TypeScriptCompile Include="App\viewmodels\deleteItems.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\createFilesystem.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemEditFile.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemAddDestination.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\configuration.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemFiles.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystems.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\searchHasMetadataClause.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\search.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemStatistics.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemSynchronization.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemUploadFile.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\searchFileSizeRangeClause.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\searchSingleInputClause.ts" />
+    <TypeScriptCompile Include="App\viewmodels\licensingStatus.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\restoreDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\backupDatabase.ts" />
@@ -191,7 +215,6 @@
     <TypeScriptCompile Include="App\commands\getConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getReplicationSourcesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomColumnsCommand.ts" />
-    <Content Include="App\commands\getNewEncryptionKey.js" />
     <TypeScriptCompile Include="App\viewmodels\conflicts.ts" />
     <TypeScriptCompile Include="App\models\conflict.ts" />
     <TypeScriptCompile Include="App\models\conflictsInfo.ts" />
@@ -201,24 +224,32 @@
     <TypeScriptCompile Include="App\models\customColumnParams.ts" />
     <TypeScriptCompile Include="App\models\customColumns.ts" />
     <TypeScriptCompile Include="App\viewmodels\selectColumns.ts" />
+    <TypeScriptCompile Include="App\common\changesApi.ts" />
+    <TypeScriptCompile Include="App\models\changeSubscription.ts" />
+    <TypeScriptCompile Include="App\common\changesCallback.ts" />
+    <TypeScriptCompile Include="App\models\patchDocuments.ts" />
+    <TypeScriptCompile Include="App\models\patchParam.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\deleteDocuments.html" />
+    <Content Include="App\views\filesystem\deleteFiles.html" />
+    <Content Include="App\views\filesystem\searchFileSizeRangeClause.html" />
+    <Content Include="App\views\filesystem\search.html" />
+    <Content Include="App\views\filesystem\filesystemSynchronization.html" />
+    <Content Include="App\views\filesystem\filesystemEditFile.html" />
+    <Content Include="App\views\filesystem\singleInputSearchClause.html" />
+    <Content Include="App\views\licensingStatus.html" />
     <Content Include="App\views\selectColumns.html" />
     <TypeScriptCompile Include="App\viewmodels\patch.ts" />
-    <Content Include="App\views\alerts.html" />
-    <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\patch.html" />
     <Content Include="App\views\createEncryption.html" />
     <Content Include="App\views\conflicts.html" />
-    <Content Include="App\views\createEncryptionConfirmation.html" />
-    <Content Include="App\views\filesystemAddDestination.html" />
-    <Content Include="App\views\filesystemConfiguration.html" />
-    <Content Include="App\views\filesystemFiles.html" />
-    <Content Include="App\views\createFilesystem.html" />
-    <Content Include="App\views\filesystems.html" />
-    <Content Include="App\views\alerts.html" />
-    <Content Include="App\views\apiKeys.html" />
-    <Content Include="App\views\filesystemUploadFile.html" />
+    <Content Include="App\views\filesystem\filesystemAddDestination.html" />
+    <Content Include="App\views\filesystem\configuration.html" />
+    <Content Include="App\views\filesystem\filesystemFiles.html" />
+    <Content Include="App\views\filesystem\createFilesystem.html" />
+    <Content Include="App\views\filesystem\filesystems.html" />
+    <Content Include="App\views\filesystem\filesystemUploadFile.html" />
     <Content Include="App\views\scriptedIndexes.html" />
     <Content Include="App\views\resetIndexConfirm.html" />
     <Content Include="App\views\createEncryptionConfirmation.html" />
@@ -263,6 +294,9 @@
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />
     <Content Include="App\views\viewSystemDatabaseConfirm.html" />
     <Content Include="App\views\windowsAuth.html" />
+    <Content Include="Content\app.min.css">
+      <DependentUpon>app.css</DependentUpon>
+    </Content>
     <Content Include="Content\bootstrap-theme.css" />
     <Content Include="Content\bootstrap-theme.min.css" />
     <Content Include="Content\bootstrap.css" />
@@ -270,6 +304,21 @@
     <Content Include="Content\durandal.css" />
     <Content Include="Content\font-awesome.css" />
     <Content Include="Content\font-awesome.min.css" />
+    <Content Include="Content\images\raven.png" />
+    <Content Include="Content\images\ui-bg_flat_0_aaaaaa_40x100.png" />
+    <Content Include="Content\images\ui-bg_flat_75_ffffff_40x100.png" />
+    <Content Include="Content\images\ui-bg_glass_55_fbf9ee_1x400.png" />
+    <Content Include="Content\images\ui-bg_glass_65_ffffff_1x400.png" />
+    <Content Include="Content\images\ui-bg_glass_75_dadada_1x400.png" />
+    <Content Include="Content\images\ui-bg_glass_75_e6e6e6_1x400.png" />
+    <Content Include="Content\images\ui-bg_glass_95_fef1ec_1x400.png" />
+    <Content Include="Content\images\ui-bg_highlight-soft_75_cccccc_1x100.png" />
+    <Content Include="Content\images\ui-icons_222222_256x240.png" />
+    <Content Include="Content\images\ui-icons_2e83ff_256x240.png" />
+    <Content Include="Content\images\ui-icons_454545_256x240.png" />
+    <Content Include="Content\images\ui-icons_888888_256x240.png" />
+    <Content Include="Content\images\ui-icons_cd0a0a_256x240.png" />
+    <Content Include="Content\jquery-ui-1.10.4.custom.min.css" />
     <Content Include="Content\nprogress.css" />
     <Content Include="favicon.ico" />
     <Content Include="fonts\fontawesome-webfont.svg" />
@@ -897,9 +946,131 @@
     <None Include="Scripts\jquery-2.1.0.intellisense.js" />
     <Content Include="Scripts\jquery-2.1.0.js" />
     <Content Include="Scripts\jquery-2.1.0.min.js" />
+    <Content Include="Scripts\jquery-ui-1.10.4.custom.min.js" />
+    <Content Include="Scripts\webshim\polyfiller.js" />
+    <Content Include="Scripts\webshim\shims\color-picker.js" />
+    <Content Include="Scripts\webshim\shims\combos\1.js" />
+    <Content Include="Scripts\webshim\shims\combos\10.js" />
+    <Content Include="Scripts\webshim\shims\combos\11.js" />
+    <Content Include="Scripts\webshim\shims\combos\12.js" />
+    <Content Include="Scripts\webshim\shims\combos\13.js" />
+    <Content Include="Scripts\webshim\shims\combos\14.js" />
+    <Content Include="Scripts\webshim\shims\combos\15.js" />
+    <Content Include="Scripts\webshim\shims\combos\16.js" />
+    <Content Include="Scripts\webshim\shims\combos\17.js" />
+    <Content Include="Scripts\webshim\shims\combos\18.js" />
+    <Content Include="Scripts\webshim\shims\combos\19.js" />
+    <Content Include="Scripts\webshim\shims\combos\2.js" />
+    <Content Include="Scripts\webshim\shims\combos\20.js" />
+    <Content Include="Scripts\webshim\shims\combos\21.js" />
+    <Content Include="Scripts\webshim\shims\combos\22.js" />
+    <Content Include="Scripts\webshim\shims\combos\23.js" />
+    <Content Include="Scripts\webshim\shims\combos\24.js" />
+    <Content Include="Scripts\webshim\shims\combos\25.js" />
+    <Content Include="Scripts\webshim\shims\combos\26.js" />
+    <Content Include="Scripts\webshim\shims\combos\27.js" />
+    <Content Include="Scripts\webshim\shims\combos\28.js" />
+    <Content Include="Scripts\webshim\shims\combos\29.js" />
+    <Content Include="Scripts\webshim\shims\combos\3.js" />
+    <Content Include="Scripts\webshim\shims\combos\30.js" />
+    <Content Include="Scripts\webshim\shims\combos\31.js" />
+    <Content Include="Scripts\webshim\shims\combos\32.js" />
+    <Content Include="Scripts\webshim\shims\combos\33.js" />
+    <Content Include="Scripts\webshim\shims\combos\4.js" />
+    <Content Include="Scripts\webshim\shims\combos\5.js" />
+    <Content Include="Scripts\webshim\shims\combos\6.js" />
+    <Content Include="Scripts\webshim\shims\combos\7.js" />
+    <Content Include="Scripts\webshim\shims\combos\8.js" />
+    <Content Include="Scripts\webshim\shims\combos\9.js" />
+    <Content Include="Scripts\webshim\shims\combos\99.js" />
+    <Content Include="Scripts\webshim\shims\details.js" />
+    <Content Include="Scripts\webshim\shims\dom-extend.js" />
+    <Content Include="Scripts\webshim\shims\es5.js" />
+    <Content Include="Scripts\webshim\shims\excanvas.js" />
+    <Content Include="Scripts\webshim\shims\filereader.js" />
+    <Content Include="Scripts\webshim\shims\FlashCanvasPro\canvas2png.js" />
+    <Content Include="Scripts\webshim\shims\FlashCanvasPro\flash10canvas.swf" />
+    <Content Include="Scripts\webshim\shims\FlashCanvasPro\flash9canvas.swf" />
+    <Content Include="Scripts\webshim\shims\FlashCanvasPro\flashcanvas.js" />
+    <Content Include="Scripts\webshim\shims\FlashCanvas\canvas2png.js" />
+    <Content Include="Scripts\webshim\shims\FlashCanvas\flashcanvas.js" />
+    <Content Include="Scripts\webshim\shims\FlashCanvas\flashcanvas.swf" />
+    <Content Include="Scripts\webshim\shims\form-combat.js" />
+    <Content Include="Scripts\webshim\shims\form-core.js" />
+    <Content Include="Scripts\webshim\shims\form-datalist-lazy.js" />
+    <Content Include="Scripts\webshim\shims\form-datalist.js" />
+    <Content Include="Scripts\webshim\shims\form-message.js" />
+    <Content Include="Scripts\webshim\shims\form-native-extend.js" />
+    <Content Include="Scripts\webshim\shims\form-number-date-api.js" />
+    <Content Include="Scripts\webshim\shims\form-number-date-ui.js" />
+    <Content Include="Scripts\webshim\shims\form-shim-extend.js" />
+    <Content Include="Scripts\webshim\shims\form-shim-extend2.js" />
+    <Content Include="Scripts\webshim\shims\form-validation.js" />
+    <Content Include="Scripts\webshim\shims\form-validators.js" />
+    <Content Include="Scripts\webshim\shims\forms-picker.js" />
+    <Content Include="Scripts\webshim\shims\geolocation.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-ar.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-ch-CN.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-cs.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-de.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-el.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-en.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-es.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-fr.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-he.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-hi.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-hu.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-it.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-ja.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-lt.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-nl.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-pl.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-pt-BR.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-pt-PT.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-pt.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-ru.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-sv.js" />
+    <Content Include="Scripts\webshim\shims\i18n\formcfg-zh-CN.js" />
+    <Content Include="Scripts\webshim\shims\jajax.js" />
+    <Content Include="Scripts\webshim\shims\jme\b.js" />
+    <Content Include="Scripts\webshim\shims\jme\c.js" />
+    <Content Include="Scripts\webshim\shims\jme\controls.css" />
+    <Content Include="Scripts\webshim\shims\jme\jme.svg" />
+    <Content Include="Scripts\webshim\shims\jpicker\images\AlphaBar.png" />
+    <Content Include="Scripts\webshim\shims\jpicker\images\bar-opacity.png" />
+    <Content Include="Scripts\webshim\shims\jpicker\images\Bars.png" />
+    <Content Include="Scripts\webshim\shims\jpicker\images\map-opacity.png" />
+    <Content Include="Scripts\webshim\shims\jpicker\images\mappoint.gif" />
+    <Content Include="Scripts\webshim\shims\jpicker\images\Maps.png" />
+    <Content Include="Scripts\webshim\shims\jpicker\images\NoColor.png" />
+    <Content Include="Scripts\webshim\shims\jpicker\images\picker.gif" />
+    <Content Include="Scripts\webshim\shims\jpicker\images\preview-opacity.png" />
+    <Content Include="Scripts\webshim\shims\jpicker\images\rangearrows.gif" />
+    <Content Include="Scripts\webshim\shims\jpicker\jpicker.css" />
+    <Content Include="Scripts\webshim\shims\mediaelement-core.js" />
+    <Content Include="Scripts\webshim\shims\mediaelement-jaris.js" />
+    <Content Include="Scripts\webshim\shims\mediaelement-native-fix.js" />
+    <Content Include="Scripts\webshim\shims\mediaelement-yt.js" />
+    <Content Include="Scripts\webshim\shims\plugins\jquery.ui.position.js" />
+    <Content Include="Scripts\webshim\shims\range-ui.js" />
+    <Content Include="Scripts\webshim\shims\sizzle.js" />
+    <Content Include="Scripts\webshim\shims\styles\forms-ext.css" />
+    <Content Include="Scripts\webshim\shims\styles\forms.png" />
+    <Content Include="Scripts\webshim\shims\styles\progress.gif" />
+    <Content Include="Scripts\webshim\shims\styles\progress.png" />
+    <Content Include="Scripts\webshim\shims\styles\shim.css" />
+    <Content Include="Scripts\webshim\shims\swfmini-embed.js" />
+    <Content Include="Scripts\webshim\shims\swfmini.js" />
+    <Content Include="Scripts\webshim\shims\swf\filereader.swf" />
+    <Content Include="Scripts\webshim\shims\swf\JarisFLVPlayer.swf" />
+    <Content Include="Scripts\webshim\shims\track-ui.js" />
+    <Content Include="Scripts\webshim\shims\track.js" />
     <Content Include="Scripts\jwerty-0.3.js" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.amd.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\ace\ace.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\ace\aceExt.ts" />
     <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\jqueryui\jqueryui.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery\jquery.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jwerty\jwerty.d.ts" />
     <Content Include="Scripts\knockout-3.1.0.debug.js" />
@@ -909,6 +1080,7 @@
     <Content Include="Scripts\knockout-postbox.js" />
     <Content Include="Scripts\knockout-postbox.min.js" />
     <Content Include="Scripts\knockout.dirtyFlag.js" />
+    <Content Include="Scripts\modernizr-custom.js" />
     <Content Include="Scripts\moment-with-langs.js" />
     <Content Include="Scripts\moment-with-langs.min.js" />
     <Content Include="Scripts\moment.js" />
@@ -917,7 +1089,9 @@
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
-    <Content Include="web.config" />
+    <Content Include="web.config">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="Scripts\ace\mode\xquery\JSONiqTokenizer.ebnf" />
     <Content Include="Scripts\ace\mode\xquery\Readme.md" />
     <Content Include="Scripts\ace\mode\xquery\XQueryParser.ebnf" />
@@ -1132,8 +1306,12 @@
     <Content Include="fonts\fontawesome-webfont.eot" />
     <Content Include="fonts\FontAwesome.otf" />
     <Content Include="Scripts\jquery-2.1.0.min.map" />
+    <Content Include="Scripts\webshim\shims\jme\jme.eot" />
+    <Content Include="Scripts\webshim\shims\jme\jme.ttf" />
+    <Content Include="Scripts\webshim\shims\jme\jme.woff" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
+      <SubType>Designer</SubType>
     </None>
     <None Include="web.Release.config">
       <DependentUpon>web.config</DependentUpon>
@@ -1157,7 +1335,7 @@
     <TypeScriptCompile Include="App\viewmodels\deleteCollection.ts" />
     <Content Include="App\views\databases.html" />
     <Content Include="App\views\deleteCollection.html" />
-    <Content Include="App\views\deleteDocuments.html" />
+    <Content Include="App\views\deleteItems.html" />
     <Content Include="App\views\documents.html" />
     <Content Include="App\views\editDocument.html" />
     <Content Include="App\views\indexes.html" />
@@ -1190,6 +1368,7 @@
     <TypeScriptCompile Include="Scripts\typings\nprogress\nprogress.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\requirejs\require.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\typeahead\typeahead.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\webshim\webshim.d.ts" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />
@@ -1211,6 +1390,7 @@
   <ItemGroup>
     <TypeScriptCompile Include="Scripts\typings\es6shim\es6shim.d.ts" />
   </ItemGroup>
+  <ItemGroup />
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
@@ -1223,7 +1403,7 @@
         <WebProjectProperties>
           <UseIIS>True</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>0</DevelopmentServerPort>
+          <DevelopmentServerPort>56397</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>http://localhost:8080/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>

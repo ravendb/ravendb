@@ -13,6 +13,7 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
+using System.Threading.Tasks;
 
 
 namespace Raven.Client.Linq
@@ -106,6 +107,7 @@ namespace Raven.Client.Linq
 	        queryInputs[name] = value;
 	    }
 
+	   
 	    /// <summary>
 		/// Set the fields to rename
 		/// </summary>
@@ -280,6 +282,35 @@ namespace Raven.Client.Linq
 			return query.Lazily(onEval);
 		}
 
+        /// <summary>
+        /// Register the query as a lazy async query in the session and return a lazy async 
+        /// instance that will evaluate the query only when needed
+        /// </summary>
+        public Lazy<Task<IEnumerable<S>>> LazilyAsync<S>(Expression expression, Action<IEnumerable<S>> onEval)
+        {
+            var processor = GetQueryProviderProcessor<S>();
+            var query = processor.GetDocumentQueryForAsync(expression);
+
+            if (afterQueryExecuted != null)
+                query.AfterQueryExecuted(afterQueryExecuted);
+
+            var renamedFields = FieldsToFetch.Select(field =>
+            {
+                var renamedField = FieldsToRename.FirstOrDefault(x => x.OriginalField == field);
+                if (renamedField != null)
+                    return renamedField.NewField ?? field;
+                return field;
+            }).ToArray();
+
+            if (renamedFields.Length > 0)
+                query.AfterQueryExecuted(processor.RenameResults);
+
+            if (FieldsToFetch.Count > 0)
+                query = query.SelectFields<S>(FieldsToFetch.ToArray(), renamedFields);
+
+            return query.LazilyAsync(onEval);
+        }
+       
 		/// <summary>
 		/// Register the query as a lazy-count query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
@@ -318,5 +349,7 @@ namespace Raven.Client.Linq
             result.SetResultTransformer(ResultTransformer);
             return result;
         }
-	}
+
+
+    }
 }

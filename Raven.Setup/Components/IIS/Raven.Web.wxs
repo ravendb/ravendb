@@ -8,6 +8,7 @@
           <File Id='Microsoft.Owin' Name='Microsoft.Owin.dll' DiskId='1' Source='$(var.Raven.Web.TargetDir)\Microsoft.Owin.dll' />
           <File Id='Microsoft.Owin.Host.SystemWeb' Name='Microsoft.Owin.Host.SystemWeb.dll' DiskId='1' Source='$(var.Raven.Web.TargetDir)\Microsoft.Owin.Host.SystemWeb.dll' />
           <File Id='Owin' Name='Owin.dll' DiskId='1' Source='$(var.Raven.Web.TargetDir)\Owin.dll' />
+					<File Id="Html.Studio.Web" Name="Raven.Studio.Html5.zip" DiskId="1" Source="..\build\Raven.Studio.Html5.zip" />
         </Component>
     </DirectoryRef>
     <DirectoryRef Id='INSTALLFOLDER'>

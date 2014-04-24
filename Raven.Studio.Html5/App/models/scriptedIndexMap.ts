@@ -4,12 +4,13 @@ import document = require("models/document");
 class scriptedIndexMap {
 
     private PREFIX = 'Raven/ScriptedIndexResults/';
-
     indexes = {};
-
+    activeScriptedIndexes = ko.observableArray<scriptedIndex>().extend({ required: true });
+    
     constructor(scriptedIndexes: scriptedIndex[]) {
         scriptedIndexes.forEach(index => {
             this.indexes[index.__metadata['id']] = index;
+            this.activeScriptedIndexes().push(index);
         });
     }
 
@@ -18,15 +19,30 @@ class scriptedIndexMap {
     }
 
     addEmptyIndex(indexName: string) {
-        if (this.indexes[this.PREFIX + indexName]) {
-            this.indexes[this.PREFIX + indexName].cancelDeletion();
+        var activeScriptedIndex: scriptedIndex = this.indexes[this.PREFIX + indexName];
+        if (activeScriptedIndex) {
+            activeScriptedIndex.cancelDeletion();
         } else {
-            this.indexes[this.PREFIX + indexName] = scriptedIndex.emptyForIndex(indexName);
+            activeScriptedIndex = scriptedIndex.emptyForIndex(indexName);
+            this.indexes[this.PREFIX + indexName] = activeScriptedIndex;
         }
+        this.activeScriptedIndexes().push(activeScriptedIndex);
+        this.activeScriptedIndexes.notifySubscribers();
     }
 
     removeIndex(indexName: string) {
-        this.indexes[this.PREFIX + indexName].markToDelete();
+        var scriptedIndexToDelete: scriptedIndex = this.indexes[this.PREFIX + indexName];
+        scriptedIndexToDelete.markToDelete();
+
+        var index = this.activeScriptedIndexes().indexOf(scriptedIndexToDelete);
+        if (index > -1) {
+            this.activeScriptedIndexes().splice(index, 1);
+            this.activeScriptedIndexes.notifySubscribers();
+        }
+    }
+
+    deleteMarkToDeletedIndex(indexName: string) {
+        delete this.indexes[indexName];
     }
 
     getIndexes(): Array<scriptedIndex> {

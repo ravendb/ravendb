@@ -955,8 +955,5 @@ namespace Raven.Client.Document.Async
 		{
 			return Conventions.GenerateDocumentKeyAsync(dbName, AsyncDatabaseCommands, entity);
 		}
-
-	   
-      
 	}
 }

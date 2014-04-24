@@ -4,6 +4,27 @@ html, body {
     height: 100%;
 }
 
+.not-implemented-yet {
+  position: relative;
+}
+
+.not-implemented-yet:after {
+  content: " ";
+  z-index: 10;
+  display: block;
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  top: 0;
+  left: 0;
+  right: 0;  
+}
+
+.table-no-borders td
+{
+    border-top: none !important;
+}
+
 .page-host {
     padding: 20px 20px 50px 20px;
     position: relative;
@@ -43,35 +64,40 @@ html, body {
     }
 }
 
-@media (max-width: 979px) {
-    .page-host {
-        top: 0;
+.side-panel {
+    li {
+        max-width: 20%;
+        margin-top: 5%;
+        margin-bottom: 5%;
+        padding-top: 5%;
+        padding-bottom: 5%;
+        overflow: hidden;
+        white-space: nowrap;
+        -ms-text-overflow: ellipsis;
+        -o-text-overflow: ellipsis;
+        text-overflow: ellipsis;
     }
+}
 
-    .navbar-fixed-top {
-        margin-bottom: 0;
+.dropdown-menu{
+    .selected{
+        color: #555;
+        background-color: #e7e7e7;
     }
+}
+
+.panel span {
+    overflow: hidden;
+    -ms-text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: auto;
 }
 
 .page {
     padding: 0 10px 20px 10px;
     width: 98%;
-}
-
-.navbar-splitbutton {
-
-    > a {
-        padding-right: 5px !important;
-    }
-
-    + .dropdown {
-        cursor: pointer;
-
-        > a {
-            padding-left: 6px;
-            padding-right: 8px;
-        }
-    }
 }
 
 .database-page {
@@ -107,7 +133,7 @@ html, body {
                 -webkit-box-shadow: 0 0 6px 0 @selectColor;
                 box-shadow: 0 0 6px 0 @selectColor;
                 background-color: @selectColor;
-                
+
                 a, .text-muted {
                     color: white;
                 }
@@ -127,15 +153,6 @@ html, body {
             }
         }
     }
-
-    /*.systemButton {
-        color:grey;
-        margin-top:50px;        
-        position:absolute;
-        top:-40px;
-        right:25px;
-    }*/
-
 }
 
 .document-collections {
@@ -150,38 +167,46 @@ html, body {
         }
 }
 
+.index-panel{
+    overflow:visible!important;
+}
+
+.index-dropdown {
+    right: 0;
+    left: auto;
+
+    li > a {
+        text-align: left;      
+    }
+
+    li > a.active{
+         -webkit-box-shadow: inset 0 0 0 rgba(0, 0, 0, .125)!important;
+         box-shadow: inset 0 0 0 rgba(0, 0, 0, .125)!important;
+         text-decoration: underline!important;
+         font-weight:bold;
+    }
+}
+
 .indexes-container {
     margin-top: 10px;
+        
+    .index-group {
+        .panel-heading {
+            padding-top: 0;
 
-    .index {
-
-        .index-actions-container {
-            display: none;
-        }
-
-        &:hover {
-            .index-actions-container {
-                display: inline-block;
+            .panel-title {
+                padding-top: 15px;
             }
-        }
-    }
 
-    .index-group .panel-heading {
-        padding-top:0;
-    }
-
-    .index-group .panel-heading .panel-title{
-        padding-top:15px;
-    }
-    .index-group .panel-heading {
-                .indexGroup-actions-container {
-            display: none;
-            padding-top:5px;
-        }
-
-        &:hover {
             .indexGroup-actions-container {
-                display: inline-block;
+                display: none;
+                padding-top: 5px;
+            }
+
+            &:hover {
+                .indexGroup-actions-container {
+                    display: inline-block;
+                }
             }
         }
     }
@@ -211,9 +236,9 @@ html, body {
     }
 
     .replication-destination-card {
-           display: inline-table;
-            width: 500px;
-            margin-right: 20px;
+        display: inline-table;
+        width: 500px;
+        margin-right: 20px;
     }
 
     .win-auth-tabs {
@@ -334,7 +359,7 @@ html, body {
 }
 
 .all-documents-collection {
-    background: rgb(255,2,2); /* Old browsers */
+    background: rgb(2,6,255); /* Old browsers */
     background: -moz-linear-gradient(top, rgba(255,2,2,1) 0%, rgba(255,242,2,1) 27%, rgba(2,255,27,1) 54%, rgba(2,6,255,1) 79%, rgba(246,2,255,1) 100%); /* FF3.6+ */
     background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(255,2,2,1)), color-stop(27%,rgba(255,242,2,1)), color-stop(54%,rgba(2,255,27,1)), color-stop(79%,rgba(2,6,255,1)), color-stop(100%,rgba(246,2,255,1))); /* Chrome,Safari4+ */
     background: -webkit-linear-gradient(top, rgba(255,2,2,1) 0%,rgba(255,242,2,1) 27%,rgba(2,255,27,1) 54%,rgba(2,6,255,1) 79%,rgba(246,2,255,1) 100%); /* Chrome10+,Safari5.1+ */
@@ -351,6 +376,22 @@ html, body {
 
 .documents-page {
     margin-top: 10px;
+
+    @media(max-device-height:1024px) {
+        a {
+            font-size: 12px !important;
+            overflow: hidden;
+            -ms-text-overflow: ellipsis;
+            -o-text-overflow: ellipsis;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
+}
+
+.control-label-additional-link{
+    display: block;
+    font-size: 80%;
 }
 
 .collection-color-strip {
@@ -366,6 +407,10 @@ html, body {
     }
 }
 
+.popover {
+            max-width: 30%;     
+    }
+
 #queryContainer {
     .editor {
         height: 60px;
@@ -379,12 +424,25 @@ html, body {
     .form-horizontal {
         overflow: hidden auto;
     }
+
+    .side-panel {
+
+        li {
+            max-width: 100% !important;
+            margin-top: 5%;
+            margin-bottom: 5%;
+            padding-top: 5%;
+            padding-bottom: 5%;
+            overflow: hidden;
+            white-space: nowrap;
+            -ms-text-overflow: ellipsis;
+            -o-text-overflow: ellipsis;
+            text-overflow: ellipsis;
+        }
+    }
 }
 
 .ko-grid {
-    /*position: absolute;
-    right: 0;
-    left: 0;*/
     &:focus {
         outline: 0;
     }
@@ -454,7 +512,29 @@ html, body {
 }
 
 .breadcrumb {
-    padding: 0 10px 0 10px;
+
+    @media(max-device-height:1024px) {
+
+        h3 {
+            font-size: 16px !important;
+            display: inline-block !important;
+        }
+
+        a {
+            font-size: 14px !important;
+            display: inline-block !important;
+        }
+
+        span {
+            font-size: 14px !important;
+            display: inline-block !important;
+        }
+
+        i {
+            font-size: 15px !important;
+            display: inline-block !important;
+        }
+    }
 }
 
 .studio-alerts {
@@ -466,6 +546,7 @@ html, body {
 }
 
 #editDocumentContainer {
+
     &:focus {
         outline: 0;
     }
@@ -481,12 +562,36 @@ html, body {
     }
 
     hr {
-        border-color:red;
-        margin-top:5px;
+        border-color: red;
+        margin-top: 5px;
     }
 
     .query-metadata {
         padding-top: 20px;
+    }
+
+
+    .documents-links-container {
+        -webkit-column-count: 2; /* Chrome, Safari, Opera */
+        -moz-column-count: 2; /* Firefox */
+        column-count: 2;
+
+        -webkit-column-gap: 30px; /* Chrome, Safari, Opera */
+        -moz-column-gap: 30px; /* Firefox */
+        column-gap: 30px;
+
+        -moz-column-width: 10px;
+        -webkit-column-width: 10px;
+        column-width: 10px;
+
+        .document-link{
+            width:80%;
+            overflow: hidden;
+            white-space: nowrap;
+            -ms-text-overflow: ellipsis;
+            -o-text-overflow: ellipsis;
+            text-overflow: ellipsis;
+        }
     }
 }
 
@@ -515,47 +620,123 @@ html, body {
     }
 }
 
-#shellFooter li {    
-                    
-        max-width:200px;
-        margin:0;
-        padding:0;
+#shellHeader {
+    .container-fluid {
+        padding-right: 15px;
+        padding-left: 5px;
+    }
+
+    #goToDocInput {
+        width: 10em;
+    } 
+
+    /* When the screen width < 1150, shrink down the padding between the nav bar items. */ 
+    @media (max-width: 1150px) {
+        .nav {
+            li {
+                a {
+                    padding-left: 8px;
+                    padding-right: 8px;
+                }
+            }
+        }
+
+        .databases {
+            padding-right: 0px;
+        }
+
+        .navbar-form {
+            padding-left: 5px;
+            padding-right: 5px;
+
+            #goToDocInput {
+                width: 8em;
+            } 
+        }
+    }
+
+    /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
+    @media(max-width: 767px) {
+        #topNavBarCollapse {
+            padding-left: 40px;
+        }
+    }
+
+    .navbar-splitbutton {
+        > a {
+            padding-right: 5px !important;
+        }
+
+        + .dropdown {
+            cursor: pointer;
+
+            > a {
+                padding-left: 0;
+                padding-right: 8px;
+            }
+        }
+    }
+}
+
+#shellFooter {
+    @media(max-width: 767px) {
+        display: none;
+    }
+
+    @media(max-width: 1150px) {
+        // When we're in a small width window, we don't have enough space to show everything in the footer.
+        // Hide the status link and the server build link.
+        .status-link {
+            display: none;
+        }
+
+        .server-build-link {
+            display: none;
+        }
+    }
+
+    /*ul {
+        width: 100% !important;
+    }
+
+    li {
+        max-width: 20% !important;
+        margin: 0;
+        padding: 0;
         overflow: hidden;
-        white-space:nowrap;
+        white-space: nowrap;
+        -ms-text-overflow: ellipsis;
+        -o-text-overflow: ellipsis;
         text-overflow: ellipsis;
-     
+
+        a {
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            padding-left: 5% !important;
+            padding-right: 5% !important;
+            font-size: 100% !important;
+        }
+    }
+
+    span {
+        overflow: hidden;
+        white-space: nowrap;
+        -ms-text-overflow: ellipsis;
+        -o-text-overflow: ellipsis;
+        text-overflow: ellipsis;
+    }*/
 }
 
 #editTransformerContainer .transformer {
-  height: 600px;
+    height: 600px;
 }
 
-#csvImportContainer .fileinputs {
-    position: relative;
-}
-
-#csvImportContainer .fakefile {
-	position: absolute;
-	top: 0;
-	left: 0;
-	z-index: 1;
-}
-
-#csvImportContainer .file {
-	position: relative;
-	text-align: right;
-	-moz-opacity:0 ;
-	filter:~"alpha(opacity: 0)";
-	opacity: 0;
-	z-index: 2;
-}
 
 .auto-complete {
     background-color: white;
 }
 
 #logsContainer, #alertsContainer, #indexErrorsContainer {
-
     table {
         outline: none;
 
@@ -635,16 +816,6 @@ footer {
     font-size: 18px;
 }
 
-@media (max-width: 979px) {
-    .page-host {
-        top: 0;
-    }
-
-    .navbar-fixed-top {
-        margin-bottom: 0;
-    }
-}
-
 #recentErrorsDialog {
     height: 500px;
     width: 600px;
@@ -663,6 +834,16 @@ footer {
     .map {
         height: 160px;
     }
+}
+
+.advanced-replication-settings {
+    cursor: pointer;
+}
+
+.popover-lg
+{
+    max-width: 800px;
+    width: 600px;
 }
 
 // Start of Filesystems
@@ -700,7 +881,7 @@ footer {
                 -webkit-box-shadow: 0 0 6px 0 @selectColor;
                 box-shadow: 0 0 6px 0 @selectColor;
                 background-color: @selectColor;
-                
+
                 a, .text-muted {
                     color: white;
                 }
@@ -722,14 +903,49 @@ footer {
     }
 
     .systemButton {
-        color:grey;
-        margin-top:50px;        
-        position:absolute;
-        top:-40px;
-        right:25px;
+        color: grey;
+        margin-top: 50px;
+        position: absolute;
+        top: -40px;
+        right: 25px;
     }
-
 }
 
+#editFileContainer {
+
+    &:focus {
+        outline: 0;
+    }
+
+    #fileMetadataEditor {
+        height: 500px;
+    }
+
+    .document-addition-data {
+        margin-top: 95px;
+        padding-top: 10px;
+        padding-bottom: 40px;
+    }
+
+    hr {
+        border-color: red;
+        margin-top: 5px;
+    }
+}
+
+.remove-icon{
+    color: #d2322d;
+    border-color: #ac2925;
+    cursor: pointer;
+}
+
+.remove-icon:hover{
+    color: #d2322d;
+}
+
+.fa-plus{
+    color: #58cc46;
+}
 // End of Filesystems
+
 

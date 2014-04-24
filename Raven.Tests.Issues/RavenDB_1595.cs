@@ -43,7 +43,7 @@ namespace Raven.Tests.Issues
 
             Assert.True(
                 Directory.Exists(Path.Combine(server1.SystemDatabase.Configuration.DataDirectory,
-                                              "D1//N/")));
+                                              "N")));
 
 
         }

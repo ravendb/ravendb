@@ -54,6 +54,7 @@
       <ComponentRef Id='StoreInstallationPath' />
       <ComponentRef Id='Raven.Server' />
       <ComponentRef Id='Raven.Database.Service' />
+			<ComponentRef Id='Raven.Abstractions.Service' />
       <ComponentRef Id='PersistServiceValues' />
       <ComponentRef Id ="CopyLicenseFile"/>
     </Feature>
@@ -66,6 +67,7 @@
       <ComponentRef Id='StoreInstallationPath' />
       <ComponentRef Id='Raven.Web' />
       <ComponentRef Id='Raven.Database.Web' />
+			<ComponentRef Id='Raven.Abstractions.Web' />
       <ComponentRef Id='Raven.Web.Config.IIS_7_And_8' />
       <ComponentRef Id='Raven.Web.Config.IIS_6' />
       <ComponentRef Id="EnableASPNet4Extension" />

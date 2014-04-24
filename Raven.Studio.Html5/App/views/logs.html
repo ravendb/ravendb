@@ -24,19 +24,18 @@
         <form class="form-inline" style="display: inline-block; vertical-align: middle;">
             <input type="text" class="form-control col-md-8" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" />
         </form>
-        <div style="padding-top: 10px" data-bind="foreach: filteredLoggers">
-            <a class="btn btn-default" data-bind="text: $data, click: $root.unHidelogType.bind($root)">
-            </a>
+        <div style="padding-top: 10px;" data-bind="foreach: filteredLoggers">
+            <button class="btn btn-default" data-bind="text: $data, click: $root.unHidelogType.bind($root)"></button>
         </div>
         <div id="logTableContainer" style="overflow-y: auto; position: absolute; bottom: 10px; top: 50px; width: 100%; padding-top:40px">
             <table class="single-line-row-table table table-condensed" data-bind="event: { keydown: tableKeyDown }" tabindex="1">
                 <thead>
                     <tr>
-                        <th style="width: 5%">Level</th>
-                        <th style="width: 10%">Logged</th>
-                        <th style="width: 50%">Message</th>
-                        <th style="width: 20%">Exception</th>
-                        <th style="width: 15%">Log Name</th>
+                        <th class="col-md-1">Level</th>
+                        <th class="col-md-2">Logged</th>
+                        <th class="col-md-4">Message</th>
+                        <th class="col-md-4">Exception</th>
+                        <th class="col-md-2">Log Name</th>
                     </tr>
                 </thead>
                 <tbody data-bind="foreach: allLogs, delegatedHandler: 'click'">
@@ -45,51 +44,49 @@
                         <td data-bind="text: TimeStampText, attr: { title: TimeStampText }"></td>
                         <td data-bind="text: Message, attr: { title: Message }"></td>
                         <td data-bind="text: Exception, attr: { title: Exception }"></td>
-                        <td class="logName">
-                            <div class="pull-left" data-bind="text: LoggerName"></div>
-                            <div class="pull-left logName-actions-container">
-                                
-                                    <button class="btn btn-primary use-bootstrap-tooltip" data-bind="click: $root.hideLogType.bind($root), attr:{title: 'Remove ' + LoggerName.split('.').slice(2).join('.')  + ' from List'}">
-                                        <i class="fa fa-filter"></i>
-                                    </button>
-                                
-                            </div>
-                        </td>
+                        <td data-bind="text: LoggerName">
                     </tr>
                 </tbody>
             </table>
         </div>
     </div>
     <div class="log-details panel panel-default" style="height: 30%;">
-        <div class="row">
-            <label class="col-md-1 text-right control-label">Message</label>
-            <div class="col-md-10" data-bind="with: selectedLog">
-                <p class="form-control-static" data-bind="text: Message"></p>
+        <div class="col-md-11">
+            <div class="row">
+                <label class="col-md-2 text-right control-label">Message</label>
+                <div class="col-md-10" data-bind="with: selectedLog">
+                    <p class="form-control-static" data-bind="text: Message"></p>
+                </div>
+            </div>
+            <div class="row">
+                <label class="col-md-2 text-right control-label">Exception</label>
+                <div class="col-md-10" data-bind="with: selectedLog">
+                    <p class="form-control-static" data-bind="text: Exception"></p>
+                </div>
+            </div>
+            <div class="row">
+                <label class="col-md-2 text-right control-label">Logged</label>
+                <div class="col-md-10" data-bind="with: selectedLog">
+                    <p class="form-control-static" data-bind="text: TimeStampText"></p>
+                </div>
+            </div>
+            <div class="row">
+                <label class="col-md-2 text-right control-label">Level</label>
+                <div class="col-md-10" data-bind="with: selectedLog">
+                    <p class="form-control-static" data-bind="text: Level, css: { 'text-warning': Level === 'Warn', 'text-danger': Level === 'Error' || Level === 'Fatal' }"></p>
+                </div>
+            </div>
+            <div class="row">
+                <label class="col-md-2 text-right control-label">Logger</label>
+                <div class="col-md-10" data-bind="with: selectedLog">
+                    <p class="form-control-static" data-bind="text: LoggerName"></p>
+                </div>
             </div>
         </div>
-        <div class="row">
-            <label class="col-md-1 text-right control-label">Exception</label>
-            <div class="col-md-10" data-bind="with: selectedLog">
-                <p class="form-control-static" data-bind="text: Exception"></p>
-            </div>
-        </div>
-        <div class="row">
-            <label class="col-md-1 text-right control-label">Logged</label>
-            <div class="col-md-10" data-bind="with: selectedLog">
-                <p class="form-control-static" data-bind="text: TimeStampText"></p>
-            </div>
-        </div>
-        <div class="row">
-            <label class="col-md-1 text-right control-label">Level</label>
-            <div class="col-md-10" data-bind="with: selectedLog">
-                <p class="form-control-static" data-bind="text: Level, css: { 'text-warning': Level === 'Warn', 'text-danger': Level === 'Error' || Level === 'Fatal' }"></p>
-            </div>
-        </div>
-        <div class="row">
-            <label class="col-md-1 text-right control-label">Logger</label>
-            <div class="col-md-10" data-bind="with: selectedLog">
-                <p class="form-control-static" data-bind="text: LoggerName"></p>
-            </div>
+        <div class="col-md-1" data-bind="with: selectedLog">
+            <button class="btn btn-default pull-right use-bootstrap-tooltip" data-placement="left" data-bind="click: $root.hideLogType.bind($root), attr:{title: 'Filter out all ' + LoggerName.split('.').slice(2).join('.') + ' logs'}">
+                <i class="fa fa-filter"></i>
+            </button>
         </div>
     </div>
 </section>

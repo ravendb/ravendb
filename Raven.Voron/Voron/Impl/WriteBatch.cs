@@ -32,27 +32,21 @@ namespace Voron.Impl
 			}
 		}
 
-		public Func<long> Size
+		public long Size()
 		{
-			get
-			{
-				return () =>
-				{
-					long totalSize = 0;
+			long totalSize = 0;
 
-					if (_lastOperations.Count > 0)
-						totalSize += _lastOperations.Sum(
-							operation =>
-							operation.Value.Values.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
+			if (_lastOperations.Count > 0)
+				totalSize += _lastOperations.Sum(
+					operation =>
+					operation.Value.Values.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
 
-					if (_multiTreeOperations.Count > 0)
-						totalSize += _multiTreeOperations.Sum(
-							tree =>
-							tree.Value.Sum(
-								multiOp => multiOp.Value.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size)));
-					return totalSize;
-				};
-			}
+			if (_multiTreeOperations.Count > 0)
+				totalSize += _multiTreeOperations.Sum(
+					tree =>
+					tree.Value.Sum(
+						multiOp => multiOp.Value.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size)));
+			return totalSize;
 		}
 
 		public bool IsEmpty { get { return _lastOperations.Count == 0 && _multiTreeOperations.Count == 0; } }
@@ -115,19 +109,27 @@ namespace Voron.Impl
 			_sliceEqualityComparer = new SliceEqualityComparer();
 		}
 
-		public void Add(Slice key, Stream value, string treeName, ushort? version = null,bool shouldIgnoreConcurrencyExceptions = false)
+		public void Add(Slice key, Slice value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
 		{
 			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
 			if (value == null) throw new ArgumentNullException("value");
-			//TODO : check up if adding empty values make sense in Voron --> in order to be consistent with existing behavior of Esent, this should be allowed
-			//			if (value.Length == 0)
-			//				throw new ArgumentException("Cannot add empty value");
+
+			var batchOperation = new BatchOperation(key, value, version, treeName, BatchOperationType.Add);
+			if (shouldIgnoreConcurrencyExceptions)
+				batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
+			AddOperation(batchOperation);
+		}
+
+		public void Add(Slice key, Stream value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
+		{
+			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
+			if (value == null) throw new ArgumentNullException("value");
 			if (value.Length > int.MaxValue)
 				throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 
 
 			var batchOperation = new BatchOperation(key, value, version, treeName, BatchOperationType.Add);
-			if(shouldIgnoreConcurrencyExceptions)
+			if (shouldIgnoreConcurrencyExceptions)
 				batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
 			AddOperation(batchOperation);
 		}
@@ -208,7 +210,7 @@ namespace Voron.Impl
 			}
 		}
 
-		public class BatchOperation
+		public class BatchOperation : IComparable<BatchOperation>
 		{
 #if DEBUG
 			private readonly StackTrace stackTrace;
@@ -219,8 +221,9 @@ namespace Voron.Impl
 #endif
 
 			private readonly long originalStreamPosition;
-			private readonly HashSet<Type> exceptionTypesToIgnore = new HashSet<Type>(); 
+			private readonly HashSet<Type> exceptionTypesToIgnore = new HashSet<Type>();
 			private readonly Action reset = delegate { };
+			private readonly Slice valSlice;
 
 			public BatchOperation(Slice key, Stream value, ushort? version, string treeName, BatchOperationType type)
 				: this(key, value as object, version, treeName, type)
@@ -243,6 +246,7 @@ namespace Voron.Impl
 			{
 				if (value != null)
 				{
+					valSlice = value;
 					originalStreamPosition = 0;
 					ValueSize = value.Size;
 				}
@@ -268,7 +272,7 @@ namespace Voron.Impl
 			public BatchOperationType Type { get; private set; }
 
 			public ushort? Version { get; private set; }
-			
+
 			public HashSet<Type> ExceptionTypesToIgnore
 			{
 				get { return exceptionTypesToIgnore; }
@@ -290,7 +294,25 @@ namespace Voron.Impl
 			public void SetIgnoreExceptionOnExecution<T>()
 				where T : Exception
 			{
-				ExceptionTypesToIgnore.Add(typeof (T));
+				ExceptionTypesToIgnore.Add(typeof(T));
+			}
+
+			public unsafe int CompareTo(BatchOperation other)
+			{
+				var r = SliceEqualityComparer.Instance.Compare(Key, other.Key);
+				if (r != 0)
+					return r;
+				if (valSlice != null)
+				{
+					if (other.valSlice == null)
+						return -1;
+					return valSlice.Compare(other.valSlice, NativeMethods.memcmp);
+				}
+				else if (other.valSlice != null)
+				{
+					return 1;
+				}
+				return 0;
 			}
 		}
 

@@ -46,28 +46,20 @@ task Init -depends Verify40, Clean {
 	New-Item $build_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
 }
 
-task Compile -depends Init {
+task Compile -depends Init, CompileHtml5 {
 	
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-	
-	# exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Utilities\Raven.ProjectRewriter\Raven.ProjectRewriter.csproj" /p:OutDir="$build_dir\" }
-	# exec { &"$build_dir\Raven.ProjectRewriter.exe" }
-	
-	$dat = "$base_dir\..\BuildsInfo\RavenDB\Settings.dat"
-	$datDest = "$base_dir\Raven.Studio\Settings.dat"
-	echo $dat
-	if (Test-Path $dat) {
-		Copy-Item $dat $datDest -force
-	}
-	ElseIf ((Test-Path $datDest) -eq $false) {
-		New-Item $datDest -type file -force
-	}
 	
 	Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
 }
 
 task CompileHtml5 {
+	
+	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
+	
+	Write-Host "Compiling HTML5" -ForegroundColor Yellow
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
 	
 	Remove-Item $build_dir\Html5 -Force -Recurse -ErrorAction SilentlyContinue | Out-Null
 	Remove-Item $build_dir\Raven.Studio.Html5.zip -Force -ErrorAction SilentlyContinue | Out-Null
@@ -76,7 +68,7 @@ task CompileHtml5 {
 	Remove-Item $build_dir\Html5\web*.config -Force -Recurse
 	Remove-Item $build_dir\Html5\packages.config -Force -Recurse
 	Remove-Item $build_dir\Html5\Raven.Studio.Html5.csproj* -Force -Recurse
-	Remove-Item $build_dir\Html5\App_Readme -Force -Recurse
+	Remove-Item $build_dir\Html5\App_Readme -Force -Recurse  -ErrorAction SilentlyContinue
 	Remove-Item $build_dir\Html5\bin -Force -Recurse
 	Remove-Item $build_dir\Html5\obj -Force -Recurse
 	Remove-Item $build_dir\Html5\Properties -Force -Recurse
@@ -100,7 +92,7 @@ task FullStorageTest {
 
 task Test -depends Compile {
 	Clear-Host
-	
+
 	$test_prjs = @( `
 		"$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
 		"$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
@@ -113,18 +105,24 @@ task Test -depends Compile {
 	$xUnit = "$lib_dir\xunit\xunit.console.clr4.exe"
 	Write-Host "xUnit location: $xUnit"
 	
+	$hasErrors = $false
 	$test_prjs | ForEach-Object { 
 		if($global:full_storage_test) {
 			$env:raventest_storage_engine = 'esent';
 			Write-Host "Testing $_ (esent)"
-			exec { &"$xUnit" "$_" }
 		}
 		else {
 			$env:raventest_storage_engine = $null;
 			Write-Host "Testing $_ (default)"
-			exec { &"$xUnit" "$_" }
 		}
+		&"$xUnit" "$_"
+		if ($lastexitcode -ne 0) {
+	        $hasErrors = $true
+	    }
 	}
+	if ($hasErrors) {
+        throw ("Test failure!")
+    }
 }
 
 task StressTest -depends Compile {
@@ -159,54 +157,6 @@ task MeasurePerformance -depends Compile {
 		exec { &"$base_dir\Raven.Performance\bin\$global:configuration\Raven.Performance.exe" "--database-location=$RavenDbStableLocation --build-number=$_ --data-location=$DataLocation --logs-location=$LogsLocation" }
 	}
 }
-
-task TestSilverlight -depends Compile, CopyServer  {
-	try
-	{
-		$process = Start-Process "$base_dir\Raven.Server\bin\$global:configuration\Raven.Server.exe" "--ram --set=Raven/Port==8079" -PassThru
-	
-		$statLight = Get-PackagePath StatLight
-		$statLight = "$statLight\tools\StatLight.exe"
-		&$statLight "--XapPath=.\build\sl5\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\build\sl5\Raven.Tests.Silverlight.Results.xml" 
-	}
-	finally
-	{
-		if ($process -ne $null) {
-			Stop-Process -InputObject $process
-		}
-	}
-}
-
-task TestWinRT -depends Compile, CopyServer {
-	try
-	{
-		exec { CheckNetIsolation LoopbackExempt -a -n=68089da0-d0b7-4a09-97f5-30a1e8f9f718_pjnejtz0hgswm }
-		
-		$process = Start-Process "$base_dir\Raven.Server\bin\$global:configuration\Raven.Server.exe" "--ram --set=Raven/Port==8079" -PassThru
-	
-		$testRunner = "C:\Program Files (x86)\Microsoft Visual Studio 11.0\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe"
-	
-		@("Raven.Tests.WinRT.dll") | ForEach-Object { 
-			Write-Host "Testing $_"
-			
-			if($global:full_storage_test) {
-				$env:raventest_storage_engine = 'esent';
-				Write-Host "Testing $_ (esent)"
-				&"$testRunner" "$_"
-			}
-			else {
-				$env:raventest_storage_engine = $null;
-				Write-Host "Testing $_ (default)"
-				&"$testRunner" "$_"
-			}
-		}
-	}
-	finally
-	{
-		Stop-Process -InputObject $process
-	}
-}
-
 task Vnext3 {
 	$global:uploadCategory = "RavenDB-Unstable"
 	$global:uploadMode = "Vnext3"
@@ -225,7 +175,7 @@ task Stable {
 	$global:configuration = "Release"
 }
 
-task RunTests -depends Test,TestSilverlight,TestWinRT
+task RunTests -depends Test
 
 task RunAllTests -depends FullStorageTest,RunTests,StressTest
 
@@ -236,9 +186,7 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output\Server -Type directory | Out-Null
 	New-Item $build_dir\Output\Web -Type directory | Out-Null
 	New-Item $build_dir\Output\Web\bin -Type directory | Out-Null
-	New-Item $build_dir\Output\EmbeddedClient -Type directory | Out-Null
 	New-Item $build_dir\Output\Client -Type directory | Out-Null
-	New-Item $build_dir\Output\Silverlight -Type directory | Out-Null
 	New-Item $build_dir\Output\Bundles -Type directory | Out-Null
 	New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
 	New-Item $build_dir\Output\Backup -Type directory | Out-Null
@@ -246,24 +194,6 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 
 task CleanOutputDirectory { 
 	Remove-Item $build_dir\Output -Recurse -Force -ErrorAction SilentlyContinue
-}
-
-task CopyEmbeddedClient {
-	$all_client_dlls = @( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
-		"$build_dir\Raven.Studio.Html5.zip", 
-		"$base_dir\Raven.Client.Embedded\bin\$global:configuration\Raven.Client.Embedded.???")
-
-	$all_client_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\EmbeddedClient }
-}
-
-task CopySilverlight {
-	$silverlight_dlls = @("$base_dir\Raven.Client.Silverlight\bin\$global:configuration\Raven.Client.Silverlight.???",
-		"$base_dir\Raven.Client.Silverlight\bin\$global:configuration\AsyncCtpLibrary_Silverlight5.???", 
-		"$base_dir\Raven.Client.Silverlight\bin\$global:configuration\DH.Scrypt.???", 
-		"$base_dir\Raven.Client.Silverlight\bin\$global:configuration\Microsoft.CompilerServices.AsyncTargetingPack.Silverlight5.???")
-
-	$silverlight_dlls + @((Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl5)) | 
-		ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight }
 }
 
 task CopySmuggler {
@@ -281,12 +211,16 @@ task CopyBackup {
 }
 
 task CopyClient {
-	$client_dlls = @( "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\Raven.Client.Lightweight.???")
+	$client_dlls = @( "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\Raven.Abstractions.???", "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\Raven.Client.Lightweight.???")
 	$client_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\Client }
 }
 
 task CopyWeb {
-	@( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
+	@( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???",
+	    "$base_dir\Raven.Abstractions\bin\$global:configuration\Raven.Abstractions.???", 
+		"$base_dir\Raven.Web\bin\Microsoft.Owin.???",
+		"$base_dir\Raven.Web\bin\Owin.???",
+		"$base_dir\Raven.Web\bin\Microsoft.Owin.Host.SystemWeb.???",
 		"$build_dir\Raven.Studio.Html5.zip",
 		"$base_dir\Raven.Web\bin\Raven.Web.???"  ) | ForEach-Object { Copy-Item "$_" $build_dir\Output\Web\bin }
 	@("$base_dir\DefaultConfigs\web.config", 
@@ -304,6 +238,7 @@ task CopyBundles {
 
 task CopyServer -depends CreateOutpuDirectories {
 	$server_files = @( "$base_dir\Raven.Database\bin\$global:configuration\Raven.Database.???", 
+		"$base_dir\Raven.Abstractions\bin\$global:configuration\Raven.Abstractions.???", 
 		"$build_dir\Raven.Studio.Html5.zip",
 		"$base_dir\Raven.Server\bin\$global:configuration\Raven.Server.???",
 		"$base_dir\DefaultConfigs\NLog.Ignored.config")
@@ -414,7 +349,6 @@ task ZipOutput {
 	exec { 
 		& $tools_dir\zip.exe -9 -A -r `
 			$file `
-			EmbeddedClient\*.* `
 			Client\*.* `
 			Smuggler\*.* `
 			Backup\*.* `
@@ -430,14 +364,11 @@ task ZipOutput {
 
 
 task DoReleasePart1 -depends Compile, `
-	CompileHtml5, `
 	CleanOutputDirectory, `
 	CreateOutpuDirectories, `
-	CopyEmbeddedClient, `
 	CopySmuggler, `
 	CopyBackup, `
 	CopyClient, `
-	CopySilverlight, `
 	CopyWeb, `
 	CopyBundles, `
 	CopyServer, `
@@ -555,7 +486,7 @@ task PushNugetPackages {
 	}
 }
 
-task CreateNugetPackages -depends Compile, InitNuget {
+task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
 
 	Remove-Item $base_dir\RavenDB*.nupkg
 	
@@ -564,11 +495,9 @@ task CreateNugetPackages -depends Compile, InitNuget {
 	New-Item $nuget_dir -Type directory | Out-Null
 	
 	New-Item $nuget_dir\RavenDB.Client\lib\net45 -Type directory | Out-Null
-	New-Item $nuget_dir\RavenDB.Client\lib\sl50 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.nuspec $nuget_dir\RavenDB.Client\RavenDB.Client.nuspec
 	
-	@("Raven.Client.Lightweight.???") |% { Copy-Item "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\$_" $nuget_dir\RavenDB.Client\lib\net45 }
-	@("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |% { Copy-Item "$base_dir\Raven.Client.Silverlight\bin\$global:configuration\$_" $nuget_dir\RavenDB.Client\lib\sl50	}
+	@("Raven.Client.Lightweight.???", "Raven.Abstractions.???") |% { Copy-Item "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\$_" $nuget_dir\RavenDB.Client\lib\net45 }
 	
 	New-Item $nuget_dir\RavenDB.Client.MvcIntegration\lib\net45 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.MvcIntegration.nuspec $nuget_dir\RavenDB.Client.MvcIntegration\RavenDB.Client.MvcIntegration.nuspec
@@ -576,21 +505,20 @@ task CreateNugetPackages -depends Compile, InitNuget {
 		
 	New-Item $nuget_dir\RavenDB.Database\lib\net45 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Database.nuspec $nuget_dir\RavenDB.Database\RavenDB.Database.nuspec
-	@("Raven.Database.???") `
+	@("Raven.Database.???", "Raven.Abstractions.???") `
 		 |% { Copy-Item "$base_dir\Raven.Database\bin\$global:configuration\$_" $nuget_dir\RavenDB.Database\lib\net45 }
 	Copy-Item "$build_dir\Raven.Studio.Html5.zip" $nuget_dir\RavenDB.Database\lib\net45
 	
 	New-Item $nuget_dir\RavenDB.Server -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Server.nuspec $nuget_dir\RavenDB.Server\RavenDB.Server.nuspec
 	New-Item $nuget_dir\RavenDB.Server\tools -Type directory | Out-Null
-	@("Raven.Database.???", "Raven.Server.???") |% { Copy-Item "$base_dir\Raven.Server\bin\$global:configuration\$_" $nuget_dir\RavenDB.Server\tools }
+	@("Raven.Database.???", "Raven.Server.???", "Raven.Abstractions.???") |% { Copy-Item "$base_dir\Raven.Server\bin\$global:configuration\$_" $nuget_dir\RavenDB.Server\tools }
 	Copy-Item "$build_dir\Raven.Studio.Html5.zip" $nuget_dir\RavenDB.Server\tools
-	@("Raven.Smuggler.???") |% { Copy-Item "$base_dir\Raven.Smuggler\bin\$global:configuration\$_" $nuget_dir\RavenDB.Server\tools }
+	@("Raven.Smuggler.???", "Raven.Abstractions.???") |% { Copy-Item "$base_dir\Raven.Smuggler\bin\$global:configuration\$_" $nuget_dir\RavenDB.Server\tools }
 	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $nuget_dir\RavenDB.Server\tools\Raven.Server.exe.config
 
 	New-Item $nuget_dir\RavenDB.Embedded\lib\net45 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Embedded.nuspec $nuget_dir\RavenDB.Embedded\RavenDB.Embedded.nuspec
-	@("Raven.Client.Embedded.???") |% { Copy-Item "$base_dir\Raven.Client.Embedded\bin\$global:configuration\$_" $nuget_dir\RavenDB.Embedded\lib\net45 }
 	
 	# Client packages
 	@("Authorization", "UniqueConstraints") | Foreach-Object { 
@@ -614,7 +542,7 @@ task CreateNugetPackages -depends Compile, InitNuget {
 	
 	New-Item $nuget_dir\RavenDB.Tests.Helpers\lib\net45 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Tests.Helpers.nuspec $nuget_dir\RavenDB.Tests.Helpers\RavenDB.Tests.Helpers.nuspec
-	@("Raven.Tests.Helpers.???", "Raven.Server.???") |% { Copy-Item "$base_dir\Raven.Tests.Helpers.$_\bin\$global:configuration\$_" $nuget_dir\RavenDB.Tests.Helpers\lib\net45 }
+	@("Raven.Tests.Helpers.???", "Raven.Server.???", "Raven.Abstractions.???") |% { Copy-Item "$base_dir\Raven.Tests.Helpers\bin\$global:configuration\$_" $nuget_dir\RavenDB.Tests.Helpers\lib\net45 }
 	New-Item $nuget_dir\RavenDB.Tests.Helpers\content -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenTests $nuget_dir\RavenDB.Tests.Helpers\content\RavenTests -Recurse
 	
@@ -696,13 +624,9 @@ task CreateSymbolSources -depends CreateNugetPackages {
 		$srcDirName1 = $srcDirName1.Replace("Raven.Bundles.", "Bundles\Raven.Bundles.")
 		$srcDirName1 = $srcDirName1.Replace("Raven.Client.Authorization", "Bundles\Raven.Client.Authorization")
 		$srcDirName1 = $srcDirName1.Replace("Raven.Client.UniqueConstraints", "Bundles\Raven.Client.UniqueConstraints")
-		$srcDirName1 = $srcDirName1.Replace("Raven.Embedded", "Raven.Client.Embedded")
 		
 		$srcDirNames = @($srcDirName1)
-		if ($dirName -eq "RavenDB.Client") {
-			$srcDirNames += @("Raven.Client.Silverlight")
-		}
-		elseif ($dirName -eq "RavenDB.Server") {
+		if ($dirName -eq "RavenDB.Server") {
 			$srcDirNames += @("Raven.Smuggler")
 		}		
 		
@@ -787,8 +711,12 @@ task CreateSymbolSources -depends CreateNugetPackages {
 								Write-Host "To $nuget_dir\$dirName\src\$copyToPath" -ForegroundColor Magenta
 							}
 							
-							New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
-							Copy-Item "$srcDirName2\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
+							if ($fileToCopy.EndsWith("\*.cs")) {
+							# do nothing
+							} else {
+								New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
+								Copy-Item "$srcDirName2\$fileToCopy" "$nuget_dir\$dirName\src\$copyToPath" -Recurse -Force
+							}
 						}
 					}  
 					
