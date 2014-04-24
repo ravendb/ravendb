@@ -270,6 +270,11 @@ namespace Raven.Abstractions.Linq
 			return new DynamicList(Enumerate().Take(count));
 		}
 
+		public IEnumerable<dynamic> Skip(int count)
+		{
+			return new DynamicList(Enumerate().Skip(count));
+		}
+
 		/// <summary>
 		/// Gets the length.
 		/// </summary>
