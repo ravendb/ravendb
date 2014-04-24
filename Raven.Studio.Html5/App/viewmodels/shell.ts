@@ -62,8 +62,10 @@ class shell extends viewModelBase {
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
 
-    databasesChangeSubscription: changeSubscription;
+    globalDocPrefixChangesSubscription: changeSubscription;
 
+    modelPollingTimeoutFlag:boolean=true;
+    
     constructor() {
         super();
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
@@ -132,7 +134,7 @@ class shell extends viewModelBase {
         shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
 
 
-        this.databasesChangeSubscription = shell.globalChangesApi.watchDocPrefix((e: documentChangeNotificationDto) => {
+        shell.globalChangesApi.watchDocPrefix((e: documentChangeNotificationDto) => {
             if (!!e.Id && e.Id.indexOf("Raven/Databases") == 0 && 
                 (e.Type == documentChangeType.Put || e.Type == documentChangeType.Delete)) {
 
@@ -149,6 +151,8 @@ class shell extends viewModelBase {
             }
         }, "Raven/Databases");
     }
+
+
 
     showNavigationProgress(isNavigating: boolean) {
         if (isNavigating) {
@@ -304,6 +308,24 @@ class shell extends viewModelBase {
             shell.currentDbChangesApi().dispose();
         }
         shell.currentDbChangesApi(new changesApi(newDb));
+
+        shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
+            if (this.modelPollingTimeoutFlag === true) {
+                this.modelPollingTimeoutFlag = false;
+                this.modelPolling();
+            } else {
+                setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+            }
+        });
+
+        shell.currentDbChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => {
+            if (this.modelPollingTimeoutFlag === true) {
+                this.modelPollingTimeoutFlag = false;
+                this.modelPolling();
+            } else {
+                setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+            }
+        });
     }
 
     modelPolling() {
