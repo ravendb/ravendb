@@ -101,7 +101,7 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		private string PrepareTooLongUriTest(DocumentStore store)
+		private string PrepareTooLongUriTest(DocumentStore store, int parts)
 		{
 			using (var session = store.OpenSession())
 			{
@@ -113,7 +113,7 @@ namespace Raven.Tests.Issues
 			new Students_ByEmailDomain().Execute(store);
 
 			var list = new List<string>() { "hibernatingrhinos.com" };
-			for (var i = 0; i < 1023; i++) // in Lucene maxClauseCount is set to 1024
+			for (var i = 0; i < parts; i++) // in Lucene maxClauseCount is set to 1024
 				list.Add(Guid.NewGuid().ToString() + Guid.NewGuid().ToString());
 
 			var queryString = String.Join(" OR ", list.Select(i => "EmailDomain: " + i));
@@ -126,7 +126,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
-				var queryString = PrepareTooLongUriTest(store);
+				var queryString = PrepareTooLongUriTest(store, 1023);
 
 				using (var session = store.OpenSession())
 				{
@@ -145,7 +145,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
-				var queryString = PrepareTooLongUriTest(store);
+				var queryString = PrepareTooLongUriTest(store, 1023);
 
 				using (var session = store.OpenSession())
 				{
@@ -186,11 +186,11 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void ShouldNotThrowTooLongUri_StreamQuery()
+		public void ShouldNotThrowTooLongUri_StreamQuery_Small()
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
-				var queryString = PrepareTooLongUriTest(store);
+				var queryString = PrepareTooLongUriTest(store, 250);
 
 				WaitForIndexing(store);
 
@@ -211,5 +211,32 @@ namespace Raven.Tests.Issues
 				Assert.Equal(1, count);
 			}
 		}
+
+        [Fact]
+        public void ShouldNotThrowTooLongUri_StreamQuery()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                var queryString = PrepareTooLongUriTest(store, 1023);
+
+                WaitForIndexing(store);
+
+                QueryHeaderInformation queryHeaders;
+                var enumerator = store.DatabaseCommands.StreamQuery(new Students_ByEmailDomain().IndexName, new IndexQuery
+                {
+                    Query = queryString
+                }, out queryHeaders);
+
+                Assert.Equal(1, queryHeaders.TotalResults);
+
+                int count = 0;
+                while (enumerator.MoveNext())
+                {
+                    count++;
+                }
+
+                Assert.Equal(1, count);
+            }
+        }
 	}
 }

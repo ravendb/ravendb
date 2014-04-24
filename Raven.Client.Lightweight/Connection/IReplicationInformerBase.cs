@@ -48,8 +48,6 @@ namespace Raven.Client.Connection
 
         int GetReadStripingBase();
 
-	    T ExecuteWithReplication<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, T> operation);
-
         Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation);
 
         void ForceCheck(string primaryUrl, bool shouldForceCheck);

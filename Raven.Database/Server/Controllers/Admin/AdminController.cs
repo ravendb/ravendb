@@ -18,12 +18,15 @@ using Raven.Database.Backup;
 using Raven.Database.Config;
 using System.Net.Http;
 
+using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Plugins.Builtins;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.Security;
 using Raven.Database.Util;
 using Raven.Json.Linq;
+
+using Voron.Impl.Backup;
 
 namespace Raven.Database.Server.Controllers.Admin
 {
@@ -133,7 +136,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				}
 			}
 
-            if (File.Exists(Path.Combine(restoreRequest.BackupLocation, Voron.Impl.Constants.DatabaseFilename)))
+			if (File.Exists(Path.Combine(restoreRequest.BackupLocation, BackupMethods.Filename)))
                 ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
             else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
 				ravenConfiguration.DefaultStorageTypeName = typeof (Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
@@ -210,7 +213,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 documentDataDir = "~\\" + documentDataDir.Substring(2);
             }
 
-			return Path.GetFullPath(Path.Combine(baseDataPath, documentDataDir.Substring(2)));
+			return documentDataDir.ToFullPath(baseDataPath);
 		}
 
 		[HttpPost]

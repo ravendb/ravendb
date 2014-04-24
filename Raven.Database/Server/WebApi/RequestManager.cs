@@ -247,11 +247,6 @@ namespace Raven.Database.Server.WebApi
 			Interlocked.Increment(ref physicalRequestsCount);
 		}
 
-		public void DecrementRequestCount()
-		{
-			Interlocked.Decrement(ref physicalRequestsCount);
-		}
-
         private void FinalizeRequestProcessing(RavenBaseApiController controller, HttpResponseMessage response, Stopwatch sw)
 		{
 			LogHttpRequestStatsParams logHttpRequestStatsParam = null;
