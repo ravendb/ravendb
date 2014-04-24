@@ -61,7 +61,6 @@ class sqlReplication extends document {
 
         this.script.subscribe(()=> {
             setTimeout(() => {
-                debugger;
                 var currentEditor = aceEditorBindingHandler.currentEditor;
                 var annotations = currentEditor.getSession().getAnnotations();
                 var isErrorExists = false;
@@ -77,7 +76,7 @@ class sqlReplication extends document {
                 } else {
                     textarea.setCustomValidity("");
                 }
-            }, 200);
+            }, 1000);
         });
     }
 
