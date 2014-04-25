@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Raven.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
@@ -29,7 +30,7 @@ namespace Raven.Client.RavenFS.Shard
                 throw new ArgumentException("shardIds must have at least one value", "shardIds");
         }
 
-        public virtual ShardResolutionResult GetShardIdForUpload(string filename, NameValueCollection metadata)
+        public virtual ShardResolutionResult GetShardIdForUpload(string filename, RavenJObject metadata)
         {
             var shardId = (
                              from kvp in ShardIds
@@ -69,7 +70,7 @@ namespace Raven.Client.RavenFS.Shard
         /// <summary>
         ///  Generate a shard id for the specified entity
         ///  </summary>
-        public virtual string GenerateShardIdFor(string filename, NameValueCollection metadata)
+        public virtual string GenerateShardIdFor(string filename, RavenJObject metadata)
         {
             var current = Interlocked.Increment(ref counter);
             return ShardIds[current % ShardIds.Count];

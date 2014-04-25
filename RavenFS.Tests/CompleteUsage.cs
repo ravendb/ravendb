@@ -1,3 +1,4 @@
+using Raven.Json.Linq;
 using System.Collections.Specialized;
 using System.IO;
 using Xunit;
@@ -10,7 +11,7 @@ namespace RavenFS.Tests
 		public void HowToUseTheClient()
 		{
 			var client = NewClient();
-			var uploadTask = client.UploadAsync("dragon.design", new NameValueCollection
+            var uploadTask = client.UploadAsync("dragon.design", new RavenJObject
 			{
 				{"Customer", "Northwind"},
 				{"Preferred", "True"}
