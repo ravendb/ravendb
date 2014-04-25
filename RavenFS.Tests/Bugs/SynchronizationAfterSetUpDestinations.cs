@@ -31,7 +31,9 @@ namespace RavenFS.Tests.Bugs
 			Assert.Equal("renamed.bin", reports[0].FileName);
 
 			fileContent.Position = 0;
-			Assert.Equal(fileContent.GetMD5Hash(), destination.GetMetadataForAsync("renamed.bin").Result["Content-MD5"]);
+
+            var metadata = await destination.GetMetadataForAsync("renamed.bin");
+            Assert.Equal(fileContent.GetMD5Hash(), metadata.Value<string>("Content-MD5"));
 		}
 	}
 }

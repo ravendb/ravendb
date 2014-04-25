@@ -105,7 +105,7 @@ namespace RavenFS.Tests.Synchronization
 		}
 
 		[Fact]
-		public void Should_reuse_pages_where_nothing_has_changed()
+		public async void Should_reuse_pages_where_nothing_has_changed()
 		{
 			var file = SyncTestUtils.PreparePagesStream(3);
 			file.Position = 0;
@@ -118,19 +118,18 @@ namespace RavenFS.Tests.Synchronization
 			var destinationContent = file;
 
 			sourceContent.Position = 0;
-			source.UploadAsync("test", sourceContent).Wait();
+			await source.UploadAsync("test", sourceContent);
 			destinationContent.Position = 0;
-			destination.UploadAsync("test", destinationContent).Wait();
+			await destination.UploadAsync("test", destinationContent);
 
-			var contentUpdate = new ContentUpdateWorkItem("test", "http://localhost:12345", sourceRfs.Storage,
-			                                              sourceRfs.SigGenerator);
+			var contentUpdate = new ContentUpdateWorkItem("test", "http://localhost:12345", sourceRfs.Storage, sourceRfs.SigGenerator);
 
 
 			sourceContent.Position = 0;
 			// force to upload entire file, we just want to check which pages will be reused
-            contentUpdate.UploadToAsync(destination.Synchronization).Wait();
-			destination.Synchronization.ResolveConflictAsync("test", ConflictResolutionStrategy.RemoteVersion).Wait();
-            contentUpdate.UploadToAsync(destination.Synchronization).Wait();
+            await contentUpdate.UploadToAsync(destination.Synchronization);
+			await destination.Synchronization.ResolveConflictAsync("test", ConflictResolutionStrategy.RemoteVersion);
+            await contentUpdate.UploadToAsync(destination.Synchronization);
 
 			FileAndPages fileAndPages = null;
 			destinationRfs.Storage.Batch(accessor => fileAndPages = accessor.GetFile("test", 0, 256));
@@ -141,7 +140,9 @@ namespace RavenFS.Tests.Synchronization
 			Assert.Equal(3, fileAndPages.Pages[2].Id); // reused page
 
 			sourceContent.Position = 0;
-			Assert.Equal(sourceContent.GetMD5Hash(), destination.GetMetadataForAsync("test").Result["Content-MD5"]);
+
+            var metadata = await destination.GetMetadataForAsync("test");
+            Assert.Equal(sourceContent.GetMD5Hash(), metadata.Value<string>("Content-MD5"));
 		}
 	}
 }

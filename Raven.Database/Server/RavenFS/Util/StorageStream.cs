@@ -6,6 +6,7 @@ using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Search;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Util
 {
@@ -25,7 +26,7 @@ namespace Raven.Database.Server.RavenFS.Util
 
 		protected StorageStream(ITransactionalStorage transactionalStorage, string fileName,
 								StorageStreamAccess storageStreamAccess,
-								NameValueCollection metadata, IndexStorage indexStorage, StorageOperationsTask operations)
+								RavenJObject metadata, IndexStorage indexStorage, StorageOperationsTask operations)
 		{
 			TransactionalStorage = transactionalStorage;
 			StorageStreamAccess = storageStreamAccess;
@@ -60,7 +61,7 @@ namespace Raven.Database.Server.RavenFS.Util
 		public StorageStreamAccess StorageStreamAccess { get; private set; }
 		public string Name { get; private set; }
 
-		public NameValueCollection Metadata { get; private set; }
+		public RavenJObject Metadata { get; private set; }
 
 		private long CurrentPageFrameSize
 		{
@@ -100,7 +101,7 @@ namespace Raven.Database.Server.RavenFS.Util
 
 		public static StorageStream CreatingNewAndWritting(ITransactionalStorage transactionalStorage,
 														   IndexStorage indexStorage, StorageOperationsTask operations,
-														   string fileName, NameValueCollection metadata)
+														   string fileName, RavenJObject metadata)
 		{
 			if (indexStorage == null)
 				throw new ArgumentNullException("indexStorage", "indexStorage == null");

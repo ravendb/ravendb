@@ -26,7 +26,7 @@ namespace RavenFS.Tests.Bugs
 			var destinationFiles = await destinationClient.GetFilesAsync("/");
 			Assert.True(destinationFiles.FileCount == 1, "count not one");
 			Assert.True(destinationFiles.Files.Length == 1, "not one file");
-			Assert.True(destinationFiles.Files[0].Name == fileName, "name doesnt match");
+			Assert.True(destinationFiles.Files[0].Name == fileName, "name doesn't match");
 		}
 	}
 }

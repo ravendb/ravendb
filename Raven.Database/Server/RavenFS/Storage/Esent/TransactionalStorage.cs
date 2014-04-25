@@ -14,7 +14,9 @@ using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 
 using Raven.Abstractions.Exceptions;
+using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Storage.Esent
 {
@@ -43,16 +45,16 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			}
 		}
 
-		public TransactionalStorage(string path, NameValueCollection settings)
-		{
-			this.settings = settings;
-			this.path = path.ToFullPath();
-			database = Path.Combine(this.path, "Data.ravenfs");
+        public TransactionalStorage(string path, RavenJObject settings)
+        {
+            this.settings = settings.ToNameValueCollection();
+            this.path = path.ToFullPath();
+            database = Path.Combine(this.path, "Data.ravenfs");
 
-			new StorageConfigurator(settings).LimitSystemCache();
+            new StorageConfigurator(this.settings).LimitSystemCache();
 
-			Api.JetCreateInstance(out instance, database + Guid.NewGuid());
-		}
+            Api.JetCreateInstance(out instance, database + Guid.NewGuid());
+        }
 
 		public TableColumnsCache TableColumnsCache
 		{
