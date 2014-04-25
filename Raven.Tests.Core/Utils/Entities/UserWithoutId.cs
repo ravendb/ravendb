@@ -1,14 +1,13 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="RavenDB_1565.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="UserWithoutId.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Tests.Common;
-
-namespace Raven.Tests.Issues
+namespace Raven.Tests.Core.Utils.Entities
 {
-	public class RavenDB_1565 : ReplicationBase
+	public class UserWithoutId
 	{
-		// moved to Raven.Tests.Core -> AutomaticConflictResolution.cs
+		public string Name { get; set; }
+		public string AddressId { get; set; } 
 	}
 }

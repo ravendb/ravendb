@@ -1,14 +1,13 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="RavenDB_1565.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="PostContent.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Tests.Common;
-
-namespace Raven.Tests.Issues
+namespace Raven.Tests.Core.Utils.Entities
 {
-	public class RavenDB_1565 : ReplicationBase
+	public class PostContent
 	{
-		// moved to Raven.Tests.Core -> AutomaticConflictResolution.cs
+		public string Id { get; set; }
+		public string Text { get; set; }
 	}
 }
