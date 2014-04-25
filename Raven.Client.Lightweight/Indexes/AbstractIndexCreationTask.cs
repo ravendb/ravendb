@@ -180,6 +180,14 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
 
+		/// <summary>
+		/// Loads the specifed document during the indexing process
+		/// </summary>
+		public object LoadAttachmentForIndexing(string key)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
 #if !NETFX_CORE
 
 		/// <summary>
@@ -350,14 +358,6 @@ namespace Raven.Client.Indexes
 		/// Allows to use lambdas recursively
 		/// </summary>
 		protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, SortedSet<TResult>> func)
-		{
-			throw new NotSupportedException("This can only be run on the server side");
-		}
-
-		/// <summary>
-		/// Loads the specifed document during the indexing process
-		/// </summary>
-		public object LoadAttachmentForIndexing(string key)
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
