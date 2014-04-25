@@ -154,7 +154,7 @@ namespace Raven.Tests.Core.Indexing
 			using (var store = GetDocumentStore())
 			{
 				new Users_ByName().Execute(store);
-				new UsersWithCustomDataAndInclude().Execute(store);
+				new UserWithCustomDataAndAddressIncludeTransformer().Execute(store);
 
 				using (var session = store.OpenSession())
 				{
@@ -177,7 +177,7 @@ namespace Raven.Tests.Core.Indexing
 				{
 					var user = session.Query<User, Users_ByName>()
 							.Customize(x => x.WaitForNonStaleResults())
-							.TransformWith<UsersWithCustomDataAndInclude, UsersWithCustomDataAndInclude.Result>()
+							.TransformWith<UserWithCustomDataAndAddressIncludeTransformer, UserWithCustomDataAndAddressIncludeTransformer.Result>()
 							.AddQueryInput("customData", "RavenDB Developer")
 							.First();
 
