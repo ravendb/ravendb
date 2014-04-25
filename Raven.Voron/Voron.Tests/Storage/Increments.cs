@@ -18,21 +18,21 @@ namespace Voron.Tests.Storage
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.ReadTree("tree0").Increment(tx, "key/1", 10);
+				Assert.Equal(10, tx.ReadTree("tree0").Increment(tx, "key/1", 10));
 
 				tx.Commit();
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.ReadTree("tree0").Increment(tx, "key/1", 5);
+				Assert.Equal(15, tx.ReadTree("tree0").Increment(tx, "key/1", 5));
 
 				tx.Commit();
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.ReadTree("tree0").Increment(tx, "key/1", -3);
+				Assert.Equal(12, tx.ReadTree("tree0").Increment(tx, "key/1", -3));
 
 				tx.Commit();
 			}

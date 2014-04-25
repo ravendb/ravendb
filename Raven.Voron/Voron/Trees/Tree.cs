@@ -83,7 +83,7 @@ namespace Voron.Trees
 		    CopyStreamToPointer(tx, value, pos);
 		}
 
-		public void Increment(Transaction tx, Slice key, long delta, ushort? version = null)
+		public long Increment(Transaction tx, Slice key, long delta, ushort? version = null)
 		{
 			long currentValue = 0;
 
@@ -91,7 +91,10 @@ namespace Voron.Trees
 			if (read != null)
 				currentValue = read.Reader.ReadInt64();
 
-			Add(tx, key, BitConverter.GetBytes(currentValue + delta), version);
+			var value = currentValue + delta;
+			Add(tx, key, BitConverter.GetBytes(value), version);
+
+			return value;
 		}
 
 		public void Add(Transaction tx, Slice key, byte[] value, ushort? version = null)
