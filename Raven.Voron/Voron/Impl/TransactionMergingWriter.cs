@@ -188,6 +188,10 @@ namespace Voron.Impl
 								tree.MultiDelete(tx, operation.Key, operation.Value as Slice, operation.Version);
 								actionType = DebugActionType.MultiDelete;
 								break;
+							case WriteBatch.BatchOperationType.Increment:
+								tree.Increment(tx, operation.Key, (long)operation.Value, operation.Version);
+								actionType = DebugActionType.Increment;
+								break;
 							default:
 								throw new ArgumentOutOfRangeException();
 						}

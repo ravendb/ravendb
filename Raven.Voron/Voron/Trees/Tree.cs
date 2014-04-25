@@ -4,14 +4,13 @@ using System.Data;
 using System.Diagnostics;
 using System.IO;
 using Voron.Debugging;
+using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 
 namespace Voron.Trees
 {
-	using Exceptions;
-
 	public unsafe class Tree
 	{
 		private TreeMutableState _state = new TreeMutableState();
@@ -84,6 +83,16 @@ namespace Voron.Trees
 		    CopyStreamToPointer(tx, value, pos);
 		}
 
+		public void Increment(Transaction tx, Slice key, long delta, ushort? version = null)
+		{
+			long currentValue = 0;
+
+			var read = Read(tx, key);
+			if (read != null)
+				currentValue = read.Reader.ReadInt64();
+
+			Add(tx, key, BitConverter.GetBytes(currentValue + delta), version);
+		}
 
 		public void Add(Transaction tx, Slice key, byte[] value, ushort? version = null)
 		{
