@@ -94,12 +94,15 @@ task Test -depends Compile {
 	Clear-Host
 
 	$test_prjs = @( `
+		"$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll", `
 		"$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
 		"$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
-		"$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll",  `
+		"$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", `
 		"$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `
-		"$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll",`
-		"$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll" )
+		"$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
+		"$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll", `
+		"$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll", `
+		"$base_dir\RavenFS.Tests\bin\$global:configuration\RavenFS.Tests.dll")
 	Write-Host $test_prjs
 	
 	$xUnit = "$lib_dir\xunit\xunit.console.clr4.exe"
