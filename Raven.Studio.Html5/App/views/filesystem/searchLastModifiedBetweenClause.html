@@ -7,10 +7,12 @@
         </div>
         <div class="modal-body form-inline">
             <div class="form-group">
-                <label>File size between: </label>
-                <input type="text" class="form-control" data-bind="value: inputs[0]" />
+                <label>Between: </label>
+                <input id="fromDate" type="text" class="form-control" data-bind="value: inputs[0]" />
+                <button class="btn btn-default" data-bind="clickBubble: false, datePicker: fromDate, datepickerOptions: {autoclose: true, endDate: '+0d' }"><i class="fa fa-calendar"></i></button>
                 <label> and: </label>
-                <input type="text" class="form-control" data-bind="value: inputs[1]" />
+                <input id="toDate" type="text" class="form-control" data-bind="value: inputs[1]" />
+                <button class="btn btn-default" data-bind="clickBubble: false, datePicker: toDate, datepickerOptions: {autoclose: true, endDate: '+0d' }"><i class="fa fa-calendar"></i></button>
             </div>
         </div>
         <div class="modal-footer">

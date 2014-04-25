@@ -7,9 +7,16 @@
         </div>
         <div class="modal-body form-inline">
             <div class="form-group">
-                <label>File size between: </label>
-                <input type="text" class="form-control" data-bind="value: inputs[0]" />
-                <label> and: </label>
+                <label>Key: </label>
+                <input id="keysAutocomplete" type="text" class="form-control" placeholder="Search key..." data-bind="value: inputs[0], valueUpdate: 'afterkeydown'" autocomplete="off" />
+                <ul style="display: none" class="dropdown-menu" role="menu" data-bind="autoComplete: '#keysAutocomplete', foreach: keySearchResults">
+                    <li role="presentation" data-bind="click: $root.setKey.bind($root, $data)">
+                        <a role="menuitem" tabindex="-1" href="#">
+                            <span data-bind="text: $data"></span>
+                        </a>
+                    </li>
+                </ul>
+                <label> value: </label>
                 <input type="text" class="form-control" data-bind="value: inputs[1]" />
             </div>
         </div>

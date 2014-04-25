@@ -14,7 +14,7 @@ class dialogViewModelBase {
 
     attached() {
         jwerty.key("escape", () => dialog.close(this), this, dialogViewModelBase.dialogSelector);
-        jwerty.key("enter", () => this.enterKeyPressed());
+        jwerty.key("enter", () => this.enterKeyPressed(), this, dialogViewModelBase.dialogSelector);
         $(dialogViewModelBase.dialogSelector).focus();
     }
 
@@ -26,12 +26,13 @@ class dialogViewModelBase {
         $(dialogViewModelBase.dialogSelector).unbind('keydown.jwerty');
     }
 
-    private enterKeyPressed() {
+    enterKeyPressed() {
         var acceptButton = <HTMLAnchorElement>$(".modal-footer:visible .btn-primary")[0];
         if (acceptButton && acceptButton.click) {
             acceptButton.click();
         }
     }
+
 }
 
 export = dialogViewModelBase;
