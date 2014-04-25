@@ -3,6 +3,7 @@ using Jint;
 using Jint.Native;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
@@ -23,24 +24,24 @@ namespace Raven.Database.Bundles.SqlReplication
 			this.docId = docId;
 		}
 
-		protected override void RemoveEngineCustomizations(JintEngine jintEngine)
+		protected override void RemoveEngineCustomizations(Engine jintEngine)
 		{
-			jintEngine.RemoveParameter("documentId");
-			jintEngine.RemoveParameter("replicateTo");
-			foreach (var sqlReplicationTable in config.SqlReplicationTables)
-			{
-				jintEngine.RemoveParameter("replicateTo" + sqlReplicationTable.TableName);
-			}
+			//jintEngine.RemoveParameter("documentId");
+			//jintEngine.RemoveParameter("replicateTo");
+			//foreach (var sqlReplicationTable in config.SqlReplicationTables)
+			//{
+			//	jintEngine.RemoveParameter("replicateTo" + sqlReplicationTable.TableName);
+			//}
 		}
 
-		protected override void CustomizeEngine(JintEngine jintEngine, ScriptedJsonPatcherOperationScope scope)
+		protected override void CustomizeEngine(Engine jintEngine, ScriptedJsonPatcherOperationScope scope)
 		{
-			jintEngine.SetParameter("documentId", docId);
-			jintEngine.SetFunction("replicateTo", new Action<string,JsObject>((tableName, cols) => ReplicateToFunction(tableName, cols, scope)));
+			jintEngine.SetValue("documentId", docId);
+			jintEngine.SetValue("replicateTo", new Action<string,JsValue>((tableName, cols) => ReplicateToFunction(tableName, cols, scope)));
 			foreach (var sqlReplicationTable in config.SqlReplicationTables)
 			{
 				var current = sqlReplicationTable;
-				jintEngine.SetFunction("replicateTo" + sqlReplicationTable.TableName, (Action<JsObject>)(cols =>
+				jintEngine.SetValue("replicateTo" + sqlReplicationTable.TableName, (Action<JsValue>)(cols =>
 				{
 					var tableName = current.TableName;
 					ReplicateToFunction(tableName, cols, scope);
@@ -48,18 +49,18 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		private void ReplicateToFunction(string tableName, JsObject cols, ScriptedJsonPatcherOperationScope scope)
+		private void ReplicateToFunction(string tableName, JsValue cols, ScriptedJsonPatcherOperationScope scope)
 		{
 			if (tableName == null)
 				throw new ArgumentException("tableName parameter is mandatory");
-			if (cols == null)
+			if (cols == JsValue.Null)
 				throw new ArgumentException("cols parameter is mandatory");
 
 			var itemToReplicates = scriptResult.Data.GetOrAdd(tableName);
 			itemToReplicates.Add(new ItemToReplicate
 			{
 				DocumentId = docId,
-				Columns = scope.ToRavenJObject(cols)
+				Columns = cols.TryCast<RavenJObject>()
 			});
 		}
 	}

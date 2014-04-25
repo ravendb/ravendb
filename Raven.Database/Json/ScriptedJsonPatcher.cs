@@ -11,6 +11,8 @@ using System.Runtime.Serialization;
 using System.Text;
 using Jint;
 using Jint.Native;
+using Jint.Runtime;
+using Jint.Runtime.Environments;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -71,7 +73,7 @@ namespace Raven.Database.Json
 
 		private RavenJObject ApplySingleScript(RavenJObject doc, ScriptedPatchRequest patch, int size, string docId, ScriptedJsonPatcherOperationScope scope)
 		{
-			JintEngine jintEngine;
+			Engine jintEngine;
 			try
 			{
 				jintEngine = ScriptsCache.CheckoutScript(CreateEngine, patch);
@@ -80,7 +82,7 @@ namespace Raven.Database.Json
 			{
 				throw new ParseException("Could not parse script", e);
 			}
-			catch (JintException e)
+			catch (JavaScriptException e)
 			{
 				throw new ParseException("Could not parse script", e);
 			}
@@ -92,36 +94,39 @@ namespace Raven.Database.Json
 			try
 			{
 			    CustomizeEngine(jintEngine, scope);
-				jintEngine.SetFunction("PutDocument", (Action<string, JsObject, JsObject>)(scope.PutDocument));
-				jintEngine.SetFunction("LoadDocument", (Func<string, JsObject>)(key => scope.LoadDocument(key, jintEngine.Global)));
-				jintEngine.SetFunction("DeleteDocument", (Action<string>)(scope.DeleteDocument));
-			    jintEngine.SetParameter("__document_id", docId);
+				jintEngine.SetValue("PutDocument", (Action<string, object, object>)(scope.PutDocument));
+				jintEngine.SetValue("LoadDocument", (Func<string, JsValue>)(key => scope.LoadDocument(key, jintEngine)));
+				jintEngine.SetValue("DeleteDocument", (Action<string>)(scope.DeleteDocument));
+				jintEngine.SetValue("__document_id", docId);
 			    foreach (var kvp in patch.Values)
 			    {
 			        var token = kvp.Value as RavenJToken;
 			        if (token != null)
 			        {
-			            jintEngine.SetParameter(kvp.Key, scope.ToJsInstance(jintEngine.Global, token));
+						jintEngine.SetValue(kvp.Key, scope.ToJsInstance(jintEngine, token));
 			        }
 			        else
 			        {
-			            var rjt = RavenJToken.FromObject(kvp.Value);
-			            var jsInstance = scope.ToJsInstance(jintEngine.Global, rjt);
-			            jintEngine.SetParameter(kvp.Key, jsInstance);
+						var rjt = RavenJToken.FromObject(kvp.Value);
+						var jsInstance = scope.ToJsInstance(jintEngine, rjt);
+						jintEngine.SetValue(kvp.Key, jsInstance);
 			        }
 			    }
-			    var jsObject = scope.ToJsObject(jintEngine.Global, doc);
-			    jintEngine.ResetSteps();
+				var jsObject = scope.ToJsObject(jintEngine, doc);
+			    jintEngine.ResetStatementsCount();
 			    if (size != 0)
 			    {
-			        jintEngine.SetMaxSteps(maxSteps + (size*additionalStepsPerSize));
+				    jintEngine.Options.MaxStatements(maxSteps + (size * additionalStepsPerSize));
 			    }
-			    jintEngine.CallFunction("ExecutePatchScript", jsObject);
+			    jintEngine.Invoke("ExecutePatchScript", jsObject);
 			    foreach (var kvp in patch.Values)
 			    {
-			        jintEngine.RemoveParameter(kvp.Key);
+					// TODO [ppekrol] not sure if this is the right way
+				    jintEngine.SetValue(kvp.Key, JsValue.Undefined);
+				    //jintEngine.RemoveParameter(kvp.Key);
 			    }
-			    jintEngine.RemoveParameter("__document_id");
+				jintEngine.SetValue("__document_id", JsValue.Undefined);
+			    //jintEngine.RemoveParameter("__document_id");
 			    RemoveEngineCustomizations(jintEngine);
 			    OutputLog(jintEngine);
 
@@ -137,9 +142,9 @@ namespace Raven.Database.Json
 			{
 				OutputLog(jintEngine);
 				var errorMsg = "Unable to execute JavaScript: " + Environment.NewLine + patch.Script;
-				var error = errorEx as JsException;
+				var error = errorEx as JavaScriptException;
 				if (error != null)
-					errorMsg += Environment.NewLine + "Error: " + Environment.NewLine + string.Join(Environment.NewLine, error.Value);
+					errorMsg += Environment.NewLine + "Error: " + Environment.NewLine + string.Join(Environment.NewLine, error.Error);
 				if (Debug.Count != 0)
 					errorMsg += Environment.NewLine + "Debug information: " + Environment.NewLine +
 								string.Join(Environment.NewLine, Debug);
@@ -148,11 +153,11 @@ namespace Raven.Database.Json
 			}
 		}
 
-		protected virtual void RemoveEngineCustomizations(JintEngine jintEngine)
+		protected virtual void RemoveEngineCustomizations(Engine jintEngine)
 		{
 		}
 
-		private JintEngine CreateEngine(ScriptedPatchRequest patch)
+		private Engine CreateEngine(ScriptedPatchRequest patch)
 		{
 			var scriptWithProperLines = NormalizeLineEnding(patch.Script);
 			var wrapperScript = String.Format(@"
@@ -163,27 +168,24 @@ function ExecutePatchScript(docInner){{
 }};
 ", scriptWithProperLines);
 
-			var jintEngine = new JintEngine()
-				.AllowClr(false)
+			var jintEngine = new Engine(cfg =>
+			{
 #if DEBUG
-				.SetDebugMode(true)
+				cfg.AllowDebuggerStatement();
 #else
-				.SetDebugMode(false)
+				cfg.AllowDebuggerStatement(false);
 #endif
-				.SetMaxRecursions(50)
-				.SetMaxSteps(maxSteps);
+				cfg.MaxStatements(maxSteps);
+			});
 
             AddScript(jintEngine, "Raven.Database.Json.lodash.js");
             AddScript(jintEngine, "Raven.Database.Json.ToJson.js");
             AddScript(jintEngine, "Raven.Database.Json.RavenDB.js");
-            AddScript(jintEngine, "Raven.Database.Json.ECMAScript5.js");
 
-            jintEngine.Run(wrapperScript);
+            jintEngine.Execute(wrapperScript);
 
 			return jintEngine;
 		}
-
-	    
 
 	    private static string NormalizeLineEnding(string script)
 		{
@@ -200,28 +202,28 @@ function ExecutePatchScript(docInner){{
 			}
 		}
 
-		private static void AddScript(JintEngine jintEngine, string ravenDatabaseJsonMapJs)
+		private static void AddScript(Engine jintEngine, string ravenDatabaseJsonMapJs)
 		{
-			jintEngine.Run(GetFromResources(ravenDatabaseJsonMapJs));
+			jintEngine.Execute(GetFromResources(ravenDatabaseJsonMapJs));
 		}
 
-		protected virtual void CustomizeEngine(JintEngine jintEngine, ScriptedJsonPatcherOperationScope scope)
+		protected virtual void CustomizeEngine(Engine jintEngine, ScriptedJsonPatcherOperationScope scope)
 		{
 		}
 
-		private void OutputLog(JintEngine engine)
+		private void OutputLog(Engine engine)
 		{
-			var arr = engine.GetParameter("debug_outputs") as JsArray;
-			if (arr == null)
-				return;
-			for (int i = 0; i < arr.Length; i++)
-			{
-				var o = arr.get(i);
-				if (o == null)
-					continue;
-				Debug.Add(o.ToString());
-			}
-			engine.SetParameter("debug_outputs", engine.Global.ArrayClass.New());
+			//var arr = engine.GetParameter("debug_outputs") as JsArray;
+			//if (arr == null)
+			//	return;
+			//for (int i = 0; i < arr.Length; i++)
+			//{
+			//	var o = arr.get(i);
+			//	if (o == null)
+			//		continue;
+			//	Debug.Add(o.ToString());
+			//}
+			//engine.SetParameter("debug_outputs", engine.Global.ArrayClass.New());
 		}
 
 		private static string GetFromResources(string resourceName)

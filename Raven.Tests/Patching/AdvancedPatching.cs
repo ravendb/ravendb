@@ -631,7 +631,7 @@ PutDocument(
 
 				store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
 				{
-                    Script = @"PutDocument('NewTypes/1', { });",
+                    Script = @"PutDocument('NewTypes/1', { }, { });",
 				});
 
 				var resultDoc = store.DatabaseCommands.Get("NewTypes/1");
