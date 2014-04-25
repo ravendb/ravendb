@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Dynamic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Dynamic;
+using Raven.Tests.Common;
 using Xunit;
 
 namespace Raven.Tests.Bugs.Async
 {
-	public class DynamicGeneratedIds : RemoteClientTest
+	public class DynamicGeneratedIds : RavenTest
 	{
 		[Fact]
 		public void AsyncMatchesSyncGeneratedIdBehavior()
