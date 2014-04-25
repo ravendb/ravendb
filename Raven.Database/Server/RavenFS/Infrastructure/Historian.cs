@@ -46,8 +46,8 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 				history.RemoveAt(0);
 
             sourceMetadata[SynchronizationConstants.RavenSynchronizationHistory] = SerializeHistory(history);            
-			sourceMetadata[SynchronizationConstants.RavenSynchronizationVersion] = synchronizationHiLo.NextId().ToString(CultureInfo.InvariantCulture);
-			sourceMetadata[SynchronizationConstants.RavenSynchronizationSource] = storage.Id.ToString();
+			sourceMetadata[SynchronizationConstants.RavenSynchronizationVersion] = synchronizationHiLo.NextId();
+			sourceMetadata[SynchronizationConstants.RavenSynchronizationSource] = new RavenJValue(storage.Id);
 		}
 
         public void UpdateLastModified(RavenJObject metadata)

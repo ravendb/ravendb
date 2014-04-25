@@ -23,7 +23,7 @@ namespace RavenFS.Tests.Synchronization
 		    var server3 = NewClient(2);
 
 			content.Position = 0;
-            server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content).Wait();
+            await server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content);
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
@@ -35,7 +35,7 @@ namespace RavenFS.Tests.Synchronization
 
 			SyncTestUtils.TurnOffSynchronization(server1);
 
-			server1.RenameAsync("test.bin", "rename.bin").Wait();
+            await server1.RenameAsync("test.bin", "rename.bin");
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
@@ -48,14 +48,17 @@ namespace RavenFS.Tests.Synchronization
 			Assert.Equal(SynchronizationType.Rename, secondServer2Synchronization[0].Reports.ToArray()[0].Type);
 
 			// On all servers should be file named "rename.bin"
-			Assert.Equal(1, server1.BrowseAsync().Result.Count());
-			Assert.Equal("rename.bin", server1.BrowseAsync().Result[0].Name);
+            var server1BrowseResult = await server1.BrowseAsync();
+            Assert.Equal(1, server1BrowseResult.Count());
+            Assert.Equal("rename.bin", server1BrowseResult.First().Name);
 
-			Assert.Equal(1, server2.BrowseAsync().Result.Count());
-			Assert.Equal("rename.bin", server2.BrowseAsync().Result[0].Name);
+            var server2BrowseResult = await server2.BrowseAsync();
+            Assert.Equal(1, server2BrowseResult.Count());
+            Assert.Equal("rename.bin", server2BrowseResult.First().Name);
 
-			Assert.Equal(1, server3.BrowseAsync().Result.Count());
-			Assert.Equal("rename.bin", server3.BrowseAsync().Result[0].Name);
+            var server3BrowseResult = await server3.BrowseAsync();
+            Assert.Equal(1, server3BrowseResult.Count());
+            Assert.Equal("rename.bin", server3BrowseResult.First().Name);
 		}
 
 		[Fact]
@@ -72,7 +75,7 @@ namespace RavenFS.Tests.Synchronization
             var server3 = NewClient(2);
 
 			content.Position = 0;
-            server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content).Wait();
+            await server1.UploadAsync("test.bin", new RavenJObject { { "test", "value" } }, content);
 			
 			Assert.Equal(1, server1.StatsAsync().Result.FileCount);
 
@@ -89,7 +92,7 @@ namespace RavenFS.Tests.Synchronization
 			SyncTestUtils.TurnOffSynchronization(server1);
 
 			content.Position = 0;
-			server1.UploadAsync("test.bin", changedContent).Wait();
+            await server1.UploadAsync("test.bin", changedContent);
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 

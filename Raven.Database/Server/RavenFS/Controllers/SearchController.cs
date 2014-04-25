@@ -11,19 +11,32 @@ namespace Raven.Database.Server.RavenFS.Controllers
 {
 	public class SearchController : RavenFsApiController
 	{
-		[HttpGet]
+        [HttpGet]
         [Route("ravenfs/{fileSystemName}/search/Terms")]
-        public HttpResponseMessage Terms(string query)
-		{
-			IndexSearcher searcher;
-			using (Search.GetSearcher(out searcher))
-			{
-				string[] result = searcher.IndexReader.GetFieldNames(IndexReader.FieldOption.ALL)
+        public HttpResponseMessage Terms()
+        {
+            IndexSearcher searcher;
+            using (Search.GetSearcher(out searcher))
+            {
+                string[] result = searcher.IndexReader.GetFieldNames(IndexReader.FieldOption.ALL).ToArray();
+
+                return this.GetMessageWithObject(result);
+            }
+        }
+
+        [HttpGet]
+        [Route("ravenfs/{fileSystemName}/search/Terms")]
+        public HttpResponseMessage Terms([FromUri] string query)
+        {
+            IndexSearcher searcher;
+            using (Search.GetSearcher(out searcher))
+            {
+                string[] result = searcher.IndexReader.GetFieldNames(IndexReader.FieldOption.ALL)
                                     .Where(x => x.IndexOf(query, 0, StringComparison.InvariantCultureIgnoreCase) != -1).ToArray();
 
                 return this.GetMessageWithObject(result);
-			}
-		}
+            }
+        }
 
 		[HttpGet]
         [Route("ravenfs/{fileSystemName}/search")]

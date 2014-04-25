@@ -9,7 +9,6 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.RavenFS;
 using Raven.Client.RavenFS;
@@ -24,6 +23,7 @@ using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using System.Diagnostics;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -76,7 +76,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			var tempFileName = RavenFileNameHelper.DownloadingFileName(fileName);
 
             var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First());
+            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First().Trim('\"'));
 
             var report = new SynchronizationReport(fileName, sourceFileETag, SynchronizationType.ContentUpdate);
 
@@ -98,7 +98,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 				Storage.Batch(accessor => StartupProceed(fileName, accessor));
 
-                RavenJObject sourceMetadata = InnerHeaders.FilterHeadersToObject();
+                RavenJObject sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders); // InnerHeaders.FilterHeadersToObject();
 
 				var localMetadata = GetLocalMetadata(fileName);
 
@@ -280,7 +280,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				Storage.Batch(accessor => StartupProceed(fileName, accessor));
 
 				var localMetadata = GetLocalMetadata(fileName);
-                var sourceMetadata = InnerHeaders.HeadersToObject();
+                var sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
 
                 bool isConflictResolved;
 
@@ -323,12 +323,13 @@ namespace Raven.Database.Server.RavenFS.Controllers
             return this.GetMessageWithObject(report, HttpStatusCode.OK);
 		}
 
+
 		[HttpDelete]
         [Route("ravenfs/{fileSystemName}/synchronization")]
 		public HttpResponseMessage Delete(string fileName)
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First());
+            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First().Trim('\"'));
 
             Log.Debug("Starting to delete a file '{0}' with ETag {1} from {2} because of synchronization", fileName, sourceFileETag, sourceServerInfo);
 
@@ -350,7 +351,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 				if (localMetadata != null)
 				{
-                    var sourceMetadata = Request.Headers.FilterHeadersToObject();
+                    // REVIEW: Use InnerHeaders for consistency?
+                    var sourceMetadata = GetFilteredMetadataFromHeaders(Request.Headers); // Request.Headers.FilterHeadersToObject();
 
                     bool isConflictResolved;
 
@@ -409,8 +411,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public HttpResponseMessage Rename(string fileName, string rename)
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-			var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First());
-            var sourceMetadata = InnerHeaders.FilterHeadersToObject();
+            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First().Trim('\"'));
+            var sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
 
 			Log.Debug("Starting to rename a file '{0}' to '{1}' with ETag {2} from {3} because of synchronization", fileName,
 					  rename, sourceFileETag, sourceServerInfo);
@@ -769,8 +771,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             RavenJObject result = null;
             try
             {
-                Storage.Batch(
-                    accessor => { result = accessor.GetFile(fileName, 0, 0).Metadata; });
+                Storage.Batch(accessor => { result = accessor.GetFile(fileName, 0, 0).Metadata; });
             }
             catch (FileNotFoundException)
             {

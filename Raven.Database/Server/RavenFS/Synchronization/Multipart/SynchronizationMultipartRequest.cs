@@ -50,20 +50,16 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 			token.ThrowIfCancellationRequested();
 
 			if (sourceStream.CanRead == false)
-			{
 				throw new Exception("Stream does not support reading");
-			}
 
 			request = destination.JsonRequestFactory.CreateHttpJsonRequest(
                                     new CreateHttpJsonRequestParams(this, destination.FileSystemUrl + "/synchronization/MultipartProceed",
 					                                                "POST", destination.Credentials, destination.Convention));
 
-			//request.SendChunked = true;
-			//request.AllowWriteStreamBuffering = false;
-			//request.KeepAlive = true;
-
-			request.AddHeaders(sourceMetadata);
-
+            // REVIEW: (Oren) There is a mismatch of expectations in the AddHeaders. ETag must always have to be surrounded by quotes. 
+            //         If AddHeader/s ever put an etag it should check for that.
+            //         I was hesitant to do the change though, because I do not understand the complete scope of such a change.
+            request.AddHeaders(sourceMetadata);           
 			request.AddHeader("Content-Type", "multipart/form-data; boundary=" + syncingBoundary);
 
 			request.AddHeader(SyncingMultipartConstants.FileName, fileName);

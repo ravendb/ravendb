@@ -50,8 +50,10 @@ namespace RavenFS.Tests.Synchronization
 			var sourceContent = SyncTestUtils.PrepareSourceStream(10);
 			sourceContent.Position = 0;
 			var destinationContent = new CombinedStream(differenceChunk, sourceContent);
+
 			var destinationClient = NewClient(0);
 			var sourceClient = NewClient(1);
+
             var sourceMetadata = new RavenJObject
 				                     {
 					                     {"SomeTest-metadata", "some-value"}
@@ -79,7 +81,7 @@ namespace RavenFS.Tests.Synchronization
 			using (var resultFileContent = new MemoryStream())
 			{
 				var metadata = sourceClient.DownloadAsync("test.txt", resultFileContent).Result;
-				Assert.Equal("shouldnt-be-overwritten", metadata.Value<string>("SomeTest-metadata"));
+				Assert.Equal("shouldnt-be-overwritten", metadata.Value<string>("SomeTest-Metadata"));
 				resultFileContent.Position = 0;
 				resultMd5 = resultFileContent.GetMD5Hash();
 				resultFileContent.Position = 0;
@@ -109,7 +111,7 @@ namespace RavenFS.Tests.Synchronization
                 await source.UploadAsync(filename, new MemoryStream(new byte[] { 1, 2, 3 }));
                 await destination.UploadAsync(filename, new MemoryStream(new byte[] { 1, 2, 3 }));
 
-                var result = source.Synchronization.StartAsync(filename, destination);
+                var result = await source.Synchronization.StartAsync(filename, destination);
 
 				if (i%3 == 0) // sometimes insert other configs
 				{
@@ -226,11 +228,11 @@ namespace RavenFS.Tests.Synchronization
 
             var conflictedMetadata = new RavenJObject
 				                         {
-					                         {"ETag", "\"" + Guid.Empty + "\""},
-					                         {SynchronizationConstants.RavenSynchronizationVersion, "1"},
-					                         {SynchronizationConstants.RavenSynchronizationSource, Guid.Empty.ToString()},
+					                         {SynchronizationConstants.RavenSynchronizationVersion, new RavenJValue(1)},
+					                         {SynchronizationConstants.RavenSynchronizationSource, new RavenJValue(Guid.Empty)},
 					                         {SynchronizationConstants.RavenSynchronizationHistory, "[]"}
-				                         };
+				                         }
+                                         .WithETag(Guid.Empty);
 
 			request.AddHeaders(conflictedMetadata);
 

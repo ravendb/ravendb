@@ -182,14 +182,12 @@ namespace Raven.Database.Server.RavenFS.Synchronization
                 }
 
                 var destinationClient = new RavenFileSystemClient(destination.ServerUrl, destination.FileSystem,
-                                                                  apiKey: destination.ApiKey, credentials: credentials)
-                                                                  .Synchronization;
+                                                                  apiKey: destination.ApiKey, credentials: credentials).Synchronization;
 
 				var lastETag = await destinationClient.GetLastSynchronizationFromAsync(storage.Id);
 
 				var activeTasks = synchronizationQueue.Active.ToList();
-				var filesNeedConfirmation =
-					GetSyncingConfigurations(destination).Where(sync => activeTasks.All(x => x.FileName != sync.FileName)).ToList();
+				var filesNeedConfirmation = GetSyncingConfigurations(destination).Where(sync => activeTasks.All(x => x.FileName != sync.FileName)).ToList();
 
 				var confirmations = await ConfirmPushedFiles(filesNeedConfirmation, destinationClient);
 
@@ -212,9 +210,8 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 							{
 								needSyncingAgain.Add(fileHeader);
 
-								Log.Debug(
-									"Destination server {0} said that file '{1}' is {2}.", destination, confirmation.FileName,
-									confirmation.Status);
+								Log.Debug("Destination server {0} said that file '{1}' is {2}.", 
+                                           destination, confirmation.FileName, confirmation.Status);
 							}
 						});
 					}
@@ -363,8 +360,8 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		private async Task<SynchronizationReport> PerformSynchronizationAsync(SynchronizationClient destination,
 																			  SynchronizationWorkItem work)
 		{
-			Log.Debug("Starting to perform {0} for a file '{1}' and a destination server {2}", work.GetType().Name, work.FileName,
-					  destination.FileSystemUrl);
+			Log.Debug("Starting to perform {0} for a file '{1}' and a destination server {2}", 
+                       work.GetType().Name, work.FileName, destination.FileSystemUrl);
 
 			if (!CanSynchronizeTo(destination.FileSystemUrl))
 			{

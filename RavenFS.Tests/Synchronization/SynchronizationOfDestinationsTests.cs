@@ -153,8 +153,7 @@ namespace RavenFS.Tests.Synchronization
 
 			await sourceClient.UploadAsync("test2.bin", source2Content);
 
-		    await
-		        sourceClient.Config.SetDestinationsConfig(destinationClient.ToSynchronizationDestination());
+		    await sourceClient.Config.SetDestinationsConfig(destinationClient.ToSynchronizationDestination());
 
 			await sourceClient.Synchronization.SynchronizeDestinationsAsync();
 

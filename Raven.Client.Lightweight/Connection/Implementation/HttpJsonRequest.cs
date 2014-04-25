@@ -804,7 +804,16 @@ namespace Raven.Client.Connection
         {
             foreach (var item in headers)
             {
-                AddHeader(item.Key, item.Value.ToString());
+                switch( item.Value.Type )
+                {
+                    case JTokenType.Object:
+                    case JTokenType.Array:
+                        AddHeader(item.Key, item.Value.ToString(Formatting.None));
+                        break;
+                    default:
+                        AddHeader(item.Key, item.Value.Value<string>());
+                        break;
+                }                
             }
         }
 

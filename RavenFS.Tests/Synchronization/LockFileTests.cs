@@ -153,14 +153,14 @@ namespace RavenFS.Tests.Synchronization
 		}
 
 		[Fact]
-		public void Should_successfully_synchronize_if_last_synchronization_timeout_exceeded()
+		public async void Should_successfully_synchronize_if_last_synchronization_timeout_exceeded()
 		{
 			RavenFileSystemClient destinationClient;
 			RavenFileSystemClient sourceClient;
 
 			UploadFilesSynchronously(out sourceClient, out destinationClient);
 
-            destinationClient.Config.SetConfig(SynchronizationConstants.RavenSynchronizationLockTimeout, new RavenJObject { { "value", TimeSpan.FromSeconds(0).ToString() } } ).Wait();
+            await destinationClient.Config.SetConfig(SynchronizationConstants.RavenSynchronizationLockTimeout, TimeSpan.FromSeconds(0));
 
 			Assert.DoesNotThrow(() => SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin"));
 		}
@@ -187,7 +187,7 @@ namespace RavenFS.Tests.Synchronization
 		{
 			destinationClient.Config.SetConfig(RavenFileNameHelper.SyncLockNameForFile("test.bin"), SynchronizationConfig(DateTime.MinValue)).Wait();
 
-            destinationClient.Config.SetConfig(SynchronizationConstants.RavenSynchronizationLockTimeout, TimeSpan.FromSeconds(0)).Wait();
+            destinationClient.Config.SetConfig(SynchronizationConstants.RavenSynchronizationLockTimeout, TimeSpan.FromSeconds(0) ).Wait();
 
 			Assert.DoesNotThrow(() => action());
 		}

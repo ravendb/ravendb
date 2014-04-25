@@ -21,6 +21,9 @@ using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Util.Streams;
 using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
+using System.Net.Http.Headers;
+using System.Text.RegularExpressions;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -65,7 +68,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			var readingStream = StorageStream.Reading(Storage, name);
 			var result = StreamResult(name, readingStream);
-			Raven.Database.Server.RavenFS.Extensions.MetadataExtensions.AddHeaders(result, fileAndPages);
+            AddHeaders(result, fileAndPages.Metadata);
 			return result;
 		}
 
@@ -153,7 +156,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			}
 
 			var httpResponseMessage = GetEmptyMessage();
-			Raven.Database.Server.RavenFS.Extensions.MetadataExtensions.AddHeaders(httpResponseMessage, fileAndPages);
+			AddHeaders(httpResponseMessage, fileAndPages.Metadata);
 			return httpResponseMessage;
 		}
 
@@ -163,7 +166,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			name = RavenFileNameHelper.RavenPath(name);
 
-            var headers = InnerHeaders.FilterHeadersToObject();
+            var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
 
             Historian.UpdateLastModified(headers);
             Historian.Update(name, headers);
@@ -192,7 +195,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             log.Debug("Metadata of a file '{0}' was updated", name);
 
             //Hack needed by jquery on the client side. We need to find a better solution for this
-            return GetMessageWithString("", HttpStatusCode.NoContent);
+            return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpPatch]
@@ -261,7 +264,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 				name = RavenFileNameHelper.RavenPath(name);
 
-                var headers = InnerHeaders.FilterHeadersToObject();
+                var headers = this.GetFilteredMetadataFromHeaders(InnerHeaders);
 
                 Historian.UpdateLastModified(headers);
                 Historian.Update(name, headers);
@@ -347,6 +350,45 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			Task.Factory.StartNew(async () => await SynchronizationTask.SynchronizeDestinationsAsync(), CancellationToken.None,
 								  TaskCreationOptions.None, TaskScheduler.Default);
 		}
+
+        private static void AddHeaders(HttpResponseMessage context, RavenJObject metadata)
+        {
+            foreach (var item in metadata)
+            {
+                if (item.Key == "ETag")
+                {
+                    var etag = item.Value.Value<Guid>();
+                    if (etag == null)
+                        continue;
+
+                    context.Headers.ETag = new EntityTagHeaderValue(@"""" + etag + @"""");
+                }
+                else
+                {
+                    if (item.Key == "Last-Modified")
+                    {
+                        string value = item.Value.Value<string>();
+                        context.Content.Headers.Add(item.Key, new Regex("\\.\\d{5}").Replace(value, string.Empty)); // HTTP does not provide milliseconds, so remove it
+                    }
+                    else
+                    {
+                        string value;
+                        switch (item.Value.Type)
+                        {
+                            // REVIEW: Can we just do item.Value.ToString(Imports.Newtonsoft.Json.Formatting.None) everywhere?
+                            case JTokenType.Object:
+                            case JTokenType.Array:
+                                value = item.Value.ToString(Imports.Newtonsoft.Json.Formatting.None);
+                                break;
+                            default:
+                                value = item.Value.Value<string>();
+                                break;
+                        }
+                        context.Content.Headers.Add(item.Key, value);
+                    }
+                }
+            }
+        }
 
 		private class ReadFileToDatabase : IDisposable
 		{

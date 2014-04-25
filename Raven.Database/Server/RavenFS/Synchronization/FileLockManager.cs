@@ -15,13 +15,17 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 	{
 		private readonly TimeSpan defaultTimeout = TimeSpan.FromMinutes(10);
 		private readonly Logger log = LogManager.GetCurrentClassLogger();
-		private TimeSpan configuredTimeout;
 
 		private TimeSpan SynchronizationTimeout(IStorageActionsAccessor accessor)
 		{
-			var timeoutConfigExists = accessor.TryGetConfigurationValue(SynchronizationConstants.RavenSynchronizationLockTimeout, out configuredTimeout);
+            string timeoutConfigKey = string.Empty;
+            accessor.TryGetConfigurationValue<string>(SynchronizationConstants.RavenSynchronizationLockTimeout, out timeoutConfigKey);
 
-			return timeoutConfigExists ? configuredTimeout : defaultTimeout;
+            TimeSpan timeoutConfiguration;
+            if (TimeSpan.TryParse(timeoutConfigKey, out timeoutConfiguration))
+                return timeoutConfiguration;
+
+            return defaultTimeout;
 		}
 
 		public void LockByCreatingSyncConfiguration(string fileName, ServerInfo sourceServer, IStorageActionsAccessor accessor)
@@ -34,7 +38,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
             accessor.SetConfig(RavenFileNameHelper.SyncLockNameForFile(fileName), JsonExtensions.ToJObject(syncLock));
 
-			log.Debug("File '{0}' was locked", fileName);
+            log.Debug("File '{0}' was locked", fileName);
 		}
 
 		public void UnlockByDeletingSyncConfiguration(string fileName, IStorageActionsAccessor accessor)

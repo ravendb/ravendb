@@ -33,8 +33,7 @@ namespace RavenFS.Tests.Synchronization
 			var notificationTask =
 				source.Notifications.SynchronizationUpdates()
 				      .Where(s => s.SynchronizationDirection == SynchronizationDirection.Outgoing)
-				      .Timeout(
-					      TimeSpan.FromSeconds(20)).Take(2).ToArray().
+				      .Timeout(TimeSpan.FromSeconds(20)).Take(2).ToArray().
 				       ToTask();
 			await source.Notifications.WhenSubscriptionsActive();
 

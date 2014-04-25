@@ -345,16 +345,15 @@ namespace Raven.Client.RavenFS
             return ExecuteWithReplication("GET", async operation =>
             {
                 var requestUriString = string.Format("{0}/search/terms?start={1}&pageSize={2}", operation.Url, start, pageSize).NoCache();
-                var request =
-                        jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
-                            "GET", operation.Credentials, convention));
+                var request = jsonRequestFactory.CreateHttpJsonRequest(
+                                        new CreateHttpJsonRequestParams(this, requestUriString,
+                                                                        "GET", operation.Credentials, convention));
 
                 try
                 {
-                    var response = await request.ReadResponseJsonAsync();
-                    {
-                        return new JsonSerializer().Deserialize<string[]>(new RavenJTokenReader(response));
-                    }
+                    var response = (RavenJArray) await request.ReadResponseJsonAsync();
+                    var items = response.Select(x => x.Value<string>());
+                    return items.ToArray();
                 }
                 catch (Exception e)
                 {
@@ -1003,8 +1002,6 @@ namespace Raven.Client.RavenFS
                 {
                     var response = (RavenJArray) await request.ReadResponseJsonAsync();
                     return response.Select(x => ((RavenJObject)x).JsonDeserialization<DestinationSyncResult>()).ToArray();
-                    //return response.JsonDeserialization<DestinationSyncResult[]>();
-                    //return new JsonSerializer().Deserialize<DestinationSyncResult[]>(new RavenJTokenReader(response));
                 }
                 catch (Exception e)
                 {
@@ -1175,17 +1172,16 @@ namespace Raven.Client.RavenFS
 
             public async Task<SourceSynchronizationInformation> GetLastSynchronizationFromAsync(Guid serverId)
             {
-                var requestUriString = String.Format("{0}/synchronization/LastSynchronization?from={1}",
-                                                        FileSystemUrl, serverId);
+                var requestUriString = String.Format("{0}/synchronization/LastSynchronization?from={1}", FileSystemUrl, serverId);
 
-                var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
-                        "GET", credentials, convention));
+                var request = jsonRequestFactory.CreateHttpJsonRequest(
+                                                    new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+                                                                                    "GET", credentials, convention));
 
                 try
                 {
                     var response = await request.ReadResponseJsonAsync();
-                    var preResult =
-                        new JsonSerializer().Deserialize<SourceSynchronizationInformation>(new RavenJTokenReader(response));
+                    var preResult = new JsonSerializer().Deserialize<SourceSynchronizationInformation>(new RavenJTokenReader(response));
                     return preResult;
                 }
                 catch (Exception e)
@@ -1329,8 +1325,9 @@ namespace Raven.Client.RavenFS
                 // REVIEW: (Oren) The ETag is always rewritten by this method as If-None-Match. Maybe a convention from the Database, but found it quite difficult to debug.  
                 var request = jsonRequestFactory.CreateHttpJsonRequest(
                                     new CreateHttpJsonRequestParams(this, FileSystemUrl + "/synchronization/UpdateMetadata/" + Uri.EscapeDataString(fileName),
-                                                                    "POST", metadata, credentials, convention));
-  
+                                                                    "POST", credentials, convention));
+
+                request.AddHeaders(metadata);
                 request.AddHeader(SyncingMultipartConstants.SourceServerInfo, sourceServer.AsJson());
                 // REVIEW: (Oren) and also causes this.
                 request.AddHeader("ETag", "\"" + metadata.Value<string>("ETag") + "\"");

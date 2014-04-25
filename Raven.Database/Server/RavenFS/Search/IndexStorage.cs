@@ -97,35 +97,6 @@ namespace Raven.Database.Server.RavenFS.Search
 			return topDocs;
 		}
 
-        [Obsolete("Eventually will be removed when the changes are done.")]
-        public virtual void Index(string key, NameValueCollection metadata)
-        {
-            Index(key, metadata.ToJObject());
-            //lock (writerLock)
-            //{
-            //    var lowerKey = key.ToLowerInvariant();
-            //    var doc = CreateDocument(lowerKey, metadata);
-
-            //    foreach (var metadataKey in metadata.AllKeys)
-            //    {
-            //        var values = metadata.GetValues(metadataKey);
-            //        if (values == null)
-            //            continue;
-
-            //        foreach (var value in values)
-            //        {
-            //            doc.Add(new Field(metadataKey, value, Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
-            //        }
-            //    }
-
-            //    writer.DeleteDocuments(new Term("__key", lowerKey));
-            //    writer.AddDocument(doc);
-            //    // yes, this is slow, but we aren't expecting high writes count
-            //    writer.Commit();
-            //    ReplaceSearcher();
-            //}
-        }
-
         public virtual void Index(string key, RavenJObject metadata)
         {
             lock (writerLock)
