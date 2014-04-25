@@ -85,6 +85,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Querying\Searching.cs" />
     <Compile Include="Utils\Indexes\Post_LoadAttachment.cs" />
     <Compile Include="Utils\Transformers\CompanyFullAddressTransformer.cs" />
     <Compile Include="Utils\Transformers\PostWithAsDocumentTransformer.cs" />
