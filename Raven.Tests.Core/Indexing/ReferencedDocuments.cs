@@ -13,7 +13,7 @@ namespace Raven.Tests.Core.Indexing
 	public class ReferencedDocuments : RavenCoreTestBase
 	{
 		[Fact]
-		public void ShouldIndexReferencedDocs()
+		public void CanUseLoadDocumentToIndexReferencedDocs()
 		{
 			using (var store = GetDocumentStore())
 			{
