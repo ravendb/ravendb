@@ -411,7 +411,7 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
-		/// Allow to get to the metadata of the document
+		/// Allow to access an entity as a document
 		/// </summary>
 		protected RavenJObject AsDocument(object doc)
 		{

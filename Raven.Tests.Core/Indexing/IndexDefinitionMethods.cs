@@ -1,16 +1,18 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using Raven.Client;
+using System.Text;
+using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Indexes;
 using Xunit;
 
 namespace Raven.Tests.Core.Indexing
 {
-    public class StaticIndexes : RavenCoreTestBase
+    public class IndexDefinitionMethods : RavenCoreTestBase
     {
         [Fact]
-        public void CreateAndQuerySimpleMapReduceIndexWithMetadataForCall()
+        public void CanUseMetadataFor()
         {
             using (var store = GetDocumentStore())
             {
@@ -67,7 +69,7 @@ namespace Raven.Tests.Core.Indexing
         }
 
         [Fact]
-        public void CreateAndQueryIndexContainingAllDocumentFields()
+		public void CanUseAsDocumentToIndexAllDocumentFields()
         {
             using (var store = GetDocumentStore())
             {
@@ -91,7 +93,7 @@ namespace Raven.Tests.Core.Indexing
         }
 
         [Fact]
-        public void CreateAndQuerySimpleIndexWithRecurse()
+        public void CanUseRecurse()
         {
             using (var store = GetDocumentStore())
             {
@@ -117,5 +119,42 @@ namespace Raven.Tests.Core.Indexing
                 }
             }
         }
+
+		[Fact]
+	    public void CanUseLoadAttachmentForIndexing()
+	    {
+			using (var store = GetDocumentStore())
+			{
+				var index = new Post_LoadAttachment();
+				index.Execute(store);
+
+				store.DatabaseCommands.PutAttachment("posts/1/attachments/1", null,
+					new MemoryStream(Encoding.UTF8.GetBytes("Lorem ipsum")), new RavenJObject());
+
+				store.DatabaseCommands.PutAttachment("posts/1/attachments/2", null,
+					new MemoryStream(Encoding.UTF8.GetBytes("dolor sit amet")), new RavenJObject());
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Post
+					{
+						Id = "posts/1",
+						AttachmentIds = new []{"posts/1/attachments/1", "posts/1/attachments/2"}
+					});
+
+					session.SaveChanges();
+
+					WaitForIndexing(store);
+
+					var post = session.Advanced.DocumentQuery<Post, Post_LoadAttachment>().WhereEquals("AttachmentContent", "Lorem").First();
+
+					Assert.NotNull(post);
+
+					post = session.Advanced.DocumentQuery<Post, Post_LoadAttachment>().WhereEquals("AttachmentContent", "sit").First();
+
+					Assert.NotNull(post);
+				}
+			}
+	    }
     }
 }

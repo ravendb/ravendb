@@ -85,7 +85,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Utils\Indexes\Post_LoadAttachment.cs" />
     <Compile Include="Utils\Transformers\CompanyFullAddressTransformer.cs" />
+    <Compile Include="Utils\Transformers\PostWithAsDocumentTransformer.cs" />
+    <Compile Include="Utils\Transformers\PostWithMetadataForTransformer.cs" />
     <Compile Include="Utils\Transformers\PostWithContentTransformer.cs" />
     <Compile Include="Utils\Transformers\UserWithCustomDataAndAddressIncludeTransformer.cs" />
     <None Include="app.config" />
@@ -139,7 +142,7 @@
     <Compile Include="Querying\Paging.cs" />
     <Compile Include="Querying\Projections.cs" />
     <Compile Include="Querying\Sorting.cs" />
-    <Compile Include="Indexing\StaticIndexes.cs" />
+    <Compile Include="Indexing\IndexDefinitionMethods.cs" />
     <Compile Include="Replication\AttachmentReplication.cs" />
     <Compile Include="Replication\AutomaticConflictResolution.cs" />
     <Compile Include="Replication\DocumentReplication.cs" />

@@ -3,7 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.IO;
 using System.Linq;
+using System.Text;
+using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Indexes;
 using Raven.Tests.Core.Utils.Transformers;
@@ -188,7 +192,63 @@ namespace Raven.Tests.Core.Indexing
 					Assert.NotNull(address);
 
 					Assert.Equal(1, session.Advanced.NumberOfRequests);
+				}
+			}
+		}
 
+		[Fact]
+		public void CanUseMetadataForInTransformer()
+		{
+			using (var store = GetDocumentStore())
+			{
+				new PostWithMetadataForTransformer().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Post
+					{
+						Id = "posts/1",
+						Title = "Result Transformers"
+					});
+
+					session.SaveChanges();
+
+					var post =
+						session.Query<Post>()
+							.Customize(x => x.WaitForNonStaleResults())
+							.TransformWith<PostWithMetadataForTransformer, PostWithMetadataForTransformer.Result>()
+							.First();
+
+					Assert.NotNull(post.LastModified);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanUseAsDocumentInTransformer()
+		{
+			using (var store = GetDocumentStore())
+			{
+				new PostWithAsDocumentTransformer().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Post
+					{
+						Id = "posts/1",
+						Title = "Result Transformers"
+					});
+
+					session.SaveChanges();
+
+					var post =
+						session.Query<Post>()
+							.Customize(x => x.WaitForNonStaleResults())
+							.TransformWith<PostWithAsDocumentTransformer, PostWithAsDocumentTransformer.Result>()
+							.First();
+
+					Assert.NotNull(post.RawDocument);
+					Assert.Equal("posts/1", post.RawDocument.Value<string>(Constants.DocumentIdFieldName));
 				}
 			}
 		}
