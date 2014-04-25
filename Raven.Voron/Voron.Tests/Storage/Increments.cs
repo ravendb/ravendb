@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Voron.Impl;
+
 using Xunit;
 
 namespace Voron.Tests.Storage
@@ -34,6 +36,36 @@ namespace Voron.Tests.Storage
 
 				tx.Commit();
 			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var read = tx.ReadTree("tree0").Read(tx, "key/1");
+
+				Assert.NotNull(read);
+				Assert.Equal(3, read.Version);
+				Assert.Equal(12, read.Reader.ReadInt64());
+			}
+		}
+
+		[Fact]
+		public void SimpleIncrementShouldWorkUsingWriteBatch()
+		{
+			CreateTrees(Env, 1, "tree");
+
+			var writeBatch = new WriteBatch();
+			writeBatch.Increment("key/1", 10, "tree0");
+
+			Env.Writer.Write(writeBatch);
+
+			writeBatch = new WriteBatch();
+			writeBatch.Increment("key/1", 5, "tree0");
+
+			Env.Writer.Write(writeBatch);
+
+			writeBatch = new WriteBatch();
+			writeBatch.Increment("key/1", -3, "tree0");
+
+			Env.Writer.Write(writeBatch);
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
