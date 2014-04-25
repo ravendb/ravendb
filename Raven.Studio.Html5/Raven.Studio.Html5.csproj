@@ -138,6 +138,7 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\configuration.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemFiles.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystems.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\searchDialogViewModel.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchHasMetadataClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemStatistics.ts" />
