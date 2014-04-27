@@ -71,12 +71,17 @@ class sqlReplication extends document {
                         break;
                     }
                 }
-                var textarea: any = $(currentEditor.container).find('textarea')[0];
-                if (isErrorExists) {
-                    textarea.setCustomValidity("The script isn't a javascript legal expression!");
-                } else {
-                    textarea.setCustomValidity("");
+
+                var editorValue = currentEditor.getSession().getValue();
+                var message = "";
+                if (editorValue === "") {
+                    message = "Please fill out this field.";
                 }
+                else if (isErrorExists) {
+                    message = "The script isn't a javascript legal expression!";
+                }
+                var textarea: any = $(currentEditor.container).find('textarea')[0];
+                textarea.setCustomValidity(message);
             }, 1000);
         });
     }
