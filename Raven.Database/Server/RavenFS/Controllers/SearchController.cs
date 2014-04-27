@@ -12,7 +12,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 	{
 		[HttpGet]
         [Route("ravenfs/{fileSystemName}/search/Terms")]		
-		public string[] Terms(string query)
+		public string[] Terms(string query = "")
 		{
 			IndexSearcher searcher;
 			using (Search.GetSearcher(out searcher))
