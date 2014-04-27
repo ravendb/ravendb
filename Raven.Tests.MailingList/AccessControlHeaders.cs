@@ -15,7 +15,7 @@ namespace Raven.Tests.MailingList
 	{
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
-			configuration.AccessControlAllowOrigin = "*";
+			configuration.AccessControlAllowOrigin.Add("*");
 		}
 
 		[Fact]
