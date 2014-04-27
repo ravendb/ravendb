@@ -311,18 +311,22 @@ namespace Voron.Trees
             // when truncating, we copy the values to a tmp page
             // this has the effect of compacting the page data and avoiding
             // internal page fragmentation
-            var copy = tx.Environment.TemporaryPage.TempPage;
-            copy.Flags = Flags;
-            for (int j = 0; j < i; j++)
-            {
-                copy.CopyNodeDataToEndOfPage(GetNode(j));
-            }
-            NativeMethods.memcpy(_base + Constants.PageHeaderSize,
-                                 copy._base + Constants.PageHeaderSize,
-								 _pageSize - Constants.PageHeaderSize);
+	        TemporaryPage tmp;
+	        using (tx.Environment.GetTemporaryPage(tx, out tmp))
+	        {
+		        var copy = tmp.TempPage;
+				copy.Flags = Flags;
+				for (int j = 0; j < i; j++)
+				{
+					copy.CopyNodeDataToEndOfPage(GetNode(j));
+				}
+				NativeMethods.memcpy(_base + Constants.PageHeaderSize,
+									 copy._base + Constants.PageHeaderSize,
+									 _pageSize - Constants.PageHeaderSize);
 
-            Upper = copy.Upper;
-            Lower = copy.Lower;
+				Upper = copy.Upper;
+				Lower = copy.Lower;
+	        }
 
             if (LastSearchPosition > i)
                 LastSearchPosition = i;
@@ -366,27 +370,31 @@ namespace Voron.Trees
             return true;
         }
 
-        private void Defrag(Transaction tx)
-        {
-            var tmp = tx.Environment.TemporaryPage.TempPage;
-            NativeMethods.memcpy(tmp.Base, Base, _pageSize);
+	    private void Defrag(Transaction tx)
+	    {
+		    TemporaryPage tmp;
+		    using (tx.Environment.GetTemporaryPage(tx, out tmp))
+		    {
+			    var tempPage = tmp.TempPage;
+			    NativeMethods.memcpy(tempPage.Base, Base, _pageSize);
 
-            var numberOfEntries = NumberOfEntries;
+			    var numberOfEntries = NumberOfEntries;
 
-            Upper = _pageSize;
+			    Upper = _pageSize;
 
-            for (int i = 0; i < numberOfEntries; i++)
-            {
-                var node = tmp.GetNode(i);
-                var size = node->GetNodeSize() - Constants.NodeOffsetSize;
-                size += size & 1;
-                NativeMethods.memcpy(Base + Upper - size, (byte*) node, size);
-                Upper -= (ushort)size;
-                KeysOffsets[i] = Upper;
-            }
-        }
+			    for (int i = 0; i < numberOfEntries; i++)
+			    {
+					var node = tempPage.GetNode(i);
+				    var size = node->GetNodeSize() - Constants.NodeOffsetSize;
+				    size += size & 1;
+				    NativeMethods.memcpy(Base + Upper - size, (byte*) node, size);
+				    Upper -= (ushort) size;
+				    KeysOffsets[i] = Upper;
+			    }
+		    }
+	    }
 
-        private bool HasSpaceFor(int len)
+	    private bool HasSpaceFor(int len)
         {
             return len <= SizeLeft;
         }

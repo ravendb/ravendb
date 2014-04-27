@@ -122,16 +122,19 @@ namespace Voron.Trees
 
 		private static void CopyStreamToPointer(Transaction tx, Stream value, byte* pos)
 		{
-			var temporaryPage = tx.Environment.TemporaryPage;
-			var tempPageBuffer = temporaryPage.TempPageBuffer;
-			var tempPagePointer = temporaryPage.TempPagePointer;
-			while (true)
+			TemporaryPage tmp;
+			using (tx.Environment.GetTemporaryPage(tx, out tmp))
 			{
-				var read = value.Read(tempPageBuffer, 0, AbstractPager.PageSize);
-				if (read == 0)
-					break;
-				NativeMethods.memcpy(pos, tempPagePointer, read);
-				pos += read;
+				var tempPageBuffer = tmp.TempPageBuffer;
+				var tempPagePointer = tmp.TempPagePointer;
+				while (true)
+				{
+					var read = value.Read(tempPageBuffer, 0, AbstractPager.PageSize);
+					if (read == 0)
+						break;
+					NativeMethods.memcpy(pos, tempPagePointer, read);
+					pos += read;
+				}
 			}
 		}
 

@@ -46,6 +46,6 @@ namespace Voron.Impl.Paging
                 };
             }
         }
-
+	    public IDisposable ReturnTemporaryPageToPool { get; set; }
     }
 }

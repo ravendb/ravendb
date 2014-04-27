@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
+using Voron.Impl.Paging;
 using Voron.Util;
 
 namespace Voron.Trees
@@ -120,30 +121,36 @@ namespace Voron.Trees
 		private void ExpandMultiTreeNestedPageSize(Transaction tx, Slice key, Slice value, byte* nestedPagePtr, ushort newSize, int currentSize)
 		{
 			Debug.Assert(newSize > currentSize);
-			var tempPagePointer = tx.Environment.TemporaryPage.TempPagePointer;
-			NativeMethods.memcpy(tempPagePointer, nestedPagePtr, currentSize);
-			Delete(tx, key); // release our current page
-			Page nestedPage = new Page(tempPagePointer, "multi tree", (ushort) currentSize);
-
-			var ptr = DirectAdd(tx, key, newSize);
-
-			var newNestedPage = new Page(ptr, "multi tree", newSize)
+			TemporaryPage tmp;
+			using (tx.Environment.GetTemporaryPage(tx, out tmp))
 			{
-				Lower = (ushort) Constants.PageHeaderSize,
-				Upper = newSize
-			};
+				var tempPagePointer = tmp.TempPagePointer;
+				NativeMethods.memcpy(tempPagePointer, nestedPagePtr, currentSize);
+				Delete(tx, key); // release our current page
+				Page nestedPage = new Page(tempPagePointer, "multi tree", (ushort)currentSize);
 
-			Slice nodeKey = new Slice(SliceOptions.Key);
-			for (int i = 0; i < nestedPage.NumberOfEntries; i++)
-			{
-				var nodeHeader = nestedPage.GetNode(i);
-				nodeKey.Set(nodeHeader);
-				newNestedPage.AddDataNode(i, nodeKey, 0,
-					(ushort) (nodeHeader->Version - 1)); // we dec by one because AdddataNode will inc by one, and we don't want to change those values
+				var ptr = DirectAdd(tx, key, newSize);
+
+				var newNestedPage = new Page(ptr, "multi tree", newSize)
+				{
+					Lower = (ushort)Constants.PageHeaderSize,
+					Upper = newSize,
+					Flags = PageFlags.Leaf,
+					PageNumber = -1L // mark as invalid page number
+				};
+
+				Slice nodeKey = new Slice(SliceOptions.Key);
+				for (int i = 0; i < nestedPage.NumberOfEntries; i++)
+				{
+					var nodeHeader = nestedPage.GetNode(i);
+					nodeKey.Set(nodeHeader);
+					newNestedPage.AddDataNode(i, nodeKey, 0,
+						(ushort)(nodeHeader->Version - 1)); // we dec by one because AdddataNode will inc by one, and we don't want to change those values
+				}
+
+				newNestedPage.Search(key, _cmp);
+				newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, value, 0, 0);
 			}
-
-			newNestedPage.Search(key, _cmp);
-			newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, value, 0, 0);
 		}
 
 		private void MultiAddOnNewValue(Transaction tx, Slice key, Slice value, ushort? version, int maxNodeSize)
@@ -168,8 +175,10 @@ namespace Voron.Trees
 
 			var nestedPage = new Page(ptr, "multi tree", actualPageSize)
 			{
+				PageNumber = -1L,// hint that this is an inner page
 				Lower = (ushort) Constants.PageHeaderSize,
-				Upper = actualPageSize
+				Upper = actualPageSize,
+				Flags = PageFlags.Leaf,
 			};
 
 			CheckConcurrency(key, value, version, 0, TreeActionType.Add);
