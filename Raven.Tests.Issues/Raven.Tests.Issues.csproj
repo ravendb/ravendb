@@ -126,6 +126,7 @@
     <Compile Include="RavenDB1369.cs" />
     <Compile Include="RavenDB1508.cs" />
     <Compile Include="RavenDB1519.cs" />
+    <Compile Include="RavenDb1962.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_LoadTests.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_QueryDynamicTests.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_QueryMapReduceAnalyzedTests.cs" />
@@ -228,6 +229,8 @@
     <Compile Include="RavenDB_1761.cs" />
     <Compile Include="RavenDB_1762.cs" />
     <Compile Include="RavenDB_1765.cs" />
+    <Compile Include="RavenDb_1816.cs" />
+    <Compile Include="RavenDB_1825.cs" />
     <Compile Include="RavenDB_1828.cs" />
     <Compile Include="RavenDB_1829.cs" />
     <Compile Include="RavenDB_187.cs" />
@@ -236,6 +239,7 @@
     <Compile Include="RavenDB_2113.cs" />
     <Compile Include="RavenDB_2124.cs" />
     <Compile Include="RavenDB_2129.cs" />
+    <Compile Include="RavenDB_2183.cs" />
     <Compile Include="RavenDB_295.cs" />
     <Compile Include="RavenDB_299.cs" />
     <Compile Include="RavenDB_301.cs" />

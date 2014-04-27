@@ -27,6 +27,7 @@ import ace = require("ace/ace");
 import getDocumentsByEntityNameCommand = require("commands/getDocumentsByEntityNameCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import getIndexTermsCommand = require("commands/getIndexTermsCommand");
+import queryStatsDialog = require("viewmodels/queryStatsDialog");
 
 class query extends viewModelBase {
 
@@ -96,6 +97,11 @@ class query extends viewModelBase {
         });
         
         aceEditorBindingHandler.install();        
+    }
+
+    openQueryStats() {
+        var viewModel = new queryStatsDialog(this.queryStats(), this.selectedIndexEditUrl(), this.didDynamicChangeIndex(), this.rawJsonUrl());
+        app.showDialog(viewModel)
     }
 
     activate(indexNameOrRecentQueryHash?: string) {

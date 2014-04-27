@@ -3,7 +3,6 @@ using Jint;
 using Jint.Native;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Json;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
@@ -34,22 +33,22 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		protected override void CustomizeEngine(JintEngine jintEngine)
+		protected override void CustomizeEngine(JintEngine jintEngine, ScriptedJsonPatcherOperationScope scope)
 		{
 			jintEngine.SetParameter("documentId", docId);
-			jintEngine.SetFunction("replicateTo", new Action<string,JsObject>(ReplicateToFunction));
+			jintEngine.SetFunction("replicateTo", new Action<string,JsObject>((tableName, cols) => ReplicateToFunction(tableName, cols, scope)));
 			foreach (var sqlReplicationTable in config.SqlReplicationTables)
 			{
 				var current = sqlReplicationTable;
 				jintEngine.SetFunction("replicateTo" + sqlReplicationTable.TableName, (Action<JsObject>)(cols =>
 				{
 					var tableName = current.TableName;
-					ReplicateToFunction(tableName, cols);
+					ReplicateToFunction(tableName, cols, scope);
 				}));
 			}
 		}
 
-		private void ReplicateToFunction(string tableName, JsObject cols)
+		private void ReplicateToFunction(string tableName, JsObject cols, ScriptedJsonPatcherOperationScope scope)
 		{
 			if (tableName == null)
 				throw new ArgumentException("tableName parameter is mandatory");
@@ -60,13 +59,8 @@ namespace Raven.Database.Bundles.SqlReplication
 			itemToReplicates.Add(new ItemToReplicate
 			{
 				DocumentId = docId,
-				Columns = ToRavenJObject(cols)
+				Columns = scope.ToRavenJObject(cols)
 			});
-		}
-
-		protected override RavenJObject ConvertReturnValue(JsObject jsObject)
-		{
-			return null;// we don't use / need the return value
 		}
 	}
 }
