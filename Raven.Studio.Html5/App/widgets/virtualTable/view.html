@@ -17,7 +17,7 @@
                     <span data-bind="text: $parent.cellMap[binding].data"></span> 
                     <!-- /ko -->
                     <!-- ko if: $parent.getCellTemplate(binding) === null -->
-                    <span></span>
+                    <span data-bind="text: binding"></span>
                     <!-- /ko -->
                     <!-- ko if: $parent.getCellTemplate(binding) === 'checkboxTemplate' -->
                     <img data-bind="click: function(sender, e) { $parents[1].toggleRowChecked($parent, e.shiftKey) }, attr: { src: $parent.isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />

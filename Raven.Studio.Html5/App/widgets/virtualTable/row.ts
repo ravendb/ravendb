@@ -74,32 +74,35 @@ class row {
             return cellVal.templateName;
         }
 
+        // Bug fix: http://issues.hibernatingrhinos.com/issue/RavenDB-2002
+        // Calling .data() registers it as a Knockout dependency; updating this 
+        // observable later will cause the cell to redraw, thus fixing the bug.
+        this.cellMap["Id"].data();
         return null;
     }
 
     getCellTemplateName(propertyName: string, data: any): string {
         if (propertyName === "Id") {
             return cell.idTemplate;
-        }else if (propertyName === "__IsChecked") {
+        } else if (propertyName === "__IsChecked") {
             return cell.checkboxTemplate;
         }
-        else if (!!data) {            
+        else if (!!data) {
             if (typeof data == "string") {
                 var cleanData = data.replace('/\t+/g', '')
-                                    .replace(/\s+/g, '')
-                                    .replace('/\n+/g', '');
+                    .replace(/\s+/g, '')
+                    .replace('/\n+/g', '');
                 if (/^\[{"[a-zA-Z0-9_-]+":/.test(cleanData) ||
                     //this handy REGEX for testing URLs was taken from http://stackoverflow.com/questions/8188645/javascript-regex-to-match-a-url-in-a-field-of-text
-                    /(http|ftp|https):\/\/[\w-]+(\.[\w-]+)+([\w.,@?^=%&amp;:\/~+#-]*[\w@?^=%&amp;\/~+#-])?/.test(cleanData))                
-                        return cell.defaultTemplate;
+                    /(http|ftp|https):\/\/[\w-]+(\.[\w-]+)+([\w.,@?^=%&amp;:\/~+#-]*[\w@?^=%&amp;\/~+#-])?/.test(cleanData))
+                    return cell.defaultTemplate; 
                 if (/\w+\/\w+/ig.test(data))
                     return cell.externalIdTemplate;
             }
             else if (!!data[propertyName] &&
-                typeof data[propertyName] == "string" &&                
-                /\w+\/\w+/ig.test(data[propertyName]))
-            {
-                    return cell.externalIdTemplate;
+                typeof data[propertyName] == "string" &&
+                /\w+\/\w+/ig.test(data[propertyName])) {
+                return cell.externalIdTemplate;
             }
         }
 
