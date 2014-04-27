@@ -5,7 +5,6 @@ import createDatabaseCommand = require("commands/createDatabaseCommand");
 import collection = require("models/collection");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/database");
-import commandBase = require("commands/commandBase");
 
 class createDatabase extends dialogViewModelBase {
 
@@ -28,21 +27,28 @@ class createDatabase extends dialogViewModelBase {
     isScriptedIndexBundleEnabled = ko.observable(false);
 
     private databases = ko.observableArray<database>();
-    private maxNameLength = 260 - 30;
-    private newCommandBase = new commandBase();
-    
+    private maxNameLength = 200;
+
     constructor(databases) {
         super();
         this.databases = databases;
     }
 
-    cancel() {
-        dialog.close(this);
-    }
-
     attached() {
-        super.attached();
         this.databaseNameFocus(true);
+        
+        var inputElement: any = $("#databaseName")[0];
+        this.databaseName.subscribe((newDatabaseName) => {
+            var errorMessage: string = '';
+            if (this.isDatabaseNameExists(newDatabaseName, this.databases()) === true) {
+                errorMessage = "Database Name Already Exists!";
+            }
+            else if ((errorMessage = this.CheckName(newDatabaseName)) != '') { }
+            inputElement.setCustomValidity(errorMessage);
+        });
+        this.subscribeToPath("#databasePath", this.databasePath, "Path");
+        this.subscribeToPath("#databaseLogs", this.databaseLogs, "Logs");
+        this.subscribeToPath("#databaseIndexes", this.databaseIndexes, "Indexes");
     }
 
     deactivate() {
@@ -53,91 +59,18 @@ class createDatabase extends dialogViewModelBase {
         }
     }
 
+    cancel() {
+        dialog.close(this);
+    }
+
     nextOrCreate() {
         // Next needs to configure bundle settings, if we've selected some bundles.
         // We haven't yet implemented bundle configuration, so for now we're just 
         // creating the database.
-        var databaseName = this.databaseName();
-        var databasePath = this.databasePath();
-        var databaseLogs = this.databaseLogs();
-        var databaseIndexes = this.databaseIndexes();
 
-        if (this.isDatabaseNameLegal(databaseName) && this.arePathsLegal(databasePath, databaseLogs, databaseIndexes)) {
-            this.creationTaskStarted = true;
-            this.creationTask.resolve(databaseName, this.getActiveBundles(), databasePath, databaseLogs, databaseIndexes);
-            dialog.close(this);
-        }
-    }
-
-    private arePathsLegal(databasePath: string, databaseLogs: string, databaseIndexes: string) {
-        if (this.isPathLegal(databasePath, "Path") && this.isPathLegal(databaseLogs, "Logs") && this.isPathLegal(databaseIndexes, "Indexes")) {
-            return true;
-        }
-        return false;
-    }
-
-    private isPathLegal(name: string, pathName: string) {
-        var rg1 = /^[^\\*:\?"<>\|]+$/; // forbidden characters \ * : ? " < > |
-        var rg2 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
-        var errorMessage = null;
-
-        if (!$.trim(name) == false) { // if name isn't empty or not consist of only whitepaces
-            if (name.length > this.maxNameLength) {
-                errorMessage = "The path name for the '" + pathName + "' can't exceed " + this.maxNameLength + " characters!";
-            } else if (!rg1.test(name)) {
-                errorMessage = "The " + pathName + " can't contain any of the following characters: * : ?" + ' " ' + "< > |";
-            } else if (rg2.test(name)) {
-                errorMessage = "The name '" + name + "' is forbidden for use!";
-            }
-        }
-        if (errorMessage != null) {
-            this.newCommandBase.reportError(errorMessage);
-            return false;
-        }
-        return true;
-    }
-
-    private isDatabaseNameLegal(databaseName: string): boolean {
-        var errorMessage = null;
-
-        if (databaseName == null) {
-            errorMessage = "Please fill out the Database Name field";
-        }
-        else if (this.isDatabaseNameExists(databaseName, this.databases()) === true) {
-            errorMessage = "Database Name Already Exists!";
-        }
-        else if ((errorMessage = this.CheckName(databaseName)) != null) { }
-
-        if (errorMessage != null) {
-            this.newCommandBase.reportError(errorMessage);
-            this.databaseNameFocus(true);
-            return false;
-        }
-        return true;
-    }
-
-    private CheckName(name: string): string {
-        var rg1 = /^[^\\/\*:\?"<>\|]+$/; // forbidden characters \ / * : ? " < > |
-        var rg2 = /^\./; // cannot start with dot (.)
-        var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
-
-        var message = null;
-        if (!$.trim(name)) {
-            message = "An empty databse name is forbidden for use!";
-        }
-        else if (name.length > this.maxNameLength) {
-            message = "The database length can't exceed " + this.maxNameLength + " characters!";
-        }
-        else if (!rg1.test(name)) {
-            message = "The database name can't contain any of the following characters: \ / * : ?" + ' " ' +"< > |";
-        }
-        else  if (rg2.test(name)) {
-            message = "The database name can't start with a dot!";
-        }
-        else if (rg3.test(name)) {
-            message = "The name '" + name + "' is forbidden for use!";
-        }
-        return message;
+        this.creationTaskStarted = true;
+        this.creationTask.resolve(this.databaseName(), this.getActiveBundles(), this.databasePath(), this.databaseLogs(), this.databaseIndexes());
+        dialog.close(this);
     }
 
     private isDatabaseNameExists(databaseName: string, databases: database[]): boolean {
@@ -147,6 +80,55 @@ class createDatabase extends dialogViewModelBase {
             }
         }
         return false;
+    }
+
+    private CheckName(name: string): string {
+        var rg1 = /^[^\\/\*:\?"<>\|]+$/; // forbidden characters \ / * : ? " < > |
+        var rg2 = /^\./; // cannot start with dot (.)
+        var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
+
+        var message = '';
+        if (!$.trim(name)) {
+            message = "An empty databse name is forbidden for use!";
+        }
+        else if (name.length > this.maxNameLength) {
+            message = "The database length can't exceed " + this.maxNameLength + " characters!";
+        }
+        else if (!rg1.test(name)) {
+            message = "The database name can't contain any of the following characters: \ / * : ?" + ' " ' + "< > |";
+        }
+        else if (rg2.test(name)) {
+            message = "The database name can't start with a dot!";
+        }
+        else if (rg3.test(name)) {
+            message = "The name '" + name + "' is forbidden for use!";
+        }
+        return message;
+    }
+
+    private subscribeToPath(tag, element, pathName) {
+        var inputElement: any = $(tag)[0];
+        element.subscribe((path) => {
+            var errorMessage: string = this.isPathLegal(path, pathName);
+            inputElement.setCustomValidity(errorMessage);
+        });
+    }
+
+    private isPathLegal(name: string, pathName: string): string {
+        var rg1 = /^[^\\*:\?"<>\|]+$/; // forbidden characters \ * : ? " < > |
+        var rg2 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
+        var errorMessage = null;
+
+        if (!$.trim(name) == false) { // if name isn't empty or not consist of only whitepaces
+            if (name.length > 30) {
+                errorMessage = "The path name for the '" + pathName + "' can't exceed " + 30 + " characters!";
+            } else if (!rg1.test(name)) {
+                errorMessage = "The " + pathName + " can't contain any of the following characters: * : ?" + ' " ' + "< > |";
+            } else if (rg2.test(name)) {
+                errorMessage = "The name '" + name + "' is forbidden for use!";
+            }
+        }
+        return errorMessage;
     }
 
     toggleCompressionBundle() {
