@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Tests.Helpers;
@@ -15,50 +16,14 @@ namespace Raven.Tests.Issues
 {
     public class RavenDb_2016 : RavenTestBase
     {
-        private Property _property;
+        private Property property;
 
         [Fact]
-        public void CanIndexAndQuery()
+        public void CanIndexAndLuceneQueryWithSetResultTransformer()
         {
             using (var store = NewDocumentStore())
             {
-                new PropertyIndex().Execute(store);
-                new PropertyTransformer().Execute(store);
-
-                using (var session = store.OpenSession())
-                {
-                    var country = new CountryD
-                    {
-                        Name = "England"
-                    };
-
-                    session.Store(country);
-
-                    var region = new Region
-                    {
-                        Name = "South",
-                        CountryId = country.Id
-                    };
-                    session.Store(region);
-
-                    var city = new City
-                    {
-                        Name = "London",
-                        RegionId = region.Id,
-                        CountryId = country.Id,
-                    };
-
-                    session.Store(city);
-
-                    _property = new Property
-                    {
-                        Name = "Sample Property",
-                        CityId = city.Id
-                    };
-                    session.Store(_property);
-
-                    session.SaveChanges();
-                }
+                FillDb(store);
 
                 //Lucene SetResultTransformer
                 using (var session = store.OpenSession())
@@ -71,6 +36,20 @@ namespace Raven.Tests.Issues
                     Assert.True(result.Name == null);
                 }
 
+            
+
+
+            }
+        }
+         [Fact]
+        public void CanIndexAndQueryWithTransformWith()
+        {
+            using (var store = NewDocumentStore())
+            {
+                FillDb(store);
+
+               
+
                 //Query TransformWith
                 using (var session = store.OpenSession())
                 {
@@ -79,8 +58,21 @@ namespace Raven.Tests.Issues
                         .TransformWith<PropertyTransformer, Property>()
                         .FirstOrDefault();
 
-                    Assert.True(result.Name == null);
+                    Assert.True(result != null && result.Name == null);
                 }
+
+     
+
+            }
+        }
+         [Fact]
+        public void CanIndexAndQueryWithCustomizeSetResultTransformer()
+        {
+            using (var store = NewDocumentStore())
+            {
+                FillDb(store);
+
+               
 
                 //Query with Customize SetResultTransformer
                 using (var session = store.OpenSession())
@@ -89,18 +81,57 @@ namespace Raven.Tests.Issues
                         .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
                         .Customize(x =>
                         {
-                            var luceneQuery = ((IDocumentQuery<Property>)x).SetResultTransformer(typeof(PropertyTransformer).Name);
-                           
-                            // var luceneQuery = (IDocumentQuery<Property>)x;
-                            // luceneQuery.SetResultTransformer(typeof(PropertyTransformer).Name);
+                             var luceneQuery = (IDocumentQuery<Property>)x;
+                             luceneQuery.SetResultTransformer(typeof(PropertyTransformer).Name);
                         }).FirstOrDefault();
 
-                    
-                    Assert.True(result.Name == null);
+
+                    Assert.True(result != null && result.Name == null);
                     ;
                 }
 
 
+            }
+        }
+
+        private void FillDb(EmbeddableDocumentStore store)
+        {
+            new PropertyIndex().Execute(store);
+            new PropertyTransformer().Execute(store);
+
+            using (var session = store.OpenSession())
+            {
+                var country = new CountryD
+                {
+                    Name = "England"
+                };
+
+                session.Store(country);
+
+                var region = new Region
+                {
+                    Name = "South",
+                    CountryId = country.Id
+                };
+                session.Store(region);
+
+                var city = new City
+                {
+                    Name = "London",
+                    RegionId = region.Id,
+                    CountryId = country.Id,
+                };
+
+                session.Store(city);
+
+                property = new Property
+                {
+                    Name = "Sample Property",
+                    CityId = city.Id
+                };
+                session.Store(property);
+
+                session.SaveChanges();
             }
         }
     }
