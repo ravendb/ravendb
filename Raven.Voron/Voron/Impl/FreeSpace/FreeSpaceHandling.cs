@@ -7,14 +7,6 @@ namespace Voron.Impl.FreeSpace
 	public class FreeSpaceHandling : IFreeSpaceHandling
 	{
 		internal const int NumberOfPagesInSection = 256 * 8; // 256 bytes, 8 bits per byte = 2,048 - each section 8 MB in size
-		private readonly StorageEnvironment _env;
-		private readonly Slice _freePagesCount;
-
-		public FreeSpaceHandling(StorageEnvironment env)
-		{
-			_freePagesCount = new Slice(EndianBitConverter.Big.GetBytes(long.MinValue));
-			_env = env;
-		}
 
 		public long? TryAllocateFromFreeSpace(Transaction tx, int num)
 		{
@@ -266,17 +258,6 @@ namespace Voron.Impl.FreeSpace
 
 			result = currentSectionId * NumberOfPagesInSection + currentRange;
 			return true;
-		}
-
-		public long GetFreePageCount()
-		{
-			using (var tx = _env.NewTransaction(TransactionFlags.Read))
-			{
-			    var readResult = tx.State.FreeSpaceRoot.Read(tx, _freePagesCount);
-			    if (readResult == null)
-			        return 0;
-                return readResult.Reader.ReadInt64();
-			}
 		}
 
 		public List<long> AllPages(Transaction tx)

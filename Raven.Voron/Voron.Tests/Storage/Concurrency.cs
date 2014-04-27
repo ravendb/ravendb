@@ -145,13 +145,13 @@ namespace Voron.Tests.Storage
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				var e = Assert.Throws<ConcurrencyException>(() => tx.State.Root.MultiAdd(tx, "key/1", "321", version: 2));
-				Assert.Equal("Cannot add 'key/1' to 'Root' tree. Version mismatch. Expected: 2. Actual: 1.", e.Message);
+				Assert.Equal("Cannot add value '321' to key 'key/1' to 'Root' tree. Version mismatch. Expected: 2. Actual: 0.", e.Message);
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				var e = Assert.Throws<ConcurrencyException>(() => tx.State.Root.MultiDelete(tx, "key/1", "123", 2));
-				Assert.Equal("Cannot delete 'key/1' to 'Root' tree. Version mismatch. Expected: 2. Actual: 1.", e.Message);
+				Assert.Equal("Cannot delete value '123' to key 'key/1' to 'Root' tree. Version mismatch. Expected: 2. Actual: 1.", e.Message);
 			}
 		}
 

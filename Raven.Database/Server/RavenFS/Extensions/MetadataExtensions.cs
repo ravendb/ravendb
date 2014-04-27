@@ -181,6 +181,7 @@ namespace Raven.Database.Server.RavenFS.Extensions
 			"Allow",
 			"ETag",
 			"Location",
+			"Origin",
 			"Retry-After",
 			"Server",
 			"Set-Cookie2",

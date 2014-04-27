@@ -10,9 +10,7 @@ class checkEncryptionKey extends commandBase {
         var keyObject = { "key": this.key };
         var result = this.post("/studio-tasks/is-base-64-key", keyObject, null);
 
-        if (Boolean(result) == false) {
-            this.reportError("The key must be in base64 encoding format!");
-        }
+        result.fail((response: JQueryXHR)=> this.reportError("Failed to create encryption", response.responseText, response.statusText) );
         return result;
     }
 }

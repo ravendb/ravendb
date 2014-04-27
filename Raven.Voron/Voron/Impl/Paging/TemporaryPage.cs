@@ -38,7 +38,7 @@ namespace Voron.Impl.Paging
         {
             get
             {
-                return new Page((byte*)_tempPage.ToPointer(), "temp")
+                return new Page((byte*)_tempPage.ToPointer(), "temp", AbstractPager.PageSize)
                 {
                     Upper = AbstractPager.PageSize,
                     Lower = (ushort)Constants.PageHeaderSize,
@@ -46,6 +46,6 @@ namespace Voron.Impl.Paging
                 };
             }
         }
-
+	    public IDisposable ReturnTemporaryPageToPool { get; set; }
     }
 }

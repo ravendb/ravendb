@@ -18,12 +18,15 @@ namespace Raven.Tests.MailingList
 		public void ShouldWork()
 		{
 			var scriptedJsonPatcher = new ScriptedJsonPatcher();
-			var result = scriptedJsonPatcher.Apply(new RavenJObject {{"Val", double.NaN}}, new ScriptedPatchRequest
-			{
-				Script = @"this.Finite = isFinite(this.Val);"
-			});
+			using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+			{ 
+				var result = scriptedJsonPatcher.Apply(scope, new RavenJObject {{"Val", double.NaN}}, new ScriptedPatchRequest
+				{
+					Script = @"this.Finite = isFinite(this.Val);"
+				});
 
 			Assert.False(result.Value<bool>("Finite"));
+}
 		}
 	}
 }
