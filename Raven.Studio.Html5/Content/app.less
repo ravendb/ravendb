@@ -79,6 +79,13 @@ html, body {
     }
 }
 
+.dropdown-menu{
+    .selected{
+        color: #555;
+        background-color: #e7e7e7;
+    }
+}
+
 .panel span {
     overflow: hidden;
     -ms-text-overflow: ellipsis;
@@ -160,21 +167,29 @@ html, body {
         }
 }
 
-.indexes-container {
-    margin-top: 10px;
+.index-panel{
+    overflow:visible!important;
+}
 
-    .index {
-        .index-actions-container {
-            display: none;
-        }
+.index-dropdown {
+    right: 0;
+    left: auto;
 
-        &:hover {
-            .index-actions-container {
-                display: inline-block;
-            }
-        }
+    li > a {
+        text-align: left;      
     }
 
+    li > a.active{
+         -webkit-box-shadow: inset 0 0 0 rgba(0, 0, 0, .125)!important;
+         box-shadow: inset 0 0 0 rgba(0, 0, 0, .125)!important;
+         text-decoration: underline!important;
+         font-weight:bold;
+    }
+}
+
+.indexes-container {
+    margin-top: 10px;
+        
     .index-group {
         .panel-heading {
             padding-top: 0;
@@ -374,6 +389,11 @@ html, body {
     }
 }
 
+.control-label-additional-link{
+    display: block;
+    font-size: 80%;
+}
+
 .collection-color-strip {
     height: 20px;
     width: 4px;
@@ -386,6 +406,10 @@ html, body {
         height: 120px;
     }
 }
+
+.popover {
+            max-width: 30%;     
+    }
 
 #queryContainer {
     .editor {
@@ -545,6 +569,30 @@ html, body {
     .query-metadata {
         padding-top: 20px;
     }
+
+
+    .documents-links-container {
+        -webkit-column-count: 2; /* Chrome, Safari, Opera */
+        -moz-column-count: 2; /* Firefox */
+        column-count: 2;
+
+        -webkit-column-gap: 30px; /* Chrome, Safari, Opera */
+        -moz-column-gap: 30px; /* Firefox */
+        column-gap: 30px;
+
+        -moz-column-width: 10px;
+        -webkit-column-width: 10px;
+        column-width: 10px;
+
+        .document-link{
+            width:80%;
+            overflow: hidden;
+            white-space: nowrap;
+            -ms-text-overflow: ellipsis;
+            -o-text-overflow: ellipsis;
+            text-overflow: ellipsis;
+        }
+    }
 }
 
 .keyboard-shortcut {
@@ -682,6 +730,7 @@ html, body {
 #editTransformerContainer .transformer {
     height: 600px;
 }
+
 
 .auto-complete {
     background-color: white;
@@ -889,12 +938,13 @@ footer {
     border-color: #ac2925;
     cursor: pointer;
 }
+
 .remove-icon:hover{
     color: #d2322d;
 }
 
 .fa-plus{
-    color: green;
+    color: #58cc46;
 }
 // End of Filesystems
 

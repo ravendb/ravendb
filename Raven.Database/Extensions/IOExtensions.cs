@@ -144,8 +144,8 @@ namespace Raven.Database.Extensions
 
 				path = Path.Combine(basePath ?? AppDomain.CurrentDomain.BaseDirectory, path.Substring(2));
 			}
-				
-			return Path.IsPathRooted(path) ? path : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
+
+			return Path.IsPathRooted(path) ? path : Path.Combine(basePath ?? AppDomain.CurrentDomain.BaseDirectory, path);
 		}
 
 		public static void CopyDirectory(string from, string to)

@@ -18,8 +18,6 @@ namespace Raven.SlowTests.Issues
 {
     public class RavenDB_1754 : RavenTest
     {
-
-
         [Fact]
         public void ShouldntThrowCollectionModified()
         {

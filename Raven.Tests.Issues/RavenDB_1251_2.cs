@@ -7,6 +7,7 @@ using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 

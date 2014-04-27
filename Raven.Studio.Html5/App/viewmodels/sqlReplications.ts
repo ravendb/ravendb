@@ -5,6 +5,7 @@ import getSqlReplicationsCommand = require("commands/getSqlReplicationsCommand")
 import saveSqlReplicationsCommand = require("commands/saveSqlReplicationsCommand");
 import deleteDocumentsCommand = require("commands/deleteDocumentsCommand");
 import appUrl = require("common/appUrl");
+import ace = require("ace/ace");
 
 class sqlReplications extends viewModelBase {
 
@@ -53,11 +54,37 @@ class sqlReplications extends viewModelBase {
     }
 
     attached() {
-        $(".script-label").popover({
+        super.attached();
+        var popOverSettings = {
             html: true,
             trigger: 'hover',
             content: 'Replication scripts use JScript.',
+            selector: '.script-label',
+        }
+        $('body').popover(popOverSettings);
+
+
+
+
+        var self = this;
+        $(document).on("keyup", '.ace_text-input', function () {
+            var editor: AceAjax.Editor = ko.utils.domData.get($(this).parent().get(0), "aceEditor");
+            var isErrorExists: boolean = false;
+            var annotations: Array<any> = editor.getSession().getAnnotations();
+
+            for (var i = 0; i < annotations.length; i++) {
+                if (annotations[i].type === "error") {
+                    isErrorExists = true;
+                    break;
+                }
+            }
+
+            var editorText = editor.getSession().getValue();
+
         });
+        //$(".ace_editor").on('keyup', ".ace_text-input", function() => {
+
+        //});
     }
 
     saveChanges() {
@@ -72,6 +99,7 @@ class sqlReplications extends viewModelBase {
                 var replicationId = replication.getId();
                 deletedReplications.remove(replicationId);
 
+                //clear the etag if the name of the replication was changed
                 if (this.loadedSqlReplications.indexOf(replicationId) == -1) {
                     delete replication.__metadata.etag;
                     delete replication.__metadata.lastModified;
@@ -141,7 +169,12 @@ class sqlReplications extends viewModelBase {
 
     addNewSqlReplication() {
         this.isFirstload(false);
-        this.replications.push(sqlReplication.empty());
+        var newSqlReplication: sqlReplication = sqlReplication.empty();
+        this.replications.push(newSqlReplication);
+        newSqlReplication.isFocused(true);
+
+        var lastElement = $('pre').last().get(0);
+        super.createResizableTextBox(lastElement);
     }
 
     removeSqlReplication(repl: sqlReplication) {

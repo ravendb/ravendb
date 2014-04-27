@@ -2,6 +2,7 @@
 using Raven.Abstractions;
 using Raven.Client;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 

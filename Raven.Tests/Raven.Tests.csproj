@@ -242,6 +242,7 @@
     <Compile Include="Bugs\ArrayOfMaybeNull.cs" />
     <Compile Include="Bugs\AsyncSetBasedOps.cs" />
     <Compile Include="Bugs\Async\WebApi.cs" />
+    <Compile Include="Bugs\Async\DynamicGeneratedIds.cs" />
     <Compile Include="Bugs\Attachments.cs" />
     <Compile Include="Bugs\AvoidRaceConditionWhenWeLoadTheDataNotPatched.cs" />
     <Compile Include="Bugs\BackwardCompatibility.cs" />
@@ -260,9 +261,6 @@
     <Compile Include="IndexMerging\SimpleIndexMerging.cs" />
     <Compile Include="Embedded\EmbeddedTests.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
-    <Compile Include="Issues\RavenDb1962.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="Bugs\CanPatchADocumentThatContainsBytes.cs" />
     <Compile Include="Bugs\DefaultOperatorTest.cs" />
     <Compile Include="Bugs\DyanmicId.cs" />
@@ -279,7 +277,6 @@
     <Compile Include="Bugs\Facets\FacetsCreationTest.cs" />
     <Compile Include="Bugs\Facets\DateTimeFacets.cs" />
     <Compile Include="Bugs\TransformerThatReturnAnArray.cs" />
-    <Compile Include="Issues\RavenDb_1816.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
     <Compile Include="Linq\GroupByAndDocumentId.cs" />
     <Compile Include="Linq\In.cs" />
@@ -536,8 +533,6 @@
     <Compile Include="Bugs\Queries\Projections.cs" />
     <Compile Include="Bugs\Queries\RangeQueries.cs" />
     <Compile Include="Bugs\Queries\StatsOnDynamicQueries.cs" />
-    <Compile Include="Bugs\Queries\TermsLocal.cs" />
-    <Compile Include="Bugs\Queries\TermsRemote.cs" />
     <Compile Include="Bugs\Queries\WithAs.cs" />
     <Compile Include="Bugs\QueryByTypeOnly.cs" />
     <Compile Include="Bugs\QueryByTypeOnlyRemote.cs" />
@@ -985,6 +980,10 @@
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
       <Project>{381234cc-8aa7-41ff-8cad-22330e15f993}</Project>
       <Name>Raven.Tests.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
+      <Project>{1B88473F-743B-4F6B-8E5E-97BB816E6C68}</Project>
+      <Name>Raven.Tests.Helpers</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
       <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>

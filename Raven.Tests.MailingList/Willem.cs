@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 
