@@ -1249,7 +1249,6 @@
     <TypeScriptCompile Include="Scripts\typings\nprogress\nprogress.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\requirejs\require.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\typeahead\typeahead.d.ts" />
-    <TypeScriptCompile Include="Scripts\typings\webshim\webshim.d.ts" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />

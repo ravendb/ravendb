@@ -17,6 +17,7 @@ class sqlReplications extends viewModelBase {
     areAllSqlReplicationsValid: KnockoutComputed<boolean>;
     isSaveEnabled: KnockoutComputed<boolean>;
     loadedSqlReplications = [];
+    private form = "#sqlReplicationsForm";
 
     constructor() {
         super();
@@ -62,7 +63,7 @@ class sqlReplications extends viewModelBase {
         };
         $('body').popover(popOverSettings);
 
-        
+
         $('#accordion').on('shown.bs.collapse', function() {
             //var element = $(this).find('pre');
             //var width = element.width();
@@ -70,7 +71,11 @@ class sqlReplications extends viewModelBase {
         });
 
 
-        var self = this;
+        
+
+
+
+        //var self = this;
         $(document).on("keyup", '.ace_text-input', function () {
             var editor: AceAjax.Editor = ko.utils.domData.get($(this).parent().get(0), "aceEditor");
             var isErrorExists: boolean = false;
@@ -89,6 +94,49 @@ class sqlReplications extends viewModelBase {
         //$(".ace_editor").on('keyup', ".ace_text-input", function() => {
 
         //});
+
+
+
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
+        this.openCollapsedInvalidElements();
+
+        this.replications().forEach((replication: sqlReplication) => {
+            replication.name.subscribe((newName) => {
+                var message = "";
+                if (newName === "") {
+                    message = "Please fill out this field.";
+                }
+                else if (this.isSqlReplicationNameExists(newName)) {
+                    message = "SQL Replication name already exists.";
+                }
+                var focusedElement: any = document.activeElement;
+                focusedElement.setCustomValidity(message);
+            });
+        });
+    }
+
+    private isSqlReplicationNameExists(name): boolean {
+        var count = 0;
+        this.replications().forEach((replication: sqlReplication) => {
+            if (replication.name() === name) {
+                count++;
+            }
+        });
+        return (count > 1) ? true : false;
+    }
+
+    //show all elements which are collapsed and at least on of its' fields isn't valid.
+    private openCollapsedInvalidElements() {
+        $('input, textarea').bind('invalid', function (e) {
+            var element: any = e.target;
+            if (!element.validity.valid) {
+                var parentElement = $(this).parents('.panel-default');
+                parentElement.children('.collapse').collapse('show');
+            }
+        });
     }
 
     saveChanges() {
@@ -179,6 +227,7 @@ class sqlReplications extends viewModelBase {
 
         var lastElement = $('pre').last().get(0);
         super.createResizableTextBox(lastElement);
+        this.openCollapsedInvalidElements();
     }
 
     removeSqlReplication(repl: sqlReplication) {

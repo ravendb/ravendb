@@ -736,4 +736,8 @@ footer ul {
 .fa-plus {
   color: #58cc46;
 }
+:invalid {
+    box-shadow: none; /* FF */
+    outline: 0;       /* IE 10 */
+}
 /*# sourceMappingURL=app.css.map */
