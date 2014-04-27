@@ -89,7 +89,7 @@ namespace Voron.Trees
 
 			var read = Read(tx, key);
 			if (read != null)
-				currentValue = read.Reader.ReadInt64();
+				currentValue = read.Reader.ReadLittleEndianInt64();
 
 			var value = currentValue + delta;
 			Add(tx, key, BitConverter.GetBytes(value), version);
