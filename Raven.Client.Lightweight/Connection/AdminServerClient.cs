@@ -29,7 +29,7 @@ namespace Raven.Client.Connection
 
 		public void DeleteDatabase(string databaseName, bool hardDelete = false)
 		{
-			asyncAdminServerClient.DeleteDatabaseAsync(databaseName, hardDelete);
+			asyncAdminServerClient.DeleteDatabaseAsync(databaseName, hardDelete).WaitUnwrap();
 		}
 
 		public IDatabaseCommands Commands { get { return new ServerClient(asyncServerClient); } }
@@ -56,7 +56,7 @@ namespace Raven.Client.Connection
 
 		public void StartRestore(RestoreRequest restoreRequest)
 		{
-			asyncAdminServerClient.StartRestoreAsync(restoreRequest);
+			asyncAdminServerClient.StartRestoreAsync(restoreRequest).WaitUnwrap();
 		}
 
 		public string GetIndexingStatus()
