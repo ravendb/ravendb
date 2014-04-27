@@ -107,7 +107,7 @@ namespace Raven.Tests.Bugs
                                                                     HostName = "localhost",
                                                                     DataDirectory = path,
                                                                     Port = 8079,
-                                                                    AccessControlAllowOrigin = "*",
+                                                                    AccessControlAllowOrigin = {"*"},
                                                                     AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
                                                                 })
             {

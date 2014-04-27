@@ -464,42 +464,42 @@ PutDocument(docId, type);
                     s.Store(new OpCounter(), "opCounter");
                     s.SaveChanges();
                 }
-                var patcher =
-                    new ScriptedIndexResultsIndexTrigger.Batcher.ScriptedIndexResultsJsonPatcher(
-                        store.DocumentDatabase, new HashSet<string> { "dogs" });
 
+				var patcher = new ScriptedJsonPatcher(store.DocumentDatabase);
+				using (var scope = new ScriptedIndexResultsJsonPatcherScope(store.DocumentDatabase, new HashSet<string> { "dogs" }))
+				{
+					patcher.Apply(scope, new RavenJObject(), new ScriptedPatchRequest
+					{
+						Script =
+	@"var opCounterId = 'opCounter';
+	var opCounter = LoadDocument(opCounterId) || {};
+	opCounter.Index++;
+	PutDocument(opCounterId, opCounter);
+	opCounter = LoadDocument(opCounterId)
+	opCounter.Deletes++;
+	PutDocument(opCounterId, opCounter);
+	"
+					});
 
-                patcher.Apply(new RavenJObject(), new ScriptedPatchRequest
-                {
-                    Script =
-@"var opCounterId = 'opCounter';
-var opCounter = LoadDocument(opCounterId) || {};
-opCounter.Index++;
-PutDocument(opCounterId, opCounter);
-opCounter = LoadDocument(opCounterId)
-opCounter.Deletes++;
-PutDocument(opCounterId, opCounter);
-"
-                });
-
-                store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
-                {
-                    foreach (var operation in patcher.GetOperations())
-                    {
-                        switch (operation.Type)
-                        {
-                            case ScriptedJsonPatcher.OperationType.Put:
-                                store.DocumentDatabase.Documents.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson,
-                                             operation.Document.Metadata, null);
-                                break;
-                            case ScriptedJsonPatcher.OperationType.Delete:
-                                store.DocumentDatabase.Documents.Delete(operation.DocumentKey, null, null);
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException("operation.Type");
-                        }
-                    }
-                });
+					store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
+					{
+						foreach (var operation in scope.GetOperations())
+						{
+							switch (operation.Type)
+							{
+								case ScriptedJsonPatcher.OperationType.Put:
+									store.DocumentDatabase.Documents.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson,
+												 operation.Document.Metadata, null);
+									break;
+								case ScriptedJsonPatcher.OperationType.Delete:
+									store.DocumentDatabase.Documents.Delete(operation.DocumentKey, null, null);
+									break;
+								default:
+									throw new ArgumentOutOfRangeException("operation.Type");
+							}
+						}
+					});
+				}
 
                 using (var s = store.OpenSession())
                 {

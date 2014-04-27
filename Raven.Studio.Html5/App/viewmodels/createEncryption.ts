@@ -3,7 +3,6 @@ import dialog = require("plugins/dialog");
 import createDatabaseCommand = require("commands/createDatabaseCommand");
 import collection = require("models/collection");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import commandBase = require("commands/commandBase");
 import getNewEncryptionKey = require("commands/getNewEncryptionKey");
 import checkEncryptionKey = require("commands/checkEncryptionKey");
 
@@ -14,14 +13,14 @@ class createEncryption extends dialogViewModelBase {
 
     key = ko.observable();
     encryptionAlgorithm = ko.observable('Rijndael');
-    encryptionBits = ko.observable();
+    encryptionBits = ko.observable<number>(256);
     isEncryptedIndexes = ko.observable(true);
     keyFocus = ko.observable(true);
     algorithmFocus = ko.observable(false);
     bitsFocus = ko.observable(false);
 
-    private newCommandBase = new commandBase();
     private newEncryptionKey: getNewEncryptionKey;
+    private base64Matcher = new RegExp("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})([=]{1,2})?$");
 
     constructor() {
         super();
@@ -31,11 +30,20 @@ class createEncryption extends dialogViewModelBase {
             .execute()
             .done(result=> {
                 this.key(result);
-        });
+            });
     }
 
-    cancel() {
-        dialog.close(this);
+    attached() {
+        var self = this;
+        var inputElement: any = $("#key")[0];
+        this.key.subscribe((newKey) => {
+            if (!self.base64Matcher.test(newKey.toString())) {
+                inputElement.setCustomValidity("The key must be in Base64 encoding format!");
+            }
+            else {
+                inputElement.setCustomValidity('');
+            }
+        });
     }
 
     deactivate() {
@@ -44,6 +52,10 @@ class createEncryption extends dialogViewModelBase {
         if (!this.creationEncryptionStarted) {
             this.creationEncryption.reject();
         }
+    }
+
+    cancel() {
+        dialog.close(this);
     }
 
     refresh_encryption() {
@@ -57,43 +69,14 @@ class createEncryption extends dialogViewModelBase {
     save() {
         var key = this.key();
 
-        if (this.isClientSideInputOK(key)) {
-            var checkEncryption: checkEncryptionKey = new checkEncryptionKey(key);
-            checkEncryption
-                .execute()
-                .done(result=> {
-                    if (Boolean(result)) {
-                        this.creationEncryption.resolve(key, this.encryptionAlgorithm(), this.encryptionBits(), this.isEncryptedIndexes());
-                        this.creationEncryptionStarted = true;
-                        dialog.close(this);
-                    }
-                });
-        }
-    }
-
-    private isClientSideInputOK(key): boolean {
-        var base64Matcher = new RegExp("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})([=]{1,2})?$");
-        var result = false;
-
-        if (!key) {
-            this.newCommandBase.reportError("Please fill out the key field");
-            this.keyFocus(true);
-        }
-        else if (!base64Matcher.test(key.toString())) {
-            this.newCommandBase.reportError("The key must be in base64 encoding format!");
-            this.keyFocus(true);
-        }
-        else if (!this.encryptionAlgorithm()) {
-            this.newCommandBase.reportError("Please select an encryption algorithm");
-            this.algorithmFocus(true);
-        }
-        else if (!this.encryptionBits()) {
-            this.newCommandBase.reportError("Please select an encryption key bits");
-            this.bitsFocus(true);
-        } else {
-            result = true;
-        }
-        return result;
+        var checkEncryption: checkEncryptionKey = new checkEncryptionKey(key);
+        checkEncryption
+            .execute()
+            .done(()=> {
+                this.creationEncryption.resolve(key, this.encryptionAlgorithm(), this.encryptionBits(), this.isEncryptedIndexes());
+                this.creationEncryptionStarted = true;
+                dialog.close(this);
+            });
     }
 }
 

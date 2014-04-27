@@ -38,7 +38,7 @@ class sqlReplications extends viewModelBase {
 
                     deferred.resolve({ can: true });
                 })
-                .fail(() => deferred.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) }));
+                .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
         }
         return deferred;
     }
@@ -54,16 +54,20 @@ class sqlReplications extends viewModelBase {
     }
 
     attached() {
-        super.attached();
         var popOverSettings = {
             html: true,
             trigger: 'hover',
             content: 'Replication scripts use JScript.',
             selector: '.script-label',
-        }
+        };
         $('body').popover(popOverSettings);
 
-
+        
+        $('#accordion').on('shown.bs.collapse', function() {
+            //var element = $(this).find('pre');
+            //var width = element.width();
+            //element.resizable({ minWidth: width, maxWidth: width });
+        });
 
 
         var self = this;

@@ -2,6 +2,8 @@
 using System.IO;
 using System.Text;
 using Voron.Impl;
+using Voron.Util;
+using Voron.Util.Conversion;
 
 namespace Voron
 {
@@ -9,6 +11,7 @@ namespace Voron
 	{
 		private int _pos;
 		private readonly byte[] _buffer;
+	    private byte[] _tmpBuf;
 		private readonly int _len;
 		private readonly byte* _val;
 
@@ -82,31 +85,65 @@ namespace Voron
 			return count;
 		}
 
-		public int ReadInt32()
+        public int ReadLittleEndianInt32()
 		{
 			if (_len - _pos < sizeof (int))
 				throw new EndOfStreamException();
-			var buffer = new byte[sizeof (int)];
+	        var buffer = EnsureTempBuffer(sizeof (int));
 
 			Read(buffer, 0, sizeof (int));
 
 			return BitConverter.ToInt32(buffer, 0);
 		}
 
-		public long ReadInt64()
+
+		public long ReadLittleEndianInt64()
 		{
 			if (_len - _pos < sizeof (long))
 				throw new EndOfStreamException();
-			var buffer = new byte[sizeof (long)];
+			var buffer = EnsureTempBuffer(sizeof(long));
 
 			Read(buffer, 0, sizeof (long));
 
 			return BitConverter.ToInt64(buffer, 0);
 		}
 
+		public int ReadBigEndianInt32()
+		{
+			if (_len - _pos < sizeof(int))
+				throw new EndOfStreamException();
+			var buffer = EnsureTempBuffer(sizeof(int));
+
+			Read(buffer, 0, sizeof(int));
+
+			return EndianBitConverter.Big.ToInt32(buffer, 0);
+		}
+
+
+		public long ReadbigEndianInt64()
+		{
+			if (_len - _pos < sizeof(long))
+				throw new EndOfStreamException();
+			var buffer = EnsureTempBuffer(sizeof(long));
+
+			Read(buffer, 0, sizeof(long));
+
+			return EndianBitConverter.Big.ToInt64(buffer, 0);
+		}
+
+
+	    private byte[] EnsureTempBuffer(int size)
+	    {
+		    if (_tmpBuf != null && _tmpBuf.Length >= size)
+			    return _tmpBuf;
+		    return _tmpBuf = new byte[Utils.NearestPowerOfTwo(size)];
+	    }
+
 		public string ToStringValue()
 		{
-			return Encoding.UTF8.GetString(ReadBytes(_len - _pos));
+	        int length = _len - _pos;
+	        int used;
+	        return Encoding.UTF8.GetString(ReadBytes(length, out used), 0, used);
 		}
 
 		public override string ToString()
@@ -117,11 +154,11 @@ namespace Voron
 			return stringValue;
 		}
 
-		public byte[] ReadBytes(int length)
+	    public byte[] ReadBytes(int length, out int used)
 		{
 			int size = Math.Min(length, _len - _pos);
-			var buffer = new byte[size];
-			Read(buffer, 0, size);
+	        var buffer = EnsureTempBuffer(length);
+			used = Read(buffer, 0, size);
 			return buffer;
 		}
 

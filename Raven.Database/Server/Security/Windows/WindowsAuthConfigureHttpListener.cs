@@ -37,8 +37,10 @@ namespace Raven.Database.Server.Security.Windows
 				return AuthenticationSchemes.Anonymous;
 
 			//CORS pre-flight.
-			if(!String.IsNullOrEmpty(configuration.AccessControlAllowOrigin) && request.HttpMethod == "OPTIONS") 
-				{ return AuthenticationSchemes.Anonymous; }
+			if (configuration.AccessControlAllowOrigin.Count > 0 && request.HttpMethod == "OPTIONS")
+			{
+				return AuthenticationSchemes.Anonymous;
+			}
 
 			if (IsAdminRequest.IsMatch(request.RawUrl) && 
 				configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
