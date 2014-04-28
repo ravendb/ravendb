@@ -48,15 +48,16 @@ class configuration extends viewModelBase {
 
     attached() {
         this.activeFilesystem.subscribe(x => {
-            this.loadKeys(x);     
+            this.loadKeys(x);
         });
-        
+
         (<any>$('.keys-collection')).contextmenu({
             target: '#keys-context-menu'
-        }); 
+        });
 
-        this.loadKeys(this.activeFilesystem()); 
+        this.loadKeys(this.activeFilesystem());
         this.initializeDocEditor();
+        this.configurationEditor.focus();
     }
 
     initializeDocEditor() {
@@ -135,21 +136,6 @@ class configuration extends viewModelBase {
     deleteKey() {
         throw new Error("Not Implemented");
     }
-
-    //addKeyValue() {
-    //    this.keyValues.push(new Pair("", ""));
-    //}
-
-    //removeKeyValue(keyValue) {
-
-    //    if (keyValue) {
-    //        this.keyValues.remove(keyValue);
-    //    }
-
-    //    if (this.keyValues.length == 0) {
-    //        this.keyValues.push(new Pair("", ""));
-    //    }
-    //}
 } 
 
 export = configuration;
