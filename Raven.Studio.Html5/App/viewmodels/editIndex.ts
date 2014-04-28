@@ -260,6 +260,11 @@ class editIndex extends viewModelBase {
         this.editedIndex().luceneFields.push(field);
     }
 
+    removeMaxIndexOutputs() {
+        this.editedIndex().maxIndexOutputsPerDocument(0);
+        this.editMaxIndexOutputsPerDocument(false);
+    }
+
     addSpatialField() {
         var field = spatialIndexField.empty();
         this.editedIndex().spatialFields.push(field);
