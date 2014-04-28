@@ -216,7 +216,7 @@ namespace Raven.Client.Document
 
 		public Guid OperationId { get; private set; }
 
-		public void Write(string id, RavenJObject metadata, RavenJObject data)
+		public virtual void Write(string id, RavenJObject metadata, RavenJObject data)
 		{
 			if (id == null) throw new ArgumentNullException("id");
 			if (metadata == null) throw new ArgumentNullException("metadata");

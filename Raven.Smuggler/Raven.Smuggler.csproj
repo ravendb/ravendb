@@ -67,6 +67,8 @@
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
+    <Compile Include="Client\ChunkedBulkInsertOperation.cs" />
+    <Compile Include="Client\ChunkedRemoteBulkInsertOperation.cs" />
     <Compile Include="Imports\SmugglerJintHelper.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Smuggler.cs" />

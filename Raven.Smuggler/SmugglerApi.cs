@@ -21,6 +21,7 @@ using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Smuggler.Client;
 using Raven.Smuggler.Imports;
 
 namespace Raven.Smuggler
@@ -99,15 +100,15 @@ namespace Raven.Smuggler
 
             using (store = CreateStore(importOptions.To))
 			{
-				Task disposeTask = null;
+				Task disposeTask;
 
 				try
 				{
-					operation = store.BulkInsert(options: new BulkInsertOptions
+					operation = new ChunkedBulkInsertOperation(store.DefaultDatabase, store, store.Listeners, new BulkInsertOptions
 					{
-                        BatchSize = options.BatchSize,
+						BatchSize = options.BatchSize,
 						OverwriteExisting = true
-					});
+					}, store.Changes(), options.ChunkSize);
 
 					operation.Report += text => ShowProgress(text);
 
