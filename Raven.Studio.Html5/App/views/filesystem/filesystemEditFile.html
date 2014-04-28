@@ -16,7 +16,7 @@
 
     <div class="btn-toolbar">
         <div class="btn-group">
-            <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveFile" title="Save (Alt+S)" accesskey="R"><i class="fa fa-save"></i></button>
+            <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveFileMetadata" title="Save (Alt+S)" accesskey="R"><i class="fa fa-save"></i></button>
             <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: refreshFile" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></button>
             <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: downloadFile" title="Download file (Alt+[)" accesskey="["><i class="fa fa-download"></i></button>
             <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: deleteFile" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
@@ -58,38 +58,6 @@
                     </div>
                     <div class="col-md-7">
                         <span data-bind="text: lastModified"></span>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-5">
-                        <label>Origin</label>
-                    </div>
-                    <div class="col-md-7">
-                        <span data-bind="text: origin"></span>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-5">
-                        <label>Raven-Synchronization-History</label>
-                    </div>
-                    <div class="col-md-7">
-                        <span data-bind="text: ravenSynchronizationHistory"></span>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-5">
-                        <label>Raven-Synchronization-Version</label>
-                    </div>
-                    <div class="col-md-7">
-                        <span data-bind="text: ravenSynchronizationVersion"></span>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-5">
-                        <label>Raven-Synchronization-Source</label>
-                    </div>
-                    <div class="col-md-7">
-                        <span data-bind="text: ravenSynchronizationSource"></span>
                     </div>
                 </div>
                 <div class="row">

@@ -42,7 +42,7 @@ namespace Raven.Abstractions.Connection
 		/// <returns></returns>
 		public static async Task<Stream> GetResponseStreamWithHttpDecompression(this HttpResponseMessage response)
 		{
-			var stream = await response.Content.ReadAsStreamAsync();
+			var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 			var encoding = response.Content.Headers.ContentEncoding.FirstOrDefault();
 			if (encoding != null && encoding.Contains("gzip"))
 				stream = new GZipStream(stream, CompressionMode.Decompress);

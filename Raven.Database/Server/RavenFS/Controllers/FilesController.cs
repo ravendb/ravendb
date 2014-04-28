@@ -30,14 +30,13 @@ namespace Raven.Database.Server.RavenFS.Controllers
         [Route("ravenfs/{fileSystemName}/files")]
 		public List<FileHeader> Get()
 		{
-			List<FileHeader> fileHeaders = null;
-			Storage.Batch(accessor =>
-			{
-				fileHeaders =
-					accessor.ReadFiles(Paging.Start, Paging.PageSize).Where(
-						x => !x.Metadata.AllKeys.Contains(SynchronizationConstants.RavenDeleteMarker)).ToList();
-			});
-			return fileHeaders;
+            int results;
+            var keys = Search.Query(null, null, Paging.Start, Paging.PageSize, out results);
+
+            var list = new List<FileHeader>();
+            Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
+
+            return list;
 		}
 
 		[HttpGet]
@@ -142,7 +141,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			StartSynchronizeDestinationsInBackground();
 
-			return new HttpResponseMessage(HttpStatusCode.NoContent);
+            return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpHead]
@@ -194,7 +193,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			catch (FileNotFoundException)
 			{
 				log.Debug("Cannot update metadata because file '{0}' was not found", name);
-				return new HttpResponseMessage(HttpStatusCode.NotFound);
+                return GetEmptyMessage(HttpStatusCode.NotFound);
 			}
 
 			Search.Index(name, headers);
@@ -204,7 +203,9 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			StartSynchronizeDestinationsInBackground();
 
 			log.Debug("Metadata of a file '{0}' was updated", name);
-			return new HttpResponseMessage(HttpStatusCode.NoContent);
+
+            //Hack needed by jquery on the client side. We need to find a better solution for this
+            return GetMessageWithString("", HttpStatusCode.NoContent);
 		}
 
 		[HttpPatch]
@@ -262,14 +263,14 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			catch (FileNotFoundException)
 			{
 				log.Debug("Cannot rename a file '{0}' to '{1}' because a file was not found", name, rename);
-				return new HttpResponseMessage(HttpStatusCode.NotFound);
+                return GetEmptyMessage(HttpStatusCode.NotFound);
 			}
 
 			log.Debug("File '{0}' was renamed to '{1}'", name, rename);
 
 			StartSynchronizeDestinationsInBackground();
 
-			return new HttpResponseMessage(HttpStatusCode.NoContent);
+            return GetMessageWithString("", HttpStatusCode.NoContent);
 		}
 
 		[HttpPut]
@@ -361,7 +362,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				throw;
 			}
 
-			return new HttpResponseMessage(HttpStatusCode.Created);
+            return GetEmptyMessage(HttpStatusCode.Created);
 		}
 
 		private void StartSynchronizeDestinationsInBackground()

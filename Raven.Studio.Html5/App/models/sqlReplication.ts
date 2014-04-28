@@ -1,6 +1,7 @@
 import sqlReplicationTable = require("models/sqlReplicationTable");
 import document = require("models/document");
 import documentMetadata = require("models/documentMetadata");
+import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class sqlReplication extends document {
 
@@ -13,22 +14,25 @@ class sqlReplication extends document {
         { label: "Connection String Name", value: this.CONNECTION_STRING_NAME },
         { label: "Connection String Setting Name", value: this.CONNECTION_STRING_SETTING_NAME }
     ];
-
+    
     public metadata: documentMetadata;
 
     name = ko.observable<string>().extend({ required: true });
     disabled = ko.observable<boolean>().extend({ required: true });
-    parameterizeDeletesDisabled = ko.observable<boolean>();
-    ravenEntityName = ko.observable<string>().extend({ required: true });
-    script = ko.observable<string>().extend({ required: true });
     factoryName = ko.observable<string>().extend({ required: true });
-    connectionString = ko.observable<string>().extend({ required: true });
-    connectionStringName = ko.observable<string>().extend({ required: true });
-    connectionStringSettingName = ko.observable<string>().extend({ required: true });
-    sqlReplicationTables = ko.observableArray<sqlReplicationTable>().extend({ required: true });
-
     connectionStringType = ko.observable<string>().extend({ required: true });
-    connectionStringValue = ko.observable<string>('').extend({ required: true });
+    connectionStringValue = ko.observable<string>(null).extend({ required: true });
+    ravenEntityName = ko.observable<string>("").extend({ required: true });
+    sqlReplicationTables = ko.observableArray<sqlReplicationTable>().extend({ required: true });
+    script = ko.observable<string>("").extend({ required: true });
+
+    connectionString = ko.observable<string>(null);
+    connectionStringName = ko.observable<string>(null);
+    connectionStringSettingName = ko.observable<string>(null);
+    connectionStringSourceFieldName: KnockoutComputed<string>;
+    parameterizeDeletesDisabled = ko.observable<boolean>();
+
+    isFocused = ko.observable(false);
 
     constructor(dto: sqlReplicationDto) {
         super(dto);
@@ -44,33 +48,76 @@ class sqlReplication extends document {
         this.setupConnectionString(dto);
 
         this.metadata = new documentMetadata(dto['@metadata']);
+
+        this.connectionStringSourceFieldName = ko.computed(() => {
+            if (this.connectionStringType() == this.CONNECTION_STRING) {
+                return "Connection string text";
+            } else if (this.connectionStringType() == this.CONNECTION_STRING_NAME) {
+                return "Setting name in local machine configuration";
+            } else {
+                return "Setting name in memory/remote configuration";
+            }
+        });
+
+        this.script.subscribe(()=> {
+            setTimeout(() => {
+                var currentEditor = aceEditorBindingHandler.currentEditor;
+                var annotations = currentEditor.getSession().getAnnotations();
+                var isErrorExists = false;
+                for (var i = 0; i < annotations.length; i++) {
+                    var annotationType = annotations[i].type;
+                    if (annotationType === "error" || annotationType === "warning") {
+                        isErrorExists = true;
+                        break;
+                    }
+                }
+
+                var editorValue = currentEditor.getSession().getValue();
+                var message = "";
+                if (editorValue === "") {
+                    message = "Please fill out this field.";
+                }
+                else if (isErrorExists) {
+                    message = "The script isn't a javascript legal expression!";
+                }
+                var textarea: any = $(currentEditor.container).find('textarea')[0];
+                textarea.setCustomValidity(message);
+            }, 1000);
+        });
     }
 
     private setupConnectionString(dto: sqlReplicationDto) {
-        if (dto.ConnectionString) {
-            this.connectionStringType(this.CONNECTION_STRING);
-            this.connectionStringValue(dto.ConnectionString);
-        } else if (dto.ConnectionStringName) {
+        if (dto.ConnectionStringName) {
             this.connectionStringType(this.CONNECTION_STRING_NAME);
             this.connectionStringValue(dto.ConnectionStringName);
         } else if (dto.ConnectionStringSettingName) {
             this.connectionStringType(this.CONNECTION_STRING_SETTING_NAME);
             this.connectionStringValue(dto.ConnectionStringSettingName);
+        } else { //(dto.ConnectionString)
+            this.connectionStringType(this.CONNECTION_STRING);
+            this.connectionStringValue(dto.ConnectionString);
         }
     }
 
+    setConnectionStringType(strType) {
+        this.connectionStringType(strType);
+    }
+
     static empty(): sqlReplication {
+        var newTable: sqlReplicationTable = sqlReplicationTable.empty();
+        var sqlReplicationTables = [];
+        sqlReplicationTables.push(newTable);
         return new sqlReplication({
             Name: "",
             Disabled: true,
             ParameterizeDeletesDisabled: false,
-            RavenEntityName: null,
-            Script: null,
+            RavenEntityName: "",
+            Script: "",
             FactoryName: null,
             ConnectionString: null,
             ConnectionStringName: null,
             ConnectionStringSettingName: null,
-            SqlReplicationTables: []
+            SqlReplicationTables: sqlReplicationTables
         });
     }
 
@@ -114,6 +161,15 @@ class sqlReplication extends document {
 
     setIdFromName() {
         this.__metadata.id = "Raven/SqlReplication/Configuration/" + this.name();
+    }
+
+    isValid(): boolean {
+        var arr = new Array();
+
+        var requiredValues = [this.name(), this.factoryName(), this.connectionStringType(), this.connectionStringValue(), this.ravenEntityName(), this.script()];
+        var fieldsCheck = requiredValues.every(v=> v != null && v.length > 0);
+        var replicationTablesCheck = this.sqlReplicationTables().every(v=> v.isValid());
+        return fieldsCheck && replicationTablesCheck;
     }
 }
 

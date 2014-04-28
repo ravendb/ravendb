@@ -16,6 +16,7 @@ using System.Web.Http.Routing;
 using System.Web.Routing;
 using Raven.Abstractions.Data;
 using Raven.Client.Util;
+using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
@@ -37,6 +38,21 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage Changes()
 		{
 			return GetMessageWithObject(Database.TransportState.DebugStatuses);
+		}
+
+		[HttpGet]
+		[Route("debug/sql-replication-stats")]
+		[Route("databases/{databaseName}/debug/sql-replication-stats")]
+		public HttpResponseMessage SqlReplicationStats()
+		{
+			var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
+			if (task == null)
+				return GetMessageWithObject(new
+				{
+					Error = "SQL Replication bundle is not installed"
+				}, HttpStatusCode.NotFound);
+
+			return GetMessageWithObject(task.Statistics);
 		}
 
 

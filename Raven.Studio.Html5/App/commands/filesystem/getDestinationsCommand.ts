@@ -1,5 +1,6 @@
 ﻿import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
+import synchronizationDestination = require("models/filesystem/synchronizationDestination");
 import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
 
 class getFilesystemDestinationsCommand extends commandBase {
@@ -8,7 +9,7 @@ class getFilesystemDestinationsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<string[]> {
+    execute(): JQueryPromise<synchronizationDestinationDto[]> {
 
         var url = "/config";
         var args = {
@@ -16,17 +17,19 @@ class getFilesystemDestinationsCommand extends commandBase {
         };
 
         var task = $.Deferred();
-        this.query<Array<Pair<string, string[]>>>(url, args, this.fs)
+        this.query<any>(url, args, this.fs)
             .done(data => {                
-                if (data.hasOwnProperty('url')) {
-                    var value = data['url'];
-                    if (value instanceof Array)
-                        task.resolve(value);                        
-                    else 
-                        task.resolve([value]);    
+                if (data.hasOwnProperty('destination')) {
+
+                    var value = data['destination'];
+                    if (!(value instanceof Array))
+                        value = [value];
+
+                    var result = value.map(x => <synchronizationDestinationDto> JSON.parse(x));
+                    task.resolve(result);                        
                 }
                 else {
-                    task.resolve({});
+                    task.resolve([]);
                 }                
             });
 

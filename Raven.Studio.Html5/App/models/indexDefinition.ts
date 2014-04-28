@@ -20,6 +20,7 @@ class indexDefinition {
     termVectors: any;
     transformResults = ko.observable<string>().extend({ required: true });
     type: string;
+    maxIndexOutputsPerDocument = ko.observable<number>(0).extend({ required: true });
 
     // This is an amalgamation of several properties from the index (Fields, Stores, Indexes, SortOptions, Analyzers, Suggestions, TermVectors) 
     // Stored as multiple luceneFields for the sake of data binding.
@@ -49,6 +50,8 @@ class indexDefinition {
 
         this.luceneFields(this.parseFields());
         this.spatialFields(this.parseSpatialFields());
+
+        this.maxIndexOutputsPerDocument(dto.MaxIndexOutputsPerDocument? dto.MaxIndexOutputsPerDocument:0);
     }
 
     toDto(): indexDefinitionDto {
@@ -70,7 +73,8 @@ class indexDefinition {
             Suggestions: this.makeFieldObject(f => f.suggestionDistance() !== "None", f => f.toSuggestionDto()),
             TermVectors: this.makeFieldObject(f => f.termVector() !== "No", f => f.termVector()),
             TransformResults: this.transformResults(),
-            Type: this.type
+            Type: this.type,
+            MaxIndexOutputsPerDocument: this.maxIndexOutputsPerDocument()? this.maxIndexOutputsPerDocument()> 0 ? this.maxIndexOutputsPerDocument() :null:null
         };
     }
 
@@ -93,7 +97,8 @@ class indexDefinition {
             Suggestions: {},
             TermVectors: {},
             TransformResults: null,
-            Type: "Map"
+            Type: "Map",
+            MaxIndexOutputsPerDocument:null
         });
     }
 

@@ -181,16 +181,16 @@ namespace Raven.Smuggler
 				switch (action)
 				{
 					case SmugglerAction.Import:
-						smugglerApi.ImportData(new SmugglerImportOptions {FromFile = backupPath}, options).Wait();
+						smugglerApi.ImportData(new SmugglerImportOptions { FromFile = backupPath, To = connectionStringOptions }, options).Wait();
 						if (waitForIndexing)
 							smugglerApi.WaitForIndexing(options).Wait();
 						break;
 					case SmugglerAction.Export:
-                        smugglerApi.ExportData(new SmugglerExportOptions {ToFile = backupPath}, options).Wait();
+						smugglerApi.ExportData(new SmugglerExportOptions { From = connectionStringOptions, ToFile = backupPath }, options).Wait();
 						break;
-                    case SmugglerAction.Between:
+					case SmugglerAction.Between:
 						connectionStringOptions2.Url = backupPath;
-						SmugglerOperation.Between(new SmugglerBetweenOptions {From = connectionStringOptions, To = connectionStringOptions2}, options).Wait();
+						SmugglerOperation.Between(new SmugglerBetweenOptions { From = connectionStringOptions, To = connectionStringOptions2 }, options).Wait();
 						break;
 				}
 			}

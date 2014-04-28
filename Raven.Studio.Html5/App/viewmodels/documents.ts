@@ -15,6 +15,7 @@ import customColumnParams = require('models/customColumnParams');
 import customColumns = require('models/customColumns');
 import selectColumns = require('viewmodels/selectColumns');
 
+
 class documents extends viewModelBase {
 
     displayName = "documents";
@@ -28,7 +29,8 @@ class documents extends viewModelBase {
     isSelectAll = ko.observable(false);
     hasAnyDocumentsSelected: KnockoutComputed<boolean>;
     contextName = ko.observable<string>('');
-    currentCollection = ko.observable <collection>();
+    currentCollection = ko.observable<collection>();
+    
 
     static gridSelector = "#documentsGrid";
 
@@ -167,9 +169,10 @@ class documents extends viewModelBase {
     deleteSelectedDocs() {
         var grid = this.getDocumentsGrid();
         if (grid) {
-            grid.deleteSelectedDocs();
+            grid.deleteSelectedItems();
         }
     }
+    
 
     copySelectedDocs() {
         var grid = this.getDocumentsGrid();

@@ -250,66 +250,8 @@ namespace Raven.Client.Connection
 		{
 			return Interlocked.Increment(ref readStripingBase);
 		}
-
-		#region ExecuteWithReplication
-
-		public virtual T ExecuteWithReplication<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, T> operation)
-		{
-			T result;
-			var timeoutThrown = false;
-
-			var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
-			var primaryOperation = new OperationMetadata(primaryUrl, primaryCredentials);
-
-			var shouldReadFromAllServers = conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
-			if (shouldReadFromAllServers && method == "GET")
-			{
-				var replicationIndex = currentReadStripingBase % (localReplicationDestinations.Count + 1);
-				// if replicationIndex == destinations count, then we want to use the master
-				// if replicationIndex < 0, then we were explicitly instructed to use the master
-				if (replicationIndex < localReplicationDestinations.Count && replicationIndex >= 0)
-				{
-					// if it is failing, ignore that, and move to the master or any of the replicas
-					if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex].Url, currentRequest, method, false))
-					{
-						if (TryOperation(operation, localReplicationDestinations[replicationIndex], primaryOperation, true, out result, out timeoutThrown))
-							return result;
-					}
-				}
-			}
-
-			if (ShouldExecuteUsing(primaryOperation.Url, currentRequest, method, true))
-			{
-				if (TryOperation(operation, primaryOperation, null, !timeoutThrown && localReplicationDestinations.Count > 0, out result, out timeoutThrown))
-					return result;
-				if (!timeoutThrown && IsFirstFailure(primaryOperation.Url) &&
-					TryOperation(operation, primaryOperation, null, localReplicationDestinations.Count > 0, out result, out timeoutThrown))
-					return result;
-				IncrementFailureCount(primaryOperation.Url);
-			}
-
-			for (var i = 0; i < localReplicationDestinations.Count; i++)
-			{
-				var replicationDestination = localReplicationDestinations[i];
-				if (ShouldExecuteUsing(replicationDestination.Url, currentRequest, method, false) == false)
-					continue;
-				if (TryOperation(operation, replicationDestination, primaryOperation, !timeoutThrown, out result, out timeoutThrown))
-					return result;
-				if (!timeoutThrown && IsFirstFailure(replicationDestination.Url) &&
-					TryOperation(operation, replicationDestination, primaryOperation, localReplicationDestinations.Count > i + 1, out result,
-								 out timeoutThrown))
-					return result;
-				IncrementFailureCount(replicationDestination.Url);
-			}
-			// this should not be thrown, but since I know the value of should...
-			throw new InvalidOperationException(@"Attempted to connect to master and all replicas have failed, giving up.
-There is a high probability of a network problem preventing access to all the replicas.
-Failed to get in touch with any of the " + (1 + localReplicationDestinations.Count) + " Raven instances.");
-		}
-		#endregion
-
 		
-		public async Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation)
+        public async Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation)
 		{
 			var timeoutThrown = false;
 
@@ -327,7 +269,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 					// if it is failing, ignore that, and move to the master or any of the replicas
 					if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex].Url, currentRequest, method, false))
 					{
-						var tuple = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true);
+                        var tuple = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true).ConfigureAwait(false);
 						if (tuple.Success)
 							return tuple.Result;
 						timeoutThrown = tuple.WasTimeout;
@@ -337,14 +279,14 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 
 			if (ShouldExecuteUsing(primaryOperation.Url, currentRequest, method, true))
 			{
-				var tuple = await TryOperationAsync(operation, primaryOperation, null, !timeoutThrown && localReplicationDestinations.Count > 0);
+                var tuple = await TryOperationAsync(operation, primaryOperation, null, !timeoutThrown && localReplicationDestinations.Count > 0).ConfigureAwait(false);
 				if (tuple.Success)
 					return tuple.Result;
 				timeoutThrown = tuple.WasTimeout;
 
 				if (!timeoutThrown && IsFirstFailure(primaryOperation.Url))
 				{
-					tuple = await TryOperationAsync(operation, primaryOperation, null, localReplicationDestinations.Count > 0);
+                    tuple = await TryOperationAsync(operation, primaryOperation, null, localReplicationDestinations.Count > 0).ConfigureAwait(false);
 					if (tuple.Success)
 						return tuple.Result;
 					timeoutThrown = tuple.WasTimeout;
@@ -358,14 +300,14 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 				if (ShouldExecuteUsing(replicationDestination.Url, currentRequest, method, false) == false)
 					continue;
 
-				var tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, !timeoutThrown);
+                var tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, !timeoutThrown).ConfigureAwait(false);
 				if (tuple.Success)
 					return tuple.Result;
 				timeoutThrown = tuple.WasTimeout;
 
 				if (!timeoutThrown && IsFirstFailure(replicationDestination.Url))
 				{
-					tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, localReplicationDestinations.Count > i + 1);
+                    tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, localReplicationDestinations.Count > i + 1).ConfigureAwait(false);
 					if (tuple.Success)
 						return tuple.Result;
 					timeoutThrown = tuple.WasTimeout;
@@ -393,7 +335,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
             try
             {
 
-                var result = await operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials) : operationMetadata);
+                var result = await operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials) : operationMetadata).ConfigureAwait(false);
                 ResetFailureCount(operationMetadata.Url);
                 return new AsyncOperationResult<T>
                 {

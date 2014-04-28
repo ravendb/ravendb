@@ -297,7 +297,7 @@ namespace Raven.Tests.Issues
 
                 store.DatabaseCommands.Delete(userId, null);
 
-                WaitForPeriodicBackup(store.DocumentDatabase, backupStatus);
+                WaitForPeriodicBackup(store.DocumentDatabase, backupStatus, x => x.LastDocsDeletionEtag);
 
             }
 

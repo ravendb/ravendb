@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 

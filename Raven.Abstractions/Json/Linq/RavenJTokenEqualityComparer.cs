@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Raven.Abstractions.Data;
 
 namespace Raven.Json.Linq
 {
@@ -9,18 +10,23 @@ namespace Raven.Json.Linq
 	{
 		public readonly static RavenJTokenEqualityComparer Default = new RavenJTokenEqualityComparer();
 
-		/// <summary>
-		/// Determines whether the specified objects are equal.
-		/// </summary>
-		/// <param name="x">The first object of type <see cref="RavenJToken"/> to compare.</param>
-		/// <param name="y">The second object of type <see cref="RavenJToken"/> to compare.</param>
-		/// <returns>
-		/// true if the specified objects are equal; otherwise, false.
-		/// </returns>
-		public bool Equals(RavenJToken x, RavenJToken y)
-		{
-			return RavenJToken.DeepEquals(x, y);
-		}
+	    /// <summary>
+	    /// Determines whether the specified objects are equal.
+	    /// </summary>
+	    /// <param name="x">The first object of type <see cref="RavenJToken"/> to compare.</param>
+	    /// <param name="y">The second object of type <see cref="RavenJToken"/> to compare.</param>
+        /// <param name="difference">describe difference</param>
+	    /// <returns>
+	    /// true if the specified objects are equal; otherwise, false.
+	    /// </returns>
+        public bool Equals(RavenJToken x, RavenJToken y, List<DocumentsChanges> difference)
+        {
+            return RavenJToken.DeepEquals(x, y,  difference);
+        }
+        public bool Equals(RavenJToken x, RavenJToken y)
+        {
+            return RavenJToken.DeepEquals(x, y);
+        }
 
 		/// <summary>
 		/// Returns a hash code for the specified object.

@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using Voron.Debugging;
 using Voron.Impl;
+using Voron.Impl.Paging;
 
 namespace Voron.Trees
 {
@@ -219,8 +220,10 @@ namespace Voron.Trees
                 var implicitLeftKey = GetActualKey(to, 0);
                 var leftPageNumber = to.GetNode(0)->PageNumber;
                 to.AddPageRefNode(1, implicitLeftKey, leftPageNumber);
+				
+				to.RemoveNode(0);
+				to.EnsureHasSpaceFor(_tx, Slice.BeforeAllKeys, -1);
                 to.AddPageRefNode(0, Slice.BeforeAllKeys, pageNum);
-                to.RemoveNode(1);
             }
             else
             {

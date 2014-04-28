@@ -164,6 +164,17 @@ namespace Raven.Database.Actions
 
             name = name.Trim();
 
+	        if (name.Equals("dynamic", StringComparison.OrdinalIgnoreCase) ||
+	            name.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
+	        {
+		        throw new ArgumentException("Cannot use index name " + name + " because it clashes with reserved dynamic index names", "name");
+	        }
+
+	        if (name.Contains("//"))
+	        {
+		        throw new ArgumentException("Canot use an index with // in the name, but got: " + name, "name");
+	        }
+
             switch (FindIndexCreationOptions(definition, ref name))
             {
                 case IndexCreationOptions.Noop:

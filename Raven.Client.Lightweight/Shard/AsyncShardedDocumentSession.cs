@@ -664,7 +664,7 @@ namespace Raven.Client.Shard
 
 	    public Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync()
 	    {
-	        throw new NotImplementedException();
+	        throw new NotSupportedException("Async kazy requests are not supported for sharded store");
 	    }
 	}
 }

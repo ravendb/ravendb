@@ -8,7 +8,7 @@ import document = require("models/document");
 import collection = require("models/collection");
 import database = require("models/database");
 import pagedResultSet = require("common/pagedResultSet");
-import deleteDocuments = require("viewmodels/deleteDocuments");
+import deleteItems = require("viewmodels/deleteItems");
 import copyDocuments = require("viewmodels/copyDocuments");
 import row = require("widgets/virtualTable/row");
 import column = require("widgets/virtualTable/column");
@@ -170,7 +170,7 @@ class ctor {
     }
 
     setupKeyboardShortcuts() {
-        this.setupKeyboardShortcut("DELETE", () => this.deleteSelectedDocs());
+        this.setupKeyboardShortcut("DELETE", () => this.deleteSelectedItems());
         this.setupKeyboardShortcut("Ctrl+C,D", () => this.copySelectedDocs());
         this.setupKeyboardShortcut("Ctrl+C,I", () => this.copySelectedDocIds());
     }
@@ -220,7 +220,7 @@ class ctor {
 
     loadRowData() {
         if (this.items && this.firstVisibleRow) {
-
+            var that = this;
             // The scrolling has paused for a minute. See if we have all the data needed.
             var firstVisibleIndex = this.firstVisibleRow.rowIndex();
             var fetchTask = this.items.fetch(firstVisibleIndex, this.recycleRows().length);
@@ -231,7 +231,6 @@ class ctor {
                     resultSet.items.forEach((r, i) => this.fillRow(r, i + firstVisibleIndex));
                     this.ensureColumnsForRows(resultSet.items);
                 }
-
             });
         }
     }
@@ -295,6 +294,7 @@ class ctor {
         // Keep allocations to a minimum.
 
         var columnsNeeded = {};
+        
         if (this.settings.customColumns().hasOverrides()) {
             var colParams = this.settings.customColumns().columns();
             for (var i = 0; i < colParams.length; i++) {
@@ -329,6 +329,7 @@ class ctor {
 
         this.columns.remove(c => unneededColumns.contains(c.binding));
         this.columns.valueHasMutated();
+        this.settings.customColumns().columns.remove(c => unneededColumns.contains(c.binding()));
 
         var columnsCurrentTotalWidth = 0;
         for (var i = 2; i < this.columns().length; i++) {
@@ -347,7 +348,7 @@ class ctor {
             freeWidth -= curColWidth;
             columnCount++;
         }
-        var freeWidthPerColumn = (freeWidth / columnCount + 1);
+        var freeWidthPerColumn = (freeWidth / (columnCount + 1));
 
         var firstRow = this.recycleRows().length > 0 ? this.recycleRows()[0] : null;
         for (var binding in columnsNeeded) {
@@ -361,9 +362,8 @@ class ctor {
 
             // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
             var newColumn = new column(binding, columnWidth, columnName);
-            if (binding === "Name") {
+            if ((binding === "Name") && (!this.settings.customColumns().customMode())){
                 this.columns.splice(2, 0, newColumn);
-                //} else if (this.columns().length < 9) {
             } else {
                 this.columns.push(newColumn);
             }
@@ -371,13 +371,17 @@ class ctor {
             var curColumnConfig = this.settings.customColumns().findConfigFor(binding);
             if (!curColumnConfig && !!firstRow) {
                 var curColumnTemplate: string = firstRow.getCellTemplate(binding);
-                this.settings.customColumns().columns.push(new customColumnParams({
+                var newCustomColumn = new customColumnParams({
                     Binding: binding,
                     Header: binding,
                     Template: curColumnTemplate,
                     DefaultWidth: availiableWidth > 0 ? Math.floor(columnWidth) : 0
-                }));
-
+                });
+                if ((binding === "Name") && (!this.settings.customColumns().customMode())) {
+                    this.settings.customColumns().columns.splice(0, 0, newCustomColumn);
+                } else {
+                    this.settings.customColumns().columns.push(newCustomColumn);
+                }
             }
         }
     }
@@ -451,7 +455,7 @@ class ctor {
             if (customConfig) {
                 return customConfig.template();
             }
-        } 
+        }
         return undefined;
     }
 
@@ -526,15 +530,16 @@ class ctor {
         return this.items.getCachedItemsAt(maxSelectedIndices);
     }
 
-    deleteSelectedDocs() {
+    deleteSelectedItems() {
         var documents = this.getSelectedItems();
-        var deleteDocsVm = new deleteDocuments(documents, this.focusableGridSelector);
+        var deleteDocsVm = new deleteItems(documents, this.focusableGridSelector);
+        var self = this;
         deleteDocsVm.deletionTask.done(() => {
-            var deletedDocIndices = documents.map(d => this.items.indexOf(d));
-            deletedDocIndices.forEach(i => this.settings.selectedIndices.remove(i));
-            this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
-            this.items.invalidateCache(); // Causes the cache of items to be discarded.
-            this.onGridScrolled(); // Forces a re-fetch of the rows in view.
+            var deletedDocIndices = documents.map(d => self.items.indexOf(d));
+            deletedDocIndices.forEach(i => self.settings.selectedIndices.remove(i));
+            self.recycleRows().forEach(r => r.isChecked(self.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
+            self.items.invalidateCache(); // Causes the cache of items to be discarded.
+            self.onGridScrolled(); // Forces a re-fetch of the rows in view.
         });
 
         app.showDialog(deleteDocsVm);

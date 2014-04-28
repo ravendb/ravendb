@@ -366,7 +366,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
             }
             catch (Exception e)
             {
-                var msg = "Could open file system named: " + tenantId;
+                var msg = "Could not open file system named: " + tenantId;
                 Logger.WarnException(msg, e);
                 throw new HttpException(503, msg, e);
             }
@@ -394,7 +394,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 }
                 catch (Exception e)
                 {
-                    var msg = "Could open file system named: " + tenantId;
+                    var msg = "Could not open file system named: " + tenantId;
                     Logger.WarnException(msg, e);
                     throw new HttpException(503, msg, e);
                 }

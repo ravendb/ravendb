@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Voron.Tests</RootNamespace>
     <AssemblyName>Voron.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
@@ -89,6 +89,7 @@
     <Compile Include="Journal\EdgeCases.cs" />
     <Compile Include="Journal\Mvcc.cs" />
     <Compile Include="Journal\UncommittedTransactions.cs" />
+    <Compile Include="MultiTreeSize.cs" />
     <Compile Include="MultiValueTree.cs" />
     <Compile Include="Optimizations\Writes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -97,6 +98,7 @@
     <Compile Include="Storage\Concurrency.cs" />
     <Compile Include="Storage\Files.cs" />
     <Compile Include="Storage\FreeScratchPages.cs" />
+    <Compile Include="Storage\Increments.cs" />
     <Compile Include="Storage\MemoryMapWithoutBackingPagerTest.cs" />
     <Compile Include="Storage\MultiTransactions.cs" />
     <Compile Include="Storage\Pagers.cs" />

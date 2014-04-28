@@ -3,7 +3,9 @@ import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 import router = require("plugins/router");
 import app = require("durandal/app");
+import uploadItem = require("models/uploadItem");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
+import ace = require("ace/ace");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -11,6 +13,7 @@ import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm
 class viewModelBase {
     public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
+    localStorageUploadQueueKey: string;
 
     private keyboardShortcutDomContainers: string[] = [];
     private modelPollingHandle: number;
@@ -36,6 +39,7 @@ class viewModelBase {
         }
 
         viewModelBase.isConfirmedUsingSystemDatabase = false;
+
         return true;
     }
 
@@ -43,6 +47,7 @@ class viewModelBase {
     * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
     */
     activate(args) {
+        this.localStorageUploadQueueKey = "ravenFs-uploadQueue.";
         var db = appUrl.getDatabase();
         var currentDb = this.activeDatabase();
         if (!!db && db !== null && (!currentDb || currentDb.name !== db.name)) {
@@ -58,7 +63,7 @@ class viewModelBase {
         this.modelPollingStart();
 
         window.onbeforeunload = (e: any) => {
-            this.saveInObservable();
+            //this.saveInObservable();
             var isDirty = viewModelBase.dirtyFlag().isDirty();
             if (isDirty) {
                 var message = "You have unsaved data.";
@@ -78,8 +83,8 @@ class viewModelBase {
 
     // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
-        // Resync Changes
-        viewModelBase.dirtyFlag().reset();
+        this.createResizableTextBoxes();
+        viewModelBase.dirtyFlag().reset(); //Resync Changes
     }
 
     /*
@@ -103,6 +108,37 @@ class viewModelBase {
         this.modelPollingStop();
     }
 
+    createResizableTextBoxes() {
+        var self = this;
+        $("pre").each(function () {
+            self.createResizableTextBox(this);
+        });
+    }
+
+    createResizableTextBox(element) {
+        var editor = ace.edit(element);
+        //editor.setOption('vScrollBarAlwaysVisible', true);
+        //editor.setOption('hScrollBarAlwaysVisible', true);
+        var minHeight = 100;
+        if ($(element).height() < 150) {
+            $(element).height(minHeight);
+        }
+        $(element).resizable({
+            minHeight: minHeight,
+            handles: "s, se",
+            grid: [10000000000000000, 1],
+            resize: function (event, ui) {
+                editor.resize();
+            }
+        });
+        $(element).find('.ui-resizable-se').removeClass('ui-icon-gripsmall-diagonal-se');
+        $(element).find('.ui-resizable-se').addClass('ui-icon-carat-1-s');
+        $('.ui-resizable-se').css('cursor', 's-resize');
+        window.onresize = function (event) {
+            editor.resize();
+        };
+    }
+
     /*
      * Creates a keyboard shortcut local to the specified element and its children.
      * The shortcut will be removed as soon as the view model is deactivated.
@@ -121,9 +157,9 @@ class viewModelBase {
 
     //A method to save the current value in the observables from text boxes and inputs before a refresh/page close.
     //Should be implemented on the inheriting class.
-    saveInObservable() {
+    //saveInObservable() {
 
-    }
+    //}
 
     private removeKeyboardShortcuts(elementSelector: string) {
         $(elementSelector).unbind('keydown.jwerty');
@@ -181,6 +217,35 @@ class viewModelBase {
         app.showDialog(systemDbConfirm);
 
         return canNavTask;
+    }
+
+    stringifyUploadQueue(queue: uploadItem[]): string {
+        return ko.toJSON(queue);
+    }
+
+    parseUploadQueue(queue: string, fs : filesystem): uploadItem[] {
+        var stringArray: any[] = JSON.parse(queue);
+        var uploadQueue: uploadItem[] = [];
+
+        for (var i = 0; i < stringArray.length; i++) {
+            uploadQueue.push(new uploadItem(stringArray[i]["id"], stringArray[i]["fileName"],
+                stringArray[i]["status"], fs));
+        }
+
+        return uploadQueue;
+    }
+
+    updateLocalStorage(x: uploadItem[], fs : filesystem) {
+        window.localStorage.setItem(this.localStorageUploadQueueKey + fs.name, this.stringifyUploadQueue(x));
+    }
+
+    updateQueueStatus(guid: string, status: string, queue: uploadItem[]) {
+        var items = ko.utils.arrayFilter(queue, (i: uploadItem) => {
+            return i.id() === guid
+        });
+        if (items) {
+            items[0].status(status);
+        }
     }
 
 }

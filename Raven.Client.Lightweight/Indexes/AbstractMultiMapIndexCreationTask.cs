@@ -86,6 +86,7 @@ namespace Raven.Client.Indexes
 				TermVectorsStrings = TermVectorsStrings,
 				SpatialIndexesStrings = SpatialIndexesStrings,
 				DisableInMemoryIndexing = DisableInMemoryIndexing,
+				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
 			}.ToIndexDefinition(Conventions, validateMap: false);
 			foreach (var map in maps.Select(generateMap => generateMap()))
 			{
@@ -93,6 +94,11 @@ namespace Raven.Client.Indexes
 			}
 			return indexDefinition;
 		}
+
+		/// <summary>
+		/// Max number of allowed indexing outputs per one source document
+		/// </summary>
+		public int? MaxIndexOutputsPerDocument { get; set; }
 	}
 
 	/// <summary>

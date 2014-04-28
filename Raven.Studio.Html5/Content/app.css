@@ -61,6 +61,10 @@ body {
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
 }
+.dropdown-menu .selected {
+  color: #555;
+  background-color: #e7e7e7;
+}
 .panel span {
   overflow: hidden;
   -ms-text-overflow: ellipsis;
@@ -120,14 +124,24 @@ body {
 .document-collections li:not(:first-child) {
   padding-left: 15px;
 }
+.index-panel {
+  overflow: visible!important;
+}
+.index-dropdown {
+  right: 0;
+  left: auto;
+}
+.index-dropdown li > a {
+  text-align: left;
+}
+.index-dropdown li > a.active {
+  -webkit-box-shadow: inset 0 0 0 rgba(0, 0, 0, 0.125) !important;
+  box-shadow: inset 0 0 0 rgba(0, 0, 0, 0.125) !important;
+  text-decoration: underline!important;
+  font-weight: bold;
+}
 .indexes-container {
   margin-top: 10px;
-}
-.indexes-container .index .index-actions-container {
-  display: none;
-}
-.indexes-container .index:hover .index-actions-container {
-  display: inline-block;
 }
 .indexes-container .index-group .panel-heading {
   padding-top: 0;
@@ -282,6 +296,10 @@ body {
     white-space: nowrap;
   }
 }
+.control-label-additional-link {
+  display: block;
+  font-size: 80%;
+}
 .collection-color-strip {
   height: 20px;
   width: 4px;
@@ -290,6 +308,9 @@ body {
 }
 #editIndex .map {
   height: 120px;
+}
+.popover {
+  max-width: 30%;
 }
 #queryContainer .editor {
   height: 60px;
@@ -409,6 +430,29 @@ body {
 }
 #editDocumentContainer .query-metadata {
   padding-top: 20px;
+}
+#editDocumentContainer .documents-links-container {
+  -webkit-column-count: 2;
+  /* Chrome, Safari, Opera */
+  -moz-column-count: 2;
+  /* Firefox */
+  column-count: 2;
+  -webkit-column-gap: 30px;
+  /* Chrome, Safari, Opera */
+  -moz-column-gap: 30px;
+  /* Firefox */
+  column-gap: 30px;
+  -moz-column-width: 10px;
+  -webkit-column-width: 10px;
+  column-width: 10px;
+}
+#editDocumentContainer .documents-links-container .document-link {
+  width: 80%;
+  overflow: hidden;
+  white-space: nowrap;
+  -ms-text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  text-overflow: ellipsis;
 }
 .keyboard-shortcut {
   margin-left: 20px;
@@ -614,6 +658,10 @@ footer ul {
 .advanced-replication-settings {
   cursor: pointer;
 }
+.popover-lg {
+  max-width: 800px;
+  width: 600px;
+}
 .filesystem-page .btn-toolbar {
   margin-bottom: 20px;
 }
@@ -661,5 +709,31 @@ footer ul {
   position: absolute;
   top: -40px;
   right: 25px;
+}
+#editFileContainer:focus {
+  outline: 0;
+}
+#editFileContainer #fileMetadataEditor {
+  height: 500px;
+}
+#editFileContainer .document-addition-data {
+  margin-top: 95px;
+  padding-top: 10px;
+  padding-bottom: 40px;
+}
+#editFileContainer hr {
+  border-color: red;
+  margin-top: 5px;
+}
+.remove-icon {
+  color: #d2322d;
+  border-color: #ac2925;
+  cursor: pointer;
+}
+.remove-icon:hover {
+  color: #d2322d;
+}
+.fa-plus {
+  color: #58cc46;
 }
 /*# sourceMappingURL=app.css.map */

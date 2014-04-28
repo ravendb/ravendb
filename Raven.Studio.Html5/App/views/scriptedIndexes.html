@@ -21,44 +21,51 @@
                 </ul>
             </form>
             <form class="navbar-form navbar-right">
-                <span data-bind="visible: scrIndex() && !scrIndex().isMarkedToDelete()">
-                    <button type="button" class="btn btn-default" data-bind="click: deleteScript"><i class="fa fa-trash-o"></i></button>
-                </span>
-                <button type="button" class="btn btn-primary  use-bootstrap-tooltip" title="Save Changes(Alt+S)" accesskey="S" data-bind="click: saveChanges"><i class="fa fa-save"></i></button>
+                <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: createNewScript, visible: !isScriptIndexVisible()" title="Create Script"><i class="fa fa-plus"></i> Create Script</button>
+                <button type="button" class="btn btn-primary use-bootstrap-tooltip" title="Save Changes(Alt+S)" accesskey="S" data-bind="click: saveChanges, enable: isSaveEnabled()"><i class="fa fa-save"></i></button>
             </form>
         </div>
     </nav>
-    <div class="alert alert-info" data-bind="visible: selectedIndex() && (!scrIndex() || scrIndex().isMarkedToDelete())">
-        There is no Script for this index. <a href="#" data-bind="click: createNewScript" class="alert-link">Create Script</a>.
-    </div>
-    <div data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-        <form class="form-horizontal" role="form" data-bind="visible: scrIndex() && !scrIndex().isMarkedToDelete(), with: scrIndex">
-            <div class="form-group">
-                <label id="indexScriptLabel" style="cursor: help;" for="indexScript" class="col-md-2 control-label" data-placement="auto right" data-original-title="Index Script" data-trigger="hover">
-                    Index Script
-                    <i class="fa fa-info-circle text-info"></i>
-                </label>
-                <div class="col-md-10">
-                    <div class="row">
-                        <div class="col-md-11">
-                            <pre class="form-control map" data-bind="aceEditor: { code: indexScript }"></pre>
+    <div class="panel panel-default" data-bind="css: { 'panel-info': isScriptIndexVisible(), 'panel-warning': !isScriptIndexVisible() }">
+        <div class="panel-heading">
+            <h3 class="panel-title">
+                <span data-bind="visible: !isScriptIndexVisible()">
+                    There is no script for this index.
+                </span>
+                <span data-bind ="visible: isScriptIndexVisible()">
+                    Scripted Index<span class="glyphicon glyphicon-remove remove-icon pull-right" data-bind="click: deleteScript" title="Remove this Scripted Index"></span>
+                </span>
+            </h3>
+        </div>
+        <div class="panel-body">
+            <form class="form-horizontal" role="form" data-bind="visible: $root.isScriptIndexVisible(), with: scrIndex">
+                <div class="form-group">
+                    <label id="indexScriptLabel" style="cursor: help;" for="indexScript" class="col-md-2 control-label" data-placement="auto right" data-original-title="Index Script" data-trigger="hover">
+                        Index Script
+                        <i class="fa fa-info-circle text-info"></i>
+                    </label>
+                    <div class="col-md-10">
+                        <div class="row">
+                            <div class="col-md-11">
+                                <pre id="indexScriptEditor" class="form-control map" data-bind="aceEditor: { code: indexScript }"></pre>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="form-group">
-                <label id="deleteScriptLabel" style="cursor: help;" for="deleteScript" class="col-md-2 control-label" data-placement="auto right" data-original-title="Delete Script" data-trigger="hover">
-                    Delete Script
-                    <i class="fa fa-info-circle text-info"></i>
-                </label>
-                <div class="col-md-10">
-                    <div class="row">
-                        <div class="col-md-11">
-                            <pre class="form-control map" data-bind="aceEditor: { code: deleteScript }"></pre>
+                <div class="form-group">
+                    <label id="deleteScriptLabel" style="cursor: help;" for="deleteScript" class="col-md-2 control-label" data-placement="auto right" data-original-title="Delete Script" data-trigger="hover">
+                        Delete Script
+                        <i class="fa fa-info-circle text-info"></i>
+                    </label>
+                    <div class="col-md-10">
+                        <div class="row">
+                            <div class="col-md-11">
+                                <pre id="deleteScriptEditor" class="form-control map" data-bind="aceEditor: { code: deleteScript }"></pre>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 </div>

@@ -53,7 +53,7 @@ namespace Raven.Database.Embedded
 
             var state = new RequestState(request, cancellationToken);
             HttpContent requestContent = request.Content ?? new StreamContent(Stream.Null);
-            Stream body = await requestContent.ReadAsStreamAsync();
+            Stream body = await requestContent.ReadAsStreamAsync().ConfigureAwait(false);
             if (body.CanSeek)
             {
                 // This body may have been consumed before, rewind it.
@@ -81,7 +81,7 @@ namespace Raven.Database.Embedded
                 }
             });
 
-            return await state.ResponseTask;
+            return await state.ResponseTask.ConfigureAwait(false);
         }
 
         private class RequestState : IDisposable

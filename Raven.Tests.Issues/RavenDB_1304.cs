@@ -23,7 +23,7 @@ namespace Raven.Tests.Issues
                     session.Store(new { }, new string('a', 127) + "1");
                     session.Store(new { }, new string('a', 127) + "2");
 
-                    Assert.DoesNotThrow(session.SaveChanges);
+                    Assert.DoesNotThrow(() => session.SaveChanges());
                 }
             }
         }

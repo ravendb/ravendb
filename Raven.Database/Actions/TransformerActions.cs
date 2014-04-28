@@ -66,6 +66,9 @@ namespace Raven.Database.Actions
             if (existingDefinition != null && existingDefinition.Equals(definition))
                 return name; // no op for the same transformer
 
+			if (existingDefinition != null)
+				IndexDefinitionStorage.RemoveTransformer(existingDefinition.TransfomerId);
+
             TransactionalStorage.Batch(accessor =>
             {
                 definition.TransfomerId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("TransformerId", accessor, null);

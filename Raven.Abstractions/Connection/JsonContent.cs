@@ -78,7 +78,15 @@ namespace Raven.Abstractions.Connection
 			if (request != null)
 			{
 				// Just a directly request from a browser should return human readable JSON, but not a request from a JavaScript application.
-				IsOutputHumanReadable = request.Headers.Accept.Any() && request.Headers.UserAgent.Any() && request.Headers.Referrer == null;
+				foreach (var agent in request.Headers.UserAgent)
+				{
+					if (agent == null || agent.Product == null)
+						continue;
+					if (agent.Product.Name == "Mozilla" || agent.Product.Name == "Fiddler")
+					{
+						IsOutputHumanReadable = true;
+					}
+				}
 			}
 			return this;
 		}

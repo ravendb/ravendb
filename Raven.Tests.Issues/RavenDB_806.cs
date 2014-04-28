@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 

@@ -42,7 +42,7 @@ class changesApi {
             command: command
         };
         if (value !== undefined) {
-            args[value] = value;
+            args["value"] = value;
         }
         //TODO: exception handling?
         this.commandBase.query('/changes/config', args, this.db);
@@ -96,6 +96,20 @@ class changesApi {
             this.allDocsHandlers.remove(callback);
             if (this.allDocsHandlers().length == 0) {
                 this.send('unwatch-docs');
+            }
+        });
+    }
+
+    watchDocPrefix(onChange: (e: documentChangeNotificationDto) => void, prefix?:string) {
+        var callback = new changesCallback<documentChangeNotificationDto>(onChange);
+        if (this.allDocsHandlers().length == 0) {
+            this.send('watch-prefix', prefix);
+        }
+        this.allDocsHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allDocsHandlers.remove(callback);
+            if (this.allDocsHandlers().length == 0) {
+                this.send('unwatch-prefix', prefix);
             }
         });
     }

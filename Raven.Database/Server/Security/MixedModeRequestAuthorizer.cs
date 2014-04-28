@@ -77,7 +77,7 @@ namespace Raven.Database.Server.Security
 			}
 
 			//CORS pre-flight (ignore creds if using cors).
-			if (!String.IsNullOrEmpty(Settings.AccessControlAllowOrigin) && controller.InnerRequest.Method.Method == "OPTIONS")
+			if (Settings.AccessControlAllowOrigin.Count > 0 && controller.InnerRequest.Method.Method == "OPTIONS")
 			{
 				msg = controller.GetEmptyMessage();
 				return true;

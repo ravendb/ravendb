@@ -311,25 +311,12 @@ namespace Raven.Database.Data
 			if (database.Configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction == false &&
 				database.Configuration.RunInMemory == false)
 			{
-				// Hash the name if it's too long (as a path)
-				if ((database.Configuration.DataDirectory.Length + indexName.Length) > 230)
-				{
-					using (var sha256 = SHA256.Create())
-					{
-						var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(indexName));
-						indexName = Convert.ToBase64String(bytes);
-					}
-				}
+				indexName = IndexingUtil.FixupIndexName(indexName, database.Configuration.DataDirectory);
 			}
 
 			var permanentIndexName = indexName.Length == 0
 					? string.Format("Auto/{0}{1}", targetName, groupBy)
 					: string.Format("Auto/{0}/By{1}{2}", targetName, indexName, groupBy);
-
-			var temporaryIndexName = indexName.Length == 0
-					? string.Format("Temp/{0}{1}", targetName, groupBy)
-					: string.Format("Temp/{0}/By{1}{2}", targetName, indexName, groupBy);
-
 
 			map.IndexName = permanentIndexName;
 		}

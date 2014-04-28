@@ -653,6 +653,8 @@ namespace Raven.Client.Document
         /// <summary>
         /// Saves all the changes to the Raven server.
         /// </summary>
+       
+
         public void SaveChanges()
         {
             using (EntityToJson.EntitiesToJsonCachingScope())
@@ -660,7 +662,7 @@ namespace Raven.Client.Document
                 var data = PrepareForSaveChanges();
 
                 if (data.Commands.Count == 0)
-                    return; // nothing to do here
+                    return;
                 IncrementRequestCount();
                 LogBatch(data);
 
@@ -751,11 +753,8 @@ namespace Raven.Client.Document
         /// <typeparam name="T">The result of the query</typeparam>
         public IRavenQueryable<T> Query<T>()
         {
-            var indexName = "dynamic";
-            if (typeof(T).IsEntityType())
-            {
-                indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-            }
+            var indexName =   CreateDynamicIndexName<T>();
+           
             return Query<T>(indexName);
         }
 
@@ -773,13 +772,11 @@ namespace Raven.Client.Document
         /// </summary>
         public IDocumentQuery<T> DocumentQuery<T>()
         {
-            string indexName = "dynamic";
-            if (typeof(T).IsEntityType())
-            {
-                indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-            }
+            var indexName = CreateDynamicIndexName<T>();
             return Advanced.DocumentQuery<T>(indexName);
         }
+
+       
 
         /// <summary>
         /// Create a new query for <typeparam name="T"/>

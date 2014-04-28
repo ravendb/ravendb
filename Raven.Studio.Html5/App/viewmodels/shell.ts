@@ -10,6 +10,7 @@ import filesystem = require("models/filesystem/filesystem");
 import document = require("models/document");
 import appUrl = require("common/appUrl");
 import collection = require("models/collection");
+import uploadItem = require("models/uploadItem");
 import deleteDocuments = require("viewmodels/deleteDocuments");
 import dialogResult = require("common/dialogResult");
 import alertArgs = require("common/alertArgs");
@@ -29,6 +30,8 @@ import changesApi = require("common/changesApi");
 
 import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
 import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
+
+import changeSubscription = require('models/changeSubscription');
 
 
 class shell extends viewModelBase {
@@ -54,10 +57,13 @@ class shell extends viewModelBase {
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
     goToDocumentSearch = ko.observable<string>();
-    goToDocumentSearchResults = ko.observableArray<string>();    
+    goToDocumentSearchResults = ko.observableArray<string>();
+    refreshTimeoutFlag: boolean = true;
 
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
+
+    databasesChangeSubscription: changeSubscription;
 
     constructor() {
         super();
@@ -66,6 +72,7 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("ActivateFilesystemWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
         ko.postbox.subscribe("ActivateDatabase", (db: database) => this.updateChangesApi(db));
+        ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         this.appUrls = appUrl.forCurrentDatabase();
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
@@ -91,7 +98,7 @@ class shell extends viewModelBase {
             { route: 'databases/edit', title: 'Edit Document', moduleId: 'viewmodels/editDocument', nav: false },
             { route: ['', 'filesystems'], title: 'File Systems', moduleId: 'viewmodels/filesystem/filesystems', nav: true, hash: this.appUrls.filesystemsManagement },
             { route: 'filesystems/files', title: 'Files', moduleId: 'viewmodels/filesystem/filesystemFiles', nav: true, hash: this.appUrls.filesystemFiles },
-            { route: 'filesystems/search', title: 'Search', moduleId: 'viewmodels/filesystem/filesystemSearch', nav: true, hash: this.appUrls.filesystemSearch },
+            { route: 'filesystems/search', title: 'Search', moduleId: 'viewmodels/filesystem/search', nav: true, hash: this.appUrls.filesystemSearch },
             { route: 'filesystems/synchronization', title: 'Synchronization', moduleId: 'viewmodels/filesystem/filesystemSynchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
             { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
             { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
@@ -124,6 +131,27 @@ class shell extends viewModelBase {
         });
 
         shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+
+
+        this.databasesChangeSubscription = shell.globalChangesApi.watchDocPrefix((e: documentChangeNotificationDto) => {
+            if (!!e.Id && e.Id.indexOf("Raven/Databases") == 0 && 
+                (e.Type == documentChangeType.Put || e.Type == documentChangeType.Delete)) {
+
+                if (e.Type == documentChangeType.Delete) {
+                    var deletedDbName = e.Id.substring(16, e.Id.length);
+                    
+                    this.databases.remove((dbToRemove: database) => {
+                    
+                        return dbToRemove.name === deletedDbName;
+                    });
+                    
+                }
+
+                if (this.refreshTimeoutFlag) {
+                    setTimeout(() => this.modelPolling(), 5000);
+                }
+            }
+        }, "Raven/Databases");
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -176,14 +204,9 @@ class shell extends viewModelBase {
                 router.activate();
             });
 
-	    this.filesystemsLoadedTask = new getFilesystemsCommand()
-	        .execute()
-	        .fail(result => this.handleRavenConnectionFailure(result))
-	        .done(results => {
-	            this.filesystemsLoaded(results);
-	            this.fetchBuildVersion();
-	            this.fetchLicenseStatus();
-	        });
+        this.filesystemsLoadedTask = new getFilesystemsCommand()
+            .execute()
+            .done(results => this.filesystemsLoaded(results));
     }
 
     fetchStudioConfig() {
@@ -370,6 +393,8 @@ class shell extends viewModelBase {
                         this.goToDocumentSearchResults(results);
                     }
                 });
+        } else if (query.length == 0) {
+            this.goToDocumentSearchResults.removeAll();
         }
     }
 
@@ -378,6 +403,12 @@ class shell extends viewModelBase {
             var dialog = new ErrorDetails(this.recordedErrors);
             app.showDialog(dialog);
         });
+    }
+
+    uploadStatusChanged(item: uploadItem) {
+        var queue: uploadItem[] = this.parseUploadQueue(window.localStorage[this.localStorageUploadQueueKey + item.filesystem.name], item.filesystem);
+        this.updateQueueStatus(item.id(), item.status(), queue);
+        this.updateLocalStorage(queue, item.filesystem);
     }
 }
 
