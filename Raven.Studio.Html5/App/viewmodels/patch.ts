@@ -14,6 +14,7 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 import savePatch = require('viewmodels/savePatch');
 import loadPatch = require('viewmodels/loadPatch');
 import savePatchCommand = require('commands/savePatchCommand');
+import executeBulkDocsCommand = require("commands/executeBulkDocsCommand");
 
 class patch extends viewModelBase {
 
@@ -29,6 +30,8 @@ class patch extends viewModelBase {
     beforePatch = ko.observable<string>();
     afterPatch = ko.observable<string>();
 
+    isExecuteAllowed: KnockoutComputed<boolean>;
+
     constructor() {
         super();
 
@@ -36,8 +39,8 @@ class patch extends viewModelBase {
     }
 
     activate() {
-        var self = this;
         this.patchDocument(patchDocument.empty());
+        this.isExecuteAllowed = ko.computed(() => ((this.patchDocument().script()) && (this.beforePatch())) ? true : false);
     }
 
     loadDocumentToPatch(selectedItem: string) {
@@ -46,6 +49,8 @@ class patch extends viewModelBase {
             loadDocTask.done(document => {
                 this.beforePatch(JSON.stringify(document.toDto(), null, 4));
             }).fail(this.clearDocumentPreview());
+        } else {
+            this.clearDocumentPreview();
         }
     }
 
@@ -132,6 +137,56 @@ class patch extends viewModelBase {
             this.patchDocument(patch.cloneWithoutMetadata());
             this.loadDocumentToPatch(patch.selectedItem());
         });
+    }
+
+    testPatch() {
+        var values = {};
+        var patchDtos = this.patchDocument().parameters().map(param => {
+            var dto = param.toDto();
+            values[dto.Key] = dto.Value;
+        });
+        var bulkDocs: Array<bulkDocumentDto> = [];
+        bulkDocs.push({
+            Key: this.patchDocument().selectedItem(),
+            Method: 'EVAL',
+            DebugMode: true,
+            Patch: {
+                Script: this.patchDocument().script(),
+                Values: values
+            }
+        });
+        new executeBulkDocsCommand(bulkDocs, this.activeDatabase())
+            .execute()
+            .done((result: bulkDocumentDto[]) => {
+                var testResult = new document(result[0].AdditionalData['Document']);
+                this.afterPatch(JSON.stringify(testResult.toDto(), null, 4));
+            })
+            .fail((result: JQueryXHR) => console.log(result.responseText))
+    }
+
+    executePatch() {
+        var values = {};
+        var patchDtos = this.patchDocument().parameters().map(param => {
+            var dto = param.toDto();
+            values[dto.Key] = dto.Value;
+        });
+        var bulkDocs: Array<bulkDocumentDto> = [];
+        bulkDocs.push({
+            Key: this.patchDocument().selectedItem(),
+            Method: 'EVAL',
+            DebugMode: false,
+            Patch: {
+                Script: this.patchDocument().script(),
+                Values: values
+            }
+        });
+        new executeBulkDocsCommand(bulkDocs, this.activeDatabase())
+            .execute()
+            .done((result: bulkDocumentDto[]) => {
+                this.afterPatch('');
+                this.loadDocumentToPatch(this.patchDocument().selectedItem());
+            })
+            .fail((result: JQueryXHR) => console.log(result.responseText))
     }
 }
 
