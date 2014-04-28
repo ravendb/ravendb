@@ -42,12 +42,7 @@ class editIndex extends viewModelBase {
         this.hasExistingTransform = ko.computed(() => this.editedIndex() && this.editedIndex().transformResults());
         this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
     }
-
-
-    indexCompleter(editor: any, session: any, pos: number, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {      
-        callback(null, [{ name: "indexa", value: "indexa", score: 10, meta: "trash" }, { name: "indexb", value: "indexb", score: 10, meta: "smashindex" }, { name: "indexc", value: "indexc", score: 10, meta: "indextrash" }]);
-    }
-
+    
     canActivate(indexToEditName: string) {
         if (indexToEditName) {
             var canActivateResult = $.Deferred();
@@ -264,7 +259,7 @@ class editIndex extends viewModelBase {
         var field = spatialIndexField.empty();
         this.editedIndex().spatialFields.push(field);
     }
-
+    
     removeMap(mapIndex: number) {
         this.editedIndex().maps.splice(mapIndex, 1);
     }
