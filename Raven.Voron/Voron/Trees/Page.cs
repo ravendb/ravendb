@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Security.Policy;
 using System.Text;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
-using Voron.Util.Conversion;
 
 namespace Voron.Trees
 {
@@ -16,16 +16,18 @@ namespace Voron.Trees
         private readonly PageHeader* _header;
 
 	    public readonly string Source;
+	    private readonly ushort _pageSize;
 
-        public int LastMatch;
+	    public int LastMatch;
         public int LastSearchPosition;
         public bool Dirty;
 
-        public Page(byte* b, string source)
+        public Page(byte* b, string source, ushort pageSize)
         {
             _base = b;
             _header = (PageHeader*)b;
 	        Source = source;
+	        _pageSize = pageSize;
         }
 
         public long PageNumber { get { return _header->PageNumber; } set { _header->PageNumber = value; } }
@@ -66,22 +68,27 @@ namespace Voron.Trees
 				return GetNode(LastSearchPosition);
 			}
 
+			var pageKey = new Slice(SliceOptions.Key);
+			if (NumberOfEntries == 1)
+			{
+				pageKey.Set(GetNode(0));
+				LastMatch = key.Compare(pageKey, cmp);
+				LastSearchPosition = LastMatch > 0 ? 1 : 0;
+				return LastSearchPosition > NumberOfEntries ? null : GetNode(0);
+			}
+
 			int low = IsLeaf ? 0 : 1;
 			int high = NumberOfEntries - 1;
 			int position = 0;
 
-			var pageKey = new Slice(SliceOptions.Key);
-			bool matched = false;
-			NodeHeader* node = null;
 			while (low <= high)
 			{
 				position = (low + high) >> 1;
 
-				node = GetNode(position);
+				var node = GetNode(position);
 				pageKey.Set(node);
 
 				LastMatch = key.Compare(pageKey, cmp);
-				matched = true;
 				if (LastMatch == 0)
 					break;
 
@@ -89,11 +96,6 @@ namespace Voron.Trees
 					low = position + 1;
 				else
 					high = position - 1;
-			}
-
-			if (matched == false)
-			{
-				LastMatch = key.Compare(pageKey, cmp);
 			}
 
 			if (LastMatch > 0) // found entry less than key
@@ -201,7 +203,7 @@ namespace Voron.Trees
             {
                 KeysOffsets[i] = KeysOffsets[i - 1];
             }
-            var nodeSize = SizeOf.NodeEntry(AbstractPager.PageMaxSpace, key, len);
+            var nodeSize = SizeOf.NodeEntry(PageMaxSpace, key, len);
             var node = AllocateNewNode(index, key, nodeSize, previousNodeVersion);
 
             if (key.Options == SliceOptions.Key)
@@ -256,7 +258,8 @@ namespace Voron.Trees
 
         private NodeHeader* AllocateNewNode(int index, Slice key, int nodeSize, ushort previousNodeVersion)
         {
-			if (previousNodeVersion + 1 > ushort.MaxValue)
+	        int newSize = previousNodeVersion + 1;
+	        if (newSize > ushort.MaxValue)
 				previousNodeVersion = 0;
 
             var newNodeOffset = (ushort)(_header->Upper - nodeSize);
@@ -280,7 +283,7 @@ namespace Voron.Trees
 
         public int SizeUsed
         {
-			get { return _header->Lower + AbstractPager.PageMaxSpace - _header->Upper; }
+			get { return _header->Lower + PageMaxSpace - _header->Upper; }
         }
 
 
@@ -308,18 +311,22 @@ namespace Voron.Trees
             // when truncating, we copy the values to a tmp page
             // this has the effect of compacting the page data and avoiding
             // internal page fragmentation
-            var copy = tx.Environment.TemporaryPage.TempPage;
-            copy.Flags = Flags;
-            for (int j = 0; j < i; j++)
-            {
-                copy.CopyNodeDataToEndOfPage(GetNode(j));
-            }
-            NativeMethods.memcpy(_base + Constants.PageHeaderSize,
-                                 copy._base + Constants.PageHeaderSize,
-								 AbstractPager.PageSize - Constants.PageHeaderSize);
+	        TemporaryPage tmp;
+	        using (tx.Environment.GetTemporaryPage(tx, out tmp))
+	        {
+		        var copy = tmp.TempPage;
+				copy.Flags = Flags;
+				for (int j = 0; j < i; j++)
+				{
+					copy.CopyNodeDataToEndOfPage(GetNode(j));
+				}
+				NativeMethods.memcpy(_base + Constants.PageHeaderSize,
+									 copy._base + Constants.PageHeaderSize,
+									 _pageSize - Constants.PageHeaderSize);
 
-            Upper = copy.Upper;
-            Lower = copy.Lower;
+				Upper = copy.Upper;
+				Lower = copy.Lower;
+	        }
 
             if (LastSearchPosition > i)
                 LastSearchPosition = i;
@@ -363,27 +370,31 @@ namespace Voron.Trees
             return true;
         }
 
-        private void Defrag(Transaction tx)
-        {
-            var tmp = tx.Environment.TemporaryPage.TempPage;
-            NativeMethods.memcpy(tmp.Base, Base, AbstractPager.PageSize);
+	    private void Defrag(Transaction tx)
+	    {
+		    TemporaryPage tmp;
+		    using (tx.Environment.GetTemporaryPage(tx, out tmp))
+		    {
+			    var tempPage = tmp.TempPage;
+			    NativeMethods.memcpy(tempPage.Base, Base, _pageSize);
 
-            var numberOfEntries = NumberOfEntries;
+			    var numberOfEntries = NumberOfEntries;
 
-            Upper = AbstractPager.PageSize;
+			    Upper = _pageSize;
 
-            for (int i = 0; i < numberOfEntries; i++)
-            {
-                var node = tmp.GetNode(i);
-                var size = node->GetNodeSize() - Constants.NodeOffsetSize;
-                size += size & 1;
-                NativeMethods.memcpy(Base + Upper - size, (byte*) node, size);
-                Upper -= (ushort)size;
-                KeysOffsets[i] = Upper;
-            }
-        }
+			    for (int i = 0; i < numberOfEntries; i++)
+			    {
+					var node = tempPage.GetNode(i);
+				    var size = node->GetNodeSize() - Constants.NodeOffsetSize;
+				    size += size & 1;
+				    NativeMethods.memcpy(Base + Upper - size, (byte*) node, size);
+				    Upper -= (ushort) size;
+				    KeysOffsets[i] = Upper;
+			    }
+		    }
+	    }
 
-        private bool HasSpaceFor(int len)
+	    private bool HasSpaceFor(int len)
         {
             return len <= SizeLeft;
         }
@@ -401,10 +412,18 @@ namespace Voron.Trees
 
         public int GetRequiredSpace(Slice key, int len)
         {
-			return SizeOf.NodeEntry(AbstractPager.PageMaxSpace, key, len) + Constants.NodeOffsetSize;
+			return SizeOf.NodeEntry(PageMaxSpace, key, len) + Constants.NodeOffsetSize;
         }
 
-        public string this[int i]
+	    public int PageMaxSpace
+	    {
+		    get
+		    {
+			    return _pageSize - Constants.PageHeaderSize;
+		    }
+	    }
+
+	    public string this[int i]
         {
             get { return new Slice(GetNode(i)).ToString(); }
         }
@@ -491,7 +510,7 @@ namespace Voron.Trees
 
         public int CalcSizeLeft()
         {
-            var sl = AbstractPager.PageMaxSpace - CalcSizeUsed();
+            var sl = PageMaxSpace - CalcSizeUsed();
             Debug.Assert(sl >= 0);
             return sl;
         }

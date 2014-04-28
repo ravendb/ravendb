@@ -13,20 +13,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 	{
         [HttpGet]
         [Route("ravenfs/{fileSystemName}/search/Terms")]
-        public HttpResponseMessage Terms()
-        {
-            IndexSearcher searcher;
-            using (Search.GetSearcher(out searcher))
-            {
-                string[] result = searcher.IndexReader.GetFieldNames(IndexReader.FieldOption.ALL).ToArray();
-
-                return this.GetMessageWithObject(result);
-            }
-        }
-
-        [HttpGet]
-        [Route("ravenfs/{fileSystemName}/search/Terms")]
-        public HttpResponseMessage Terms([FromUri] string query)
+        public HttpResponseMessage Terms([FromUri] string query  = "")
         {
             IndexSearcher searcher;
             using (Search.GetSearcher(out searcher))

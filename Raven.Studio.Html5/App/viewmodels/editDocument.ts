@@ -245,6 +245,13 @@ class editDocument extends viewModelBase {
             });
         }
 
+        // skip some not necessary meta in headers
+        var metaToSkipInHeaders = ['Raven-Replication-History'];
+        for (var i in metaToSkipInHeaders) {
+            var skippedHeader = metaToSkipInHeaders[i];
+            delete meta[skippedHeader];
+        }
+
         var newDoc = new document(updatedDto);
         var saveCommand = new saveDocumentCommand(currentDocumentId, newDoc, appUrl.getDatabase());
         var saveTask = saveCommand.execute();

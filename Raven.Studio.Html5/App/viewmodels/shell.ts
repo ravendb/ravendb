@@ -58,6 +58,7 @@ class shell extends viewModelBase {
     activeArea = ko.observable<string>("Databases");
     goToDocumentSearch = ko.observable<string>();
     goToDocumentSearchResults = ko.observableArray<string>();
+    refreshTimeoutFlag: boolean = true;
 
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
@@ -145,7 +146,10 @@ class shell extends viewModelBase {
                     });
                     
                 }
-                this.modelPolling();
+
+                if (this.refreshTimeoutFlag) {
+                    setTimeout(() => this.modelPolling(), 5000);
+                }
             }
         }, "Raven/Databases");
     }

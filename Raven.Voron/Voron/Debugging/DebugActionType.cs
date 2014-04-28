@@ -6,6 +6,7 @@
 		Delete,
 		MultiAdd,
 		MultiDelete,
-		CreateTree,			
+		CreateTree,
+		Increment	
 	}
 }
