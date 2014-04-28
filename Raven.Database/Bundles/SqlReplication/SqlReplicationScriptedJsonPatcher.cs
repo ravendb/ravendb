@@ -3,7 +3,6 @@ using Jint;
 using Jint.Native;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Json;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
@@ -26,12 +25,12 @@ namespace Raven.Database.Bundles.SqlReplication
 
 		protected override void RemoveEngineCustomizations(Engine jintEngine)
 		{
-			//jintEngine.RemoveParameter("documentId");
-			//jintEngine.RemoveParameter("replicateTo");
-			//foreach (var sqlReplicationTable in config.SqlReplicationTables)
-			//{
-			//	jintEngine.RemoveParameter("replicateTo" + sqlReplicationTable.TableName);
-			//}
+			jintEngine.Global.Delete("documentId", true);
+			jintEngine.Global.Delete("replicateTo", true);
+			foreach (var sqlReplicationTable in config.SqlReplicationTables)
+			{
+				jintEngine.Global.Delete("replicateTo" + sqlReplicationTable.TableName, true);
+			}
 		}
 
 		protected override void CustomizeEngine(Engine jintEngine, ScriptedJsonPatcherOperationScope scope)
@@ -60,7 +59,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			itemToReplicates.Add(new ItemToReplicate
 			{
 				DocumentId = docId,
-				Columns = cols.TryCast<RavenJObject>()
+				Columns = scope.ToRavenJObject(cols)
 			});
 		}
 	}

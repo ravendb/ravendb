@@ -40,7 +40,7 @@ namespace Raven.Database.Json
 
 		public abstract void Dispose();
 
-		protected RavenJObject ToRavenJObject(JsValue jsObject)
+		public RavenJObject ToRavenJObject(JsValue jsObject)
 		{
 			var rjo = new RavenJObject();
 			foreach (var property in jsObject.AsObject().Properties)
