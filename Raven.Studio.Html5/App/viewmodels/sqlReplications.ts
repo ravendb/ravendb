@@ -1,15 +1,21 @@
+import database = require("models/database");
+import collection = require("models/collection");
 import sqlReplication = require("models/sqlReplication");
 import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import getSqlReplicationsCommand = require("commands/getSqlReplicationsCommand");
 import saveSqlReplicationsCommand = require("commands/saveSqlReplicationsCommand");
 import deleteDocumentsCommand = require("commands/deleteDocumentsCommand");
+import getCollectionsCommand = require("commands/getCollectionsCommand");
 import appUrl = require("common/appUrl");
+import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 import ace = require("ace/ace");
+
 
 class sqlReplications extends viewModelBase {
 
     replications = ko.observableArray<sqlReplication>();
+    collections = ko.observableArray<string>();
     isFirstload = ko.observable(true);
     lastIndex = ko.computed(function () {
         return this.isFirstload() ? -1 : this.replications().length - 1;
@@ -17,12 +23,11 @@ class sqlReplications extends viewModelBase {
     areAllSqlReplicationsValid: KnockoutComputed<boolean>;
     isSaveEnabled: KnockoutComputed<boolean>;
     loadedSqlReplications = [];
-    private form = "#sqlReplicationsForm";
 
     constructor() {
         super();
-
         aceEditorBindingHandler.install();
+        autoCompleteBindingHandler.install();
     }
 
     canActivate(args: any): JQueryPromise<any> {
@@ -41,12 +46,12 @@ class sqlReplications extends viewModelBase {
                 })
                 .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
         }
+        this.fetchCollections(db);
         return deferred;
     }
 
     activate(args) {
         super.activate(args);
-
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.replications]);
         this.isSaveEnabled = ko.computed(()=> {
             return viewModelBase.dirtyFlag().isDirty();
@@ -69,10 +74,20 @@ class sqlReplications extends viewModelBase {
 
         this.replications().forEach((replication: sqlReplication) => {
             this.subscribeToSqlReplicationName(replication);
+            replication.collections = this.collections;
         });
 
         $('pre').each((index, currentPreElement) => {
             this.initializeAceValidity(currentPreElement);
+        });
+    }
+
+    //private fetchCollections(db: database): JQueryPromise<Array<collection>> {
+    private fetchCollections(db: database): JQueryPromise<any> {
+        return new getCollectionsCommand(db)
+            .execute()
+            .done((collections: Array<collection>)=> {
+                this.collections(collections.map((collection: collection)=> { return collection.name; }));
         });
     }
 
@@ -88,6 +103,18 @@ class sqlReplications extends viewModelBase {
     }
 
     private subscribeToSqlReplicationName(sqlReplicationElement: sqlReplication) {
+        /*sqlReplicationElement.name.subscribe(function (previousName) {
+            this.replications().filter((replication: sqlReplication) => {
+                debugger;
+                return replication.name() === previousName;
+            }).forEach((replication: sqlReplication) => {
+                debugger;
+                replication.name.valueHasMutated();
+            });
+            
+            debugger;
+            //I'd like to get the previous value of 'myObservable' here before it's set to newValue
+        }, this, "beforeChange");*/
         sqlReplicationElement.name.subscribe((newName) => {
             var message = "";
             if (newName === "") {
@@ -101,8 +128,15 @@ class sqlReplications extends viewModelBase {
                 .each((index, element: any) => {
                     element.setCustomValidity(message);
                 });
+            //this.replications().forEach((replication: sqlReplication) => {
+            //    if (replication.name() !== newName) {
+            //        replication.name.valueHasMutated();
+            //    }
+            //});
         });
+
     }
+
     private isSqlReplicationNameExists(name): boolean {
         var count = 0;
         this.replications().forEach((replication: sqlReplication) => {
@@ -204,6 +238,7 @@ class sqlReplications extends viewModelBase {
     addNewSqlReplication() {
         this.isFirstload(false);
         var newSqlReplication: sqlReplication = sqlReplication.empty();
+        newSqlReplication.collections = this.collections;
         this.replications.push(newSqlReplication);
         this.subscribeToSqlReplicationName(newSqlReplication);
         $('.in').find('input[name="name"]').focus();

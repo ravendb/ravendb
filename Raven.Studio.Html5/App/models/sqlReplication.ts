@@ -25,12 +25,14 @@ class sqlReplication extends document {
     ravenEntityName = ko.observable<string>("").extend({ required: true });
     sqlReplicationTables = ko.observableArray<sqlReplicationTable>().extend({ required: true });
     script = ko.observable<string>("").extend({ required: true });
-
     connectionString = ko.observable<string>(null);
     connectionStringName = ko.observable<string>(null);
     connectionStringSettingName = ko.observable<string>(null);
     connectionStringSourceFieldName: KnockoutComputed<string>;
     parameterizeDeletesDisabled = ko.observable<boolean>();
+
+    collections = ko.observableArray<string>();
+    searchResults = ko.observableArray<string>();
 
     constructor(dto: sqlReplicationDto) {
         super(dto);
@@ -55,6 +57,13 @@ class sqlReplication extends document {
             } else {
                 return "Setting name in memory/remote configuration";
             }
+        });
+
+        this.ravenEntityName.subscribe((newRavenEntityName) => {
+            this.searchResults(this.collections().filter((name) => {
+                return !!newRavenEntityName && name.toLowerCase().indexOf(newRavenEntityName) > -1;
+            }));
+
         });
 
         this.script.subscribe(() => {
@@ -159,6 +168,10 @@ class sqlReplication extends document {
 
     setIdFromName() {
         this.__metadata.id = "Raven/SqlReplication/Configuration/" + this.name();
+    }
+
+    saveNewRavenEntityName(newRavenEntityName) {
+        this.ravenEntityName(newRavenEntityName);
     }
 }
 

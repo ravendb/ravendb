@@ -74,7 +74,14 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Source Document Collection</label>
                             <div class="col-sm-9">
-                                <input required type="text" class="form-control" data-bind="value: ravenEntityName, valueUpdate: 'keyup'" />
+                                <input required type="text" class="form-control" data-bind="value: ravenEntityName, valueUpdate: 'keyup', attr: { 'id': 'sourceDocumentCollection' + $index() }" />
+                                <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#sourceDocumentCollection' + $index(), foreach: searchResults">
+                                    <li role="presentation" data-bind="click: $parent.saveNewRavenEntityName.bind($parent, $data)">
+                                        <a role="menuitem" tabindex="-1">
+                                            <span data-bind="text: $data"></span>
+                                        </a>
+                                    </li>
+                                </ul>
                             </div>
                         </div>
                         <div class="form-group">
