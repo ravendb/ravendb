@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Jint;
+using Jint.Runtime;
+
 using Raven.Abstractions.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Tests.Common;
@@ -290,7 +292,12 @@ this.Parts = this.Email.split('@');";
 				}
 			});
 
-			Assert.Contains("Too many steps in script", x.Message);
+			Assert.Contains("Unable to execute JavaScript", x.Message);
+
+			var inner = x.InnerException as StatementsCountOverflowException;
+
+			Assert.NotNull(inner);
+			Assert.Equal("The maximum number of statements executed have been reached.", inner.Message);
 		}
 
         [Fact]

@@ -93,46 +93,18 @@ namespace Raven.Database.Json
 
 			try
 			{
-			    CustomizeEngine(jintEngine, scope);
-				jintEngine.SetValue("PutDocument", (Action<string, object, object>)(scope.PutDocument));
-				jintEngine.SetValue("LoadDocument", (Func<string, JsValue>)(key => scope.LoadDocument(key, jintEngine)));
-				jintEngine.SetValue("DeleteDocument", (Action<string>)(scope.DeleteDocument));
-				jintEngine.SetValue("__document_id", docId);
-			    foreach (var kvp in patch.Values)
-			    {
-			        var token = kvp.Value as RavenJToken;
-			        if (token != null)
-			        {
-						jintEngine.SetValue(kvp.Key, scope.ToJsInstance(jintEngine, token));
-			        }
-			        else
-			        {
-						var rjt = RavenJToken.FromObject(kvp.Value);
-						var jsInstance = scope.ToJsInstance(jintEngine, rjt);
-						jintEngine.SetValue(kvp.Key, jsInstance);
-			        }
-			    }
+				PrepareEngine(patch, docId, size, scope, jintEngine);
+
 				var jsObject = scope.ToJsObject(jintEngine, doc);
-			    jintEngine.ResetStatementsCount();
-			    if (size != 0)
-			    {
-				    jintEngine.Options.MaxStatements(maxSteps + (size * additionalStepsPerSize));
-			    }
 			    jintEngine.Invoke("ExecutePatchScript", jsObject);
-			    foreach (var kvp in patch.Values)
-			    {
-					// TODO [ppekrol] not sure if this is the right way
-				    jintEngine.SetValue(kvp.Key, JsValue.Undefined);
-				    //jintEngine.RemoveParameter(kvp.Key);
-			    }
-				jintEngine.SetValue("__document_id", JsValue.Undefined);
-			    //jintEngine.RemoveParameter("__document_id");
-			    RemoveEngineCustomizations(jintEngine);
-			    OutputLog(jintEngine);
+
+			    CleanupEngine(patch, jintEngine);
+
+				OutputLog(jintEngine);
 
 			    ScriptsCache.CheckinScript(patch, jintEngine);
 
-			    return scope.ConvertReturnValue(jsObject);
+				return scope.ConvertReturnValue(jsObject);
 			}
 			catch (ConcurrencyException)
 			{
@@ -140,6 +112,8 @@ namespace Raven.Database.Json
 			}
 			catch (Exception errorEx)
 			{
+				jintEngine.ResetStatementsCount();
+
 				OutputLog(jintEngine);
 				var errorMsg = "Unable to execute JavaScript: " + Environment.NewLine + patch.Script;
 				var error = errorEx as JavaScriptException;
@@ -149,8 +123,54 @@ namespace Raven.Database.Json
 					errorMsg += Environment.NewLine + "Debug information: " + Environment.NewLine +
 								string.Join(Environment.NewLine, Debug);
 
+				var targetEx = errorEx as TargetInvocationException;
+				if (targetEx != null && targetEx.InnerException != null)
+					throw new InvalidOperationException(errorMsg, targetEx.InnerException);
+
 				throw new InvalidOperationException(errorMsg, errorEx);
 			}
+		}
+
+		private void CleanupEngine(ScriptedPatchRequest patch, Engine jintEngine)
+		{
+			foreach (var kvp in patch.Values)
+				jintEngine.Global.Delete(kvp.Key, true);
+
+			jintEngine.Global.Delete("__document_id", true);
+			RemoveEngineCustomizations(jintEngine);
+		}
+
+		private void PrepareEngine(ScriptedPatchRequest patch, string docId, int size, ScriptedJsonPatcherOperationScope scope, Engine jintEngine)
+		{
+			jintEngine.Global.Delete("PutDocument", false);
+			jintEngine.Global.Delete("LoadDocument", false);
+			jintEngine.Global.Delete("DeleteDocument", false);
+
+			CustomizeEngine(jintEngine, scope);
+
+			jintEngine.SetValue("PutDocument", (Action<string, object, object>)((key, document, metadata) => scope.PutDocument(key, document, metadata, jintEngine)));
+			jintEngine.SetValue("LoadDocument", (Func<string, JsValue>)(key => scope.LoadDocument(key, jintEngine)));
+			jintEngine.SetValue("DeleteDocument", (Action<string>)(scope.DeleteDocument));
+			jintEngine.SetValue("__document_id", docId);
+
+			foreach (var kvp in patch.Values)
+			{
+				var token = kvp.Value as RavenJToken;
+				if (token != null)
+				{
+					jintEngine.SetValue(kvp.Key, scope.ToJsInstance(jintEngine, token));
+				}
+				else
+				{
+					var rjt = RavenJToken.FromObject(kvp.Value);
+					var jsInstance = scope.ToJsInstance(jintEngine, rjt);
+					jintEngine.SetValue(kvp.Key, jsInstance);
+				}
+			}
+
+			jintEngine.ResetStatementsCount();
+			if (size != 0)
+				jintEngine.Options.MaxStatements(maxSteps + (size * additionalStepsPerSize));
 		}
 
 		protected virtual void RemoveEngineCustomizations(Engine jintEngine)
@@ -213,17 +233,25 @@ function ExecutePatchScript(docInner){{
 
 		private void OutputLog(Engine engine)
 		{
-			//var arr = engine.GetParameter("debug_outputs") as JsArray;
-			//if (arr == null)
-			//	return;
-			//for (int i = 0; i < arr.Length; i++)
-			//{
-			//	var o = arr.get(i);
-			//	if (o == null)
-			//		continue;
-			//	Debug.Add(o.ToString());
-			//}
-			//engine.SetParameter("debug_outputs", engine.Global.ArrayClass.New());
+			var arr = engine.GetValue("debug_outputs");
+			if (arr == JsValue.Null || arr.IsArray() == false)
+				return;
+
+			foreach (var property in arr.AsArray().Properties)
+			{
+				if (property.Key == "length")
+					continue;
+
+				var jsInstance = property.Value.Value;
+				if (!jsInstance.HasValue)
+					continue;
+
+				var output = jsInstance.Value.IsNumber() ? jsInstance.Value.AsNumber().ToString() : jsInstance.Value.AsString();
+
+				Debug.Add(output);
+			}
+
+			engine.Invoke("clear_debug_outputs");
 		}
 
 		private static string GetFromResources(string resourceName)

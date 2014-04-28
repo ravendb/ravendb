@@ -53,7 +53,7 @@ namespace Raven.Smuggler.Imports
 		    }
 		}
 
-        private class Scope : IDisposable
+        private sealed class Scope : IDisposable
         {
 			private Dictionary<JsValue, KeyValuePair<RavenJValue, object>> propertiesByValue = new Dictionary<JsValue, KeyValuePair<RavenJValue, object>>();
 
@@ -77,7 +77,7 @@ namespace Raven.Smuggler.Imports
 				return rjo;
 			}
 
-	        private RavenJToken ToRavenJToken(JsValue v)
+			private RavenJToken ToRavenJToken(JsValue v)
 			{
 				if (v.IsBoolean())
 					return new RavenJValue(v.AsBoolean());
@@ -159,9 +159,9 @@ namespace Raven.Smuggler.Imports
 			public JsValue ToJsObject(Engine engine, RavenJObject doc)
 			{
 				var jsObject = new ObjectInstance(engine)
-				               {
-					               Extensible = true
-				               };
+				{
+					Extensible = true
+				};
 
 				foreach (var prop in doc)
 				{
@@ -208,7 +208,7 @@ namespace Raven.Smuggler.Imports
 						return engine.Date.Construct((DateTime)dtVal.Value);
 					case JTokenType.String:
 						var strVal = ((RavenJValue)value);
-						return new JsValue((long)strVal.Value);
+						return new JsValue((string)strVal.Value);
 					case JTokenType.Bytes:
 						var byteValue = (RavenJValue)value;
 						var base64 = Convert.ToBase64String((byte[])byteValue.Value);
@@ -218,7 +218,7 @@ namespace Raven.Smuggler.Imports
 				}
 			}
 
-	        private JsValue ToJsArray(Engine engine, RavenJArray array)
+			private JsValue ToJsArray(Engine engine, RavenJArray array)
 			{
 				var elements = new JsValue[array.Length];
 				for (var i = 0; i < array.Length; i++)

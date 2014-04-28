@@ -34,7 +34,7 @@ namespace Raven.Database.Json
 
 		public abstract JsValue LoadDocument(string documentKey, Engine engine);
 
-		public abstract void PutDocument(string documentKey, object data, object meta);
+		public abstract void PutDocument(string documentKey, object data, object meta, Engine jintEngine);
 
 		public abstract void DeleteDocument(string documentKey);
 
@@ -251,57 +251,58 @@ namespace Raven.Database.Json
 			return ToJsObject(engine, loadedDoc);
 		}
 
-		public override void PutDocument(string key, object doc, object meta)
+		public override void PutDocument(string key, object documentAsObject, object metadataAsObject, Engine engine)
 		{
-			//if (doc == JsValue.Null)
-			//{
-			//	throw new InvalidOperationException(
-			//		string.Format("Created document cannot be null or empty. Document key: '{0}'", key));
-			//}
+			if (documentAsObject == null)
+			{
+				throw new InvalidOperationException(
+					string.Format("Created document cannot be null or empty. Document key: '{0}'", key));
+			}
 
-			//var newDocument = new JsonDocument
-			//{
-			//	Key = key,
-			//	DataAsJson = ToRavenJObject(doc)
-			//};
+			var newDocument = new JsonDocument
+			{
+				Key = key,
+				//DataAsJson = ToRavenJObject(doc)
+				DataAsJson = RavenJObject.FromObject(documentAsObject)
+			};
 
-			//if (meta == JsValue.Null)
-			//{
-			//	RavenJToken value;
-			//	if (newDocument.DataAsJson.TryGetValue("@metadata", out value))
-			//	{
-			//		newDocument.DataAsJson.Remove("@metadata");
-			//		newDocument.Metadata = (RavenJObject)value;
-			//	}
-			//}
-			//else
-			//{
-			//	var metadata = ToRavenJObject(meta);
+			if (metadataAsObject == null)
+			{
+				RavenJToken value;
+				if (newDocument.DataAsJson.TryGetValue("@metadata", out value))
+				{
+					newDocument.DataAsJson.Remove("@metadata");
+					newDocument.Metadata = (RavenJObject)value;
+				}
+			}
+			else
+			{
+				var metadata = RavenJObject.FromObject(metadataAsObject);
 
-			//	foreach (var etagKeyName in EtagKeyNames)
-			//	{
-			//		RavenJToken etagValue;
-			//		if (!metadata.TryGetValue(etagKeyName, out etagValue))
-			//			continue;
+				foreach (var etagKeyName in EtagKeyNames)
+				{
+					RavenJToken etagValue;
+					if (!metadata.TryGetValue(etagKeyName, out etagValue))
+						continue;
 
-			//		metadata.Remove(etagKeyName);
+					metadata.Remove(etagKeyName);
 
-			//		var etag = etagValue.Value<string>();
-			//		if (string.IsNullOrEmpty(etag))
-			//			continue;
+					var etag = etagValue.Value<string>();
+					if (string.IsNullOrEmpty(etag))
+						continue;
 
-			//		Etag newDocumentEtag;
-			//		if (Etag.TryParse(etag, out newDocumentEtag) == false)
-			//			throw new InvalidOperationException(string.Format("Invalid ETag value '{0}' for document '{1}'", etag, key));
+					Etag newDocumentEtag;
+					if (Etag.TryParse(etag, out newDocumentEtag) == false)
+						throw new InvalidOperationException(string.Format("Invalid ETag value '{0}' for document '{1}'", etag, key));
 
-			//		newDocument.Etag = newDocumentEtag;
-			//	}
+					newDocument.Etag = newDocumentEtag;
+				}
 
-			//	newDocument.Metadata = metadata;
-			//}
+				newDocument.Metadata = metadata;
+			}
 
-			//ValidateDocument(newDocument);
-			//AddToContext(key, newDocument);
+			ValidateDocument(newDocument);
+			AddToContext(key, newDocument);
 		}
 
 		public override void DeleteDocument(string documentKey)
