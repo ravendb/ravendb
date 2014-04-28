@@ -70,6 +70,7 @@ class shell extends viewModelBase {
     constructor() {
         super();
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
+        ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("ActivateFilesystemWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
@@ -237,6 +238,20 @@ class shell extends viewModelBase {
                 this.connectToRavenServer();
             }
         });
+    }
+
+    dataLoadProgress(splashType?: alertType) {
+        if (!splashType) {
+            NProgress.configure({ showSpinner: false });
+            NProgress.done();
+        } else if (splashType == alertType.warning) {
+            NProgress.configure({ showSpinner: true });
+            NProgress.start();
+        } else {
+            NProgress.done();
+            NProgress.configure({ showSpinner: false });
+            this.showAlert(new alertArgs(alertType.danger, "Database load time is too long", "The database server might not be responding."));
+        }
     }
 
     showAlert(alert: alertArgs) {
