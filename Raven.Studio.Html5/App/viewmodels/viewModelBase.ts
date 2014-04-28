@@ -63,7 +63,6 @@ class viewModelBase {
         this.modelPollingStart();
 
         window.onbeforeunload = (e: any) => {
-            //this.saveInObservable();
             var isDirty = viewModelBase.dirtyFlag().isDirty();
             if (isDirty) {
                 var message = "You have unsaved data.";
@@ -154,12 +153,6 @@ class viewModelBase {
             this.keyboardShortcutDomContainers.push(elementSelector);
         }
     }
-
-    //A method to save the current value in the observables from text boxes and inputs before a refresh/page close.
-    //Should be implemented on the inheriting class.
-    //saveInObservable() {
-
-    //}
 
     private removeKeyboardShortcuts(elementSelector: string) {
         $(elementSelector).unbind('keydown.jwerty');

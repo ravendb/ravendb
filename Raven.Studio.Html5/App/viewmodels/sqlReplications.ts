@@ -47,7 +47,6 @@ class sqlReplications extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-        this.areAllSqlReplicationsValid = ko.computed(() => this.replications().every(k => k.isValid()));
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.replications]);
         this.isSaveEnabled = ko.computed(()=> {
             return viewModelBase.dirtyFlag().isDirty();
@@ -58,45 +57,10 @@ class sqlReplications extends viewModelBase {
         var popOverSettings = {
             html: true,
             trigger: 'hover',
-            content: 'Replication scripts use JScript.',
+            content: 'Replication scripts use JScript.<br/><br/>The script will be called once for each document in the source document collection, with <span class="code-keyword">this</span> representing the document, and the document id available as <i>documentId</i>.<br/><br/>Call <i>replicateToTableName</i> for each row you want to write to the database.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> orderData = {<br/>   Id: documentId,<br/>   OrderLinesCount: <span class="code-keyword">this</span>.OrderLines.length,<br/>   TotalCost: 0<br/>};<br/><br/>replicateToOrders(\'Id\', orderData);<br/><br/>for (<span class="code-keyword">var</span> i = 0; i &lt; <span class="code-keyword">this</span>.OrderLines.length; i++) {<br/>   <span class="code-keyword">var</span> line = <span class="code-keyword">this</span>.OrderLines[i];<br/>   orderData.TotalCost += line.Cost;<br/>   replicateToOrderLines(\'OrderId\', {"<br/>      OrderId: documentId,<br/>      Qty: line.Quantity,<br/>      Product: line.Product,<br/>      Cost: line.Cost<br/>   });<br/>}</pre>',
             selector: '.script-label',
         };
         $('body').popover(popOverSettings);
-
-
-        $('#accordion').on('shown.bs.collapse', function() {
-            //var element = $(this).find('pre');
-            //var width = element.width();
-            //element.resizable({ minWidth: width, maxWidth: width });
-        });
-
-
-        
-
-
-
-        //var self = this;
-        $(document).on("keyup", '.ace_text-input', function () {
-            var editor: AceAjax.Editor = ko.utils.domData.get($(this).parent().get(0), "aceEditor");
-            var isErrorExists: boolean = false;
-            var annotations: Array<any> = editor.getSession().getAnnotations();
-
-            for (var i = 0; i < annotations.length; i++) {
-                if (annotations[i].type === "error") {
-                    isErrorExists = true;
-                    break;
-                }
-            }
-
-            var editorText = editor.getSession().getValue();
-
-        });
-        //$(".ace_editor").on('keyup', ".ace_text-input", function() => {
-
-        //});
-
-
-
     }
 
     compositionComplete() {
@@ -104,28 +68,12 @@ class sqlReplications extends viewModelBase {
         this.openCollapsedInvalidElements();
 
         this.replications().forEach((replication: sqlReplication) => {
-            replication.name.subscribe((newName) => {
-                var message = "";
-                if (newName === "") {
-                    message = "Please fill out this field.";
-                }
-                else if (this.isSqlReplicationNameExists(newName)) {
-                    message = "SQL Replication name already exists.";
-                }
-                var focusedElement: any = document.activeElement;
-                focusedElement.setCustomValidity(message);
-            });
+            this.subscribeToSqlReplicationName(replication);
         });
-    }
 
-    private isSqlReplicationNameExists(name): boolean {
-        var count = 0;
-        this.replications().forEach((replication: sqlReplication) => {
-            if (replication.name() === name) {
-                count++;
-            }
+        $('pre').each((index, currentPreElement) => {
+            this.initializeAceValidity(currentPreElement);
         });
-        return (count > 1) ? true : false;
     }
 
     //show all elements which are collapsed and at least on of its' fields isn't valid.
@@ -137,6 +85,41 @@ class sqlReplications extends viewModelBase {
                 parentElement.children('.collapse').collapse('show');
             }
         });
+    }
+
+    private subscribeToSqlReplicationName(sqlReplicationElement: sqlReplication) {
+        sqlReplicationElement.name.subscribe((newName) => {
+            var message = "";
+            if (newName === "") {
+                message = "Please fill out this field.";
+            }
+            else if (this.isSqlReplicationNameExists(newName)) {
+                message = "SQL Replication name already exists.";
+            }
+            $('input[name="name"]')
+                .filter(function () { return this.value === newName; })
+                .each((index, element: any) => {
+                    element.setCustomValidity(message);
+                });
+        });
+    }
+    private isSqlReplicationNameExists(name): boolean {
+        var count = 0;
+        this.replications().forEach((replication: sqlReplication) => {
+            if (replication.name() === name) {
+                count++;
+            }
+        });
+        return (count > 1) ? true : false;
+    }
+
+    private initializeAceValidity(element: Element) {
+        var editor: AceAjax.Editor = ko.utils.domData.get(element, "aceEditor");
+        var editorValue = editor.getSession().getValue();
+        if (editorValue === "") {
+            var textarea: any = $(element).find('textarea')[0];
+            textarea.setCustomValidity("Please fill out this field.");
+        }
     }
 
     saveChanges() {
@@ -163,8 +146,7 @@ class sqlReplications extends viewModelBase {
                 var saveDeferred = this.saveSqlReplications(onScreenReplications, db);
                 saveDeferred.done(()=> {
                     this.updateLoadedSqlReplications();
-                    // Resync Changes
-                    viewModelBase.dirtyFlag().reset();
+                    viewModelBase.dirtyFlag().reset(); //Resync Changes
                 });
             });
         }
@@ -223,15 +205,21 @@ class sqlReplications extends viewModelBase {
         this.isFirstload(false);
         var newSqlReplication: sqlReplication = sqlReplication.empty();
         this.replications.push(newSqlReplication);
-        newSqlReplication.isFocused(true);
+        this.subscribeToSqlReplicationName(newSqlReplication);
+        $('.in').find('input[name="name"]').focus();
 
-        var lastElement = $('pre').last().get(0);
-        super.createResizableTextBox(lastElement);
+        var lastPreElement = $('pre').last().get(0);
+        super.createResizableTextBox(lastPreElement);
         this.openCollapsedInvalidElements();
+        this.initializeAceValidity(lastPreElement);
     }
 
     removeSqlReplication(repl: sqlReplication) {
         this.replications.remove(repl);
+
+        this.replications().forEach((replication: sqlReplication) => {
+            replication.name.valueHasMutated();
+        });
     }
 
     itemNumber = function(index) {

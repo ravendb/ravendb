@@ -32,8 +32,6 @@ class sqlReplication extends document {
     connectionStringSourceFieldName: KnockoutComputed<string>;
     parameterizeDeletesDisabled = ko.observable<boolean>();
 
-    isFocused = ko.observable(false);
-
     constructor(dto: sqlReplicationDto) {
         super(dto);
 
@@ -59,9 +57,16 @@ class sqlReplication extends document {
             }
         });
 
-        this.script.subscribe(()=> {
+        this.script.subscribe(() => {
+            var message = "";
+            var currentEditor = aceEditorBindingHandler.currentEditor;
+            var editorValue = currentEditor.getSession().getValue();
+            if (editorValue === "") {
+                message = "Please fill out this field.";
+            }
+            var textarea: any = $(currentEditor.container).find('textarea')[0];
+            textarea.setCustomValidity(message);
             setTimeout(() => {
-                var currentEditor = aceEditorBindingHandler.currentEditor;
                 var annotations = currentEditor.getSession().getAnnotations();
                 var isErrorExists = false;
                 for (var i = 0; i < annotations.length; i++) {
@@ -71,18 +76,11 @@ class sqlReplication extends document {
                         break;
                     }
                 }
-
-                var editorValue = currentEditor.getSession().getValue();
-                var message = "";
-                if (editorValue === "") {
-                    message = "Please fill out this field.";
-                }
-                else if (isErrorExists) {
+                if (isErrorExists) {
                     message = "The script isn't a javascript legal expression!";
+                    textarea.setCustomValidity(message);
                 }
-                var textarea: any = $(currentEditor.container).find('textarea')[0];
-                textarea.setCustomValidity(message);
-            }, 1000);
+            }, 700);
         });
     }
 
@@ -161,15 +159,6 @@ class sqlReplication extends document {
 
     setIdFromName() {
         this.__metadata.id = "Raven/SqlReplication/Configuration/" + this.name();
-    }
-
-    isValid(): boolean {
-        var arr = new Array();
-
-        var requiredValues = [this.name(), this.factoryName(), this.connectionStringType(), this.connectionStringValue(), this.ravenEntityName(), this.script()];
-        var fieldsCheck = requiredValues.every(v=> v != null && v.length > 0);
-        var replicationTablesCheck = this.sqlReplicationTables().every(v=> v.isValid());
-        return fieldsCheck && replicationTablesCheck;
     }
 }
 
