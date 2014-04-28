@@ -43,7 +43,7 @@ namespace Voron.Tests.Storage
 
 				Assert.NotNull(read);
 				Assert.Equal(3, read.Version);
-				Assert.Equal(12, read.Reader.ReadInt64());
+				Assert.Equal(12, read.Reader.ReadLittleEndianInt64());
 			}
 		}
 
@@ -73,7 +73,7 @@ namespace Voron.Tests.Storage
 
 				Assert.NotNull(read);
 				Assert.Equal(3, read.Version);
-				Assert.Equal(12, read.Reader.ReadInt64());
+				Assert.Equal(12, read.Reader.ReadLittleEndianInt64());
 			}
 		}
 	}

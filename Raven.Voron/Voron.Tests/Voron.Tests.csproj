@@ -89,6 +89,7 @@
     <Compile Include="Journal\EdgeCases.cs" />
     <Compile Include="Journal\Mvcc.cs" />
     <Compile Include="Journal\UncommittedTransactions.cs" />
+    <Compile Include="MultiTreeSize.cs" />
     <Compile Include="MultiValueTree.cs" />
     <Compile Include="Optimizations\Writes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

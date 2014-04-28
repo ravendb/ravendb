@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
+using System.Linq;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Xunit;
@@ -52,7 +53,8 @@ namespace Voron.Tests.Journal
 
 				var readResult = txr.State.Root.Read(txr, "items/1");
 
-			    var readData = readResult.Reader.ReadBytes(readResult.Reader.Length);
+				int used;
+				var readData = readResult.Reader.ReadBytes(readResult.Reader.Length, out used).Take(used).ToArray();
 
 				for (int i = 0; i < 3000; i++)
 				{
