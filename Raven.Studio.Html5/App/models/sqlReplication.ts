@@ -1,6 +1,7 @@
 import sqlReplicationTable = require("models/sqlReplicationTable");
 import document = require("models/document");
 import documentMetadata = require("models/documentMetadata");
+import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class sqlReplication extends document {
 
@@ -56,6 +57,32 @@ class sqlReplication extends document {
             } else {
                 return "Setting name in memory/remote configuration";
             }
+        });
+
+        this.script.subscribe(()=> {
+            setTimeout(() => {
+                var currentEditor = aceEditorBindingHandler.currentEditor;
+                var annotations = currentEditor.getSession().getAnnotations();
+                var isErrorExists = false;
+                for (var i = 0; i < annotations.length; i++) {
+                    var annotationType = annotations[i].type;
+                    if (annotationType === "error" || annotationType === "warning") {
+                        isErrorExists = true;
+                        break;
+                    }
+                }
+
+                var editorValue = currentEditor.getSession().getValue();
+                var message = "";
+                if (editorValue === "") {
+                    message = "Please fill out this field.";
+                }
+                else if (isErrorExists) {
+                    message = "The script isn't a javascript legal expression!";
+                }
+                var textarea: any = $(currentEditor.container).find('textarea')[0];
+                textarea.setCustomValidity(message);
+            }, 1000);
         });
     }
 

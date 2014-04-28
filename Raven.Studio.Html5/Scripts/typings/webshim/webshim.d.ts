@@ -1,7 +1,8 @@
 // Partial type declation for Webshim
 
 interface WebshimStatic {
-    polyfill(): void;
+    polyfill(string?): void;
+    setOptions(string, any);
 }
 
 declare var webshims: WebshimStatic;

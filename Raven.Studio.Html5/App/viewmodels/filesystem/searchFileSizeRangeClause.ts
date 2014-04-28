@@ -1,21 +1,22 @@
 ﻿import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
+import searchDialogViewModel = require("viewmodels/filesystem/searchDialogViewModel");
 
-class searchFileSizeRangeClause extends dialogViewModelBase {
+class searchFileSizeRangeClause extends searchDialogViewModel {
 
     public applyFilterTask = $.Deferred();
-    minSizeText = ko.observable("");
-    maxSizeText = ko.observable("");
 
-    cancel() {
-        dialog.close(this);
+    constructor() {
+        super([ko.observable(""), ko.observable("")]);
     }
 
+
     applyFilter() {
-        var filter = "__size_numeric:[" + this.convertInputStringToRangeValue(this.minSizeText()) +
-            " TO " + this.convertInputStringToRangeValue(this.maxSizeText()) + "]";
+        var filter = "__size_numeric:[" + this.convertInputStringToRangeValue(this.inputs[0]()) +
+            " TO " + this.convertInputStringToRangeValue(this.inputs[1]()) + "]";
         this.applyFilterTask.resolve(filter);
-        dialog.close(this);
+
+        this.close();
     }
 
     private convertInputStringToRangeValue(input: string) : string {

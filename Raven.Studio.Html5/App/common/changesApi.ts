@@ -109,7 +109,7 @@ class changesApi {
         return new changeSubscription(() => {
             this.allDocsHandlers.remove(callback);
             if (this.allDocsHandlers().length == 0) {
-                this.send('watch-prefix', prefix);
+                this.send('unwatch-prefix', prefix);
             }
         });
     }

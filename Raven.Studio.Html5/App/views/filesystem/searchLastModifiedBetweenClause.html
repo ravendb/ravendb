@@ -1,0 +1,24 @@
+﻿<div class="messageBox" tabindex="-1">
+
+    <form data-bind="submit: applyFilter">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">&times;</button>
+            <h4 class="modal-title">Add search filter</h4>
+        </div>
+        <div class="modal-body form-inline">
+            <div class="form-group">
+                <label>Between: </label>
+                <input id="fromDate" type="text" class="form-control" data-bind="value: inputs[0]" />
+                <button class="btn btn-default" data-bind="clickBubble: false, datePicker: fromDate, datepickerOptions: {autoclose: true, endDate: '+0d' }"><i class="fa fa-calendar"></i></button>
+                <label> and: </label>
+                <input id="toDate" type="text" class="form-control" data-bind="value: inputs[1]" />
+                <button class="btn btn-default" data-bind="clickBubble: false, datePicker: toDate, datepickerOptions: {autoclose: true, endDate: '+0d' }"><i class="fa fa-calendar"></i></button>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Apply</button>
+            <button type="button" class="btn btn-default" data-bind="click: close">Cancel</button>
+        </div>
+    </form>
+
+</div>

@@ -1,0 +1,30 @@
+﻿<div class="messageBox" tabindex="-1">
+    <div class="modal-header">
+        <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">&times;</button>
+        <h4 class="modal-title">Query Stats</h4>
+    </div>
+    <div class="modal-body">
+        <div class="row">
+            <div>
+                <div class="form-group">
+                    <ul class="list-group" data-bind="with: queryStats">
+                        <li class="list-group-item" data-bind="text: 'Total Results: ' + TotalResults"></li>
+                        <li class="list-group-item" data-bind="text: 'Status: ' + IsStale === true ? 'Stale' : 'Up to date'"></li>
+                        <li class="list-group-item" data-bind="text: 'Duration: ' + ((typeof (DurationMilliseconds) !== 'undefined') ? DurationMilliseconds : '??? ') + 'ms'"></li>
+                        <li class="list-group-item">
+                            Index:
+                            <a data-bind="text: IndexName, click: $root.goToIndex.bind($root)"></a> <!--attr: { href: $root.selectedIndexEditUrl }-->
+                        </li>
+                        <li class="list-group-item" data-bind="visible:$root.didDynamicChangeIndex === true">
+                            <a target='_blank' data-bind="attr: { href: $root.rawJsonUrl  + '&explain=true'}">Index Explain</a>
+                        </li>
+                        <li class="list-group-item" data-bind="text: 'ETag: ' + ResultEtag"></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bind="click: cancel">OK</button>
+    </div>
+</div>

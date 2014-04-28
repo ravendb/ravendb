@@ -81,10 +81,6 @@ class viewModelBase {
         ko.postbox.publish("SetRawJSONUrl", "");
     }
 
-    attached() {
-        webshims.polyfill();
-    }
-
     // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
         this.createResizableTextBoxes();
@@ -117,13 +113,6 @@ class viewModelBase {
         $("pre").each(function () {
             self.createResizableTextBox(this);
         });
-
-        //adjust the minWidth and maxWidth for the accordion element
-        $('#accordion').on('shown.bs.collapse', function () {
-            var element = $(this).find('pre');
-            //var width = element.width();
-            //element.resizable({ minWidth: width, maxWidth: width });
-        })
     }
 
     createResizableTextBox(element) {

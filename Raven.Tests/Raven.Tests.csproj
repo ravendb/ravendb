@@ -246,6 +246,7 @@
     <Compile Include="Bugs\ArrayOfMaybeNull.cs" />
     <Compile Include="Bugs\AsyncSetBasedOps.cs" />
     <Compile Include="Bugs\Async\WebApi.cs" />
+    <Compile Include="Bugs\Async\DynamicGeneratedIds.cs" />
     <Compile Include="Bugs\Attachments.cs" />
     <Compile Include="Bugs\AvoidRaceConditionWhenWeLoadTheDataNotPatched.cs" />
     <Compile Include="Bugs\BackwardCompatibility.cs" />
@@ -536,8 +537,6 @@
     <Compile Include="Bugs\Queries\Projections.cs" />
     <Compile Include="Bugs\Queries\RangeQueries.cs" />
     <Compile Include="Bugs\Queries\StatsOnDynamicQueries.cs" />
-    <Compile Include="Bugs\Queries\TermsLocal.cs" />
-    <Compile Include="Bugs\Queries\TermsRemote.cs" />
     <Compile Include="Bugs\Queries\WithAs.cs" />
     <Compile Include="Bugs\QueryByTypeOnly.cs" />
     <Compile Include="Bugs\QueryByTypeOnlyRemote.cs" />

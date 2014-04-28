@@ -104,7 +104,7 @@ namespace Raven.Database.Server.Controllers
         [Route("studio-tasks/is-base-64-key")]
         public async Task<HttpResponseMessage> IsBase64Key(string path = null)
         {
-            bool result = true;
+            string message = null;
             try
             {
                 //Request is of type HttpRequestMessage
@@ -118,10 +118,10 @@ namespace Raven.Database.Server.Controllers
             }
             catch (Exception e)
             {
-                result = false;
+				message = "The key must be in Base64 encoding format!";
             }
 
-            HttpResponseMessage response = Request.CreateResponse(HttpStatusCode.OK, result);
+			HttpResponseMessage response = Request.CreateResponse((message == null) ? HttpStatusCode.OK : HttpStatusCode.BadRequest, message);
             return response;
         }
 
