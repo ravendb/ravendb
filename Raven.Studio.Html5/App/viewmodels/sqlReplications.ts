@@ -1,4 +1,4 @@
-import database = require("models/database");
+﻿import database = require("models/database");
 import collection = require("models/collection");
 import sqlReplication = require("models/sqlReplication");
 import viewModelBase = require("viewmodels/viewModelBase");
@@ -32,21 +32,18 @@ class sqlReplications extends viewModelBase {
 
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
+
         var db = this.activeDatabase();
         if (db) {
-            new getSqlReplicationsCommand(db)
-                .execute()
-                .done(results => {
-                    for (var i = 0; i < results.length; i++) {
-                        this.loadedSqlReplications.push(results[i].getId());
-                    }
-                    this.replications(results);
-
+            $.when(this.fetchSqlReplications(db), this.fetchCollections(db))
+                .done(() => {
+                    this.replications().forEach((replication: sqlReplication) => {
+                        replication.collections = this.collections;
+                    });
                     deferred.resolve({ can: true });
                 })
-                .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
+                .fail(() => deferred.resolve({ redirect: appUrl.forSettings(this.activeDatabase()) }));
         }
-        this.fetchCollections(db);
         return deferred;
     }
 
@@ -64,8 +61,11 @@ class sqlReplications extends viewModelBase {
             trigger: 'hover',
             content: 'Replication scripts use JScript.<br/><br/>The script will be called once for each document in the source document collection, with <span class="code-keyword">this</span> representing the document, and the document id available as <i>documentId</i>.<br/><br/>Call <i>replicateToTableName</i> for each row you want to write to the database.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> orderData = {<br/>   Id: documentId,<br/>   OrderLinesCount: <span class="code-keyword">this</span>.OrderLines.length,<br/>   TotalCost: 0<br/>};<br/><br/>replicateToOrders(\'Id\', orderData);<br/><br/>for (<span class="code-keyword">var</span> i = 0; i &lt; <span class="code-keyword">this</span>.OrderLines.length; i++) {<br/>   <span class="code-keyword">var</span> line = <span class="code-keyword">this</span>.OrderLines[i];<br/>   orderData.TotalCost += line.Cost;<br/>   replicateToOrderLines(\'OrderId\', {"<br/>      OrderId: documentId,<br/>      Qty: line.Quantity,<br/>      Product: line.Product,<br/>      Cost: line.Cost<br/>   });<br/>}</pre>',
             selector: '.script-label',
-        };
+    };
         $('body').popover(popOverSettings);
+        $('form :input[name="ravenEntityName"]').on("keypress", (e)=> {
+            return e.which != 13;
+        });​
     }
 
     compositionComplete() {
@@ -74,7 +74,6 @@ class sqlReplications extends viewModelBase {
 
         this.replications().forEach((replication: sqlReplication) => {
             this.subscribeToSqlReplicationName(replication);
-            replication.collections = this.collections;
         });
 
         $('pre').each((index, currentPreElement) => {
@@ -82,13 +81,23 @@ class sqlReplications extends viewModelBase {
         });
     }
 
-    //private fetchCollections(db: database): JQueryPromise<Array<collection>> {
+    private fetchSqlReplications(db: database): JQueryPromise<any> {
+        return new getSqlReplicationsCommand(db)
+            .execute()
+            .done(results=> {
+                for (var i = 0; i < results.length; i++) {
+                    this.loadedSqlReplications.push(results[i].getId());
+                }
+                this.replications(results);
+            });
+    }
+
     private fetchCollections(db: database): JQueryPromise<any> {
         return new getCollectionsCommand(db)
             .execute()
-            .done((collections: Array<collection>)=> {
-                this.collections(collections.map((collection: collection)=> { return collection.name; }));
-        });
+            .done((collections: Array<collection>) => {
+                this.collections(collections.map((collection: collection) => { return collection.name; }));
+            });
     }
 
     //show all elements which are collapsed and at least on of its' fields isn't valid.
@@ -103,18 +112,14 @@ class sqlReplications extends viewModelBase {
     }
 
     private subscribeToSqlReplicationName(sqlReplicationElement: sqlReplication) {
-        /*sqlReplicationElement.name.subscribe(function (previousName) {
-            this.replications().filter((replication: sqlReplication) => {
-                debugger;
-                return replication.name() === previousName;
-            }).forEach((replication: sqlReplication) => {
-                debugger;
-                replication.name.valueHasMutated();
-            });
-            
-            debugger;
-            //I'd like to get the previous value of 'myObservable' here before it's set to newValue
-        }, this, "beforeChange");*/
+        sqlReplicationElement.name.subscribe((previousName) => {
+            //Get the previous value of 'name' here before it's set to newValue
+            var nameInputArray = $('input[name="name"]').filter(function() { return this.value === previousName; });
+            if (nameInputArray.length === 1) {
+                var inputField: any = nameInputArray[0];
+                inputField.setCustomValidity("");
+            }       
+        }, this, "beforeChange");
         sqlReplicationElement.name.subscribe((newName) => {
             var message = "";
             if (newName === "") {
@@ -128,13 +133,7 @@ class sqlReplications extends viewModelBase {
                 .each((index, element: any) => {
                     element.setCustomValidity(message);
                 });
-            //this.replications().forEach((replication: sqlReplication) => {
-            //    if (replication.name() !== newName) {
-            //        replication.name.valueHasMutated();
-            //    }
-            //});
         });
-
     }
 
     private isSqlReplicationNameExists(name): boolean {

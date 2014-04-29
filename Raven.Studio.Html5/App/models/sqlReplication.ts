@@ -61,7 +61,7 @@ class sqlReplication extends document {
 
         this.ravenEntityName.subscribe((newRavenEntityName) => {
             this.searchResults(this.collections().filter((name) => {
-                return !!newRavenEntityName && name.toLowerCase().indexOf(newRavenEntityName) > -1;
+                return !!newRavenEntityName && name.toLowerCase().indexOf(newRavenEntityName.toLowerCase()) > -1;
             }));
 
         });
