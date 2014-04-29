@@ -119,7 +119,15 @@
                         <div class="panel panel-default">
                             <div class="panel-heading">
                                 <div class="col-md-11">
-                                    <input type="text" class="form-control" data-bind="value: name" placeholder="FieldName" />
+                                    <input name="fieldName" type="text" class="form-control" placeholder="FieldName" data-bind="attr:{id:'fieldName' + $index()},value: name, valueUpdate: 'afterkeydown'" autocomplete="off" />
+                                    <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'fieldName' + $index(),foreach: fieldNameAutocompletes">
+                                        <li role="presentation" data-bind="click: $parent.setName.bind($parent,$data)">
+                                            <a role="menuitem" tabindex="-1" href="#">
+                                                <span data-bind=" text:$data">
+                                            </span>
+                                            </a>
+                                        </li>
+                                    </ul>
                                 </div>
                                 <div>
                                     <button type="button" class="close use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind=" click: $root.removeLuceneField.bind($root, $index())" aria-hidden="true" title="Remove this field from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
