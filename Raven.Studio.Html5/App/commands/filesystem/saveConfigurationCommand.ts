@@ -11,7 +11,8 @@ class saveFilesystemConfigurationCommand extends commandBase {
     execute(): JQueryPromise<any> {
 
         var url = "/config?name=" + encodeURIComponent(this.key.key);
-        return this.put(url, JSON.stringify(this.args), this.fs);
+        return this.put(url, JSON.stringify(this.args), this.fs)
+            .done( () => this.reportSuccess("Saved configuration"));
     }
 }
 

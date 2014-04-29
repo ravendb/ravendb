@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.RavenFS;
 using Raven.Client.RavenFS.Changes;
 using Xunit;
+using Raven.Json.Linq;
 
 namespace RavenFS.Tests
 {
@@ -62,7 +63,7 @@ namespace RavenFS.Tests
                 client.Notifications.FolderChanges("/").Timeout(TimeSpan.FromSeconds(2)).Take(1).ToTask();
             await client.Notifications.WhenSubscriptionsActive();
 
-            await client.UpdateMetadataAsync("abc.txt", new NameValueCollection {{"MyMetadata", "MyValue"}});
+            await client.UpdateMetadataAsync("abc.txt", new RavenJObject { { "MyMetadata", "MyValue" } });
 
             var fileChange = await notificationTask;
 
@@ -110,7 +111,7 @@ namespace RavenFS.Tests
                 client.Notifications.ConfigurationChanges().Timeout(TimeSpan.FromSeconds(2)).Take(1).ToTask();
             await client.Notifications.WhenSubscriptionsActive();
 
-            await client.Config.SetConfig("Test", new NameValueCollection());
+            await client.Config.SetConfig("Test", new RavenJObject());
 
             var configChange = await notificationTask;
 

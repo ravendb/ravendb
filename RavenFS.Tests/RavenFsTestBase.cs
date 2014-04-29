@@ -32,7 +32,7 @@ namespace RavenFS.Tests
         private readonly List<RavenDbServer> servers = new List<RavenDbServer>();
         private readonly List<RavenFileSystemClient> ravenFileSystemClients = new List<RavenFileSystemClient>();
         private readonly HashSet<string> pathsToDelete = new HashSet<string>();
-        public static readonly int[] Ports = { 19079, 19078, 19077 };
+        public static readonly int[] Ports = { 19069, 19068, 19067 };
 
         protected RavenDbServer CreateRavenDbServer(int port,
                                                     string dataDirectory = null,

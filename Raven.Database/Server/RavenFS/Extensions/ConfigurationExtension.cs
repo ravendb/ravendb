@@ -2,92 +2,141 @@
 using System.Collections.Specialized;
 using System.IO;
 using System.Text;
+using System.Linq;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Abstractions.Extensions;
+using Raven.Json.Linq;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace Raven.Database.Server.RavenFS.Extensions
 {
 	public static class ConfigurationExtension
 	{
-		public static T GetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key)
-		{
-			var value = accessor.GetConfig(key)["value"];
-			var serializer = new JsonSerializer
-			{
-				Converters = { new NameValueCollectionJsonConverter() }
-			};
-			return serializer.Deserialize<T>(new JsonTextReader(new StringReader(value)));
-		}
+        public static T GetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key)
+        {
+            var value = accessor.GetConfig(key);
+            if (typeof(T).IsValueType || typeof(T) == typeof(string))
+                return value.Value<T>("Value");
 
-		public static bool TryGetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key, out T result)
-		{
-			try
-			{
-				result = GetConfigurationValue<T>(accessor, key);
-				return true;
-			}
-			catch (FileNotFoundException)
-			{
-				result = default(T);
-				return false;
-			}
-		}
+            return JsonExtensions.JsonDeserialization<T>(value);
+        }
 
-		public static void SetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key, T objectToSave)
-		{
-			var sb = new StringBuilder();
-			var jw = new JsonTextWriter(new StringWriter(sb));
-			var serializer = new JsonSerializer
-			{
-				Converters = { new NameValueCollectionJsonConverter() }
-			};
-			serializer.Serialize(jw, objectToSave);
-			var value = sb.ToString();
-			accessor.SetConfig(key, new NameValueCollection { { "value", value } });
-		}
+        public static IEnumerable<T> GetConfigurationValuesStartWithPrefix<T>(this IStorageActionsAccessor accessor, string prefix, int start, int take)
+        {
+            var values = accessor.GetConfigsStartWithPrefix(prefix, start, take);
+            if (typeof(T).IsValueType || typeof(T) == typeof(string))
+            {
+                return values.Select(x => x.Value<T>("Value"));
+            }
 
-		public static NameValueCollection AsConfig<T>(this T @object) where T : class, new()
-		{
-			var nameValueCollection = new NameValueCollection();
+            return values.Select(x => JsonExtensions.JsonDeserialization<T>(x));
+        }
 
-			foreach (var propertyInfo in @object.GetType().GetProperties())
-			{
-				if (propertyInfo.CanRead)
-				{
-					var pName = propertyInfo.Name;
-					var pValue = propertyInfo.GetValue(@object, null);
-					if (pValue != null)
-					{
-						var propertyType = propertyInfo.PropertyType;
-						if (propertyType.IsPrimitive || propertyType.IsEnum || propertyType == typeof(string) ||
-							propertyType == typeof(Guid) || propertyType == typeof(DateTime))
-						{
-							nameValueCollection.Add(pName, pValue.ToString());
-						}
-						else
-						{
-							var serializedObject = new StringBuilder();
+        public static bool TryGetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key, out T result)
+        {
+            try
+            {
+                result = GetConfigurationValue<T>(accessor, key);
+                return true;
+            }
+            catch (FileNotFoundException)
+            {
+                result = default(T);
+                return false;
+            }
+        }
 
-							new JsonSerializer
-							{
-								Converters = { new NameValueCollectionJsonConverter() }
-							}.Serialize(new JsonTextWriter(new StringWriter(serializedObject)), pValue);
+        public static void SetConfigurationValue<T>(this IStorageActionsAccessor accessor, string key, T objectToSave)
+        {
+            accessor.SetConfig(key, JsonExtensions.ToJObject(objectToSave));
+        }
 
-							nameValueCollection.Add(pName, serializedObject.ToString());
-						}
-					}
-					else
-					{
-						nameValueCollection.Add(pName, string.Empty);
-					}
-				}
-			}
 
-			return nameValueCollection;
-		}
 
-		public static T AsObject<T>(this NameValueCollection config) where T : class, new()
+
+        //[Obsolete("This method is only intended as an stop-gap while getting rid of all NameValueCollection objects in RavenFS.")]
+        //public static NameValueCollection AsConfig<T>(this T @object) where T : class, new()
+        //{
+        //    var nameValueCollection = new NameValueCollection();
+
+        //    foreach (var propertyInfo in @object.GetType().GetProperties())
+        //    {
+        //        if (propertyInfo.CanRead)
+        //        {
+        //            var pName = propertyInfo.Name;
+        //            var pValue = propertyInfo.GetValue(@object, null);
+        //            if (pValue != null)
+        //            {
+        //                var propertyType = propertyInfo.PropertyType;
+        //                if (propertyType.IsPrimitive || propertyType.IsEnum || propertyType == typeof(string) ||
+        //                    propertyType == typeof(Guid) || propertyType == typeof(DateTime))
+        //                {
+        //                    nameValueCollection.Add(pName, pValue.ToString());
+        //                }
+        //                else
+        //                {
+        //                    var serializedObject = new StringBuilder();
+
+        //                    new JsonSerializer
+        //                    {
+        //                        Converters = { new NameValueCollectionJsonConverter() }
+        //                    }.Serialize(new JsonTextWriter(new StringWriter(serializedObject)), pValue);
+
+        //                    nameValueCollection.Add(pName, serializedObject.ToString());
+        //                }
+        //            }
+        //            else
+        //            {
+        //                nameValueCollection.Add(pName, string.Empty);
+        //            }
+        //        }
+        //    }
+
+        //    return nameValueCollection;
+        //}
+
+        [Obsolete("This method is only intended as an stop-gap while getting rid of all NameValueCollection objects in RavenFS.")]
+        public static NameValueCollection ToNameValueCollection(this RavenJObject @object)
+        {
+            var result = new NameValueCollection();            
+
+            foreach( var item in @object )
+            {                
+                if ( item.Value is RavenJArray )
+                {
+                    var array = item.Value as RavenJArray;
+                    foreach (var itemInArray in array)
+                    {
+                        result.Add(item.Key, itemInArray.ToString());
+                    }
+                }
+                else if ( item.Value is RavenJValue )
+                {
+                    result.Add(item.Key, item.Value.ToString());
+                }
+            }
+
+            return result;
+        }
+
+        [Obsolete("This method is only intended as an stop-gap while getting rid of all NameValueCollection objects in RavenFS.")]
+        public static RavenJObject ToJObject(this NameValueCollection config)
+        {
+            var serializedObject = new StringBuilder();
+
+            new JsonSerializer
+            {
+                Converters = { new NameValueCollectionJsonConverter() }
+            }
+            .Serialize(new JsonTextWriter(new StringWriter(serializedObject)), config);
+
+            return RavenJObject.Parse(serializedObject.ToString());
+        }
+
+        public static T AsObject<T>(this NameValueCollection config) where T : class, new()
 		{
 			var result = new T();
 

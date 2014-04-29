@@ -9,25 +9,22 @@ using Raven.Database.Server.RavenFS.Search;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Util;
 using Xunit;
+using Raven.Json.Linq;
+using Raven.Database.Server.RavenFS.Extensions;
 
 namespace RavenFS.Tests
 {
 	public class StorageStreamTest : StorageTest
 	{
-		private static readonly NameValueCollection EmptyETagMetadata = new NameValueCollection
-			                                                                {
-				                                                                {"ETag", "\"" + Guid.Empty + "\""}
-			                                                                };
+        private static readonly RavenJObject EmptyETagMetadata = new RavenJObject().WithETag(Guid.Empty);
 
 		[Fact]
 		public void StorageStream_should_write_to_storage_by_64kB_pages()
 		{
-			using (
-				var stream = StorageStream.CreatingNewAndWritting(transactionalStorage, new MockIndexStorage(),
-				                                                  new StorageOperationsTask(transactionalStorage,
-				                                                                            new MockIndexStorage(),
-				                                                                            new EmptyNotificationsPublisher()),
-				                                                  "file", EmptyETagMetadata))
+			using (var stream = StorageStream.CreatingNewAndWritting(
+                                                    transactionalStorage, new MockIndexStorage(),
+				                                    new StorageOperationsTask(transactionalStorage, new MockIndexStorage(), new EmptyNotificationsPublisher()),
+				                                    "file", EmptyETagMetadata))
 			{
 				var buffer = new byte[StorageConstants.MaxPageSize];
 
@@ -50,13 +47,10 @@ namespace RavenFS.Tests
 		[Fact]
 		public void SynchronizingFileStream_should_write_to_storage_by_64kB_pages()
 		{
-			using (
-				var stream = SynchronizingFileStream.CreatingOrOpeningAndWritting(transactionalStorage, new MockIndexStorage(),
-				                                                                  new StorageOperationsTask(transactionalStorage,
-				                                                                                            new MockIndexStorage(),
-				                                                                                            new EmptyNotificationsPublisher
-					                                                                                            ()), "file",
-				                                                                  EmptyETagMetadata))
+            using (var stream = SynchronizingFileStream.CreatingOrOpeningAndWritting(
+                                                            transactionalStorage, new MockIndexStorage(),
+                                                            new StorageOperationsTask(transactionalStorage, new MockIndexStorage(), new EmptyNotificationsPublisher()),
+                                                            "file", EmptyETagMetadata))
 			{
 				var buffer = new byte[StorageConstants.MaxPageSize];
 
@@ -85,12 +79,10 @@ namespace RavenFS.Tests
 
 			new Random().NextBytes(buffer);
 
-			using (
-				var stream = StorageStream.CreatingNewAndWritting(transactionalStorage, new MockIndexStorage(),
-				                                                  new StorageOperationsTask(transactionalStorage,
-				                                                                            new MockIndexStorage(),
-				                                                                            new EmptyNotificationsPublisher()),
-				                                                  "file", EmptyETagMetadata))
+			using (var stream = StorageStream.CreatingNewAndWritting(
+                                                    transactionalStorage, new MockIndexStorage(),
+				                                    new StorageOperationsTask(transactionalStorage, new MockIndexStorage(), new EmptyNotificationsPublisher()),
+				                                    "file", EmptyETagMetadata))
 			{
 				stream.Write(buffer, 0, StorageConstants.MaxPageSize);
 			}
@@ -136,7 +128,7 @@ namespace RavenFS.Tests
 			{
 			}
 
-			public override void Index(string key, NameValueCollection metadata)
+			public override void Index(string key, RavenJObject metadata)
 			{
 			}
 		}

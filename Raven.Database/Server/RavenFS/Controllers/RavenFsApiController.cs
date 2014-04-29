@@ -13,6 +13,7 @@ using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using Raven.Abstractions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Streams;
@@ -29,6 +30,8 @@ using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
+using Raven.Json.Linq;
+using System.Collections.Generic;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -419,5 +422,93 @@ namespace Raven.Database.Server.RavenFS.Controllers
 	    {
 	        RavenFileSystem.MetricsCounters.RequestDuationMetric.Update(duration);
 	    }
-	}
+
+        #region Metadata Headers Handling
+
+
+        private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		{
+			// Raven internal headers
+			"Raven-Server-Build",
+			"Non-Authoritive-Information",
+			"Raven-Timer-Request",
+
+            //proxy
+            "Reverse-Via",
+
+            "Allow",
+            "Content-Disposition",
+            "Content-Encoding",
+            "Content-Language",
+            "Content-Location",
+            "Content-MD5",
+            "Content-Range",
+            "Content-Type",
+            "Expires",
+			// ignoring this header, we handle this internally
+			"Last-Modified",
+			// Ignoring this header, since it may
+			// very well change due to things like encoding,
+			// adding metadata, etc
+			"Content-Length",
+			// Special things to ignore
+			"Keep-Alive",
+			"X-Powered-By",
+			"X-AspNet-Version",
+			"X-Requested-With",
+			"X-SourceFiles",
+			// Request headers
+			"Accept-Charset",
+			"Accept-Encoding",
+			"Accept",
+			"Accept-Language",
+			"Authorization",
+			"Cookie",
+			"Expect",
+			"From",
+			"Host",
+			"If-Match",
+			"If-Modified-Since",
+			"If-None-Match",
+			"If-Range",
+			"If-Unmodified-Since",
+			"Max-Forwards",
+			"Referer",
+			"TE",
+			"User-Agent",
+			//Response headers
+			"Accept-Ranges",
+			"Age",
+			"Allow",
+			"ETag",
+			"Location",
+			"Origin",
+			"Retry-After",
+			"Server",
+			"Set-Cookie2",
+			"Set-Cookie",
+			"Vary",
+			"Www-Authenticate",
+			// General
+			"Cache-Control",
+			"Connection",
+			"Date",
+			"Pragma",
+			"Trailer",
+			"Transfer-Encoding",
+			"Upgrade",
+			"Via",
+			"Warning",
+		};
+
+        protected static readonly IList<string> ReadOnlyHeaders = new List<string> { "Last-Modified", "ETag" }.AsReadOnly();
+
+        protected virtual RavenJObject GetFilteredMetadataFromHeaders(HttpHeaders headers)
+        {            
+            return headers.FilterHeadersToObject();
+        }
+
+        #endregion Metadata Headers Handling
+
+    }
 }

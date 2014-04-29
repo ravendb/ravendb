@@ -25,14 +25,13 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 		private readonly string fileName;
 		private readonly IList<RdcNeed> needList;
 		private readonly ServerInfo serverInfo;
-		private readonly NameValueCollection sourceMetadata;
+        private readonly RavenJObject sourceMetadata;
 		private readonly Stream sourceStream;
 		private readonly string syncingBoundary;
 		private HttpJsonRequest request;
 
         public SynchronizationMultipartRequest(RavenFileSystemClient.SynchronizationClient destination, ServerInfo serverInfo, string fileName,
-											   NameValueCollection sourceMetadata, Stream sourceStream,
-											   IList<RdcNeed> needList)
+                                               RavenJObject sourceMetadata, Stream sourceStream, IList<RdcNeed> needList)
 		{
 			this.destination = destination;
 			this.serverInfo = serverInfo;
@@ -51,21 +50,16 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 			token.ThrowIfCancellationRequested();
 
 			if (sourceStream.CanRead == false)
-			{
 				throw new Exception("Stream does not support reading");
-			}
 
-			request =
-				destination.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-					destination.FileSystemUrl + "/synchronization/MultipartProceed",
-					"POST", destination.Credentials, destination.Convention));
+			request = destination.JsonRequestFactory.CreateHttpJsonRequest(
+                                    new CreateHttpJsonRequestParams(this, destination.FileSystemUrl + "/synchronization/MultipartProceed",
+					                                                "POST", destination.Credentials, destination.Convention));
 
-			//request.SendChunked = true;
-			//request.AllowWriteStreamBuffering = false;
-			//request.KeepAlive = true;
-
-			request.AddHeaders(sourceMetadata);
-
+            // REVIEW: (Oren) There is a mismatch of expectations in the AddHeaders. ETag must always have to be surrounded by quotes. 
+            //         If AddHeader/s ever put an etag it should check for that.
+            //         I was hesitant to do the change though, because I do not understand the complete scope of such a change.
+            request.AddHeaders(sourceMetadata);           
 			request.AddHeader("Content-Type", "multipart/form-data; boundary=" + syncingBoundary);
 
 			request.AddHeader(SyncingMultipartConstants.FileName, fileName);

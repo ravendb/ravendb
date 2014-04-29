@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Raven.Json.Linq;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 
 namespace Raven.Client.RavenFS
@@ -8,7 +9,7 @@ namespace Raven.Client.RavenFS
 		public string Name { get; set; }
 		public long? TotalSize { get; set; }
 		public string HumaneTotalSize { get; set; }
-		public NameValueCollection Metadata { get; set; }
+        public RavenJObject Metadata { get; set; }
 	}
 
 	public class SearchResults
