@@ -14,6 +14,7 @@ class changesApi {
 
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
     private allIndexesHandlers = ko.observableArray<changesCallback<indexChangeNotificationDto>>();
+    private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
     private commandBase = new commandBase();
 
     constructor(private db: database) {
@@ -96,6 +97,20 @@ class changesApi {
             this.allDocsHandlers.remove(callback);
             if (this.allDocsHandlers().length == 0) {
                 this.send('unwatch-docs');
+            }
+        });
+    }
+
+    watchBulks(onChange: (e: bulkInsertChangeNotificationDto) => void) {
+        var callback = new changesCallback<bulkInsertChangeNotificationDto>(onChange);
+        if (this.allBulkInsertsHandlers().length == 0) {
+            this.send('watch-bulk-operation');
+        }
+        this.allBulkInsertsHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allDocsHandlers.remove(callback);
+            if (this.allDocsHandlers().length == 0) {
+                this.send('unwatch-bulk-operation');
             }
         });
     }

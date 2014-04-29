@@ -627,6 +627,8 @@
     <Content Include="Scripts\ace\mode\python_highlight_rules.js" />
     <Content Include="Scripts\ace\mode\python_test.js" />
     <Content Include="Scripts\ace\mode\r.js" />
+    <Content Include="Scripts\ace\mode\ravenLinq.js" />
+    <Content Include="Scripts\ace\mode\ravenLinq_highlight_rules.js" />
     <Content Include="Scripts\ace\mode\rdoc.js" />
     <Content Include="Scripts\ace\mode\rdoc_highlight_rules.js" />
     <Content Include="Scripts\ace\mode\rhtml.js" />
