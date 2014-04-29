@@ -19,13 +19,13 @@ class getFilesystemDestinationsCommand extends commandBase {
         var task = $.Deferred();
         this.query<any>(url, args, this.fs)
             .done(data => {                
-                if (data.hasOwnProperty('destination')) {
+                if (data.hasOwnProperty('Destinations')) {
 
-                    var value = data['destination'];
+                    var value = data['Destinations'];
                     if (!(value instanceof Array))
                         value = [value];
 
-                    var result = value.map(x => <synchronizationDestinationDto> JSON.parse(x));
+                    var result = value.map(x => <synchronizationDestinationDto> x);
                     task.resolve(result);                        
                 }
                 else {
