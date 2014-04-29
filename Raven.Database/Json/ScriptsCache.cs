@@ -15,7 +15,7 @@ namespace Raven.Database.Json
 		{
 			public int Usage;
 			public DateTime Timestamp;
-			public ConcurrentQueue<Jint.JintEngine> Queue;
+			public ConcurrentQueue<Engine> Queue;
 		}
 
 		private const int CacheMaxSize = 25;
@@ -23,7 +23,7 @@ namespace Raven.Database.Json
 		private readonly ConcurrentDictionary<ScriptedPatchRequest, CachedResult> cacheDic =
 			new ConcurrentDictionary<ScriptedPatchRequest, CachedResult>();
 
-		public void CheckinScript(ScriptedPatchRequest request, Jint.JintEngine context)
+		public void CheckinScript(ScriptedPatchRequest request, Engine context)
 		{
 			CachedResult value;
 			if (cacheDic.TryGetValue(request, out value))
@@ -35,7 +35,7 @@ namespace Raven.Database.Json
 			}
 			cacheDic.AddOrUpdate(request, patchRequest =>
 			{
-				var queue = new ConcurrentQueue<Jint.JintEngine>();
+				var queue = new ConcurrentQueue<Engine>();
 				queue.Enqueue(context);
 				return new CachedResult
 				{
@@ -50,13 +50,13 @@ namespace Raven.Database.Json
 			});
 		}
 
-		public Jint.JintEngine CheckoutScript(Func<ScriptedPatchRequest, JintEngine> createEngine,ScriptedPatchRequest request)
+		public Engine CheckoutScript(Func<ScriptedPatchRequest, Engine> createEngine, ScriptedPatchRequest request)
 		{
 			CachedResult value;
 			if (cacheDic.TryGetValue(request, out value))
 			{
 				Interlocked.Increment(ref value.Usage);
-				JintEngine context;
+				Engine context;
 				if (value.Queue.TryDequeue(out context))
 				{
 					return context;
@@ -67,7 +67,7 @@ namespace Raven.Database.Json
 			var cachedResult = new CachedResult
 			{
 				Usage = 1,
-				Queue = new ConcurrentQueue<JintEngine>(),
+				Queue = new ConcurrentQueue<Engine>(),
 				Timestamp = SystemTime.UtcNow
 			};
 

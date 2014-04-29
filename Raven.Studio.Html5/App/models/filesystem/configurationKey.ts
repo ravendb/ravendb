@@ -14,7 +14,7 @@ class configurationKey {
         ko.postbox.publish("ActivateConfigurationKey", this);
     }
 
-    getValues(): JQueryPromise<Array<Pair<string, string[]>>> {
+    getValues(): JQueryPromise<string> {
         return new getConfigurationByKeyCommand(this.fs, this.key).execute();
     }
 

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.RavenFS;
 using Raven.Client.RavenFS.Shard;
 using Xunit;
+using Raven.Json.Linq;
 
 namespace RavenFS.Tests.Shard
 {
@@ -200,11 +201,11 @@ namespace RavenFS.Tests.Shard
 		[Fact]
 		public async Task CanSearchForFilesByMetadataWithShardingWithFields()
 		{
-			await shardedClient.UploadAsync("111", new NameValueCollection {{"Active", "true"}}, StreamOfLength(100));
-			await shardedClient.UploadAsync("2", new NameValueCollection { { "Active", "false" } }, StreamOfLength(2));
-			await shardedClient.UploadAsync("33", new NameValueCollection { { "Active", "false" } }, StreamOfLength(3));
-			await shardedClient.UploadAsync("4", new NameValueCollection { { "Active", "false" } }, StreamOfLength(4));
-			await shardedClient.UploadAsync("55555", new NameValueCollection { { "Active", "true" } }, StreamOfLength(5));
+            await shardedClient.UploadAsync("111", new RavenJObject { { "Active", "true" } }, StreamOfLength(100));
+            await shardedClient.UploadAsync("2", new RavenJObject { { "Active", "false" } }, StreamOfLength(2));
+            await shardedClient.UploadAsync("33", new RavenJObject { { "Active", "false" } }, StreamOfLength(3));
+            await shardedClient.UploadAsync("4", new RavenJObject { { "Active", "false" } }, StreamOfLength(4));
+            await shardedClient.UploadAsync("55555", new RavenJObject { { "Active", "true" } }, StreamOfLength(5));
 
 			var result = await shardedClient.SearchAsync("", new[] { "Active" });
 			var files = result.Files;
@@ -219,11 +220,11 @@ namespace RavenFS.Tests.Shard
 		[Fact]
 		public async Task CanSearchForFilesByMetadataWithShardingWithFieldsDecending()
 		{
-			await shardedClient.UploadAsync("111", new NameValueCollection { { "Active", "true" } }, StreamOfLength(100));
-			await shardedClient.UploadAsync("2", new NameValueCollection { { "Active", "false" } }, StreamOfLength(2));
-			await shardedClient.UploadAsync("33", new NameValueCollection { { "Active", "false" } }, StreamOfLength(3));
-			await shardedClient.UploadAsync("4", new NameValueCollection { { "Active", "false" } }, StreamOfLength(4));
-			await shardedClient.UploadAsync("55555", new NameValueCollection { { "Active", "true" } }, StreamOfLength(5));
+            await shardedClient.UploadAsync("111", new RavenJObject { { "Active", "true" } }, StreamOfLength(100));
+            await shardedClient.UploadAsync("2", new RavenJObject { { "Active", "false" } }, StreamOfLength(2));
+            await shardedClient.UploadAsync("33", new RavenJObject { { "Active", "false" } }, StreamOfLength(3));
+            await shardedClient.UploadAsync("4", new RavenJObject { { "Active", "false" } }, StreamOfLength(4));
+            await shardedClient.UploadAsync("55555", new RavenJObject { { "Active", "true" } }, StreamOfLength(5));
 
 			var result = await shardedClient.SearchAsync("", new[] { "-Active" });
 			var files = result.Files;
@@ -238,11 +239,11 @@ namespace RavenFS.Tests.Shard
         [Fact]
         public async Task CanTakeStats()
         {
-            await shardedClient.UploadAsync("111", new NameValueCollection { { "Active", "true" } }, StreamOfLength(100));
-            await shardedClient.UploadAsync("2", new NameValueCollection { { "Active", "false" } }, StreamOfLength(2));
-            await shardedClient.UploadAsync("33", new NameValueCollection { { "Active", "false" } }, StreamOfLength(3));
-            await shardedClient.UploadAsync("4", new NameValueCollection { { "Active", "false" } }, StreamOfLength(4));
-            await shardedClient.UploadAsync("55555", new NameValueCollection { { "Active", "true" } }, StreamOfLength(5));
+            await shardedClient.UploadAsync("111", new RavenJObject { { "Active", "true" } }, StreamOfLength(100));
+            await shardedClient.UploadAsync("2", new RavenJObject { { "Active", "false" } }, StreamOfLength(2));
+            await shardedClient.UploadAsync("33", new RavenJObject { { "Active", "false" } }, StreamOfLength(3));
+            await shardedClient.UploadAsync("4", new RavenJObject { { "Active", "false" } }, StreamOfLength(4));
+            await shardedClient.UploadAsync("55555", new RavenJObject { { "Active", "true" } }, StreamOfLength(5));
 
             var stats = await shardedClient.StatsAsync();
 

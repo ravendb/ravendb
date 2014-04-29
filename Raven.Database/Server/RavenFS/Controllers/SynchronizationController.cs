@@ -9,7 +9,6 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.RavenFS;
 using Raven.Client.RavenFS;
@@ -22,6 +21,9 @@ using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
 using Raven.Database.Server.RavenFS.Synchronization.Multipart;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
+using System.Diagnostics;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -34,46 +36,51 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
         [HttpPost]
         [Route("ravenfs/{fileSystemName}/synchronization/ToDestinations")]
-        public Task<DestinationSyncResult[]> ToDestinations(bool forceSyncingAll)
+        public async Task<HttpResponseMessage> ToDestinations(bool forceSyncingAll)
         {
-            return SynchronizationTask.SynchronizeDestinationsAsync(forceSyncingAll);
+            var result = await SynchronizationTask.SynchronizeDestinationsAsync(forceSyncingAll);
+
+            return this.GetMessageWithObject(result, HttpStatusCode.OK);
         }
 
         [HttpPost]
         [Route("ravenfs/{fileSystemName}/synchronization/ToDestination")]
-        public Task<DestinationSyncResult> ToDestination(string destination, bool forceSyncingAll)
-        {            
-            return SynchronizationTask.SynchronizeDestinationAsync(destination + "/ravenfs/" + this.FileSystemName, forceSyncingAll);
+        public async Task<HttpResponseMessage> ToDestination(string destination, bool forceSyncingAll)
+        {
+            var result = await SynchronizationTask.SynchronizeDestinationAsync(destination + "/ravenfs/" + this.FileSystemName, forceSyncingAll);
+            
+            return this.GetMessageWithObject(result, HttpStatusCode.OK);
         }
 
 		[HttpPost]
         [Route("ravenfs/{fileSystemName}/synchronization/start/{*fileName}")]
-		public async Task<SynchronizationReport> Start(string fileName)
+        public async Task<HttpResponseMessage> Start(string fileName)
 		{
 		    var destination = await ReadJsonObjectAsync<SynchronizationDestination>();
 
 			Log.Debug("Starting to synchronize a file '{0}' to {1}", fileName, destination.FileSystemUrl);
 
-			return await SynchronizationTask.SynchronizeFileToAsync(fileName, destination);
+			var result = await SynchronizationTask.SynchronizeFileToAsync(fileName, destination);
+
+            return this.GetMessageWithObject(result, HttpStatusCode.OK);
 		}
 
 		[HttpPost]
         [Route("ravenfs/{fileSystemName}/synchronization/MultipartProceed")]
-		public async Task<HttpResponseMessage> MultipartProceed()
+        public async Task<HttpResponseMessage> MultipartProceed()
 		{
 			if (!Request.Content.IsMimeMultipartContent())
 				throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
 
-			var fileName = Request.Headers.GetValues(SyncingMultipartConstants.FileName).FirstOrDefault();
+            var fileName = Request.Headers.GetValues(SyncingMultipartConstants.FileName).FirstOrDefault();
 			var tempFileName = RavenFileNameHelper.DownloadingFileName(fileName);
 
-			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-			var sourceFileETag = InnerHeaders.Value<Guid>("ETag");
+            var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
+            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First().Trim('\"'));
 
-			var report = new SynchronizationReport(fileName, sourceFileETag, SynchronizationType.ContentUpdate);
+            var report = new SynchronizationReport(fileName, sourceFileETag, SynchronizationType.ContentUpdate);
 
-			Log.Debug("Starting to process multipart synchronization request of a file '{0}' with ETag {1} from {2}", fileName,
-					  sourceFileETag, sourceServerInfo);
+			Log.Debug("Starting to process multipart synchronization request of a file '{0}' with ETag {1} from {2}", fileName, sourceFileETag, sourceServerInfo);
 
 			StorageStream localFile = null;
 			var isNewFile = false;
@@ -91,66 +98,66 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 				Storage.Batch(accessor => StartupProceed(fileName, accessor));
 
-				NameValueCollection sourceMetadata = InnerHeaders.FilterHeaders();
+                RavenJObject sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders); // InnerHeaders.FilterHeadersToObject();
 
 				var localMetadata = GetLocalMetadata(fileName);
 
-				if (localMetadata != null)
-				{
-					AssertConflictDetection(fileName, localMetadata, sourceMetadata, sourceServerInfo, out isConflictResolved);
-					localFile = StorageStream.Reading(Storage, fileName);
-				}
-				else
-				{
-					isNewFile = true;
-				}
+                if (localMetadata != null)
+                {
+                    AssertConflictDetection(fileName, localMetadata, sourceMetadata, sourceServerInfo, out isConflictResolved);
+                    localFile = StorageStream.Reading(Storage, fileName);
+                }
+                else
+                {
+                    isNewFile = true;
+                }
 
-				Historian.UpdateLastModified(sourceMetadata);
+                Historian.UpdateLastModified(sourceMetadata);
 
-				var synchronizingFile = SynchronizingFileStream.CreatingOrOpeningAndWritting(Storage, Search, StorageOperationsTask,
-																							 tempFileName, sourceMetadata);
+                var synchronizingFile = SynchronizingFileStream.CreatingOrOpeningAndWritting(Storage, Search, StorageOperationsTask,
+                                                                                             tempFileName, sourceMetadata);
 
-				var provider = new MultipartSyncStreamProvider(synchronizingFile, localFile);
+                var provider = new MultipartSyncStreamProvider(synchronizingFile, localFile);
 
-				Log.Debug("Starting to process multipart content of a file '{0}'", fileName);
+                Log.Debug("Starting to process multipart content of a file '{0}'", fileName);
 
-				await Request.Content.ReadAsMultipartAsync(provider);
+                await Request.Content.ReadAsMultipartAsync(provider);
 
-				Log.Debug("Multipart content of a file '{0}' was processed", fileName);
+                Log.Debug("Multipart content of a file '{0}' was processed", fileName);
 
-				report.BytesCopied = provider.BytesCopied;
-				report.BytesTransfered = provider.BytesTransfered;
-				report.NeedListLength = provider.NumberOfFileParts;
+                report.BytesCopied = provider.BytesCopied;
+                report.BytesTransfered = provider.BytesTransfered;
+                report.NeedListLength = provider.NumberOfFileParts;
 
-				synchronizingFile.PreventUploadComplete = false;
-				synchronizingFile.Dispose();
-				sourceMetadata["Content-MD5"] = synchronizingFile.FileHash;
+                synchronizingFile.PreventUploadComplete = false;
+                synchronizingFile.Dispose();
+                sourceMetadata["Content-MD5"] = synchronizingFile.FileHash;
 
-				Storage.Batch(accessor => accessor.UpdateFileMetadata(tempFileName, sourceMetadata));
+                Storage.Batch(accessor => accessor.UpdateFileMetadata(tempFileName, sourceMetadata));
 
-				Storage.Batch(accessor =>
-				{
-					StorageOperationsTask.IndicateFileToDelete(fileName);
-					accessor.RenameFile(tempFileName, fileName);
+                Storage.Batch(accessor =>
+                {
+                    StorageOperationsTask.IndicateFileToDelete(fileName);
+                    accessor.RenameFile(tempFileName, fileName);
 
-					Search.Delete(tempFileName);
-					Search.Index(fileName, sourceMetadata);
-				});
+                    Search.Delete(tempFileName);
+                    Search.Index(fileName, sourceMetadata);
+                });
 
-				if (isNewFile)
-				{
-					Log.Debug("Temporary downloading file '{0}' was renamed to '{1}'. Indexes was updated.", tempFileName, fileName);
-				}
-				else
-				{
-					Log.Debug("Old file '{0}' was deleted. Indexes was updated.", fileName);
-				}
+                if (isNewFile)
+                {
+                    Log.Debug("Temporary downloading file '{0}' was renamed to '{1}'. Indexes was updated.", tempFileName, fileName);
+                }
+                else
+                {
+                    Log.Debug("Old file '{0}' was deleted. Indexes was updated.", fileName);
+                }
 
-				if (isConflictResolved)
-				{
-					ConflictArtifactManager.Delete(fileName);
-					Publisher.Publish(new ConflictResolved { FileName = fileName });
-				}
+                if (isConflictResolved)
+                {
+                    ConflictArtifactManager.Delete(fileName);
+                    Publisher.Publish(new ConflictResolved { FileName = fileName });
+                }
 			}
 			catch (Exception ex)
 			{
@@ -173,7 +180,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			else
 			{
 				Log.WarnException(
-					string.Format("Error has occured during synchronization of a file '{0}' from {1}", fileName, sourceServerInfo),
+					string.Format("Error has occurred during synchronization of a file '{0}' from {1}", fileName, sourceServerInfo),
 					report.Exception);
 			}
 
@@ -182,11 +189,10 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			PublishFileNotification(fileName, isNewFile ? FileChangeAction.Add : FileChangeAction.Update);
 			PublishSynchronizationNotification(fileName, sourceServerInfo, report.Type, SynchronizationAction.Finish);
 
-			return Request.CreateResponse(HttpStatusCode.OK, report);
+            return this.GetMessageWithObject(report, HttpStatusCode.OK);
 		}
 
-		private void FinishSynchronization(string fileName, SynchronizationReport report, ServerInfo sourceServer,
-										   Guid sourceFileETag)
+		private void FinishSynchronization(string fileName, SynchronizationReport report, ServerInfo sourceServer, Guid sourceFileETag)
 		{
 			try
 			{
@@ -216,9 +222,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			}
 		}
 
-		private void AssertConflictDetection(string fileName, NameValueCollection localMetadata,
-											 NameValueCollection sourceMetadata, ServerInfo sourceServer,
-											 out bool isConflictResolved)
+        private void AssertConflictDetection(string fileName, RavenJObject localMetadata, RavenJObject sourceMetadata, ServerInfo sourceServer, out bool isConflictResolved)
 		{
 			var conflict = ConflictDetector.Check(fileName, localMetadata, sourceMetadata, sourceServer.FileSystemUrl);
 			isConflictResolved = ConflictResolver.IsResolved(localMetadata, conflict);
@@ -255,9 +259,10 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public HttpResponseMessage UpdateMetadata(string fileName)
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-			var sourceFileETag = InnerHeaders.Value<Guid>("ETag");
+            // REVIEW: (Oren) It works, but it seems to me it is not an scalable solution. 
+            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First().Trim('\"'));
 
-			Log.Debug("Starting to update a metadata of file '{0}' with ETag {1} from {2} because of synchronization", fileName,
+            Log.Debug("Starting to update a metadata of file '{0}' with ETag {1} from {2} because of synchronization", fileName,
 					  sourceFileETag, sourceServerInfo);
 
 			var report = new SynchronizationReport(fileName, sourceFileETag, SynchronizationType.MetadataUpdate);
@@ -275,25 +280,25 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				Storage.Batch(accessor => StartupProceed(fileName, accessor));
 
 				var localMetadata = GetLocalMetadata(fileName);
-				var sourceMetadata = InnerHeaders.FilterHeaders();
+                var sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
 
-				bool isConflictResolved;
+                bool isConflictResolved;
 
-				AssertConflictDetection(fileName, localMetadata, sourceMetadata, sourceServerInfo, out isConflictResolved);
+                AssertConflictDetection(fileName, localMetadata, sourceMetadata, sourceServerInfo, out isConflictResolved);
 
-				Historian.UpdateLastModified(sourceMetadata);
+                Historian.UpdateLastModified(sourceMetadata);
 
-				Storage.Batch(accessor => accessor.UpdateFileMetadata(fileName, sourceMetadata));
+                Storage.Batch(accessor => accessor.UpdateFileMetadata(fileName, sourceMetadata));
 
-				Search.Index(fileName, sourceMetadata);
+                Search.Index(fileName, sourceMetadata);
 
-				if (isConflictResolved)
-				{
-					ConflictArtifactManager.Delete(fileName);
-					Publisher.Publish(new ConflictResolved { FileName = fileName });
-				}
+                if (isConflictResolved)
+                {
+                    ConflictArtifactManager.Delete(fileName);
+                    Publisher.Publish(new ConflictResolved { FileName = fileName });
+                }
 
-				PublishFileNotification(fileName, FileChangeAction.Update);
+                PublishFileNotification(fileName, FileChangeAction.Update);
 			}
 			catch (Exception ex)
 			{
@@ -315,18 +320,18 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				Log.Debug("Metadata of file '{0}' was synchronized successfully from {1}", fileName, sourceServerInfo);
 			}
 
-			return Request.CreateResponse(HttpStatusCode.OK, report);
+            return this.GetMessageWithObject(report, HttpStatusCode.OK);
 		}
+
 
 		[HttpDelete]
         [Route("ravenfs/{fileSystemName}/synchronization")]
 		public HttpResponseMessage Delete(string fileName)
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-			var sourceFileETag = InnerHeaders.Value<Guid>("ETag");
+            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First().Trim('\"'));
 
-			Log.Debug("Starting to delete a file '{0}' with ETag {1} from {2} because of synchronization", fileName,
-					  sourceFileETag, sourceServerInfo);
+            Log.Debug("Starting to delete a file '{0}' with ETag {1} from {2} because of synchronization", fileName, sourceFileETag, sourceServerInfo);
 
 			var report = new SynchronizationReport(fileName, sourceFileETag, SynchronizationType.Delete);
 
@@ -346,46 +351,45 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 				if (localMetadata != null)
 				{
-					var sourceMetadata = Request.Headers.FilterHeaders();
+                    // REVIEW: Use InnerHeaders for consistency?
+                    var sourceMetadata = GetFilteredMetadataFromHeaders(Request.Headers); // Request.Headers.FilterHeadersToObject();
 
-					bool isConflictResolved;
+                    bool isConflictResolved;
 
-					AssertConflictDetection(fileName, localMetadata, sourceMetadata, sourceServerInfo, out isConflictResolved);
+                    AssertConflictDetection(fileName, localMetadata, sourceMetadata, sourceServerInfo, out isConflictResolved);
 
-					Storage.Batch(accessor =>
-					{
-						StorageOperationsTask.IndicateFileToDelete(fileName);
+                    Storage.Batch(accessor =>
+                    {
+                        StorageOperationsTask.IndicateFileToDelete(fileName);
 
-						var tombstoneMetadata = new NameValueCollection
-								                                      {
-									                                      {
-										                                      SynchronizationConstants.RavenSynchronizationHistory,
-										                                      localMetadata[SynchronizationConstants.RavenSynchronizationHistory]
-									                                      },
-									                                      {
-										                                      SynchronizationConstants.RavenSynchronizationVersion,
-										                                      localMetadata[SynchronizationConstants.RavenSynchronizationVersion]
-									                                      },
-									                                      {
-										                                      SynchronizationConstants.RavenSynchronizationSource,
-										                                      localMetadata[SynchronizationConstants.RavenSynchronizationSource]
-									                                      }
-								                                      }.WithDeleteMarker();
+                        var tombstoneMetadata = new RavenJObject
+                                                    {
+                                                        {
+                                                            SynchronizationConstants.RavenSynchronizationHistory,
+                                                            localMetadata[SynchronizationConstants.RavenSynchronizationHistory]
+                                                        },
+                                                        {
+                                                            SynchronizationConstants.RavenSynchronizationVersion,
+                                                            localMetadata[SynchronizationConstants.RavenSynchronizationVersion]
+                                                        },
+                                                        {
+                                                            SynchronizationConstants.RavenSynchronizationSource,
+                                                            localMetadata[SynchronizationConstants.RavenSynchronizationSource]
+                                                        }
+                                                    }.WithDeleteMarker();
 
-						Historian.UpdateLastModified(tombstoneMetadata);
-						accessor.PutFile(fileName, 0, tombstoneMetadata, true);
-					});
+                        Historian.UpdateLastModified(tombstoneMetadata);
+                        accessor.PutFile(fileName, 0, tombstoneMetadata, true);
+                    });
 
-					PublishFileNotification(fileName, FileChangeAction.Delete);
+                    PublishFileNotification(fileName, FileChangeAction.Delete);
 				}
 			}
 			catch (Exception ex)
 			{
 				report.Exception = ex;
 
-				Log.WarnException(
-					string.Format("Error was occured during deletion synchronization of file '{0}' from {1}", fileName,
-								  sourceServerInfo), ex);
+				Log.WarnException(string.Format("Error was occurred during deletion synchronization of file '{0}' from {1}", fileName, sourceServerInfo), ex);
 			}
 			finally
 			{
@@ -399,7 +403,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				Log.Debug("File '{0}' was deleted during synchronization from {1}", fileName, sourceServerInfo);
 			}
 
-			return Request.CreateResponse(HttpStatusCode.OK, report);
+            return this.GetMessageWithObject(report, HttpStatusCode.OK);
 		}
 
 		[HttpPatch]
@@ -407,8 +411,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public HttpResponseMessage Rename(string fileName, string rename)
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-			var sourceFileETag = InnerHeaders.Value<Guid>("ETag");
-			var sourceMetadata = InnerHeaders.FilterHeaders();
+            var sourceFileETag = Guid.Parse(InnerHeaders.GetValues("ETag").First().Trim('\"'));
+            var sourceMetadata = GetFilteredMetadataFromHeaders(InnerHeaders);
 
 			Log.Debug("Starting to rename a file '{0}' to '{1}' with ETag {2} from {3} because of synchronization", fileName,
 					  rename, sourceFileETag, sourceServerInfo);
@@ -431,22 +435,19 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 				bool isConflictResolved;
 
-				AssertConflictDetection(fileName, localMetadata, sourceMetadata, sourceServerInfo, out isConflictResolved);
+                AssertConflictDetection(fileName, localMetadata, sourceMetadata, sourceServerInfo, out isConflictResolved);
 
-				StorageOperationsTask.RenameFile(new RenameFileOperation
-				{
-					Name = fileName,
-					Rename = rename,
-					MetadataAfterOperation =
-						sourceMetadata.WithETag(sourceFileETag).DropRenameMarkers()
-				});
+                StorageOperationsTask.RenameFile(new RenameFileOperation
+                {
+                    Name = fileName,
+                    Rename = rename,
+                    MetadataAfterOperation = sourceMetadata.WithETag(sourceFileETag).DropRenameMarkers()
+                });
 			}
 			catch (Exception ex)
 			{
 				report.Exception = ex;
-				Log.WarnException(
-					string.Format("Error was occured during renaming synchronization of file '{0}' from {1}", fileName,
-								  sourceServerInfo), ex);
+				Log.WarnException( string.Format("Error was occurred during renaming synchronization of file '{0}' from {1}", fileName, sourceServerInfo), ex);
 			}
 			finally
 			{
@@ -458,7 +459,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			if (report.Exception == null)
 				Log.Debug("File '{0}' was renamed to '{1}' during synchronization from {2}", fileName, rename, sourceServerInfo);
 
-			return Request.CreateResponse(HttpStatusCode.OK, report);
+            return this.GetMessageWithObject(report, HttpStatusCode.OK);
 		}
 
 		[HttpPost]
@@ -495,32 +496,35 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			{
 				var configs = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.SyncResultNamePrefix,
 																 Paging.PageSize * Paging.Start, Paging.PageSize);
-				var reports = configs.Select(config => config.AsObject<SynchronizationReport>()).ToList();
+				var reports = configs.Select(config => config.JsonDeserialization<SynchronizationReport>()).ToList();
 				page = new ListPage<SynchronizationReport>(reports, reports.Count);
 			});
 
-			return Request.CreateResponse(HttpStatusCode.OK, page);
+            return this.GetMessageWithObject(page, HttpStatusCode.OK);
 		}
 
 		[HttpGet]
         [Route("ravenfs/{fileSystemName}/synchronization/Active")]
 		public HttpResponseMessage Active()
 		{
-			return Request.CreateResponse(HttpStatusCode.OK,
-										  new ListPage<SynchronizationDetails>(
-											  SynchronizationTask.Queue.Active.Skip(Paging.PageSize * Paging.Start).Take(
-												  Paging.PageSize), SynchronizationTask.Queue.GetTotalActiveTasks()));
+            var result = new ListPage<SynchronizationDetails>(SynchronizationTask.Queue.Active
+                                                                                       .Skip(Paging.PageSize * Paging.Start)
+                                                                                       .Take(Paging.PageSize), 
+                                                              SynchronizationTask.Queue.GetTotalActiveTasks());
+
+            return this.GetMessageWithObject(result, HttpStatusCode.OK);
 		}
 
 		[HttpGet]
         [Route("ravenfs/{fileSystemName}/synchronization/Pending")]
 		public HttpResponseMessage Pending()
 		{
-			return Request.CreateResponse(HttpStatusCode.OK,
-										  new ListPage<SynchronizationDetails>(
-											  SynchronizationTask.Queue.Pending.Skip(Paging.PageSize * Paging.Start).Take(
-												  Paging.PageSize),
-											  SynchronizationTask.Queue.GetTotalPendingTasks()));
+            var result = new ListPage<SynchronizationDetails>(SynchronizationTask.Queue.Pending
+                                                                                       .Skip(Paging.PageSize * Paging.Start)
+                                                                                       .Take(Paging.PageSize),
+											                  SynchronizationTask.Queue.GetTotalPendingTasks());
+
+            return this.GetMessageWithObject(result, HttpStatusCode.OK);
 		}
 
 		[HttpGet]
@@ -531,16 +535,15 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			Storage.Batch(accessor =>
 			{
-				var conflicts =
-					accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.ConflictConfigNamePrefix,
-													   Paging.PageSize * Paging.Start,
-													   Paging.PageSize)
-							.Select(config => config.AsObject<ConflictItem>())
-							.ToList();
+                var conflicts = accessor.GetConfigurationValuesStartWithPrefix<ConflictItem>(
+                                                    RavenFileNameHelper.ConflictConfigNamePrefix,
+													Paging.PageSize * Paging.Start,
+													Paging.PageSize).ToList();
+
 				page = new ListPage<ConflictItem>(conflicts, conflicts.Count);
 			});
 
-			return Request.CreateResponse(HttpStatusCode.OK, page);
+            return this.GetMessageWithObject(page, HttpStatusCode.OK);			
 		}
 
 		[HttpPatch]
@@ -563,8 +566,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 		[HttpPatch]
         [Route("ravenfs/{fileSystemName}/synchronization/applyConflict/{*fileName}")]
-		public async Task<HttpResponseMessage> ApplyConflict(string filename, long remoteVersion, string remoteServerId,
-															 string remoteServerUrl)
+		public async Task<HttpResponseMessage> ApplyConflict(string filename, long remoteVersion, string remoteServerId, string remoteServerUrl)
 		{
 			var localMetadata = GetLocalMetadata(filename);
 
@@ -576,7 +578,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			var current = new HistoryItem
 			{
 				ServerId = Storage.Id.ToString(),
-				Version = long.Parse(localMetadata[SynchronizationConstants.RavenSynchronizationVersion])
+				Version = localMetadata.Value<long>(SynchronizationConstants.RavenSynchronizationVersion)
 			};
 
 			var currentConflictHistory = Historian.DeserializeHistory(localMetadata);
@@ -608,9 +610,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				SourceServerUrl = remoteServerUrl
 			});
 
-			Log.Debug(
-				"Conflict applied for a file '{0}' (remote version: {1}, remote server id: {2}).", filename, remoteVersion,
-				remoteServerId);
+			Log.Debug("Conflict applied for a file '{0}' (remote version: {1}, remote server id: {2}).", filename, remoteVersion, remoteServerId);
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
@@ -624,7 +624,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			Log.Debug("Got synchronization last ETag request from {0}: [{1}]", from, lastEtag);
 
-			return Request.CreateResponse(HttpStatusCode.OK, lastEtag);
+            return this.GetMessageWithObject(lastEtag, HttpStatusCode.OK);
 		}
 
 		[HttpPost]
@@ -664,8 +664,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			});
 		}
 
-		private void PublishSynchronizationNotification(string fileName, ServerInfo sourceServer, SynchronizationType type,
-														SynchronizationAction action)
+		private void PublishSynchronizationNotification(string fileName, ServerInfo sourceServer, SynchronizationType type, SynchronizationAction action)
 		{
 			Publisher.Publish(new SynchronizationUpdate
 			{
@@ -682,26 +681,23 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			Storage.Batch(accessor =>
 			{
-				var conflict =
-					accessor.GetConfig(RavenFileNameHelper.ConflictConfigNameForFile(fileName)).AsObject<ConflictItem>();
-				var localMetadata = accessor.GetFile(fileName, 0, 0).Metadata;
-				var localHistory = Historian.DeserializeHistory(localMetadata);
+                var conflict = accessor.GetConfigurationValue<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile(fileName));
 
-				// incorporate remote version history into local
-				foreach (
-					var remoteHistoryItem in
-						conflict.RemoteHistory.Where(remoteHistoryItem => !localHistory.Contains(remoteHistoryItem)))
-				{
-					localHistory.Add(remoteHistoryItem);
-				}
+                var localMetadata = accessor.GetFile(fileName, 0, 0).Metadata;
+                var localHistory = Historian.DeserializeHistory(localMetadata);
 
-				localMetadata[SynchronizationConstants.RavenSynchronizationHistory] =
-					Historian.SerializeHistory(localHistory);
+                // incorporate remote version history into local
+                foreach (var remoteHistoryItem in conflict.RemoteHistory.Where(remoteHistoryItem => !localHistory.Contains(remoteHistoryItem)))
+                {
+                    localHistory.Add(remoteHistoryItem);
+                }
 
-				accessor.UpdateFileMetadata(fileName, localMetadata);
+                localMetadata[SynchronizationConstants.RavenSynchronizationHistory] = Historian.SerializeHistory(localHistory);
 
-				ConflictArtifactManager.Delete(fileName, accessor);
-				Publisher.Publish(new ConflictResolved { FileName = fileName });
+                accessor.UpdateFileMetadata(fileName, localMetadata);
+
+                ConflictArtifactManager.Delete(fileName, accessor);
+                Publisher.Publish(new ConflictResolved { FileName = fileName });
 			});
 		}
 
@@ -712,18 +708,16 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				{
 					var localMetadata = accessor.GetFile(fileName, 0, 0).Metadata;
 					var conflictConfigName = RavenFileNameHelper.ConflictConfigNameForFile(fileName);
-					var conflictItem = accessor.GetConfig(conflictConfigName).AsObject<ConflictItem>();
+                    var conflictItem = accessor.GetConfig(conflictConfigName).JsonDeserialization<ConflictItem>();
 
-					var conflictResolution =
-						new ConflictResolution
-						{
-							Strategy = ConflictResolutionStrategy.RemoteVersion,
-							RemoteServerId = conflictItem.RemoteHistory.Last().ServerId,
-							Version = conflictItem.RemoteHistory.Last().Version,
-						};
+					var conflictResolution = new ConflictResolution
+						                        {
+							                        Strategy = ConflictResolutionStrategy.RemoteVersion,
+							                        RemoteServerId = conflictItem.RemoteHistory.Last().ServerId,
+							                        Version = conflictItem.RemoteHistory.Last().Version,
+						                        };
 
-					localMetadata[SynchronizationConstants.RavenSynchronizationConflictResolution] =
-						new TypeHidingJsonSerializer().Stringify(conflictResolution);
+					localMetadata[SynchronizationConstants.RavenSynchronizationConflictResolution] = JsonExtensions.ToJObject(conflictResolution);
 					accessor.UpdateFileMetadata(fileName, localMetadata);
 				});
 		}
@@ -741,7 +735,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		private void SaveSynchronizationReport(string fileName, IStorageActionsAccessor accessor, SynchronizationReport report)
 		{
 			var name = RavenFileNameHelper.SyncResultNameForFile(fileName);
-			accessor.SetConfig(name, report.AsConfig());
+			accessor.SetConfig(name, JsonExtensions.ToJObject(report));
 		}
 
 		private void DeleteSynchronizationReport(string fileName, IStorageActionsAccessor accessor)
@@ -761,7 +755,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 					try
 					{
 						var name = RavenFileNameHelper.SyncResultNameForFile(fileName);
-						preResult = accessor.GetConfig(name).AsObject<SynchronizationReport>();
+                        preResult = accessor.GetConfig(name).JsonDeserialization<SynchronizationReport>();
 					}
 					catch (FileNotFoundException)
 					{
@@ -772,25 +766,24 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			return preResult;
 		}
 
-		private NameValueCollection GetLocalMetadata(string fileName)
+        private RavenJObject GetLocalMetadata(string fileName)
 		{
-			NameValueCollection result = null;
-			try
-			{
-				Storage.Batch(
-					accessor => { result = accessor.GetFile(fileName, 0, 0).Metadata; });
-			}
-			catch (FileNotFoundException)
-			{
-				return null;
-			}
+            RavenJObject result = null;
+            try
+            {
+                Storage.Batch(accessor => { result = accessor.GetFile(fileName, 0, 0).Metadata; });
+            }
+            catch (FileNotFoundException)
+            {
+                return null;
+            }
 
-			if (result.AllKeys.Contains(SynchronizationConstants.RavenDeleteMarker))
-			{
-				return null;
-			}
+            if (result.ContainsKey(SynchronizationConstants.RavenDeleteMarker))
+            {
+                return null;
+            }
 
-			return result;
+            return result;
 		}
 
 		private SourceSynchronizationInformation GetLastSynchronization(Guid from, IStorageActionsAccessor accessor)
@@ -798,9 +791,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			SourceSynchronizationInformation info;
 			try
 			{
-				info =
-					accessor.GetConfig(SynchronizationConstants.RavenSynchronizationSourcesBasePath + "/" + from).AsObject
-						<SourceSynchronizationInformation>();
+				info = accessor.GetConfig(SynchronizationConstants.RavenSynchronizationSourcesBasePath + "/" + from)
+                               .JsonDeserialization<SourceSynchronizationInformation>();
 			}
 			catch (FileNotFoundException)
 			{
@@ -814,12 +806,10 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			return info;
 		}
 
-		private void SaveSynchronizationSourceInformation(ServerInfo sourceServer, Guid lastSourceEtag,
-														  IStorageActionsAccessor accessor)
+		private void SaveSynchronizationSourceInformation(ServerInfo sourceServer, Guid lastSourceEtag, IStorageActionsAccessor accessor)
 		{
 			var lastSynchronizationInformation = GetLastSynchronization(sourceServer.Id, accessor);
-			if (Buffers.Compare(lastSynchronizationInformation.LastSourceFileEtag.ToByteArray(), lastSourceEtag.ToByteArray()) >
-				0)
+			if (Buffers.Compare(lastSynchronizationInformation.LastSourceFileEtag.ToByteArray(), lastSourceEtag.ToByteArray()) > 0)
 			{
 				return;
 			}
@@ -833,7 +823,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 			var key = SynchronizationConstants.RavenSynchronizationSourcesBasePath + "/" + sourceServer.Id;
 
-			accessor.SetConfig(key, synchronizationSourceInfo.AsConfig());
+			accessor.SetConfig(key, JsonExtensions.ToJObject(synchronizationSourceInfo));
 
 			Log.Debug("Saved last synchronized file ETag {0} from {1} ({2})", lastSourceEtag, sourceServer.FileSystemUrl, sourceServer.Id);
 		}

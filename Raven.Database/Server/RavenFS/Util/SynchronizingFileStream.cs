@@ -5,6 +5,7 @@ using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Search;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Util
 {
@@ -13,7 +14,7 @@ namespace Raven.Database.Server.RavenFS.Util
 		private readonly MD5 md5Hasher;
 
 		private SynchronizingFileStream(ITransactionalStorage transactionalStorage, string fileName,
-										StorageStreamAccess storageStreamAccess, NameValueCollection metadata,
+										StorageStreamAccess storageStreamAccess, RavenJObject metadata,
 										IndexStorage indexStorage, StorageOperationsTask operations)
 			: base(transactionalStorage, fileName, storageStreamAccess, metadata, indexStorage, operations)
 		{
@@ -47,10 +48,9 @@ namespace Raven.Database.Server.RavenFS.Util
 
 		public static SynchronizingFileStream CreatingOrOpeningAndWritting(ITransactionalStorage storage, IndexStorage search,
 																		   StorageOperationsTask operationsTask,
-																		   string fileName, NameValueCollection metadata)
+																		   string fileName, RavenJObject metadata)
 		{
-			return new SynchronizingFileStream(storage, fileName, StorageStreamAccess.CreateAndWrite, metadata, search,
-											   operationsTask) { PreventUploadComplete = true };
+			return new SynchronizingFileStream(storage, fileName, StorageStreamAccess.CreateAndWrite, metadata, search, operationsTask) { PreventUploadComplete = true };
 		}
 	}
 }

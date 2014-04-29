@@ -13,6 +13,7 @@ using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
 using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -54,7 +55,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			get { return Cts.Token.IsCancellationRequested; }
 		}
 
-		protected NameValueCollection FileMetadata { get; set; }
+        protected RavenJObject FileMetadata { get; set; }
 
 		protected ServerInfo ServerInfo { get; private set; }
 
@@ -66,33 +67,31 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		{
 		}
 
-		protected void AssertLocalFileExistsAndIsNotConflicted(NameValueCollection sourceMetadata)
+        protected void AssertLocalFileExistsAndIsNotConflicted(RavenJObject sourceMetadata)
 		{
 			if (sourceMetadata == null)
 				throw new SynchronizationException(string.Format("File {0} does not exist", FileName));
 
-			if (sourceMetadata.AllKeys.Contains(SynchronizationConstants.RavenSynchronizationConflict))
-				throw new SynchronizationException(string.Format("File {0} is conflicted", FileName));
+            if (sourceMetadata.ContainsKey(SynchronizationConstants.RavenSynchronizationConflict))
+                throw new SynchronizationException(string.Format("File {0} is conflicted", FileName));
 		}
 
-		protected ConflictItem CheckConflictWithDestination(NameValueCollection sourceMetadata,
-															NameValueCollection destinationMetadata, string localServerUrl)
+        protected ConflictItem CheckConflictWithDestination(RavenJObject sourceMetadata,
+                                                            RavenJObject destinationMetadata, string localServerUrl)
 		{
-			var conflict = conflictDetector.CheckOnSource(FileName, sourceMetadata, destinationMetadata, localServerUrl);
-			var isConflictResolved = conflictResolver.IsResolved(destinationMetadata, conflict);
+            var conflict = conflictDetector.CheckOnSource(FileName, sourceMetadata, destinationMetadata, localServerUrl);
+            var isConflictResolved = conflictResolver.IsResolved(destinationMetadata, conflict);
 
-			// optimization - conflict checking on source side before any changes pushed
-			if (conflict != null && !isConflictResolved)
-				return conflict;
+            // optimization - conflict checking on source side before any changes pushed
+            if (conflict != null && !isConflictResolved)
+                return conflict;
 
-			return null;
+            return null;
 		}
 
-        protected async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, RavenFileSystemClient.SynchronizationClient destination,
-																					string localServerUrl, ILog log)
+        protected async Task<SynchronizationReport> ApplyConflictOnDestinationAsync(ConflictItem conflict, RavenFileSystemClient.SynchronizationClient destination, string localServerUrl, ILog log)
 		{
-			log.Debug("File '{0}' is in conflict with destination version from {1}. Applying conflict on destination", FileName,
-					  destination.FileSystemUrl);
+			log.Debug("File '{0}' is in conflict with destination version from {1}. Applying conflict on destination", FileName, destination.FileSystemUrl);
 
 			try
 			{

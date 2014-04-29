@@ -11,6 +11,7 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using System.Collections.Specialized;
 
 namespace Raven.Client.RavenFS.Connections
 {
@@ -39,22 +40,18 @@ namespace Raven.Client.RavenFS.Connections
 
                 try
                 {
-                    var config = serverClient.Config.GetConfig(SynchronizationConstants.RavenSynchronizationDestinations).Result;
+                    var config = serverClient.Config.GetConfig<RavenJObject>(SynchronizationConstants.RavenSynchronizationDestinations).Result;
                     failureCounts[serverClient.FileSystemUrl] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 
                     if (config != null)
                     {
-                        var destinationStrings = config.GetValues("destination");
 
-                        if (destinationStrings != null)
+                        var destinationsArray = config.Value<RavenJArray>("Destinations");
+                        if (destinationsArray != null)
                         {
-                            var destinations = destinationStrings.Select(JsonConvert.DeserializeObject<SynchronizationDestination>).ToList();
-
-                            var ravenJArray = RavenJToken.FromObject(destinations);
-
                             document = new JsonDocument();
-                            document.DataAsJson = new RavenJObject(){{"destinations", ravenJArray}};
-                        }
+                            document.DataAsJson = new RavenJObject() { { "Destinations", destinationsArray } };
+                        }                       
                     }
                 }
                 catch (Exception e)
@@ -80,7 +77,7 @@ namespace Raven.Client.RavenFS.Connections
 
         protected override void UpdateReplicationInformationFromDocument(JsonDocument document)
         {
-            var destinations = document.DataAsJson.Value<RavenJArray>("destinations").Select(x => JsonConvert.DeserializeObject<SynchronizationDestination>(x.ToString()));
+            var destinations = document.DataAsJson.Value<RavenJArray>("Destinations").Select(x => JsonConvert.DeserializeObject<SynchronizationDestination>(x.ToString()));
             ReplicationDestinations = destinations.Select(x =>
             {
                 ICredentials credentials = null;

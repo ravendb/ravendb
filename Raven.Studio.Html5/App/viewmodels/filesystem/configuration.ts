@@ -2,6 +2,7 @@
 import system = require("durandal/system");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
+import ace = require("ace/ace");
 
 import filesystem = require("models/filesystem/filesystem");
 import viewModelBase = require("viewmodels/viewModelBase");
@@ -15,37 +16,84 @@ class configuration extends viewModelBase {
 
     keys = ko.observableArray<configurationKey>();
     selectedKey = ko.observable<configurationKey>().subscribeTo("ActivateConfigurationKey").distinctUntilChanged();
-    keyValues = ko.observableArray<Pair<string, string>>();
     selectedKeyValue = ko.observable<Pair<string, string>>();
     currentKey = ko.observable<configurationKey>();
+    configurationEditor: AceAjax.Editor;
+    configurationKeyText = ko.observable<string>();
+    isBusy = ko.observable(false);
+    isSaveEnabled: KnockoutComputed<boolean>;
+    subscription: any;
 
     constructor() {
         super();
         this.selectedKey.subscribe(k => this.selectedKeyChanged(k));
+
+        // When we programmatically change a configuration doc, push it into the editor.
+        this.subscription = this.configurationKeyText.subscribe(() => this.updateConfigurationText());
     }
 
     canActivate(args: any) {
         return true;
     }
 
-    attached() {
+    activate(navigationArgs) {
+        super.activate(navigationArgs);
 
-        this.activeFilesystem.subscribe(x => {
-            this.loadKeys(x);     
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.configurationKeyText]);
+
+        this.isSaveEnabled = ko.computed(() => {
+            return viewModelBase.dirtyFlag().isDirty();
         });
-        
+    }
+
+    attached() {
+        this.activeFilesystem.subscribe(x => {
+            this.loadKeys(x);
+        });
+
         (<any>$('.keys-collection')).contextmenu({
             target: '#keys-context-menu'
-        }); 
+        });
 
-        this.loadKeys(this.activeFilesystem()); 
+        this.loadKeys(this.activeFilesystem());
+        this.initializeDocEditor();
+        this.configurationEditor.focus();
+    }
+
+    initializeDocEditor() {
+        // Startup the Ace editor with JSON syntax highlighting.
+        this.configurationEditor = ace.edit("configurationEditor");
+        this.configurationEditor.setTheme("ace/theme/github");
+        this.configurationEditor.setFontSize("16px");
+        this.configurationEditor.getSession().setMode("ace/mode/json");
+        $("#configurationEditor").on('keyup', ".ace_text-input", () => this.storeEditorTextIntoObservable());
+        this.updateConfigurationText();
+    }
+
+    storeEditorTextIntoObservable() {
+        if (this.configurationEditor) {
+            var text = this.configurationEditor.getSession().getValue();
+
+            this.subscription.dispose();
+            this.configurationKeyText(text);
+            this.subscription = this.configurationKeyText.subscribe(() => this.updateConfigurationText());
+        }
+    }
+
+    updateConfigurationText() {
+        if (this.configurationEditor) {
+            this.configurationEditor.getSession().setValue(this.configurationKeyText());
+        }
     }
 
     loadKeys(fs: filesystem){
         new getConfigurationCommand(fs)
             .execute()
-            .done(x => {
-                this.keys(x);          
+            .done( (x: configurationKey[]) => {
+                this.keys(x);
+                if (x.length > 0) {
+                    this.selectedKey(x[0]);
+                }
             });
     }
 
@@ -56,24 +104,11 @@ class configuration extends viewModelBase {
 
     selectedKeyChanged(selected: configurationKey) {
         if (selected) {
-            selected.getValues().done(x => {
-
-                //we collapse the dictionary into a flattened value pair array to show in the UI.
-                var nameValueCollection = new Array<Pair<string, string>>();
-                
-                for (var i = 0; i < x.length; i++) {
-                    var pair = x[i];
-                    var name = pair.item1;
-                    for (var j = 0; j < pair.item2.length; j++) {
-                        var value = pair.item2[j];
-                        nameValueCollection.push(new Pair(name, value));
-                    }
-                }
-
-                if (nameValueCollection.length == 0)
-                    nameValueCollection.push(new Pair("", ""));   
-
-                this.keyValues(nameValueCollection);
+            this.isBusy(true);
+            selected.getValues().done(data => {
+                this.configurationKeyText(data);
+            }).always(() => {
+                this.isBusy(false);
             });
 
             this.currentKey(selected);
@@ -85,48 +120,21 @@ class configuration extends viewModelBase {
     }
 
     save() {
+        var jsonConfigDoc = JSON.parse(this.configurationKeyText());
+        var saveCommand = new saveConfigurationCommand(this.activeFilesystem(), this.currentKey(), jsonConfigDoc);
+        var saveTask = saveCommand.execute();
+        saveTask.done((result) => {
+            // Resync Changes
+            viewModelBase.dirtyFlag().reset();
+        });
+    }
 
-        var args: { [name: string]: string[]; } = {};
-        var values = this.keyValues();
-
-        for (var i = 0; i < values.length; i++) {
-
-            var key = values[i].item1;
-            if (key == null || key == "")
-                continue;
-
-            var value = values[i].item2;
-            if (value == null || value == "")
-                continue;
-
-            if (args[key] == null) {
-                args[key] = [value];
-            }
-            else {
-                args[key].push(value);
-            }
-        }
-
-        new saveConfigurationCommand(this.activeFilesystem(), this.currentKey(), args).execute();
+    refreshConfig() {
+        //this.selectKey(this.currentKey());
     }
 
     deleteKey() {
         throw new Error("Not Implemented");
-    }
-
-    addKeyValue() {
-        this.keyValues.push(new Pair("", ""));
-    }
-
-    removeKeyValue(keyValue) {
-
-        if (keyValue) {
-            this.keyValues.remove(keyValue);
-        }
-
-        if (this.keyValues.length == 0) {
-            this.keyValues.push(new Pair("", ""));
-        }
     }
 } 
 

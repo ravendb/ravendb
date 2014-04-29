@@ -49,6 +49,8 @@ class ctor {
         customColumnParams: { [column: string]: customColumnParams };
         isIndexMapReduce: KnockoutObservable<boolean>;
         isCopyAllowed: boolean;
+        contextMenuOptions: string[];
+        selectionEnabled: boolean;
         customColumns: KnockoutObservable<customColumns>;
     }
 
@@ -64,6 +66,8 @@ class ctor {
             customColumnParams: {},
             isIndexMapReduce: ko.observable<boolean>(true),
             isCopyAllowed: true,
+            contextMenuOptions: ["CopyItems", "CopyIDs", "Delete"],
+            selectionEnabled: true,
             customColumns: ko.observable(customColumns.empty())
         };
         this.settings = $.extend(defaults, settings);
@@ -230,13 +234,7 @@ class ctor {
                     this.virtualRowCount(resultSet.totalResultCount);
                     resultSet.items.forEach((r, i) => this.fillRow(r, i + firstVisibleIndex));
                     this.ensureColumnsForRows(resultSet.items);
-                    this.recycleRows.valueHasMutated();
-                    this.columns.valueHasMutated();
-
-                    var rows = this.recycleRows();
-                    var columns = this.columns();
                 }
-                this.recycleRows.valueHasMutated();
             });
         }
     }

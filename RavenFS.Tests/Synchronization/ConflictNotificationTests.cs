@@ -7,6 +7,7 @@ using Raven.Client.RavenFS;
 using Raven.Client.RavenFS.Changes;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
+using Raven.Json.Linq;
 
 namespace RavenFS.Tests.Synchronization
 {
@@ -27,12 +28,12 @@ namespace RavenFS.Tests.Synchronization
 			var sourceContent = new RandomlyModifiedStream(new RandomStream(1), 0.01);
 			var destinationContent = new RandomlyModifiedStream(sourceContent, 0.01);
 
-			var sourceMetadata = new NameValueCollection
+            var sourceMetadata = new RavenJObject
 				                     {
 					                     {"SomeTest-metadata", "some-value"}
 				                     };
 
-			var destinationMetadata = new NameValueCollection
+            var destinationMetadata = new RavenJObject
 				                          {
 					                          {"SomeTest-metadata", "should-be-overwritten"}
 				                          };
