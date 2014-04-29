@@ -77,7 +77,7 @@
                                 <input required name="ravenEntityName" type="text" class="form-control" data-bind="value: ravenEntityName, valueUpdate: 'keyup', attr: { 'id': 'sourceDocumentCollection' + $index() }" />
                                 <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#sourceDocumentCollection' + $index(), foreach: searchResults">
                                     <li role="presentation" data-bind="click: $parent.saveNewRavenEntityName.bind($parent, $data)">
-                                        <a role="menuitem" tabindex="-1">
+                                        <a role="menuitem" tabindex="-1" href="#">
                                             <span data-bind="text: $data"></span>
                                         </a>
                                     </li>
