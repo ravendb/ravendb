@@ -662,6 +662,20 @@ footer ul {
   max-width: 800px;
   width: 600px;
 }
+.license-error {
+  color: #d2322d;
+}
+.remove-icon{
+  color: #d2322d;
+  border-color: #ac2925;
+  cursor: pointer;
+}
+.remove-icon:hover{
+  color: #d2322d;
+}
+.fa-plus{
+  color: #58cc46;
+}
 .filesystem-page .btn-toolbar {
   margin-bottom: 20px;
 }
@@ -724,16 +738,5 @@ footer ul {
 #editFileContainer hr {
   border-color: red;
   margin-top: 5px;
-}
-.remove-icon {
-  color: #d2322d;
-  border-color: #ac2925;
-  cursor: pointer;
-}
-.remove-icon:hover {
-  color: #d2322d;
-}
-.fa-plus {
-  color: #58cc46;
 }
 /*# sourceMappingURL=app.css.map */
