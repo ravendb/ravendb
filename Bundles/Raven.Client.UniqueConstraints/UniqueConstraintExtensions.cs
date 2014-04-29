@@ -68,8 +68,8 @@ namespace Raven.Client.UniqueConstraints
 				var constraintDocs = session.Include("RelatedId").Load<RavenJObject>(uniqueIds);
 				if (constraintDocs != null)
 				{
-					string nullId = Guid.NewGuid().ToString(); // simple way to maintain parallel results array - this ID should never exist in the DB
-					var ids = constraintDocs.Select(d => d == null ? nullId : d.Value<string>("RelatedId")).ToArray();
+					// simple way to maintain parallel results array - DummyId should never exist in the DB
+					var ids = constraintDocs.Select(d => d == null ? DummyId : d.Value<string>("RelatedId")).ToArray();
 					return session.Load<T>(ids);
 				}
 			}
@@ -77,7 +77,7 @@ namespace Raven.Client.UniqueConstraints
 			return values.Select(v => default(T)).ToArray();
 		}
 
-
+	    public const string DummyId = "E1972AA7-148D-4035-9779-0EDFB3A7DBFF";
 
 		private static string GetPropropertyNameForKeySelector<T>(Expression<Func<T, object>> keySelector)
 		{
