@@ -193,15 +193,11 @@ namespace Voron.Trees
 
 		public void ChangeImplicitRefPageNode(long implicitRefPageNumber)
 		{
-			var implicitRefKey = Slice.Empty;
 			const int implicitRefIndex = 0;
 
 			var node = GetNode(implicitRefIndex);
 
-			if (implicitRefKey.Options == SliceOptions.Key)
-				implicitRefKey.CopyTo((byte*)node + Constants.NodeHeaderSize);
-
-			node->KeySize = implicitRefKey.Size;
+			node->KeySize = 0;
 			node->Flags = NodeFlags.PageRef;
 			node->Version = 1;
 			node->PageNumber = implicitRefPageNumber;
