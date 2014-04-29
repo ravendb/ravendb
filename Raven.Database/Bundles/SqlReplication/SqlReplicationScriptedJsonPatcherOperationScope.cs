@@ -12,7 +12,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		{
 		}
 
-		public override RavenJObject ConvertReturnValue(JsObject jsObject)
+		public override RavenJObject ConvertReturnValue(JsValue jsObject)
 		{
 			return null;// we don't use / need the return value
 		}
