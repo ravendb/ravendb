@@ -21,6 +21,8 @@ namespace Raven.Tests.Common
 {
     public class RavenTest : RavenTestBase
     {
+		protected bool ShowLogs { get; set; }
+
         static RavenTest()
         {
             LogManager.RegisterTarget<DatabaseMemoryTarget>();
@@ -31,7 +33,42 @@ namespace Raven.Tests.Common
             SystemTime.UtcDateTime = () => DateTime.UtcNow;
         }
 
-        protected void Consume(object o)
+	    public override void Dispose()
+	    {
+		    ShowLogsIfNecessary();
+
+		    base.Dispose();
+	    }
+
+	    private void ShowLogsIfNecessary()
+	    {
+		    if (!ShowLogs)
+			    return;
+
+		    foreach (var databaseName in DatabaseNames)
+		    {
+			    var target = LogManager.GetTarget<DatabaseMemoryTarget>()[databaseName];
+			    if (target == null)
+				    continue;
+
+			    Console.WriteLine("Logs for: " + databaseName);
+
+			    foreach (var info in target.GeneralLog)
+			    {
+					Console.WriteLine("========================================");
+					Console.WriteLine("Time: " + info.TimeStamp);
+					Console.WriteLine("Level: " + info.Level);
+					Console.WriteLine("Logger: " + info.LoggerName);
+					Console.WriteLine("Message: " + info.FormattedMessage);
+					Console.WriteLine("Exception: " + info.Exception);
+					Console.WriteLine("========================================");
+			    }
+
+			    Console.WriteLine();
+		    }
+	    }
+
+	    protected void Consume(object o)
         {
 
         }
