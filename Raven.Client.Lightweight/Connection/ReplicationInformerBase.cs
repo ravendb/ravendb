@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -16,6 +17,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -85,8 +87,10 @@ namespace Raven.Client.Connection
 		protected readonly System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter>();
 
 		protected Task refreshReplicationInformationTask;
+	    private bool _fallbackPollingActive = false;
+	    private readonly ManualResetEventSlim _reconnectedWithPrimaryServerEvent = new ManualResetEventSlim();
 
-		public class FailureCounter
+	    public class FailureCounter
 		{
 			public long Value;
 			public DateTime LastCheck;
@@ -130,11 +134,11 @@ namespace Raven.Client.Connection
 				return true;
 			}
 
-			if (currentRequest % GetCheckRepetitionRate(failureCounter.Value) == 0)
-			{
-				failureCounter.LastCheck = SystemTime.UtcNow;
-				return true;
-			}
+            //if (currentRequest % GetCheckRepetitionRate(failureCounter.Value) == 0)
+            //{
+            //    failureCounter.LastCheck = SystemTime.UtcNow;
+            //    return true;
+            //}
 
 			if ((SystemTime.UtcNow - failureCounter.LastCheck) > conventions.MaxFailoverCheckPeriod)
 			{
@@ -269,45 +273,71 @@ namespace Raven.Client.Connection
 					// if it is failing, ignore that, and move to the master or any of the replicas
 					if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex].Url, currentRequest, method, false))
 					{
-                        var tuple = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true).ConfigureAwait(false);
+					    var tuple = await IsDestinationOnline<T>(operation, localReplicationDestinations[replicationIndex], primaryOperation, true);
+                       // var tuple = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true).ConfigureAwait(false);
 						if (tuple.Success)
 							return tuple.Result;
 						timeoutThrown = tuple.WasTimeout;
 					}
 				}
 			}
+            if (_reconnectedWithPrimaryServerEvent.IsSet)
+            {
+                var tuple = await IsDestinationOnline<T>(operation, primaryOperation, null, !timeoutThrown && localReplicationDestinations.Count > 0);
 
+                // var tuple = await TryOperationAsync(operation, primaryOperation, null, !timeoutThrown && localReplicationDestinations.Count > 0).ConfigureAwait(false);
+                if (tuple.Success)
+                    return tuple.Result;
+
+            }
 			if (ShouldExecuteUsing(primaryOperation.Url, currentRequest, method, true))
 			{
-                var tuple = await TryOperationAsync(operation, primaryOperation, null, !timeoutThrown && localReplicationDestinations.Count > 0).ConfigureAwait(false);
+                var tuple = await IsDestinationOnline<T>(operation, primaryOperation, null, !timeoutThrown && localReplicationDestinations.Count > 0);
+
+               // var tuple = await TryOperationAsync(operation, primaryOperation, null, !timeoutThrown && localReplicationDestinations.Count > 0).ConfigureAwait(false);
 				if (tuple.Success)
 					return tuple.Result;
 				timeoutThrown = tuple.WasTimeout;
 
 				if (!timeoutThrown && IsFirstFailure(primaryOperation.Url))
 				{
-                    tuple = await TryOperationAsync(operation, primaryOperation, null, localReplicationDestinations.Count > 0).ConfigureAwait(false);
+                    tuple = await IsDestinationOnline<T>(operation, primaryOperation, null,  localReplicationDestinations.Count > 0);
+
+                   // tuple = await TryOperationAsync(operation, primaryOperation, null, localReplicationDestinations.Count > 0).ConfigureAwait(false);
 					if (tuple.Success)
 						return tuple.Result;
 					timeoutThrown = tuple.WasTimeout;
 				}
 				IncrementFailureCount(primaryOperation.Url);
-			}
+			    if ((!tuple.Success) && (_fallbackPollingActive == false))
+			    {
+			        //Task.Factory.StartNew(() => ServerPolling_Thread(operation, primaryOperation));
+			        var t = new Thread(() => ServerPolling_Thread(operation, primaryOperation));
+			        t.Start();
+			    }
 
-			for (var i = 0; i < localReplicationDestinations.Count; i++)
+
+			}
+      
+			
+            for (var i = 0; i < localReplicationDestinations.Count; i++)
 			{
 				var replicationDestination = localReplicationDestinations[i];
 				if (ShouldExecuteUsing(replicationDestination.Url, currentRequest, method, false) == false)
 					continue;
 
-                var tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, !timeoutThrown).ConfigureAwait(false);
+                var tuple = await IsDestinationOnline<T>(operation, replicationDestination, primaryOperation, !timeoutThrown );
+
+                //var tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, !timeoutThrown).ConfigureAwait(false);
 				if (tuple.Success)
 					return tuple.Result;
 				timeoutThrown = tuple.WasTimeout;
 
 				if (!timeoutThrown && IsFirstFailure(replicationDestination.Url))
 				{
-                    tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, localReplicationDestinations.Count > i + 1).ConfigureAwait(false);
+                    tuple = await IsDestinationOnline<T>(operation, replicationDestination, primaryOperation, localReplicationDestinations.Count > i + 1);
+
+                   // tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, localReplicationDestinations.Count > i + 1).ConfigureAwait(false);
 					if (tuple.Success)
 						return tuple.Result;
 					timeoutThrown = tuple.WasTimeout;
@@ -319,6 +349,76 @@ namespace Raven.Client.Connection
 There is a high probability of a network problem preventing access to all the replicas.
 Failed to get in touch with any of the " + (1 + localReplicationDestinations.Count) + " Raven instances.");
 		}
+
+        private void ServerPolling_Thread<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata replicationDestination)
+        {
+            _reconnectedWithPrimaryServerEvent.Reset();
+            _fallbackPollingActive = true;
+            int failureCount = 0;
+            while (failureCount < 15)
+            {
+                //   var tuple = await IsDestinationOnline<T>(operation, primaryOperation, null, true);
+                var hasSucceeded = IsPrimaryServerOnline(operation, replicationDestination);
+                if (hasSucceeded)
+                {
+                    _reconnectedWithPrimaryServerEvent.Set();
+                    break;
+                }
+
+                failureCount++;
+
+                Thread.Sleep(1000);
+            }
+            _fallbackPollingActive = false;
+        }
+
+
+       
+
+	   
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+	    private async Task<AsyncOperationResult<T>> IsDestinationOnline<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata replicationDestination, OperationMetadata primaryOperation,  bool timeoutThrown)
+        {
+          
+            var tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, timeoutThrown).ConfigureAwait(false);
+            return tuple;
+
+        }
+        private bool IsPrimaryServerOnline<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata replicationDestination)
+	    {
+            bool wasTimeout;
+           Task<T> result=null ;
+            try
+            {
+                var res=TryOperation(operation, replicationDestination, null, true, out result, out wasTimeout);
+                if (result != null)
+                {
+                    result.Wait();
+                    return !result.IsFaulted;
+   
+                }
+                return false;
+             }
+            catch (AggregateException )
+            {
+                if (result != null)
+                    return !result.IsFaulted;
+               
+                    return false;
+                
+            }
+ 
+           
+ 
+	    }
+
+	    public async Task<object> PollServer<T>(OperationMetadata primaryOperation, bool avoidThrowing , Func<OperationMetadata, Task<T>> operation)
+	    {
+            var tuple = await TryOperationAsync(operation,  primaryOperation,null, avoidThrowing).ConfigureAwait(false);
+            if (tuple.Success)
+                return tuple.Result;
+            return null;
+	    }
 
 	    protected class AsyncOperationResult<T>
 	    {
