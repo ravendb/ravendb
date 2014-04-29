@@ -109,7 +109,6 @@ class filesystemSynchronization extends viewModelBase {
         }
     }
 
-
     collapseAll() {
         $(".synchronization-group-content").collapse('hide');
     }
