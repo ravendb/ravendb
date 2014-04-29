@@ -31,14 +31,13 @@ namespace Voron.Trees
 
             if (page.NumberOfEntries == 0) // empty page, just delete it and fixup parent
             {
-				// need to delete the implicit left page, shift right 
-                if (parentPage.LastSearchPosition == 0 && parentPage.NumberOfEntries > 2)
-                {
+				// need to change the implicit left page
+				if (parentPage.LastSearchPosition == 0 && parentPage.NumberOfEntries > 2)
+				{
 					var newImplicit = parentPage.GetNode(1)->PageNumber;
-                    parentPage.RemoveNode(0);
-                    parentPage.RemoveNode(0);
-                    parentPage.AddPageRefNode(0, Slice.Empty, newImplicit);
-                }
+					parentPage.RemoveNode(0);
+					parentPage.ChangeImplicitRefPageNode(newImplicit);
+				}
                 else // will be set to rights by the next rebalance call
                 {
                     parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry);
