@@ -579,7 +579,8 @@ namespace Raven.Client.Document
                 throw new NotSupportedException(
                     "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
 
-            var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
+			IncrementRequestCount(); 
+			var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
             return YieldQuery(query, enumerator);
         }
 
@@ -628,12 +629,14 @@ namespace Raven.Client.Document
 
         public FacetResults[] MultiFacetedSearch(params FacetQuery[] facetQueries)
         {
-            return DatabaseCommands.GetMultiFacets(facetQueries);
+			IncrementRequestCount(); 
+			return DatabaseCommands.GetMultiFacets(facetQueries);
         }
 
         private IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation)
         {
-            using (var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation))
+			IncrementRequestCount();
+			using (var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation))
             {
                 while (enumerator.MoveNext())
                 {
@@ -869,7 +872,8 @@ namespace Raven.Client.Document
 
         private bool ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation)
         {
-            var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
+			IncrementRequestCount();
+			var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
             try
             {
                 if (DatabaseCommands is ServerClient) // server mode
@@ -937,6 +941,7 @@ namespace Raven.Client.Document
 
         public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null)
         {
+			IncrementRequestCount();
             return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude, pagingInformation: pagingInformation)
                                    .Select(TrackEntity<T>)
                                    .ToArray();
@@ -948,6 +953,7 @@ namespace Raven.Client.Document
 	                                                             Action<ILoadConfiguration> configure = null)
 		    where TTransformer : AbstractTransformerCreationTask, new()
 	    {
+			IncrementRequestCount();
 		    var transformer = new TTransformer().TransformerName;
 
 			var configuration = new RavenLoadConfiguration();
@@ -965,6 +971,7 @@ namespace Raven.Client.Document
 
 	    public Lazy<TResult[]> MoreLikeThis<TResult>(MoreLikeThisQuery query)
         {
+			IncrementRequestCount();
             var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, null, null);
             var lazyOp = new LazyMoreLikeThisOperation<TResult>(multiLoadOperation, query);
             return AddLazyOperation<TResult[]>(lazyOp, null);
