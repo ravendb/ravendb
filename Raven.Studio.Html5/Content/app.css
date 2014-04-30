@@ -1,4 +1,4 @@
-html,
+﻿html,
 body {
   height: 100%;
 }
@@ -64,6 +64,18 @@ body {
 .dropdown-menu .selected {
   color: #555;
   background-color: #e7e7e7;
+}
+.vertical-bottom-container {
+  width: 10%!important;
+  padding: 0 40% 0 40% !important;
+}
+.vertical-navbar-menu-item {
+  float: none!important;
+  display: block;
+  padding: 0 0 0 0;
+}
+.vertical-navbar-menu-item a {
+  padding: 0 0 0 0;
 }
 .panel span {
   overflow: hidden;
