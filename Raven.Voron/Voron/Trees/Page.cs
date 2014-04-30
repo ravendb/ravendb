@@ -74,7 +74,7 @@ namespace Voron.Trees
 				pageKey.Set(GetNode(0));
 				LastMatch = key.Compare(pageKey, cmp);
 				LastSearchPosition = LastMatch > 0 ? 1 : 0;
-				return LastSearchPosition > NumberOfEntries ? null : GetNode(0);
+				return LastSearchPosition == 0 ? GetNode(0) : null;
 			}
 
 			int low = IsLeaf ? 0 : 1;
