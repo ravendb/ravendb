@@ -92,6 +92,8 @@
     <Compile Include="Utils\Transformers\PostWithMetadataForTransformer.cs" />
     <Compile Include="Utils\Transformers\PostWithContentTransformer.cs" />
     <Compile Include="Utils\Transformers\UserWithCustomDataAndAddressIncludeTransformer.cs" />
+    <Compile Include="Utils\Indexes\Companies_WithReferencedEmployees.cs" />
+    <Compile Include="Utils\Transformers\CompanyEmployeesTransformer.cs" />
     <None Include="app.config" />
     <None Include="packages.config" />
     <Compile Include="Commands\Admin.cs" />
