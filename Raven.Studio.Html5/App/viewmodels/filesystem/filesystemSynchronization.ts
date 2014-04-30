@@ -16,6 +16,7 @@ import saveDestinationCommand = require("commands/filesystem/saveDestinationComm
 import deleteDestinationCommand = require("commands/filesystem/deleteDestinationCommand");
 import synchronizeNowCommand = require("commands/filesystem/synchronizeNowCommand");
 import synchronizeWithDestinationCommand = require("commands/filesystem/synchronizeWithDestinationCommand");
+import resolveConflictCommand = require("commands/filesystem/resolveConflictCommand");
 
 import filesystemAddDestination = require("viewmodels/filesystem/filesystemAddDestination");
 import resolveConflict = require("viewmodels/filesystem/resolveConflict");
@@ -129,7 +130,15 @@ class filesystemSynchronization extends viewModelBase {
             var resolveConflictViewModel: resolveConflict = new resolveConflict(message, "Resolve conflict with local");
             resolveConflictViewModel
                 .resolveTask
-                .done(x => alert("Conflict resolved locally"));
+                .done(x => {
+                    var fs = this.activeFilesystem();
+
+                    for (var i = 0; i < this.selectedConflicts().length;  i++) {
+                        var conflict = this.selectedConflicts()[i];
+                        new resolveConflictCommand(conflict, 1, fs).execute()
+                        .done(alert("Conflicts resolved!"));
+                    }
+                });
             app.showDialog(resolveConflictViewModel);
         });
     }
