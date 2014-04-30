@@ -3,14 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Collections.Concurrent;
+
 using Raven.Abstractions.Util.Streams;
-using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
 	using System;
 	using System.Collections.Generic;
-	using System.Diagnostics;
 	using System.Linq;
 	using System.Threading;
 
@@ -69,8 +69,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					ushort version;
 					var reduceStats = Load(tableStorage.ReduceStats, key, out version);
 					var lastIndexedEtag = Load(tableStorage.LastIndexedEtags, key, out version);
+					var priority = ReadPriority(key);
+					var touches = ReadTouches(key);
 
-					yield return GetIndexStats(indexStats, reduceStats, lastIndexedEtag);
+					yield return GetIndexStats(indexStats, reduceStats, lastIndexedEtag, priority, touches);
 				}
 				while (indexingStatsIterator.MoveNext());
 			}
@@ -85,8 +87,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var indexStats = Load(tableStorage.IndexingStats, key, out version);
 			var reduceStats = Load(tableStorage.ReduceStats, key, out version);
 			var lastIndexedEtags = Load(tableStorage.LastIndexedEtags, key, out version);
+			var priority = ReadPriority(key);
+			var touches = ReadTouches(key);
 
-			return GetIndexStats(indexStats, reduceStats, lastIndexedEtags);
+			return GetIndexStats(indexStats, reduceStats, lastIndexedEtags, priority, touches);
 		}
 
 		public void AddIndex(int id, bool createMapReduce)
@@ -105,11 +109,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					{ "attempts", 0 },
 					{ "successes", 0 },
 					{ "failures", 0 },
-					{ "priority", 1 },
-					{ "touches", 0 },
 					{ "createdTimestamp", SystemTime.UtcNow },
 					{ "lastIndexingTime", DateTime.MinValue }
 				}, 0);
+
+			tableStorage.IndexingMetadata.Add(writeBatch.Value, CreateKey(id, "priority"), BitConverter.GetBytes(1), 0);
+			tableStorage.IndexingMetadata.Increment(writeBatch.Value, CreateKey(id, "touches"), 0, 0);
 
 			tableStorage.ReduceStats.Add(
 				writeBatch.Value,
@@ -139,6 +144,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var key = CreateKey(id);
 
 			tableStorage.IndexingStats.Delete(writeBatch.Value, key);
+			tableStorage.IndexingMetadata.Delete(writeBatch.Value, CreateKey(id, "priority"));
+			tableStorage.IndexingMetadata.Delete(writeBatch.Value, CreateKey(id, "touches"));
 			tableStorage.ReduceStats.Delete(writeBatch.Value, key);
 			tableStorage.LastIndexedEtags.Delete(writeBatch.Value, key);
 		}
@@ -158,14 +165,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public void SetIndexPriority(int id, IndexingPriority priority)
 		{
-			var key = CreateKey(id);
-
-			ushort version;
-			var index = Load(tableStorage.IndexingStats, key, out version);
-
-			index["priority"] = (int)priority;
-
-			tableStorage.IndexingStats.Add(writeBatch.Value, key, index, version);
+			tableStorage.IndexingMetadata.Add(writeBatch.Value, CreateKey(id, "priority"), BitConverter.GetBytes((int)priority));
 		}
 
 		public IndexFailureInformation GetFailureRate(int id)
@@ -221,14 +221,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public void TouchIndexEtag(int id)
 		{
-			var key = CreateKey(id);
-
-			ushort version;
-			var index = Load(tableStorage.IndexingStats, key, out version);
-
-			index["touches"] = index.Value<int>("touches") + 1;
-
-			tableStorage.IndexingStats.Add(writeBatch.Value, key, index, version);
+			tableStorage.IndexingMetadata.Increment(writeBatch.Value, CreateKey(id, "touches"), 1);
 		}
 
 		public void UpdateIndexingStats(int id, IndexingWorkStats stats)
@@ -352,8 +345,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			{
 				var count = 0;
 
-				if (!iterator.Seek(Slice.BeforeAllKeys)) return
-					count;
+				if (!iterator.Seek(Slice.BeforeAllKeys)) 
+					return count;
 
 				do
 				{
@@ -398,11 +391,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return value;
 		}
 
-		private static IndexStats GetIndexStats(RavenJToken indexingStats, RavenJToken reduceStats, RavenJToken lastIndexedEtags)
+		private static IndexStats GetIndexStats(RavenJToken indexingStats, RavenJToken reduceStats, RavenJToken lastIndexedEtags, int priority, int touches)
 		{
 			return new IndexStats
 			{
-				TouchCount = indexingStats.Value<int>("touches"),
+				TouchCount = touches,
 				IndexingAttempts = indexingStats.Value<int>("attempts"),
 				IndexingErrors = indexingStats.Value<int>("failures"),
 				IndexingSuccesses = indexingStats.Value<int>("successes"),
@@ -410,7 +403,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				ReduceIndexingErrors = reduceStats.Value<int?>("reduce_failures"),
 				ReduceIndexingSuccesses = reduceStats.Value<int?>("reduce_successes"),
 				Id = indexingStats.Value<int>("index"),
-				Priority = (IndexingPriority)indexingStats.Value<int>("priority"),
+				Priority = (IndexingPriority)priority,
 				LastIndexedEtag = Etag.Parse(lastIndexedEtags.Value<byte[]>("lastEtag")),
 				LastIndexedTimestamp = lastIndexedEtags.Value<DateTime>("lastTimestamp"),
 				CreatedTimestamp = indexingStats.Value<DateTime>("createdTimestamp"),
@@ -460,6 +453,16 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			documentReferencesByRef.MultiDelete(writeBatch.Value, CreateKey(reference), id);
 			documentReferencesByView.MultiDelete(writeBatch.Value, CreateKey(view), id);
 			documentReferencesByViewAndKey.MultiDelete(writeBatch.Value, CreateKey(view, key), id);
+		}
+
+		private int ReadPriority(string key)
+		{
+			return tableStorage.IndexingMetadata.Read(Snapshot, CreateKey(key, "priority"), writeBatch.Value).Reader.ReadLittleEndianInt32();
+		}
+
+		private int ReadTouches(string key)
+		{
+			return tableStorage.IndexingMetadata.Read(Snapshot, CreateKey(key, "touches"), writeBatch.Value).Reader.ReadLittleEndianInt32();
 		}
 	}
 }
