@@ -1,4 +1,4 @@
-html,
+﻿html,
 body {
   height: 100%;
 }
@@ -48,6 +48,9 @@ body {
 }
 .loader.active {
   visibility: visible;
+}
+.replicationError {
+  color: red;
 }
 .side-panel li {
   max-width: 20%;
