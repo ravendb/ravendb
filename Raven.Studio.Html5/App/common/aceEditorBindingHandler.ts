@@ -18,7 +18,9 @@ class aceEditorBindingHandler {
         lang: "ace/mode/csharp",
         readOnly: false
     }
-    
+
+    static dom = require("ace/lib/dom");    
+    static commands = require("ace/commands/default_commands").commands;
     
     static install() {
         if (!ko.bindingHandlers["aceEditor"]) {
@@ -38,6 +40,18 @@ class aceEditorBindingHandler {
                     value: "general"
                 }
             });
+
+            /// taken from https://github.com/ajaxorg/ace-demos/blob/master/scrolling-editor.html
+            aceEditorBindingHandler.commands.push({
+                name: "Toggle Fullscreen",
+                bindKey: "F11",
+                exec: function(editor) {
+                    aceEditorBindingHandler.dom.toggleCssClass(document.body, "fullScreen");
+                    aceEditorBindingHandler.dom.toggleCssClass(editor.container, "fullScreen-editor");
+                    editor.resize();
+                }
+            });
+            /// 
         }
     }
 
