@@ -77,7 +77,6 @@ class viewModelBase {
                 // For Safari
                 return message;
             }
-            return null;
         };
 
         ko.postbox.publish("SetRawJSONUrl", "");
