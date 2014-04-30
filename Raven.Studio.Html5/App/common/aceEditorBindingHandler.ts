@@ -1,6 +1,6 @@
 /// <amd-dependency path="ace/ext/language_tools" />
 /// <amd-dependency path="ace/mode/lucene" />
-/// <amd-dependency path="ace/theme/github" />
+/// <amd-dependency path="ace/theme/xcode" />
 import composition = require("durandal/composition");
 import ace = require("ace/ace");
 import aceLang = require("ace/ext/language_tools");
