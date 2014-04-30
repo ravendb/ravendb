@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
@@ -51,21 +52,32 @@ namespace Raven.Tests.Common
 			    if (target == null)
 				    continue;
 
-			    Console.WriteLine("Logs for: " + databaseName);
-
-			    foreach (var info in target.GeneralLog)
+			    using (var file = File.Open("debug_output.txt", FileMode.Append))
+			    using (var writer = new StreamWriter(file))
 			    {
-					Console.WriteLine("========================================");
-					Console.WriteLine("Time: " + info.TimeStamp);
-					Console.WriteLine("Level: " + info.Level);
-					Console.WriteLine("Logger: " + info.LoggerName);
-					Console.WriteLine("Message: " + info.FormattedMessage);
-					Console.WriteLine("Exception: " + info.Exception);
-					Console.WriteLine("========================================");
-			    }
+					WriteLine(writer);
+				    WriteLine(writer, "Logs for: " + databaseName);
 
-			    Console.WriteLine();
+				    foreach (var info in target.GeneralLog)
+				    {
+						WriteLine(writer, "========================================");
+						WriteLine(writer, "Time: " + info.TimeStamp);
+						WriteLine(writer, "Level: " + info.Level);
+						WriteLine(writer, "Logger: " + info.LoggerName);
+						WriteLine(writer, "Message: " + info.FormattedMessage);
+						WriteLine(writer, "Exception: " + info.Exception);
+						WriteLine(writer, "========================================");
+				    }
+
+				    WriteLine(writer);
+			    }
 		    }
+	    }
+
+	    private static void WriteLine(TextWriter writer, string message = "")
+	    {
+		    Console.WriteLine(message);
+			writer.WriteLine(message);
 	    }
 
 	    protected void Consume(object o)
