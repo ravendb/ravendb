@@ -6,7 +6,11 @@ import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 import synchronizationDetails = require("models/filesystem/synchronizationDetails");
+import synchronizationReport = require("models/filesystem/synchronizationReport");
+import synchronizationDetail = require("models/filesystem/synchronizationDetail");
 import synchronizationDestination = require("models/filesystem/synchronizationDestination");
+import pagedList = require("common/pagedList");
+import pagedResultSet = require("common/pagedResultSet");
 
 import getDestinationsCommand = require("commands/filesystem/getDestinationsCommand");
 import getFilesConflictsCommand = require("commands/filesystem/getFilesConflictsCommand");
@@ -27,11 +31,15 @@ class filesystemSynchronization extends viewModelBase {
     conflicts = ko.observableArray<string>();      
     isConflictsVisible = ko.computed(() => this.conflicts().length > 0); 
 
-    outgoingActivity = ko.observableArray<synchronizationDetails>();   
-    isOutgoingActivityVisible = ko.computed(() => this.outgoingActivity().length > 0); 
-       
-    incomingActivity = ko.observableArray<synchronizationDetails>();      
-    isIncomingActivityVisible = ko.computed(() => this.incomingActivity().length > 0);     
+    outgoingActivityPagedList = ko.observable<pagedList>();
+    outgoingActivity = ko.observableArray<synchronizationDetail>();   
+    //isOutgoingActivityVisible = ko.computed(() => this.outgoingActivity().length > 0); 
+    isOutgoingActivityVisible = ko.computed(() => true);
+    
+    incomingActivityPagedList = ko.observable<pagedList>();   
+    incomingActivity = ko.observableArray<synchronizationReport>();      
+    //isIncomingActivityVisible = ko.computed(() => this.incomingActivity().length > 0);
+    isIncomingActivityVisible = ko.computed(() => true);
           
     private router = router;
     synchronizationUrl = appUrl.forCurrentDatabase().filesystemSynchronization;
@@ -101,12 +109,32 @@ class filesystemSynchronization extends viewModelBase {
             new getFilesConflictsCommand(fs).execute()
                 .done(x => this.conflicts(x));                                    
 
-            new getSyncOutgoingActivitiesCommand(fs).execute()
-                .done(x => this.outgoingActivity(x));
+            this.outgoingActivityPagedList(this.createOutgoingActivityPagedList());
 
-            new getSyncIncomingActivitiesCommand(fs).execute()
-                .done(x => this.incomingActivity(x));
+            this.incomingActivityPagedList(this.createIncomingActivityPagedList());
         }
+    }
+
+    createIncomingActivityPagedList(): pagedList {
+        var fetcher = (skip: number, take: number) => this.incomingActivityFetchTask(skip, take);
+        var list = new pagedList(fetcher);
+        return list;
+    }
+
+    incomingActivityFetchTask(skip: number, take: number): JQueryPromise<pagedResultSet> {
+        var task = new getSyncIncomingActivitiesCommand(appUrl.getFilesystem(), skip, take).execute();
+        return task;
+    }
+
+    createOutgoingActivityPagedList(): pagedList {
+        var fetcher = (skip: number, take: number) => this.outgoingActivityFetchTask(skip, take);
+        var list = new pagedList(fetcher);
+        return list;
+    }
+
+    outgoingActivityFetchTask(skip: number, take: number): JQueryPromise<pagedResultSet> {
+        var task = new getSyncOutgoingActivitiesCommand(appUrl.getFilesystem(), skip, take).execute();
+        return task;
     }
 
 

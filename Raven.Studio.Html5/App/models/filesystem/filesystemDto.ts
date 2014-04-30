@@ -7,7 +7,7 @@ enum filesystemSynchronizationType {
 }
 
 interface filesystemSynchronizationDetailsDto {
-    Filename: string;
+    FileName: string;
     FileETag: string;
     DestinationUrl: string;
     Type: filesystemSynchronizationType;
