@@ -18,26 +18,28 @@ import synchronizeNowCommand = require("commands/filesystem/synchronizeNowComman
 import synchronizeWithDestinationCommand = require("commands/filesystem/synchronizeWithDestinationCommand");
 
 import filesystemAddDestination = require("viewmodels/filesystem/filesystemAddDestination");
+import resolveConflict = require("viewmodels/filesystem/resolveConflict");
 
 class filesystemSynchronization extends viewModelBase {
 
     destinations = ko.observableArray<string>();
-    isDestinationsVisible = ko.computed(() => this.destinations().length > 0); 
+    isDestinationsVisible = ko.computed(() => this.destinations().length > 0);
 
-    conflicts = ko.observableArray<string>();      
-    isConflictsVisible = ko.computed(() => this.conflicts().length > 0); 
+    conflicts = ko.observableArray<string>();
+    selectedConflicts = ko.observableArray<string>();
+    isConflictsVisible = ko.computed(() => this.conflicts().length > 0);
 
-    outgoingActivity = ko.observableArray<synchronizationDetails>();   
-    isOutgoingActivityVisible = ko.computed(() => this.outgoingActivity().length > 0); 
-       
-    incomingActivity = ko.observableArray<synchronizationDetails>();      
-    isIncomingActivityVisible = ko.computed(() => this.incomingActivity().length > 0);     
-          
+    outgoingActivity = ko.observableArray<synchronizationDetails>();
+    isOutgoingActivityVisible = ko.computed(() => this.outgoingActivity().length > 0);
+
+    incomingActivity = ko.observableArray<synchronizationDetails>();
+    isIncomingActivityVisible = ko.computed(() => this.incomingActivity().length > 0);
+
     private router = router;
     synchronizationUrl = appUrl.forCurrentDatabase().filesystemSynchronization;
 
     constructor() {
-        super();        
+        super();
     }
 
     canActivate(args: any) {
@@ -61,8 +63,8 @@ class filesystemSynchronization extends viewModelBase {
 
     private addDestinationUrl(url: synchronizationDestination) {
         var fs = this.activeFilesystem();
-        if (fs) {        
-            var self = this;    
+        if (fs) {
+            var self = this;
             new saveDestinationCommand(fs, url).execute()
                 .done(x => self.forceModelPolling());
         }
@@ -96,10 +98,10 @@ class filesystemSynchronization extends viewModelBase {
         var fs = this.activeFilesystem();
         if (fs) {
             new getDestinationsCommand(fs).execute()
-                .done(data => this.destinations(data));        
+                .done(data => this.destinations(data));
 
             new getFilesConflictsCommand(fs).execute()
-                .done(x => this.conflicts(x));                                    
+                .done(x => this.conflicts(x));
 
             new getSyncOutgoingActivitiesCommand(fs).execute()
                 .done(x => this.outgoingActivity(x));
@@ -115,6 +117,37 @@ class filesystemSynchronization extends viewModelBase {
 
     expandAll() {
         $(".synchronization-group-content").collapse('show');
+    }
+
+    resolveWithLocalVersion() {
+
+        var message = this.selectedConflicts().length == 1 ?
+            "Are you sure you want to resolve the conflict for file <b>" + this.selectedConflicts()[0] + "</b> by choosing the local version?" :
+            "Are you sure you want to resolve the conflict for <b>" + this.selectedConflicts().length + "</b> selected files by choosing the local version?";
+
+        require(["viewmodels/filesystem/resolveConflict"], resolveConflict => {
+            var resolveConflictViewModel: resolveConflict = new resolveConflict(message, "Resolve conflict with local");
+            resolveConflictViewModel
+                .resolveTask
+                .done(x => alert("Conflict resolved locally"));
+            app.showDialog(resolveConflictViewModel);
+        });
+    }
+
+    resolveWithRemoteVersion() {
+
+        var message = this.selectedConflicts().length == 1 ?
+            "Are you sure you want to resolve the conflict for file <b>" + this.selectedConflicts()[0] + "</b> by choosing the remote version?" :
+            "Are you sure you want to resolve the conflict for <b>" + this.selectedConflicts().length + "</b> selected files by choosing the remote version?";
+
+        require(["viewmodels/filesystem/resolveConflict"], resolveConflict => {
+            var resolveConflictViewModel: resolveConflict = new resolveConflict(message, "Resolve conflict with remote");
+            resolveConflictViewModel
+                .resolveTask
+                .done(x => alert("Conflict resolved remotely"));
+            app.showDialog(resolveConflictViewModel);
+        });
+
     }
 }
 
