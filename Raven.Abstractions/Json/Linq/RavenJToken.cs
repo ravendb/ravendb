@@ -380,8 +380,9 @@ namespace Raven.Json.Linq
                                         if (docChanges == null)
                                             return false;
 
-                                        isEqual = docChanges.AddChanges(DocumentsChanges.ChangeType.RemovedField);
-                                       
+                                        docChanges.AddChanges(DocumentsChanges.ChangeType.RemovedField);
+                                        isEqual = false;
+
                                     }
 
                                     if (kvp.Value == null)
@@ -391,8 +392,8 @@ namespace Raven.Json.Linq
                                             if (docChanges == null)
                                                 return false;
 
-                                            isEqual = docChanges.AddChanges(DocumentsChanges.ChangeType.NewField);
-
+                                            docChanges.AddChanges(DocumentsChanges.ChangeType.NewField);
+                                            isEqual = false;
                                            
                                         }
 
@@ -427,8 +428,8 @@ namespace Raven.Json.Linq
                                             {
                                                 if (docChanges == null)
                                                     return false;
-                                                isEqual = docChanges.AddChanges( kvp, token);
-                                               
+                                                docChanges.AddChanges( kvp, token);
+                                                isEqual = false;
                                             }
 
                                             break;
@@ -441,8 +442,8 @@ namespace Raven.Json.Linq
                                 {
                                     if (docChanges == null)
                                         return false;
-                                    isEqual = docChanges.AddChanges( curThisReader, curOtherReader, fieldName);
-                                   
+                                    docChanges.AddChanges( curThisReader, curOtherReader, fieldName);
+                                    isEqual = false;
                                 }
 
                                 break;
