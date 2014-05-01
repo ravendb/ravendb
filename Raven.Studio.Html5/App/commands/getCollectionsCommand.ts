@@ -19,10 +19,10 @@ class getCollectionsCommand extends commandBase {
        
 
         var finalResult = $.Deferred<collection[]>();
-
-        return this.runQuery()
+        this.runQuery()
             .fail((xhr: JQueryXHR) => this.createSystemIndexAndTryAgain(finalResult, xhr))
             .done((results: collection[]) => finalResult.resolve(results));
+        return finalResult;
     }
 
     runQuery(): JQueryPromise<collection[]> {
@@ -37,18 +37,12 @@ class getCollectionsCommand extends commandBase {
 
     createSystemIndexAndTryAgain(deferred: JQueryDeferred<collection[]>, originalReadError: JQueryXHR) {
         // Most often, failure to get the collections is due to the missing system index, Raven/DocumentsByEntityName.
-        // This appears to be new behavior as of 3.0: Raven doesn't create this index automatically.
+        // This appears to be new behavior as of 3.0: Raven doesn't create this index automatically for the system database.
 
-        // So, if we are unable to read the collections, we create the system index ourselves, then try again.
-        require(["commands/saveIndexDefinitionCommand"], (saveIndexDefinitionCommandCtor: any) => {
-            var systemIndex = this.createSystemIndex();
-
-            // Ctor in this case is the constructor for saveIndexDefinitionCommand.
-            new saveIndexDefinitionCommandCtor(systemIndex, 0, this.ownerDb)
-                .execute()
-                .fail(() => this.onErrorReadingCollections(deferred, originalReadError))
-                .done(() => this.retryQuery(deferred, originalReadError));
-        });
+        // Calling silverlight/ensureStartup creates the system index.
+        this.query("/silverlight/ensureStartup", null, this.ownerDb)
+            .done(() => this.retryQuery(deferred, originalReadError))
+            .fail(() => this.onErrorReadingCollections(deferred, originalReadError));
     }
 
     retryQuery(deferred: JQueryDeferred<collection[]>, originalReadError: JQueryXHR) {
@@ -60,31 +54,6 @@ class getCollectionsCommand extends commandBase {
     onErrorReadingCollections(deferred: JQueryDeferred<collection[]>, xhr: JQueryXHR) {
         this.reportError("Failed to read collections", xhr.responseText, xhr.statusText);
         deferred.reject(xhr);
-    }
-
-    createSystemIndex(): indexDefinitionDto {
-        var map = 'from doc in docs let Tag = doc["@metadata"]["Raven-Entity-Name"] select new { Tag, LastModified = (DateTime)doc["@metadata"]["Last-Modified"] }';
-        return {
-            Analyzers: {},
-            Fields: [],
-            Indexes: {},
-            InternalFieldsMapping: {},
-            IsCompiled: false,
-            IsMapReduce: false,
-            LockMode: "Unlock",
-            Map: map,
-            Maps: [map],
-            Name: "Raven/DocumentsByEntityName",
-            Reduce: null,
-            SortOptions: {},
-            SpatialIndexes: {},
-            Stores: {},
-            Suggestions: {},
-            TermVectors: {},
-            TransformResults: null,
-            Type: "Map",
-            MaxIndexOutputsPerDocument: null
-        };
     }
 }
 
