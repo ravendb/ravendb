@@ -25,7 +25,7 @@ class getFilesystemDestinationsCommand extends commandBase {
                     if (!(value instanceof Array))
                         value = [value];
 
-                    var result = value.map(x => <synchronizationDestinationDto> JSON.parse(x));
+                    var result = value.map(x => <synchronizationDestinationDto> x);
                     task.resolve(result);                        
                 }
                 else {
