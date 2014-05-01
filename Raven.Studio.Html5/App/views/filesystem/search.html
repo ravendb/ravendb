@@ -12,10 +12,10 @@
                     <div class="input-group col-lg-12">
                         <input type="text" class="form-control" data-bind="value: searchText" placeholder="E.g. __fileName:MyFile* AND __directory:/subfolder" />
                         <span class="input-group-addon" style="width: 30px">
-                            <a href="javascript:void(0)"><i class="fa fa-times"></i></a>
+                            <a href="#" data-bind="click: clear" ><i class="fa fa-times"></i></a>
                         </span>
                         <span class="input-group-addon" style="width: 30px">
-                            <a href="javascript:void(0)"><i class="fa fa-search"></i></a>
+                            <a href="#" data-bind="click: search"><i class="fa fa-search"></i></a>
                         </span>
                     </div>
                 </div>
@@ -27,47 +27,14 @@
                     <button id="fileNameStartsWith" type="button" class="btn btn-default" data-bind="click: fileNameStartsWith">File name starts with...</button>
                     <button id="fileNameEndsWith" type="button" class="btn btn-default" data-bind="click: fileNameEndsWith">File name ends with...</button>
                     <button id="fileSizeBetween" type="button" class="btn btn-default" data-bind="click: fileSizeBetween">File size...</button>
-                    <button id="hasMetadata" type="button" class="btn btn-default">Has metadata...</button>
-                    <button id="inFolder" type="button" class="btn btn-default">In folder...</button>
-                    <button id="lastModifiedBetween" type="button" class="btn btn-default">Last modified...</button>
+                    <button id="hasMetadata" type="button" class="btn btn-default" data-bind="click: hasMetadata">Has metadata...</button>
+                    <button id="inFolder" type="button" class="btn btn-default" data-bind="click: inFolder">In folder...</button>
+                    <button id="lastModifiedBetween" type="button" class="btn btn-default" data-bind="click: lastModifiedBetween">Last modified...</button>
                 </div>
             </div>
         </div>
         <div class="panel-body">
-            <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, gridSelector: '#filesGrid', isCopyAllowed: false }"></div>
+            <div id="filesGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: allFilesPagedItems, selectedIndices: selectedFilesIndices, gridSelector: '#filesGrid', contextMenuOptions: [], selectionEnabled: false }"></div>
         </div>
     </div>
-</div>
-
-<div id="hasMetadataContextMenu" hidden>
-    <form class="form-inline" role="form">
-        <div class="form-group">
-            <label>Key: </label>
-            <input type="text" class="form-control" />
-            <label> value: </label>
-            <input type="text" class="form-control" />
-        </div>
-    </form>
-</div>
-
-<div id="inFolderContextMenu" hidden>
-    <form class="form-inline" role="form">
-        <div class="form-group">
-            <label>Folder path: </label>
-            <input type="text" class="form-control" />
-        </div>
-    </form>
-</div>
-
-<div id="lastModifiedBetweenContextMenu" hidden>
-    <form class="form-inline" role="form">
-        <div class="form-group">
-            <label>Between: </label>
-            <input type="text" class="form-control" />
-            <button class="btn btn-default"><i class="fa fa-calendar"></i></button>
-            <label> and: </label>
-            <input type="text" class="form-control" />
-            <button class="btn btn-default"><i class="fa fa-calendar"></i></button>
-        </div>
-    </form>
 </div>

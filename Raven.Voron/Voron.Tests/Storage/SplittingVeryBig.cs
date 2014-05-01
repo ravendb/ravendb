@@ -1,4 +1,5 @@
-﻿using Voron.Impl;
+﻿using System.Linq;
+using Voron.Impl;
 using Voron.Impl.Paging;
 
 namespace Voron.Tests.Storage
@@ -41,7 +42,8 @@ namespace Voron.Tests.Storage
 
 			    var reader = read.Reader;
 			    Assert.Equal(buffer.Length, read.Reader.Length);
-			    Assert.Equal(buffer, reader.ReadBytes(read.Reader.Length));
+				int used;
+				Assert.Equal(buffer, reader.ReadBytes(read.Reader.Length, out used).Take(used).ToArray());
 			}
 		}
 
@@ -90,7 +92,8 @@ namespace Voron.Tests.Storage
 
 					{
 						Assert.Equal(buffer.Length, read.Reader.Length);
-						Assert.Equal(buffer, read.Reader.ReadBytes(read.Reader.Length));
+						int used;
+						Assert.Equal(buffer, read.Reader.ReadBytes(read.Reader.Length, out used).Take(used).ToArray());
 					}
 				}
 			}

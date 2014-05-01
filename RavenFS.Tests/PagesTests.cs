@@ -5,6 +5,7 @@ using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
 
 using Xunit;
+using Raven.Json.Linq;
 
 namespace RavenFS.Tests
 {
@@ -12,11 +13,7 @@ namespace RavenFS.Tests
 	{
 		readonly TransactionalStorage storage;
 
-		private readonly NameValueCollection metadataWithEtag = new NameValueCollection()
-		                                               	{
-		                                               		{"ETag", "\"" + Guid.Empty +"\""}
-		                                               	};
-
+        private readonly RavenJObject metadataWithEtag = new RavenJObject().WithETag(Guid.Empty);
 		public PagesTests()
 		{
 			IOExtensions.DeleteDirectory("test");

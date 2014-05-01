@@ -17,6 +17,8 @@ using Voron;
 using Voron.Impl;
 using Constants = Raven.Abstractions.Data.Constants;
 using VoronExceptions = Voron.Exceptions;
+using Raven.Json.Linq;
+using Raven.Database.Server.RavenFS.Extensions;
 
 namespace Raven.Database.Server.RavenFS.Storage.Voron
 {
@@ -38,10 +40,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         private IdGenerator idGenerator;
 
-        public TransactionalStorage(string path, NameValueCollection settings)
+        public TransactionalStorage(string path, RavenJObject settings)
         {
             this.path = path;
-            this.settings = settings;
+            this.settings = settings.ToNameValueCollection();
 
             bufferPool = new BufferPool(2L * 1024 * 1024 * 1024, int.MaxValue); // 2GB max buffer size (voron limit)
         }

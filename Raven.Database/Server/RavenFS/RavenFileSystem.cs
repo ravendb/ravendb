@@ -18,6 +18,7 @@ using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS
 {
@@ -59,7 +60,7 @@ namespace Raven.Database.Server.RavenFS
                 storageType = InMemoryRavenConfiguration.VoronTypeName;
             }
 
-            storage = CreateTransactionalStorage(storageType, systemConfiguration.FileSystemDataDirectory, systemConfiguration.Settings);
+            storage = CreateTransactionalStorage(storageType, systemConfiguration.FileSystemDataDirectory, systemConfiguration.Settings.ToJObject());
 			search = new IndexStorage(systemConfiguration.FileSystemIndexStoragePath, systemConfiguration.Settings);
 			sigGenerator = new SigGenerator();
 			var replicationHiLo = new SynchronizationHiLo(storage);
@@ -83,7 +84,7 @@ namespace Raven.Database.Server.RavenFS
 			AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
 		}
 
-        private static ITransactionalStorage CreateTransactionalStorage(string storageType, string path, NameValueCollection settings)
+        private static ITransactionalStorage CreateTransactionalStorage(string storageType, string path, RavenJObject settings)
         {
             switch (storageType)
             {

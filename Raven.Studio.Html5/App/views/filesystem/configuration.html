@@ -3,8 +3,7 @@
     <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2062">You can track progress here</a>
 </div>
 
-<div class="filesystems-page not-implemented-yet">
-
+<div class="filesystems-page">
     <ul class="breadcrumb">
         <li>
             <h3>
@@ -21,68 +20,37 @@
         </li>
         <!--<li class="active">
                 <span data-bind="text: currentBreadcrumbTitle"></span>
-            </li>-->
+        </li>-->
     </ul>
-
-    <div class="col-md-3">
-        <ul class="nav nav-pills nav-stacked keys-collection" data-bind="foreach: keys">
-            <li data-bind="event: { mousedown: $parent.selectKey.bind($parent) }, css: { active: $data === $parent.selectedKey() }">
-                <a href="javascript:void(0)" data-bind="text: key"></a>
-            </li>
-        </ul>
-    </div>
-
-    <div id="settingsContainer" class="col-md-9">
-        <div class="row">
-            <div class="btn-toolbar" role="toolbar">
-                <div class="btn-group">
-                    <!--<button type="button" class="btn btn-default" data-bind="click: navigateToEditSettingsDocument" title="Navigate to setting document(F2)"><i class="fa fa-edit"></i> Edit</button>-->
-                </div>
-            </div>
+    <div class="row">
+        <div class="col-md-3">
+            <ul class="nav nav-pills nav-stacked keys-collection" data-bind="foreach: keys">
+                <li data-bind="event: { mousedown: $parent.selectKey.bind($parent) }, css: { active: $data === $parent.selectedKey() }">
+                    <a href="#" data-bind="text: key, click: $parent.selectKey.bind($parent)"></a>
+                </li>
+            </ul>
         </div>
-        <div class="row">
+        <div id="settingsContainer" class="col-md-9">
             <form data-bind="submit: save">
-                <div class="table-responsive">
-                    <table data-bind="visible: keyValues().length > 0" class="table table-condensed table-no-borders">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Value</th>
-                                <th />
-                            </tr>
-                        </thead>
-                        <tbody data-bind='foreach: keyValues'>
-                            <tr>
-                                <td class="col-md-3">
-                                    <input class="form-control" data-bind="value: $data.item1, uniqueName: true" placeholder="New Key" />
-                                </td>
-                                <td class="col-md-8">
-                                    <input class="form-control" data-bind='value: $data.item2, uniqueName: true' />
-                                </td>
-                                <td class="col-md-1">
-                                    <button title="" data-bind="click: $root.removeKeyValue.bind($root, $data)" class="btn btn-default use-bootstrap-tooltip" type="button" data-original-title="Delete key/value">
-                                        <i class="fa fa-trash-o"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="3">
-                                    <button data-bind='click: addKeyValue' class="btn btn-default">Add New</button>
-                                    <button type="submit" class="btn btn-primary">Save</button>
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                <div class="row">
+                    <div class="btn-toolbar">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: save, enable: isSaveEnabled" title="Save (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+                            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: refreshConfig" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></button>
+                        </div>
+                    </div>
+                    <!--<button type="submit" class="btn btn-primary">Save</button>-->
+                </div>
+                <div class="row"> &nbsp; </div>
+                <div class="row">
+                    <pre id="configurationEditor" class="form-control use-bootstrap-tooltip" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 20 }"></pre>
                 </div>
             </form>
         </div>
+        </div>
+    <div id="keys-context-menu">
+        <ul class="dropdown-menu" role="menu">
+            <li data-bind="click: $root.deleteKey"><a tabindex="-1" href="#">Delete</a></li>
+        </ul>
     </div>
-</div>
-
-<div id="keys-context-menu">
-    <ul class="dropdown-menu" role="menu">
-        <li data-bind="click: $root.deleteKey"><a tabindex="-1" href="#">Delete</a></li>
-    </ul>
 </div>

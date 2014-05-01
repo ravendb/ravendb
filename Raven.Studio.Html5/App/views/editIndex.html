@@ -75,7 +75,7 @@
                 <div data-bind="foreach: maps" class="col-md-11">
                     <div class="row">
                         <div class="col-md-11">
-                            <pre id="indexEditor" class="form-control map" data-bind="aceEditor: { code: $data, getFocus: true, completer:$root.indexCompleter, typeName:'indexMap' }"></pre>
+                            <pre id="indexEditor" class="form-control map" data-bind="aceEditor: { code: $data, getFocus: true, lang:'ace/mode/ravenLinq'}"></pre>
                         </div>
                         <button type="button" class="close pull-left use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind=" visible: $index() !== 0 || $root.hasMultipleMaps(), click: $root.removeMap.bind($root, $index())" aria-hidden="true" title="Remove this map from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
                     </div>
@@ -90,7 +90,7 @@
                 <div class="col-md-11">
                     <div class="row">
                         <div class="col-md-11">
-                            <pre class="form-control map" data-bind="aceEditor: { code: reduce }"></pre>
+                            <pre class="form-control map" data-bind="aceEditor: { code: reduce, lang:'ace/mode/ravenLinq' }"></pre>
                         </div>
                         <button type="button" class="close pull-left use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="right" data-bind="click: $root.removeReduce.bind($root)" aria-hidden="true" title="Remove the Reduce function from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
                     </div>
@@ -104,7 +104,7 @@
                 <div class="col-md-11">
                     <div class="row">
                         <div class="col-md-11">
-                            <pre class="form-control map" data-bind="aceEditor: { code: transformResults }"></pre>
+                            <pre class="form-control map" data-bind="aceEditor: { code: transformResults, lang:'ace/mode/ravenLinq' }"></pre>
                         </div>
                         <button type="button" class="close pull-left use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind="click: $root.removeTransform.bind($root)" aria-hidden="true" title="Remove Transform Results from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
                     </div>

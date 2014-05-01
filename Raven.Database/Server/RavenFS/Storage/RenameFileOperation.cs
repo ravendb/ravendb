@@ -1,4 +1,5 @@
-﻿using System.Collections.Specialized;
+﻿using Raven.Json.Linq;
+using System.Collections.Specialized;
 
 namespace Raven.Database.Server.RavenFS.Storage
 {
@@ -8,6 +9,6 @@ namespace Raven.Database.Server.RavenFS.Storage
 
 		public string Rename { get; set; }
 
-		public NameValueCollection MetadataAfterOperation { get; set; }
+		public RavenJObject MetadataAfterOperation { get; set; }
 	}
 }

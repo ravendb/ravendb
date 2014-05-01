@@ -88,6 +88,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
     </Reference>
+    <Reference Include="Jint, Version=2.1.0.0, Culture=neutral, PublicKeyToken=2e92ba9c8d81157f, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Jint.dll</HintPath>
+    </Reference>
     <Reference Include="Jint.Raven, Version=0.9.2.0, Culture=neutral, PublicKeyToken=5fa384605d304122, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Jint.Raven.dll</HintPath>
@@ -242,6 +246,7 @@
     <Compile Include="Bugs\ArrayOfMaybeNull.cs" />
     <Compile Include="Bugs\AsyncSetBasedOps.cs" />
     <Compile Include="Bugs\Async\WebApi.cs" />
+    <Compile Include="Bugs\Async\DynamicGeneratedIds.cs" />
     <Compile Include="Bugs\Attachments.cs" />
     <Compile Include="Bugs\AvoidRaceConditionWhenWeLoadTheDataNotPatched.cs" />
     <Compile Include="Bugs\BackwardCompatibility.cs" />
@@ -532,8 +537,6 @@
     <Compile Include="Bugs\Queries\Projections.cs" />
     <Compile Include="Bugs\Queries\RangeQueries.cs" />
     <Compile Include="Bugs\Queries\StatsOnDynamicQueries.cs" />
-    <Compile Include="Bugs\Queries\TermsLocal.cs" />
-    <Compile Include="Bugs\Queries\TermsRemote.cs" />
     <Compile Include="Bugs\Queries\WithAs.cs" />
     <Compile Include="Bugs\QueryByTypeOnly.cs" />
     <Compile Include="Bugs\QueryByTypeOnlyRemote.cs" />

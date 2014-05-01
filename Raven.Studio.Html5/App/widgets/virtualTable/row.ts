@@ -74,6 +74,10 @@ class row {
             return cellVal.templateName;
         }
 
+        // Bug fix: http://issues.hibernatingrhinos.com/issue/RavenDB-2002
+        // Calling .data() registers it as a Knockout dependency; updating this 
+        // observable later will cause the cell to redraw, thus fixing the bug.
+        this.cellMap["Id"].data();
         return null;
     }
 

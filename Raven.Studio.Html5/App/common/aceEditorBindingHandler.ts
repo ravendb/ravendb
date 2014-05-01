@@ -13,7 +13,7 @@ import aceLang = require("ace/ext/language_tools");
 class aceEditorBindingHandler {
         
     defaults = {
-        theme: "ace/theme/github",
+        theme: "ace/theme/xcode",
         fontSize: "16px",
         lang: "ace/mode/csharp",
         readOnly: false

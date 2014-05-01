@@ -30,12 +30,22 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/studio-tasks/import")]
 		public async Task<HttpResponseMessage> ImportDatabase()
 		{
+            if (!this.Request.Content.IsMimeMultipartContent()) 
+            { 
+                throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType); 
+            }
+
+            var streamProvider = new MultipartMemoryStreamProvider();
+            await Request.Content.ReadAsMultipartAsync(streamProvider);
+            var fileStream = await streamProvider.Contents.First().ReadAsStreamAsync();
 			var dataDumper = new DataDumper(Database);
-			var importData = dataDumper.ImportData(new SmugglerImportOptions
+            var importOptions = new SmugglerImportOptions
 			{
-				FromStream = await InnerRequest.Content.ReadAsStreamAsync()
-			}, new SmugglerOptions());
-			throw new InvalidOperationException();
+                FromStream = fileStream
+			};
+            var options = new SmugglerOptions();
+			await dataDumper.ImportData(importOptions, options);
+            return GetEmptyMessage();
 		}
 
 
