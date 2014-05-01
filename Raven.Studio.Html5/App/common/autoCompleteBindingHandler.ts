@@ -55,6 +55,13 @@ class autoCompleteBindingHandler {
         
         input.on('keydown', (args: JQueryEventObject) => {
             var lis, curSelected;
+            if (element.style.display == "none" && args.which == 40) {
+                if ($element.children("li").length > 0) {
+                    setTimeout(() => element.style.display = "block", 0);
+                    return true;
+                }
+            }
+
             if (args.which == 40 || args.which == 38 || args.which == 13) {
                 lis = $element.children("li");
                 curSelected = $element.find('.selected');
