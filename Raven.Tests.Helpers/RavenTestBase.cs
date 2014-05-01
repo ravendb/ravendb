@@ -48,6 +48,8 @@ namespace Raven.Tests.Helpers
 		protected readonly List<IDocumentStore> stores = new List<IDocumentStore>();
 		private readonly HashSet<string> pathsToDelete = new HashSet<string>();
 
+		protected readonly HashSet<string> DatabaseNames = new HashSet<string> { Constants.SystemDatabase };
+
 		private static int pathCount;
 
 		protected RavenTestBase()
@@ -104,6 +106,7 @@ namespace Raven.Tests.Helpers
 			var documentStore = new EmbeddableDocumentStore
 			{
 				UseEmbeddedHttpServer = port.HasValue,
+				DefaultDatabase = databaseName,
 				Configuration =
 				{
 					DefaultStorageTypeName = storageType,
@@ -722,14 +725,21 @@ namespace Raven.Tests.Helpers
             if (string.IsNullOrEmpty(databaseName)) 
                 return null;
 
-            if (databaseName.Length < 50)
-                return databaseName;
+	        if (databaseName.Length < 50)
+	        {
+				DatabaseNames.Add(databaseName);
+		        return databaseName;
+	        }
 
-            var prefix = databaseName.Substring(0, 30);
+	        var prefix = databaseName.Substring(0, 30);
             var suffix = databaseName.Substring(databaseName.Length - 10, 10);
             var hash = new Guid(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(databaseName))).ToString("N").Substring(0, 8);
 
-            return string.Format("{0}_{1}_{2}", prefix, hash, suffix);
+            var name = string.Format("{0}_{1}_{2}", prefix, hash, suffix);
+
+	        DatabaseNames.Add(name);
+
+	        return name;
         }
 	}
 }
