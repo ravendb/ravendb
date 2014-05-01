@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 
@@ -308,13 +309,11 @@ namespace Raven.Json.Linq
 
         private static  void FillDifferentJsonData(DictionaryWithParentSnapshot selfObj, DictionaryWithParentSnapshot otherObj, Dictionary<string, string> diffData)
         {
+            Debug.Assert(diffData != null,"Precaution --> parameter should not be null");
+
             string[] diffNames;
             DictionaryWithParentSnapshot bigObj ;
 
-            if (diffData == null)
-            {
-                diffData = new Dictionary<string, string>();
-            }
             if (selfObj.Keys.Count < otherObj.Keys.Count)
             {
                 diffNames = otherObj.Keys.Except(selfObj.Keys).ToArray();
