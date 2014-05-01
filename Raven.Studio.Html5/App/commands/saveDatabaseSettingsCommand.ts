@@ -18,9 +18,16 @@ class saveDatabaseSettingsCommand extends commandBase {
         //var resultsSelector = (queryResult: queryResultDto) => new document(queryResult);
 
 
+        //in order to allow changing the bundles list
+        var jQueryOptions: JQueryAjaxSettings = {
+            headers: {
+                "Raven-Temp-Allow-Bundles-Change": true
+            }
+        };
+
         var args = JSON.stringify(this.document.toDto());
         var url = "/admin/databases/" + this.db.name;
-        var saveTask = this.post(url, args, null, { dataType: undefined });
+        var saveTask = this.post(url, args, null, jQueryOptions);
 
         //var url = "/admin/databases/" + this.db.name;
         //var saveTask = this.query(url, null, null, resultsSelector);

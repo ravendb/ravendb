@@ -84,7 +84,9 @@ class databaseSettings extends viewModelBase {
     private fetchDatabaseSettings(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {
         return new getDatabaseSettingsCommand(db, reportFetchProgress)
             .execute()
-            .done((document: document) => this.document(document));
+            .done((document: document)=> {
+            this.document(document);
+        });
     }
 
     formatDocument() {
@@ -103,7 +105,6 @@ class databaseSettings extends viewModelBase {
     }
 
     saveChanges() {
-        this.updatedDto['@metadata'] = { "Raven-Replication-Source": 'true'}; //to allow changing the bundles list
         var newDoc = new document(this.updatedDto);
         var saveCommand = new saveDatabaseSettingsCommand(appUrl.getDatabase(), newDoc);
         var saveTask = saveCommand.execute();

@@ -118,8 +118,8 @@ class viewModelBase {
 
     createResizableTextBox(element) {
         var editor = ace.edit(element);
-        //editor.setOption('vScrollBarAlwaysVisible', true);
-        //editor.setOption('hScrollBarAlwaysVisible', true);
+        editor.setOption('vScrollBarAlwaysVisible', true);
+        editor.setOption('hScrollBarAlwaysVisible', true);
         var minHeight = 100;
         if ($(element).height() < 150) {
             $(element).height(minHeight);

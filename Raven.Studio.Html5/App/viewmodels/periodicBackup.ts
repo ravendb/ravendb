@@ -1,8 +1,9 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getPeriodicBackupSetupCommand = require("commands/getPeriodicBackupSetupCommand");
 import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
-import periodicBackupSetup = require("models/periodicBackupSetup");
 import savePeriodicBackupSetupCommand = require("commands/savePeriodicBackupSetupCommand");
+import document = require("models/document");
+import periodicBackupSetup = require("models/periodicBackupSetup");
 import appUrl = require("common/appUrl");
 
 class periodicBackup extends viewModelBase {
@@ -54,7 +55,7 @@ class periodicBackup extends viewModelBase {
         var deferred = $.Deferred();
         new getDatabaseSettingsCommand(db)
             .execute()
-            .done(document => this.backupSetup().fromDatabaseSettingsDto(document.toDto()) )
+            .done((document: document)=> { this.backupSetup().fromDatabaseSettingsDto(document.toDto()); })
             .always(() => deferred.resolve({ can: true }));
         return deferred;
     }

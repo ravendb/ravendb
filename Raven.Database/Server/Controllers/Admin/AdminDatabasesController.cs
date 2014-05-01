@@ -37,11 +37,12 @@ namespace Raven.Database.Server.Controllers.Admin
 			var dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
 			dbDoc.Id = id;
 			DatabasesLandlord.Unprotect(dbDoc);
-			return GetMessageWithObject(dbDoc);
+			return GetMessageWithObject(dbDoc, HttpStatusCode.OK, document.Etag);
 		}
 
-		private Tuple<string, HttpStatusCode> CheckInput(string databaseName)
+		private Tuple<string, HttpStatusCode> CheckDatabaseNameFormat(string databaseName)
 		{
+			
 			string errorMessage = null;
 			HttpStatusCode errorCode = HttpStatusCode.BadRequest;
 
@@ -72,26 +73,54 @@ namespace Raven.Database.Server.Controllers.Admin
 				errorMessage = "System Database document cannot be changed";
 				errorCode = HttpStatusCode.Forbidden;
 			}
-
 			return new Tuple<string, HttpStatusCode>(errorMessage, errorCode);
+		}
+
+
+		private string checkDatbaseName(string id, Etag etag)
+		{
+			string errorMessage = null;
+			var docKey = "Raven/Databases/" + id;
+			var database = Database.Documents.Get(docKey, null);
+			var isExistingDatabase = (database != null);
+
+			if (isExistingDatabase && etag == null)
+			{
+				errorMessage = "Database with the name '{0}' already exists";
+			}
+			else if (!isExistingDatabase && etag != null)
+			{
+				errorMessage = "Database with the name '{0}' doesn't exist";
+			}
+
+			return errorMessage;
 		}
 
 		[HttpPut]
 		[Route("admin/databases/{*id}")]
 		public async Task<HttpResponseMessage> DatabasesPut(string id)
 		{
-			Tuple<string, HttpStatusCode> message = CheckInput(id);
-			if (message.Item1 != null)
+			Etag etag = GetEtag();
+			if (etag == null)
 			{
-				return GetMessageWithString(message.Item1, message.Item2);
+				Tuple<string, HttpStatusCode> databaseNameFormat = CheckDatabaseNameFormat(id);
+				if (databaseNameFormat.Item1 != null)
+					return GetMessageWithString(databaseNameFormat.Item1, databaseNameFormat.Item2);
 			}
 
 			var docKey = "Raven/Databases/" + id;
+
+			string error = checkDatbaseName(id, etag);
+			if (error != null)
+			{
+				return GetMessageWithString(string.Format(error, id), HttpStatusCode.BadRequest);
+			}
+			/*var docKey = "Raven/Databases/" + id;
 			var existingDatabase = Database.Documents.Get(docKey, null);
-			if (existingDatabase != null)
+			if (existingDatabase != null && etag == null)
 			{
 				return GetMessageWithString(string.Format("Database with the name '{0}' already exists", id), HttpStatusCode.BadRequest);
-			}
+			}*/
 
 			var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
 			if (dbDoc.Settings.ContainsKey("Bundles") && dbDoc.Settings["Bundles"].Contains("Encryption"))
@@ -107,7 +136,9 @@ namespace Raven.Database.Server.Controllers.Admin
 			var json = RavenJObject.FromObject(dbDoc);
 			json.Remove("Id");
 
-			Database.Documents.Put(docKey, null, json, new RavenJObject(), null);
+			var metadata = (etag != null) ? InnerHeaders.FilterHeadersToObject() : new RavenJObject();
+			var transactionInformation = (etag != null) ? GetRequestTransaction() : null;
+			Database.Documents.Put(docKey, etag, json, metadata, transactionInformation);
 
 			return GetEmptyMessage();
 		}
@@ -116,6 +147,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		[Route("admin/databases/{*id}")]
 		public async Task<HttpResponseMessage> DatabasePost(string id)
 		{
+			//return DatabasesPut(id).Result;
 			var docKey = "Raven/Databases/" + id;
 			var existingDatabase = Database.Documents.Get(docKey, null);
 			if (existingDatabase == null)
@@ -124,6 +156,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 
 			var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
+			var metdaDoc = InnerHeaders.FilterHeadersToObject();
 			if (dbDoc.Settings.ContainsKey("Bundles") && dbDoc.Settings["Bundles"].Contains("Encryption"))
 			{
 				if (!dbDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
@@ -136,9 +169,10 @@ namespace Raven.Database.Server.Controllers.Admin
 			DatabasesLandlord.Protect(dbDoc);
 			var json = RavenJObject.FromObject(dbDoc);
 			json.Remove("Id");
-
-			Database.Documents.Put(docKey, null, json, new RavenJObject(), null);
-
+			//GetEtag(), metdaDoc
+			var etag = GetEtag();
+			Database.Documents.Put(docKey, GetEtag(), json, metdaDoc, GetRequestTransaction());
+			
 			return GetEmptyMessage();
 		}
 
