@@ -49,6 +49,9 @@ body {
 .loader.active {
   visibility: visible;
 }
+.replicationError {
+  color: red;
+}
 .side-panel li {
   max-width: 20%;
   margin-top: 5%;
