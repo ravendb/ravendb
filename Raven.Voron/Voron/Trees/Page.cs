@@ -191,6 +191,18 @@ namespace Voron.Trees
 			return (byte*)node + Constants.NodeHeaderSize + key.Size;
 		}
 
+		public void ChangeImplicitRefPageNode(long implicitRefPageNumber)
+		{
+			const int implicitRefIndex = 0;
+
+			var node = GetNode(implicitRefIndex);
+
+			node->KeySize = 0;
+			node->Flags = NodeFlags.PageRef;
+			node->Version = 1;
+			node->PageNumber = implicitRefPageNumber;
+		}
+
         private NodeHeader* CreateNode(int index, Slice key, NodeFlags flags, int len, ushort previousNodeVersion)
         {
             Debug.Assert(index <= NumberOfEntries && index >= 0);
