@@ -453,13 +453,14 @@ namespace Raven.Database.Actions
         }
 
 
-        public JsonDocument GetWithTransformer(string key, string transformer, TransactionInformation transactionInformation, Dictionary<string, RavenJToken> queryInputs)
+        public JsonDocument GetWithTransformer(string key, string transformer, TransactionInformation transactionInformation, Dictionary<string, RavenJToken> queryInputs, out HashSet<string> itemsToInclude)
         {
             JsonDocument result = null;
+            DocumentRetriever docRetriever = null;
             TransactionalStorage.Batch(
             actions =>
             {
-                var docRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, queryInputs);
+                docRetriever = new DocumentRetriever(actions, Database.ReadTriggers, Database.InFlightTransactionalState, queryInputs);
                 using (new CurrentTransformationScope(docRetriever))
                 {
                     var document = Get(key, transactionInformation);
@@ -479,7 +480,7 @@ namespace Raven.Database.Actions
                     var transformed = storedTransformer.TransformResultsDefinition(new[] { new DynamicJsonObject(document.ToJson()) })
                                      .Select(x => JsonExtensions.ToJObject(x))
                                      .ToArray();
-
+                   
                     if (transformed.Length == 0)
                         return;
 
@@ -492,6 +493,7 @@ namespace Raven.Database.Actions
                     };
                 }
             });
+            itemsToInclude = docRetriever.ItemsToInclude;
             return result;
         }
 

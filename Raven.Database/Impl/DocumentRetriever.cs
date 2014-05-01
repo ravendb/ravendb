@@ -311,7 +311,7 @@ namespace Raven.Database.Impl
 		}
 		public dynamic Include(string id)
 		{
-			itemsToInclude.Add(id);
+			ItemsToInclude.Add(id);
 			return new DynamicNullObject();
 		}
 
@@ -319,7 +319,7 @@ namespace Raven.Database.Impl
 		{
 			foreach (var id in ids)
 			{
-				itemsToInclude.Add(id);
+				ItemsToInclude.Add(id);
 			}
 			return new DynamicNullObject();
 		}
@@ -358,6 +358,10 @@ namespace Raven.Database.Impl
 			return new DynamicList(items.Select(x => (object)x).ToArray());
 		}
 
-        public Dictionary<string, RavenJToken> QueryInputs { get { return this.queryInputs; } } 
+        public Dictionary<string, RavenJToken> QueryInputs { get { return this.queryInputs; } }
+	    public HashSet<string> ItemsToInclude
+	    {
+	        get { return itemsToInclude; }
+	    }
 	}
 }
