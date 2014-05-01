@@ -24,6 +24,10 @@ interface documentChangeNotificationDto {
     Message: string;
 }
 
+interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
+    OperationId: string;
+}
+
 interface indexChangeNotificationDto {
     Type: string;
     Name: string;
@@ -520,11 +524,16 @@ interface patchDto {
 
 enum documentChangeType {
     None = 0,
-
     Put = 1,
     Delete = 2,
     Common= 3,
     BulkInsertStarted = 4,
     BulkInsertEnded = 8,
     BulkInsertError = 16
+}
+
+interface filterSettingDto {
+    Path: string;
+    Values: string[];
+    ShouldMatch: boolean;
 }

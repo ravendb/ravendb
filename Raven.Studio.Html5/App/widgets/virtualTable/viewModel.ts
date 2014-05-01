@@ -234,13 +234,7 @@ class ctor {
                     this.virtualRowCount(resultSet.totalResultCount);
                     resultSet.items.forEach((r, i) => this.fillRow(r, i + firstVisibleIndex));
                     this.ensureColumnsForRows(resultSet.items);
-                    this.recycleRows.valueHasMutated();
-                    this.columns.valueHasMutated();
-
-                    var rows = this.recycleRows();
-                    var columns = this.columns();
                 }
-                this.recycleRows.valueHasMutated();
             });
         }
     }

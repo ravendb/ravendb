@@ -85,10 +85,10 @@ namespace Raven.Client.Document
 			using (ConnectionOptions.Expect100Continue(operationClient.Url))
 			{
 				var operationUrl = CreateOperationUrl(options);
-				var token = await GetToken();
+				var token = await GetToken().ConfigureAwait(false);
 				try
 				{
-					token = await ValidateThatWeCanUseAuthenticateTokens(token);
+					token = await ValidateThatWeCanUseAuthenticateTokens(token).ConfigureAwait(false);
 				}
 				catch (Exception e)
 				{
@@ -109,19 +109,19 @@ namespace Raven.Client.Document
 					{
 						source.TrySetException(e);
 					}
-				}, TaskCreationOptions.LongRunning));
+				}, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
 
 				long operationId;
 
 				using (response)
-				using (var stream = await response.Content.ReadAsStreamAsync())
+				using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
 				using (var streamReader = new StreamReader(stream))
 				{
 					var result = RavenJObject.Load(new JsonTextReader(streamReader));
 					operationId = result.Value<long>("OperationId");
 				}
 
-				if (await IsOperationCompleted(operationId))
+				if (await IsOperationCompleted(operationId).ConfigureAwait(false))
 					responseOperationId = operationId;
 			}
 		}
@@ -135,7 +135,7 @@ namespace Raven.Client.Document
 		private async Task<string> GetToken()
 		{
 			// this will force the HTTP layer to authenticate, meaning that our next request won't have to
-			var jsonToken = await GetAuthToken();
+			var jsonToken = await GetAuthToken().ConfigureAwait(false);
 
 			return jsonToken.Value<string>("Token");
 		}
@@ -216,7 +216,7 @@ namespace Raven.Client.Document
 
 		public Guid OperationId { get; private set; }
 
-		public void Write(string id, RavenJObject metadata, RavenJObject data)
+		public virtual void Write(string id, RavenJObject metadata, RavenJObject data)
 		{
 			if (id == null) throw new ArgumentNullException("id");
 			if (metadata == null) throw new ArgumentNullException("metadata");

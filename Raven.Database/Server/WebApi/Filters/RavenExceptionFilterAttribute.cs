@@ -4,11 +4,11 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http.Filters;
-using Jint;
+using Jint.Runtime;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Database.Server.Controllers;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.WebApi.Filters
@@ -20,7 +20,7 @@ namespace Raven.Database.Server.WebApi.Filters
 			{
 				{typeof (BadRequestException), (ctx, e) => HandleBadRequest(ctx, e as BadRequestException)},
 				{typeof (ConcurrencyException), (ctx, e) => HandleConcurrencyException(ctx, e as ConcurrencyException)},
-				{typeof (JintException), (ctx, e) => HandleJintException(ctx, e as JintException)},
+				{typeof (JavaScriptException), (ctx, e) => HandleJintException(ctx, e as JavaScriptException)},
 				{typeof (IndexDisabledException), (ctx, e) => HandleIndexDisabledException(ctx, e as IndexDisabledException)},
 				{typeof (IndexDoesNotExistsException), (ctx, e) => HandleIndexDoesNotExistsException(ctx, e as IndexDoesNotExistsException)},
 			};
@@ -106,12 +106,12 @@ namespace Raven.Database.Server.WebApi.Filters
 			});
 		}
 
-		private static void HandleJintException(HttpActionExecutedContext ctx, JintException e)
+		private static void HandleJintException(HttpActionExecutedContext ctx, JavaScriptException e)
 		{
-			while (e.InnerException is JintException)
-			{
-				e = (JintException)e.InnerException;
-			}
+			//while (e.InnerException is JintException)
+			//{
+			//	e = (JintException)e.InnerException;
+			//}
 
 			ctx.Response = new HttpResponseMessage
 			{

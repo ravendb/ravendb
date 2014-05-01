@@ -1605,8 +1605,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			}).ToArray();
 
 			var finalQuery = ((IDocumentQuery<T>)documentQuery).SelectFields<TProjection>(FieldsToFetch.ToArray(), renamedFields);
-
-			finalQuery.SetResultTransformer(resultsTransformer);
+            
+            //no reason to override a value that may or may not exist there
+            if(!String.IsNullOrEmpty(resultsTransformer))
+			    finalQuery.SetResultTransformer(resultsTransformer);
 			finalQuery.SetQueryInputs(queryInputs);
 
 			if (FieldsToRename.Count > 0)
