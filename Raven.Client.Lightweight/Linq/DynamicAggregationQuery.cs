@@ -40,8 +40,14 @@ namespace Raven.Client.Linq
 				renames[propertyPath] = tmp;
 				propertyPath = tmp;
 			}
-
-			facets.Add(new AggregationQuery<T> { Name = propertyPath, DisplayName = displayName});
+		    if (facets.Count > 0)
+		    {
+	           if (facets.Any(facet => facet.DisplayName == displayName))
+               {
+		            throw new InvalidOperationException("Cannot use the more than one aggregation function with the same name/without name");
+		        }
+		    }
+		    facets.Add(new AggregationQuery<T> { Name = propertyPath, DisplayName = displayName});
 
 			return this;
 		}
@@ -93,6 +99,9 @@ namespace Raven.Client.Linq
 	        {
                 return;
 	        }
+            if((string.IsNullOrEmpty(last.AggregationField) == false) && (!last.AggregationField.Equals(path.ToPropertyPath())))
+                  throw new InvalidOperationException("Cannot call different aggregation function with differentt parameters at the same aggregation. Use AndAggregateOn");
+
 	        last.AggregationField = path.ToPropertyPath();
 	        last.AggregationType = path.ExtractTypeFromPath().FullName;
 	    }
