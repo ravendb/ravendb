@@ -79,6 +79,34 @@ html, body {
     }
 }
 
+/// taken from https://github.com/ajaxorg/ace-demos/blob/master/scrolling-editor.html
+/*
+.ace_editor {
+		border: 1px solid lightgray;
+		margin: auto;
+		height: 200px;
+		width: 80%;
+		position: relative !important
+	}*/
+
+.fullScreen .fullScreen-editor{ 
+	height: auto!important;
+	width: auto!important;
+	border: 0;
+    margin: 0;
+    position: fixed !important;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+	z-index: 10000
+}
+
+.fullScreen {
+	overflow: hidden
+}
+///
+
 .dropdown-menu{
     .selected{
         color: #555;
