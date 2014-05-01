@@ -106,7 +106,6 @@ namespace Raven.Tests.Helpers
 			var documentStore = new EmbeddableDocumentStore
 			{
 				UseEmbeddedHttpServer = port.HasValue,
-				DefaultDatabase = databaseName,
 				Configuration =
 				{
 					DefaultStorageTypeName = storageType,
