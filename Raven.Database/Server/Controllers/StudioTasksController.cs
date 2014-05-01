@@ -6,18 +6,27 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.Serialization.Json;
 using System.Security.Cryptography;
+using System.Security.Permissions;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using Microsoft.VisualBasic.FileIO;
+using Newtonsoft.Json;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
 using Raven.Client.Util;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
+using Raven.Database.Extensions;
+using System.Text.RegularExpressions;
+using System.Reflection;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -48,15 +57,26 @@ namespace Raven.Database.Server.Controllers
             return GetEmptyMessage();
 		}
 
-
-		[HttpPost]
+	    public class ExportData
+	    {
+            public string SmugglerOptions { get; set; }
+	    }
+        
+	    [HttpPost]
 		[Route("studio-tasks/exportDatabase")]
 		[Route("databases/{databaseName}/studio-tasks/exportDatabase")]
-		public async Task<HttpResponseMessage> ExportDatabase(SmugglerOptionsDto dto)
+        public async Task<HttpResponseMessage> ExportDatabase(ExportData smugglerOptionsJson)
 		{
-			var smugglerOptions = new SmugglerOptions();
-			// smugglerOptions.OperateOnTypes = ;
-
+            var requestString = smugglerOptionsJson.SmugglerOptions;
+	        SmugglerOptions smugglerOptions;
+      
+            using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
+			{
+				var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+                smugglerOptions = (SmugglerOptions)serializer.Deserialize(jsonReader, typeof(SmugglerOptions));
+			}
+            
+          
 			var result = GetEmptyMessage();
 			result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
 			{
@@ -295,3 +315,4 @@ namespace Raven.Database.Server.Controllers
 		public bool RemoveAnalyzers { get; set; }
 	}
 }
+
