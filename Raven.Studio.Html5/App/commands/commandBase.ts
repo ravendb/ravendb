@@ -118,6 +118,10 @@ class commandBase {
         return this.ajax(relativeUrl, args, "POST", resource, options);
     }
 
+    patch(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "PATCH", resource, options);
+    }
+
     private ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
         // ContentType:
         //

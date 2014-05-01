@@ -6,7 +6,7 @@
     Type: filesystemSynchronizationType;
     Status: string;
 
-    constructor(dto: filesystemSynchronizationDetailsDto, status: string) {
+    constructor(dto: filesystemSynchronizationDetailsDto, status?: string) {
         this.fileName = dto.FileName;
         this.fileETag = dto.FileETag;
         this.DestinationUrl = dto.DestinationUrl;

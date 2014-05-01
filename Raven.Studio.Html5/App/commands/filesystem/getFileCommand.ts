@@ -17,7 +17,7 @@ class getFileCommand extends commandBase {
             fileHeaders.id = this.name;
             fileHeaders.__metadata = new fileMetadata(metadata);
             return fileHeaders;
-        }
+        };
         return this.head(url, null, this.fs, resultsSelector);
     }
 

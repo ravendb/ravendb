@@ -30,6 +30,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\getFilesConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getSyncIncomingActivitiesCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getSyncOutgoingActivitiesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\resolveConflictCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\saveDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteConfigurationKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileCommand.ts" />
@@ -138,6 +139,7 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\configuration.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemFiles.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystems.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\resolveConflict.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchDialogViewModel.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchHasMetadataClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search.ts" />
@@ -237,6 +239,7 @@
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\deleteDocuments.html" />
     <Content Include="App\views\filesystem\deleteFiles.html" />
+    <Content Include="App\views\filesystem\resolveConflict.html" />
     <Content Include="App\views\filesystem\searchFileSizeRangeClause.html" />
     <Content Include="App\views\filesystem\search.html" />
     <Content Include="App\views\filesystem\filesystemSynchronization.html" />
