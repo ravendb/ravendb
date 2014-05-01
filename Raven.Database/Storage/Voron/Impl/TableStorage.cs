@@ -72,6 +72,8 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public Table ReduceStats { get; private set; }
 
+		public Table IndexingMetadata { get; private set; }
+
 		public Table LastIndexedEtags { get; private set; }
 
 		public Table DocumentReferences { get; private set; }
@@ -181,9 +183,15 @@ namespace Raven.Database.Storage.Voron.Impl
 				CreateReduceResultsSchema(tx);
 				CreateGeneralSchema(tx);
 				CreateReduceStatsSchema(tx);
+				CreateIndexingMetadataSchema(tx);
 
 				tx.Commit();
 			}
+		}
+
+		private void CreateIndexingMetadataSchema(Transaction tx)
+		{
+			env.CreateTree(tx, Tables.IndexingMetadata.TableName);
 		}
 
 		private void CreateReduceStatsSchema(Transaction tx)
@@ -304,6 +312,7 @@ namespace Raven.Database.Storage.Voron.Impl
 			Documents = new Table(Tables.Documents.TableName, bufferPool, Tables.Documents.Indices.KeyByEtag, Tables.Documents.Indices.Metadata);
 			Details = new Table(Tables.Details.TableName, bufferPool);
             IndexingStats = new Table(Tables.IndexingStats.TableName, bufferPool);
+			IndexingMetadata = new Table(Tables.IndexingMetadata.TableName, bufferPool);
             LastIndexedEtags = new Table(Tables.LastIndexedEtags.TableName, bufferPool);
             DocumentReferences = new Table(Tables.DocumentReferences.TableName, bufferPool, Tables.DocumentReferences.Indices.ByRef, Tables.DocumentReferences.Indices.ByView, Tables.DocumentReferences.Indices.ByViewAndKey, Tables.DocumentReferences.Indices.ByKey);
             Queues = new Table(Tables.Queues.TableName, bufferPool, Tables.Queues.Indices.ByName, Tables.Queues.Indices.Data);
