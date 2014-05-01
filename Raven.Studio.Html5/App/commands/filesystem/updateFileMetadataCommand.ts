@@ -24,7 +24,7 @@ class updateFileMetadataCommand extends commandBase {
             headers: <any>customHeaders
         };
 
-        var url = "/files/"+this.fileName
+        var url = "/files/" + this.fileName;
         var updateTask = this.post(url, null, this.fs, jQueryOptions);
 
         if (this.reportSaveProgress) {

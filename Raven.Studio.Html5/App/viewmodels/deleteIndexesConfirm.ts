@@ -22,8 +22,15 @@ class deleteIndexesConfirm extends dialogViewModelBase {
     deleteIndexes() {
         var deleteTasks = this.indexNames
             .map(name => new deleteIndexCommand(name, this.db).execute());
+        var myDeleteTask = this.deleteTask;
 
-        $.when(deleteTasks).done(() => this.deleteTask.resolve());
+        $.when.apply($, deleteTasks)
+            .done(() => {
+                myDeleteTask.resolve();
+            })
+            .fail(()=> {
+                myDeleteTask.reject();
+            });
         dialog.close(this);
     }
 

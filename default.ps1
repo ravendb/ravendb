@@ -549,6 +549,11 @@ task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
 	New-Item $nuget_dir\RavenDB.Tests.Helpers\content -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenTests $nuget_dir\RavenDB.Tests.Helpers\content\RavenTests -Recurse
 	
+	New-Item $nuget_dir\RavenDB.Bundles.Development\lib\net45 -Type directory | Out-Null
+	Copy-Item $base_dir\NuGet\RavenDB.Bundles.Development.nuspec $nuget_dir\RavenDB.Bundles.Development\RavenDB.Bundles.Development.nuspec
+	@("Raven.Database.???", "Raven.Abstractions.???") |% { Copy-Item "$base_dir\Raven.Database\bin\$global:configuration\$_" $nuget_dir\RavenDB.Bundles.Development\lib\net45 }
+	@("Raven.Client.Lightweight.???") |% { Copy-Item "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\$_" $nuget_dir\RavenDB.Bundles.Development\lib\net45 }
+	
 	# Sets the package version in all the nuspec as well as any RavenDB package dependency versions
 	$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
 	$packages |% { 

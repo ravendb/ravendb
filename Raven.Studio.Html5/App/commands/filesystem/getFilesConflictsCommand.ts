@@ -8,12 +8,12 @@ class getFilesConflictsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<conflictItem> {
+    execute(): JQueryPromise<conflictItem[]> {
 
         var url = "/synchronization/Conflicts";
 
-        return this.query<filesystemListPageDto<filesystemConflictItemDto>>(url, null, this.fs)
-                   .then(x => conflictItem.fromConflictItemDto(x.Items));
+        var resultsSelector = (page: filesystemListPageDto<filesystemConflictItemDto>) => page.Items.map(x => conflictItem.fromConflictItemDto(x));
+        return this.query(url, null, this.fs, resultsSelector);
     }
 }
 

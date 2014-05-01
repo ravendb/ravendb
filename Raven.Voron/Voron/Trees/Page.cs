@@ -74,7 +74,7 @@ namespace Voron.Trees
 				pageKey.Set(GetNode(0));
 				LastMatch = key.Compare(pageKey, cmp);
 				LastSearchPosition = LastMatch > 0 ? 1 : 0;
-				return LastSearchPosition > NumberOfEntries ? null : GetNode(0);
+				return LastSearchPosition == 0 ? GetNode(0) : null;
 			}
 
 			int low = IsLeaf ? 0 : 1;
@@ -189,6 +189,18 @@ namespace Voron.Trees
 			node->DataSize = dataSize;
 
 			return (byte*)node + Constants.NodeHeaderSize + key.Size;
+		}
+
+		public void ChangeImplicitRefPageNode(long implicitRefPageNumber)
+		{
+			const int implicitRefIndex = 0;
+
+			var node = GetNode(implicitRefIndex);
+
+			node->KeySize = 0;
+			node->Flags = NodeFlags.PageRef;
+			node->Version = 1;
+			node->PageNumber = implicitRefPageNumber;
 		}
 
         private NodeHeader* CreateNode(int index, Slice key, NodeFlags flags, int len, ushort previousNodeVersion)

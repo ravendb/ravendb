@@ -190,16 +190,10 @@ namespace Raven.Database.Storage
         {
             if (configuration.RunInMemory)
                 return;
-            string indexName;
-            int i = 0;
-            while (true)
-            {
-                indexName = Path.Combine(path, i + ".transform");
-                if (File.Exists(indexName) == false)
-                    break;
-                i++;
-            }
-            File.WriteAllText(indexName,
+
+            string transformerFileName = Path.Combine(path, transformerDefinition.TransfomerId + ".transform");
+
+            File.WriteAllText(transformerFileName,
                               JsonConvert.SerializeObject(transformerDefinition, Formatting.Indented, Default.Converters));
         }
 

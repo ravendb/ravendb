@@ -9,6 +9,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getConfigurationCommand = require("commands/filesystem/getConfigurationCommand");
 import saveConfigurationCommand = require("commands/filesystem/saveConfigurationCommand");
 import configurationKey = require("models/filesystem/configurationKey");
+import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class configuration extends viewModelBase {
 
@@ -26,6 +27,7 @@ class configuration extends viewModelBase {
 
     constructor() {
         super();
+        aceEditorBindingHandler.install();
         this.selectedKey.subscribe(k => this.selectedKeyChanged(k));
 
         // When we programmatically change a configuration doc, push it into the editor.

@@ -46,8 +46,12 @@ namespace Voron.Trees
 		{
 			get
 			{
-				if (_currentPage == null || _currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
+				if (_currentPage == null)
 					throw new InvalidOperationException("No current page was set");
+
+				if (_currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
+					throw new InvalidOperationException(string.Format("Current page is invalid. Search position ({0}) exceeds number of entries ({1}). Page: {2}.", _currentPage.LastSearchPosition, _currentPage.NumberOfEntries, _currentPage));
+					
 				return _currentKey;
 			}
 		}
@@ -66,8 +70,12 @@ namespace Voron.Trees
 		{
 			get
 			{
-				if (_currentPage == null || _currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
+				if (_currentPage == null)
 					throw new InvalidOperationException("No current page was set");
+
+				if (_currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
+					throw new InvalidOperationException(string.Format("Current page is invalid. Search position ({0}) exceeds number of entries ({1}). Page: {2}.", _currentPage.LastSearchPosition, _currentPage.NumberOfEntries, _currentPage));
+					
 				return _currentPage.GetNode(_currentPage.LastSearchPosition);
 			}
 		}

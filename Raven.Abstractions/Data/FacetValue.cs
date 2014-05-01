@@ -8,7 +8,7 @@ namespace Raven.Abstractions.Data
 
         public int Hits { get; set; }
 
-	    public double? Count { get; set; }
+	    public int? Count { get; set; }
         public double? Sum { get; set; }
         public double? Max { get; set; }
         public double? Min { get; set; }

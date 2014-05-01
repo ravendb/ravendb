@@ -150,28 +150,6 @@ namespace Raven.Database.Server.Security.OAuth
 			return token;
 		}
 
-		void WriteAuthorizationChallenge(IHttpContext ctx, int statusCode, string error, string errorDescription)
-		{
-			if (string.IsNullOrEmpty(Settings.OAuthTokenServer) == false)
-			{
-				if (Settings.UseDefaultOAuthTokenServer == false)
-				{
-					ctx.Response.AddHeader("OAuth-Source", Settings.OAuthTokenServer);
-				}
-				else
-				{
-					ctx.Response.AddHeader("OAuth-Source", new UriBuilder(Settings.OAuthTokenServer)
-					{
-						Host = ctx.Request.Url.Host,
-						Port = ctx.Request.Url.Port
-					}.Uri.ToString());
-
-				}
-			}
-			ctx.Response.StatusCode = statusCode;
-			ctx.Response.AddHeader("WWW-Authenticate", string.Format("Bearer realm=\"Raven\", error=\"{0}\",error_description=\"{1}\"", error, errorDescription));
-		}
-
         HttpResponseMessage WriteAuthorizationChallenge(RavenBaseApiController controller, int statusCode, string error, string errorDescription)
 		{
 			var msg = controller.GetEmptyMessage();
@@ -186,8 +164,9 @@ namespace Raven.Database.Server.Security.OAuth
 				{
 					controller.AddHeader("OAuth-Source", new UriBuilder(systemConfiguration.OAuthTokenServer)
 					{
-						Host = controller.InnerRequest.RequestUri.Host,
-						Port = controller.InnerRequest.RequestUri.Port
+                        Scheme = controller.InnerRequest.RequestUri.Scheme,
+                        Host = controller.InnerRequest.RequestUri.Host,
+						Port = controller.InnerRequest.RequestUri.Port,
 					}.Uri.ToString(), msg);
 
 				}
@@ -197,28 +176,6 @@ namespace Raven.Database.Server.Security.OAuth
 			msg.Headers.Add("WWW-Authenticate", string.Format("Bearer realm=\"Raven\", error=\"{0}\",error_description=\"{1}\"", error, errorDescription));
 
 			return msg;
-		}
-
-		public IPrincipal GetUser(IHttpContext ctx, bool hasApiKey)
-		{
-			var token = GetToken(ctx);
-
-			if (token == null)
-			{
-				WriteAuthorizationChallenge(ctx, hasApiKey ? 412 : 401, "invalid_request", "The access token is required");
-
-				return null;
-			}
-
-			AccessTokenBody tokenBody;
-			if (!AccessToken.TryParseBody(Settings.OAuthTokenKey, token, out tokenBody))
-			{
-				WriteAuthorizationChallenge(ctx, 401, "invalid_token", "The access token is invalid");
-
-				return null;
-			}
-
-			return new OAuthPrincipal(tokenBody, null);
 		}
 
 		public IPrincipal GetUser(RavenDbApiController controller, bool hasApiKey)
