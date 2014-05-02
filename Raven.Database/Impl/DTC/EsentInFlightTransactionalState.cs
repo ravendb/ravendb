@@ -51,7 +51,14 @@ namespace Raven.Database.Impl.DTC
 				if (age.TotalMinutes >= 5)
 				{
 					log.Info("Rolling back DTC transaction {0} because it is too old {1}", ctx.Key, age);
-					Rollback(ctx.Key);
+					try
+					{
+						Rollback(ctx.Key);
+					}
+					catch (Exception e)
+					{
+						log.WarnException("Could not properly rollback transaction", e);
+					}
 				}
 			}
 		}
