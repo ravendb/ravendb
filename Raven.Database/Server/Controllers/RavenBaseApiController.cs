@@ -212,15 +212,6 @@ namespace Raven.Database.Server.Controllers
 			if (string.IsNullOrWhiteSpace(etag))
 				return;
 
-            // REVIEW: (Oren) if someone passes the etag with the quotes included this method will not work as intended.
-
-			//string clientVersion = GetHeader("Raven-Client-Version");
-			//if (string.IsNullOrEmpty(clientVersion))
-			//{
-			//	msg.Headers.ETag = new EntityTagHeaderValue(etag);
-			//	return;
-			//}
-
 			msg.Headers.ETag = new EntityTagHeaderValue("\"" + etag + "\"");
 		}
 
