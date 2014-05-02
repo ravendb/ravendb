@@ -1,5 +1,5 @@
 ﻿<div>
-    <form data-bind="submit: saveChanges" class=" form-horizontal" role="form">
+    <form id="sqlReplicationsForm" data-bind="submit: saveChanges" class=" form-horizontal" role="form">
         <nav class="navbar navbar-default" role="navigation">
             <div class="collapse navbar-collapse">
                 <div class="navbar-form navbar-right">
@@ -26,7 +26,7 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Name</label>
                             <div class="col-sm-9">
-                                <input required type="text" class="form-control" data-bind="value: name, valueUpdate: 'keyup', attr: { placeholder: 'New SQL Replication ' + $root.itemNumber($index()) }, hasFocus: isFocused" />
+                                <input required type="text" class="form-control" name="name" data-bind="value: name, valueUpdate: 'keyup', attr: { placeholder: 'New SQL Replication ' + $root.itemNumber($index()) }" />
                             </div>
                         </div>
                         <div class="form-group">
@@ -74,7 +74,14 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Source Document Collection</label>
                             <div class="col-sm-9">
-                                <input required type="text" class="form-control" data-bind="value: ravenEntityName, valueUpdate: 'keyup'" />
+                                <input required name="ravenEntityName" type="text" class="form-control" data-bind="value: ravenEntityName, valueUpdate: 'keyup', attr: { 'id': 'sourceDocumentCollection' + $index() }" />
+                                <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#sourceDocumentCollection' + $index(), foreach: searchResults">
+                                    <li role="presentation" data-bind="click: $parent.saveNewRavenEntityName.bind($parent, $data)">
+                                        <a role="menuitem" tabindex="-1" href="#">
+                                            <span data-bind="text: $data"></span>
+                                        </a>
+                                    </li>
+                                </ul>
                             </div>
                         </div>
                         <div class="form-group">

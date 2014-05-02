@@ -63,8 +63,7 @@ class viewModelBase {
         }
 
         this.modelPollingStart();
-        window.onbeforeunload = (e: any) => this.beforeUnload(e);
-        ko.postbox.publish("SetRawJSONUrl", "");
+		window.onbeforeunload = (e: any) => this.beforeUnload(e);        ko.postbox.publish("SetRawJSONUrl", "");
     }
 
     // Called back after the entire composition has finished (parents and children included)
@@ -147,12 +146,6 @@ class viewModelBase {
             this.keyboardShortcutDomContainers.push(elementSelector);
         }
     }
-
-    //A method to save the current value in the observables from text boxes and inputs before a refresh/page close.
-    //Should be implemented on the inheriting class.
-    //saveInObservable() {
-
-    //}
 
     private removeKeyboardShortcuts(elementSelector: string) {
         $(elementSelector).unbind('keydown.jwerty');
@@ -247,7 +240,6 @@ class viewModelBase {
     }
 
     private beforeUnload(e: any) {
-        //this.saveInObservable();
         var isDirty = viewModelBase.dirtyFlag().isDirty();
         if (isDirty) {
             var message = "You have unsaved data.";
@@ -261,8 +253,6 @@ class viewModelBase {
             // For Safari
             return message;
         }
-
-        return null;
     }
 
 }
