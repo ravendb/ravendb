@@ -63,6 +63,7 @@ namespace Voron
 		public int IdleFlushTimeout { get; set; }
 
 		public long? MaxStorageSize { get; set; }
+		public abstract string BasePath { get; }
 
 		public abstract IJournalWriter CreateJournalWriter(long journalNumber, long journalSize);
 
@@ -140,7 +141,7 @@ namespace Voron
 				}
 			}
 
-			public string BasePath
+			public override string BasePath
 			{
 				get { return _basePath; }
 			}
@@ -280,6 +281,11 @@ namespace Voron
 			public override IVirtualPager DataPager
 			{
 				get { return _dataPager; }
+			}
+
+			public override string BasePath
+			{
+				get { return ":memory:"; }
 			}
 
 			public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
