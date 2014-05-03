@@ -77,7 +77,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 
-		private string checkDatbaseName(string id, Etag etag)
+		private string CheckDatbaseName(string id, Etag etag)
 		{
 			string errorMessage = null;
 			var docKey = "Raven/Databases/" + id;
@@ -110,7 +110,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			var docKey = "Raven/Databases/" + id;
 
-			string error = checkDatbaseName(id, etag);
+			string error = CheckDatbaseName(id, etag);
 			if (error != null)
 			{
 				return GetMessageWithString(string.Format(error, id), HttpStatusCode.BadRequest);
@@ -138,7 +138,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			var metadata = (etag != null) ? InnerHeaders.FilterHeadersToObject() : new RavenJObject();
 			var transactionInformation = (etag != null) ? GetRequestTransaction() : null;
-			Database.Documents.Put(docKey, etag, json, metadata, transactionInformation);
+			Database.Documents.Put(docKey, null, json, new RavenJObject(), null);
 
 			return GetEmptyMessage();
 		}
@@ -147,7 +147,6 @@ namespace Raven.Database.Server.Controllers.Admin
 		[Route("admin/databases/{*id}")]
 		public async Task<HttpResponseMessage> DatabasePost(string id)
 		{
-			//return DatabasesPut(id).Result;
 			var docKey = "Raven/Databases/" + id;
 			var existingDatabase = Database.Documents.Get(docKey, null);
 			if (existingDatabase == null)
@@ -156,11 +155,10 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 
 			var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
-			var metdaDoc = InnerHeaders.FilterHeadersToObject();
 			if (dbDoc.Settings.ContainsKey("Bundles") && dbDoc.Settings["Bundles"].Contains("Encryption"))
 			{
 				if (!dbDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
-				    !dbDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
+					!dbDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
 				{
 					return GetMessageWithString(string.Format("Failed to modify '{0}' database, becuase of not valid encryption configuration.", id), HttpStatusCode.BadRequest);
 				}
@@ -169,11 +167,10 @@ namespace Raven.Database.Server.Controllers.Admin
 			DatabasesLandlord.Protect(dbDoc);
 			var json = RavenJObject.FromObject(dbDoc);
 			json.Remove("Id");
-			//GetEtag(), metdaDoc
-			var etag = GetEtag();
-			Database.Documents.Put(docKey, GetEtag(), json, metdaDoc, GetRequestTransaction());
-			
-			return GetEmptyMessage();
+
+			var putResult = Database.Documents.Put(docKey, GetEtag(), json, InnerHeaders.FilterHeadersToObject(), null);
+			return GetMessageWithObject(putResult, HttpStatusCode.Created);
+			return GetEmptyMessage(HttpStatusCode.OK, GetEtag());
 		}
 
 

@@ -21,7 +21,7 @@ class saveDatabaseSettingsCommand extends commandBase {
         //in order to allow changing the bundles list
         var jQueryOptions: JQueryAjaxSettings = {
             headers: {
-                "Raven-Temp-Allow-Bundles-Change": true
+                'If-None-Match': this.document.__metadata.etag,
             }
         };
 
