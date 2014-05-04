@@ -17,7 +17,8 @@ class saveDatabaseSettingsCommand extends commandBase {
 
         var jQueryOptions: JQueryAjaxSettings = {
             headers: {
-                'If-None-Match': this.document.__metadata['@etag']
+                'If-None-Match': this.document.__metadata.etag,
+                'Raven-Temp-Allow-Bundles-Change': this.document.__metadata['Raven-Temp-Allow-Bundles-Change']
             }
         };
 
