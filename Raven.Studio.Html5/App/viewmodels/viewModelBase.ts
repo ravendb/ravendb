@@ -208,7 +208,7 @@ class viewModelBase {
 
         var canNavTask = $.Deferred<any>();
 
-        var systemDbConfirm = new viewSystemDatabaseConfirm();
+        var systemDbConfirm = new viewSystemDatabaseConfirm("Meddling with the system database could cause irreversible damage");
         systemDbConfirm.viewTask
             .fail(() => canNavTask.resolve({ redirect: 'databases' }))
             .done(() => {

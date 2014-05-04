@@ -3,11 +3,12 @@ import router = require("plugins/router");
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
+import saveDatabaseSettingsCommand = require("commands/saveDatabaseSettingsCommand");
 import document = require("models/document");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
-import saveDatabaseSettingsCommand = require("commands/saveDatabaseSettingsCommand");
+import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
 
 class databaseSettings extends viewModelBase {
    
@@ -57,13 +58,6 @@ class databaseSettings extends viewModelBase {
         });
     }
 
-    attached() {
-        //this.initializeDbDocEditor();
-        //this.docEditor.getSession().setValue(this.documentText());
-        //this.fetchDatabaseSettings();
-        //this.createKeyboardShortcut("F2", () => this.navigateToDatabaseSettingDocument(), databaseSettings.containerId);
-    }
-
     compositionComplete() {
         super.compositionComplete();
         this.docEditor = ko.utils.domData.get($("#dbDocEditor")[0], "aceEditor");
@@ -97,23 +91,35 @@ class databaseSettings extends viewModelBase {
     }
 
     editDatabaseSettings() {
-        this.docEditor.setReadOnly(false);
-        this.docEditor.focus();
-        this.isEditingEnabled(true);
+        var editDbConfirm = new viewSystemDatabaseConfirm("Meddling with the database settings document could cause irreversible damage!");
+        editDbConfirm
+            .viewTask
+            .done(() => {
+                this.docEditor.setReadOnly(false);
+                this.docEditor.focus();
+                this.isEditingEnabled(true);
+            });
+        app.showDialog(editDbConfirm);
     }
 
     saveChanges() {
-        this.updatedDto['__metadata'] = { '@etag': this.document().__metadata['@etag'] };
-        var newDoc = new document(this.updatedDto);
-        var saveCommand = new saveDatabaseSettingsCommand(appUrl.getDatabase(), newDoc);
-        var saveTask = saveCommand.execute();
-        saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
-            this.document().__metadata['@etag'] = idAndEtag.ETag;
-            this.docEditor.setReadOnly(true);
-            this.isEditingEnabled(false);
-            this.formatDocument();
-            viewModelBase.dirtyFlag().reset(); //Resync Changes
-        });
+        var editDbConfirm = new viewSystemDatabaseConfirm("Meddling with the database settings document could cause irreversible damage!");
+        editDbConfirm
+            .viewTask
+            .done(() => {
+                this.updatedDto['__metadata'] = { '@etag': this.document().__metadata['@etag'] };
+                var newDoc = new document(this.updatedDto);
+                var saveCommand = new saveDatabaseSettingsCommand(appUrl.getDatabase(), newDoc);
+                var saveTask = saveCommand.execute();
+                saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
+                    this.document().__metadata['@etag'] = idAndEtag.ETag;
+                    this.docEditor.setReadOnly(true);
+                    this.isEditingEnabled(false);
+                    this.formatDocument();
+                    viewModelBase.dirtyFlag().reset(); //Resync Changes
+                });
+            });
+        app.showDialog(editDbConfirm);
     }
 
     refreshFromServer() {
@@ -132,7 +138,7 @@ class databaseSettings extends viewModelBase {
         var deferred = $.Deferred();
         var isDirty = viewModelBase.dirtyFlag().isDirty();
         if (isDirty) {
-            return app.showMessage('You have unsaved data. Are you sure you want to refresh from the server?', 'Unsaved Data', ['Yes', 'No']);
+            return app.showMessage('You have unsaved data. Are you sure you want to refresh the data from the server?', 'Unsaved Data', ['Yes', 'No']);
         }
         return deferred.resolve();
     }
@@ -140,11 +146,6 @@ class databaseSettings extends viewModelBase {
     private getDatabaseSettingsDocumentId(db: database) {
         return "Raven/Databases/" + db.name;
     }
-
-    //private handleDocument(doc: document) {
-    //    var dbSettings = this.stringify(doc.toDto());
-    //    this.docEditor.getSession().setValue(dbSettings);
-    //}
 
     private stringify(obj: any) {
         var prettifySpacing = 4;
