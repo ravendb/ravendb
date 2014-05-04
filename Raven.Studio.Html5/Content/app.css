@@ -710,6 +710,10 @@ footer ul {
   max-width: 800px;
   width: 600px;
 }
+:invalid {
+  box-shadow: none; /* FF */
+  outline: 0;       /* IE 10 */
+}
 .license-error {
   color: #d2322d;
 }

@@ -69,7 +69,6 @@ class viewModelBase {
 
     // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
-        this.createResizableTextBoxes();
         viewModelBase.dirtyFlag().reset(); //Resync Changes
     }
 
@@ -94,44 +93,6 @@ class viewModelBase {
         this.modelPollingStop();
     }
 
-    // TODO: move this code. It doesn't belong here.
-    createResizableTextBoxes() {
-        var self = this;
-        $("pre").each(function () {
-            self.createResizableTextBox(this);
-        });
-    }
-
-    // TODO: move this. Creating resizable text boxes has nothing to do with view model behavior.
-    // Roll this code into the existing aceEditorBindingHandler.
-    createResizableTextBox(element) {
-        var editor = ace.edit(element);
-        //editor.setOption('vScrollBarAlwaysVisible', true);
-        //editor.setOption('hScrollBarAlwaysVisible', true);
-        var minHeight = 100;
-        if ($(element).height() < 150) {
-            $(element).height(minHeight);
-        }
-        $(element).resizable({
-            minHeight: minHeight,
-            handles: "s, se",
-            grid: [10000000000000000, 1],
-            resize: function (event, ui) {
-                editor.resize();
-            }
-        });
-        $(element).find('.ui-resizable-se').removeClass('ui-icon-gripsmall-diagonal-se');
-        $(element).find('.ui-resizable-se').addClass('ui-icon-carat-1-s');
-        $('.ui-resizable-se').css('cursor', 's-resize');
-
-        // TODO: isn't this a memory leak, and a potential cause of runtime errors?
-        // Runtime error: What happens when editor is removed from the DOM? 
-        // Memory leak: editor is kept in memory forever, since handler is never removed.
-        window.onresize = function (event) {
-            editor.resize();
-        };
-    }
-
     /*
      * Creates a keyboard shortcut local to the specified element and its children.
      * The shortcut will be removed as soon as the view model is deactivated.
@@ -147,12 +108,6 @@ class viewModelBase {
             this.keyboardShortcutDomContainers.push(elementSelector);
         }
     }
-
-    //A method to save the current value in the observables from text boxes and inputs before a refresh/page close.
-    //Should be implemented on the inheriting class.
-    //saveInObservable() {
-
-    //}
 
     private removeKeyboardShortcuts(elementSelector: string) {
         $(elementSelector).unbind('keydown.jwerty');
@@ -247,7 +202,6 @@ class viewModelBase {
     }
 
     private beforeUnload(e: any) {
-        //this.saveInObservable();
         var isDirty = viewModelBase.dirtyFlag().isDirty();
         if (isDirty) {
             var message = "You have unsaved data.";
@@ -261,8 +215,6 @@ class viewModelBase {
             // For Safari
             return message;
         }
-
-        return null;
     }
 
 }

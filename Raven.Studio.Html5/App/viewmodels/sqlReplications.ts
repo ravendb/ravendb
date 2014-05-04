@@ -176,9 +176,6 @@ class sqlReplications extends viewModelBase {
         var newSqlReplication: sqlReplication = sqlReplication.empty();
         this.replications.push(newSqlReplication);
         newSqlReplication.isFocused(true);
-
-        var lastElement = $('pre').last().get(0);
-        super.createResizableTextBox(lastElement);
     }
 
     removeSqlReplication(repl: sqlReplication) {
