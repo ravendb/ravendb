@@ -177,5 +177,10 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			public const string TableName = "reduce_stats";
 		}
+
+		public class IndexingMetadata
+		{
+			public const string TableName = "indexing_metadata";
+		}
 	}
 }

@@ -22,13 +22,13 @@
         <br />
         <br />
         <form>
-            <input id="upload" name="upload" type="file" multiple="multiple" data-bind="value: files, fileUpload: files" />
+            <input id="upload" name="upload" type="file" multiple="multiple" data-bind="value: files, fileUpload: { files: files, uploads: uploadQueue, success: uploadSuccess.bind($data), fail: uploadFailed.bind($data) }" />
         </form>
         <br />
         <br />
     </div>
 
-    <div class="indexes-container" dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+    <div class="indexes-container" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
         <div class="index-group panel panel-default">
             <div class="panel-heading">
                 <div class="pull-right indexGroup-actions-container">

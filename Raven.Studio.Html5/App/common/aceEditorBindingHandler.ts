@@ -1,6 +1,6 @@
 /// <amd-dependency path="ace/ext/language_tools" />
 /// <amd-dependency path="ace/mode/lucene" />
-/// <amd-dependency path="ace/theme/github" />
+/// <amd-dependency path="ace/theme/xcode" />
 import composition = require("durandal/composition");
 import ace = require("ace/ace");
 import aceLang = require("ace/ext/language_tools");
@@ -18,7 +18,9 @@ class aceEditorBindingHandler {
         lang: "ace/mode/csharp",
         readOnly: false
     }
-    
+
+    static dom = require("ace/lib/dom");    
+    static commands = require("ace/commands/default_commands").commands;
     
     static install() {
         if (!ko.bindingHandlers["aceEditor"]) {
@@ -38,6 +40,18 @@ class aceEditorBindingHandler {
                     value: "general"
                 }
             });
+
+            /// taken from https://github.com/ajaxorg/ace-demos/blob/master/scrolling-editor.html
+            aceEditorBindingHandler.commands.push({
+                name: "Toggle Fullscreen",
+                bindKey: "F11",
+                exec: function(editor) {
+                    aceEditorBindingHandler.dom.toggleCssClass(document.body, "fullScreen");
+                    aceEditorBindingHandler.dom.toggleCssClass(editor.container, "fullScreen-editor");
+                    editor.resize();
+                }
+            });
+            /// 
         }
     }
 

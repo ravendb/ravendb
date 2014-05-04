@@ -22,6 +22,7 @@ class databases extends viewModelBase {
     initializedStats: boolean;
     docsForSystemUrl: string;
     databasesChangeSubscription: changeSubscription;
+    isFirstLoad = true;
 
     constructor() {
         super();
@@ -38,29 +39,16 @@ class databases extends viewModelBase {
 
     attached() {
         ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
-        this.databasesChangeSubscription = shell.globalChangesApi.watchDocPrefix((e: documentChangeNotificationDto) => {
-            if (!!e.Id && e.Id.indexOf("Raven/Databases") == 0 &&
-                (e.Type == documentChangeType.Put || e.Type == documentChangeType.Delete)) {
-                if (e.Type == documentChangeType.Delete) {
-                    this.onDatabaseDeleted(new database(e.Id));
-                }
-
-                this.modelPolling();
-            }
-        }, "Raven/Databases");
+        this.databasesChangeSubscription = shell.globalChangesApi.watchDocPrefix((e: documentChangeNotificationDto) => this.changesApiFiredForDatabases(e), "Raven/Databases");
     }
-
-
 
     deactivate() {
         super.deactivate();
         this.databasesChangeSubscription.off();
-
     }
 
-
-    modelPolling() {
-        new getDatabasesCommand()
+    modelPolling(): JQueryPromise<database[]> {
+        return new getDatabasesCommand()
             .execute()
             .done((results: database[]) => this.databasesLoaded(results));
     }
@@ -75,6 +63,11 @@ class databases extends viewModelBase {
     }
 
     databasesLoaded(results: Array<database>) {
+        // If we have no databases, show the "create a new database" screen.
+        if (results.length === 0 && this.isFirstLoad) {
+            this.newDatabase();
+        }
+
         var databasesHaveChanged = this.checkDifferentDatabases(results);
         if (databasesHaveChanged) {            
             this.databases(results);
@@ -86,12 +79,9 @@ class databases extends viewModelBase {
                 this.initializedStats = true;
                 results.forEach(db => this.fetchStats(db));
             }
-
-            // If we have no databases, show the "create a new database" screen.
-            if (results.length === 0) {
-                this.newDatabase();
-            }
         }
+
+        this.isFirstLoad = false;
     }
 
     checkDifferentDatabases(dbs: database[]) {
@@ -136,7 +126,7 @@ class databases extends viewModelBase {
         var savedKey;
 
         if (bundles.contains("Encryption")) {
-            var createEncryptionViewModel: createEncryption = new createEncryption();
+            var createEncryptionViewModel = new createEncryption();
             createEncryptionViewModel
                 .creationEncryption
                 .done((key: string, encryptionAlgorithm: string, encryptionBits: string, isEncryptedIndexes: string) => {
@@ -155,15 +145,17 @@ class databases extends viewModelBase {
         }
 
         deferred.done(() => {
-            //var self = this; // Note: no reason to use self. If you want to use 'this' in a callback, put the callback in a lambda, e.g. .done(() => this.Foobar())
             new createDatabaseCommand(databaseName, settings, securedSettings)
                 .execute()
                 .done(() => {
-                    this.databases.unshift(new database(databaseName));
+                    var newDb = new database(databaseName);
+                    this.databases.unshift(newDb);
                     if (!jQuery.isEmptyObject(securedSettings)) {
                         var createEncryptionConfirmationViewModel: createEncryptionConfirmation = new createEncryptionConfirmation(savedKey);
                         app.showDialog(createEncryptionConfirmationViewModel);
                     }
+
+                    this.selectDatabase(newDb);
                 });
         });
     }
@@ -203,8 +195,7 @@ class databases extends viewModelBase {
     }
 
     goToDocuments(db: database) {
-        // TODO: use appUrl for this.
-        router.navigate("#documents?database=" + encodeURIComponent(db.name));
+        router.navigate(appUrl.forDocuments(null, db));
     }
 
     filterDatabases(filter: string) {
@@ -234,11 +225,21 @@ class databases extends viewModelBase {
 
     onDatabaseDeleted(db: database) {
         this.databases.remove(db);
-        this.databases.valueHasMutated();
         if (this.databases.length === 0)
             this.selectDatabase(this.systemDb);
         else if (this.databases.contains(this.selectedDatabase()) === false) {
             this.selectDatabase(this.databases().first());
+        }
+    }
+
+    changesApiFiredForDatabases(e: documentChangeNotificationDto) {
+        if (!!e.Id && e.Id.indexOf("Raven/Databases") === 0 &&
+            (e.Type === documentChangeType.Put || e.Type === documentChangeType.Delete)) {
+            if (e.Type === documentChangeType.Delete) {
+                this.onDatabaseDeleted(new database(e.Id));
+            }
+
+            this.modelPolling();
         }
     }
 }

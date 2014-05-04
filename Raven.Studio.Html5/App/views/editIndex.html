@@ -111,49 +111,57 @@
                 </div>
             </div>
             <div class="form-group" data-bind="visible: luceneFields().length > 0">
-                <label class="col-sm-1 control-label">
+                <label class="col-sm-1 control-label" >
                     Fields
                 </label>
-                <div class="col-md-10" data-bind="foreach: luceneFields">
-                    <div>
+                <div class="col-md-11" data-bind="foreach: luceneFields">
+                    <div class="col-xs-12 col-sm-9 col-md-6 col-lg-5">
                         <div class="panel panel-default">
                             <div class="panel-heading">
                                 <div class="col-md-11">
-                                    <input type="text" class="form-control" data-bind="value: name" placeholder="FieldName" />
+                                    <input name="fieldName" type="text" class="form-control" placeholder="FieldName" data-bind="attr:{id:'fieldName' + $index()},value: name, valueUpdate: 'afterkeydown'" autocomplete="off" />
+                                    <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'fieldName' + $index(),foreach: fieldNameAutocompletes">
+                                        <li role="presentation" data-bind="click: $parent.setName.bind($parent,$data)">
+                                            <a role="menuitem" tabindex="-1" href="#">
+                                                <span data-bind=" text:$data">
+                                            </span>
+                                            </a>
+                                        </li>
+                                    </ul>
                                 </div>
                                 <div>
                                     <button type="button" class="close use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind=" click: $root.removeLuceneField.bind($root, $index())" aria-hidden="true" title="Remove this field from the index"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
                                 </div>
                                 <div class="clearfix"></div>
                             </div>
-                            <div class="panel-body">
-                                <div class="col-md-6">
-                                    <label class="control-label col-md-3">Storage</label>
-                                    <div class="col-md-9">
-                                        <select class="form-control" data-bind="options: ['Yes', 'No'], value: stores"></select>
+                            <div class="panel-body fieldControl">
+                                <div class="col-md-6 fieldControl">
+                                    <label class="control-label col-md-5 fieldControl">Storage</label>
+                                    <div class="col-md-7 fieldControl">
+                                        <select class="form-control fieldControl" data-bind="options: ['Yes', 'No'], value: stores"></select>
                                     </div>
-                                    <label class="control-label col-md-3">Sort</label>
-                                    <div class="col-md-9">
-                                        <select class="form-control" data-bind="options: ['None', 'String', 'Int', 'Float', 'Long', 'Double', 'Short', 'Custom', 'Byte', 'StringVal'], value: sort"></select>
+                                    <label class="control-label col-md-5 fieldControl">Sort</label>
+                                    <div class="col-md-7 fieldControl">
+                                        <select class="form-control fieldControl" data-bind="options: ['None', 'String', 'Int', 'Float', 'Long', 'Double', 'Short', 'Custom', 'Byte', 'StringVal'], value: sort"></select>
                                     </div>
-                                    <label class="control-label col-md-3">Term Vector</label>
-                                    <div class="col-md-9">
-                                        <select class="form-control" data-bind="options: ['No', 'Yes', 'WithPositions', 'WithOffsets', 'WithPositionsAndOffsets'], value: termVector"></select>
+                                    <label class="control-label col-md-5 fieldControl">TermVector</label>
+                                    <div class="col-md-7 fieldControl">
+                                        <select class="form-control fieldControl" data-bind="options: ['No', 'Yes', 'WithPositions', 'WithOffsets', 'WithPositionsAndOffsets'], value: termVector"></select>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="control-label col-md-3">Indexing</label>
-                                    <div class="col-md-9">
-                                        <select class="form-control" data-bind="options: ['No', 'Analyzed', 'NotAnalyzed', 'Default'], value: indexing"></select>
+                                <div class="col-md-6 fieldControl">
+                                    <label class="control-label col-md-5 fieldControl">Indexing</label>
+                                    <div class="col-md-7 fieldControl">
+                                        <select class="form-control fieldControl" data-bind="options: ['No', 'Analyzed', 'NotAnalyzed', 'Default'], value: indexing"></select>
                                     </div>
-                                    <label class="control-label col-md-3" data-bind="visible: indexing() === 'Analyzed'">Analyzer</label>
-                                    <div class="col-md-9" data-bind="visible: indexing() === 'Analyzed'">
-                                        <input type="text" class="form-control" data-bind="value: analyzer, attr: { title: analyzer }" />
+                                    <label class="control-label col-md-5 fieldControl" data-bind="visible: indexing() === 'Analyzed'">Analyzer</label>
+                                    <div class="col-md-7 fieldControl" data-bind="visible: indexing() === 'Analyzed'">
+                                        <input type="text" class="form-control fieldControl" data-bind="value: analyzer, attr: { title: analyzer }" />
                                     </div>
-                                    <label class="control-label col-md-3 use-bootstrap-tooltip" title="The suggestion distance algorithm" data-trigger="hover" data-toggle="tooltip" data-placement="bottom">Suggestion</label>
-                                    <div class="col-md-9">
-                                        <select class="form-control" data-bind="options: ['None', 'Default', 'Levenshtein', 'JaroWinkler', 'NGram'], value: suggestionDistance"></select>
-                                        <input type="number" class="form-control use-bootstrap-tooltip" title="The suggestion accuracy" step="0.1" min="0.0" max="1.0" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="value: suggestionAccuracy, visible: suggestionDistance() !== 'None'" />
+                                    <label class="control-label col-md-5 use-bootstrap-tooltip fieldControl" title="The suggestion distance algorithm" data-trigger="hover" data-toggle="tooltip" data-placement="bottom">Suggestion</label>
+                                    <div class="col-md-7 fieldControl">
+                                        <select class="form-control  fieldControl" data-bind="options: ['None', 'Default', 'Levenshtein', 'JaroWinkler', 'NGram'], value: suggestionDistance"></select>
+                                        <input type="number" class="form-control use-bootstrap-tooltip fieldControl" title="The suggestion accuracy" step="0.1" min="0.0" max="1.0" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="value: suggestionAccuracy, visible: suggestionDistance() !== 'None'" />
                                     </div>
                                 </div>
                             </div>
@@ -229,6 +237,9 @@
                 <label class="col-sm-1 control-label">Max Index Outputs Per Document</label>
                 <div class="col-md-2">
                     <input class="form-control" required type="number" data-bind="value: maxIndexOutputsPerDocument" min="0" />
+                </div>
+                <div class="col-md-1">
+                    <button type="button" class="close pull-left use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="left" data-bind="click: $root.removeMaxIndexOutputs.bind($root)" aria-hidden="true" title="Nullify Max Index Outputs Per Document And Hide The Control"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
                 </div>
             </div>
         </form>

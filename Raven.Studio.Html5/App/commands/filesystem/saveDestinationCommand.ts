@@ -31,7 +31,7 @@ class saveFilesystemConfigurationCommand extends commandBase {
                 var url = "/config?name=" + encodeURIComponent("Raven/Synchronization/Destinations");       
 
                 var doc = {
-                    destination: dtos.map(x => JSON.stringify(x))
+                    destination: dtos.map(y => JSON.stringify(y))
                 };
 
                 var docAsString = JSON.stringify(doc);

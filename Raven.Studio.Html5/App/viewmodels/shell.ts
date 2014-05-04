@@ -431,6 +431,13 @@ class shell extends viewModelBase {
         this.updateQueueStatus(item.id(), item.status(), queue);
         this.updateLocalStorage(queue, item.filesystem);
     }
+
+    showLicenseStatusDialog() {
+        require(["viewmodels/licensingStatus"], licensingStatus => {
+            var dialog = new licensingStatus(this.licenseStatus());
+            app.showDialog(dialog);
+        });
+    }
 }
 
 export = shell;
