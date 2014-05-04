@@ -55,7 +55,7 @@ class periodicBackup extends viewModelBase {
         var deferred = $.Deferred();
         new getDatabaseSettingsCommand(db)
             .execute()
-            .done((document: document)=> { this.backupSetup().fromDatabaseSettingsDto(document.toDto()); })
+            .done((document: document)=> { this.backupSetup().fromDatabaseSettingsDto(document.toDto(true)); })
             .always(() => deferred.resolve({ can: true }));
         return deferred;
     }
@@ -69,7 +69,9 @@ class periodicBackup extends viewModelBase {
         var db = this.activeDatabase();
         if (db) {
             var saveTask = new savePeriodicBackupSetupCommand(this.backupSetup(), db).execute();
-            saveTask.done(() => {
+            saveTask.done((resultArray) => {
+                var newEtag = resultArray[0].ETag;
+                this.backupSetup().setEtag(newEtag);
                 this.backupStatusDirtyFlag().reset(); //Resync Changes
                 this.backupConfigDirtyFlag().reset(); //Resync Changes
             });

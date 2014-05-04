@@ -15,22 +15,16 @@ class saveDatabaseSettingsCommand extends commandBase {
     execute(): JQueryPromise<any> {
         this.reportInfo("Saving Database Settings for '" + this.db.name + "'...");
 
-        //var resultsSelector = (queryResult: queryResultDto) => new document(queryResult);
-
-
-        //in order to allow changing the bundles list
         var jQueryOptions: JQueryAjaxSettings = {
             headers: {
-                'If-None-Match': this.document.__metadata.etag,
+                'If-None-Match': this.document.__metadata['@etag']
             }
         };
 
         var args = JSON.stringify(this.document.toDto());
         var url = "/admin/databases/" + this.db.name;
-        var saveTask = this.post(url, args, null, jQueryOptions);
+        var saveTask = this.put(url, args, null, jQueryOptions);
 
-        //var url = "/admin/databases/" + this.db.name;
-        //var saveTask = this.query(url, null, null, resultsSelector);
         saveTask.done(() => this.reportSuccess("Database Settings of '" + this.db.name + "' were successfully saved!"));
         saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save Database Settings!", response.responseText, response.statusText));
         return saveTask;

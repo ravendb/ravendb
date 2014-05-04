@@ -40,62 +40,6 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetMessageWithObject(dbDoc, HttpStatusCode.OK, document.Etag);
 		}
 
-		private Tuple<string, HttpStatusCode> CheckDatabaseNameFormat(string databaseName)
-		{
-			
-			string errorMessage = null;
-			HttpStatusCode errorCode = HttpStatusCode.BadRequest;
-
-			if (databaseName == null)
-			{
-				errorMessage = "An empty name is forbidden for use!";
-			}
-			else if (databaseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-			{
-				errorMessage = string.Format("The name '{0}' contains charaters that are forbidden for use!", databaseName);
-			}
-			else if (Array.IndexOf(Constants.WindowsReservedFileNames, databaseName.ToLower()) >= 0){
-				errorMessage = string.Format("The name '{0}' is forbidden for use!", databaseName);
-			}
-			else if ((Environment.OSVersion.Platform == PlatformID.Unix) && (databaseName.Length > Constants.LinuxMaxFileNameLength) && (Database.Configuration.DataDirectory.Length + databaseName.Length > Constants.LinuxMaxPath))
-			{
-				int theoreticalMaxFileNameLength = Constants.LinuxMaxPath - Database.Configuration.DataDirectory.Length;
-				int maxfileNameLength = (theoreticalMaxFileNameLength > Constants.LinuxMaxFileNameLength) ? Constants.LinuxMaxFileNameLength : theoreticalMaxFileNameLength;
-				errorMessage = string.Format("Invalid name for a database! Databse name cannot exceed {0} characters", maxfileNameLength);
-			}
-			else if (Path.Combine(Database.Configuration.DataDirectory, databaseName).Length > Constants.WindowsMaxPath)
-			{
-				int maxfileNameLength = Constants.WindowsMaxPath - Database.Configuration.DataDirectory.Length;
-				errorMessage = string.Format("Invalid name for a database! Databse name cannot exceed {0} characters", maxfileNameLength);
-			}
-			else if (IsSystemDatabase(databaseName))
-			{
-				errorMessage = "System Database document cannot be changed";
-				errorCode = HttpStatusCode.Forbidden;
-			}
-			return new Tuple<string, HttpStatusCode>(errorMessage, errorCode);
-		}
-
-
-		private string CheckDatbaseName(string id, Etag etag)
-		{
-			string errorMessage = null;
-			var docKey = "Raven/Databases/" + id;
-			var database = Database.Documents.Get(docKey, null);
-			var isExistingDatabase = (database != null);
-
-			if (isExistingDatabase && etag == null)
-			{
-				errorMessage = "Database with the name '{0}' already exists";
-			}
-			else if (!isExistingDatabase && etag != null)
-			{
-				errorMessage = "Database with the name '{0}' doesn't exist";
-			}
-
-			return errorMessage;
-		}
-
 		[HttpPut]
 		[Route("admin/databases/{*id}")]
 		public async Task<HttpResponseMessage> DatabasesPut(string id)
@@ -115,12 +59,6 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
 				return GetMessageWithString(string.Format(error, id), HttpStatusCode.BadRequest);
 			}
-			/*var docKey = "Raven/Databases/" + id;
-			var existingDatabase = Database.Documents.Get(docKey, null);
-			if (existingDatabase != null && etag == null)
-			{
-				return GetMessageWithString(string.Format("Database with the name '{0}' already exists", id), HttpStatusCode.BadRequest);
-			}*/
 
 			var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
 			if (dbDoc.Settings.ContainsKey("Bundles") && dbDoc.Settings["Bundles"].Contains("Encryption"))
@@ -137,15 +75,14 @@ namespace Raven.Database.Server.Controllers.Admin
 			json.Remove("Id");
 
 			var metadata = (etag != null) ? InnerHeaders.FilterHeadersToObject() : new RavenJObject();
-			var transactionInformation = (etag != null) ? GetRequestTransaction() : null;
-			Database.Documents.Put(docKey, null, json, new RavenJObject(), null);
+			var putResult = Database.Documents.Put(docKey, etag, json, metadata, null);
 
-			return GetEmptyMessage();
+			return (etag == null) ? GetEmptyMessage() : GetMessageWithObject(putResult);
 		}
 
 		[HttpPost]
 		[Route("admin/databases/{*id}")]
-		public async Task<HttpResponseMessage> DatabasePost(string id)
+		private async Task<HttpResponseMessage> DatabasePost(string id)
 		{
 			var docKey = "Raven/Databases/" + id;
 			var existingDatabase = Database.Documents.Get(docKey, null);
@@ -202,5 +139,61 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetEmptyMessage();
 		}
 
+		private Tuple<string, HttpStatusCode> CheckDatabaseNameFormat(string databaseName)
+		{
+
+			string errorMessage = null;
+			HttpStatusCode errorCode = HttpStatusCode.BadRequest;
+
+			if (databaseName == null)
+			{
+				errorMessage = "An empty name is forbidden for use!";
+			}
+			else if (databaseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+			{
+				errorMessage = string.Format("The name '{0}' contains charaters that are forbidden for use!", databaseName);
+			}
+			else if (Array.IndexOf(Constants.WindowsReservedFileNames, databaseName.ToLower()) >= 0)
+			{
+				errorMessage = string.Format("The name '{0}' is forbidden for use!", databaseName);
+			}
+			else if ((Environment.OSVersion.Platform == PlatformID.Unix) && (databaseName.Length > Constants.LinuxMaxFileNameLength) && (Database.Configuration.DataDirectory.Length + databaseName.Length > Constants.LinuxMaxPath))
+			{
+				int theoreticalMaxFileNameLength = Constants.LinuxMaxPath - Database.Configuration.DataDirectory.Length;
+				int maxfileNameLength = (theoreticalMaxFileNameLength > Constants.LinuxMaxFileNameLength) ? Constants.LinuxMaxFileNameLength : theoreticalMaxFileNameLength;
+				errorMessage = string.Format("Invalid name for a database! Databse name cannot exceed {0} characters", maxfileNameLength);
+			}
+			else if (Path.Combine(Database.Configuration.DataDirectory, databaseName).Length > Constants.WindowsMaxPath)
+			{
+				int maxfileNameLength = Constants.WindowsMaxPath - Database.Configuration.DataDirectory.Length;
+				errorMessage = string.Format("Invalid name for a database! Databse name cannot exceed {0} characters", maxfileNameLength);
+			}
+			else if (IsSystemDatabase(databaseName))
+			{
+				errorMessage = "System Database document cannot be changed";
+				errorCode = HttpStatusCode.Forbidden;
+			}
+			return new Tuple<string, HttpStatusCode>(errorMessage, errorCode);
+		}
+
+
+		private string CheckDatbaseName(string id, Etag etag)
+		{
+			string errorMessage = null;
+			var docKey = "Raven/Databases/" + id;
+			var database = Database.Documents.Get(docKey, null);
+			var isExistingDatabase = (database != null);
+
+			if (isExistingDatabase && etag == null)
+			{
+				errorMessage = "Database with the name '{0}' already exists";
+			}
+			else if (!isExistingDatabase && etag != null)
+			{
+				errorMessage = "Database with the name '{0}' doesn't exist";
+			}
+
+			return errorMessage;
+		}
 	}
 }

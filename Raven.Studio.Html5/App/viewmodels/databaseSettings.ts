@@ -84,9 +84,7 @@ class databaseSettings extends viewModelBase {
     private fetchDatabaseSettings(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {
         return new getDatabaseSettingsCommand(db, reportFetchProgress)
             .execute()
-            .done((document: document)=> {
-            this.document(document);
-        });
+            .done((document: document)=> { this.document(document); });
     }
 
     formatDocument() {
@@ -105,13 +103,15 @@ class databaseSettings extends viewModelBase {
     }
 
     saveChanges() {
-        this.updatedDto['__metadata'] = { etag : this.document().__metadata.etag };
+        this.updatedDto['__metadata'] = { '@etag': this.document().__metadata['@etag'] };
         var newDoc = new document(this.updatedDto);
         var saveCommand = new saveDatabaseSettingsCommand(appUrl.getDatabase(), newDoc);
         var saveTask = saveCommand.execute();
-        saveTask.done(() => {
+        saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
+            this.document().__metadata['@etag'] = idAndEtag.ETag;
             this.docEditor.setReadOnly(true);
             this.isEditingEnabled(false);
+            this.formatDocument();
             viewModelBase.dirtyFlag().reset(); //Resync Changes
         });
     }
