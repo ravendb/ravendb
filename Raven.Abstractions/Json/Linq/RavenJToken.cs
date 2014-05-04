@@ -420,7 +420,6 @@ namespace Raven.Json.Linq
                                         case JTokenType.Object:
                                             otherStack.Push(token);
                                             thisStack.Push(kvp.Value);
-                                           // fieldNameStack.Push(kvp.Key);
                                             fieldNameStack.Push(fieldName);
                                             break;
                                         case JTokenType.Bytes:
@@ -444,7 +443,6 @@ namespace Raven.Json.Linq
                                             {
                                                 if (docChanges == null)
                                                     return false;
-                                               // docChanges.AddChanges(kvp, token);
                                                 docChanges.AddChanges(kvp, token,fieldName);
                                                 isEqual = false;
                                             }
