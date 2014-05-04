@@ -14,7 +14,7 @@ class exportDatabase extends viewModelBase {
     includeAllCollections = ko.observable(true);
     removeAnalyzers = ko.observable(false);
     showAdvancedOptions = ko.observable(false);
-    batchSize = ko.observable(0);
+    batchSize = ko.observable(1024);
     includedCollections = ko.observableArray<{ collection: string; isIncluded: KnockoutObservable<boolean>; }>();
     filters = ko.observableArray<filterSettingDto>();
     transformScript = ko.observable<string>();
@@ -90,11 +90,12 @@ class exportDatabase extends viewModelBase {
         filtersToSend.pushAll(this.filters());
 
         if (!this.includeAllCollections()) {
-            var newFilter: filterSettingDto = {
+            filtersToSend.push(
+            {
                 ShouldMatch: true,
                 Path: "@metadata.Raven-Entity-Name",
-                Values : this.includedCollections().filter((curCol) => curCol.isIncluded() == true).map((curCol) => curCol.collection)                
-            };           
+                Values: this.includedCollections().filter((curCol) => curCol.isIncluded() == true).map((curCol) => curCol.collection)
+            });
         }
 
 
@@ -102,7 +103,7 @@ class exportDatabase extends viewModelBase {
             OperateOnTypes: operateOnTypes,
             BatchSize: this.batchSize(),
             ShouldExcludeExpired: !this.includeExpiredDocuments(),
-            Filters: this.filters(),
+            Filters: filtersToSend,
             TransformScript: this.transformScript()
         };
         /*

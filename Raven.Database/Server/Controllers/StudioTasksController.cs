@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Security.Permissions;
 using System.Text;
@@ -74,23 +75,39 @@ namespace Raven.Database.Server.Controllers
 				var serializer = JsonExtensions.CreateDefaultJsonSerializer();
                 smugglerOptions = (SmugglerOptions)serializer.Deserialize(jsonReader, typeof(SmugglerOptions));
 			}
+
+
+            var result = GetEmptyMessage();
             
-          
-			var result = GetEmptyMessage();
+            // create PushStreamContent object that will be called when the output stream will be ready.
 			result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
 			{
-				{
-					
-				};
-				await new DataDumper(Database).ExportData(new SmugglerExportOptions
-				{
-					ToStream = outputStream
-				}, smugglerOptions);
+			    try
+			    {
+			        await new DataDumper(Database).ExportData(new SmugglerExportOptions
+			        {
+			            ToStream = outputStream
+			        }, smugglerOptions).ConfigureAwait(false);
+			    }
+                    // close the output stream, so the PushStremContent mechanism will know that the process is finished
+			    finally
+			    {
+			        outputStream.Close();
+			    }
+
+				
 			});
+
+            result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+            {
+                FileName = "Dump of " + this.DatabaseName + ", " + DateTime.Now.ToString("dd MMM yyyy HH-mm")
+            };
 			
 			return result;
-		}
 
+
+		}
+        
 		[HttpPost]
 		[Route("studio-tasks/createSampleData")]
 		[Route("databases/{databaseName}/studio-tasks/createSampleData")]
