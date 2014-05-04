@@ -355,6 +355,20 @@ namespace Raven.Json.Linq
             docChanges.Add(changes);
           
         }
+        public static void AddChanges(this ICollection<DocumentsChanges> docChanges, KeyValuePair<string, RavenJToken> kvp, RavenJToken token,string fieldName)
+        {
+            var changes = new DocumentsChanges
+            {
+                FieldNewType = kvp.Value.Type.ToString(),
+                FieldOldType = token.Type.ToString(),
+                FieldNewValue = kvp.Value.ToString(),
+                FieldOldValue = token.ToString(),
+                Change = DocumentsChanges.ChangeType.FieldChanged,
+                FieldName = fieldName
+            };
+            docChanges.Add(changes);
+
+        }
         public static void AddChanges(this ICollection<DocumentsChanges> docChanges, RavenJToken curThisReader, RavenJToken curOtherReader, string fieldName)
         {
             var changes = new DocumentsChanges

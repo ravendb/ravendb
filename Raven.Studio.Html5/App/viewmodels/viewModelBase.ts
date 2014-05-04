@@ -63,23 +63,7 @@ class viewModelBase {
         }
 
         this.modelPollingStart();
-
-        window.onbeforeunload = (e: any) => {
-            //this.saveInObservable();
-            var isDirty = viewModelBase.dirtyFlag().isDirty();
-            if (isDirty) {
-                var message = "You have unsaved data.";
-                e = e || window.event;
-                // For IE and Firefox
-                if (e) {
-                    e.returnValue = message;
-                }
-                // For Safari
-                return message;
-            }
-            return null;
-        };
-
+        window.onbeforeunload = (e: any) => this.beforeUnload(e);
         ko.postbox.publish("SetRawJSONUrl", "");
     }
 
@@ -110,6 +94,7 @@ class viewModelBase {
         this.modelPollingStop();
     }
 
+    // TODO: move this code. It doesn't belong here.
     createResizableTextBoxes() {
         var self = this;
         $("pre").each(function () {
@@ -117,6 +102,8 @@ class viewModelBase {
         });
     }
 
+    // TODO: move this. Creating resizable text boxes has nothing to do with view model behavior.
+    // Roll this code into the existing aceEditorBindingHandler.
     createResizableTextBox(element) {
         var editor = ace.edit(element);
         //editor.setOption('vScrollBarAlwaysVisible', true);
@@ -136,6 +123,10 @@ class viewModelBase {
         $(element).find('.ui-resizable-se').removeClass('ui-icon-gripsmall-diagonal-se');
         $(element).find('.ui-resizable-se').addClass('ui-icon-carat-1-s');
         $('.ui-resizable-se').css('cursor', 's-resize');
+
+        // TODO: isn't this a memory leak, and a potential cause of runtime errors?
+        // Runtime error: What happens when editor is removed from the DOM? 
+        // Memory leak: editor is kept in memory forever, since handler is never removed.
         window.onresize = function (event) {
             editor.resize();
         };
@@ -221,10 +212,13 @@ class viewModelBase {
         return canNavTask;
     }
 
-    stringifyUploadQueue(queue: uploadItem[]): string {
+    private stringifyUploadQueue(queue: uploadItem[]): string {
         return ko.toJSON(queue);
     }
 
+    // TODO: move this. It doesn't belong in the viewModelBase; it is file 
+    // system-specific functionality. It is used only by file system code, and the shell.
+    // Maybe move into its own class, like UploadParser, or derive a new viewModel base class, e.g. fileSystemViewModelBase.
     parseUploadQueue(queue: string, fs : filesystem): uploadItem[] {
         var stringArray: any[] = JSON.parse(queue);
         var uploadQueue: uploadItem[] = [];
@@ -237,10 +231,12 @@ class viewModelBase {
         return uploadQueue;
     }
 
+    // TODO: move this. It doesn't belong in the viewModelBase. Only the shell and file system view models use it.
     updateLocalStorage(x: uploadItem[], fs : filesystem) {
         window.localStorage.setItem(this.localStorageUploadQueueKey + fs.name, this.stringifyUploadQueue(x));
     }
 
+    // TODO: move this. It doesn't belong in the viewModelBase. Only the shell and file system view models use it.
     updateQueueStatus(guid: string, status: string, queue: uploadItem[]) {
         var items = ko.utils.arrayFilter(queue, (i: uploadItem) => {
             return i.id() === guid
@@ -248,6 +244,25 @@ class viewModelBase {
         if (items) {
             items[0].status(status);
         }
+    }
+
+    private beforeUnload(e: any) {
+        //this.saveInObservable();
+        var isDirty = viewModelBase.dirtyFlag().isDirty();
+        if (isDirty) {
+            var message = "You have unsaved data.";
+            e = e || window.event;
+
+            // For IE and Firefox
+            if (e) {
+                e.returnValue = message;
+            }
+
+            // For Safari
+            return message;
+        }
+
+        return null;
     }
 
 }

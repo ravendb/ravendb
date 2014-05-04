@@ -14,6 +14,7 @@ import dialog = require("plugins/dialog");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
+import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 
 class editIndex extends viewModelBase { 
 
@@ -30,11 +31,13 @@ class editIndex extends viewModelBase {
     queryUrl = ko.observable<string>();
     editMaxIndexOutputsPerDocument = ko.observable<boolean>(false);
     indexErrorsList = ko.observableArray<string>();
+    
 
     constructor() {
         super();
 
         aceEditorBindingHandler.install();
+        autoCompleteBindingHandler.install();
 
         this.priorityFriendlyName = ko.computed(() => this.getPriorityFriendlyName());
         this.priorityLabel = ko.computed(() => this.priorityFriendlyName() ? "Priority: " + this.priorityFriendlyName() : "Priority");
@@ -86,7 +89,7 @@ class editIndex extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
     }
-
+    
     /*saveInObservable() {
         var docEditor = ace.edit("docEditor");
         var docEditorText = docEditor.getSession().getValue();
@@ -252,7 +255,14 @@ class editIndex extends viewModelBase {
 
     addField() {
         var field = new luceneField("");
+        field.indexFieldNames = this.editedIndex().fields();
+        field.calculateFieldNamesAutocomplete();
         this.editedIndex().luceneFields.push(field);
+    }
+
+    removeMaxIndexOutputs() {
+        this.editedIndex().maxIndexOutputsPerDocument(0);
+        this.editMaxIndexOutputsPerDocument(false);
     }
 
     addSpatialField() {

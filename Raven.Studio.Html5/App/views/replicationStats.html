@@ -8,7 +8,8 @@
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <h4 class="panel-title">
-                        <a data-toggle="collapse" href="#collapseOne" data-bind="text: Url, attr: { href: '#statsIndexCollapse' + $index() }"></a>
+                        <a data-toggle="collapse" href="#collapseOne" data-bind="text: Url, attr: { href: '#statsIndexCollapse' + $index() }"></a> 
+                        <i class="fa fa-ambulance replicationError" data-bind="visible:isHotFailure"></i>
                     </h4>
                 </div>
                 <div class="panel-collapse collapse" data-bind="attr: { id: 'statsIndexCollapse' + $index() }">

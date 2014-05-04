@@ -85,14 +85,19 @@ namespace Raven.Client.Linq
 		}
 
 	    private void SetFacet(Expression<Func<T, object>> path, FacetAggregation facetAggregation)
-		{
-			var last = facets.Last();
-			last.AggregationField = path.ToPropertyPath();
-		    last.AggregationType = path.ExtractTypeFromPath().FullName;
-			last.Aggregation |= facetAggregation;
-		}
+	    {
+	        var last = facets.Last();
+	        last.Aggregation |= facetAggregation;
+	        if (facetAggregation == FacetAggregation.Count && 
+                string.IsNullOrEmpty(last.AggregationField) == false)
+	        {
+                return;
+	        }
+	        last.AggregationField = path.ToPropertyPath();
+	        last.AggregationType = path.ExtractTypeFromPath().FullName;
+	    }
 
-		public DynamicAggregationQuery<T> MaxOn(Expression<Func<T, object>> path)
+	    public DynamicAggregationQuery<T> MaxOn(Expression<Func<T, object>> path)
 		{
 			SetFacet(path, FacetAggregation.Max);
 
