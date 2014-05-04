@@ -85,8 +85,25 @@ class exportDatabase extends viewModelBase {
             operateOnTypes += 8000;
         }
 
+
+        var filtersToSend: filterSettingDto[] = [];
+        filtersToSend.pushAll(this.filters());
+
+        if (!this.includeAllCollections()) {
+            var newFilter: filterSettingDto = {
+                ShouldMatch: true,
+                Path: "@metadata.Raven-Entity-Name",
+                Values : this.includedCollections().filter((curCol) => curCol.isIncluded() == true).map((curCol) => curCol.collection)                
+            };           
+        }
+
+
         var smugglerOptions = {
-            OperateOnTypes: operateOnTypes
+            OperateOnTypes: operateOnTypes,
+            BatchSize: this.batchSize(),
+            ShouldExcludeExpired: !this.includeExpiredDocuments(),
+            Filters: this.filters(),
+            TransformScript: this.transformScript()
         };
         /*
         new exportDatabaseCommand(smugglerOptions, this.activeDatabase())

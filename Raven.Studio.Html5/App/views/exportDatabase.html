@@ -27,43 +27,60 @@
             <li data-bind="css: { active: showAdvancedOptions()}"><a data-bind="click:function(){this.selectAdvancedOptions()}">Advanced</a></li>
         </ul>
         <br />
-        <div class="btn-group-vertical" data-toggle="buttons-checkbox" data-bind="visible:!showAdvancedOptions()">
+        <div class="btn-group btn-group-vertical" data-bind="visible:!showAdvancedOptions()">
 
             <!--
-                <button class="btn btn-default" data-bind="css:{active:includeDocuments() == true}, click: function(){$root.includeDocuments.toggle(); return true;}">
-                    Include Documents
-                </button>
-                <button class="btn btn-default" data-bind="css:{active:includeIndexes() == true}, click: function(){$root.includeIndexes.toggle(); return true;}">
-                    Include Indexes
-                </button>
-                <button class="btn btn-default" data-bind="css:{active:includeAttachments() == true}, click: function(){$root.includeAttachments.toggle(); return true;}">
-                    Include Attachments
-                </button>
-                <button class="btn btn-default" data-bind="css:{active:includeTransformers() == true}, click: function(){$root.includeTransformers.toggle(); return true;}">
-                    Include Transformers
-                </button>
-                <button class="btn btn-default" data-bind="css:{active:removeAnalyzers() == true}, click: function(){$root.removeAnalyzers.toggle()}">
-                    Remove Analyzers
-                </button>
-                
+            <button class="btn btn-default" data-bind="css:{active:includeDocuments() == true}, click: function(){$root.includeDocuments(!$root.includeDocuments()); return true;}">
+                Include Documents
+            </button>
+            <button class="btn btn-default" data-bind="css:{active:includeIndexes() == true}, click: function(){$root.includeIndexes(!$root.includeIndexes()); return true;}">
+                Include Indexes
+            </button>
+            <button class="btn btn-default" data-bind="css:{active:includeAttachments() == true}, click: function(){$root.includeAttachments(!$root.includeAttachments()); return true;}">
+                Include Attachments
+            </button>
+            <button class="btn btn-default" data-bind="css:{active:includeTransformers() == true}, click: function(){$root.includeTransformers(!$root.includeTransformers()); return true;}">
+                Include Transformers
+            </button>
+            <button class="btn btn-default" data-bind="css:{active:removeAnalyzers() == true}, click: function(){$root.removeAnalyzers(!$root.removeAnalyzers()); return true; }">
+                Remove Analyzers
+            </button>
                 -->
-                
-            <label class="btn btn-default" data-bind="css:{active:includeDocuments}">
-                <input type="checkbox" data-bind="checked: includeDocuments"> Include Documents
+
+            <!--
+        <label class="btn btn-default" data-bind="css:{active:includeDocuments}">
+            <input type="checkbox" data-bind="checked: includeDocuments"> Include Documents
+        </label>
+        <label class="btn btn-default" data-bind="css:{active:includeIndexes}">
+            <input type="checkbox" data-bind="checked: includeIndexes"> Include Indexes
+        </label>
+        <label class="btn btn-default" data-bind="css:{active:includeAttachments}">
+            <input type="checkbox" data-bind="checked: includeAttachments"> Include Attachments
+        </label>
+        <label class="btn btn-default" data-bind="css:{active:includeTransformers}">
+            <input type="checkbox" data-bind="checked: includeTransformers"> Include Transformers
+        </label>
+        <label class="btn btn-default" data-bind="css:{active:removeAnalyzers}">
+            <input type="checkbox" data-bind="checked: removeAnalyzers"> Remove Analyzers
+        </label>
+        -->
+
+
+            <label class="btn btn-default" data-bind="css:{active:includeDocuments() == true}, click: function(){$root.includeDocuments(!$root.includeDocuments()); return true;}, clickBubble: false">
+                Include Documents
             </label>
-            <label class="btn btn-default" data-bind="css:{active:includeIndexes}">
-                <input type="checkbox" data-bind="checked: includeIndexes"> Include Indexes
+            <label class="btn btn-default" data-bind="css:{active:includeIndexes() == true}, click: function(){$root.includeIndexes(!$root.includeIndexes()); return true;}, clickBubble: false">
+                Include Indexes
             </label>
-            <label class="btn btn-default" data-bind="css:{active:includeAttachments}">
-                <input type="checkbox" data-bind="checked: includeAttachments"> Include Attachments
+            <label class="btn btn-default" data-bind="css:{active:includeAttachments() == true}, click: function(){$root.includeAttachments(!$root.includeAttachments()); return true;}, clickBubble: false">
+                Include Attachments
             </label>
-            <label class="btn btn-default" data-bind="css:{active:includeTransformers}">
-                <input type="checkbox" data-bind="checked: includeTransformers"> Include Transformers
+            <label class="btn btn-default" data-bind="css:{active:includeTransformers() == true}, click: function(){$root.includeTransformers(!$root.includeTransformers()); return true;}, clickBubble: false">
+                Include Transformers
             </label>
-            <label class="btn btn-default" data-bind="css:{active:removeAnalyzers}">
-                <input type="checkbox" data-bind="checked: removeAnalyzers"> Remove Analyzers
+            <label class="btn btn-default" data-bind="css:{active:removeAnalyzers() == true}, click: function(){$root.removeAnalyzers(!$root.removeAnalyzers()); return true; }, clickBubble: false">
+                Remove Analyzers
             </label>
-            
 
         </div>
         <div data-bind="visible:showAdvancedOptions()">
