@@ -356,7 +356,7 @@ class editDocument extends viewModelBase {
                 this.nextDocumentOrFirst();
             });
             app.showDialog(viewModel, editDocument.editDocSelector);
-        }
+        } 
     }
 
     formatDocument() {
