@@ -114,7 +114,7 @@ public class AbstractIndexCreationTask extends AbstractCommonApiForIndexesAndTra
     updateIndexInReplication(databaseCommands, documentConvention, new Action2<ServerClient, OperationMetadata>() {
       @Override
       public void apply(ServerClient commands, OperationMetadata operationMetadata) {
-        commands.directPutIndex(getIndexName(), operationMetadata, true, indexDefinition);
+        commands.directPutIndex(getIndexName(), indexDefinition, true, operationMetadata);
       }
     });
   }

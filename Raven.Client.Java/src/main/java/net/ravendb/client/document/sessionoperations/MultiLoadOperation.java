@@ -60,7 +60,7 @@ public class MultiLoadOperation {
     includeResults = SerializationHelper.ravenJObjectsToJsonDocuments(multiLoadResult.getIncludes()).toArray(new JsonDocument[0]);
     results = SerializationHelper.ravenJObjectsToJsonDocuments(multiLoadResult.getResults()).toArray(new JsonDocument[0]);
 
-    if (!sessionOperations.isAllowNonAuthoritativeInformation()) {
+    if (sessionOperations.isAllowNonAuthoritativeInformation()) {
       return false;
     }
     for (JsonDocument doc : results) {

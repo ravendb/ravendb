@@ -1095,7 +1095,6 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     }
   }
 
-
   //TODO: ProjectionToInstance is missing
 
   @Override

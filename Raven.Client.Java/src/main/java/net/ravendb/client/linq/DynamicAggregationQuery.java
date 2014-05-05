@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.commons.lang.StringUtils;
 
@@ -60,7 +61,7 @@ public class DynamicAggregationQuery<T> {
 
     if (facets.size() > 0) {
       for (AggregationQueryDsl facet: facets) {
-        if (facet.getDisplayName().equals(displayName)) {
+        if (Objects.equals(facet.getDisplayName(), displayName)) {
           throw new IllegalArgumentException("Cannot use the more than one aggregation function with the same name/without name");
         }
       }
