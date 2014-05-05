@@ -11,15 +11,16 @@ import net.ravendb.abstractions.json.linq.RavenJArray;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.abstractions.json.linq.RavenJToken;
 import net.ravendb.client.document.DocumentSession;
+import net.ravendb.client.document.InMemoryDocumentSessionOperations;
 
 
 
 public class LoadTransformerOperation {
-  private DocumentSession documentSession;
+  private InMemoryDocumentSessionOperations documentSession;
   private final String transformer;
   private String[] ids;
 
-  public LoadTransformerOperation(DocumentSession documentSession, String transformer, String[] ids) {
+  public LoadTransformerOperation(InMemoryDocumentSessionOperations documentSession, String transformer, String[] ids) {
     this.documentSession = documentSession;
     this.transformer = transformer;
     this.ids = ids;

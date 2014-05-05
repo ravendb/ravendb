@@ -8,6 +8,7 @@ import net.ravendb.client.changes.IDatabaseChanges;
 import net.ravendb.client.connection.implementation.HttpJsonRequestFactory;
 import net.ravendb.client.document.BulkInsertOperation;
 import net.ravendb.client.document.DocumentConvention;
+import net.ravendb.client.document.DocumentSessionListeners;
 import net.ravendb.client.document.OpenSessionOptions;
 import net.ravendb.client.indexes.AbstractIndexCreationTask;
 import net.ravendb.client.indexes.AbstractTransformerCreationTask;
@@ -177,5 +178,9 @@ public interface IDocumentStore extends IDisposalNotification {
    * @return
    */
   public BulkInsertOperation bulkInsert(String database, BulkInsertOptions options);
+
+  public DocumentSessionListeners getListeners();
+
+  public void setListeners(DocumentSessionListeners listeners);
 
 }

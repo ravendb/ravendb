@@ -141,7 +141,7 @@ public class SerializationHelper {
   }
 
   public static JsonDocumentMetadata deserializeJsonDocumentMetadata(String docKey, Map<String, String> headers, int responseStatusCode) {
-    RavenJObject meta = MetadataExtensions.filterHeaders(headers);
+    RavenJObject meta = MetadataExtensions.filterHeadersToObject(headers);
     Etag etag = HttpExtensions.etagHeaderToEtag(headers.get("ETag"));
     JsonDocumentMetadata result =  new JsonDocumentMetadata();
     result.setEtag(etag);
@@ -161,7 +161,7 @@ public class SerializationHelper {
 
     Etag etag = extract(metadata, "@etag", Etag.empty(), Etag.class);
     boolean nai = extract(metadata, "Non-Authoritative-Information", false, Boolean.class);
-    JsonDocument jsonDocument = new JsonDocument(doc, MetadataExtensions.filterHeaders(metadata), key, nai, etag, lastModified);
+    JsonDocument jsonDocument = new JsonDocument(doc, MetadataExtensions.filterHeadersToObject(metadata), key, nai, etag, lastModified);
     jsonDocument.setTempIndexScore(metadata == null ? null : metadata.value(Float.class, Constants.TEMPORARY_SCORE_VALUE));
 
     return jsonDocument;
@@ -170,7 +170,7 @@ public class SerializationHelper {
   public static JsonDocument deserializeJsonDocument(String docKey, RavenJToken responseJson, Map<String, String> headers, int responseStatusCode) {
     RavenJObject jsonData = (RavenJObject) responseJson;
 
-    RavenJObject meta = MetadataExtensions.filterHeaders(headers);
+    RavenJObject meta = MetadataExtensions.filterHeadersToObject(headers);
     Etag etag = HttpExtensions.etagHeaderToEtag(headers.get("ETag"));
 
     return new JsonDocument(jsonData, meta, docKey, responseStatusCode == HttpStatus.SC_NON_AUTHORITATIVE_INFORMATION, etag, getLastModifiedDate(headers));

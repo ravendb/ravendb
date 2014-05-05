@@ -2,11 +2,19 @@ package net.ravendb.abstractions.json.linq;
 
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
+import javax.print.Doc;
+
+import net.ravendb.abstractions.basic.CollectionUtils;
+import net.ravendb.abstractions.data.DocumentsChanges;
+import net.ravendb.abstractions.data.DocumentsChanges.ChangeType;
 import net.ravendb.abstractions.data.Etag;
 import net.ravendb.abstractions.util.NetDateFormat;
 
@@ -200,4 +208,133 @@ public class Extensions {
 
   }
 
+  public static boolean compareRavenJArrayData(Collection<DocumentsChanges> docChanges, RavenJArray selfArray, RavenJArray otherArray, String fieldArrName) {
+
+    List<RavenJToken> differences;
+    if (selfArray.size() < otherArray.size()) {
+      differences = CollectionUtils.except(otherArray, selfArray);
+    } else {
+      differences = CollectionUtils.except(selfArray, otherArray);
+    }
+
+    for (RavenJToken dif : differences) {
+      DocumentsChanges changes = new DocumentsChanges();
+      changes.setFieldName(fieldArrName);
+
+      if (selfArray.size() < otherArray.size()) {
+        changes.setChange(ChangeType.ARRAY_VALUE_REMOVED);
+        changes.setFieldOldValue(dif.toString());
+        changes.setFieldOldType(dif.getType().toString());
+      }
+
+      if (selfArray.size() > otherArray.size()) {
+        changes.setChange(ChangeType.ARRAY_VALUE_ADDED);
+        changes.setFieldNewValue(dif.toString());
+        changes.setFieldNewType(dif.getType().toString());
+      }
+      docChanges.add(changes);
+
+    }
+
+    return false;
+
+  }
+
+  public static boolean compareDifferentLengthRavenJObjectData(Collection<DocumentsChanges> docChanges, RavenJObject otherObj, RavenJObject selfObj, String fieldName) {
+    Map<String, String> diffData = new HashMap<>();
+    String descr = "";
+    RavenJToken token1;
+    if (otherObj.getCount() == 0) {
+      for (Map.Entry<String, RavenJToken> kvp: selfObj.getProperties()) {
+        DocumentsChanges changes = new DocumentsChanges();
+        if (selfObj.getProperties().containsKey(kvp.getKey())) {
+          token1 = selfObj.getProperties().get(kvp.getKey());
+          changes.setFieldNewValue(token1.toString());
+          changes.setFieldNewType(token1.getType().toString());
+          changes.setChange(ChangeType.ARRAY_VALUE_ADDED);
+
+          changes.setFieldName(kvp.getKey());
+        }
+
+        changes.setFieldOldValue("null");
+        changes.setFieldOldType("null");
+
+        docChanges.add(changes);
+      }
+      return false;
+    }
+
+    compareJsonData(selfObj.getProperties(), otherObj.getProperties(), diffData);
+
+    for (String key: diffData.keySet()) {
+      DocumentsChanges changes = new DocumentsChanges();
+      changes.setFieldOldType(otherObj.getType().toString());
+      changes.setFieldNewType(selfObj.getType().toString());
+      changes.setFieldName(key);
+
+      if (selfObj.getCount() < otherObj.getCount()) {
+        changes.setChange(ChangeType.ARRAY_VALUE_REMOVED);
+        changes.setFieldOldValue(diffData.get(key));
+      } else {
+        changes.setChange(ChangeType.ARRAY_VALUE_ADDED);
+        changes.setFieldNewValue(diffData.get(key));
+      }
+      docChanges.add(changes);
+    }
+
+    return false;
+  }
+
+  //TODO: we have to rewrite those methods !
+  private static void compareJsonData(DictionaryWithParentSnapshot selfObj, DictionaryWithParentSnapshot otherObj, Map<String, String> diffData) {
+    List<String> diffNames = CollectionUtils.except(selfObj.keySet(), otherObj.keySet());
+    DictionaryWithParentSnapshot bigObj = selfObj;
+    if (diffData == null) {
+      diffData = new HashMap<>();
+    }
+    if (selfObj.size() < otherObj.size()) {
+      diffNames = CollectionUtils.except(otherObj.keySet(), selfObj.keySet());
+      bigObj = otherObj;
+    }
+    for (String kvp : diffNames) {
+      if (bigObj.containsKey(kvp)) {
+        diffData.put(kvp, bigObj.get(kvp).toString());
+      }
+    }
+  }
+
+  public static boolean addChanges(List<DocumentsChanges> docChanges, DocumentsChanges.ChangeType change) {
+    DocumentsChanges documentsChanges = new DocumentsChanges();
+    documentsChanges.setChange(change);
+
+    docChanges.add(documentsChanges);
+    return false;
+  }
+
+  public static boolean addChanges(List<DocumentsChanges> docChanges, String key, RavenJToken value, RavenJToken token) {
+    DocumentsChanges docChange = new DocumentsChanges();
+    docChange.setFieldNewType(value.getType().toString());
+    docChange.setFieldOldType(token.getType().toString());
+    docChange.setFieldNewValue(value.toString());
+    docChange.setFieldOldValue(token.toString());
+    docChange.setChange(ChangeType.FIELD_CHANGED);
+    docChange.setFieldName(key);
+
+    docChanges.add(docChange);
+    return false;
+  }
+
+  public static boolean addChanges(List<DocumentsChanges> docChanges, RavenJToken curThisReader, RavenJToken curOtherReader, String fieldName) {
+    DocumentsChanges changes = new DocumentsChanges();
+    changes.setFieldNewType(curThisReader.getType().toString());
+    changes.setFieldOldType(curOtherReader.getType().toString());
+    changes.setFieldNewValue(curThisReader.toString());
+    changes.setFieldOldValue(curOtherReader.toString());
+    changes.setChange(ChangeType.FIELD_CHANGED);
+    changes.setFieldName(fieldName);
+
+    docChanges.add(changes);
+    return false;
+
+  }
 }

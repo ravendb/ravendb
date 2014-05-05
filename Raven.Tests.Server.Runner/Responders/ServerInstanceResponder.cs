@@ -157,7 +157,9 @@ namespace Raven.Tests.Server.Runner.Responders
                 IOExtensions.DeleteDirectory(configuration.DataDirectory);
 
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(configuration.Port);
-            var server = new RavenDbServer(configuration);
+            var server = new RavenDbServer(configuration) { UseEmbeddedHttpServer = true };
+
+            server.Initialize();
 
             servers.Add(configuration.Port, server);
 

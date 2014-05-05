@@ -76,7 +76,7 @@ public class MultiLoadOperation {
 
   public <T> T[] complete(Class<T> clazz) {
     for (int i = 0; i < includeResults.length; i++) {
-      sessionOperations.trackIncludedDocumnet(includeResults[i]);
+      sessionOperations.trackIncludedDocument(includeResults[i]);
     }
 
     JsonDocument[] selectedResults = selectResults();

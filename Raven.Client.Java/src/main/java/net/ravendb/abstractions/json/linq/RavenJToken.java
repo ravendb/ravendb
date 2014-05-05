@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Stack;
 
 import net.ravendb.abstractions.basic.Tuple;
+import net.ravendb.abstractions.data.DocumentsChanges;
 import net.ravendb.abstractions.exceptions.JsonReaderException;
 import net.ravendb.abstractions.exceptions.JsonWriterException;
 import net.ravendb.abstractions.extensions.JsonExtensions;
@@ -22,6 +23,11 @@ import org.codehaus.jackson.map.ObjectMapper;
  * Represents an abstract JSON token.
  */
 public abstract class RavenJToken {
+
+  public static boolean deepEquals(RavenJToken t1, RavenJToken t2, List<DocumentsChanges> difference)
+  {
+    return (t1 == t2 || t1 != null && t2 != null && t1.deepEquals(t2, difference));
+  }
 
   public static boolean deepEquals(RavenJToken t1, RavenJToken t2) {
     return (t1 == t2 || t1 != null && t2 != null && t1.deepEquals(t2));
@@ -237,6 +243,10 @@ public abstract class RavenJToken {
   public abstract RavenJToken createSnapshot();
 
   public boolean deepEquals(RavenJToken other) {
+      return deepEquals(other, (List<DocumentsChanges>)null);
+  }
+
+  public boolean deepEquals(RavenJToken other, List<DocumentsChanges> docChanges) {
     if (other == null) {
       return false;
     }
@@ -248,8 +258,13 @@ public abstract class RavenJToken {
       return false;
     }
 
+    String fieldName ="";
+
     Stack<RavenJToken> otherStack = new Stack<>();
     Stack<RavenJToken> thisStack = new Stack<>();
+
+    Stack<String> fieldNameStack = new Stack<>();
+    boolean isEqual = true;
 
     thisStack.push(this);
     otherStack.push(other);
@@ -257,6 +272,13 @@ public abstract class RavenJToken {
     while (!otherStack.isEmpty()) {
       RavenJToken curOtherReader = otherStack.pop();
       RavenJToken curThisReader = thisStack.pop();
+
+      String fieldArrName = "";
+      if (fieldNameStack.isEmpty() == false)
+      {
+          fieldArrName = fieldNameStack.pop();
+          fieldName = fieldArrName;
+      }
 
       if (curOtherReader == null && curThisReader == null) continue; // shouldn't happen, but we got an error report from a user about this
       if (curOtherReader == null || curThisReader == null) return false;
@@ -267,11 +289,17 @@ public abstract class RavenJToken {
             RavenJArray selfArray = (RavenJArray) curThisReader;
             RavenJArray otherArray = (RavenJArray) curOtherReader;
             if (selfArray.size() != otherArray.size()) {
-              return false;
-            }
-            for (int i = 0; i < selfArray.size(); i++) {
-              thisStack.push(selfArray.get(i));
-              otherStack.push(otherArray.get(i));
+              if (docChanges == null) {
+                return false;
+              } else {
+                isEqual = Extensions.compareRavenJArrayData(docChanges, selfArray, otherArray, fieldArrName);
+              }
+
+            } else {
+              for (int i = 0; i < selfArray.size(); i++) {
+                thisStack.push(selfArray.get(i));
+                otherStack.push(otherArray.get(i));
+              }
             }
             break;
           case OBJECT:
@@ -279,40 +307,67 @@ public abstract class RavenJToken {
             RavenJObject otherObj = (RavenJObject) curOtherReader;
 
             if (selfObj.getCount() != otherObj.getCount()) {
-              return false;
-            }
-            for (String key : selfObj.getProperties().keySet()) {
-              RavenJToken value = selfObj.get(key);
-              RavenJToken token;
-              RavenJToken returnedValue = otherObj.get(key);
-              if (returnedValue == null) {
+              if (docChanges == null) {
                 return false;
+              } else {
+                isEqual = Extensions.compareDifferentLengthRavenJObjectData(docChanges, otherObj, selfObj, fieldName);
               }
-              token = returnedValue;
-              switch (value.getType()) {
-                case ARRAY:
-                case OBJECT:
-                  otherStack.push(token);
-                  thisStack.push(value);
-                  break;
-                default:
-                  if (!value.deepEquals(token)) {
+            } else {
+              for (String key : selfObj.getProperties().keySet()) {
+                fieldName = key;
+                RavenJToken token;
+                if (!otherObj.containsKey(key)) {
+                  if (docChanges == null) {
                     return false;
                   }
-                  break;
+                  isEqual = Extensions.addChanges(docChanges, DocumentsChanges.ChangeType.REMOVED_FIELD);
+                }
+                token = otherObj.get(key);
+
+                RavenJToken value = selfObj.get(key);
+
+                if (value == null) {
+                  if (token != null && token.getType() != JTokenType.NULL) {
+                    if (docChanges == null) {
+                      return false;
+                    }
+                    isEqual = Extensions.addChanges(docChanges, DocumentsChanges.ChangeType.NEW_FIELD);
+                  }
+                  continue;
+                }
+
+                switch (value.getType()) {
+                  case ARRAY:
+                  case OBJECT:
+                    otherStack.push(token);
+                    thisStack.push(value);
+                    fieldNameStack.push(key);
+                    break;
+                  default:
+                    if (!value.deepEquals(token)) {
+                      if (docChanges == null) {
+                        return false;
+                      }
+                      isEqual = Extensions.addChanges(docChanges, key, value, token);
+                    }
+                    break;
+                }
               }
             }
             break;
           default:
             if (!curOtherReader.deepEquals(curThisReader)) {
-              return false;
+              if (docChanges == null) {
+                return false;
+              }
+              isEqual = Extensions.addChanges(docChanges, curThisReader, curOtherReader, fieldName);
             }
             break;
         }
       }
     }
 
-    return true;
+    return isEqual;
   }
 
   public int deepHashCode() {
@@ -342,20 +397,28 @@ public abstract class RavenJToken {
   }
 
   public RavenJToken selectToken(String path) {
-    return selectToken(path, false);
+    return selectToken(path, false, false);
   }
 
   public RavenJToken selectToken(String path, boolean errorWhenNoMatch) {
+    return selectToken(path, errorWhenNoMatch, false);
+  }
+
+  public RavenJToken selectToken(String path, boolean errorWhenNoMatch, boolean createSnapshots) {
     RavenJPath p = new RavenJPath(path);
-    return p.evaluate(this, errorWhenNoMatch);
+    return p.evaluate(this, errorWhenNoMatch, createSnapshots);
   }
 
   public RavenJToken selectToken(RavenJPath path) {
-    return selectToken(path, false);
+    return selectToken(path, false, false);
   }
 
   public RavenJToken selectToken(RavenJPath path, boolean errorWhenNoMatch) {
-    return path.evaluate(this, errorWhenNoMatch);
+    return selectToken(path, errorWhenNoMatch, false);
+  }
+
+  public RavenJToken selectToken(RavenJPath path, boolean errorWhenNoMatch, boolean createSnapshots) {
+    return path.evaluate(this, errorWhenNoMatch, createSnapshots);
   }
 
   public Iterable<RavenJToken> values() {

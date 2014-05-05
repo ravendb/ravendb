@@ -8,6 +8,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -1324,7 +1325,7 @@ public class ServerClient implements IDatabaseCommands {
 
     queryHeaderInformation.setIndexEtag(Etag.parse(headers.get("Raven-Index-Etag")));
     queryHeaderInformation.setResultEtag(Etag.parse(headers.get("Raven-Result-Etag")));
-    queryHeaderInformation.setStable(Boolean.valueOf(headers.get("Raven-Is-Stale")));
+    queryHeaderInformation.setStale(Boolean.valueOf(headers.get("Raven-Is-Stale")));
     queryHeaderInformation.setTotalResults(Integer.valueOf(headers.get("Raven-Total-Results")));
 
     queryHeaderInfo.value = queryHeaderInformation;
@@ -1624,42 +1625,41 @@ public class ServerClient implements IDatabaseCommands {
       request.write(RavenJToken.fromObject(uniqueIds).toString());
     }
 
-    RavenJObject result = (RavenJObject)request.readResponseJson();
+    RavenJToken result = request.readResponseJson();
+    return completeMultiGet(operationMetadata, ids, includes, result);
+  }
 
-    Collection<RavenJObject> results = result.value(RavenJArray.class, "Results").values(RavenJObject.class);
+  private MultiLoadResult completeMultiGet(final OperationMetadata operationMetadata, final String[] keys, final String[] includes, RavenJToken result) {
+    //TODO: rewrite from ansync server client
     MultiLoadResult multiLoadResult = new MultiLoadResult();
-    multiLoadResult.setIncludes(new ArrayList<>(result.value(RavenJArray.class, "Includes").values(RavenJObject.class)));
 
-    if (StringUtils.isEmpty(transformer)) {
-      List<RavenJObject> values = new ArrayList<>();
-      outerFor:
-        for (String id : ids) {
-
-          for (RavenJObject jObject : results) {
-            if (StringUtils.equals(id, jObject.get("@metadata").value(String.class, "@id"))) {
-              values.add(jObject);
-              continue outerFor;
-            }
-          }
-          values.add(null);
-        }
-      multiLoadResult.setResults(values);
-    } else {
-      multiLoadResult.setResults(new ArrayList<>(results));
+    List<RavenJObject> includesList = new ArrayList<>();
+    for (RavenJToken token: result.value(RavenJArray.class, "Includes")) {
+      includesList.add((RavenJObject) token);
     }
+    multiLoadResult.setIncludes(includesList);
+
+    List<RavenJObject> resultsList = new ArrayList<>();
+    for (RavenJToken token: result.value(RavenJArray.class, "Results")) {
+      if (token instanceof RavenJObject) {
+        resultsList.add((RavenJObject) token);
+      } else {
+        resultsList.add(null);
+      }
+    }
+    multiLoadResult.setResults(resultsList);
 
     List<RavenJObject> docResults = new ArrayList<>();
-    docResults.addAll(multiLoadResult.getResults());
-    docResults.addAll(multiLoadResult.getIncludes());
+    docResults.addAll(resultsList);
+    docResults.addAll(includesList);
 
     return retryOperationBecauseOfConflict(docResults, multiLoadResult, new Function0<MultiLoadResult>() {
       @Override
       public MultiLoadResult apply() {
-        return directGet(ids, operationMetadata, includes, transformer, queryInputs, metadataOnly);
+        return directGet(keys, operationMetadata, includes, null, null, false);
       }
     });
   }
-
 
   private <T> T retryOperationBecauseOfConflict(List<RavenJObject> docResults, T currentResult, Function0<T> nextTry) {
 
