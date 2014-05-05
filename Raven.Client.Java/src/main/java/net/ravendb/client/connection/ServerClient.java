@@ -61,6 +61,7 @@ import net.ravendb.abstractions.exceptions.TransformCompilationException;
 import net.ravendb.abstractions.extensions.JsonExtensions;
 import net.ravendb.abstractions.extensions.MetadataExtensions;
 import net.ravendb.abstractions.indexing.IndexDefinition;
+import net.ravendb.abstractions.indexing.IndexMergeResults;
 import net.ravendb.abstractions.indexing.NumberUtil;
 import net.ravendb.abstractions.indexing.TransformerDefinition;
 import net.ravendb.abstractions.json.linq.JTokenType;
@@ -106,7 +107,7 @@ public class ServerClient implements IDatabaseCommands {
   private OperationCredentials credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
   final DocumentConvention convention;
   protected Map<String, String> operationsHeaders;
-  private final HttpJsonRequestFactory jsonRequestFactory;
+  protected final HttpJsonRequestFactory jsonRequestFactory;
   private final UUID sessionId;
   private final Function1<String, IDocumentStoreReplicationInformer> replicationInformerGetter;
   private final IDocumentStoreReplicationInformer replicationInformer;
@@ -126,9 +127,20 @@ public class ServerClient implements IDatabaseCommands {
     replicationInformer.removeFailoverStatusChanged(event);
   }
 
-  //TODO:       public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, string databaseName)
+  @Override
+  public IndexMergeResults getIndexMergeSuggestions() {
+    String url2 = RavenUrlExtensions.noCache(url + "/debug/suggest-index-merge");
+    HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2,
+      HttpMethods.GET, new RavenJObject(), credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
+    request.addOperationHeaders(operationsHeaders);
 
-  //TODO:         public async Task<IndexMergeResults> GetIndexMergeSuggestionsAsync()
+    try {
+      RavenJToken result = request.readResponseJson();
+      return convention.createSerializer().readValue(result.toString(), IndexMergeResults.class);
+    } catch (IOException e) {
+      throw new ServerClientException("unable to get merge suggestions", e);
+    }
+  }
 
 
   public ServerClient(String url, DocumentConvention convention, OperationCredentials operationCredentials,
@@ -203,17 +215,17 @@ public class ServerClient implements IDatabaseCommands {
 
 
   @Override
-  public Collection<TransformerDefinition> getTransformers(final int start, final int pageSize) {
-    return executeWithReplication(HttpMethods.GET, new Function1<OperationMetadata, Collection<TransformerDefinition>>() {
+  public List<TransformerDefinition> getTransformers(final int start, final int pageSize) {
+    return executeWithReplication(HttpMethods.GET, new Function1<OperationMetadata, List<TransformerDefinition>>() {
 
       @Override
-      public Collection<TransformerDefinition> apply(OperationMetadata operationMetadata) {
+      public List<TransformerDefinition> apply(OperationMetadata operationMetadata) {
         return directGetTransformers(operationMetadata, start, pageSize);
       }
     });
   }
 
-  protected Collection<TransformerDefinition> directGetTransformers(OperationMetadata operationMetadata, int start, int pageSize) {
+  protected List<TransformerDefinition> directGetTransformers(OperationMetadata operationMetadata, int start, int pageSize) {
     String url2 = RavenUrlExtensions.noCache(operationMetadata.getUrl() + "/transformers?start=" + start + "&pageSize=" + pageSize);
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, HttpMethods.GET, new RavenJObject(), operationMetadata.getCredentials(), convention));
     request.addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
@@ -480,7 +492,7 @@ public class ServerClient implements IDatabaseCommands {
     RavenJObject metadata = new RavenJObject();
     String actualUrl = operationMetadata.getUrl() + "/docs?id=" + UrlUtils.escapeDataString(key);
     if (StringUtils.isNotEmpty(transform)) {
-      actualUrl += "?=" + UrlUtils.escapeDataString(transform);
+      actualUrl += "&transformer=" + UrlUtils.escapeDataString(transform);
     }
 
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
@@ -594,7 +606,7 @@ public class ServerClient implements IDatabaseCommands {
     return conflictException;
   }
 
-  private void ensureIsNotNullOrEmpty(String key, String argName) {
+  private static void ensureIsNotNullOrEmpty(String key, String argName) {
     if (key == null || "".equals(key)) {
       throw new IllegalArgumentException("Key cannot be null or empty " + argName);
     }
@@ -639,7 +651,7 @@ public class ServerClient implements IDatabaseCommands {
   }
 
   @SuppressWarnings("null")
-  private List<JsonDocument> directStartsWith(OperationMetadata operationMetadata, String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly, String exclude, RavenPagingInformation pagingInformation, String transformer, Map<String, RavenJToken> queryInputs) throws ServerClientException {
+  protected List<JsonDocument> directStartsWith(OperationMetadata operationMetadata, String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly, String exclude, RavenPagingInformation pagingInformation, String transformer, Map<String, RavenJToken> queryInputs) throws ServerClientException {
     RavenJObject metadata = new RavenJObject();
 
     int actualStart = start;
@@ -979,7 +991,7 @@ public class ServerClient implements IDatabaseCommands {
       .addReplicationStatusHeaders(url, operationMetadata.getUrl(), replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
     try {
-      RavenJObject json = (RavenJObject)webRequest.readResponseJson();
+      RavenJArray json = (RavenJArray)webRequest.readResponseJson();
       return JsonExtensions.createDefaultJsonSerializer().readValue(json.toString(), AttachmentInformation[].class);
     } catch (Exception e) {
       throw new ServerClientException(e);

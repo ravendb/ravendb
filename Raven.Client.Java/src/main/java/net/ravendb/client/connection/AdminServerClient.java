@@ -21,7 +21,7 @@ import net.ravendb.client.indexes.RavenDocumentsByEntityName;
 public class AdminServerClient implements IAdminDatabaseCommands, IGlobalAdminDatabaseCommands {
 
   private final ServerClient innerServerClient;
-  private final AdminRequestCreator adminRequest;
+  protected final AdminRequestCreator adminRequest;
 
   public AdminServerClient(ServerClient serverClient) {
     innerServerClient = serverClient;

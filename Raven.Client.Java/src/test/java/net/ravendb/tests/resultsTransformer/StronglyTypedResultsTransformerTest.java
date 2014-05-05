@@ -1,11 +1,14 @@
 package net.ravendb.tests.resultsTransformer;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 
+import net.ravendb.abstractions.indexing.TransformerDefinition;
 import net.ravendb.client.IDocumentSession;
 import net.ravendb.client.IDocumentStore;
 import net.ravendb.client.RemoteClientTest;
@@ -219,6 +222,12 @@ public class StronglyTypedResultsTransformerTest extends RemoteClientTest {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
       new OrderWithProductInformation().execute(store);
 
+      List<TransformerDefinition> transformers = store.getDatabaseCommands().getTransformers(0, 128);
+      assertEquals(1, transformers.size());
+      assertEquals("OrderWithProductInformation", transformers.get(0).getName());
+
+      assertNotNull(store.getDatabaseCommands().getTransformer("OrderWithProductInformation"));
+
       try (IDocumentSession session = store.openSession()) {
         session.store(new Product("products/milk", "Milk"));
         session.store(new Product("products/bear", "Bear"));
@@ -243,6 +252,8 @@ public class StronglyTypedResultsTransformerTest extends RemoteClientTest {
         assertEquals("Milk", order.getProducts()[0].getProductName());
         assertEquals("products/milk", order.getProducts()[0].getProductId());
       }
+
+      store.getDatabaseCommands().deleteTransformer("OrderWithProductInformation");
     }
   }
 

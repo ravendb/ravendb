@@ -17,6 +17,7 @@ import net.ravendb.abstractions.commands.ICommandData;
 import net.ravendb.abstractions.commands.PatchCommandData;
 import net.ravendb.abstractions.commands.PutCommandData;
 import net.ravendb.abstractions.data.Attachment;
+import net.ravendb.abstractions.data.AttachmentInformation;
 import net.ravendb.abstractions.data.BatchResult;
 import net.ravendb.abstractions.data.Constants;
 import net.ravendb.abstractions.data.DatabaseDocument;
@@ -38,8 +39,10 @@ import net.ravendb.abstractions.json.linq.RavenJArray;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.abstractions.json.linq.RavenJToken;
 import net.ravendb.abstractions.json.linq.RavenJValue;
+import net.ravendb.client.IDocumentStore;
 import net.ravendb.client.RavenDBAwareTests;
 import net.ravendb.client.connection.IDatabaseCommands;
+import net.ravendb.client.document.DocumentStore;
 import net.ravendb.samples.Developer;
 
 import org.apache.commons.lang.StringUtils;
@@ -61,7 +64,6 @@ public class ServerClientTest extends RavenDBAwareTests {
       deleteDb("testingDb");
     }
   }
-
 
 
   @Test
@@ -489,6 +491,24 @@ public class ServerClientTest extends RavenDBAwareTests {
       deleteDb();
     }
 
+  }
+
+  @Test
+  public void testGetAttachments() throws Exception {
+    IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
+
+    try {
+      createDb();
+
+      dbCommands.putAttachment("att/1", null, new ByteArrayInputStream(new byte[] { 1,2,3,4,5}), new RavenJObject());
+
+      AttachmentInformation[] attachments = dbCommands.getAttachments(Etag.empty(), 2);
+
+      assertEquals(1, attachments.length);
+
+    } finally {
+      deleteDb();
+    }
   }
 
   @Test
