@@ -1,4 +1,4 @@
-﻿html,
+html,
 body {
   height: 100%;
 }
@@ -51,6 +51,25 @@ body {
 }
 .replicationError {
   color: red;
+}
+.query-stats {
+  width: 600px;
+  margin: -250px 0 0 -450px;
+}
+.query-stats ul li {
+  padding: 0 10px 0 10px;
+  border-bottom: 0!important;
+  border-top: 0!important;
+  border-left: 0!important;
+  border-right: 0!important;
+}
+.query-stats ul li strong {
+  padding: 0 10px 0 10px;
+  display: inline-block;
+}
+.query-stats ul li span {
+  padding: 0 10px 0 10px;
+  display: inline-block;
 }
 .side-panel li {
   max-width: 20%;
@@ -713,15 +732,15 @@ footer ul {
 .license-error {
   color: #d2322d;
 }
-.remove-icon{
+.remove-icon {
   color: #d2322d;
   border-color: #ac2925;
   cursor: pointer;
 }
-.remove-icon:hover{
+.remove-icon:hover {
   color: #d2322d;
 }
-.fa-plus{
+.fa-plus {
   color: #58cc46;
 }
 .filesystem-page .btn-toolbar {
@@ -787,4 +806,3 @@ footer ul {
   border-color: red;
   margin-top: 5px;
 }
-/*# sourceMappingURL=app.css.map */
