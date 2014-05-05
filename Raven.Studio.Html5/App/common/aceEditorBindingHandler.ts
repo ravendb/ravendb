@@ -138,10 +138,7 @@ class aceEditorBindingHandler {
         $(element).on('keyup', aceFocusElement, () => code(aceEditor.getSession().getValue()));
         $(element).on('focus', aceFocusElement, () => aceEditorBindingHandler.currentEditor = aceEditor);
 
-
-
-
-
+        // Initialize ace resizeble text box
         aceEditor.setOption('vScrollBarAlwaysVisible', true);
         aceEditor.setOption('hScrollBarAlwaysVisible', true);
         var minHeight = 120;
@@ -157,21 +154,9 @@ class aceEditorBindingHandler {
             }
         });
         aceEditor.resize(); //for ace elements smaller than 'minHeight'
-
         $(element).find('.ui-resizable-se').removeClass('ui-icon-gripsmall-diagonal-se');
         $(element).find('.ui-resizable-se').addClass('ui-icon-carat-1-s');
         $('.ui-resizable-se').css('cursor', 's-resize');
-
-        // TODO: isn't this a memory leak, and a potential cause of runtime errors?
-        // Runtime error: What happens when editor is removed from the DOM? 
-        // Memory leak: editor is kept in memory forever, since handler is never removed.
-        //window.onresize = function (event) {
-            //aceEditor.resize();
-        //};
-
-
-
-
 
         // When the element is removed from the DOM, unhook our keyup and focus event handlers and remove the  resizable functionality completely. lest we leak memory.
         ko.utils.domNodeDisposal.addDisposeCallback(element, () => {
@@ -186,8 +171,6 @@ class aceEditorBindingHandler {
         if (bindingValues.getFocus && bindingValues.getFocus == true) {
             aceEditor.focus();
         }
-
-
     }
 
     // Called by Knockout each time the dependent observable value changes.
