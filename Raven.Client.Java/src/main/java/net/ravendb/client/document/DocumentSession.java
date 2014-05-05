@@ -844,7 +844,6 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
 
   private boolean executeLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation) {
 
-    incrementRequestCount();
     List<AutoCloseable> disposables = new ArrayList<>();
     for (ILazyOperation lazyOp: pendingLazyOperations) {
       AutoCloseable context = lazyOp.enterContext();

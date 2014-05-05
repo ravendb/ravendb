@@ -217,6 +217,10 @@ public class Extensions {
       differences = CollectionUtils.except(selfArray, otherArray);
     }
 
+    if (differences.isEmpty()) {
+      return true;
+    }
+
     for (RavenJToken dif : differences) {
       DocumentsChanges changes = new DocumentsChanges();
       changes.setFieldName(fieldArrName);
@@ -243,14 +247,14 @@ public class Extensions {
   public static boolean compareDifferentLengthRavenJObjectData(Collection<DocumentsChanges> docChanges, RavenJObject otherObj, RavenJObject selfObj, String fieldName) {
     Map<String, String> diffData = new HashMap<>();
     String descr = "";
-    RavenJToken token1;
+    RavenJToken token;
     if (otherObj.getCount() == 0) {
       for (Map.Entry<String, RavenJToken> kvp: selfObj.getProperties()) {
         DocumentsChanges changes = new DocumentsChanges();
         if (selfObj.getProperties().containsKey(kvp.getKey())) {
-          token1 = selfObj.getProperties().get(kvp.getKey());
-          changes.setFieldNewValue(token1.toString());
-          changes.setFieldNewType(token1.getType().toString());
+          token = selfObj.getProperties().get(kvp.getKey());
+          changes.setFieldNewValue(token.toString());
+          changes.setFieldNewType(token.getType().toString());
           changes.setChange(ChangeType.ARRAY_VALUE_ADDED);
 
           changes.setFieldName(kvp.getKey());
@@ -264,7 +268,7 @@ public class Extensions {
       return false;
     }
 
-    compareJsonData(selfObj.getProperties(), otherObj.getProperties(), diffData);
+    fillDifferentJsonData(selfObj.getProperties(), otherObj.getProperties(), diffData);
 
     for (String key: diffData.keySet()) {
       DocumentsChanges changes = new DocumentsChanges();
@@ -285,16 +289,18 @@ public class Extensions {
     return false;
   }
 
-  //TODO: we have to rewrite those methods !
-  private static void compareJsonData(DictionaryWithParentSnapshot selfObj, DictionaryWithParentSnapshot otherObj, Map<String, String> diffData) {
-    List<String> diffNames = CollectionUtils.except(selfObj.keySet(), otherObj.keySet());
-    DictionaryWithParentSnapshot bigObj = selfObj;
+  private static void fillDifferentJsonData(DictionaryWithParentSnapshot selfObj, DictionaryWithParentSnapshot otherObj, Map<String, String> diffData) {
+    List<String> diffNames;
+    DictionaryWithParentSnapshot bigObj;
     if (diffData == null) {
       diffData = new HashMap<>();
     }
     if (selfObj.size() < otherObj.size()) {
       diffNames = CollectionUtils.except(otherObj.keySet(), selfObj.keySet());
       bigObj = otherObj;
+    } else {
+      diffNames = CollectionUtils.except(selfObj.keySet(), otherObj.keySet());
+      bigObj = selfObj;
     }
     for (String kvp : diffNames) {
       if (bigObj.containsKey(kvp)) {
@@ -303,15 +309,14 @@ public class Extensions {
     }
   }
 
-  public static boolean addChanges(List<DocumentsChanges> docChanges, DocumentsChanges.ChangeType change) {
+  public static void addChanges(List<DocumentsChanges> docChanges, DocumentsChanges.ChangeType change) {
     DocumentsChanges documentsChanges = new DocumentsChanges();
     documentsChanges.setChange(change);
 
     docChanges.add(documentsChanges);
-    return false;
   }
 
-  public static boolean addChanges(List<DocumentsChanges> docChanges, String key, RavenJToken value, RavenJToken token) {
+  public static void addChanges(List<DocumentsChanges> docChanges, String key, RavenJToken value, RavenJToken token) {
     DocumentsChanges docChange = new DocumentsChanges();
     docChange.setFieldNewType(value.getType().toString());
     docChange.setFieldOldType(token.getType().toString());
@@ -321,10 +326,9 @@ public class Extensions {
     docChange.setFieldName(key);
 
     docChanges.add(docChange);
-    return false;
   }
 
-  public static boolean addChanges(List<DocumentsChanges> docChanges, RavenJToken curThisReader, RavenJToken curOtherReader, String fieldName) {
+  public static void addChanges(List<DocumentsChanges> docChanges, RavenJToken curThisReader, RavenJToken curOtherReader, String fieldName) {
     DocumentsChanges changes = new DocumentsChanges();
     changes.setFieldNewType(curThisReader.getType().toString());
     changes.setFieldOldType(curOtherReader.getType().toString());
@@ -334,7 +338,6 @@ public class Extensions {
     changes.setFieldName(fieldName);
 
     docChanges.add(changes);
-    return false;
 
   }
 }

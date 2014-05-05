@@ -320,7 +320,8 @@ public abstract class RavenJToken {
                   if (docChanges == null) {
                     return false;
                   }
-                  isEqual = Extensions.addChanges(docChanges, DocumentsChanges.ChangeType.REMOVED_FIELD);
+                  Extensions.addChanges(docChanges, DocumentsChanges.ChangeType.REMOVED_FIELD);
+                  isEqual = false;
                 }
                 token = otherObj.get(key);
 
@@ -331,7 +332,8 @@ public abstract class RavenJToken {
                     if (docChanges == null) {
                       return false;
                     }
-                    isEqual = Extensions.addChanges(docChanges, DocumentsChanges.ChangeType.NEW_FIELD);
+                    Extensions.addChanges(docChanges, DocumentsChanges.ChangeType.NEW_FIELD);
+                    isEqual = false;
                   }
                   continue;
                 }
@@ -348,7 +350,8 @@ public abstract class RavenJToken {
                       if (docChanges == null) {
                         return false;
                       }
-                      isEqual = Extensions.addChanges(docChanges, key, value, token);
+                      Extensions.addChanges(docChanges, key, value, token);
+                      isEqual = false;
                     }
                     break;
                 }
@@ -360,7 +363,8 @@ public abstract class RavenJToken {
               if (docChanges == null) {
                 return false;
               }
-              isEqual = Extensions.addChanges(docChanges, curThisReader, curOtherReader, fieldName);
+              Extensions.addChanges(docChanges, curThisReader, curOtherReader, fieldName);
+              isEqual = false;
             }
             break;
         }

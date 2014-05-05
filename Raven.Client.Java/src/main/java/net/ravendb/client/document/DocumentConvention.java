@@ -66,7 +66,6 @@ public class DocumentConvention extends Convention implements Serializable {
   public ConsistencyOptions defaultQueryingConsistency;
 
   private static Map<Class<?>, String> CACHED_DEFAULT_TYPE_TAG_NAMES = new HashMap<>();
-  private AtomicInteger requestCount = new AtomicInteger(0);
 
   private ClrTypeFinder findClrType;
 
@@ -729,10 +728,6 @@ public class DocumentConvention extends Convention implements Serializable {
   @Override
   public DocumentConvention clone() {
     return (DocumentConvention) SerializationUtils.clone(this);
-  }
-
-  public int incrementRequestCount() {
-    return requestCount.incrementAndGet();
   }
 
   /**

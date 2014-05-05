@@ -462,7 +462,6 @@ public class ServerClient implements IDatabaseCommands {
 
 
   <S> S executeWithReplication(HttpMethods method, Function1<OperationMetadata, S> operation) throws ServerClientException {
-    int currentRequest = convention.incrementRequestCount();
     return replicationInformer.executeWithReplication(method, url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, currentRequest, readStripingBase, operation);
   }
 
