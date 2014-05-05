@@ -105,8 +105,8 @@ class viewModelBase {
     // Roll this code into the existing aceEditorBindingHandler.
     createResizableTextBox(element) {
         var editor = ace.edit(element);
-        //editor.setOption('vScrollBarAlwaysVisible', true);
-        //editor.setOption('hScrollBarAlwaysVisible', true);
+        editor.setOption('vScrollBarAlwaysVisible', true);
+        editor.setOption('hScrollBarAlwaysVisible', true);
         var minHeight = 100;
         if ($(element).height() < 150) {
             $(element).height(minHeight);
@@ -193,7 +193,7 @@ class viewModelBase {
 
         var canNavTask = $.Deferred<any>();
 
-        var systemDbConfirm = new viewSystemDatabaseConfirm();
+        var systemDbConfirm = new viewSystemDatabaseConfirm("Meddling with the system database could cause irreversible damage");
         systemDbConfirm.viewTask
             .fail(() => canNavTask.resolve({ redirect: 'databases' }))
             .done(() => {
