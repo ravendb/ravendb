@@ -872,7 +872,6 @@ namespace Raven.Client.Document
 
         private bool ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation)
         {
-			IncrementRequestCount();
 			var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
             try
             {

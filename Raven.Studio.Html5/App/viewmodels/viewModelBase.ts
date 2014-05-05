@@ -63,8 +63,7 @@ class viewModelBase {
         }
 
         this.modelPollingStart();
-        window.onbeforeunload = (e: any) => this.beforeUnload(e);
-        ko.postbox.publish("SetRawJSONUrl", "");
+		window.onbeforeunload = (e: any) => this.beforeUnload(e);        ko.postbox.publish("SetRawJSONUrl", "");
     }
 
     // Called back after the entire composition has finished (parents and children included)

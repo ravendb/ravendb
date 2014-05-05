@@ -194,7 +194,7 @@ namespace Raven.Tests.Faceted
 						var filteredData = _data.Where(exp.Compile()).ToList();
 						CheckFacetResultsMatchInMemoryData(facetResults.Value, filteredData);
 
-						Assert.Equal(oldRequests +1, s.Advanced.NumberOfRequests);
+						Assert.Equal(oldRequests +2, s.Advanced.NumberOfRequests);
 					}
 				}
 			}
@@ -233,7 +233,7 @@ namespace Raven.Tests.Faceted
 						var filteredData = _data.Where(exp.Compile()).ToList();
 						CheckFacetResultsMatchInMemoryData(facetResults.Value, filteredData);
 						var forceLoading = load.Value;
-						Assert.Equal(oldRequests + 1, s.Advanced.NumberOfRequests);
+						Assert.Equal(oldRequests + 2, s.Advanced.NumberOfRequests);
 					}
 				}
 			}
