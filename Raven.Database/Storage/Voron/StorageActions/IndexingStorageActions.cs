@@ -319,21 +319,21 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			using (var iterator = documentReferencesByRef.MultiRead(Snapshot, CreateKey(reference)))
 			{
-				var result = new List<string>();
 
-				if (!iterator.Seek(Slice.BeforeAllKeys))
-					return result;
+			    if (!iterator.Seek(Slice.BeforeAllKeys))
+			        yield break;
 
-				do
+                var result = new HashSet<string>();
+                do
 				{
 					ushort version;
 					var value = LoadJson(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch.Value, out version);
 
-					result.Add(value.Value<string>("key"));
+				    var item = value.Value<string>("key");
+				    if (result.Add(item))
+				        yield return item;
 				}
 				while (iterator.MoveNext());
-
-				return result.Distinct(StringComparer.OrdinalIgnoreCase);
 			}
 		}
 
