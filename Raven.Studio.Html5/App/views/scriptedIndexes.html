@@ -26,13 +26,19 @@
             </form>
         </div>
     </nav>
+    
+    <div class="panel-group" id="accordion" data-bind="foreach: indexNames">
+        <div data-bind="text: $data"></div>
+    </div>
+
+
     <div class="panel panel-default" data-bind="css: { 'panel-info': isScriptIndexVisible(), 'panel-warning': !isScriptIndexVisible() }">
         <div class="panel-heading">
             <h3 class="panel-title">
                 <span data-bind="visible: !isScriptIndexVisible()">
                     There is no script for this index.
                 </span>
-                <span data-bind ="visible: isScriptIndexVisible()">
+                <span data-bind="visible: isScriptIndexVisible()">
                     Scripted Index<span class="glyphicon glyphicon-remove remove-icon pull-right" data-bind="click: deleteScript" title="Remove this Scripted Index"></span>
                 </span>
             </h3>
@@ -47,7 +53,7 @@
                     <div class="col-md-10">
                         <div class="row">
                             <div class="col-md-11">
-                                <pre id="indexScriptEditor" class="form-control map" data-bind="aceEditor: { code: indexScript }"></pre>
+                                <pre id="indexScriptEditor" class="form-control map" data-bind="aceEditor: { code: indexScript, lang: 'ace/mode/javascript' }"></pre>
                             </div>
                         </div>
                     </div>
@@ -60,7 +66,7 @@
                     <div class="col-md-10">
                         <div class="row">
                             <div class="col-md-11">
-                                <pre id="deleteScriptEditor" class="form-control map" data-bind="aceEditor: { code: deleteScript }"></pre>
+                                <pre id="deleteScriptEditor" class="form-control map" data-bind="aceEditor: { code: deleteScript, lang: 'ace/mode/javascript' }"></pre>
                             </div>
                         </div>
                     </div>

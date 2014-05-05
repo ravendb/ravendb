@@ -45,13 +45,29 @@ class scriptedIndexes extends viewModelBase {
             return this.scrIndex() && !this.scrIndex().isMarkedToDelete();
         }, this);
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.scrIndexes().activeScriptedIndexes]);
-        this.isSaveEnabled = ko.computed(function () {
+        this.isSaveEnabled = ko.computed(() => {
             return viewModelBase.dirtyFlag().isDirty();
         });
     }
 
     attached() {
-        this.initializeScriptsTextboxes();
+        var popOverSettings = {
+            html: true,
+            trigger: 'hover',
+            content: 'Index Scripts are written in JScript.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> company = LoadDocument(<span class="code-keyword">this</span>.Company);<br/><span class="code-keyword">if</span>(company == null) <span class="code-keyword">return</span>;<br/>company.Orders = { Count: <span class="code-keyword">this</span>.Count, Total: <span class="code-keyword">this</span>.Total };<br/>PutDocument(<span class="code-keyword">this</span>.Company, company);</pre>',
+            //selector: '.index-script-label'
+            selector: '#indexScriptLabel',
+        };
+        $('body').popover(popOverSettings);
+        var popOverSettings2 = {
+            html: true,
+            trigger: 'hover',
+            content: 'Index Scripts are written in JScript.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> company = LoadDocument(<span class="code-keyword">this</span>.Company);<br/><span class="code-keyword">if</span> (company == null) <span class="code-keyword">return</span>;<br/><span class="code-keyword">delete</span> company.Orders;<br/>PutDocument(<span class="code-keyword">this</span>.Company, company);</pre>',
+            //selector: '.delete-script-label'
+            selector: '#deleteScriptLabel',
+        };
+        $('#scriptedIndex').popover(popOverSettings2);
+        //this.initializeScriptsTextboxes();
     }
 
     fetchAllIndexes(db): JQueryPromise<any> {
@@ -88,25 +104,9 @@ class scriptedIndexes extends viewModelBase {
     }
 
     initializeScriptsTextboxes() {
-        this.addIndexScriptHelpPopover();
-        this.addDeleteScriptHelpPopover();
-        this.startupAceEditor();
-    }
-
-    addIndexScriptHelpPopover() {
-        $("#indexScriptLabel").popover({
-            html: true,
-            trigger: 'hover',
-            content: 'Index Scripts are written in JScript.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> company = LoadDocument(<span class="code-keyword">this</span>.Company);<br/><span class="code-keyword">if</span>(company == null) <span class="code-keyword">return</span>;<br/>company.Orders = { Count: <span class="code-keyword">this</span>.Count, Total: <span class="code-keyword">this</span>.Total };<br/>PutDocument(<span class="code-keyword">this</span>.Company, company);</pre>',
-        });
-    }
-
-    addDeleteScriptHelpPopover() {
-        $("#deleteScriptLabel").popover({
-            html: true,
-            trigger: 'hover',
-            content: 'Index Scripts are written in JScript.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> company = LoadDocument(<span class="code-keyword">this</span>.Company);<br/><span class="code-keyword">if</span> (company == null) <span class="code-keyword">return</span>;<br/><span class="code-keyword">delete</span> company.Orders;<br/>PutDocument(<span class="code-keyword">this</span>.Company, company);</pre>',
-        });
+        //this.addIndexScriptHelpPopover();
+        //this.addDeleteScriptHelpPopover();
+        //this.startupAceEditor();
     }
 
     setSelectedIndex(indexName: string) {
