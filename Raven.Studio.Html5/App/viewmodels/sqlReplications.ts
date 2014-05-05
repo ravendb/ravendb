@@ -3,12 +3,12 @@ import collection = require("models/collection");
 import sqlReplication = require("models/sqlReplication");
 import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 import getSqlReplicationsCommand = require("commands/getSqlReplicationsCommand");
 import saveSqlReplicationsCommand = require("commands/saveSqlReplicationsCommand");
 import deleteDocumentsCommand = require("commands/deleteDocumentsCommand");
 import getCollectionsCommand = require("commands/getCollectionsCommand");
 import appUrl = require("common/appUrl");
-import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 import ace = require("ace/ace");
 
 
@@ -17,9 +17,7 @@ class sqlReplications extends viewModelBase {
     replications = ko.observableArray<sqlReplication>();
     collections = ko.observableArray<string>();
     isFirstload = ko.observable(true);
-    lastIndex = ko.computed(function () {
-        return this.isFirstload() ? -1 : this.replications().length - 1;
-    }, this);
+    lastIndex: KnockoutComputed<number>;
     areAllSqlReplicationsValid: KnockoutComputed<boolean>;
     isSaveEnabled: KnockoutComputed<boolean>;
     loadedSqlReplications = [];
@@ -28,6 +26,9 @@ class sqlReplications extends viewModelBase {
         super();
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
+        this.lastIndex = ko.computed(function () {
+            return this.isFirstload() ? -1 : this.replications().length - 1;
+        }, this);
     }
 
     canActivate(args: any): JQueryPromise<any> {
@@ -70,7 +71,7 @@ class sqlReplications extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-        this.openCollapsedInvalidElements();
+        this.initializeCollapsedInvalidElements();
 
         this.replications().forEach((replication: sqlReplication) => {
             this.subscribeToSqlReplicationName(replication);
@@ -79,6 +80,61 @@ class sqlReplications extends viewModelBase {
         $('pre').each((index, currentPreElement) => {
             this.initializeAceValidity(currentPreElement);
         });
+    }
+
+    addNewSqlReplication() {
+        this.isFirstload(false);
+        var newSqlReplication: sqlReplication = sqlReplication.empty();
+        newSqlReplication.collections = this.collections;
+        this.replications.push(newSqlReplication);
+        this.subscribeToSqlReplicationName(newSqlReplication);
+        $('.in').find('input[name="name"]').focus();
+
+        var lastPreElement = $('pre').last().get(0);
+        this.initializeAceValidity(lastPreElement);
+        this.initializeCollapsedInvalidElements();
+    }
+
+    removeSqlReplication(repl: sqlReplication) {
+        this.replications.remove(repl);
+
+        this.replications().forEach((replication: sqlReplication) => {
+            replication.name.valueHasMutated();
+        });
+    }
+
+    saveChanges() {
+        var db = this.activeDatabase();
+        if (db) {
+            this.replications().forEach(r => r.setIdFromName());
+            var deletedReplications = this.loadedSqlReplications.slice(0);
+            var onScreenReplications = this.replications();
+
+            for (var i = 0; i < onScreenReplications.length; i++) {
+                var replication: sqlReplication = onScreenReplications[i];
+                var replicationId = replication.getId();
+                deletedReplications.remove(replicationId);
+
+                //clear the etag if the name of the replication was changed
+                if (this.loadedSqlReplications.indexOf(replicationId) == -1) {
+                    delete replication.__metadata.etag;
+                    delete replication.__metadata.lastModified;
+                }
+            }
+
+            var deleteDeferred = this.deleteSqlReplications(deletedReplications, db);
+            deleteDeferred.done(() => {
+                var saveDeferred = this.saveSqlReplications(onScreenReplications, db);
+                saveDeferred.done(() => {
+                    this.updateLoadedSqlReplications();
+                    viewModelBase.dirtyFlag().reset(); //Resync Changes
+                });
+            });
+        }
+    }
+
+    itemNumber = function (index) {
+        return index + 1;
     }
 
     private fetchSqlReplications(db: database): JQueryPromise<any> {
@@ -100,8 +156,8 @@ class sqlReplications extends viewModelBase {
             });
     }
 
-    //show all elements which are collapsed and at least on of its' fields isn't valid.
-    private openCollapsedInvalidElements() {
+    //show all elements which are collapsed and at least one of its' fields isn't valid.
+    private initializeCollapsedInvalidElements() {
         $('input, textarea').bind('invalid', function (e) {
             var element: any = e.target;
             if (!element.validity.valid) {
@@ -155,36 +211,6 @@ class sqlReplications extends viewModelBase {
         }
     }
 
-    saveChanges() {
-        var db = this.activeDatabase();
-        if (db) {
-            this.replications().forEach(r => r.setIdFromName());
-            var deletedReplications = this.loadedSqlReplications.slice(0);
-            var onScreenReplications = this.replications();
-
-            for (var i = 0; i < onScreenReplications.length; i++) {
-                var replication: sqlReplication = onScreenReplications[i];
-                var replicationId = replication.getId();
-                deletedReplications.remove(replicationId);
-
-                //clear the etag if the name of the replication was changed
-                if (this.loadedSqlReplications.indexOf(replicationId) == -1) {
-                    delete replication.__metadata.etag;
-                    delete replication.__metadata.lastModified;
-                }
-            }
-
-            var deleteDeferred = this.deleteSqlReplications(deletedReplications, db);
-            deleteDeferred.done(() => {
-                var saveDeferred = this.saveSqlReplications(onScreenReplications, db);
-                saveDeferred.done(()=> {
-                    this.updateLoadedSqlReplications();
-                    viewModelBase.dirtyFlag().reset(); //Resync Changes
-                });
-            });
-        }
-    }
-
     private deleteSqlReplications(deletedReplications: Array<string>, db): JQueryDeferred<{}> {
         var deleteDeferred = $.Deferred();
         //delete from the server the deleted on screen sql replications
@@ -232,32 +258,6 @@ class sqlReplications extends viewModelBase {
                 key.__metadata.lastModified = serverKey.Metadata['Last-Modified'];
             }
         });
-    }
-
-    addNewSqlReplication() {
-        this.isFirstload(false);
-        var newSqlReplication: sqlReplication = sqlReplication.empty();
-        newSqlReplication.collections = this.collections;
-        this.replications.push(newSqlReplication);
-        this.subscribeToSqlReplicationName(newSqlReplication);
-        $('.in').find('input[name="name"]').focus();
-
-        var lastPreElement = $('pre').last().get(0);
-        super.createResizableTextBox(lastPreElement);
-        this.openCollapsedInvalidElements();
-        this.initializeAceValidity(lastPreElement);
-    }
-
-    removeSqlReplication(repl: sqlReplication) {
-        this.replications.remove(repl);
-
-        this.replications().forEach((replication: sqlReplication) => {
-            replication.name.valueHasMutated();
-        });
-    }
-
-    itemNumber = function(index) {
-        return index + 1;
     }
 }
 

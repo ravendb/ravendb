@@ -106,21 +106,21 @@ var ScrollBarH = function(parent, renderer) {
     oop.implement(this, EventEmitter);
 
     this.setVisible = function (show) {
-        /* Changed in order to allow showing a resize button */
         if (show) {
             this.element.style.visibility = "visible";
-            /*if (this.fullWidth)
+            if (this.fullWidth)
                 this.width = this.fullWidth;
             if (this.fullHeight)
-                this.height = this.fullHeight;*/
+                this.height = this.fullHeight;
         } else {
             this.element.style.visibility = "hidden";
-            /*this.height = this.width = 0;*/
+            this.height = this.width = 0;
         }
-        if (this.fullWidth)
+        /* possible change in order to allow showing a resize button */
+        /* if (this.fullWidth)
             this.width = this.fullWidth;
         if (this.fullHeight)
-            this.height = this.fullHeight;
+            this.height = this.fullHeight;*/
     };
     
     /**

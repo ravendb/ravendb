@@ -129,7 +129,6 @@ class query extends viewModelBase {
         });
         ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexQueryRawData(this.activeDatabase(), this.selectedIndex()));
 
-        super.createResizableTextBoxes();
         this.focusOnQuery();
     }
 
