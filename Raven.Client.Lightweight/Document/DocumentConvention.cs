@@ -33,7 +33,11 @@ using Raven.Client.WinRT.MissingFromWinRT;
 
 namespace Raven.Client.Document
 {
-	using Raven.Abstractions.Connection;
+   using System.Dynamic;
+
+   using Microsoft.CSharp.RuntimeBinder;
+
+   using Raven.Abstractions.Connection;
 
 	/// <summary>
 	/// The set of conventions used by the <see cref="DocumentStore"/> which allow the users to customize
@@ -229,7 +233,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public static string GenerateDocumentKeyUsingIdentity(DocumentConvention conventions, object entity)
 		{
-			return conventions.FindTypeTagName(entity.GetType()).ToLower() + "/";
+			return conventions.GetDynamicTagName(entity).ToLower() + "/";
 		}
 
 		private static IDictionary<Type, string> cachedDefaultTypeTagNames = new Dictionary<Type, string>();
@@ -280,6 +284,32 @@ namespace Raven.Client.Document
 		{
 			return FindTypeTagName(type) ?? DefaultTypeTagName(type);
 		}
+
+      /// <summary>
+      /// If object is dynamic, try to load a tag name.
+      /// </summary>
+      /// <param name="entity">Current entity.</param>
+      /// <returns>Dynamic tag name if available.</returns>
+	   public string GetDynamicTagName(object entity)
+	   {
+         if (entity == null)
+         {
+            return null;
+         }
+
+         if (FindDynamicTagName != null && entity is IDynamicMetaObjectProvider)
+         {
+            try
+            {
+               return FindDynamicTagName(entity);
+            }
+            catch (RuntimeBinderException)
+            {
+            }
+         }
+
+         return this.GetTypeTagName(entity.GetType());
+	   }
 
 #if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
@@ -406,6 +436,12 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <value>The name of the find type tag.</value>
 		public Func<Type, string> FindTypeTagName { get; set; }
+
+      /// <summary>
+      /// Gets or sets the function to find the tag name if the object is dynamic.
+      /// </summary>
+      /// <value>The tag name.</value>
+      public Func<dynamic, string> FindDynamicTagName { get; set; }
 
 		/// <summary>
 		/// Gets or sets the function to find the indexed property name

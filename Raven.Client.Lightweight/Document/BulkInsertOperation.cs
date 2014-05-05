@@ -88,7 +88,7 @@ namespace Raven.Client.Document
 		{
 			var metadata = new RavenJObject();
 
-			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
+			var tag = documentStore.Conventions.GetDynamicTagName(entity);
 			if (tag != null)
 				metadata.Add(Constants.RavenEntityName, tag);
 
