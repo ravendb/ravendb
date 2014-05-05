@@ -27,7 +27,6 @@ class editIndex extends viewModelBase {
     hasExistingTransform: KnockoutComputed<string>;
     hasMultipleMaps: KnockoutComputed<boolean>;
     termsUrl = ko.observable<string>();
-    statsUrl = ko.observable<string>();
     queryUrl = ko.observable<string>();
     editMaxIndexOutputsPerDocument = ko.observable<boolean>(false);
     indexErrorsList = ko.observableArray<string>();
@@ -85,22 +84,10 @@ class editIndex extends viewModelBase {
         this.addTransformHelpPopover();
     }
 
-    // Called back after the entire composition has finished (parents and children included)
-    compositionComplete() {
-        super.compositionComplete();
-    }
-    
-    /*saveInObservable() {
-        var docEditor = ace.edit("docEditor");
-        var docEditorText = docEditor.getSession().getValue();
-        this.editedTransformer().transformResults(docEditorText);
-    }*/
-
     editExistingIndex(unescapedIndexName: string) {
         var indexName = decodeURIComponent(unescapedIndexName);
         this.fetchIndexPriority(indexName);
         this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
-        this.statsUrl(appUrl.forStatus(this.activeDatabase()));
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
     }
 

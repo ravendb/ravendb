@@ -2,6 +2,7 @@ package net.ravendb.client;
 
 import java.util.Iterator;
 
+import net.ravendb.abstractions.basic.CloseableIterator;
 import net.ravendb.abstractions.basic.Reference;
 import net.ravendb.abstractions.closure.Action1;
 import net.ravendb.abstractions.data.Etag;
@@ -165,7 +166,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param query
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(IRavenQueryable<T> query);
+  public <T> CloseableIterator<StreamResult<T>> stream(IRavenQueryable<T> query);
 
   /**
    * Stream the results on the query to the client, converting them to
@@ -175,7 +176,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param queryHeaderInformation
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(IRavenQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
+  public <T> CloseableIterator<StreamResult<T>> stream(IRavenQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
 
 
   /**
@@ -185,7 +186,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param query
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(IDocumentQuery<T> query);
+  public <T> CloseableIterator<StreamResult<T>> stream(IDocumentQuery<T> query);
 
   /**
    * Stream the results on the query to the client, converting them to
@@ -194,7 +195,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param query
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(IDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
+  public <T> CloseableIterator<StreamResult<T>> stream(IDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
 
   /**
    * Stream the results on the query to the client, converting them to
@@ -203,7 +204,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param fromEtag
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass);
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass);
 
 
   /**
@@ -213,7 +214,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param fromEtag
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag);
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag);
 
   /**
    * Stream the results on the query to the client, converting them to
@@ -223,7 +224,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param startsWith
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith);
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith);
 
   /**
    * Stream the results on the query to the client, converting them to
@@ -234,7 +235,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param matches
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches);
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches);
 
   /**
    * Stream the results on the query to the client, converting them to
@@ -246,7 +247,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param start
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start);
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start);
 
   /**
    * Stream the results on the query to the client, converting them to
@@ -259,7 +260,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param pageSize
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize);
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize);
 
   /**
    * Stream the results on the query to the client, converting them to
@@ -272,7 +273,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param pageSize
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize, RavenPagingInformation pagingInformation);
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize, RavenPagingInformation pagingInformation);
 
   /**
    *

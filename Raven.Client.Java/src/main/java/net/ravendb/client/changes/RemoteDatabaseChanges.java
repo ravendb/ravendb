@@ -58,14 +58,14 @@ import org.codehaus.jackson.map.ObjectMapper;
 public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, IObserver<String> {
 
   private static final ILog logger = LogManager.getCurrentClassLogger();
-  private final ConcurrentSkipListSet<String> watchedDocs = new ConcurrentSkipListSet<>();
-  private final ConcurrentSkipListSet<String> watchedPrefixes = new ConcurrentSkipListSet<>();
-  private final ConcurrentSkipListSet<String> watchedTypes = new ConcurrentSkipListSet<>();
-  private final ConcurrentSkipListSet<String> watchedCollections = new ConcurrentSkipListSet<>();
-  private final ConcurrentSkipListSet<String> watchedIndexes = new ConcurrentSkipListSet<>();
-  private final ConcurrentSkipListSet<String> watchedBulkInserts = new ConcurrentSkipListSet<>();
-  private boolean watchAllDocs;
-  private boolean watchAllIndexes;
+  protected final ConcurrentSkipListSet<String> watchedDocs = new ConcurrentSkipListSet<>();
+  protected final ConcurrentSkipListSet<String> watchedPrefixes = new ConcurrentSkipListSet<>();
+  protected final ConcurrentSkipListSet<String> watchedTypes = new ConcurrentSkipListSet<>();
+  protected final ConcurrentSkipListSet<String> watchedCollections = new ConcurrentSkipListSet<>();
+  protected final ConcurrentSkipListSet<String> watchedIndexes = new ConcurrentSkipListSet<>();
+  protected final ConcurrentSkipListSet<String> watchedBulkInserts = new ConcurrentSkipListSet<>();
+  protected boolean watchAllDocs;
+  protected boolean watchAllIndexes;
 
   private Timer clientSideHeartbeatTimer;
 
@@ -76,7 +76,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
   private final IDocumentStoreReplicationInformer replicationInformer;
   private final Action0 onDispose;
   private final Function4<String, Etag, String[] , OperationMetadata, Boolean> tryResolveConflictByUsingRegisteredConflictListeners;
-  private final AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<>(String.CASE_INSENSITIVE_ORDER);
+  protected final AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<>(String.CASE_INSENSITIVE_ORDER);
   private Closeable connection;
   private Date lastHeartbeat = new Date();
 
@@ -225,7 +225,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
     }
   }
 
-  private void clientSideHeartbeat() {
+  protected void clientSideHeartbeat() {
     long elapsedTimeSinceHeartbeat = new Date().getTime() - lastHeartbeat.getTime();
     if (elapsedTimeSinceHeartbeat < 45 * 1000) {
       return;
@@ -279,7 +279,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
     return taskedObservable;
   }
 
-  private void send(String command, String value) {
+  protected void send(String command, String value) {
     synchronized (this) {
       logger.info("Sending command %s - %s to %s with id %s", command, value, url, id);
 

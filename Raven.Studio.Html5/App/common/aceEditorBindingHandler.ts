@@ -133,18 +133,40 @@ class aceEditorBindingHandler {
             }
         }
                 
-        // When we lose focus, push the value into the observable.
+        // In the event of keyup or lose focus, push the value into the observable.
         var aceFocusElement = ".ace_text-input";
-        //$(element).on('blur', aceFocusElement, () => code(aceEditor.getSession().getValue()));
         $(element).on('keyup', aceFocusElement, () => code(aceEditor.getSession().getValue()));
         $(element).on('focus', aceFocusElement, () => aceEditorBindingHandler.currentEditor = aceEditor);
 
-        // When the element is removed from the DOM, unhook our blur event handler, lest we leak memory.
-        ko.utils.domNodeDisposal.addDisposeCallback(element, () => $(element).off('blur', aceFocusElement));
+        // Initialize ace resizeble text box
+        aceEditor.setOption('vScrollBarAlwaysVisible', true);
+        aceEditor.setOption('hScrollBarAlwaysVisible', true);
+        var minHeight = 120;
+        if ($(element).height() < minHeight) {
+            $(element).height(minHeight);
+        }
+        $(element).resizable({
+            minHeight: minHeight,
+            handles: "s, se",
+            grid: [10000000000000000, 1],
+            resize: function (event, ui) {
+                aceEditor.resize();
+            }
+        });
+        aceEditor.resize(); //for ace elements smaller than 'minHeight'
+        $(element).find('.ui-resizable-se').removeClass('ui-icon-gripsmall-diagonal-se');
+        $(element).find('.ui-resizable-se').addClass('ui-icon-carat-1-s');
+        $('.ui-resizable-se').css('cursor', 's-resize');
+
+        // When the element is removed from the DOM, unhook our keyup and focus event handlers and remove the  resizable functionality completely. lest we leak memory.
+        ko.utils.domNodeDisposal.addDisposeCallback(element, () => {
+            $(element).off('keyup', aceFocusElement);
+            $(element).off('focus', aceFocusElement);
+            $(element).resizable("destroy");
+        });
 
         // Keep track of the editor for this element.
         ko.utils.domData.set(element, "aceEditor", aceEditor);
-
 
         if (bindingValues.getFocus && bindingValues.getFocus == true) {
             aceEditor.focus();
