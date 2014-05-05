@@ -30,7 +30,7 @@ namespace Voron.Impl
         public ScratchBufferPool(StorageEnvironment env)
         {
             _scratchPager = env.Options.CreateScratchPager("scratch.buffers");
-            _scratchPager.AllocateMorePages(null, env.Options.InitialLogFileSize);
+            _scratchPager.AllocateMorePages(null, env.Options.InitialFileSize.HasValue ? Math.Max(env.Options.InitialFileSize.Value, env.Options.InitialLogFileSize) : env.Options.InitialLogFileSize);
         }
 
         public PagerState PagerState { get { return _scratchPager.PagerState; } }
