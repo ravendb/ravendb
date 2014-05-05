@@ -17,9 +17,14 @@ class savePeriodicBackupSetupCommand extends commandBase {
     }
 
     private saveAccountInformation(): JQueryPromise<any> {
+        var jQueryOptions: JQueryAjaxSettings = {
+            headers: {
+                'If-None-Match': this.setupToPersist.getEtag()
+            }
+        };
         var url = "/admin/databases/" + this.db.name;
         var putArgs = JSON.stringify(this.setupToPersist.toDatabaseSettingsDto());
-        return this.post(url, putArgs, null, { dataType: undefined });
+        return this.put(url, putArgs, null, jQueryOptions);
     }
 
     private saveSetup(): JQueryPromise<any> {

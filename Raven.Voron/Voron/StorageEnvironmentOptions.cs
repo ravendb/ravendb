@@ -28,6 +28,8 @@ namespace Voron
 			handler(this, new RecoveryErrorEventArgs(message, e));
 		}
 
+		public long? InitialFileSize { get; set; }
+
 		public long MaxLogFileSize
 		{
 			get { return _maxLogFileSize; }
@@ -130,7 +132,7 @@ namespace Voron
                 if (_journalPath != tempPath && Directory.Exists(_journalPath) == false)
                     Directory.CreateDirectory(_journalPath);
 
-				_dataPager = new Lazy<IVirtualPager>(() => new Win32MemoryMapPager(Path.Combine(_basePath, Constants.DatabaseFilename)));
+				_dataPager = new Lazy<IVirtualPager>(() => new Win32MemoryMapPager(Path.Combine(_basePath, Constants.DatabaseFilename), InitialFileSize));
 			}
 
 			public override IVirtualPager DataPager
@@ -250,7 +252,7 @@ namespace Voron
 			    if (File.Exists(scratchFile)) 
                     File.Delete(scratchFile);
 
-                return new Win32MemoryMapPager(scratchFile, (NativeFileAttributes.DeleteOnClose | NativeFileAttributes.Temporary));
+                return new Win32MemoryMapPager(scratchFile, InitialFileSize, (NativeFileAttributes.DeleteOnClose | NativeFileAttributes.Temporary));
 			}
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)
@@ -275,7 +277,7 @@ namespace Voron
 
 			public PureMemoryStorageEnvironmentOptions()
 			{
-				_dataPager = new Win32PageFileBackedMemoryMappedPager("data.pager");
+				_dataPager = new Win32PageFileBackedMemoryMappedPager("data.pager", InitialFileSize);
 			}
 
 			public override IVirtualPager DataPager
@@ -351,7 +353,7 @@ namespace Voron
 
 			public override IVirtualPager CreateScratchPager(string name)
 			{
-				return new Win32PageFileBackedMemoryMappedPager(name);
+				return new Win32PageFileBackedMemoryMappedPager(name, InitialFileSize);
 			}
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)

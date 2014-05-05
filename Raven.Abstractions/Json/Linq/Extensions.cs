@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 
@@ -308,13 +309,11 @@ namespace Raven.Json.Linq
 
         private static  void FillDifferentJsonData(DictionaryWithParentSnapshot selfObj, DictionaryWithParentSnapshot otherObj, Dictionary<string, string> diffData)
         {
+            Debug.Assert(diffData != null,"Precaution --> parameter should not be null");
+
             string[] diffNames;
             DictionaryWithParentSnapshot bigObj ;
 
-            if (diffData == null)
-            {
-                diffData = new Dictionary<string, string>();
-            }
             if (selfObj.Keys.Count < otherObj.Keys.Count)
             {
                 diffNames = otherObj.Keys.Except(selfObj.Keys).ToArray();
@@ -355,6 +354,20 @@ namespace Raven.Json.Linq
             };
             docChanges.Add(changes);
           
+        }
+        public static void AddChanges(this ICollection<DocumentsChanges> docChanges, KeyValuePair<string, RavenJToken> kvp, RavenJToken token,string fieldName)
+        {
+            var changes = new DocumentsChanges
+            {
+                FieldNewType = kvp.Value.Type.ToString(),
+                FieldOldType = token.Type.ToString(),
+                FieldNewValue = kvp.Value.ToString(),
+                FieldOldValue = token.ToString(),
+                Change = DocumentsChanges.ChangeType.FieldChanged,
+                FieldName = fieldName
+            };
+            docChanges.Add(changes);
+
         }
         public static void AddChanges(this ICollection<DocumentsChanges> docChanges, RavenJToken curThisReader, RavenJToken curOtherReader, string fieldName)
         {

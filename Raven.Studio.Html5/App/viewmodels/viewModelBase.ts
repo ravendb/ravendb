@@ -91,7 +91,6 @@ class viewModelBase {
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
     }
-
     /*
      * Creates a keyboard shortcut local to the specified element and its children.
      * The shortcut will be removed as soon as the view model is deactivated.
@@ -154,7 +153,7 @@ class viewModelBase {
 
         var canNavTask = $.Deferred<any>();
 
-        var systemDbConfirm = new viewSystemDatabaseConfirm();
+        var systemDbConfirm = new viewSystemDatabaseConfirm("Meddling with the system database could cause irreversible damage");
         systemDbConfirm.viewTask
             .fail(() => canNavTask.resolve({ redirect: 'databases' }))
             .done(() => {
@@ -215,7 +214,6 @@ class viewModelBase {
             return message;
         }
     }
-
 }
 
 export = viewModelBase;

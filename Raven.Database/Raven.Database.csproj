@@ -257,6 +257,7 @@
     <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualDeleteTrigger.cs" />
     <Compile Include="Client\EmbeddableDocumentStore.cs" />
     <Compile Include="Client\EmbeddedDocumentStore.cs" />
+    <Compile Include="Config\Settings\NullableIntegerSetting.cs" />
     <Compile Include="Embedded\ResponseStream.cs" />
     <Compile Include="Impl\DTC\DtcNotSupportedTransactionalState.cs" />
     <Compile Include="Indexing\IndexMerging\ChangeRootReferenceVisitor.cs" />
