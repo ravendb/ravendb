@@ -27,7 +27,6 @@ class editIndex extends viewModelBase {
     hasExistingTransform: KnockoutComputed<string>;
     hasMultipleMaps: KnockoutComputed<boolean>;
     termsUrl = ko.observable<string>();
-    statsUrl = ko.observable<string>();
     queryUrl = ko.observable<string>();
     editMaxIndexOutputsPerDocument = ko.observable<boolean>(false);
     indexErrorsList = ko.observableArray<string>();
@@ -100,7 +99,6 @@ class editIndex extends viewModelBase {
         var indexName = decodeURIComponent(unescapedIndexName);
         this.fetchIndexPriority(indexName);
         this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
-        this.statsUrl(appUrl.forStatus(this.activeDatabase()));
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
     }
 

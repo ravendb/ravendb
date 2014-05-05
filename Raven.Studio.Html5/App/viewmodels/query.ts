@@ -101,7 +101,7 @@ class query extends viewModelBase {
 
     openQueryStats() {
         var viewModel = new queryStatsDialog(this.queryStats(), this.selectedIndexEditUrl(), this.didDynamicChangeIndex(), this.rawJsonUrl());
-        app.showDialog(viewModel)
+        app.showDialog(viewModel);
     }
 
     activate(indexNameOrRecentQueryHash?: string) {
