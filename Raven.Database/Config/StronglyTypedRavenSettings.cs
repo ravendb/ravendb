@@ -149,6 +149,7 @@ namespace Raven.Database.Config
 
 			MaxRecentTouchesToRemember = new IntegerSetting(settings["Raven/MaxRecentTouchesToRemember"], 1024);
             VoronMaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
+			VoronInitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
 		}
 
 		private string GetDefaultWebDir()
@@ -282,5 +283,6 @@ namespace Raven.Database.Config
 
 		public IntegerSetting MaxRecentTouchesToRemember { get; set; }
         public IntegerSetting VoronMaxBufferPoolSize { get; private set; }
+		public NullableIntegerSetting VoronInitialFileSize { get; private set; }
 	}
 }

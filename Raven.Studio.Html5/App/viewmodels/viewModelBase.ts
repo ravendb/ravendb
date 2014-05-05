@@ -63,8 +63,7 @@ class viewModelBase {
         }
 
         this.modelPollingStart();
-        window.onbeforeunload = (e: any) => this.beforeUnload(e);
-        ko.postbox.publish("SetRawJSONUrl", "");
+		window.onbeforeunload = (e: any) => this.beforeUnload(e);        ko.postbox.publish("SetRawJSONUrl", "");
     }
 
     // Called back after the entire composition has finished (parents and children included)
@@ -106,8 +105,8 @@ class viewModelBase {
     // Roll this code into the existing aceEditorBindingHandler.
     createResizableTextBox(element) {
         var editor = ace.edit(element);
-        //editor.setOption('vScrollBarAlwaysVisible', true);
-        //editor.setOption('hScrollBarAlwaysVisible', true);
+        editor.setOption('vScrollBarAlwaysVisible', true);
+        editor.setOption('hScrollBarAlwaysVisible', true);
         var minHeight = 100;
         if ($(element).height() < 150) {
             $(element).height(minHeight);
@@ -147,12 +146,6 @@ class viewModelBase {
             this.keyboardShortcutDomContainers.push(elementSelector);
         }
     }
-
-    //A method to save the current value in the observables from text boxes and inputs before a refresh/page close.
-    //Should be implemented on the inheriting class.
-    //saveInObservable() {
-
-    //}
 
     private removeKeyboardShortcuts(elementSelector: string) {
         $(elementSelector).unbind('keydown.jwerty');
@@ -200,7 +193,7 @@ class viewModelBase {
 
         var canNavTask = $.Deferred<any>();
 
-        var systemDbConfirm = new viewSystemDatabaseConfirm();
+        var systemDbConfirm = new viewSystemDatabaseConfirm("Meddling with the system database could cause irreversible damage");
         systemDbConfirm.viewTask
             .fail(() => canNavTask.resolve({ redirect: 'databases' }))
             .done(() => {
@@ -247,7 +240,6 @@ class viewModelBase {
     }
 
     private beforeUnload(e: any) {
-        //this.saveInObservable();
         var isDirty = viewModelBase.dirtyFlag().isDirty();
         if (isDirty) {
             var message = "You have unsaved data.";
@@ -261,8 +253,6 @@ class viewModelBase {
             // For Safari
             return message;
         }
-
-        return null;
     }
 
 }

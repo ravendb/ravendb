@@ -91,7 +91,6 @@ namespace Raven.Database
             Configuration = configuration;
             this.transportState = transportState ?? new TransportState();
             ExtensionsState = new AtomicDictionary<object>();
-            var recentTouches = new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(1024, StringComparer.OrdinalIgnoreCase);
 
             using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
             {

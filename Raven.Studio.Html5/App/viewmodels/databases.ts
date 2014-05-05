@@ -217,7 +217,10 @@ class databases extends viewModelBase {
         if (db) {
             require(["viewmodels/deleteDatabaseConfirm"], deleteDatabaseConfirm => {
                 var confirmDeleteVm: deleteDatabaseConfirm = new deleteDatabaseConfirm(db, this.systemDb);
-                confirmDeleteVm.deleteTask.done(() => this.onDatabaseDeleted(db));
+                confirmDeleteVm.deleteTask.done(()=> {
+                    this.onDatabaseDeleted(db);
+                    this.selectedDatabase(null);
+                });
                 app.showDialog(confirmDeleteVm);
             });
         }
