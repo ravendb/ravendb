@@ -14,7 +14,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -138,6 +138,27 @@ namespace Raven.Database.Actions
             }
         }
 
+        private static bool IsIndexNameValid(string indexName)
+        {
+            bool result;
+            var error = string.Format("Index name {0} not permitted. ", indexName).Replace("//","__");
+            if (indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(error + "Index names starting with dynamic_ or dynamic/ are reserved.");
+            }
+            if ( indexName.Equals("dynamic", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(error + "Index name dynamic is reserved.");
+            }
+
+            if (indexName.Contains("__") || (indexName.Contains("//")))
+            {
+                throw new InvalidOperationException(error+ "Index names cannot contains __ (double _)");
+
+            }         
+            return true;
+        }
+       
         // only one index can be created at any given time
         // the method already handle attempts to create the same index, so we don't have to 
         // worry about this.
@@ -146,7 +167,9 @@ namespace Raven.Database.Actions
         {
             if (name == null)
                 throw new ArgumentNullException("name");
-
+           
+            IsIndexNameValid(name);
+          
             var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
 
             if (existingIndex != null)
