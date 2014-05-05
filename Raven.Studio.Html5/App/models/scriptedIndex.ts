@@ -3,22 +3,24 @@ import documentMetadata = require("models/documentMetadata");
 
 class scriptedIndex extends document {
 
-    deleteLater = ko.observable<boolean>();
-
+    static PREFIX = 'Raven/ScriptedIndexResults/';
+    indexName = ko.observable<string>();
     indexScript = ko.observable<string>();
     deleteScript = ko.observable<string>();
+    deleteLater = ko.observable<boolean>();
 
     constructor(dto: scriptedIndexDto) {
-
         super(dto);
 
+        var scriptedIndexName = dto['@metadata']['@id'].slice(scriptedIndex.PREFIX.length);
+        this.indexName(scriptedIndexName);
         this.indexScript(dto.IndexScript);
         this.deleteScript(dto.DeleteScript);
     }
 
     static emptyForIndex(indexName: string): scriptedIndex {
         var meta = [];
-        meta['@id'] = "Raven/ScriptedIndexResults/" + indexName;
+        meta['@id'] = this.PREFIX + indexName;
         meta['Raven-Entity-Name'] = 'ScriptedIndexResults';
         return new scriptedIndex({
             '@metadata': meta,

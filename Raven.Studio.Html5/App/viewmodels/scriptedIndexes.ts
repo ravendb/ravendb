@@ -9,7 +9,6 @@ import saveScriptedIndexesCommand = require("commands/saveScriptedIndexesCommand
 
 class scriptedIndexes extends viewModelBase {
 
-    indexNames = ko.observableArray<string>();
     selectedIndex = ko.observable<string>();
     isSaveEnabled: KnockoutComputed<boolean>;
     scrIndexes = ko.observable<scriptedIndexMap>();
@@ -17,10 +16,21 @@ class scriptedIndexes extends viewModelBase {
     isScriptIndexVisible: KnockoutComputed<boolean>;
     isFirstLoad: boolean = true;
 
+    allScriptedIndexes = ko.observableArray<scriptedIndex>();
+    activeScriptedIndexes = ko.observableArray<scriptedIndex>().extend({ required: true });
+    indexNames = ko.observableArray<string>();
+    inactiveIndexNames: KnockoutComputed<Array<string>>;
+
     constructor() {
         super();
 
         aceEditorBindingHandler.install();
+        this.inactiveIndexNames = ko.computed(function() {
+            var activeIndexNames = this.allScriptedIndexes()
+                .filter((index: scriptedIndex)=> { return !index.isMarkedToDelete(); })
+                .map((index: scriptedIndex) => index.indexName());
+            return this.indexNames().filter((indexName: string) => { return activeIndexNames.indexOf(indexName) < 0; });
+        }, this);
     }
 
     canActivate(args: any): any {
@@ -91,6 +101,11 @@ class scriptedIndexes extends viewModelBase {
             .execute()
             .done((indexes: scriptedIndex[])=> {
                 this.performAllScriptedIndexes(indexes);
+
+
+                this.allScriptedIndexes.pushAll(indexes);
+                this.activeScriptedIndexes.pushAll(indexes);
+            //this.activeScriptedIndexes.valueHasMutated();
                 deferred.resolve({ can: true });
             });
         return deferred;
@@ -130,7 +145,7 @@ class scriptedIndexes extends viewModelBase {
         }
     }
 
-    startupAceEditor() {
+    /*startupAceEditor() {
         // Startup the Ace editor
         if ($("#indexScriptEditor").length > 0) {
             ace.edit("indexScriptEditor").focus();
@@ -143,7 +158,7 @@ class scriptedIndexes extends viewModelBase {
             var value = ace.edit("deleteScriptEditor").getSession().getValue();
             this.scrIndex().deleteScript(value);
         });
-    }
+    }*/
 
     saveChanges() {
         new saveScriptedIndexesCommand(this.scrIndexes(), this.activeDatabase())
@@ -168,9 +183,29 @@ class scriptedIndexes extends viewModelBase {
         });
     }
 
-    deleteScript() {
+    deleteScriptedIndex() {
         this.scrIndexes().removeIndex(this.selectedIndex());
         this.getIndexForName(this.selectedIndex());
+    }
+
+
+
+
+    createScriptedIndex(indexName: string) {
+        var results = this.allScriptedIndexes().filter((index: scriptedIndex) => { return index.indexName() == indexName; });
+        var activeScriptedIndex: scriptedIndex = results[0];
+        if (activeScriptedIndex) {
+            activeScriptedIndex.cancelDeletion();
+
+        } else {
+            activeScriptedIndex = scriptedIndex.emptyForIndex(indexName);
+            this.allScriptedIndexes.push(activeScriptedIndex);
+            this.activeScriptedIndexes.push(activeScriptedIndex);
+        }
+    }
+
+    removeScriptedIndex(scriptedIndexToDelete: scriptedIndex) {
+        scriptedIndexToDelete.markToDelete();
     }
 }
 

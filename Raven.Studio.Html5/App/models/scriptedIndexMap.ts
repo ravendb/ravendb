@@ -6,7 +6,7 @@ class scriptedIndexMap {
     private PREFIX = 'Raven/ScriptedIndexResults/';
     indexes = {};
     activeScriptedIndexes = ko.observableArray<scriptedIndex>().extend({ required: true });
-    
+
     constructor(scriptedIndexes: scriptedIndex[]) {
         scriptedIndexes.forEach(index => {
             this.indexes[index.__metadata['id']] = index;
