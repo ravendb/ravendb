@@ -151,7 +151,7 @@ namespace Raven.Database.Actions
                 throw new InvalidOperationException(error + "Index name dynamic is reserved.");
             }
 
-            if (indexName.Contains("__") || (indexName.Contains("//")))
+            if (indexName.Contains("//"))
             {
                 throw new InvalidOperationException(error+ "Index names cannot contains __ (double _)");
 
