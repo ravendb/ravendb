@@ -1,0 +1,1246 @@
+<?xml version="1.0"?><doc><assembly><name>ActiproSoftware.Text.Addons.JavaScript.Silverlight</name></assembly><members><member name="T:ActiproSoftware.Products.Text.Addons.JavaScript.Resources"><summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.ResourceManager"><summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.Culture"><summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptDocumentEndErrorAlias"><summary>
+              Looks up a localized string similar to Document end.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptExpressionErrorAlias"><summary>
+              Looks up a localized string similar to Expression.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptForStatementCoreErrorAlias"><summary>
+              Looks up a localized string similar to ';' or 'in'.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptForStatementInitializerErrorAlias"><summary>
+              Looks up a localized string similar to 'var' or expression.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptIdentifierErrorAlias"><summary>
+              Looks up a localized string similar to Identifier.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptKeywordErrorAlias"><summary>
+              Looks up a localized string similar to '{0}'.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptLiteralDecimalIntegerErrorAlias"><summary>
+              Looks up a localized string similar to Decimal integer literal.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptLiteralDoubleQuoteStringErrorAlias"><summary>
+              Looks up a localized string similar to String literal.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptLiteralHexadecimalIntegerErrorAlias"><summary>
+              Looks up a localized string similar to Hexadecimal integer literal.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptLiteralRealErrorAlias"><summary>
+              Looks up a localized string similar to Real number literal.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptLiteralRegularExpressionErrorAlias"><summary>
+              Looks up a localized string similar to Regular expression.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptLiteralSingleQuoteStringErrorAlias"><summary>
+              Looks up a localized string similar to String literal.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptOperatorErrorAlias"><summary>
+              Looks up a localized string similar to '{0}'.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptParseErrorInvalidAssignmentExpressionTarget"><summary>
+              Looks up a localized string similar to Invalid left-hand side in assignment..
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptParseErrorInvalidForInElementExpression"><summary>
+              Looks up a localized string similar to Invalid left-hand side in for-in..
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptPropertyNameErrorAlias"><summary>
+              Looks up a localized string similar to Property name.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptPunctuationErrorAlias"><summary>
+              Looks up a localized string similar to '{0}'.
+            </summary></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.Resources.JavaScriptStatementErrorAlias"><summary>
+              Looks up a localized string similar to Statement.
+            </summary></member><member name="T:ActiproSoftware.Products.Text.Addons.JavaScript.SR"><summary>
+            Provides access to the string resources of this assembly, also allowing for their customization.
+            </summary><remarks>
+            Call the <see cref="M:ActiproSoftware.Products.Text.Addons.JavaScript.SR.GetString(System.String)" /> method to return a resolved resource string.
+            If a custom string has been set for a specified string resource name, it will be returned.
+            Otherwise, the default string resource value is returned.
+            <para>
+            If any of the resource strings are customized via a call to <see cref="M:ActiproSoftware.Products.Text.Addons.JavaScript.SR.SetCustomString(System.String,System.String)" />,
+            it is best to do so before any other classes in this assembly are referenced,
+            such as in the application startup.
+            </para></remarks></member><member name="M:ActiproSoftware.Products.Text.Addons.JavaScript.SR.ClearCustomStrings"><summary>
+            Removes all custom strings.
+            </summary></member><member name="M:ActiproSoftware.Products.Text.Addons.JavaScript.SR.ContainsCustomString(System.String)"><summary>
+            Returns whether a custom string is defined for the specified string resource.
+            </summary><param name="name">The name of the resource for which to search.</param><returns><c>true</c> if a custom string is defined for the specified string resource; otherwise, <c>false</c>.
+            </returns></member><member name="M:ActiproSoftware.Products.Text.Addons.JavaScript.SR.GetCustomString(System.String)"><summary>
+            Returns custom string that is stored for the specified string resource, if any.
+            </summary><param name="name">The name of the resource to get.</param><returns>The custom string that is stored for the specified string resource, if any.</returns></member><member name="M:ActiproSoftware.Products.Text.Addons.JavaScript.SR.GetString(System.String)"><summary>
+            Returns the resolved value of the specified string resource.
+            </summary><param name="name">The name of the resource to get.</param><returns>
+            The value of the resource localized for the caller's current culture settings. 
+            If a best match is not possible, <see langword="null" /> is returned.
+            </returns></member><member name="M:ActiproSoftware.Products.Text.Addons.JavaScript.SR.GetString(ActiproSoftware.Products.Text.Addons.JavaScript.SRName)"><summary>
+            Returns the resolved value of the specified string resource.
+            </summary><param name="name">The name of the resource to get.</param><returns>
+            The value of the resource localized for the caller's current culture settings. 
+            If a best match is not possible, <see langword="null" /> is returned.
+            </returns></member><member name="M:ActiproSoftware.Products.Text.Addons.JavaScript.SR.GetString(System.String,System.Object[])"><summary>
+            Returns the resolved value of the specified string resource, by calling <c>String.Format</c> using supplied arguments.
+            </summary><param name="name">The name of the resource to get.</param><param name="args">The arguments to pass to <c>String.Format</c>.</param><returns>
+            The value of the resource localized for the caller's current culture settings. 
+            If a best match is not possible, <see langword="null" /> is returned.
+            </returns></member><member name="M:ActiproSoftware.Products.Text.Addons.JavaScript.SR.GetString(ActiproSoftware.Products.Text.Addons.JavaScript.SRName,System.Object[])"><summary>
+            Returns the resolved value of the specified string resource, by calling <c>String.Format</c> using supplied arguments.
+            </summary><param name="name">The name of the resource to get.</param><param name="args">The arguments to pass to <c>String.Format</c>.</param><returns>
+            The value of the resource localized for the caller's current culture settings. 
+            If a best match is not possible, <see langword="null" /> is returned.
+            </returns></member><member name="M:ActiproSoftware.Products.Text.Addons.JavaScript.SR.RemoveCustomString(System.String)"><summary>
+            Removes any custom string that is defined for the specified string resource.
+            </summary><param name="name">The name of the resource to remove.</param></member><member name="M:ActiproSoftware.Products.Text.Addons.JavaScript.SR.SetCustomString(System.String,System.String)"><summary>
+            Sets a custom string value for the specified string resource.
+            </summary><param name="name">The name of the resource to set.</param><param name="value">The value of the resource to set.</param></member><member name="P:ActiproSoftware.Products.Text.Addons.JavaScript.SR.ResourceManager"><summary>
+            Gets the <see cref="P:ActiproSoftware.Products.Text.Addons.JavaScript.SR.ResourceManager" /> that provides the default resources. 
+            </summary><value>The <see cref="P:ActiproSoftware.Products.Text.Addons.JavaScript.SR.ResourceManager" /> that provides the default resources.</value></member><member name="T:ActiproSoftware.Products.Text.Addons.JavaScript.SRName"><summary>
+            Specifies the names of string resources for this assembly.
+            </summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptDocumentEndErrorAlias"><summary>A terminal error alias string.</summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptExpressionErrorAlias"><summary>A terminal error alias string.</summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptForStatementCoreErrorAlias"><summary>A terminal error alias string.</summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptForStatementInitializerErrorAlias"><summary>A terminal error alias string.</summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptIdentifierErrorAlias"><summary>A terminal error alias string.</summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptKeywordErrorAlias"><summary>A terminal error alias string.</summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptLiteralDecimalIntegerErrorAlias"><summary>A terminal error alias string.</summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptLiteralDoubleQuoteStringErrorAlias"><summary>A terminal error alias string.</summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptLiteralHexadecimalIntegerErrorAlias"><summary>A terminal error alias string.</summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptLiteralRealErrorAlias"><summary>A terminal error alias string.</summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptLiteralRegularExpressionErrorAlias"><summary>A terminal error alias string.</summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptLiteralSingleQuoteStringErrorAlias"><summary>A terminal error alias string.</summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptOperatorErrorAlias"><summary>A terminal error alias string.</summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptPropertyNameErrorAlias"><summary>A terminal error alias string.</summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptPunctuationErrorAlias"><summary>A terminal error alias string.</summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptStatementErrorAlias"><summary>A terminal error alias string.</summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptParseErrorInvalidAssignmentExpressionTarget"><summary>A parse error string.</summary></member><member name="F:ActiproSoftware.Products.Text.Addons.JavaScript.SRName.JavaScriptParseErrorInvalidForInElementExpression"><summary>A parse error string.</summary></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.Argument"><summary>
+            Represents an argument.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.Argument.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.Argument.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.Argument.Expression"><summary>
+            Gets or sets the expression.
+            </summary><value>The expression.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.Expression"><summary>
+            Represents an expression.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.Expression.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ArrayInitializerExpression"><summary>
+            Represents an array initializer expression.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ArrayInitializerExpression.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ArrayInitializerExpression.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ArrayInitializerExpression.Initializers"><summary>
+            Gets the initializers.
+            </summary><value>The initializers.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ArrayInitializerExpression.HasInitializers"><summary>
+            Returns whether the <see cref="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ArrayInitializerExpression.Initializers" /> collection property contains at least one item.
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.AssignmentExpression"><summary>
+            Represents an assignment expression.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.AssignmentExpression.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.AssignmentExpression.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.AssignmentExpression.LeftExpression"><summary>
+            Gets or sets the left expression.
+            </summary><value>The left expression.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.AssignmentExpression.Operator"><summary>
+            Gets or sets the operator.
+            </summary><value>The operator.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.AssignmentExpression.RightExpression"><summary>
+            Gets or sets the right expression.
+            </summary><value>The right expression.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.BinaryOperatorExpression"><summary>
+            Represents a binary operator expression.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.BinaryOperatorExpression.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.BinaryOperatorExpression.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.BinaryOperatorExpression.LeftExpression"><summary>
+            Gets or sets the left expression.
+            </summary><value>The left expression.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.BinaryOperatorExpression.Operator"><summary>
+            Gets or sets the operator.
+            </summary><value>The operator.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.BinaryOperatorExpression.RightExpression"><summary>
+            Gets or sets the right expression.
+            </summary><value>The right expression.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SourceElement"><summary>
+            Represents a source element.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SourceElement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.Statement"><summary>
+            Represents a statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.Statement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.BlockStatement"><summary>
+            Represents a block statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.BlockStatement.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.BlockStatement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.BlockStatement.ChildStatements"><summary>
+            Gets the child statements.
+            </summary><value>The child statements.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.BlockStatement.HasChildStatements"><summary>
+            Returns whether the <see cref="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.BlockStatement.ChildStatements" /> collection property contains at least one item.
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.BreakStatement"><summary>
+            Represents a break statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.BreakStatement.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.BreakStatement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.BreakStatement.Label"><summary>
+            Gets or sets the label.
+            </summary><value>The label.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.CatchClause"><summary>
+            Represents a catch clause.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.CatchClause.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.CatchClause.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.CatchClause.CatchBlock"><summary>
+            Gets or sets the catch block.
+            </summary><value>The catch block.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.CatchClause.VariableDeclaration"><summary>
+            Gets or sets the variable declaration.
+            </summary><value>The variable declaration.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.CompilationUnit"><summary>
+            Represents a compilation unit.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.CompilationUnit.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.CompilationUnit.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.CompilationUnit.SourceElements"><summary>
+            Gets the source elements.
+            </summary><value>The source elements.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.CompilationUnit.HasSourceElements"><summary>
+            Returns whether the <see cref="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.CompilationUnit.SourceElements" /> collection property contains at least one item.
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ConditionalExpression"><summary>
+            Represents a conditional expression.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ConditionalExpression.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ConditionalExpression.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ConditionalExpression.ConditionExpression"><summary>
+            Gets or sets the condition expression.
+            </summary><value>The condition expression.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ConditionalExpression.FalseExpression"><summary>
+            Gets or sets the false expression.
+            </summary><value>The false expression.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ConditionalExpression.TrueExpression"><summary>
+            Gets or sets the true expression.
+            </summary><value>The true expression.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ContinueStatement"><summary>
+            Represents a continue statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ContinueStatement.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ContinueStatement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ContinueStatement.Label"><summary>
+            Gets or sets the label.
+            </summary><value>The label.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.DebuggerStatement"><summary>
+            Represents a debugger statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.DebuggerStatement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.DoStatement"><summary>
+            Represents a do statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.DoStatement.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.DoStatement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.DoStatement.ChildStatement"><summary>
+            Gets or sets the child statement.
+            </summary><value>The child statement.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.DoStatement.ConditionExpression"><summary>
+            Gets or sets the condition expression.
+            </summary><value>The condition expression.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ExpressionStatement"><summary>
+            Represents an expression statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ExpressionStatement.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ExpressionStatement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ExpressionStatement.Expression"><summary>
+            Gets or sets the expression.
+            </summary><value>The expression.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ForEachStatement"><summary>
+            Represents a for each statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ForEachStatement.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ForEachStatement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ForEachStatement.ChildStatement"><summary>
+            Gets or sets the child statement.
+            </summary><value>The child statement.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ForEachStatement.ElementExpression"><summary>
+            Gets or sets the element expression.
+            </summary><value>The element expression.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ForEachStatement.EnumerableExpression"><summary>
+            Gets or sets the enumerable expression.
+            </summary><value>The enumerable expression.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ForStatement"><summary>
+            Represents a for statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ForStatement.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ForStatement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ForStatement.ChildStatement"><summary>
+            Gets or sets the child statement.
+            </summary><value>The child statement.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ForStatement.ConditionExpression"><summary>
+            Gets or sets the condition expression.
+            </summary><value>The condition expression.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ForStatement.InitializerExpression"><summary>
+            Gets or sets the initializer expression.
+            </summary><value>The initializer expression.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ForStatement.IteratorExpression"><summary>
+            Gets or sets the iterator expression.
+            </summary><value>The iterator expression.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionBody"><summary>
+            Represents a function body.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionBody.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionBody.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionBody.SourceElements"><summary>
+            Gets the source elements.
+            </summary><value>The source elements.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionBody.HasSourceElements"><summary>
+            Returns whether the <see cref="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionBody.SourceElements" /> collection property contains at least one item.
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionDeclaration"><summary>
+            Represents a function declaration.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionDeclaration.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionDeclaration.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionDeclaration.Body"><summary>
+            Gets or sets the body.
+            </summary><value>The body.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionDeclaration.Name"><summary>
+            Gets or sets the name.
+            </summary><value>The name.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionDeclaration.Parameters"><summary>
+            Gets the parameters.
+            </summary><value>The parameters.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionDeclaration.HasParameters"><summary>
+            Returns whether the <see cref="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionDeclaration.Parameters" /> collection property contains at least one item.
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionExpression"><summary>
+            Represents a function expression.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionExpression.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionExpression.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionExpression.Body"><summary>
+            Gets or sets the body.
+            </summary><value>The body.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionExpression.Name"><summary>
+            Gets or sets the name.
+            </summary><value>The name.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionExpression.Parameters"><summary>
+            Gets the parameters.
+            </summary><value>The parameters.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionExpression.HasParameters"><summary>
+            Returns whether the <see cref="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.FunctionExpression.Parameters" /> collection property contains at least one item.
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.IfStatement"><summary>
+            Represents an if statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.IfStatement.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.IfStatement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.IfStatement.ConditionExpression"><summary>
+            Gets or sets the condition expression.
+            </summary><value>The condition expression.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.IfStatement.FalseStatement"><summary>
+            Gets or sets the false statement.
+            </summary><value>The false statement.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.IfStatement.TrueStatement"><summary>
+            Gets or sets the true statement.
+            </summary><value>The true statement.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.InstanceExpression"><summary>
+            Represents an instance expression.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.InstanceExpression.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.InvocationExpression"><summary>
+            Represents an invocation expression.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.InvocationExpression.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.InvocationExpression.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.InvocationExpression.Arguments"><summary>
+            Gets the arguments.
+            </summary><value>The arguments.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.InvocationExpression.HasArguments"><summary>
+            Returns whether the <see cref="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.InvocationExpression.Arguments" /> collection property contains at least one item.
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.InvocationExpression.TargetExpression"><summary>
+            Gets or sets the target expression.
+            </summary><value>The target expression.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId"><summary>
+            Contains the AST node IDs for the <c>JavaScript</c> language.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.ContainsId(System.Int32)"><summary>
+            Returns whether the specified ID value is valid for this AST node ID provider.
+            </summary><param name="id">The AST node ID to examine.</param><returns><c>true</c> if the ID value is valid; otherwise, <c>false</c></returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.GetDescription(System.Int32)"><summary>
+            Returns the actual string representation for the specified AST node ID.
+            </summary><param name="id">The AST node ID to examine.</param><returns>The actual string representation for the specified AST node ID.</returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.GetKey(System.Int32)"><summary>
+            Returns the string-based key for the specified AST node ID.
+            </summary><param name="id">The AST node ID to examine.</param><returns>The string-based key for the specified AST node ID.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.MinId"><summary>
+            Gets the minimum AST node ID returned by this provider.
+            </summary><value>The minimum AST node ID returned by this provider.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.MaxId"><summary>
+            Gets the maximum AST node ID returned by this provider.
+            </summary><value>The maximum AST node ID returned by this provider.</value></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.Argument"><summary>
+            Gets the <c>Argument</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.ArrayInitializerExpression"><summary>
+            Gets the <c>ArrayInitializerExpression</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.AssignmentExpression"><summary>
+            Gets the <c>AssignmentExpression</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.BinaryOperatorExpression"><summary>
+            Gets the <c>BinaryOperatorExpression</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.BlockStatement"><summary>
+            Gets the <c>BlockStatement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.BreakStatement"><summary>
+            Gets the <c>BreakStatement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.CatchClause"><summary>
+            Gets the <c>CatchClause</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.CompilationUnit"><summary>
+            Gets the <c>CompilationUnit</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.ConditionalExpression"><summary>
+            Gets the <c>ConditionalExpression</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.ContinueStatement"><summary>
+            Gets the <c>ContinueStatement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.DebuggerStatement"><summary>
+            Gets the <c>DebuggerStatement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.DoStatement"><summary>
+            Gets the <c>DoStatement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.Expression"><summary>
+            Gets the <c>Expression</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.ExpressionStatement"><summary>
+            Gets the <c>ExpressionStatement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.ForEachStatement"><summary>
+            Gets the <c>ForEachStatement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.ForStatement"><summary>
+            Gets the <c>ForStatement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.FunctionBody"><summary>
+            Gets the <c>FunctionBody</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.FunctionDeclaration"><summary>
+            Gets the <c>FunctionDeclaration</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.FunctionExpression"><summary>
+            Gets the <c>FunctionExpression</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.IfStatement"><summary>
+            Gets the <c>IfStatement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.InstanceExpression"><summary>
+            Gets the <c>InstanceExpression</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.InvocationExpression"><summary>
+            Gets the <c>InvocationExpression</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.LabeledStatement"><summary>
+            Gets the <c>LabeledStatement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.LiteralExpression"><summary>
+            Gets the <c>LiteralExpression</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.MemberAccess"><summary>
+            Gets the <c>MemberAccess</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.ObjectCreationExpression"><summary>
+            Gets the <c>ObjectCreationExpression</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.ObjectInitializerExpression"><summary>
+            Gets the <c>ObjectInitializerExpression</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.ParameterDeclaration"><summary>
+            Gets the <c>ParameterDeclaration</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.ParenthesizedExpression"><summary>
+            Gets the <c>ParenthesizedExpression</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.PropertyDeclaration"><summary>
+            Gets the <c>PropertyDeclaration</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.ReturnStatement"><summary>
+            Gets the <c>ReturnStatement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.SequenceExpression"><summary>
+            Gets the <c>SequenceExpression</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.SimpleName"><summary>
+            Gets the <c>SimpleName</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.SourceElement"><summary>
+            Gets the <c>SourceElement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.Statement"><summary>
+            Gets the <c>Statement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.SwitchSection"><summary>
+            Gets the <c>SwitchSection</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.SwitchStatement"><summary>
+            Gets the <c>SwitchStatement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.ThrowStatement"><summary>
+            Gets the <c>ThrowStatement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.TryStatement"><summary>
+            Gets the <c>TryStatement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.UnaryOperatorExpression"><summary>
+            Gets the <c>UnaryOperatorExpression</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.VariableDeclaration"><summary>
+            Gets the <c>VariableDeclaration</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.VariableDeclarationExpression"><summary>
+            Gets the <c>VariableDeclarationExpression</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.VariableStatement"><summary>
+            Gets the <c>VariableStatement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.WhileStatement"><summary>
+            Gets the <c>WhileStatement</c> AST node ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.JavaScriptAstNodeId.WithStatement"><summary>
+            Gets the <c>WithStatement</c> AST node ID.
+            </summary></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.LabeledStatement"><summary>
+            Represents a labeled statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.LabeledStatement.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.LabeledStatement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.LabeledStatement.ChildStatement"><summary>
+            Gets or sets the child statement.
+            </summary><value>The child statement.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.LabeledStatement.Label"><summary>
+            Gets or sets the label.
+            </summary><value>The label.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.LiteralExpression"><summary>
+            Represents a literal expression.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.LiteralExpression.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.LiteralExpression.Kind"><summary>
+            Gets or sets the kind of literal.
+            </summary><value>The kind of literal.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.LiteralExpression.StringValue"><summary>
+            Gets or sets the string value.
+            </summary><value>The string value.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.MemberAccess"><summary>
+            Represents a member access.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.MemberAccess.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.MemberAccess.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.MemberAccess.Name"><summary>
+            Gets or sets the name.
+            </summary><value>The name.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.MemberAccess.TargetExpression"><summary>
+            Gets or sets the target expression.
+            </summary><value>The target expression.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ObjectCreationExpression"><summary>
+            Represents an object creation expression.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ObjectCreationExpression.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ObjectCreationExpression.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ObjectCreationExpression.Arguments"><summary>
+            Gets the arguments.
+            </summary><value>The arguments.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ObjectCreationExpression.HasArguments"><summary>
+            Returns whether the <see cref="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ObjectCreationExpression.Arguments" /> collection property contains at least one item.
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ObjectCreationExpression.Type"><summary>
+            Gets or sets the type.
+            </summary><value>The type.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ObjectInitializerExpression"><summary>
+            Represents an object initializer expression.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ObjectInitializerExpression.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ObjectInitializerExpression.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ObjectInitializerExpression.Members"><summary>
+            Gets the members.
+            </summary><value>The members.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ObjectInitializerExpression.HasMembers"><summary>
+            Returns whether the <see cref="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ObjectInitializerExpression.Members" /> collection property contains at least one item.
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ParameterDeclaration"><summary>
+            Represents a parameter declaration.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ParameterDeclaration.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ParameterDeclaration.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ParameterDeclaration.Name"><summary>
+            Gets or sets the name.
+            </summary><value>The name.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ParenthesizedExpression"><summary>
+            Represents a parenthesized expression.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ParenthesizedExpression.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ParenthesizedExpression.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ParenthesizedExpression.ChildExpression"><summary>
+            Gets or sets the child expression.
+            </summary><value>The child expression.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.PropertyDeclaration"><summary>
+            Represents a property declaration.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.PropertyDeclaration.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.PropertyDeclaration.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.PropertyDeclaration.Body"><summary>
+            Gets or sets the body.
+            </summary><value>The body.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.PropertyDeclaration.Initializer"><summary>
+            Gets or sets the initializer.
+            </summary><value>The initializer.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.PropertyDeclaration.Name"><summary>
+            Gets or sets the name.
+            </summary><value>The name.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.PropertyDeclaration.Parameters"><summary>
+            Gets the parameters.
+            </summary><value>The parameters.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.PropertyDeclaration.HasParameters"><summary>
+            Returns whether the <see cref="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.PropertyDeclaration.Parameters" /> collection property contains at least one item.
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ReturnStatement"><summary>
+            Represents a return statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ReturnStatement.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ReturnStatement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ReturnStatement.Expression"><summary>
+            Gets or sets the expression.
+            </summary><value>The expression.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SequenceExpression"><summary>
+            Represents a sequence expression.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SequenceExpression.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SequenceExpression.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SequenceExpression.ChildExpressions"><summary>
+            Gets the child expressions.
+            </summary><value>The child expressions.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SequenceExpression.HasChildExpressions"><summary>
+            Returns whether the <see cref="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SequenceExpression.ChildExpressions" /> collection property contains at least one item.
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SimpleName"><summary>
+            Represents a simple name.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SimpleName.#ctor"><summary>
+            Initializes a new instance of the <c>SimpleName</c> class.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SimpleName.#ctor(System.String)"><summary>
+            Initializes a new instance of the <c>SimpleName</c> class.
+            </summary><param name="text">The text value of the identifier.</param></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SimpleName.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SimpleName.Text"><summary>
+            Gets or sets the text value of the identifier.
+            </summary><value>The text value of the identifier.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SwitchSection"><summary>
+            Represents a switch section.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SwitchSection.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SwitchSection.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SwitchSection.Labels"><summary>
+            Gets the labels.
+            </summary><value>The labels.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SwitchSection.HasLabels"><summary>
+            Returns whether the <see cref="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SwitchSection.Labels" /> collection property contains at least one item.
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SwitchSection.Statements"><summary>
+            Gets the statements.
+            </summary><value>The statements.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SwitchSection.HasStatements"><summary>
+            Returns whether the <see cref="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SwitchSection.Statements" /> collection property contains at least one item.
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SwitchStatement"><summary>
+            Represents a switch statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SwitchStatement.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SwitchStatement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SwitchStatement.Expression"><summary>
+            Gets or sets the expression.
+            </summary><value>The expression.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SwitchStatement.Sections"><summary>
+            Gets the sections.
+            </summary><value>The sections.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SwitchStatement.HasSections"><summary>
+            Returns whether the <see cref="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.SwitchStatement.Sections" /> collection property contains at least one item.
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ThrowStatement"><summary>
+            Represents a throw statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ThrowStatement.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ThrowStatement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.ThrowStatement.Expression"><summary>
+            Gets or sets the expression.
+            </summary><value>The expression.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.TryStatement"><summary>
+            Represents a try statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.TryStatement.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.TryStatement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.TryStatement.CatchClauses"><summary>
+            Gets the catch clauses.
+            </summary><value>The catch clauses.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.TryStatement.HasCatchClauses"><summary>
+            Returns whether the <see cref="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.TryStatement.CatchClauses" /> collection property contains at least one item.
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.TryStatement.FinallyBlock"><summary>
+            Gets or sets the finally block.
+            </summary><value>The finally block.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.TryStatement.TryBlock"><summary>
+            Gets or sets the try block.
+            </summary><value>The try block.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.UnaryOperatorExpression"><summary>
+            Represents an unary operator expression.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.UnaryOperatorExpression.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.UnaryOperatorExpression.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.UnaryOperatorExpression.ChildExpression"><summary>
+            Gets or sets the child expression.
+            </summary><value>The child expression.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.UnaryOperatorExpression.Operator"><summary>
+            Gets or sets the operator.
+            </summary><value>The operator.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.VariableDeclaration"><summary>
+            Represents a variable declaration.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.VariableDeclaration.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.VariableDeclaration.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.VariableDeclaration.Initializer"><summary>
+            Gets or sets the initializer.
+            </summary><value>The initializer.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.VariableDeclaration.Name"><summary>
+            Gets or sets the name.
+            </summary><value>The name.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.VariableDeclarationExpression"><summary>
+            Represents a variable declaration expression.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.VariableDeclarationExpression.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.VariableDeclarationExpression.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.VariableDeclarationExpression.Declarations"><summary>
+            Gets the declarations.
+            </summary><value>The declarations.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.VariableDeclarationExpression.HasDeclarations"><summary>
+            Returns whether the <see cref="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.VariableDeclarationExpression.Declarations" /> collection property contains at least one item.
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.VariableStatement"><summary>
+            Represents a variable statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.VariableStatement.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.VariableStatement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.VariableStatement.Declarations"><summary>
+            Gets the declarations.
+            </summary><value>The declarations.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.VariableStatement.HasDeclarations"><summary>
+            Returns whether the <see cref="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.VariableStatement.Declarations" /> collection property contains at least one item.
+            </summary><value><c>true</c> if there is at least one item in the collection; otherwise, <c>false</c>.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.WhileStatement"><summary>
+            Represents a while statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.WhileStatement.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.WhileStatement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.WhileStatement.ChildStatement"><summary>
+            Gets or sets the child statement.
+            </summary><value>The child statement.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.WhileStatement.ConditionExpression"><summary>
+            Gets or sets the condition expression.
+            </summary><value>The condition expression.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.WithStatement"><summary>
+            Represents a with statement.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.WithStatement.GetChildrenEnumerator"><summary>
+            Retrieves an <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.
+            </summary><returns>An <c>IEnumerator</c> object that can iterate the child <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" /> objects in this node.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.WithStatement.Id"><summary>
+            Gets the An integer value that identifies the type of AST node.
+            </summary><value>The An integer value that identifies the type of AST node.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.WithStatement.ChildStatement"><summary>
+            Gets or sets the child statement.
+            </summary><value>The child statement.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Ast.Implementation.WithStatement.Expression"><summary>
+            Gets or sets the expression.
+            </summary><value>The expression.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.LiteralExpressionKind"><summary>
+            Specifies the type of literal expression.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.LiteralExpressionKind.None"><summary>
+            No kind indicated.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.LiteralExpressionKind.Null"><summary>
+            A null value.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.LiteralExpressionKind.Boolean"><summary>
+            A boolean.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.LiteralExpressionKind.DecimalInteger"><summary>
+            A decimal integer.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.LiteralExpressionKind.HexadecimalInteger"><summary>
+            A hexadecimal integer.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.LiteralExpressionKind.Real"><summary>
+            A real number.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.LiteralExpressionKind.SingleQuoteString"><summary>
+            A string of characters.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.LiteralExpressionKind.DoubleQuoteString"><summary>
+            A string of characters.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.LiteralExpressionKind.RegularExpression"><summary>
+            A regular expression.
+            </summary></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind"><summary>
+            Specifies the kind of an operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.None"><summary>
+            No valid operator kind.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.Addition"><summary>
+            An addition operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.Subtraction"><summary>
+            A subtraction operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.Multiplication"><summary>
+            A multiplication operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.Division"><summary>
+            A division operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.Modulus"><summary>
+            A modulus operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.BitwiseAnd"><summary>
+            A bitwise AND operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.BitwiseOr"><summary>
+            A bitwise OR operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.ExclusiveOr"><summary>
+            A bitwise XOR operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.Negation"><summary>
+            A negation operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.OnesComplement"><summary>
+            A bitwise complement operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.LessThan"><summary>
+            A less than operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.GreaterThan"><summary>
+            A greater than operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.PreIncrement"><summary>
+            An pre-increment operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.PreDecrement"><summary>
+            An pre-decrement operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.PostIncrement"><summary>
+            An post-increment operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.PostDecrement"><summary>
+            An post-decrement operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.LeftShift"><summary>
+            A left shift operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.RightShift"><summary>
+            A right shift operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.ZeroFillRightShift"><summary>
+            A zero fill right shift operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.ValueEquality"><summary>
+            A value equality operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.ValueInequality"><summary>
+            A value inequality operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.StrictValueEquality"><summary>
+            A strict value equality operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.StrictValueInequality"><summary>
+            A strict value inequality operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.LessThanOrEqual"><summary>
+            A less than or equal operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.GreaterThanOrEqual"><summary>
+            A greater than or equal operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.ConditionalOr"><summary>
+            A conditional OR binary operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.ConditionalAnd"><summary>
+            A conditional AND binary operator.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.InstanceOf"><summary>
+            An operator indicating if an object is of the specified type.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.In"><summary>
+            An operator indicating if a property is in an object. 
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.Delete"><summary>
+            An operator that deletes an object, an object's property, or an element at a specified index in an array.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.Void"><summary>
+            An operator that specifies an expression to be evaluated without returning a value.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Ast.OperatorKind.TypeOf"><summary>
+            An operator that returns a string indicating the type of the unevaluated operand.
+            </summary></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptClassificationTypeProvider"><summary>
+            Provides the base requirements of an object that provides <see cref="T:ActiproSoftware.Text.IClassificationType" /> objects for the <c>JavaScript</c> language.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptClassificationTypeProvider.Comment"><summary>
+            Gets the <c>Comment</c> classification type.
+            </summary><value>The <c>Comment</c> classification type.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptClassificationTypeProvider.Identifier"><summary>
+            Gets the <c>Identifier</c> classification type.
+            </summary><value>The <c>Identifier</c> classification type.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptClassificationTypeProvider.Keyword"><summary>
+            Gets the <c>Keyword</c> classification type.
+            </summary><value>The <c>Keyword</c> classification type.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptClassificationTypeProvider.Number"><summary>
+            Gets the <c>Number</c> classification type.
+            </summary><value>The <c>Number</c> classification type.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptClassificationTypeProvider.Operator"><summary>
+            Gets the <c>Operator</c> classification type.
+            </summary><value>The <c>Operator</c> classification type.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptClassificationTypeProvider.String"><summary>
+            Gets the <c>String</c> classification type.
+            </summary><value>The <c>String</c> classification type.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptGrammarOptions"><summary>
+            Contains options for a <c>JavaScript</c> grammar.
+            </summary></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptGrammarOptions.RootNonTerminal"><summary>
+            Gets a <see cref="T:ActiproSoftware.Text.Languages.JavaScript.JavaScriptGrammarRootNonTerminal" /> indicating the root non-terminal of the grammar.
+            </summary><value>
+            A <see cref="T:ActiproSoftware.Text.Languages.JavaScript.JavaScriptGrammarRootNonTerminal" /> indicating the root non-terminal of the grammar.
+            The default value is <c>CompilationUnit</c>.
+            </value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptParseData"><summary>
+            Provides the base requirements of an object that stores the results of a <c>JavaScript</c> language parsing operation.
+            </summary><seealso cref="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptParseData" /></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptParseData.SymbolTable"><summary>
+            Gets the table of symbols located within the document.
+            </summary><value>The table of symbols located within the document.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptSymbol"><summary>
+            Provides the base requirements of an object that represents a <c>JavaScript</c> symbol.
+            </summary><seealso cref="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptSymbol" /></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptSymbol.Name"><summary>
+            Gets the symbol name.
+            </summary><value>The symbol name.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptSymbol.UsageCount"><summary>
+            Gets or sets the usage count.
+            </summary><value>The usage count.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptSymbolTable"><summary>
+            Provides the base requirements of an object that represents a <c>JavaScript</c> symbol.
+            </summary><seealso cref="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptSymbol" /></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptSymbolTable.Symbols"><summary>
+            Gets the collection of symbols located within the document.
+            </summary><value>The collection of symbols located within the document.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.IJsonParseData"><summary>
+            Provides the base requirements of an object that stores the results of a <c>JSON</c> language parsing operation.
+            </summary><seealso cref="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JsonParseData" /></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptExampleTextProvider"><summary>
+            Represents a example text provider for the <c>JavaScript</c> language.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptExampleTextProvider.ExampleText"><summary>
+            Gets the example text, a code snippet of the related language.
+            </summary><value>The example text, a code snippet of the related language.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptGrammar"><summary>
+            Represents a <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar" /> for the <c>JavaScript</c> language.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptGrammar.#ctor"><summary>
+            Initializes a new instance of the <c>JavaScriptGrammar</c> class using default options.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptGrammar.#ctor(ActiproSoftware.Text.Languages.JavaScript.IJavaScriptGrammarOptions)"><summary>
+            Initializes a new instance of the <c>JavaScriptGrammar</c> class.
+            </summary><param name="options">An <see cref="T:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptGrammarOptions" /> that contains options for the grammar.</param></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptGrammarOptions"><summary>
+            Contains options for a <c>JavaScript</c> grammar.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptGrammarOptions.#ctor"><summary>
+            Initializes a new instance of the <c>JavaScriptGrammarOptions</c> class.
+            </summary></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptGrammarOptions.RootNonTerminal"><summary>
+            Gets or sets a <see cref="T:ActiproSoftware.Text.Languages.JavaScript.JavaScriptGrammarRootNonTerminal" /> indicating the root non-terminal of the grammar.
+            </summary><value>
+            A <see cref="T:ActiproSoftware.Text.Languages.JavaScript.JavaScriptGrammarRootNonTerminal" /> indicating the root non-terminal of the grammar.
+            The default value is <c>CompilationUnit</c>.
+            </value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptLexer"><summary>
+            Represents a <c>JavaScript</c> lexer (lexical analyzer) implementation.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptLexer.GetAllLexicalStateTransitions"><summary>
+            Returns a collection containing all <see cref="T:ActiproSoftware.Text.Lexing.ILexicalStateTransition" /> objects within the lexer.
+            </summary><returns>A collection containing all <see cref="T:ActiproSoftware.Text.Lexing.ILexicalStateTransition" /> objects within the lexer.</returns><remarks>
+            This method allows consumers to see which language transitions can be made within the lexer.
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptLexer.GetNextToken(ActiproSoftware.Text.ITextBufferReader,ActiproSoftware.Text.Lexing.ILexicalState)"><summary>
+            Performs a lex to return the next <see cref="T:ActiproSoftware.Text.Lexing.MergableLexerResult" /> 
+            from a <see cref="T:ActiproSoftware.Text.ITextBufferReader" /> and seeks past it if there is a match.
+            </summary><param name="reader">An <see cref="T:ActiproSoftware.Text.ITextBufferReader" /> that is reading a text source.</param><param name="lexicalState">The <see cref="T:ActiproSoftware.Text.Lexing.ILexicalState" /> that specifies the current state.</param><returns>A <see cref="T:ActiproSoftware.Text.Lexing.MergableLexerResult" /> indicating the lexer result.</returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptLexer.IsIdentifierPartCharacter(System.Char)"><summary>
+            Returns whether the specified character is an identifier part character.
+            </summary><param name="ch">The character to examine.</param><returns><c>true</c> if the specified character is an identifier part character; otherwise, <c>false</c>.
+            </returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptLexer.IsIdentifierStartCharacter(System.Char)"><summary>
+            Returns whether the specified character is an identifier start character.
+            </summary><param name="ch">The character to examine.</param><returns><c>true</c> if the specified character is an identifier start character; otherwise, <c>false</c>.
+            </returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptLexer.#ctor"><summary>
+            Initializes a new instance of the <c>JavaScriptLexer</c> class.
+            </summary></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptLexer.LexicalStates"><summary>
+            Gets the collection of lexical states used by this lexer.
+            </summary><value>The collection of lexical states used by this lexer.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptLexicalStateId"><summary>
+            Contains the lexical state IDs for the <c>JavaScript</c> language.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptLexicalStateId.ContainsId(System.Int32)"><summary>
+            Returns whether the specified ID value is valid for this lexical state ID provider.
+            </summary><param name="id">The lexical state ID to examine.</param><returns><c>true</c> if the ID value is valid; otherwise, <c>false</c></returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptLexicalStateId.GetDescription(System.Int32)"><summary>
+            Returns the actual string representation for the specified lexical state ID.
+            </summary><param name="id">The lexical state ID to examine.</param><returns>The actual string representation for the specified lexical state ID.</returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptLexicalStateId.GetKey(System.Int32)"><summary>
+            Returns the string-based key for the specified lexical state ID.
+            </summary><param name="id">The lexical state ID to examine.</param><returns>The string-based key for the specified lexical state ID.</returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptLexicalStateId.MinId"><summary>
+            Gets the minimum lexical state ID returned by this provider.
+            </summary><value>The minimum lexical state ID returned by this provider.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptLexicalStateId.MaxId"><summary>
+            Gets the maximum lexical state ID returned by this provider.
+            </summary><value>The maximum lexical state ID returned by this provider.</value></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptLexicalStateId.Default"><summary>
+            Gets the <c>Default</c> lexical state ID.
+            </summary></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptParseData"><summary>
+            Stores the results of a <c>JavaScript</c> language parsing operation.
+            </summary></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptParseData.SymbolTable"><summary>
+            Gets or sets the table of symbols located within the document.
+            </summary><value>The table of symbols located within the document.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptParser"><summary>
+            Represents a parser for the <c>JavaScript</c> language.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptParser.CreateParseData(ActiproSoftware.Text.Parsing.IParseRequest,ActiproSoftware.Text.Parsing.LLParser.IParserState)"><summary>
+            Creates an <see cref="T:ActiproSoftware.Text.Parsing.IParseData" /> for the specified <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" />.
+            </summary><param name="request">The <see cref="T:ActiproSoftware.Text.Parsing.IParseRequest" /> that contains data about the requested parsing operation.</param><param name="state">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" /> to examine.</param><returns>The <see cref="T:ActiproSoftware.Text.Parsing.IParseData" /> that was created.</returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptParser.CreateTokenReader(ActiproSoftware.Text.ITextBufferReader)"><summary>
+            Creates an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.
+            </summary><param name="reader">The <see cref="T:ActiproSoftware.Text.ITextBufferReader" /> that provides access to the text buffer.</param><returns>An <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.</returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptParser.#ctor"><summary>
+            Initializes a new instance of the <c>JavaScriptParser</c> class.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptParser.#ctor(ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar)"><summary>
+            Initializes a new instance of the <c>JavaScriptParser</c> class.
+            </summary><param name="grammar">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar" /> instance to use.</param></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptSymbol"><summary>
+            Represents a <c>JavaScript</c> symbol, located during parsing.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptSymbol.#ctor(System.String)"><summary>
+            Initializes a new instance of the <c>JavaScriptSymbol</c> class.
+            </summary><param name="name">The symbol name.</param></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptSymbol.Name"><summary>
+            Gets the symbol name.
+            </summary><value>The symbol name.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptSymbol.UsageCount"><summary>
+            Gets or sets the usage count.
+            </summary><value>The usage count.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptSymbolTable"><summary>
+            Provides a <c>JavaScript</c> symbol table.
+            </summary></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptSymbolTable.Symbols"><summary>
+            Gets the collection of symbols located within the document.
+            </summary><value>The collection of symbols located within the document.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId"><summary>
+            Contains the token IDs for the <c>JavaScript</c> language.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.ContainsId(System.Int32)"><summary>
+            Returns whether the specified ID value is valid for this token ID provider.
+            </summary><param name="id">The token ID to examine.</param><returns><c>true</c> if the ID value is valid; otherwise, <c>false</c></returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.GetDescription(System.Int32)"><summary>
+            Returns the actual string representation for the specified token ID.
+            </summary><param name="id">The token ID to examine.</param><returns>The actual string representation for the specified token ID.</returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.GetKey(System.Int32)"><summary>
+            Returns the string-based key for the specified token ID.
+            </summary><param name="id">The token ID to examine.</param><returns>The string-based key for the specified token ID.</returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.IsCommentClassificationType(System.Int32)"><summary>
+            Returns whether the specified ID value is part of the <c>Comment</c>.
+            </summary><param name="id">The token ID to examine.</param><returns><c>true</c> if the ID value is in the classification type; otherwise, <c>false</c></returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.IsIdentifierClassificationType(System.Int32)"><summary>
+            Returns whether the specified ID value is part of the <c>Identifier</c>.
+            </summary><param name="id">The token ID to examine.</param><returns><c>true</c> if the ID value is in the classification type; otherwise, <c>false</c></returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.IsKeywordClassificationType(System.Int32)"><summary>
+            Returns whether the specified ID value is part of the <c>Keyword</c>.
+            </summary><param name="id">The token ID to examine.</param><returns><c>true</c> if the ID value is in the classification type; otherwise, <c>false</c></returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.IsNumberClassificationType(System.Int32)"><summary>
+            Returns whether the specified ID value is part of the <c>Number</c>.
+            </summary><param name="id">The token ID to examine.</param><returns><c>true</c> if the ID value is in the classification type; otherwise, <c>false</c></returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.IsOperatorClassificationType(System.Int32)"><summary>
+            Returns whether the specified ID value is part of the <c>Operator</c>.
+            </summary><param name="id">The token ID to examine.</param><returns><c>true</c> if the ID value is in the classification type; otherwise, <c>false</c></returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.IsStringClassificationType(System.Int32)"><summary>
+            Returns whether the specified ID value is part of the <c>String</c>.
+            </summary><param name="id">The token ID to examine.</param><returns><c>true</c> if the ID value is in the classification type; otherwise, <c>false</c></returns></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.MinId"><summary>
+            Gets the minimum token ID returned by this provider.
+            </summary><value>The minimum token ID returned by this provider.</value></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.MaxId"><summary>
+            Gets the maximum token ID returned by this provider.
+            </summary><value>The maximum token ID returned by this provider.</value></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.Whitespace"><summary>
+            Gets the <c>Whitespace</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.LineTerminator"><summary>
+            Gets the <c>LineTerminator</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.LineContinuation"><summary>
+            Gets the <c>LineContinuation</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OpenCurlyBrace"><summary>
+            Gets the <c>OpenCurlyBrace</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.CloseCurlyBrace"><summary>
+            Gets the <c>CloseCurlyBrace</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OpenSquareBrace"><summary>
+            Gets the <c>OpenSquareBrace</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.CloseSquareBrace"><summary>
+            Gets the <c>CloseSquareBrace</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OpenParenthesis"><summary>
+            Gets the <c>OpenParenthesis</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.CloseParenthesis"><summary>
+            Gets the <c>CloseParenthesis</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.Dot"><summary>
+            Gets the <c>Dot</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.Comma"><summary>
+            Gets the <c>Comma</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.Colon"><summary>
+            Gets the <c>Colon</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.SemiColon"><summary>
+            Gets the <c>SemiColon</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.QuestionMark"><summary>
+            Gets the <c>QuestionMark</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.Backslash"><summary>
+            Gets the <c>Backslash</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.CommentSingleLine"><summary>
+            Gets the <c>CommentSingleLine</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.CommentMultiLine"><summary>
+            Gets the <c>CommentMultiLine</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.LiteralDecimalInteger"><summary>
+            Gets the <c>LiteralDecimalInteger</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.LiteralDoubleQuoteString"><summary>
+            Gets the <c>LiteralDoubleQuoteString</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.LiteralHexadecimalInteger"><summary>
+            Gets the <c>LiteralHexadecimalInteger</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.LiteralReal"><summary>
+            Gets the <c>LiteralReal</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.LiteralRegularExpression"><summary>
+            Gets the <c>LiteralRegularExpression</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.LiteralSingleQuoteString"><summary>
+            Gets the <c>LiteralSingleQuoteString</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.Identifier"><summary>
+            Gets the <c>Identifier</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordBreak"><summary>
+            Gets the <c>KeywordBreak</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordCase"><summary>
+            Gets the <c>KeywordCase</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordCatch"><summary>
+            Gets the <c>KeywordCatch</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordContinue"><summary>
+            Gets the <c>KeywordContinue</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordDebugger"><summary>
+            Gets the <c>KeywordDebugger</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordDefault"><summary>
+            Gets the <c>KeywordDefault</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordDelete"><summary>
+            Gets the <c>KeywordDelete</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordDo"><summary>
+            Gets the <c>KeywordDo</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordElse"><summary>
+            Gets the <c>KeywordElse</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordFalse"><summary>
+            Gets the <c>KeywordFalse</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordFinally"><summary>
+            Gets the <c>KeywordFinally</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordFor"><summary>
+            Gets the <c>KeywordFor</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordFunction"><summary>
+            Gets the <c>KeywordFunction</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordIf"><summary>
+            Gets the <c>KeywordIf</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordIn"><summary>
+            Gets the <c>KeywordIn</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordInstanceOf"><summary>
+            Gets the <c>KeywordInstanceOf</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordNew"><summary>
+            Gets the <c>KeywordNew</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordNull"><summary>
+            Gets the <c>KeywordNull</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordReturn"><summary>
+            Gets the <c>KeywordReturn</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordSwitch"><summary>
+            Gets the <c>KeywordSwitch</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordThis"><summary>
+            Gets the <c>KeywordThis</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordThrow"><summary>
+            Gets the <c>KeywordThrow</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordTrue"><summary>
+            Gets the <c>KeywordTrue</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordTry"><summary>
+            Gets the <c>KeywordTry</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordTypeOf"><summary>
+            Gets the <c>KeywordTypeOf</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordVar"><summary>
+            Gets the <c>KeywordVar</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordVoid"><summary>
+            Gets the <c>KeywordVoid</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordWhile"><summary>
+            Gets the <c>KeywordWhile</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.KeywordWith"><summary>
+            Gets the <c>KeywordWith</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.ReservedKeywordClass"><summary>
+            Gets the <c>ReservedKeywordClass</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.ReservedKeywordConst"><summary>
+            Gets the <c>ReservedKeywordConst</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.ReservedKeywordEnum"><summary>
+            Gets the <c>ReservedKeywordEnum</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.ReservedKeywordExport"><summary>
+            Gets the <c>ReservedKeywordExport</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.ReservedKeywordExtends"><summary>
+            Gets the <c>ReservedKeywordExtends</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.ReservedKeywordImplements"><summary>
+            Gets the <c>ReservedKeywordImplements</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.ReservedKeywordImport"><summary>
+            Gets the <c>ReservedKeywordImport</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.ReservedKeywordInterface"><summary>
+            Gets the <c>ReservedKeywordInterface</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.ReservedKeywordLet"><summary>
+            Gets the <c>ReservedKeywordLet</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.ReservedKeywordPackage"><summary>
+            Gets the <c>ReservedKeywordPackage</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.ReservedKeywordPrivate"><summary>
+            Gets the <c>ReservedKeywordPrivate</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.ReservedKeywordProtected"><summary>
+            Gets the <c>ReservedKeywordProtected</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.ReservedKeywordPublic"><summary>
+            Gets the <c>ReservedKeywordPublic</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.ReservedKeywordStatic"><summary>
+            Gets the <c>ReservedKeywordStatic</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.ReservedKeywordSuper"><summary>
+            Gets the <c>ReservedKeywordSuper</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.ReservedKeywordYield"><summary>
+            Gets the <c>ReservedKeywordYield</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorLessThan"><summary>
+            Gets the <c>OperatorLessThan</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorGreaterThan"><summary>
+            Gets the <c>OperatorGreaterThan</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorLessThanOrEqual"><summary>
+            Gets the <c>OperatorLessThanOrEqual</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorGreaterThanOrEqual"><summary>
+            Gets the <c>OperatorGreaterThanOrEqual</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorEquality"><summary>
+            Gets the <c>OperatorEquality</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorInequality"><summary>
+            Gets the <c>OperatorInequality</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorStrictEquality"><summary>
+            Gets the <c>OperatorStrictEquality</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorStrictInequality"><summary>
+            Gets the <c>OperatorStrictInequality</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorAddition"><summary>
+            Gets the <c>OperatorAddition</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorSubtraction"><summary>
+            Gets the <c>OperatorSubtraction</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorMultiplication"><summary>
+            Gets the <c>OperatorMultiplication</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorDivision"><summary>
+            Gets the <c>OperatorDivision</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorModulus"><summary>
+            Gets the <c>OperatorModulus</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorIncrement"><summary>
+            Gets the <c>OperatorIncrement</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorDecrement"><summary>
+            Gets the <c>OperatorDecrement</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorLeftShift"><summary>
+            Gets the <c>OperatorLeftShift</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorRightShift"><summary>
+            Gets the <c>OperatorRightShift</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorZeroFillRightShift"><summary>
+            Gets the <c>OperatorZeroFillRightShift</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorBitwiseAnd"><summary>
+            Gets the <c>OperatorBitwiseAnd</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorBitwiseOr"><summary>
+            Gets the <c>OperatorBitwiseOr</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorExclusiveOr"><summary>
+            Gets the <c>OperatorExclusiveOr</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorNegation"><summary>
+            Gets the <c>OperatorNegation</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorOnesComplement"><summary>
+            Gets the <c>OperatorOnesComplement</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorConditionalAnd"><summary>
+            Gets the <c>OperatorConditionalAnd</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorConditionalOr"><summary>
+            Gets the <c>OperatorConditionalOr</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorAssignment"><summary>
+            Gets the <c>OperatorAssignment</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorAdditionAssignment"><summary>
+            Gets the <c>OperatorAdditionAssignment</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorSubtractionAssignment"><summary>
+            Gets the <c>OperatorSubtractionAssignment</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorMultiplicationAssignment"><summary>
+            Gets the <c>OperatorMultiplicationAssignment</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorDivisionAssignment"><summary>
+            Gets the <c>OperatorDivisionAssignment</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorModulusAssignment"><summary>
+            Gets the <c>OperatorModulusAssignment</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorLeftShiftAssignment"><summary>
+            Gets the <c>OperatorLeftShiftAssignment</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorRightShiftAssignment"><summary>
+            Gets the <c>OperatorRightShiftAssignment</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorZeroFillRightShiftAssignment"><summary>
+            Gets the <c>OperatorZeroFillRightShiftAssignment</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorBitwiseAndAssignment"><summary>
+            Gets the <c>OperatorBitwiseAndAssignment</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorBitwiseOrAssignment"><summary>
+            Gets the <c>OperatorBitwiseOrAssignment</c> token ID.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenId.OperatorExclusiveOrAssignment"><summary>
+            Gets the <c>OperatorExclusiveOrAssignment</c> token ID.
+            </summary></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenReader"><summary>
+            Represents an object that can provide tokens to a <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ILLParser" /> in a forward-only direction for the <c>JavaScript</c> language.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenReader.GetNextToken"><summary>
+            Returns the next <see cref="T:ActiproSoftware.Text.Lexing.IToken" /> that will be consumed by the token reader.
+            </summary><returns>The next <see cref="T:ActiproSoftware.Text.Lexing.IToken" /> that will be consumed by the token reader.</returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenReader.#ctor(ActiproSoftware.Text.ITextBufferReader,ActiproSoftware.Text.Lexing.IMergableLexer)"><summary>
+            Initializes a new instance of the <c>JavaScriptTokenReader</c> class.
+            </summary><param name="reader">The <see cref="T:ActiproSoftware.Text.ITextBufferReader" /> to use for consuming text.</param><param name="rootLexer">The root <see cref="T:ActiproSoftware.Text.Lexing.IMergableLexer" />.</param></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenTagger"><summary>
+            Represents an <see cref="T:ActiproSoftware.Text.Tagging.ITagger`1" />  for the <c>JavaScript</c> language.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenTagger.ClassifyToken(ActiproSoftware.Text.Lexing.IToken)"><summary>
+            Returns an <see cref="T:ActiproSoftware.Text.IClassificationType" /> for the specified <see cref="T:ActiproSoftware.Text.Lexing.IToken" />, if one is appropriate.
+            </summary><param name="token">The <see cref="T:ActiproSoftware.Text.Lexing.IToken" /> to examine.</param><returns>An <see cref="T:ActiproSoftware.Text.IClassificationType" /> for the specified <see cref="T:ActiproSoftware.Text.Lexing.IToken" />, if one is appropriate.</returns><remarks>
+            The default implementation of this method automatically returns the classification type if the token
+            is an <see cref="T:ActiproSoftware.Text.Lexing.IMergableToken" />.
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenTagger.#ctor(ActiproSoftware.Text.ICodeDocument,ActiproSoftware.Text.Languages.JavaScript.IJavaScriptClassificationTypeProvider)"><summary>
+            Initializes a new instance of the <c>JavaScriptTokenTagger</c> class.
+            </summary><param name="document">The specific <see cref="T:ActiproSoftware.Text.ICodeDocument" /> for which this token tagger will be used.</param><param name="classificationTypeProvider">A <see cref="T:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptClassificationTypeProvider" /> that provides classification types used by this token tagger.</param></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenTaggerProvider"><summary>
+            Represents a provider of <see cref="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenTagger" /> objects for documents that use the <c>JavaScriptTokenTagger</c> language.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenTaggerProvider.GetTagger``1(ActiproSoftware.Text.ICodeDocument)"><summary>
+            Returns a tagger for the specified <see cref="T:ActiproSoftware.Text.ICodeDocument" />.
+            </summary><typeparam name="T">The type of <see cref="T:ActiproSoftware.Text.Tagging.ITag" /> created by the tagger.</typeparam><param name="document">The <see cref="T:ActiproSoftware.Text.ICodeDocument" /> that requires a tagger.</param><returns>A tagger for the specified <see cref="T:ActiproSoftware.Text.ICodeDocument" />.</returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenTaggerProvider.#ctor(ActiproSoftware.Text.Languages.JavaScript.IJavaScriptClassificationTypeProvider)"><summary>
+            Initializes a new instance of the <c>JavaScriptTokenTaggerProvider</c> class.
+            </summary><param name="classificationTypeProvider">A <see cref="T:ActiproSoftware.Text.Languages.JavaScript.IJavaScriptClassificationTypeProvider" /> that provides classification types.</param></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenTaggerProvider.TaggerFactory"><summary>
+            Implements a factory that can creates <see cref="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenTagger" /> objects for a document.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenTaggerProvider.TaggerFactory.CreateTagger"><summary>
+            Creates an <see cref="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenTagger" /> for the <see cref="T:ActiproSoftware.Text.ICodeDocument" />.
+            </summary><returns>An <see cref="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JavaScriptTokenTagger" /> for the <see cref="T:ActiproSoftware.Text.ICodeDocument" />.</returns></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JsonExampleTextProvider"><summary>
+            Represents a example text provider for the <c>JSON</c> language.
+            </summary><remarks>
+            This type was generated by the Actipro Language Designer tool v13.1.581.0 (http://www.actiprosoftware.com).
+            </remarks></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Implementation.JsonExampleTextProvider.ExampleText"><summary>
+            Gets the example text, a code snippet of the related language.
+            </summary><value>The example text, a code snippet of the related language.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JsonGrammar"><summary>
+            Represents a <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar" /> for the <c>JSON</c> language.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JsonGrammar.#ctor"><summary>
+            Initializes a new instance of the <c>JsonGrammar</c> class using default options.
+            </summary></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JsonLexer"><summary>
+            Represents a <c>JSON</c> lexer (lexical analyzer) implementation.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JsonLexer.GetAllLexicalStateTransitions"><summary>
+            Returns a collection containing all <see cref="T:ActiproSoftware.Text.Lexing.ILexicalStateTransition" /> objects within the lexer.
+            </summary><returns>A collection containing all <see cref="T:ActiproSoftware.Text.Lexing.ILexicalStateTransition" /> objects within the lexer.</returns><remarks>
+            This method allows consumers to see which language transitions can be made within the lexer.
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JsonLexer.GetNextToken(ActiproSoftware.Text.ITextBufferReader,ActiproSoftware.Text.Lexing.ILexicalState)"><summary>
+            Performs a lex to return the next <see cref="T:ActiproSoftware.Text.Lexing.MergableLexerResult" /> 
+            from a <see cref="T:ActiproSoftware.Text.ITextBufferReader" /> and seeks past it if there is a match.
+            </summary><param name="reader">An <see cref="T:ActiproSoftware.Text.ITextBufferReader" /> that is reading a text source.</param><param name="lexicalState">The <see cref="T:ActiproSoftware.Text.Lexing.ILexicalState" /> that specifies the current state.</param><returns>A <see cref="T:ActiproSoftware.Text.Lexing.MergableLexerResult" /> indicating the lexer result.</returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JsonLexer.#ctor"><summary>
+            Initializes a new instance of the <c>JsonLexer</c> class.
+            </summary></member><member name="P:ActiproSoftware.Text.Languages.JavaScript.Implementation.JsonLexer.LexicalStates"><summary>
+            Gets the collection of lexical states used by this lexer.
+            </summary><value>The collection of lexical states used by this lexer.</value></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JsonParseData"><summary>
+            Stores the results of a <c>JSON</c> language parsing operation.
+            </summary></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.Implementation.JsonParser"><summary>
+            Represents a parser for the <c>JSON</c> language.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JsonParser.CreateParseData(ActiproSoftware.Text.Parsing.IParseRequest,ActiproSoftware.Text.Parsing.LLParser.IParserState)"><summary>
+            Creates an <see cref="T:ActiproSoftware.Text.Parsing.IParseData" /> for the specified <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" />.
+            </summary><param name="request">The <see cref="T:ActiproSoftware.Text.Parsing.IParseRequest" /> that contains data about the requested parsing operation.</param><param name="state">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" /> to examine.</param><returns>The <see cref="T:ActiproSoftware.Text.Parsing.IParseData" /> that was created.</returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JsonParser.CreateTokenReader(ActiproSoftware.Text.ITextBufferReader)"><summary>
+            Creates an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.
+            </summary><param name="reader">The <see cref="T:ActiproSoftware.Text.ITextBufferReader" /> that provides access to the text buffer.</param><returns>An <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.</returns></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JsonParser.#ctor"><summary>
+            Initializes a new instance of the <c>JsonParser</c> class.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.JavaScript.Implementation.JsonParser.#ctor(ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar)"><summary>
+            Initializes a new instance of the <c>JsonParser</c> class.
+            </summary><param name="grammar">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar" /> instance to use.</param></member><member name="T:ActiproSoftware.Text.Languages.JavaScript.JavaScriptGrammarRootNonTerminal"><summary>
+            Specifies the root non-terminal to use for a <c>JavaScript</c> grammar.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.JavaScriptGrammarRootNonTerminal.CompilationUnit"><summary>
+            Compilation unit (the default).
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.JavaScriptGrammarRootNonTerminal.StatementList"><summary>
+            Statement list.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.JavaScriptGrammarRootNonTerminal.Statement"><summary>
+            Statement.
+            </summary></member><member name="F:ActiproSoftware.Text.Languages.JavaScript.JavaScriptGrammarRootNonTerminal.Expression"><summary>
+            Expression.
+            </summary></member></members></doc>

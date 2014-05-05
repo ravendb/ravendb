@@ -1,28 +1,125 @@
-<?xml version="1.0"?><doc><assembly><name>ActiproSoftware.Wizard.Silverlight</name></assembly><members><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardWindowCancelButton"><summary>
-            Specifies the button in a <see cref="T:ActiproSoftware.Windows.Controls.Wizard.Wizard" /> control that is clicked when the user
-            presses the ESCAPE key.
-            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardWindowCancelButton.None"><summary>
-            None of the wizard buttons are clicked.
-            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardWindowCancelButton.Cancel"><summary>
-            The Cancel button is clicked.
-            </summary></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags"><summary>
-            Indicates information about a <see cref="T:ActiproSoftware.Windows.Controls.Wizard.Wizard" /> page selection.
-            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags.BackwardProgress"><summary>
-            The page selection is backward progress.
-            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags.ForwardProgress"><summary>
-            The page selection is forward progress.
-            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags.Programmatic"><summary>
-            The page selection was made programmatically.
-            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags.NextPageCommand"><summary>
-            The page selection was made via the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardCommands.NextPage" />.
-            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags.PreviousPageCommand"><summary>
-            The page selection was made via the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardCommands.PreviousPage" />.
-            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags.GoToPageCommand"><summary>
-            The page selection was made via the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardCommands.GoToPage" />.
-            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags.BacktrackToPageCommand"><summary>
-            The page selection was made via the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardCommands.BacktrackToPage" />.
-            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags.Default"><summary>
-            The default flags of <c>Programmatic</c> and <c>ForwardProgress</c>.
+<?xml version="1.0"?><doc><assembly><name>ActiproSoftware.Wizard.Silverlight</name></assembly><members><member name="T:ActiproSoftware.Products.Wizard.AssemblyInfo"><summary>
+            Provides a class for retrieving information about the <c>ActiproSoftware.Wizard</c> assembly.
+            </summary></member><member name="P:ActiproSoftware.Products.Wizard.AssemblyInfo.Instance"><summary>
+            Gets the instance of the <see cref="T:ActiproSoftware.Products.AssemblyInfo" /> class for this assembly.
+            </summary><value>The instance of the <see cref="T:ActiproSoftware.Products.AssemblyInfo" /> class for this assembly.</value></member><member name="P:ActiproSoftware.Products.Wizard.AssemblyInfo.LicenseType"><summary>
+            Gets the type of license that is available for the assembly.
+            </summary><value>A <see cref="T:ActiproSoftware.Products.AssemblyLicenseType" /> specifying the type of license that is available for the assembly.</value></member><member name="P:ActiproSoftware.Products.Wizard.AssemblyInfo.Platform"><summary>
+            Gets the target platform for the assembly.
+            </summary><value>A <see cref="T:ActiproSoftware.Products.AssemblyPlatform" /> specifying the target platform for the assembly.</value></member><member name="P:ActiproSoftware.Products.Wizard.AssemblyInfo.ProductCode"><summary>
+            Gets the product code of the assembly.
+            </summary><value>A three-letter product code of the assembly.</value></member><member name="P:ActiproSoftware.Products.Wizard.AssemblyInfo.ProductId"><summary>
+            Gets the product ID of the assembly.
+            </summary><value>The product ID of the assembly.</value></member><member name="T:ActiproSoftware.Products.Wizard.Resources"><summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary></member><member name="P:ActiproSoftware.Products.Wizard.Resources.ResourceManager"><summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary></member><member name="P:ActiproSoftware.Products.Wizard.Resources.Culture"><summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary></member><member name="P:ActiproSoftware.Products.Wizard.Resources.ExItemNotFound"><summary>
+              Looks up a localized string similar to The specified item was not found in the Items collection..
+            </summary></member><member name="P:ActiproSoftware.Products.Wizard.Resources.UIButtonBackText"><summary>
+              Looks up a localized string similar to &lt; Back.
+            </summary></member><member name="P:ActiproSoftware.Products.Wizard.Resources.UIButtonCancelText"><summary>
+              Looks up a localized string similar to Cancel.
+            </summary></member><member name="P:ActiproSoftware.Products.Wizard.Resources.UIButtonFinishText"><summary>
+              Looks up a localized string similar to Finish.
+            </summary></member><member name="P:ActiproSoftware.Products.Wizard.Resources.UIButtonHelpText"><summary>
+              Looks up a localized string similar to Help.
+            </summary></member><member name="P:ActiproSoftware.Products.Wizard.Resources.UIButtonNextText"><summary>
+              Looks up a localized string similar to Next &gt;.
+            </summary></member><member name="T:ActiproSoftware.Products.Wizard.SR"><summary>
+            Provides access to the string resources of this assembly, also allowing for their customization.
+            </summary><remarks>
+            Call the <see cref="M:ActiproSoftware.Products.Wizard.SR.GetString(System.String)" /> method to return a resolved resource string.
+            If a custom string has been set for a specified string resource name, it will be returned.
+            Otherwise, the default string resource value is returned.
+            <para>
+            If any of the resource strings are customized via a call to <see cref="M:ActiproSoftware.Products.Wizard.SR.SetCustomString(System.String,System.String)" />,
+            it is best to do so before any other classes in this assembly are referenced,
+            such as in the application startup.
+            </para></remarks></member><member name="M:ActiproSoftware.Products.Wizard.SR.ClearCustomStrings"><summary>
+            Removes all custom strings.
+            </summary></member><member name="M:ActiproSoftware.Products.Wizard.SR.ContainsCustomString(System.String)"><summary>
+            Returns whether a custom string is defined for the specified string resource.
+            </summary><param name="name">The name of the resource for which to search.</param><returns><c>true</c> if a custom string is defined for the specified string resource; otherwise, <c>false</c>.
+            </returns></member><member name="M:ActiproSoftware.Products.Wizard.SR.GetCustomString(System.String)"><summary>
+            Returns custom string that is stored for the specified string resource, if any.
+            </summary><param name="name">The name of the resource to get.</param><returns>The custom string that is stored for the specified string resource, if any.</returns></member><member name="M:ActiproSoftware.Products.Wizard.SR.GetString(System.String)"><summary>
+            Returns the resolved value of the specified string resource.
+            </summary><param name="name">The name of the resource to get.</param><returns>
+            The value of the resource localized for the caller's current culture settings. 
+            If a best match is not possible, <see langword="null" /> is returned.
+            </returns></member><member name="M:ActiproSoftware.Products.Wizard.SR.GetString(ActiproSoftware.Products.Wizard.SRName)"><summary>
+            Returns the resolved value of the specified string resource.
+            </summary><param name="name">The name of the resource to get.</param><returns>
+            The value of the resource localized for the caller's current culture settings. 
+            If a best match is not possible, <see langword="null" /> is returned.
+            </returns></member><member name="M:ActiproSoftware.Products.Wizard.SR.GetString(System.String,System.Object[])"><summary>
+            Returns the resolved value of the specified string resource, by calling <c>String.Format</c> using supplied arguments.
+            </summary><param name="name">The name of the resource to get.</param><param name="args">The arguments to pass to <c>String.Format</c>.</param><returns>
+            The value of the resource localized for the caller's current culture settings. 
+            If a best match is not possible, <see langword="null" /> is returned.
+            </returns></member><member name="M:ActiproSoftware.Products.Wizard.SR.GetString(ActiproSoftware.Products.Wizard.SRName,System.Object[])"><summary>
+            Returns the resolved value of the specified string resource, by calling <c>String.Format</c> using supplied arguments.
+            </summary><param name="name">The name of the resource to get.</param><param name="args">The arguments to pass to <c>String.Format</c>.</param><returns>
+            The value of the resource localized for the caller's current culture settings. 
+            If a best match is not possible, <see langword="null" /> is returned.
+            </returns></member><member name="M:ActiproSoftware.Products.Wizard.SR.RemoveCustomString(System.String)"><summary>
+            Removes any custom string that is defined for the specified string resource.
+            </summary><param name="name">The name of the resource to remove.</param></member><member name="M:ActiproSoftware.Products.Wizard.SR.SetCustomString(System.String,System.String)"><summary>
+            Sets a custom string value for the specified string resource.
+            </summary><param name="name">The name of the resource to set.</param><param name="value">The value of the resource to set.</param></member><member name="P:ActiproSoftware.Products.Wizard.SR.ResourceManager"><summary>
+            Gets the <see cref="P:ActiproSoftware.Products.Wizard.SR.ResourceManager" /> that provides the default resources. 
+            </summary><value>The <see cref="P:ActiproSoftware.Products.Wizard.SR.ResourceManager" /> that provides the default resources.</value></member><member name="T:ActiproSoftware.Products.Wizard.SRName"><summary>
+            Specifies the names of string resources for this assembly.
+            </summary></member><member name="F:ActiproSoftware.Products.Wizard.SRName.ExItemNotFound"><summary>An exception message string.</summary></member><member name="F:ActiproSoftware.Products.Wizard.SRName.UIButtonBackText"><summary>A user interface string.</summary></member><member name="F:ActiproSoftware.Products.Wizard.SRName.UIButtonCancelText"><summary>A user interface string.</summary></member><member name="F:ActiproSoftware.Products.Wizard.SRName.UIButtonFinishText"><summary>A user interface string.</summary></member><member name="F:ActiproSoftware.Products.Wizard.SRName.UIButtonHelpText"><summary>A user interface string.</summary></member><member name="F:ActiproSoftware.Products.Wizard.SRName.UIButtonNextText"><summary>A user interface string.</summary></member><member name="T:ActiproSoftware.Products.Wizard.WizardLogo"><summary>
+            Represents the logo for this product.
+            </summary></member><member name="M:ActiproSoftware.Products.Wizard.WizardLogo.InitializeComponent"><summary>
+            InitializeComponent
+            </summary></member><member name="M:ActiproSoftware.Products.Wizard.WizardLogo.#ctor"><summary>
+            Initializes a new instance of the <c>WizardLogo</c> class.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer"><summary>
+            Exposes <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.Wizard" /> types to UI Automation.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.CreateItemAutomationPeer(System.Object)"><summary>
+            Creates a new instance of the <see cref="T:System.Windows.Automation.Peers.ItemAutomationPeer" /> class. 
+            </summary><param name="item">The item that is associated with this items control.</param><returns>The <see cref="T:System.Windows.Automation.Peers.ItemAutomationPeer" /> for the specified item.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.GetAutomationControlTypeCore"><summary>
+            Gets the <see cref="T:System.Windows.Automation.Peers.AutomationControlType" /> for the element that is associated with the UI Automation peer.
+            </summary><returns>A <see cref="T:System.Windows.Automation.Peers.AutomationControlType" /> indicating the control type.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.GetChildrenCore"><summary>
+            Gets the collection of child elements of the <see cref="T:System.Windows.Controls.ItemsControl" /> that is associated with this UI Automation peer.
+            </summary><returns>The collection of child elements.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.GetClassNameCore"><summary>
+            Gets a human readable name that, in addition to <see cref="T:System.Windows.Automation.Peers.AutomationControlType" />, differentiates the control represented by this <see cref="T:System.Windows.Automation.Peers.AutomationPeer" />. 
+            </summary><returns>The string that contains the name.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.GetNameCore"><summary>
+            Gets the text string describing the element that is associated with this automation peer. 
+            </summary><returns>The string that contains the name.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.GetPattern(System.Windows.Automation.Peers.PatternInterface)"><summary>
+            Gets the object that supports the specified control pattern of the element that is associated with this automation peer. 
+            </summary><param name="patternInterface">The <see cref="T:System.Windows.Automation.Peers.PatternInterface" /> to examine.</param><returns>
+            The reference to <c>this</c> instance if the specified pattern is implemented; otherwise, <c>null</c>.
+            </returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.#ctor(ActiproSoftware.Windows.Controls.Wizard.Wizard)"><summary>
+            Initializes an instance of the <c>WizardAutomationPeer</c> class.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.Wizard"><summary>
+            Gets the <see cref="T:ActiproSoftware.Windows.Controls.Wizard.Wizard" /> that is wrapped by this UI Automation peer.
+            </summary><value>The <see cref="T:ActiproSoftware.Windows.Controls.Wizard.Wizard" /> that is wrapped by this UI Automation peer.</value></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageAutomationPeer"><summary>
+            Exposes <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageAutomationPeer.WizardPage" /> types to UI Automation.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageAutomationPeer.GetAutomationControlTypeCore"><summary>
+            Gets the <see cref="T:System.Windows.Automation.Peers.AutomationControlType" /> for the element that is associated with the UI Automation peer.
+            </summary><returns>A <see cref="T:System.Windows.Automation.Peers.AutomationControlType" /> indicating the control type.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageAutomationPeer.GetClassNameCore"><summary>
+            Gets a human readable name that, in addition to <see cref="T:System.Windows.Automation.Peers.AutomationControlType" />, differentiates the control represented by this <see cref="T:System.Windows.Automation.Peers.AutomationPeer" />. 
+            </summary><returns>The string that contains the name.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageAutomationPeer.GetNameCore"><summary>
+            Gets the text string describing the element that is associated with this automation peer. 
+            </summary><returns>The string that contains the name.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageAutomationPeer.GetPattern(System.Windows.Automation.Peers.PatternInterface)"><summary>
+            Gets the object that supports the specified control pattern of the element that is associated with this automation peer. 
+            </summary><param name="patternInterface">The <see cref="T:System.Windows.Automation.Peers.PatternInterface" /> to examine.</param><returns>
+            The reference to <c>this</c> instance if the specified pattern is implemented; otherwise, <c>null</c>.
+            </returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageAutomationPeer.#ctor(System.Object,ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer)"><summary>
+            Initializes an instance of the <c>WizardPageAutomationPeer</c> class.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageAutomationPeer.WizardPage"><summary>
+            Gets the <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPage" /> that is wrapped by this UI Automation peer.
+            </summary><value>The <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPage" /> that is wrapped by this UI Automation peer.</value></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageWrapperAutomationPeer"><summary>
+            Exposes <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPage" /> wrapper types to UI Automation.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageWrapperAutomationPeer.#ctor(ActiproSoftware.Windows.Controls.Wizard.WizardPage)"><summary>
+            Initializes an instance of the <c>WizardPageWrapperAutomationPeer</c> class.
             </summary></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardCommands"><summary>
             Contains the commands used for the <see cref="T:ActiproSoftware.Windows.Controls.Wizard.Wizard" /> control.
             </summary><summary>
@@ -61,36 +158,45 @@
             Gets the <see cref="T:ActiproSoftware.Compatibility.RoutedCommand" /> that is used to display help for the wizard.
             </summary><value>The <see cref="T:ActiproSoftware.Compatibility.RoutedCommand" /> that is used to display help for the wizard.</value></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardCommands.CommandProperty"><summary>
             Identifies the <c>Command</c> dependency property.  This field is read-only.
-            </summary><value>The identifier for the <c>Command</c> dependency property.</value></member><member name="T:ActiproSoftware.Products.Wizard.WizardLogo"><summary>
-            Represents the logo for this product.
-            </summary></member><member name="M:ActiproSoftware.Products.Wizard.WizardLogo.InitializeComponent"><summary>
-            InitializeComponent
-            </summary></member><member name="M:ActiproSoftware.Products.Wizard.WizardLogo.#ctor"><summary>
-            Initializes a new instance of the <c>WizardLogo</c> class.
-            </summary></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardWindowTitleBehavior"><summary>
-            Specifies the behavior the <see cref="T:ActiproSoftware.Windows.Controls.Wizard.Wizard" /> control will use in regards to 
-            automatically updating the title bar of the containing <see cref="T:System.Windows.Window" />.
-            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardWindowTitleBehavior.None"><summary>
-            Do not modify the containing <see cref="T:System.Windows.Window" /> control's title.
-            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardWindowTitleBehavior.PageTitle"><summary>
-            Displays the text in the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleBaseText" /> property appended by a dash and the
-            text in the current page's <see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardPage.Title" /> property.
-            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardWindowTitleBehavior.PageCaption"><summary>
-            Displays the text in the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleBaseText" /> property appended by a dash and the
-            text in the current page's <see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardPage.Caption" /> property.
-            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardWindowTitleBehavior.Custom"><summary>
-            Displays the text in the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleBaseText" /> property appended by the
-            text in the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleCustomPageText" /> property, which defaults to <c> - Step {0} of {1}</c>.
-            If using step numbers, this title behavior is only useful for Wizards that do not have multiple execution paths.
-            <para>
-            The <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleCustomPageText" /> provides numerous format options such as
-            displaying step numbers, page caption or title.  See its help topic for more information.
-            </para></summary></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.Wizard"><summary>
+            </summary><value>The identifier for the <c>Command</c> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangingEventArgs"><summary>
+            Provides event arguments when the selection of a <see cref="T:ActiproSoftware.Windows.Controls.Wizard.Wizard" /> is changing.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangingEventArgs.#ctor(System.Object,System.Object,ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags,System.Boolean)"><summary>
+            Initializes a new instance of the <c>WizardSelectionChangingEventArgs</c> class.
+            </summary><param name="oldValue">The old selected item.</param><param name="newValue">The new selected item.</param><param name="selectionFlags">A <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.</param><param name="canCancel">A value indicating whether this event can be canceled.</param></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangingEventArgs.#ctor(ActiproSoftware.Compatibility.RoutedEventEx,System.Object,System.Object,ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags,System.Boolean)"><summary>
+            Initializes a new instance of the <c>WizardSelectionChangingEventArgs</c> class.
+            </summary><param name="routedEvent">The routed event identifier for this event arguments instance.</param><param name="oldValue">The old selected item.</param><param name="newValue">The new selected item.</param><param name="selectionFlags">A <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.</param><param name="canCancel">A value indicating whether this event can be canceled.</param></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangingEventArgs.#ctor(ActiproSoftware.Compatibility.RoutedEventEx,System.Object,System.Object,ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags,System.Boolean,System.Object)"><summary>
+            Initializes a new instance of the <c>WizardSelectionChangingEventArgs</c> class.
+            </summary><param name="routedEvent">The routed event identifier for this event arguments instance.</param><param name="oldValue">The old selected item.</param><param name="newValue">The new selected item.</param><param name="selectionFlags">A <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.</param><param name="canCancel">A value indicating whether this event can be canceled.</param><param name="source">An alternate source that will be reported when the event is handled.</param></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangingEventArgs.CanCancel"><summary>
+            Gets or sets a value indicating whether this event can be canceled.
+            </summary><value><c>true</c> if this event can be canceled; otherwise, <c>false</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangingEventArgs.SelectionFlags"><summary>
+            Gets a <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.
+            </summary><value>A <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.</value></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.Wizard"><summary>
             Represents a <c>Wizard</c> control.
             </summary><remarks>
             For detailed documentation on this control's features and how to use them, please see the 
             <a href="../Topics/Wizard/Default.html">Wizard</a>-related series of documentation topics. 
-            </remarks></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.IsItemItsOwnContainerOverride(System.Object)"><summary>
+            </remarks></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.BacktrackToPage(System.Object)"><summary>
+            Selects the specified item using backward progress.
+            </summary><param name="item">The item to select.</param><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.BacktrackToPreviousPage" /><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GoToNextPage" /><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GoToPage(System.Object)" /></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.BacktrackToPreviousPage"><summary>
+            Selects the previous page using backward progress.
+            </summary><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.BacktrackToPage(System.Object)" /><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GoToNextPage" /><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GoToPage(System.Object)" /></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.ExecuteCancel"><summary>
+            Executes the <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardCommands" />.<see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardCommands.Cancel" /> command, similar to clicking the <c>Cancel</c> button.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.ExecuteFinish"><summary>
+            Executes the <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardCommands" />.<see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardCommands.Finish" /> command, similar to clicking the <c>Finish</c> button.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GoToNextPage"><summary>
+            Selects the next page using forward progress.
+            </summary><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.BacktrackToPage(System.Object)" /><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.BacktrackToPreviousPage" /><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GoToPage(System.Object)" /></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GoToPage(System.Object)"><summary>
+            Selects the specified item using forward progress.
+            </summary><param name="item">The item to select.</param><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.BacktrackToPage(System.Object)" /><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.BacktrackToPreviousPage" /><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GoToNextPage" /></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.RequestHelp"><summary>
+            Executes the <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardCommands" />.<see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardCommands.RequestHelp" /> command, similar to clicking the <c>Help</c> button.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.OnKeyDown(System.Windows.Input.KeyEventArgs)"><summary>
+            Called before the <see cref="E:System.Windows.UIElement.KeyDown" /> event occurs.
+            </summary><param name="e">The data for the event.</param></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.ResetCommandBindings"><summary>
+            Resets the <c>CommandBindings</c> property to its default value.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GetContainerForItemOverride"><summary>
+            Creates or identifies the element used to display the specified item.
+            </summary><returns>The element that is used to display the given item. </returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.IsItemItsOwnContainerOverride(System.Object)"><summary>
             Determines if the specified item is (or is eligible to be) its own item container.
             </summary><param name="item">Specified item.</param><returns><c>true</c> if the item is its own item container; otherwise, <c>false</c>.
             </returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.OnApplyTemplate"><summary>
@@ -154,33 +260,9 @@
             Sets the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.SelectedItem" /> property using the specified <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" />.
             </summary><param name="item">The item to select.</param><param name="newSelectionFlags">A <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.</param></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.UpdateWindowTitle"><summary>
             Updates the containing <see cref="T:System.Windows.Controls.ChildWindow" /> control's title based on the current page.
-            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.ResetCommandBindings"><summary>
-            Resets the <c>CommandBindings</c> property to its default value.
-            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.OnKeyDown(System.Windows.Input.KeyEventArgs)"><summary>
-            Called before the <see cref="E:System.Windows.UIElement.KeyDown" /> event occurs.
-            </summary><param name="e">The data for the event.</param></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.BacktrackToPage(System.Object)"><summary>
-            Selects the specified item using backward progress.
-            </summary><param name="item">The item to select.</param><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.BacktrackToPreviousPage" /><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GoToNextPage" /><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GoToPage(System.Object)" /></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.BacktrackToPreviousPage"><summary>
-            Selects the previous page using backward progress.
-            </summary><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.BacktrackToPage(System.Object)" /><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GoToNextPage" /><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GoToPage(System.Object)" /></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.ExecuteCancel"><summary>
-            Executes the <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardCommands" />.<see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardCommands.Cancel" /> command, similar to clicking the <c>Cancel</c> button.
-            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.ExecuteFinish"><summary>
-            Executes the <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardCommands" />.<see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardCommands.Finish" /> command, similar to clicking the <c>Finish</c> button.
-            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GoToNextPage"><summary>
-            Selects the next page using forward progress.
-            </summary><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.BacktrackToPage(System.Object)" /><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.BacktrackToPreviousPage" /><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GoToPage(System.Object)" /></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GoToPage(System.Object)"><summary>
-            Selects the specified item using forward progress.
-            </summary><param name="item">The item to select.</param><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.BacktrackToPage(System.Object)" /><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.BacktrackToPreviousPage" /><seealso cref="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GoToNextPage" /></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.RequestHelp"><summary>
-            Executes the <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardCommands" />.<see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardCommands.RequestHelp" /> command, similar to clicking the <c>Help</c> button.
-            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.GetContainerForItemOverride"><summary>
-            Creates or identifies the element used to display the specified item.
-            </summary><returns>The element that is used to display the given item. </returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.#ctor"><summary>
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Wizard.#ctor"><summary>
             Initializes an instance of the <c>Wizard</c> class.
-            </summary></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.CommandBindings"><summary>
-            Gets the list of <see cref="T:ActiproSoftware.Compatibility.CommandBinding" /> objects.
-            </summary><value>The list of <see cref="T:ActiproSoftware.Compatibility.CommandBinding" /> objects.</value></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.InputBindings"><summary>
-            Gets the list of <see cref="T:ActiproSoftware.Compatibility.KeyBinding" /> objects.
-            </summary><value>The list of <see cref="T:ActiproSoftware.Compatibility.KeyBinding" /> objects.</value></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.BackButtonContent"><summary>
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.BackButtonContent"><summary>
             Gets or sets the default content for the Back button.
             This is a dependency property.
             </summary><value>The default content for the Back button.</value></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.BackwardProgressTransitionDuration"><summary>
@@ -503,7 +585,11 @@
             </value><remarks>
             This property value is constructed based on the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleBaseText" />, <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleBehavior" />,
             and <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleCustomPageText" /> properties.
-            </remarks></member><member name="E:ActiproSoftware.Windows.Controls.Wizard.Wizard.Canceled"><summary>
+            </remarks></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.CommandBindings"><summary>
+            Gets the list of <see cref="T:ActiproSoftware.Compatibility.CommandBinding" /> objects.
+            </summary><value>The list of <see cref="T:ActiproSoftware.Compatibility.CommandBinding" /> objects.</value></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.InputBindings"><summary>
+            Gets the list of <see cref="T:ActiproSoftware.Compatibility.KeyBinding" /> objects.
+            </summary><value>The list of <see cref="T:ActiproSoftware.Compatibility.KeyBinding" /> objects.</value></member><member name="E:ActiproSoftware.Windows.Controls.Wizard.Wizard.Canceled"><summary>
             Occurs when the wizard is canceled, generally via a <c>Cancel</c> button click.
             </summary></member><member name="E:ActiproSoftware.Windows.Controls.Wizard.Wizard.Canceling"><summary>
             Occurs when the wizard is canceling, generally via a <c>Cancel</c> button click.
@@ -619,31 +705,12 @@
             Identifies the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleBehavior" /> dependency property.  This field is read-only.
             </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleBehavior" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleCustomPageTextProperty"><summary>
             Identifies the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleCustomPageText" /> dependency property.  This field is read-only.
-            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleCustomPageText" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangingEventArgs"><summary>
-            Provides event arguments when the selection of a <see cref="T:ActiproSoftware.Windows.Controls.Wizard.Wizard" /> is changing.
-            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangingEventArgs.#ctor(System.Object,System.Object,ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags,System.Boolean)"><summary>
-            Initializes a new instance of the <c>WizardSelectionChangingEventArgs</c> class.
-            </summary><param name="oldValue">The old selected item.</param><param name="newValue">The new selected item.</param><param name="selectionFlags">A <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.</param><param name="canCancel">A value indicating whether this event can be canceled.</param></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangingEventArgs.#ctor(ActiproSoftware.Compatibility.RoutedEventEx,System.Object,System.Object,ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags,System.Boolean)"><summary>
-            Initializes a new instance of the <c>WizardSelectionChangingEventArgs</c> class.
-            </summary><param name="routedEvent">The routed event identifier for this event arguments instance.</param><param name="oldValue">The old selected item.</param><param name="newValue">The new selected item.</param><param name="selectionFlags">A <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.</param><param name="canCancel">A value indicating whether this event can be canceled.</param></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangingEventArgs.#ctor(ActiproSoftware.Compatibility.RoutedEventEx,System.Object,System.Object,ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags,System.Boolean,System.Object)"><summary>
-            Initializes a new instance of the <c>WizardSelectionChangingEventArgs</c> class.
-            </summary><param name="routedEvent">The routed event identifier for this event arguments instance.</param><param name="oldValue">The old selected item.</param><param name="newValue">The new selected item.</param><param name="selectionFlags">A <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.</param><param name="canCancel">A value indicating whether this event can be canceled.</param><param name="source">An alternate source that will be reported when the event is handled.</param></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangingEventArgs.CanCancel"><summary>
-            Gets or sets a value indicating whether this event can be canceled.
-            </summary><value><c>true</c> if this event can be canceled; otherwise, <c>false</c>.
-            </value></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangingEventArgs.SelectionFlags"><summary>
-            Gets a <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.
-            </summary><value>A <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.</value></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageWrapperAutomationPeer"><summary>
-            Exposes <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPage" /> wrapper types to UI Automation.
-            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageWrapperAutomationPeer.#ctor(ActiproSoftware.Windows.Controls.Wizard.WizardPage)"><summary>
-            Initializes an instance of the <c>WizardPageWrapperAutomationPeer</c> class.
-            </summary></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardPage"><summary>
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleCustomPageText" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardPage"><summary>
             Represents a page within a <see cref="T:ActiproSoftware.Windows.Controls.Wizard.Wizard" /> control.
             </summary><remarks>
             For detailed documentation on this control's features and how to use them, please see the 
             <a href="../Topics/Wizard/Default.html">Wizard</a>-related series of documentation topics. 
-            </remarks></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardPage.ToString"><summary>
-            Returns a <c>String</c> that represents the current <c>Object</c>.
-            </summary><returns>A <c>String</c> that represents the current <c>Object</c>.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardPage.OnCanceled(ActiproSoftware.Compatibility.RoutedEventArgsEx)"><summary>
+            </remarks></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardPage.OnCanceled(ActiproSoftware.Compatibility.RoutedEventArgsEx)"><summary>
             Invoked when an unhandled <see cref="E:ActiproSoftware.Windows.Controls.Wizard.WizardPage.Canceled" /> attached event reaches an element in its route that is derived from this class.
             Implement this method to add class handling for this event. 
             </summary><param name="e">An <see cref="T:ActiproSoftware.Compatibility.RoutedEventArgsEx" /> that contains the event data.</param><remarks>
@@ -708,7 +775,9 @@
             This method has no default implementation. 
             Because an intermediate class in the inheritance might implement this method, 
             we recommend that you call the base implementation in your implementation.
-            </remarks></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardPage.#ctor"><summary>
+            </remarks></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardPage.ToString"><summary>
+            Returns a <c>String</c> that represents the current <c>Object</c>.
+            </summary><returns>A <c>String</c> that represents the current <c>Object</c>.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardPage.#ctor"><summary>
             Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPage" /> class.
             </summary></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.WizardPage.Caption"><summary>
             Gets or sets the caption that is displayed in the page.
@@ -1122,80 +1191,25 @@
             Identifies the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardPage.InteriorHeaderMinAscent" /> dependency property.  This field is read-only.
             </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardPage.InteriorHeaderMinAscent" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPage.InteriorTemplateProperty"><summary>
             Identifies the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardPage.InteriorTemplate" /> dependency property.  This field is read-only.
-            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardPage.InteriorTemplate" /> dependency property.</value></member><member name="T:ActiproSoftware.Products.Wizard.SR"><summary>
-            Provides access to the string resources of this assembly, also allowing for their customization.
-            </summary><remarks>
-            Call the <see cref="M:ActiproSoftware.Products.Wizard.SR.GetString(System.String)" /> method to return a resolved resource string.
-            If a custom string has been set for a specified string resource name, it will be returned.
-            Otherwise, the default string resource value is returned.
-            <para>
-            If any of the resource strings are customized via a call to <see cref="M:ActiproSoftware.Products.Wizard.SR.SetCustomString(System.String,System.String)" />,
-            it is best to do so before any other classes in this assembly are referenced,
-            such as in the application startup.
-            </para></remarks></member><member name="M:ActiproSoftware.Products.Wizard.SR.ClearCustomStrings"><summary>
-            Removes all custom strings.
-            </summary></member><member name="M:ActiproSoftware.Products.Wizard.SR.ContainsCustomString(System.String)"><summary>
-            Returns whether a custom string is defined for the specified string resource.
-            </summary><param name="name">The name of the resource for which to search.</param><returns><c>true</c> if a custom string is defined for the specified string resource; otherwise, <c>false</c>.
-            </returns></member><member name="M:ActiproSoftware.Products.Wizard.SR.GetCustomString(System.String)"><summary>
-            Returns custom string that is stored for the specified string resource, if any.
-            </summary><param name="name">The name of the resource to get.</param><returns>The custom string that is stored for the specified string resource, if any.</returns></member><member name="M:ActiproSoftware.Products.Wizard.SR.GetString(System.String)"><summary>
-            Returns the resolved value of the specified string resource.
-            </summary><param name="name">The name of the resource to get.</param><returns>
-            The value of the resource localized for the caller's current culture settings. 
-            If a best match is not possible, <see langword="null" /> is returned.
-            </returns></member><member name="M:ActiproSoftware.Products.Wizard.SR.GetString(ActiproSoftware.Products.Wizard.SRName)"><summary>
-            Returns the resolved value of the specified string resource.
-            </summary><param name="name">The name of the resource to get.</param><returns>
-            The value of the resource localized for the caller's current culture settings. 
-            If a best match is not possible, <see langword="null" /> is returned.
-            </returns></member><member name="M:ActiproSoftware.Products.Wizard.SR.GetString(System.String,System.Object[])"><summary>
-            Returns the resolved value of the specified string resource, by calling <c>String.Format</c> using supplied arguments.
-            </summary><param name="name">The name of the resource to get.</param><param name="args">The arguments to pass to <c>String.Format</c>.</param><returns>
-            The value of the resource localized for the caller's current culture settings. 
-            If a best match is not possible, <see langword="null" /> is returned.
-            </returns></member><member name="M:ActiproSoftware.Products.Wizard.SR.GetString(ActiproSoftware.Products.Wizard.SRName,System.Object[])"><summary>
-            Returns the resolved value of the specified string resource, by calling <c>String.Format</c> using supplied arguments.
-            </summary><param name="name">The name of the resource to get.</param><param name="args">The arguments to pass to <c>String.Format</c>.</param><returns>
-            The value of the resource localized for the caller's current culture settings. 
-            If a best match is not possible, <see langword="null" /> is returned.
-            </returns></member><member name="M:ActiproSoftware.Products.Wizard.SR.RemoveCustomString(System.String)"><summary>
-            Removes any custom string that is defined for the specified string resource.
-            </summary><param name="name">The name of the resource to remove.</param></member><member name="M:ActiproSoftware.Products.Wizard.SR.SetCustomString(System.String,System.String)"><summary>
-            Sets a custom string value for the specified string resource.
-            </summary><param name="name">The name of the resource to set.</param><param name="value">The value of the resource to set.</param></member><member name="P:ActiproSoftware.Products.Wizard.SR.ResourceManager"><summary>
-            Gets the <see cref="P:ActiproSoftware.Products.Wizard.SR.ResourceManager" /> that provides the default resources. 
-            </summary><value>The <see cref="P:ActiproSoftware.Products.Wizard.SR.ResourceManager" /> that provides the default resources.</value></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer"><summary>
-            Exposes <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.Wizard" /> types to UI Automation.
-            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.CreateItemAutomationPeer(System.Object)"><summary>
-            Creates a new instance of the <see cref="T:System.Windows.Automation.Peers.ItemAutomationPeer" /> class. 
-            </summary><param name="item">The item that is associated with this items control.</param><returns>The <see cref="T:System.Windows.Automation.Peers.ItemAutomationPeer" /> for the specified item.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.GetAutomationControlTypeCore"><summary>
-            Gets the <see cref="T:System.Windows.Automation.Peers.AutomationControlType" /> for the element that is associated with the UI Automation peer.
-            </summary><returns>A <see cref="T:System.Windows.Automation.Peers.AutomationControlType" /> indicating the control type.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.GetChildrenCore"><summary>
-            Gets the collection of child elements of the <see cref="T:System.Windows.Controls.ItemsControl" /> that is associated with this UI Automation peer.
-            </summary><returns>The collection of child elements.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.GetClassNameCore"><summary>
-            Gets a human readable name that, in addition to <see cref="T:System.Windows.Automation.Peers.AutomationControlType" />, differentiates the control represented by this <see cref="T:System.Windows.Automation.Peers.AutomationPeer" />. 
-            </summary><returns>The string that contains the name.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.GetNameCore"><summary>
-            Gets the text string describing the element that is associated with this automation peer. 
-            </summary><returns>The string that contains the name.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.GetPattern(System.Windows.Automation.Peers.PatternInterface)"><summary>
-            Gets the object that supports the specified control pattern of the element that is associated with this automation peer. 
-            </summary><param name="patternInterface">The <see cref="T:System.Windows.Automation.Peers.PatternInterface" /> to examine.</param><returns>
-            The reference to <c>this</c> instance if the specified pattern is implemented; otherwise, <c>null</c>.
-            </returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.#ctor(ActiproSoftware.Windows.Controls.Wizard.Wizard)"><summary>
-            Initializes an instance of the <c>WizardAutomationPeer</c> class.
-            </summary></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer.Wizard"><summary>
-            Gets the <see cref="T:ActiproSoftware.Windows.Controls.Wizard.Wizard" /> that is wrapped by this UI Automation peer.
-            </summary><value>The <see cref="T:ActiproSoftware.Windows.Controls.Wizard.Wizard" /> that is wrapped by this UI Automation peer.</value></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangedEventArgs"><summary>
-            Provides event arguments when the selection of a <see cref="T:ActiproSoftware.Windows.Controls.Wizard.Wizard" /> has changed.
-            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangedEventArgs.#ctor(System.Object,System.Object,ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags)"><summary>
-            Initializes a new instance of the <c>WizardSelectionChangedEventArgs</c> class.
-            </summary><param name="oldValue">The old selected item.</param><param name="newValue">The new selected item.</param><param name="selectionFlags">A <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.</param></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangedEventArgs.#ctor(ActiproSoftware.Compatibility.RoutedEventEx,System.Object,System.Object,ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags)"><summary>
-            Initializes a new instance of the <c>WizardSelectionChangedEventArgs</c> class.
-            </summary><param name="routedEvent">The routed event identifier for this event arguments instance.</param><param name="oldValue">The old selected item.</param><param name="newValue">The new selected item.</param><param name="selectionFlags">A <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.</param></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangedEventArgs.#ctor(ActiproSoftware.Compatibility.RoutedEventEx,System.Object,System.Object,ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags,System.Object)"><summary>
-            Initializes a new instance of the <c>WizardSelectionChangedEventArgs</c> class.
-            </summary><param name="routedEvent">The routed event identifier for this event arguments instance.</param><param name="oldValue">The old selected item.</param><param name="newValue">The new selected item.</param><param name="source">An alternate source that will be reported when the event is handled.</param><param name="selectionFlags">A <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.</param></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangedEventArgs.SelectionFlags"><summary>
-            Gets a <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.
-            </summary><value>A <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.</value></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSequenceType"><summary>
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardPage.InteriorTemplate" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags"><summary>
+            Indicates information about a <see cref="T:ActiproSoftware.Windows.Controls.Wizard.Wizard" /> page selection.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags.BackwardProgress"><summary>
+            The page selection is backward progress.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags.ForwardProgress"><summary>
+            The page selection is forward progress.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags.Programmatic"><summary>
+            The page selection was made programmatically.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags.NextPageCommand"><summary>
+            The page selection was made via the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardCommands.NextPage" />.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags.PreviousPageCommand"><summary>
+            The page selection was made via the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardCommands.PreviousPage" />.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags.GoToPageCommand"><summary>
+            The page selection was made via the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardCommands.GoToPage" />.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags.BacktrackToPageCommand"><summary>
+            The page selection was made via the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardCommands.BacktrackToPage" />.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags.Default"><summary>
+            The default flags of <c>Programmatic</c> and <c>ForwardProgress</c>.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSequenceType"><summary>
             Specifies the type of page sequencing to use.
             </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageSequenceType.Normal"><summary>
             Normal page sequencing, in which pages are visited in the order in which they appear in the pages collection.
@@ -1207,36 +1221,32 @@
             This feature requires each <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPage" />'s <c>Name</c> property to be set.
             </para><para>
             The <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPage" />.<see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardPage.PreviousPage" /> property is ignored when using stack sequencing.
-            </para></summary></member><member name="T:ActiproSoftware.Products.Wizard.Resources"><summary>
-              A strongly-typed resource class, for looking up localized strings, etc.
-            </summary></member><member name="P:ActiproSoftware.Products.Wizard.Resources.ResourceManager"><summary>
-              Returns the cached ResourceManager instance used by this class.
-            </summary></member><member name="P:ActiproSoftware.Products.Wizard.Resources.Culture"><summary>
-              Overrides the current thread's CurrentUICulture property for all
-              resource lookups using this strongly typed resource class.
-            </summary></member><member name="P:ActiproSoftware.Products.Wizard.Resources.ExItemNotFound"><summary>
-              Looks up a localized string similar to The specified item was not found in the Items collection..
-            </summary></member><member name="P:ActiproSoftware.Products.Wizard.Resources.UIButtonBackText"><summary>
-              Looks up a localized string similar to &lt; Back.
-            </summary></member><member name="P:ActiproSoftware.Products.Wizard.Resources.UIButtonCancelText"><summary>
-              Looks up a localized string similar to Cancel.
-            </summary></member><member name="P:ActiproSoftware.Products.Wizard.Resources.UIButtonFinishText"><summary>
-              Looks up a localized string similar to Finish.
-            </summary></member><member name="P:ActiproSoftware.Products.Wizard.Resources.UIButtonHelpText"><summary>
-              Looks up a localized string similar to Help.
-            </summary></member><member name="P:ActiproSoftware.Products.Wizard.Resources.UIButtonNextText"><summary>
-              Looks up a localized string similar to Next &gt;.
-            </summary></member><member name="T:ActiproSoftware.Windows.Themes.WizardThemeCatalog"><summary>
-            A theme catalog that describes the theme group name implementations and
-            available themed resource dictionaries within this assembly.
-            </summary></member><member name="M:ActiproSoftware.Windows.Themes.WizardThemeCatalog.#ctor"><summary>
-            Initializes a new instance of the <c>WizardThemeCatalog</c> class. 
-            </summary></member><member name="P:ActiproSoftware.Windows.Themes.WizardThemeCatalog.DictionaryReferences"><summary>
-            Gets the collection of <see cref="T:ActiproSoftware.Windows.Themes.ThemedResourceDictionaryReference" /> objects for the assembly.
-            </summary><value>The collection of <see cref="T:ActiproSoftware.Windows.Themes.ThemedResourceDictionaryReference" /> objects for the assembly.</value></member><member name="P:ActiproSoftware.Windows.Themes.WizardThemeCatalog.GroupImplementations"><summary>
-            Gets the collection of group names (e.g. Ribbon, NavigationBar, etc.) that indicates the groups of controls
-            that are implemented in the assembly via procedural code.
-            </summary><value>The collection of group names.</value></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardWindowDefaultButton"><summary>
+            </para></summary></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageType"><summary>
+            Specifies the type of <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPage" />.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageType.Blank"><summary>
+            Represents a blank page type.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageType.Interior"><summary>
+            Represents an interior page type.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageType.Exterior"><summary>
+            Represents an exterior page type.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangedEventArgs"><summary>
+            Provides event arguments when the selection of a <see cref="T:ActiproSoftware.Windows.Controls.Wizard.Wizard" /> has changed.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangedEventArgs.#ctor(System.Object,System.Object,ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags)"><summary>
+            Initializes a new instance of the <c>WizardSelectionChangedEventArgs</c> class.
+            </summary><param name="oldValue">The old selected item.</param><param name="newValue">The new selected item.</param><param name="selectionFlags">A <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.</param></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangedEventArgs.#ctor(ActiproSoftware.Compatibility.RoutedEventEx,System.Object,System.Object,ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags)"><summary>
+            Initializes a new instance of the <c>WizardSelectionChangedEventArgs</c> class.
+            </summary><param name="routedEvent">The routed event identifier for this event arguments instance.</param><param name="oldValue">The old selected item.</param><param name="newValue">The new selected item.</param><param name="selectionFlags">A <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.</param></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangedEventArgs.#ctor(ActiproSoftware.Compatibility.RoutedEventEx,System.Object,System.Object,ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags,System.Object)"><summary>
+            Initializes a new instance of the <c>WizardSelectionChangedEventArgs</c> class.
+            </summary><param name="routedEvent">The routed event identifier for this event arguments instance.</param><param name="oldValue">The old selected item.</param><param name="newValue">The new selected item.</param><param name="source">An alternate source that will be reported when the event is handled.</param><param name="selectionFlags">A <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.</param></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.WizardSelectionChangedEventArgs.SelectionFlags"><summary>
+            Gets a <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.
+            </summary><value>A <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageSelectionFlags" /> indicating information about the page selection.</value></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardWindowCancelButton"><summary>
+            Specifies the button in a <see cref="T:ActiproSoftware.Windows.Controls.Wizard.Wizard" /> control that is clicked when the user
+            presses the ESCAPE key.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardWindowCancelButton.None"><summary>
+            None of the wizard buttons are clicked.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardWindowCancelButton.Cancel"><summary>
+            The Cancel button is clicked.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardWindowDefaultButton"><summary>
             Specifies the button in a <see cref="T:ActiproSoftware.Windows.Controls.Wizard.Wizard" /> control that is clicked when the user 
             presses the ENTER key.
             </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardWindowDefaultButton.None"><summary>
@@ -1249,42 +1259,32 @@
             The Finish button is clicked if visible and enabled, otherwise the Next button is clicked.
             </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardWindowDefaultButton.NextThenFinish"><summary>
             The Next button is clicked if visible and enabled, otherwise the Finish button is clicked.
-            </summary></member><member name="T:ActiproSoftware.Products.Wizard.AssemblyInfo"><summary>
-            Provides a class for retrieving information about the <c>ActiproSoftware.Wizard</c> assembly.
-            </summary></member><member name="P:ActiproSoftware.Products.Wizard.AssemblyInfo.Instance"><summary>
-            Gets the instance of the <see cref="T:ActiproSoftware.Products.AssemblyInfo" /> class for this assembly.
-            </summary><value>The instance of the <see cref="T:ActiproSoftware.Products.AssemblyInfo" /> class for this assembly.</value></member><member name="P:ActiproSoftware.Products.Wizard.AssemblyInfo.LicenseType"><summary>
-            Gets the type of license that is available for the assembly.
-            </summary><value>A <see cref="T:ActiproSoftware.Products.AssemblyLicenseType" /> specifying the type of license that is available for the assembly.</value></member><member name="P:ActiproSoftware.Products.Wizard.AssemblyInfo.Platform"><summary>
-            Gets the target platform for the assembly.
-            </summary><value>A <see cref="T:ActiproSoftware.Products.AssemblyPlatform" /> specifying the target platform for the assembly.</value></member><member name="P:ActiproSoftware.Products.Wizard.AssemblyInfo.ProductCode"><summary>
-            Gets the product code of the assembly.
-            </summary><value>A three-letter product code of the assembly.</value></member><member name="P:ActiproSoftware.Products.Wizard.AssemblyInfo.ProductId"><summary>
-            Gets the product ID of the assembly.
-            </summary><value>The product ID of the assembly.</value></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageAutomationPeer"><summary>
-            Exposes <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageAutomationPeer.WizardPage" /> types to UI Automation.
-            </summary></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageAutomationPeer.GetAutomationControlTypeCore"><summary>
-            Gets the <see cref="T:System.Windows.Automation.Peers.AutomationControlType" /> for the element that is associated with the UI Automation peer.
-            </summary><returns>A <see cref="T:System.Windows.Automation.Peers.AutomationControlType" /> indicating the control type.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageAutomationPeer.GetClassNameCore"><summary>
-            Gets a human readable name that, in addition to <see cref="T:System.Windows.Automation.Peers.AutomationControlType" />, differentiates the control represented by this <see cref="T:System.Windows.Automation.Peers.AutomationPeer" />. 
-            </summary><returns>The string that contains the name.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageAutomationPeer.GetNameCore"><summary>
-            Gets the text string describing the element that is associated with this automation peer. 
-            </summary><returns>The string that contains the name.</returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageAutomationPeer.GetPattern(System.Windows.Automation.Peers.PatternInterface)"><summary>
-            Gets the object that supports the specified control pattern of the element that is associated with this automation peer. 
-            </summary><param name="patternInterface">The <see cref="T:System.Windows.Automation.Peers.PatternInterface" /> to examine.</param><returns>
-            The reference to <c>this</c> instance if the specified pattern is implemented; otherwise, <c>null</c>.
-            </returns></member><member name="M:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageAutomationPeer.#ctor(System.Object,ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardAutomationPeer)"><summary>
-            Initializes an instance of the <c>WizardPageAutomationPeer</c> class.
-            </summary></member><member name="P:ActiproSoftware.Windows.Controls.Wizard.Automation.Peers.WizardPageAutomationPeer.WizardPage"><summary>
-            Gets the <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPage" /> that is wrapped by this UI Automation peer.
-            </summary><value>The <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPage" /> that is wrapped by this UI Automation peer.</value></member><member name="T:ActiproSoftware.Products.Wizard.SRName"><summary>
-            Specifies the names of string resources for this assembly.
-            </summary></member><member name="F:ActiproSoftware.Products.Wizard.SRName.ExItemNotFound"><summary>An exception message string.</summary></member><member name="F:ActiproSoftware.Products.Wizard.SRName.UIButtonBackText"><summary>A user interface string.</summary></member><member name="F:ActiproSoftware.Products.Wizard.SRName.UIButtonCancelText"><summary>A user interface string.</summary></member><member name="F:ActiproSoftware.Products.Wizard.SRName.UIButtonFinishText"><summary>A user interface string.</summary></member><member name="F:ActiproSoftware.Products.Wizard.SRName.UIButtonHelpText"><summary>A user interface string.</summary></member><member name="F:ActiproSoftware.Products.Wizard.SRName.UIButtonNextText"><summary>A user interface string.</summary></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardPageType"><summary>
-            Specifies the type of <see cref="T:ActiproSoftware.Windows.Controls.Wizard.WizardPage" />.
-            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageType.Blank"><summary>
-            Represents a blank page type.
-            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageType.Interior"><summary>
-            Represents an interior page type.
-            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardPageType.Exterior"><summary>
-            Represents an exterior page type.
-            </summary></member></members></doc>
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.Wizard.WizardWindowTitleBehavior"><summary>
+            Specifies the behavior the <see cref="T:ActiproSoftware.Windows.Controls.Wizard.Wizard" /> control will use in regards to 
+            automatically updating the title bar of the containing <see cref="T:System.Windows.Window" />.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardWindowTitleBehavior.None"><summary>
+            Do not modify the containing <see cref="T:System.Windows.Window" /> control's title.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardWindowTitleBehavior.PageTitle"><summary>
+            Displays the text in the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleBaseText" /> property appended by a dash and the
+            text in the current page's <see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardPage.Title" /> property.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardWindowTitleBehavior.PageCaption"><summary>
+            Displays the text in the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleBaseText" /> property appended by a dash and the
+            text in the current page's <see cref="P:ActiproSoftware.Windows.Controls.Wizard.WizardPage.Caption" /> property.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.Wizard.WizardWindowTitleBehavior.Custom"><summary>
+            Displays the text in the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleBaseText" /> property appended by the
+            text in the <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleCustomPageText" /> property, which defaults to <c> - Step {0} of {1}</c>.
+            If using step numbers, this title behavior is only useful for Wizards that do not have multiple execution paths.
+            <para>
+            The <see cref="P:ActiproSoftware.Windows.Controls.Wizard.Wizard.WindowTitleCustomPageText" /> provides numerous format options such as
+            displaying step numbers, page caption or title.  See its help topic for more information.
+            </para></summary></member><member name="T:ActiproSoftware.Windows.Themes.WizardThemeCatalog"><summary>
+            A theme catalog that describes the theme group name implementations and
+            available themed resource dictionaries within this assembly.
+            </summary></member><member name="M:ActiproSoftware.Windows.Themes.WizardThemeCatalog.#ctor"><summary>
+            Initializes a new instance of the <c>WizardThemeCatalog</c> class. 
+            </summary></member><member name="P:ActiproSoftware.Windows.Themes.WizardThemeCatalog.DictionaryReferences"><summary>
+            Gets the collection of <see cref="T:ActiproSoftware.Windows.Themes.ThemedResourceDictionaryReference" /> objects for the assembly.
+            </summary><value>The collection of <see cref="T:ActiproSoftware.Windows.Themes.ThemedResourceDictionaryReference" /> objects for the assembly.</value></member><member name="P:ActiproSoftware.Windows.Themes.WizardThemeCatalog.GroupImplementations"><summary>
+            Gets the collection of group names (e.g. Ribbon, NavigationBar, etc.) that indicates the groups of controls
+            that are implemented in the assembly via procedural code.
+            </summary><value>The collection of group names.</value></member></members></doc>
