@@ -71,7 +71,7 @@ class sqlReplications extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-        this.openCollapsedInvalidElements();
+        this.initializeCollapsedInvalidElements();
 
         this.replications().forEach((replication: sqlReplication) => {
             this.subscribeToSqlReplicationName(replication);
@@ -92,6 +92,7 @@ class sqlReplications extends viewModelBase {
 
         var lastPreElement = $('pre').last().get(0);
         this.initializeAceValidity(lastPreElement);
+        this.initializeCollapsedInvalidElements();
     }
 
     removeSqlReplication(repl: sqlReplication) {
@@ -155,8 +156,8 @@ class sqlReplications extends viewModelBase {
             });
     }
 
-    //show all elements which are collapsed and at least on of its' fields isn't valid.
-    private openCollapsedInvalidElements() {
+    //show all elements which are collapsed and at least one of its' fields isn't valid.
+    private initializeCollapsedInvalidElements() {
         $('input, textarea').bind('invalid', function (e) {
             var element: any = e.target;
             if (!element.validity.valid) {
