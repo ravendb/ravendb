@@ -41,7 +41,7 @@ namespace Raven.Tests.Issues
 				}
 
 
-				//DB that is stored on H.D *should* be unloaded
+				//DB that is stored on H.D should *not* be unloaded
 				Assert.True(tenantRemovedEvent.Wait(TimeSpan.FromMinutes(15)));
 			}
 		}
@@ -67,7 +67,7 @@ namespace Raven.Tests.Issues
 				}
 				
 
-				//DB that is stored on H.D *should* be unloaded
+				//DB that is stored in-memory should* be unloaded
 				Assert.False(tenantRemovedEvent.Wait(TimeSpan.FromMinutes(15)));
 			}			
 		}
