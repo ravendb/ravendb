@@ -29,7 +29,7 @@ interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
 }
 
 interface indexChangeNotificationDto {
-    Type: string;
+    Type: indexChangeType;
     Name: string;
     Etag: string;
 }
@@ -655,6 +655,24 @@ enum documentChangeType {
     BulkInsertStarted = 4,
     BulkInsertEnded = 8,
     BulkInsertError = 16
+}
+
+enum indexChangeType {
+    None = 0,
+
+    MapCompleted = 1,
+    ReduceCompleted = 2,
+    RemoveFromIndex = 4,
+
+    IndexAdded = 8,
+    IndexRemoved = 16,
+
+    IndexDemotedToIdle = 32,
+    IndexPromotedFromIdle = 64,
+
+    IndexDemotedToAbandoned = 128,
+    IndexDemotedToDisabled = 256,
+    IndexMarkedAsErrored =  512
 }
 
 interface filterSettingDto {

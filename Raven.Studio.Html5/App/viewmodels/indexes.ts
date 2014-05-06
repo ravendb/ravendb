@@ -10,6 +10,8 @@ import querySort = require("models/querySort");
 import app = require("durandal/app");
 import resetIndexConfirm = require("viewmodels/resetIndexConfirm");
 import router = require("plugins/router"); 
+import shell = require("viewmodels/shell");
+import changeSubscription = require("models/changeSubscription");
 
 class indexes extends viewModelBase {
 
@@ -18,6 +20,8 @@ class indexes extends viewModelBase {
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     containerSelector = "#indexesContainer";
     recentQueries = ko.observableArray<storedQueryDto>();
+    indexMutex = true;
+
     sortedGroups = ko.computed(()=> {
         var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
 
@@ -27,8 +31,37 @@ class indexes extends viewModelBase {
 
         return groups;
     });
-
     
+    createNotifications(): Array<changeSubscription> {
+        return [ shell.currentDbChangesApi().watchAllIndexes( e => this.processIndexEvent(e)) ];
+    }
+
+    processIndexEvent(e: indexChangeNotificationDto) {
+        if (e.Type == indexChangeType.IndexRemoved) {
+            this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));
+        } else {
+            if (this.indexMutex == true) {
+                this.indexMutex = false;
+                setTimeout(() => {
+                    this.fetchIndexes().always(() => this.indexMutex = true);
+                }, 5000);
+            }
+        }
+    }
+
+    findIndexesByName(indexName: string) {
+        var result = new Array<index>();
+        this.indexGroups().forEach(g => {
+            g.indexes().forEach(i => {
+                if (i.name == indexName) {
+                    result.push(i);
+                }
+            });
+        });
+
+        return result;
+    }
+
     activate(args) {
         super.activate(args);
 
@@ -45,7 +78,7 @@ class indexes extends viewModelBase {
     }
 
     fetchIndexes() {
-        new getDatabaseStatsCommand(this.activeDatabase())
+        return new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
             .done((stats: databaseStatisticsDto) => this.processDbStats(stats));
     }
@@ -86,10 +119,13 @@ class indexes extends viewModelBase {
 
     putIndexIntoGroupNamed(i: index, groupName: string) {
         var group = this.indexGroups.first(g => g.entityName === groupName);
+        var oldIndex: index;
         var indexExists: boolean;
         if (group) {
-            indexExists = !!group.indexes.first((cur: index) => cur.name == i.name);
-            if (!indexExists) {
+            oldIndex = group.indexes.first((cur: index) => cur.name == i.name);
+            if (!!oldIndex) {
+                group.indexes.replace(oldIndex, i);
+            } else {
                 group.indexes.push(i);
             }
         } else {
