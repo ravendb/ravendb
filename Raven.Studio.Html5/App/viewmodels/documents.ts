@@ -32,8 +32,6 @@ class documents extends viewModelBase {
     hasAnyDocumentsSelected: KnockoutComputed<boolean>;
     contextName = ko.observable<string>('');
     currentCollection = ko.observable<collection>();
-    staleView = ko.observable(false);
-    anyDocumentChangeSubscription: changeSubscription;
     currentDBDocChangesSubscription: changeSubscription;
     currentDBBulkInsertSubscription: changeSubscription;
     modelPollingTimeoutFlag: boolean = true;
@@ -107,27 +105,8 @@ class documents extends viewModelBase {
         // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo&database="blahDb"
         this.collectionToSelectName = args ? args.collection : null;
         this.fetchCollections(appUrl.getDatabase());
-        this.bindSubscription();
     }
 
-    bindSubscription() {
-        this.anyDocumentChangeSubscription = shell.currentDbChangesApi().watchAllDocs((e) => {
-            // we use changes here to notify about concurrent change.
-            this.staleView(true);
-            this.anyDocumentChangeSubscription.off();
-        });
-    }
-
-    reloadData() {
-        this.fetchCollections(appUrl.getDatabase());
-        this.staleView(false);
-        if (this.anyDocumentChangeSubscription) {
-            this.anyDocumentChangeSubscription.off();
-        }
-        this.bindSubscription();
-    }
-
-    
     changesApiBulkInsert(e: bulkInsertChangeNotificationDto) {
         if (e.Type == documentChangeType.BulkInsertEnded) {
 
@@ -262,16 +241,7 @@ class documents extends viewModelBase {
     }
 
     selectCollection(collection: collection) {
-
-        if (this.staleView()) {
-            // reload collections
-            this.collectionToSelectName = collection.name;
-            this.reloadData();
-            return;
-        } else {
-            // for stale view collection activation is done in reload data
-            collection.activate();
-        }
+        collection.activate();
         
         var documentsWithCollectionUrl = appUrl.forDocuments(collection.name, this.activeDatabase());
         router.navigate(documentsWithCollectionUrl, false);
