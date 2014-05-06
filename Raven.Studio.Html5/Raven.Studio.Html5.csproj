@@ -217,7 +217,6 @@
     <TypeScriptCompile Include="App\commands\saveSqlReplicationsCommand.ts" />
     <TypeScriptCompile Include="App\viewmodels\scriptedIndexes.ts" />
     <TypeScriptCompile Include="App\models\scriptedIndex.ts" />
-    <TypeScriptCompile Include="App\models\scriptedIndexMap.ts" />
     <TypeScriptCompile Include="App\commands\getScriptedIndexesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getReplicationSourcesCommand.ts" />

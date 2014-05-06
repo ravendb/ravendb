@@ -16,8 +16,8 @@ class sqlReplications extends viewModelBase {
 
     replications = ko.observableArray<sqlReplication>();
     collections = ko.observableArray<string>();
-    isFirstload = ko.observable(true);
-    lastIndex: KnockoutComputed<number>;
+    isFirstLoad = ko.observable(true);
+    firstIndex: KnockoutComputed<number>;
     areAllSqlReplicationsValid: KnockoutComputed<boolean>;
     isSaveEnabled: KnockoutComputed<boolean>;
     loadedSqlReplications = [];
@@ -26,8 +26,8 @@ class sqlReplications extends viewModelBase {
         super();
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
-        this.lastIndex = ko.computed(function () {
-            return this.isFirstload() ? -1 : this.replications().length - 1;
+        this.firstIndex = ko.computed(function () {
+            return !this.isFirstLoad() ? 0 : -1;
         }, this);
     }
 
@@ -56,21 +56,10 @@ class sqlReplications extends viewModelBase {
         });
     }
 
-    attached() {
-        var popOverSettings = {
-            html: true,
-            trigger: 'hover',
-            content: 'Replication scripts use JScript.<br/><br/>The script will be called once for each document in the source document collection, with <span class="code-keyword">this</span> representing the document, and the document id available as <i>documentId</i>.<br/><br/>Call <i>replicateToTableName</i> for each row you want to write to the database.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> orderData = {<br/>   Id: documentId,<br/>   OrderLinesCount: <span class="code-keyword">this</span>.OrderLines.length,<br/>   TotalCost: 0<br/>};<br/><br/>replicateToOrders(\'Id\', orderData);<br/><br/>for (<span class="code-keyword">var</span> i = 0; i &lt; <span class="code-keyword">this</span>.OrderLines.length; i++) {<br/>   <span class="code-keyword">var</span> line = <span class="code-keyword">this</span>.OrderLines[i];<br/>   orderData.TotalCost += line.Cost;<br/>   replicateToOrderLines(\'OrderId\', {"<br/>      OrderId: documentId,<br/>      Qty: line.Quantity,<br/>      Product: line.Product,<br/>      Cost: line.Cost<br/>   });<br/>}</pre>',
-            selector: '.script-label',
-    };
-        $('body').popover(popOverSettings);
-        $('form :input[name="ravenEntityName"]').on("keypress", (e)=> {
-            return e.which != 13;
-        });​
-    }
-
     compositionComplete() {
         super.compositionComplete();
+
+        this.addScriptLabelPopover();
         this.initializeCollapsedInvalidElements();
 
         this.replications().forEach((replication: sqlReplication) => {
@@ -80,13 +69,17 @@ class sqlReplications extends viewModelBase {
         $('pre').each((index, currentPreElement) => {
             this.initializeAceValidity(currentPreElement);
         });
+
+
     }
 
     addNewSqlReplication() {
-        this.isFirstload(false);
+        if (this.isFirstLoad()) {
+            this.isFirstLoad(false);
+        }
         var newSqlReplication: sqlReplication = sqlReplication.empty();
         newSqlReplication.collections = this.collections;
-        this.replications.push(newSqlReplication);
+        this.replications.unshift(newSqlReplication);
         this.subscribeToSqlReplicationName(newSqlReplication);
         $('.in').find('input[name="name"]').focus();
 
@@ -156,7 +149,20 @@ class sqlReplications extends viewModelBase {
             });
     }
 
-    //show all elements which are collapsed and at least one of its' fields isn't valid.
+    private addScriptLabelPopover() {
+        var popOverSettings = {
+            html: true,
+            trigger: 'hover',
+            content: 'Replication scripts use JScript.<br/><br/>The script will be called once for each document in the source document collection, with <span class="code-keyword">this</span> representing the document, and the document id available as <i>documentId</i>.<br/><br/>Call <i>replicateToTableName</i> for each row you want to write to the database.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> orderData = {<br/>   Id: documentId,<br/>   OrderLinesCount: <span class="code-keyword">this</span>.OrderLines.length,<br/>   TotalCost: 0<br/>};<br/><br/>replicateToOrders(\'Id\', orderData);<br/><br/>for (<span class="code-keyword">var</span> i = 0; i &lt; <span class="code-keyword">this</span>.OrderLines.length; i++) {<br/>   <span class="code-keyword">var</span> line = <span class="code-keyword">this</span>.OrderLines[i];<br/>   orderData.TotalCost += line.Cost;<br/>   replicateToOrderLines(\'OrderId\', {"<br/>      OrderId: documentId,<br/>      Qty: line.Quantity,<br/>      Product: line.Product,<br/>      Cost: line.Cost<br/>   });<br/>}</pre>',
+            selector: '.script-label',
+        };
+        $('body').popover(popOverSettings);
+        $('form :input[name="ravenEntityName"]').on("keypress", (e) => {
+            return e.which != 13;
+        });
+    }
+
+    //when pressing the save button, show all elements which are collapsed and at least one of its' fields isn't valid.
     private initializeCollapsedInvalidElements() {
         $('input, textarea').bind('invalid', function (e) {
             var element: any = e.target;

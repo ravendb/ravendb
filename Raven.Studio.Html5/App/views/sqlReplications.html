@@ -1,4 +1,4 @@
-﻿<div>
+﻿<div id="sqlReplications">
     <form id="sqlReplicationsForm" data-bind="submit: saveChanges" class=" form-horizontal" role="form">
         <nav class="navbar navbar-default" role="navigation">
             <div class="collapse navbar-collapse">
@@ -21,8 +21,8 @@
                         </h3>
                     </a>
                 </div>
-                <div data-bind="attr: { 'id': 'sqlRelication' + $index() }, css: { 'collapse': ($index() !== $parent.lastIndex()), 'in': ($index() === $parent.lastIndex()) }" class="panel-collapse collapse">
-                    <div class="panel-body sql-replication-panel-body">
+                <div data-bind="attr: { 'id': 'sqlRelication' + $index() }, css: { 'collapse': ($index() !== $parent.firstIndex()), 'in': ($index() === $parent.firstIndex()) }" class="panel-collapse collapse">
+                    <div class="panel-body">
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Name</label>
                             <div class="col-sm-9">

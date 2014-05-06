@@ -3,23 +3,18 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import scriptedIndex = require("models/scriptedIndex");
-import scriptedIndexMap = require("models/scriptedIndexMap");
 import getScriptedIndexesCommand = require("commands/getScriptedIndexesCommand");
 import saveScriptedIndexesCommand = require("commands/saveScriptedIndexesCommand");
 
 class scriptedIndexes extends viewModelBase {
 
-    selectedIndex = ko.observable<string>();
-    isSaveEnabled: KnockoutComputed<boolean>;
-    scrIndexes = ko.observable<scriptedIndexMap>();
-    scrIndex = ko.observable<scriptedIndex>();
-    isScriptIndexVisible: KnockoutComputed<boolean>;
-    isFirstLoad: boolean = true;
-
     allScriptedIndexes = ko.observableArray<scriptedIndex>();
     activeScriptedIndexes = ko.observableArray<scriptedIndex>().extend({ required: true });
     indexNames = ko.observableArray<string>();
     inactiveIndexNames: KnockoutComputed<Array<string>>;
+    isSaveEnabled: KnockoutComputed<boolean>;
+    firstIndex: KnockoutComputed<number>;
+    isFirstLoad = ko.observable(true);
 
     constructor() {
         super();
@@ -30,6 +25,9 @@ class scriptedIndexes extends viewModelBase {
                 .filter((index: scriptedIndex)=> { return !index.isMarkedToDelete(); })
                 .map((index: scriptedIndex) => index.indexName());
             return this.indexNames().filter((indexName: string) => { return activeIndexNames.indexOf(indexName) < 0; });
+        }, this);
+        this.firstIndex = ko.computed(function () {
+            return !this.isFirstLoad() ? 0 : -1;
         }, this);
     }
 
@@ -51,36 +49,65 @@ class scriptedIndexes extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-        this.isScriptIndexVisible = ko.computed(() => {
-            return this.scrIndex() && !this.scrIndex().isMarkedToDelete();
-        }, this);
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.scrIndexes().activeScriptedIndexes]);
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.activeScriptedIndexes]);
         this.isSaveEnabled = ko.computed(() => {
             return viewModelBase.dirtyFlag().isDirty();
         });
     }
 
-    attached() {
-        var popOverSettings = {
-            html: true,
-            trigger: 'hover',
-            content: 'Index Scripts are written in JScript.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> company = LoadDocument(<span class="code-keyword">this</span>.Company);<br/><span class="code-keyword">if</span>(company == null) <span class="code-keyword">return</span>;<br/>company.Orders = { Count: <span class="code-keyword">this</span>.Count, Total: <span class="code-keyword">this</span>.Total };<br/>PutDocument(<span class="code-keyword">this</span>.Company, company);</pre>',
-            //selector: '.index-script-label'
-            selector: '#indexScriptLabel',
-        };
-        $('body').popover(popOverSettings);
-        var popOverSettings2 = {
-            html: true,
-            trigger: 'hover',
-            content: 'Index Scripts are written in JScript.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> company = LoadDocument(<span class="code-keyword">this</span>.Company);<br/><span class="code-keyword">if</span> (company == null) <span class="code-keyword">return</span>;<br/><span class="code-keyword">delete</span> company.Orders;<br/>PutDocument(<span class="code-keyword">this</span>.Company, company);</pre>',
-            //selector: '.delete-script-label'
-            selector: '#deleteScriptLabel',
-        };
-        $('#scriptedIndex').popover(popOverSettings2);
-        //this.initializeScriptsTextboxes();
+    compositionComplete() {
+        super.compositionComplete();
+
+        this.addScriptsLabelPopover();
+        this.initializeCollapsedInvalidElements();
+
+        $('pre').each((index, currentPreElement) => {
+            var editor: AceAjax.Editor = ko.utils.domData.get(currentPreElement, "aceEditor");
+            var editorValue = editor.getSession().getValue();
+            this.initializeAceValidity(currentPreElement, editorValue);
+        });
     }
 
-    fetchAllIndexes(db): JQueryPromise<any> {
+    createScriptedIndex(indexName: string) {
+        if (this.isFirstLoad()) {
+            this.isFirstLoad(false);
+        }
+        var results = this.allScriptedIndexes().filter((index: scriptedIndex) => { return index.indexName() == indexName; });
+        var activeScriptedIndex: scriptedIndex = results[0];
+        if (activeScriptedIndex) {
+            activeScriptedIndex.cancelDeletion();
+        } else {
+            activeScriptedIndex = scriptedIndex.emptyForIndex(indexName);
+            this.allScriptedIndexes.unshift(activeScriptedIndex);
+        }
+        this.activeScriptedIndexes.unshift(activeScriptedIndex);
+
+        var twoCreatedPreElements = $('.in pre');
+        var editor = ko.utils.domData.get(twoCreatedPreElements[0], "aceEditor");
+        editor.focus();
+
+        twoCreatedPreElements.each((index, preElement) => {
+            this.initializeAceValidity(preElement, "");
+        });
+        this.initializeCollapsedInvalidElements();
+    }
+
+    removeScriptedIndex(scriptedIndexToDelete: scriptedIndex) {
+        this.activeScriptedIndexes.remove(scriptedIndexToDelete);
+        scriptedIndexToDelete.markToDelete();
+    }
+
+    saveChanges() {
+        var db = this.activeDatabase();
+        new saveScriptedIndexesCommand(this.allScriptedIndexes(), db)
+            .execute()
+            .done((result: bulkDocumentDto[]) => {
+                this.updateIndexes(result);
+                viewModelBase.dirtyFlag().reset(); //Resync Changes
+            });
+    }
+
+    private fetchAllIndexes(db): JQueryPromise<any> {
         var deferred = $.Deferred();
         new getDatabaseStatsCommand(db)
             .execute()
@@ -91,121 +118,70 @@ class scriptedIndexes extends viewModelBase {
         return deferred;
     }
 
-    performAllIndexesResult(results: databaseStatisticsDto) {
+    private performAllIndexesResult(results: databaseStatisticsDto) {
         this.indexNames(results.Indexes.map(i => i.PublicName));
     }
 
-    fetchAllScriptedIndexes(db): JQueryPromise<any> {
+    private fetchAllScriptedIndexes(db): JQueryPromise<any> {
         var deferred = $.Deferred();
         new getScriptedIndexesCommand(db)
             .execute()
             .done((indexes: scriptedIndex[])=> {
-                this.performAllScriptedIndexes(indexes);
-
-
                 this.allScriptedIndexes.pushAll(indexes);
                 this.activeScriptedIndexes.pushAll(indexes);
-            //this.activeScriptedIndexes.valueHasMutated();
                 deferred.resolve({ can: true });
             });
         return deferred;
     }
 
-    performAllScriptedIndexes(indexes: scriptedIndex[]) {
-        this.scrIndexes(new scriptedIndexMap(indexes));
-        if (this.indexNames().length > 0) {
-            this.setSelectedIndex(this.indexNames.first());
-        }
+    private addScriptsLabelPopover() {
+        var indexScriptpopOverSettings = {
+            html: true,
+            trigger: 'hover',
+            content: 'Index Scripts are written in JScript.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> company = LoadDocument(<span class="code-keyword">this</span>.Company);<br/><span class="code-keyword">if</span>(company == null) <span class="code-keyword">return</span>;<br/>company.Orders = { Count: <span class="code-keyword">this</span>.Count, Total: <span class="code-keyword">this</span>.Total };<br/>PutDocument(<span class="code-keyword">this</span>.Company, company);</pre>',
+            selector: '.index-script-label',
+        };
+        $('#accordion').popover(indexScriptpopOverSettings);
+        var deleteScriptPopOverSettings = {
+            html: true,
+            trigger: 'hover',
+            content: 'Index Scripts are written in JScript.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> company = LoadDocument(<span class="code-keyword">this</span>.Company);<br/><span class="code-keyword">if</span> (company == null) <span class="code-keyword">return</span>;<br/><span class="code-keyword">delete</span> company.Orders;<br/>PutDocument(<span class="code-keyword">this</span>.Company, company);</pre>',
+            selector: '.delete-script-label',
+
+        };
+        $('#scriptedIndexesForm').popover(deleteScriptPopOverSettings);
     }
 
-    initializeScriptsTextboxes() {
-        //this.addIndexScriptHelpPopover();
-        //this.addDeleteScriptHelpPopover();
-        //this.startupAceEditor();
-    }
-
-    setSelectedIndex(indexName: string) {
-        this.selectedIndex(indexName);
-        this.getIndexForName(indexName);
-    }
-
-    createNewScript() {
-        this.scrIndexes().addEmptyIndex(this.selectedIndex());
-        this.getIndexForName(this.selectedIndex());
-    }
-
-    private getIndexForName(indexName: string) {
-        var index = this.scrIndexes().getIndex(indexName);
-        this.scrIndex(index);
-
-        if (index && !this.isFirstLoad) {
-            this.initializeScriptsTextboxes();
-        } else {
-            this.isFirstLoad = false;
-        }
-    }
-
-    /*startupAceEditor() {
-        // Startup the Ace editor
-        if ($("#indexScriptEditor").length > 0) {
-            ace.edit("indexScriptEditor").focus();
-        }
-        $("#indexScriptEditor").on('keyup', ".ace_text-input", () => {
-            var value = ace.edit("indexScriptEditor").getSession().getValue();
-            this.scrIndex().indexScript(value);
+    //when pressing the save button, show all elements which are collapsed and at least one of its' fields isn't valid.
+    private initializeCollapsedInvalidElements() {
+        $('textarea').bind('invalid', function (e) {
+            var element: any = e.target;
+            if (!element.validity.valid) {
+                var parentElement = $(this).parents('.panel-default');
+                parentElement.children('.collapse').collapse('show');
+            }
         });
-        $("#deleteScriptEditor").on('keyup', ".ace_text-input", () => {
-            var value = ace.edit("deleteScriptEditor").getSession().getValue();
-            this.scrIndex().deleteScript(value);
-        });
-    }*/
+    }
 
-    saveChanges() {
-        new saveScriptedIndexesCommand(this.scrIndexes(), this.activeDatabase())
-            .execute()
-            .done((result: bulkDocumentDto[]) => {
-                this.updateIndexes(result);
-                
-                viewModelBase.dirtyFlag().reset(); //Resync Changes
-        });
+    private initializeAceValidity(element: Element, editorValue: string) {
+        if (editorValue === "") {
+            var textarea: any = $(element).find('textarea')[0];
+            textarea.setCustomValidity("Please fill out this field.");
+        }
     }
 
     private updateIndexes(serverIndexes: bulkDocumentDto[]) {
-        this.scrIndexes().getIndexes().forEach(index => {
+        for (var i = 0; i < this.allScriptedIndexes().length; i++) {
+            var index = this.allScriptedIndexes()[i];
             var serverIndex = serverIndexes.first(k => k.Key === index.getId());
             if (serverIndex && !serverIndex.Deleted) {
                 index.__metadata.etag = serverIndex.Etag;
                 index.__metadata.lastModified = serverIndex.Metadata['Last-Modified'];
             }
-            else if (serverIndex && serverIndex.Deleted) { //remove mark to deleted indexes
-                this.scrIndexes().deleteMarkToDeletedIndex(serverIndex.Key);
+            else if (serverIndex && serverIndex.Deleted) { //remove mark to deleted index
+                this.allScriptedIndexes().splice(i--, 1);
             }
-        });
-    }
-
-    deleteScriptedIndex() {
-        this.scrIndexes().removeIndex(this.selectedIndex());
-        this.getIndexForName(this.selectedIndex());
-    }
-
-
-
-
-    createScriptedIndex(indexName: string) {
-        var results = this.allScriptedIndexes().filter((index: scriptedIndex) => { return index.indexName() == indexName; });
-        var activeScriptedIndex: scriptedIndex = results[0];
-        if (activeScriptedIndex) {
-            activeScriptedIndex.cancelDeletion();
-
-        } else {
-            activeScriptedIndex = scriptedIndex.emptyForIndex(indexName);
-            this.allScriptedIndexes.push(activeScriptedIndex);
-            this.activeScriptedIndexes.push(activeScriptedIndex);
         }
-    }
-
-    removeScriptedIndex(scriptedIndexToDelete: scriptedIndex) {
-        scriptedIndexToDelete.markToDelete();
     }
 }
 

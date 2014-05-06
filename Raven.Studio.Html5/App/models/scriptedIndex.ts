@@ -1,5 +1,6 @@
 import document = require("models/document");
 import documentMetadata = require("models/documentMetadata");
+import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class scriptedIndex extends document {
 
@@ -16,6 +17,9 @@ class scriptedIndex extends document {
         this.indexName(scriptedIndexName);
         this.indexScript(dto.IndexScript);
         this.deleteScript(dto.DeleteScript);
+
+        this.subscribeToObservable(this.indexScript);
+        this.subscribeToObservable(this.deleteScript);
     }
 
     static emptyForIndex(indexName: string): scriptedIndex {
@@ -50,6 +54,36 @@ class scriptedIndex extends document {
 
     isMarkedToDelete(): boolean {
         return this.deleteLater();
+    }
+
+    private subscribeToObservable(observable) {
+        observable.subscribe((newValue) => {
+            var message = "";
+            var currentEditor = aceEditorBindingHandler.currentEditor;
+            if (currentEditor != undefined) {
+                var textarea: any = $(currentEditor.container).find('textarea')[0];
+
+                if (newValue === "") {
+                    message = "Please fill out this field.";
+                }
+                textarea.setCustomValidity(message);
+                setTimeout(()=> {
+                    var annotations = currentEditor.getSession().getAnnotations();
+                    var isErrorExists = false;
+                    for (var i = 0; i < annotations.length; i++) {
+                        var annotationType = annotations[i].type;
+                        if (annotationType === "error" || annotationType === "warning") {
+                            isErrorExists = true;
+                            break;
+                        }
+                    }
+                    if (isErrorExists) {
+                        message = "The script isn't a javascript legal expression!";
+                        textarea.setCustomValidity(message);
+                    }
+                }, 700);
+            }
+        });
     }
 }
 
