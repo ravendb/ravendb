@@ -220,5 +220,43 @@ namespace Raven.Tests.Core.Querying
                 }
             }
         }
+
+        [Fact]
+        public void CanDoSearchBoosting()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Users_ByName().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User 
+                    {
+                        Name = "Bob",
+                        LastName = "LastName"
+                    });
+                    session.Store(new User
+                    {
+                        Name = "Name",
+                        LastName = "LastName"
+                    });
+                    session.Store(new User
+                    {
+                        Name = "Name",
+                        LastName = "Bob"
+                    });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+
+                    var users = session.Query<User, Users_ByName>()
+                        .Where(x => x.Name == "Bob" || x.LastName == "Bob")
+                        .ToArray();
+
+                    Assert.Equal(2, users.Length);
+                    Assert.Equal("Name", users[0].Name);
+                    Assert.Equal("Bob", users[1].Name);
+                }
+            }
+        }
 	}
 }
