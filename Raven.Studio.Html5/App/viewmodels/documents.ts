@@ -17,8 +17,6 @@ import customColumns = require('models/customColumns');
 import selectColumns = require('viewmodels/selectColumns');
 import changeSubscription = require('models/changeSubscription');
 import changesApi = require("common/changesApi");
-import changeSubscription = require('models/changeSubscription');
-import shell = require("viewmodels/shell");
 
 class documents extends viewModelBase {
 

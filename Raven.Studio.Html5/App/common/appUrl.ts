@@ -121,55 +121,55 @@ class appUrl {
     }
 
     static forStatusDebug(db: database): string {
-        return "#status/debug?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/debug?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebugChanges(db: database): string {
-        return "#status/debug?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/debug?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebugMetrics(db: database): string {
-        return "#status/debug/metrics?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/debug/metrics?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebugConfig(db: database): string {
-        return "#status/debug/config?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/debug/config?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebugDocrefs(db: database): string {
-        return "#status/debug/docrefs?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/debug/docrefs?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebugCurrentlyIndexing(db: database): string {
-        return "#status/debug/currentlyIndexing?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/debug/currentlyIndexing?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebugQueries(db: database): string {
-        return "#status/debug/queries?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/debug/queries?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebugTasks(db: database): string {
-        return "#status/debug/tasks?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/debug/tasks?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebugRoutes(db): string {
-        return "#status/debug/routes?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/debug/routes?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebugRequestTracing(db): string {
-        return "#status/debug/requestTracing?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/debug/requestTracing?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebugSqlReplication(db: database): string {
-        return "#status/debug/sqlReplication?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/debug/sqlReplication?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebugIndexFields(db: database): string {
-        return "#status/debug/indexFields?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/debug/indexFields?" + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusDebugSlowDocCounts(db: database): string {
-        return "#status/debug/slowDocCounts?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/debug/slowDocCounts?" + appUrl.getEncodedDbPart(db);
     }
 
     static forSettings(db: database): string {

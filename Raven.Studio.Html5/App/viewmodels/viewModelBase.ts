@@ -65,32 +65,15 @@ class viewModelBase {
     * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
     */
     activate(args) {
+
         this.localStorageUploadQueueKey = "ravenFs-uploadQueue.";
         var db = appUrl.getDatabase();
         var currentDb = this.activeDatabase();
         if (!!db && db !== null && (!currentDb || currentDb.name !== db.name)) {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
         }
-
         this.notifications = this.createNotifications();
 
-        this.modelPollingStart();
-
-        window.onbeforeunload = (e: any) => {
-            this.saveInObservable();
-            var isDirty = viewModelBase.dirtyFlag().isDirty();
-            if (isDirty) {
-                var message = "You have unsaved data.";
-                e = e || window.event;
-                // For IE and Firefox
-                if (e) {
-                    e.returnValue = message;
-                }
-                // For Safari
-                return message;
-            }
-            return null;
-        };
         var fs = appUrl.getFilesystem();
         var currentFilesystem = this.activeFilesystem();
         if (!currentFilesystem || currentFilesystem.name !== fs.name) {
@@ -98,7 +81,7 @@ class viewModelBase {
         }
 
         this.modelPollingStart();
-		window.onbeforeunload = (e: any) => this.beforeUnload(e);        ko.postbox.publish("SetRawJSONUrl", "");
+        window.onbeforeunload = (e: any) => this.beforeUnload(e); ko.postbox.publish("SetRawJSONUrl", "");
     }
 
     // Called back after the entire composition has finished (parents and children included)

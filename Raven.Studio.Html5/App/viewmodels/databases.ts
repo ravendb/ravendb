@@ -13,8 +13,6 @@ import createEncryptionConfirmation = require("viewmodels/createEncryptionConfir
 import changesApi = require('common/changesApi');
 import shell = require('viewmodels/shell');
 import changeSubscription = require('models/changeSubscription');
-import changeSubscription = require('models/changeSubscription');
-import shell = require('viewmodels/shell');
 
 class databases extends viewModelBase {
 
@@ -38,12 +36,6 @@ class databases extends viewModelBase {
     // Override canActivate: we can always load this page, regardless of any system db prompt.
     canActivate(args: any): any {
         return true;
-    }
-
-    createNotifications(): Array<changeSubscription> {
-        return [
-            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.reloadDatabases())
-        ];
     }
 
     attached() {
