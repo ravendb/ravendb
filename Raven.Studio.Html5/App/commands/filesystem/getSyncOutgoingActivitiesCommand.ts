@@ -59,12 +59,12 @@ class getSyncOutgoingActivitiesCommand extends commandBase {
 
     getPendingActivity(skip: number, take: number): JQueryPromise<filesystemListPageDto<filesystemSynchronizationDetailsDto>> {
         var pendingUrl = "/synchronization/pending";
-        return this.query<filesystemListPageDto<filesystemSynchronizationDetailsDto>>(pendingUrl, { start: 0, pageSize: 1 }, this.fs, x => <filesystemListPageDto<filesystemSynchronizationDetailsDto>>x);
+        return this.query<filesystemListPageDto<filesystemSynchronizationDetailsDto>>(pendingUrl, { start: skip, pageSize: take }, this.fs, x => <filesystemListPageDto<filesystemSynchronizationDetailsDto>>x);
     }
 
     getActiveActivity(skip: number, take: number): JQueryPromise<filesystemListPageDto<filesystemSynchronizationDetailsDto>> {
         var activeUrl = "/synchronization/active";
-        return this.query<filesystemListPageDto<filesystemSynchronizationDetailsDto>>(activeUrl, { start: 0, pageSize: 1 }, this.fs, x => <filesystemListPageDto<filesystemSynchronizationDetailsDto>>x);
+        return this.query<filesystemListPageDto<filesystemSynchronizationDetailsDto>>(activeUrl, { start: skip, pageSize: take }, this.fs, x => <filesystemListPageDto<filesystemSynchronizationDetailsDto>>x);
     }
 }
 

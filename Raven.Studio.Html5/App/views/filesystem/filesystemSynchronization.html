@@ -117,11 +117,9 @@
                     </h4>
                 </div>
                 <div class="synchronization-group-content panel-collapse in" data-bind="attr: { id: 'outgoingActivityCollapse' }" id="outgoingActivityCollapse">
-                    <div class="panel panel-default" style="overflow: visible;">
                         <div class="panel-body">
-                            <div id="outgoingGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: outgoingActivityPagedList, gridSelector: '#outgoingGrid', contextMenuOptions: [], selectionEnabled: false }"></div>
+                            <div id="outgoingGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: outgoingActivityPagedList, maxHeight: '350px', gridSelector: '#outgoingGrid', contextMenuOptions: [], selectionEnabled: false }"></div>
                         </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -132,17 +130,20 @@
                     <h4 class="panel-title">
                         <a data-toggle="collapse" data-bind="attr: { href: '#incomingActivityCollapse' }">
                             <span>Incoming Activity</span>
-                            <span class="text-muted" data-bind="text: '(' + incomingActivityPagedList().totalResultCount() + ')'"></span>
+                            <!--<!-- ko if: incomingActivityPagedList().totalResultCount() < 50 -->
+                                <span class="text-muted" data-bind="text: '(' + incomingActivityPagedList().totalResultCount() + ')'"></span>
+                            <!--<!-- /ko -->
+                            <!--<!-- ko if: incomingActivityPagedList().totalResultCount() >= 50 -->
+                                <!--<span class="text-muted" data-bind="text: '(last ' + incomingActivityPagedList().totalResultCount() + ')'"></span>-->
+                            <!-- /ko -->
                         </a>
                     </h4>
                 </div>
 
                 <div class="synchronization-group-content panel-collapse in" data-bind="attr: { id: 'incomingActivityCollapse' }" id="incomingActivityCollapse">
-                    <div class="panel panel-default" style="overflow: visible;">
                         <div class="panel-body">
-                            <div id="incomingGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: incomingActivityPagedList, gridSelector: '#incomingGrid', contextMenuOptions: [], selectionEnabled: false }"></div>
+                            <div id="incomingGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: incomingActivityPagedList, maxHeight: '350px', gridSelector: '#incomingGrid', contextMenuOptions: [], selectionEnabled: false }"></div>
                         </div>
-                    </div>
                 </div>
             </div>
         </div>

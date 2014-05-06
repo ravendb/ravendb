@@ -495,9 +495,13 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			Storage.Batch(accessor =>
 			{
 				var configs = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.SyncResultNamePrefix,
-																 Paging.PageSize * Paging.Start, Paging.PageSize);
+                                                                 Paging.Start, Paging.PageSize);
+                int totalCount = 0;
+                accessor.GetConfigNamesStartingWithPrefix(RavenFileNameHelper.SyncResultNamePrefix,
+                                                                 Paging.Start, Paging.PageSize, out totalCount);
+
 				var reports = configs.Select(config => config.JsonDeserialization<SynchronizationReport>()).ToList();
-				page = new ListPage<SynchronizationReport>(reports, reports.Count);
+                page = new ListPage<SynchronizationReport>(reports, totalCount);
 			});
 
             return this.GetMessageWithObject(page, HttpStatusCode.OK);
@@ -508,7 +512,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public HttpResponseMessage Active()
 		{
             var result = new ListPage<SynchronizationDetails>(SynchronizationTask.Queue.Active
-                                                                                       .Skip(Paging.PageSize * Paging.Start)
+                                                                                       .Skip(Paging.Start)
                                                                                        .Take(Paging.PageSize), 
                                                               SynchronizationTask.Queue.GetTotalActiveTasks());
 
@@ -520,7 +524,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		public HttpResponseMessage Pending()
 		{
             var result = new ListPage<SynchronizationDetails>(SynchronizationTask.Queue.Pending
-                                                                                       .Skip(Paging.PageSize * Paging.Start)
+                                                                                       .Skip(Paging.Start)
                                                                                        .Take(Paging.PageSize),
 											                  SynchronizationTask.Queue.GetTotalPendingTasks());
 
