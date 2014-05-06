@@ -15,6 +15,7 @@ import savePatch = require('viewmodels/savePatch');
 import loadPatch = require('viewmodels/loadPatch');
 import savePatchCommand = require('commands/savePatchCommand');
 import executeBulkDocsCommand = require("commands/executeBulkDocsCommand");
+import virtualTable = require("widgets/virtualTable/viewModel");
 
 class patch extends viewModelBase {
 
@@ -31,6 +32,10 @@ class patch extends viewModelBase {
     afterPatch = ko.observable<string>();
 
     isExecuteAllowed: KnockoutComputed<boolean>;
+    documentKey = ko.observable<string>();
+    keyOfTestedDocument: KnockoutComputed<string>;
+
+    static gridSelector = "#matchingDocumentsGrid";
 
     constructor() {
         super();
@@ -41,6 +46,27 @@ class patch extends viewModelBase {
     activate() {
         this.patchDocument(patchDocument.empty());
         this.isExecuteAllowed = ko.computed(() => ((this.patchDocument().script()) && (this.beforePatch())) ? true : false);
+        this.keyOfTestedDocument = ko.computed(() => {
+            switch (this.patchDocument().patchOnOption()) {
+                case "Collection":
+                case "Index":
+                    return this.documentKey();
+                case "Document":
+                    return this.patchDocument().selectedItem();
+            }
+        });
+        this.selectedDocumentIndices.subscribe(list => {
+            var firstCheckedOnList = list.last();
+            if (firstCheckedOnList != null) {
+                this.currentCollectionPagedItems().getNthItem(firstCheckedOnList)
+                    .done(document => {
+                        this.documentKey(document.__metadata.id);
+                        this.beforePatch(JSON.stringify(document.toDto(), null, 4));
+                    });
+            } else {
+                this.clearDocumentPreview();
+            }
+        });
     }
 
     loadDocumentToPatch(selectedItem: string) {
@@ -118,7 +144,6 @@ class patch extends viewModelBase {
             this.currentCollectionPagedItems(resultsList);
             return resultsList;
         }
-
         return null;
     }
 
@@ -147,7 +172,7 @@ class patch extends viewModelBase {
         });
         var bulkDocs: Array<bulkDocumentDto> = [];
         bulkDocs.push({
-            Key: this.patchDocument().selectedItem(),
+            Key: this.keyOfTestedDocument(),
             Method: 'EVAL',
             DebugMode: true,
             Patch: {
@@ -161,25 +186,41 @@ class patch extends viewModelBase {
                 var testResult = new document(result[0].AdditionalData['Document']);
                 this.afterPatch(JSON.stringify(testResult.toDto(), null, 4));
             })
-            .fail((result: JQueryXHR) => console.log(result.responseText))
+            .fail((result: JQueryXHR) => console.log(result.responseText));
     }
 
-    executePatch() {
+    executePatchOnSingle() {
+        var keys = [];
+        keys.push(this.patchDocument().selectedItem());
+        this.executePatch(keys);
+    }
+
+    executePatchOnSelected() {
+        this.executePatch(this.getDocumentsGrid().getSelectedItems().map(doc => doc.__metadata.id));
+    }
+
+    executePatchOnAll() {
+        this.executePatch(this.currentCollectionPagedItems().getAllCachedItems().map(doc => doc.__metadata.id));
+    }
+
+    private executePatch(keys: string[]) {
         var values = {};
         var patchDtos = this.patchDocument().parameters().map(param => {
             var dto = param.toDto();
             values[dto.Key] = dto.Value;
         });
         var bulkDocs: Array<bulkDocumentDto> = [];
-        bulkDocs.push({
-            Key: this.patchDocument().selectedItem(),
-            Method: 'EVAL',
-            DebugMode: false,
-            Patch: {
-                Script: this.patchDocument().script(),
-                Values: values
-            }
-        });
+        keys.forEach(
+            key => bulkDocs.push({
+                Key: key,
+                Method: 'EVAL',
+                DebugMode: false,
+                Patch: {
+                    Script: this.patchDocument().script(),
+                    Values: values
+                }
+            })
+        );
         new executeBulkDocsCommand(bulkDocs, this.activeDatabase())
             .execute()
             .done((result: bulkDocumentDto[]) => {
@@ -187,6 +228,15 @@ class patch extends viewModelBase {
                 this.loadDocumentToPatch(this.patchDocument().selectedItem());
             })
             .fail((result: JQueryXHR) => console.log(result.responseText))
+    }
+
+    getDocumentsGrid(): virtualTable {
+        var gridContents = $(patch.gridSelector).children()[0];
+        if (gridContents) {
+            return ko.dataFor(gridContents);
+        }
+
+        return null;
     }
 }
 

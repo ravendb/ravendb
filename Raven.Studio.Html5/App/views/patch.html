@@ -25,11 +25,11 @@
             <button class="btn btn-default use-bootstrap-tooltip" title="Load a saved Patch" data-bind="click: loadPatch"><i class="fa fa-arrow-up"></i> Load</button>
         </div>
         <div class="btn-group" data-bind="visible: patchDocument().isDocumentPatch()">
-            <button class="btn btn-default use-bootstrap-tooltip" title="Execute Patch" data-bind="click: executePatch, enable: isExecuteAllowed"><i class="fa fa-play"></i> Patch</button>
+            <button class="btn btn-default use-bootstrap-tooltip" title="Execute Patch" data-bind="click: executePatchOnSingle, enable: isExecuteAllowed"><i class="fa fa-play"></i> Patch</button>
         </div>
         <div class="btn-group" data-bind="visible: patchDocument().isCollectionPatch() || patchDocument().isIndexPatch()">
-            <button class="btn btn-default use-bootstrap-tooltip" title="Patch just the selected documents" data-bind="enable: isExecuteAllowed" ><i class="fa fa-play"></i> Patch Selected</button>
-            <button class="btn btn-default use-bootstrap-tooltip" title="Patch all matching documents" data-bind="enable: isExecuteAllowed"><i class="fa fa-forward"></i> Patch All</button>
+            <button class="btn btn-default use-bootstrap-tooltip" title="Patch just the selected documents" data-bind="click: executePatchOnSelected, enable: isExecuteAllowed" ><i class="fa fa-play"></i> Patch Selected</button>
+            <button class="btn btn-default use-bootstrap-tooltip" title="Patch all matching documents" data-bind="click: executePatchOnAll"><i class="fa fa-forward"></i> Patch All</button>
         </div>
     </div>
     <br/>
@@ -154,7 +154,8 @@
                 </div>
             </div>
         </div>
-        <div class="form-group" data-bind="visible: isCollectionPatch() || isIndexPatch()">
+        <!--div class="form-group" data-bind="visible: isCollectionPatch() || isIndexPatch()"-->
+        <div class="form-group">
             <div class="col-md-12">
                 <div>
                     <label>Matching Documents</label>
@@ -190,5 +191,5 @@
                 </div>
             </div>
         </div>
-    </div>
+    </!--div>
 </div>
