@@ -102,8 +102,6 @@ namespace Raven.Database.Storage.Voron.Impl
 				public const string ByView = "by_view";
 
 				public const string ByViewAndLevelAndReduceKey  = "by_view_and_level_and_reduce_key";
-
-				public const string ByViewAndLevel = "by_view_and_level";
 			}
 		}
 
@@ -178,6 +176,11 @@ namespace Raven.Database.Storage.Voron.Impl
 		public class ReduceStats
 		{
 			public const string TableName = "reduce_stats";
+		}
+
+		public class IndexingMetadata
+		{
+			public const string TableName = "indexing_metadata";
 		}
 	}
 }

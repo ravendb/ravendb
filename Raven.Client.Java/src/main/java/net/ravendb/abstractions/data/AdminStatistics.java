@@ -2,16 +2,21 @@ package net.ravendb.abstractions.data;
 
 import java.util.List;
 
-
 public class AdminStatistics {
   private String serverName;
-  private String clusterName;
-
   private int totalNumberOfRequests;
   private long uptime;
   private AdminMemoryStatistics memory;
-
   private List<LoadedDatabaseStatistics> loadedDatabases;
+  private List<FileSystemStats> loadedFileSystems;
+
+  public List<FileSystemStats> getLoadedFileSystems() {
+    return loadedFileSystems;
+  }
+
+  public void setLoadedFileSystems(List<FileSystemStats> loadedFileSystems) {
+    this.loadedFileSystems = loadedFileSystems;
+  }
 
   public String getServerName() {
     return serverName;
@@ -19,14 +24,6 @@ public class AdminStatistics {
 
   public void setServerName(String serverName) {
     this.serverName = serverName;
-  }
-
-  public String getClusterName() {
-    return clusterName;
-  }
-
-  public void setClusterName(String clusterName) {
-    this.clusterName = clusterName;
   }
 
   public int getTotalNumberOfRequests() {

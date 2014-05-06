@@ -5,6 +5,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
 import database = require("models/database");
 import saveApiKeysCommand = require("commands/saveApiKeysCommand");
+import databaseAccess = require("models/databaseAccess");
 
 class apiKeys extends viewModelBase {
 

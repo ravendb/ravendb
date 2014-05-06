@@ -27,7 +27,7 @@ public class CanIndexReferencedEntityTest extends RemoteClientTest {
         session.saveChanges();
       }
       try (IDocumentSession session = store.openSession()) {
-        Item item = session.advanced().luceneQuery(Item.class, "test")
+        Item item = session.advanced().documentQuery(Item.class, "test")
           .waitForNonStaleResults()
           .whereEquals("RefName", "ayende")
           .single();
@@ -56,7 +56,7 @@ public class CanIndexReferencedEntityTest extends RemoteClientTest {
       }
 
       try (IDocumentSession session = store.openSession()) {
-        Item item = session.advanced().luceneQuery(Item.class, "test")
+        Item item = session.advanced().documentQuery(Item.class, "test")
           .waitForNonStaleResults(5 * 60 * 1000)
           .whereEquals("RefName", "arava")
           .single();
@@ -86,7 +86,7 @@ public class CanIndexReferencedEntityTest extends RemoteClientTest {
       }
 
       try (IDocumentSession session = store.openSession()) {
-        Item item = session.advanced().luceneQuery(Item.class, "test")
+        Item item = session.advanced().documentQuery(Item.class, "test")
           .waitForNonStaleResults()
           .whereEquals("RefName", "arava")
           .single();
@@ -115,7 +115,7 @@ public class CanIndexReferencedEntityTest extends RemoteClientTest {
       }
 
       try (IDocumentSession session = store.openSession()) {
-        Item item = session.advanced().luceneQuery(Item.class, "test")
+        Item item = session.advanced().documentQuery(Item.class, "test")
           .waitForNonStaleResults(5 * 60 * 1000)
           .whereEquals("RefNameNotNull", false)
           .single();
@@ -150,7 +150,7 @@ public class CanIndexReferencedEntityTest extends RemoteClientTest {
       waitForNonStaleIndexes(store.getDatabaseCommands());
 
       try (IDocumentSession session = store.openSession()) {
-        Item item = session.advanced().luceneQuery(Item.class, "test")
+        Item item = session.advanced().documentQuery(Item.class, "test")
           .waitForNonStaleResults()
           .whereEquals("RefName", "Rahien")
           .single();
@@ -176,7 +176,7 @@ public class CanIndexReferencedEntityTest extends RemoteClientTest {
       }
 
       try (IDocumentSession session = store.openSession()) {
-        Item item = session.advanced().luceneQuery(Item.class, "test")
+        Item item = session.advanced().documentQuery(Item.class, "test")
           .waitForNonStaleResults()
           .whereEquals("RefName", "Ayende")
           .single();
@@ -206,7 +206,7 @@ public class CanIndexReferencedEntityTest extends RemoteClientTest {
       waitForNonStaleIndexes(store.getDatabaseCommands());
 
       try (IDocumentSession session = store.openSession()) {
-        Item item = session.advanced().luceneQuery(Item.class, "test")
+        Item item = session.advanced().documentQuery(Item.class, "test")
           .waitForNonStaleResults()
           .whereEquals("RefName", "Ayende")
           .single();

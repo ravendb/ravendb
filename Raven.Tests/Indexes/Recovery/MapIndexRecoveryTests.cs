@@ -12,6 +12,8 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Indexes.Recovery
@@ -32,7 +34,12 @@ namespace Raven.Tests.Indexes.Recovery
 			configuration.MaxIndexCommitPointStoreTimeInterval = TimeSpan.MaxValue;
 		}
 
-		[Fact]
+	    protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+	    {
+	        configuration.DefaultStorageTypeName = "esent";
+	    }
+
+	    [Fact]
 		public void ShouldCreateCommitPointsForMapIndexes()
 		{
 			var index = new MapRecoveryTestIndex();

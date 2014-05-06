@@ -32,9 +32,7 @@ namespace Raven.Client.Document
     public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
                                    ISyncAdvancedSessionOperation, IDocumentQueryGenerator
     {
-        private readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
-        private readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
-
+ 
         /// <summary>
         /// Gets the database commands.
         /// </summary>
@@ -343,25 +341,7 @@ namespace Raven.Client.Document
             return new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
         }
 
-        internal object ProjectionToInstance(RavenJObject y, Type type)
-        {
-            HandleInternalMetadata(y);
-            foreach (var conversionListener in theListeners.ExtendedConversionListeners)
-            {
-                conversionListener.BeforeConversionToEntity(null, y, null);
-            }
-            var instance = y.Deserialize(type, Conventions);
-            foreach (var conversionListener in theListeners.ConversionListeners)
-            {
-                conversionListener.DocumentToEntity(null, instance, y, null);
-            }
-            foreach (var conversionListener in theListeners.ExtendedConversionListeners)
-            {
-                conversionListener.AfterConversionToEntity(null, y, null, instance);
-            }
-            return instance;
-        }
-
+      
 
         public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
         {
@@ -461,11 +441,19 @@ namespace Raven.Client.Document
             value.ETag = jsonDocument.Etag;
             value.OriginalValue = jsonDocument.DataAsJson;
             var newEntity = ConvertToEntity(typeof(T),value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
-            foreach (var property in entity.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            var type = entity.GetType();
+            foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
-                if (!property.CanWrite || !property.CanRead || property.GetIndexParameters().Length != 0)
+                var prop = property;
+                if (prop.DeclaringType != type && prop.DeclaringType != null)
+                {
+                    prop = prop.DeclaringType.GetProperty(prop.Name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    if (prop == null)
+                        prop = property; // shouldn't happen ever...
+                }
+                if (!prop.CanWrite || !prop.CanRead || prop.GetIndexParameters().Length != 0)
                     continue;
-                property.SetValue(entity, property.GetValue(newEntity, null), null);
+                prop.SetValue(entity, prop.GetValue(newEntity, null), null);
             }
         }
 
@@ -591,7 +579,8 @@ namespace Raven.Client.Document
                 throw new NotSupportedException(
                     "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
 
-            var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
+			IncrementRequestCount(); 
+			var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
             return YieldQuery(query, enumerator);
         }
 
@@ -640,12 +629,14 @@ namespace Raven.Client.Document
 
         public FacetResults[] MultiFacetedSearch(params FacetQuery[] facetQueries)
         {
-            return DatabaseCommands.GetMultiFacets(facetQueries);
+			IncrementRequestCount(); 
+			return DatabaseCommands.GetMultiFacets(facetQueries);
         }
 
         private IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation)
         {
-            using (var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation))
+			IncrementRequestCount();
+			using (var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation))
             {
                 while (enumerator.MoveNext())
                 {
@@ -665,6 +656,8 @@ namespace Raven.Client.Document
         /// <summary>
         /// Saves all the changes to the Raven server.
         /// </summary>
+       
+
         public void SaveChanges()
         {
             using (EntityToJson.EntitiesToJsonCachingScope())
@@ -672,7 +665,7 @@ namespace Raven.Client.Document
                 var data = PrepareForSaveChanges();
 
                 if (data.Commands.Count == 0)
-                    return; // nothing to do here
+                    return;
                 IncrementRequestCount();
                 LogBatch(data);
 
@@ -763,11 +756,8 @@ namespace Raven.Client.Document
         /// <typeparam name="T">The result of the query</typeparam>
         public IRavenQueryable<T> Query<T>()
         {
-            var indexName = "dynamic";
-            if (typeof(T).IsEntityType())
-            {
-                indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-            }
+            var indexName =   CreateDynamicIndexName<T>();
+           
             return Query<T>(indexName);
         }
 
@@ -785,13 +775,11 @@ namespace Raven.Client.Document
         /// </summary>
         public IDocumentQuery<T> DocumentQuery<T>()
         {
-            string indexName = "dynamic";
-            if (typeof(T).IsEntityType())
-            {
-                indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-            }
+            var indexName = CreateDynamicIndexName<T>();
             return Advanced.DocumentQuery<T>(indexName);
         }
+
+       
 
         /// <summary>
         /// Create a new query for <typeparam name="T"/>
@@ -884,7 +872,7 @@ namespace Raven.Client.Document
 
         private bool ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation)
         {
-            var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
+			var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
             try
             {
                 if (DatabaseCommands is ServerClient) // server mode
@@ -952,6 +940,7 @@ namespace Raven.Client.Document
 
         public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null)
         {
+			IncrementRequestCount();
             return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude, pagingInformation: pagingInformation)
                                    .Select(TrackEntity<T>)
                                    .ToArray();
@@ -963,6 +952,7 @@ namespace Raven.Client.Document
 	                                                             Action<ILoadConfiguration> configure = null)
 		    where TTransformer : AbstractTransformerCreationTask, new()
 	    {
+			IncrementRequestCount();
 		    var transformer = new TTransformer().TransformerName;
 
 			var configuration = new RavenLoadConfiguration();
@@ -980,6 +970,7 @@ namespace Raven.Client.Document
 
 	    public Lazy<TResult[]> MoreLikeThis<TResult>(MoreLikeThisQuery query)
         {
+			IncrementRequestCount();
             var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, null, null);
             var lazyOp = new LazyMoreLikeThisOperation<TResult>(multiLoadOperation, query);
             return AddLazyOperation<TResult[]>(lazyOp, null);

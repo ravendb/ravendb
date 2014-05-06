@@ -2,6 +2,8 @@ using System.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Tests.Bugs.LiveProjections;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Indexes

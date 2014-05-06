@@ -8,7 +8,7 @@ import copyDocuments = require("viewmodels/copyDocuments");
 import document = require("models/document");
 
 class logs extends viewModelBase {
-
+    
     allLogs = ko.observableArray<logDto>();
     filterLevel = ko.observable("All");
     selectedLog = ko.observable<logDto>();
@@ -21,6 +21,7 @@ class logs extends viewModelBase {
     searchTextThrottled: KnockoutObservable<string>;
     now = ko.observable<Moment>();
     updateNowTimeoutHandle = 0;
+    filteredLoggers = ko.observableArray<string>();
 
     constructor() {
         super();
@@ -59,10 +60,12 @@ class logs extends viewModelBase {
         var now = moment();
         results.forEach(r => {
             r['TimeStampText'] = this.createHumanReadableTime(r.TimeStamp);
-            r['IsVisible'] = ko.computed(() => this.matchesFilterAndSearch(r));
+            r['IsVisible'] = ko.computed(() => this.matchesFilterAndSearch(r) && !this.filteredLoggers.contains(r.LoggerName));
         });
         this.allLogs(results.reverse());
     }
+
+    
 
     matchesFilterAndSearch(log: logDto) {
         var searchTextThrottled = this.searchTextThrottled().toLowerCase();
@@ -116,6 +119,10 @@ class logs extends viewModelBase {
         }
     }
 
+    showContextMenu() {
+        //alert("this");
+    }
+
     ensureRowVisible(row: JQuery) {
         var table = $("#logTableContainer");
         var scrollTop = table.scrollTop();
@@ -161,6 +168,19 @@ class logs extends viewModelBase {
         this.now(moment());
         this.updateNowTimeoutHandle = setTimeout(() => this.updateCurrentNowTime(), 60000);
     }
+
+    hideLogType(log: logDto) {
+        if (!this.filteredLoggers.contains(log.LoggerName)) {
+            this.filteredLoggers.push(log.LoggerName);
+        }
+    }
+
+    unHidelogType(loggerName: string) {
+        if (this.filteredLoggers.contains(loggerName)) {
+            this.filteredLoggers.remove(loggerName);
+        }
+    }
+
 }
 
 export = logs;

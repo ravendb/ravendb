@@ -9,6 +9,8 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
+using System.Configuration;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -36,7 +38,7 @@ namespace Raven.Database.Config
 	{
 	    public const string VoronTypeName = "voron";
 	    private const string EsentTypeName = "esent";
-	    private CompositionContainer container;
+		private CompositionContainer container;
 		private bool containerExternallySet;
 		private string dataDirectory;
 		private string pluginsDirectory;
@@ -80,7 +82,8 @@ namespace Raven.Database.Config
 
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
 			ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
-
+			
+			EncryptionKeyBitsPreference = ravenSettings.EncryptionKeyBitsPreference.Value;
 			// Core settings
 			MaxPageSize = ravenSettings.MaxPageSize.Value;
 
@@ -125,8 +128,6 @@ namespace Raven.Database.Config
 			}
 			AvailableMemoryForRaisingIndexBatchSizeLimit = ravenSettings.AvailableMemoryForRaisingIndexBatchSizeLimit.Value;
 
-
-
 			MaxNumberOfItemsToReduceInSingleBatch = ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Value;
 			InitialNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToReduceInSingleBatch == ravenSettings.MaxNumberOfItemsToReduceInSingleBatch.Default ?
 				 defaultInitialNumberOfItemsToIndexInSingleBatch / 2 :
@@ -162,7 +163,7 @@ namespace Raven.Database.Config
             if (string.IsNullOrEmpty(DefaultFileSystemStorageTypeName))
             {
                 DefaultFileSystemStorageTypeName = Settings["Raven/FileSystem/Storage"] ?? VoronTypeName;
-            }
+			}
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
 
@@ -191,12 +192,15 @@ namespace Raven.Database.Config
 				IndexStoragePath = indexStoragePathSettingValue;
 			}
 
+			MaxRecentTouchesToRemember = ravenSettings.MaxRecentTouchesToRemember.Value;
+		    JournalsStoragePath = Settings["Raven/Esent/LogsPath"] ?? Settings[Constants.RavenTxJournalPath];
+
 			// HTTP settings
 			HostName = ravenSettings.HostName.Value;
 
 			if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
 			{
-				Port = PortUtil.GetPort(ravenSettings.Port.Value);
+				Port = PortUtil.GetPort(ravenSettings.Port.Value, RunInMemory);
 				UseSsl = ravenSettings.UseSsl.Value;
 			}
 
@@ -204,7 +208,10 @@ namespace Raven.Database.Config
 
 			HttpCompression = ravenSettings.HttpCompression.Value;
 
-			AccessControlAllowOrigin = ravenSettings.AccessControlAllowOrigin.Value;
+			if (ravenSettings.AccessControlAllowOrigin.Value == null)
+				AccessControlAllowOrigin = new HashSet<string>();
+			else
+				AccessControlAllowOrigin = new HashSet<string>(ravenSettings.AccessControlAllowOrigin.Value.Split());
 			AccessControlMaxAge = ravenSettings.AccessControlMaxAge.Value;
 			AccessControlAllowMethods = ravenSettings.AccessControlAllowMethods.Value;
 			AccessControlRequestHeaders = ravenSettings.AccessControlRequestHeaders.Value;
@@ -216,7 +223,7 @@ namespace Raven.Database.Config
 			DisableDocumentPreFetchingForIndexing = ravenSettings.DisableDocumentPreFetchingForIndexing.Value;
 
 			MaxNumberOfItemsToPreFetchForIndexing = ravenSettings.MaxNumberOfItemsToPreFetchForIndexing.Value;
-
+			
 			// Misc settings
 			WebDir = ravenSettings.WebDir.Value;
 
@@ -234,11 +241,17 @@ namespace Raven.Database.Config
 			AllowLocalAccessWithoutAuthorization = ravenSettings.AllowLocalAccessWithoutAuthorization.Value;
 
 		    VoronMaxBufferPoolSize = Math.Max(2, ravenSettings.VoronMaxBufferPoolSize.Value);
+			VoronInitialFileSize = ravenSettings.VoronInitialFileSize.Value;
 
 			PostInit();
 		}
 
-        /// <summary>
+		public int EncryptionKeyBitsPreference
+		{
+		    get; set;
+		}
+
+		/// <summary>
         /// This limits the number of concurrent multi get requests,
         /// Note that this plays with the max number of requests allowed as well as the max number
         /// of sessions
@@ -488,7 +501,12 @@ namespace Raven.Database.Config
 					return Math.Min(maxNumberOfParallelIndexTasks ?? MemoryStatistics.MaxParallelism, MemoryStatistics.MaxParallelism);
 				return maxNumberOfParallelIndexTasks ?? Environment.ProcessorCount;
 			}
-			set { maxNumberOfParallelIndexTasks = value; }
+			set
+			{
+				if (value == 0)
+					throw new ArgumentException("You cannot set the number of parallel tasks to zero");
+				maxNumberOfParallelIndexTasks = value;
+			}
 		}
 
 		/// <summary>
@@ -529,7 +547,7 @@ namespace Raven.Database.Config
 		/// Indicates the URL of a site trusted to make cross-domain requests to this server.
 		/// Allowed values: null (don't send the header), *, http://example.org (space separated if multiple sites)
 		/// </summary>
-		public string AccessControlAllowOrigin { get; set; }
+		public HashSet<string> AccessControlAllowOrigin { get; set; }
 
 		/// <summary>
 		/// Determine the value of the Access-Control-Max-Age header sent by the server.
@@ -768,7 +786,7 @@ namespace Raven.Database.Config
 
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
-		private string indexStoragePath;
+		private string indexStoragePath, journalStoragePath;
 		private string fileSystemIndexStoragePath;
 		private int? maxNumberOfParallelIndexTasks;
 		private int initialNumberOfItemsToIndexInSingleBatch;
@@ -814,6 +832,17 @@ namespace Raven.Database.Config
 			set { indexStoragePath = value.ToFullPath(); }
 		}
 
+        public string JournalsStoragePath
+        {
+            get
+            {
+                return journalStoragePath;
+            }
+            set {
+                journalStoragePath = value != null ? value.ToFullPath() : null;
+            }
+        }
+
 		public string FileSystemIndexStoragePath
 		{
 			get
@@ -830,7 +859,7 @@ namespace Raven.Database.Config
 		public TimeSpan MaxIndexingRunLatency { get; set; }
 
 		internal bool IsTenantDatabase { get; set; }
-
+		
 		/// <summary>
 		/// If True, cluster discovery will be disabled. Default is False
 		/// </summary>
@@ -840,12 +869,18 @@ namespace Raven.Database.Config
 		/// The server name
 		/// </summary>
 		public string ServerName { get; set; }
-
+		
 		/// <summary>
 		/// The maximum number of steps (instructions) to give a script before timing out.
 		/// Default: 10,000
 		/// </summary>
 		public int MaxStepsForScript { get; set; }
+
+		/// <summary>
+		/// The maximum number of recent document touches to store (i.e. updates done in
+		/// order to initiate indexing rather than because something has actually changed).
+		/// </summary>
+		public int MaxRecentTouchesToRemember { get; set; }
 
 		/// <summary>
 		/// The number of additional steps to add to a given script based on the processed document's quota.
@@ -869,7 +904,7 @@ namespace Raven.Database.Config
         /// the facet cache when finishing an indexing batch
         /// </summary>
 	    public TimeSpan PrewarmFacetsOnIndexingMaxAge { get; set; }
-
+	    
         /// <summary>
         /// The time we should wait for pre-warming the facet cache from existing query after an indexing batch
         /// in a syncronous manner (after that, the pre warm still runs, but it will do so in a background thread).
@@ -883,6 +918,11 @@ namespace Raven.Database.Config
         /// Minimum value is 2.
         /// </summary>
         public int VoronMaxBufferPoolSize { get; set; }
+
+		/// <summary>
+		/// You can use this setting to specify an initial file size for data file (in bytes).
+		/// </summary>
+		public int? VoronInitialFileSize { get; set; }
 
 	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
@@ -976,12 +1016,12 @@ namespace Raven.Database.Config
                 return VoronTypeName;                
 			}
 
-            if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
+			if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
 			{
 				if (File.Exists(Path.Combine(DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
-                {
+				{
                     return VoronTypeName;
-                }
+				}
 				if (File.Exists(Path.Combine(DataDirectory, "Data")))
 					return EsentTypeName;
 			}

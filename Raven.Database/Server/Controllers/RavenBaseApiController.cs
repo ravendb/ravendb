@@ -13,6 +13,8 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
+using ICSharpCode.SharpZipLib.Zip;
+using Mono.CSharp;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -147,8 +149,10 @@ namespace Raven.Database.Server.Controllers
 		public int GetPageSize(int maxPageSize)
 		{
 			int pageSize;
-			if (int.TryParse(GetQueryStringValue("pageSize"), out pageSize) == false || pageSize < 0)
+			if (int.TryParse(GetQueryStringValue("pageSize"), out pageSize) == false)
 				pageSize = 25;
+		    if (pageSize < 0)
+		        return 0;
 			if (pageSize > maxPageSize)
 				pageSize = maxPageSize;
 			return pageSize;
@@ -207,12 +211,6 @@ namespace Raven.Database.Server.Controllers
 		{
 			if (string.IsNullOrWhiteSpace(etag))
 				return;
-			//string clientVersion = GetHeader("Raven-Client-Version");
-			//if (string.IsNullOrEmpty(clientVersion))
-			//{
-			//	msg.Headers.ETag = new EntityTagHeaderValue(etag);
-			//	return;
-			//}
 
 			msg.Headers.ETag = new EntityTagHeaderValue("\"" + etag + "\"");
 		}
@@ -414,25 +412,67 @@ namespace Raven.Database.Server.Controllers
 			var cookieHeaderValue = InnerRequest.Headers.GetCookies(key).FirstOrDefault();
 			if (cookieHeaderValue != null)
 			{
-				var coockie = cookieHeaderValue.Cookies.FirstOrDefault();
-				if (coockie != null)
-					return coockie.Value;
+				var cookie = cookieHeaderValue.Cookies.FirstOrDefault();
+				if (cookie != null)
+					return cookie.Value;
 			}
 
 			return null;
 		}
 
-		public HttpResponseMessage WriteEmbeddedFile(string ravenPath, string embeddedPath, string docPath)
+		public HttpResponseMessage WriteEmbeddedFile(string ravenPath, string embeddedPath, string zipPath,  string docPath)
 		{
-
 			var filePath = Path.Combine(ravenPath, docPath);
 			if (File.Exists(filePath))
 				return WriteFile(filePath);
 			filePath = Path.Combine("~/../../../../Raven.Studio.Html5", docPath);
 			if (File.Exists(filePath))
 				return WriteFile(filePath);
-			
-			return WriteEmbeddedFileOfType(embeddedPath, docPath);
+
+			if (string.IsNullOrEmpty(zipPath) == false)
+			{
+			    var fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, zipPath + ".zip");
+				if (File.Exists(fullZipPath) == false)
+					fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bin", zipPath + ".zip");
+
+				if (File.Exists(fullZipPath))
+				{
+                    return WriteFileFromZip(fullZipPath, docPath);
+				}
+			}
+
+		    return WriteEmbeddedFileOfType(embeddedPath, docPath);
+		}
+
+		private HttpResponseMessage WriteFileFromZip(string zipPath, string docPath)
+		{
+			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
+			var currentFileEtag = EmbeddedLastChangedDate + docPath;
+			if (etagValue == currentFileEtag)
+				return GetEmptyMessage(HttpStatusCode.NotModified);
+
+			var fileStream = new FileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+			var zipFile = new ZipFile(fileStream);
+			var zipEntry = zipFile.GetEntry(docPath);
+
+			if (zipEntry == null || zipEntry.IsFile == false)
+				return EmbeddedFileNotFound(docPath);
+
+			var entry = zipFile.GetInputStream(zipEntry);
+			var msg = new HttpResponseMessage
+			{
+				Content = new CompressedStreamContent(entry, false)
+				{
+					Disposables = {fileStream}
+				},
+			};
+
+			WriteETag(currentFileEtag, msg);
+
+			var type = GetContentType(docPath);
+			msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
+
+			return msg;
 		}
 
 		public HttpResponseMessage WriteFile(string filePath)
@@ -470,12 +510,12 @@ namespace Raven.Database.Server.Controllers
 			var lowercasedResourceName = resourceNames.FirstOrDefault(s => string.Equals(s, resourceName, StringComparison.OrdinalIgnoreCase));
 		    if (lowercasedResourceName == null)
 		    {
-		        return GetEmptyMessage(HttpStatusCode.NotFound);
+				return EmbeddedFileNotFound(docPath);
 		    }
 			using (var resource = resourceAssembly.GetManifestResourceStream(lowercasedResourceName))
 			{
 				if (resource == null)
-					return GetEmptyMessage(HttpStatusCode.NotFound);
+					return EmbeddedFileNotFound(docPath);
 
 				bytes = resource.ReadData();
 			}
@@ -490,6 +530,13 @@ namespace Raven.Database.Server.Controllers
 			msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
 
 			return msg;
+		}
+
+		private HttpResponseMessage EmbeddedFileNotFound(string docPath)
+		{
+			var message = "The following embedded file was not available: " + docPath +
+			              ". Please make sure that the Raven.Studio.Html.zip file exist in the main directory (near to the Raven.Database.dll).";
+			return GetMessageWithObject(new {Message = message}, HttpStatusCode.NotFound);
 		}
 
 		private static readonly string EmbeddedLastChangedDate =

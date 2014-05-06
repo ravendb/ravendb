@@ -12,11 +12,14 @@ import appUrl = require("common/appUrl");
 import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import dialog = require("plugins/dialog");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import alertType = require("common/alertType");
+import alertArgs = require("common/alertArgs");
+import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 
 class editIndex extends viewModelBase { 
 
     isEditingExistingIndex = ko.observable(false);
-    priority = ko.observable<indexPriority>();
+    priority = ko.observable<indexPriority>().extend({ required: true });
     priorityLabel: KnockoutComputed<string>;
     priorityFriendlyName: KnockoutComputed<string>;
     editedIndex = ko.observable<indexDefinition>();
@@ -24,19 +27,38 @@ class editIndex extends viewModelBase {
     hasExistingTransform: KnockoutComputed<string>;
     hasMultipleMaps: KnockoutComputed<boolean>;
     termsUrl = ko.observable<string>();
-    statsUrl = ko.observable<string>();
     queryUrl = ko.observable<string>();
+    editMaxIndexOutputsPerDocument = ko.observable<boolean>(false);
+    indexErrorsList = ko.observableArray<string>();
+    
 
     constructor() {
         super();
 
         aceEditorBindingHandler.install();
+        autoCompleteBindingHandler.install();
 
         this.priorityFriendlyName = ko.computed(() => this.getPriorityFriendlyName());
         this.priorityLabel = ko.computed(() => this.priorityFriendlyName() ? "Priority: " + this.priorityFriendlyName() : "Priority");
         this.hasExistingReduce = ko.computed(() => this.editedIndex() && this.editedIndex().reduce());
         this.hasExistingTransform = ko.computed(() => this.editedIndex() && this.editedIndex().transformResults());
         this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
+    }
+    
+    canActivate(indexToEditName: string) {
+        if (indexToEditName) {
+            var canActivateResult = $.Deferred();
+            this.fetchIndexToEdit(indexToEditName)
+                .done(()=> canActivateResult.resolve({ can: true }))
+                .fail(() => {
+                    ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + decodeURIComponent(indexToEditName) + " index", null));
+                    canActivateResult.resolve({ redirect: appUrl.forIndexes(this.activeDatabase() )});
+                });
+
+            return canActivateResult;
+        } else {
+            return $.Deferred().resolve({ can: true });
+        }
     }
 
     activate(indexToEditName: string) {
@@ -50,21 +72,23 @@ class editIndex extends viewModelBase {
             this.priority(indexPriority.normal);
             this.editedIndex(this.createNewIndexDefinition());
         }
-    }
 
-    editExistingIndex(unescapedIndexName: string) {
-        var indexName = decodeURIComponent(unescapedIndexName);
-        this.fetchIndexToEdit(indexName);
-        this.fetchIndexPriority(indexName);
-        this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
-        this.statsUrl(appUrl.forStatus(this.activeDatabase()));
-        this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
+        var indexDef = this.editedIndex();
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.fields, indexDef.transformResults, indexDef.spatialFields, indexDef.maxIndexOutputsPerDocument]);
+        //need to add more fields like: this.editedIndex().luceneFields()[0].name, this.editedIndex().luceneFields()[0].indexing()
     }
 
     attached() {
         this.addMapHelpPopover();
         this.addReduceHelpPopover();
         this.addTransformHelpPopover();
+    }
+
+    editExistingIndex(unescapedIndexName: string) {
+        var indexName = decodeURIComponent(unescapedIndexName);
+        this.fetchIndexPriority(indexName);
+        this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
+        this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
     }
 
     addMapHelpPopover() {
@@ -91,10 +115,13 @@ class editIndex extends viewModelBase {
         });
     }
 
-    fetchIndexToEdit(indexName: string) {
-        new getIndexDefinitionCommand(indexName, this.activeDatabase())
+    fetchIndexToEdit(indexName: string) : JQueryPromise<any>{
+        return new getIndexDefinitionCommand(indexName, this.activeDatabase())
             .execute()
-            .done((results: indexDefinitionContainerDto) => this.editedIndex(new indexDefinition(results.Index)));
+            .done((results: indexDefinitionContainerDto) => {
+                this.editedIndex(new indexDefinition(results.Index));
+                this.editMaxIndexOutputsPerDocument(results.Index.MaxIndexOutputsPerDocument ? results.Index.MaxIndexOutputsPerDocument > 0 ? true : false : false);
+        });
     }
 
     fetchIndexPriority(indexName: string) {
@@ -121,12 +148,20 @@ class editIndex extends viewModelBase {
             saveCommand
                 .execute()
                 .done(() => {
+                    // Resync Changes
+                    viewModelBase.dirtyFlag().reset();
+
                     if (!this.isEditingExistingIndex()) {
                         this.isEditingExistingIndex(true);
                         this.editExistingIndex(index.Name);
                     }
-                });
+                this.updateUrl(index.Name);
+            });
         }
+    }
+
+    updateUrl(indexName: string) {
+        router.navigate(appUrl.forEditIndex(indexName, this.activeDatabase()));
     }
 
     refreshIndex() {
@@ -135,6 +170,9 @@ class editIndex extends viewModelBase {
             this.editedIndex(null);
             this.editExistingIndex(existingIndex.name());
         }
+
+        // Resync Changes
+        viewModelBase.dirtyFlag().reset();
     }
 
     deleteIndex() {
@@ -204,14 +242,21 @@ class editIndex extends viewModelBase {
 
     addField() {
         var field = new luceneField("");
+        field.indexFieldNames = this.editedIndex().fields();
+        field.calculateFieldNamesAutocomplete();
         this.editedIndex().luceneFields.push(field);
+    }
+
+    removeMaxIndexOutputs() {
+        this.editedIndex().maxIndexOutputsPerDocument(0);
+        this.editMaxIndexOutputsPerDocument(false);
     }
 
     addSpatialField() {
         var field = spatialIndexField.empty();
         this.editedIndex().spatialFields.push(field);
     }
-
+    
     removeMap(mapIndex: number) {
         this.editedIndex().maps.splice(mapIndex, 1);
     }

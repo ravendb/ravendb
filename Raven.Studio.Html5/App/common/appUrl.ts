@@ -1,4 +1,6 @@
 import database = require("models/database");
+import filesystem = require("models/filesystem/filesystem");
+import resource = require("models/resource");
 import pagedList = require("common/pagedList");
 import router = require("plugins/router");
 
@@ -8,10 +10,13 @@ class appUrl {
     //private static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
     private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
+    private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
 
 	// Stores some computed values that update whenever the current database updates.
-	private static currentDbComputeds: computedAppUrls = {
+    private static currentDbComputeds: computedAppUrls = {
+        databases: ko.computed(() => appUrl.forDatabases()),
         documents: ko.computed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
+        conflicts: ko.computed(() => appUrl.forConflicts(appUrl.currentDatabase())),
         patch: ko.computed(() => appUrl.forPatch(appUrl.currentDatabase())),
         indexes: ko.computed(() => appUrl.forIndexes(appUrl.currentDatabase())),
         transformers: ko.computed(() => appUrl.forTransformers(appUrl.currentDatabase())),
@@ -33,12 +38,36 @@ class appUrl {
         periodicBackup: ko.computed(() => appUrl.forPeriodicBackup(appUrl.currentDatabase())),
         replications: ko.computed(() => appUrl.forReplications(appUrl.currentDatabase())),
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
+        scriptedIndexes: ko.computed(() => appUrl.forScriptedIndexes(appUrl.currentDatabase())),
 
-        isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null)
-	};
+        isAreaActive: (routeRoot: string) => ko.computed(() => appUrl.checkIsAreaActive(routeRoot)),
+        isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
+        databasesManagement: ko.computed(() => appUrl.forDatabases() + "?database=" + appUrl.getEncodedDbPart(appUrl.currentDatabase())),
+
+        filesystems: ko.computed(() => appUrl.forFilesystems()),
+        filesystemsManagement: ko.computed(() => appUrl.forFilesystems() + "?filesystem=" + appUrl.getEncodedFsPart(appUrl.currentFilesystem())),
+        filesystemFiles: ko.computed(() => appUrl.forFilesystemFiles(appUrl.currentFilesystem())),
+        filesystemSearch: ko.computed(() => appUrl.forFilesystemSearch(appUrl.currentFilesystem())),
+        filesystemSynchronization: ko.computed(() => appUrl.forFilesystemSynchronization(appUrl.currentFilesystem())),
+        filesystemConfiguration: ko.computed(() => appUrl.forFilesystemConfiguration(appUrl.currentFilesystem())),
+    };
+
+  
+
+    static checkIsAreaActive(routeRoot: string): boolean {
+
+        var items = router.routes.filter(m => m.isActive() && m.route != null && m.route != '');
+        var isThereAny = items.some(m => m.route.substring(0, routeRoot.length) === routeRoot);
+
+        return isThereAny;
+    }
 
     static forDatabases(): string {
         return "#databases";
+    }
+
+    static forFilesystems(): string {
+        return "#filesystems";
     }
 
     /**
@@ -52,12 +81,21 @@ class appUrl {
 		var databaseUrlPart = appUrl.getEncodedDbPart(db);
 		var docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
 		var pagedListInfo = collectionName && docIndexInCollection != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + docIndexInCollection : "";
-		return "#edit?" + docIdUrlPart + databaseUrlPart + pagedListInfo;
+        return "#databases/edit?" + docIdUrlPart + databaseUrlPart + pagedListInfo;
     }
+
+    static forEditItem(itemId: string, res: resource, itemIndex: number, collectionName?: string): string {
+        var databaseUrlPart = appUrl.getEncodedResourcePart(res);
+        var itemIdUrlPart = itemId ? "&id=" + encodeURIComponent(itemId) : "";
+
+        var pagedListInfo = collectionName && itemIndex != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + itemIndex : "";
+        var resourceTag = res instanceof filesystem ? "#filesystems" : "#databases";       
+        return resourceTag+"/edit?" + itemIdUrlPart + databaseUrlPart + pagedListInfo;
+    } 
 
     static forNewDoc(db: database): string {
         var databaseUrlPart = appUrl.getEncodedDbPart(db);
-        return "#edit?" + databaseUrlPart;
+        return "#databases/edit?" + databaseUrlPart;
     }
 
 	/**
@@ -65,98 +103,108 @@ class appUrl {
 	* @param database The database to use in the URL. If null, the current database will be used.
 	*/
 	static forStatus(db: database): string {
-		return "#status?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status?" + appUrl.getEncodedDbPart(db);
     }
 
     static forSettings(db: database): string {
-        return "#settings?" + appUrl.getEncodedDbPart(db);
+        var path = (db && db.isSystem) ? "#databases/settings/apiKeys" : "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
+        return path;
     }
 
     static forLogs(db: database): string {
-        return "#status/logs?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/logs?" + appUrl.getEncodedDbPart(db);
     }
 
     static forAlerts(db: database): string {
-        return "#status/alerts?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/alerts?" + appUrl.getEncodedDbPart(db);
     }
 
     static forIndexErrors(db: database): string {
-        return "#status/indexErrors?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/indexErrors?" + appUrl.getEncodedDbPart(db);
     }
 
     static forReplicationStats(db: database): string {
-        return "#status/replicationStats?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/replicationStats?" + appUrl.getEncodedDbPart(db);
     }
 
     static forUserInfo(db: database): string {
-        return "#status/userInfo?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/userInfo?" + appUrl.getEncodedDbPart(db);
     }
 
     static forApiKeys(): string {
         // Doesn't take a database, because API keys always works against the system database only.
-        return "#settings/apiKeys";
+        return "#databases/settings/apiKeys";
     }
 
     static forWindowsAuth(): string {
         // Doesn't take a database, because API keys always works against the system database only.
-        return "#settings/windowsAuth";
+        return "#databases/settings/windowsAuth";
     }
 
     static forDatabaseSettings(db: database): string {
-        return "#settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
+        return "#databases/settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
     }
 
     static forPeriodicBackup(db: database): string {
-        return "#settings/periodicBackup?" + appUrl.getEncodedDbPart(db);
+        return "#databases/settings/periodicBackups?" + appUrl.getEncodedDbPart(db);
     }
 
     static forReplications(db: database): string {
-        return "#settings/replication?" + appUrl.getEncodedDbPart(db);
+        return "#databases/settings/replication?" + appUrl.getEncodedDbPart(db);
     }
 
     static forSqlReplications(db: database): string {
-        return "#settings/sqlReplication?" + appUrl.getEncodedDbPart(db);
+        return "#databases/settings/sqlReplication?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forScriptedIndexes(db: database): string {
+        return "#databases/settings/scriptedIndex?" + appUrl.getEncodedDbPart(db);
     }
 
 	static forDocuments(collection: string, db: database): string {
         var collectionPart = collection ? "collection=" + encodeURIComponent(collection) : "";
         var databasePart = appUrl.getEncodedDbPart(db);
-		return "#documents?" + collectionPart + databasePart;
+        return "#databases/documents?" + collectionPart + databasePart;
+    }
+
+    static forConflicts(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/conflicts?" + databasePart;
     }
 
     static forPatch(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#patch?" + databasePart;
+        return "#databases/patch?" + databasePart;
     }
 
     static forIndexes(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#indexes?" + databasePart;
+        return "#databases/indexes?" + databasePart;
     }
 
     static forNewIndex(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#indexes/edit?" + databasePart;
+        return "#databases/indexes/edit?" + databasePart;
     }
 
     static forEditIndex(indexName: string, db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
+        return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
     }
 
     static forNewTransformer(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#transformers/edit?" + databasePart;
+        return "#databases/transformers/edit?" + databasePart;
     }
 
     static forEditTransformer(transformerName: string, db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#transformers/edit/" + encodeURIComponent(transformerName) + "?" + databasePart;
+        return "#databases/transformers/edit/" + encodeURIComponent(transformerName) + "?" + databasePart;
     }
 
     static forTransformers(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#transformers?" + databasePart;
+        return "#databases/transformers?" + databasePart;
     }
 
     static forQuery(db: database, indexNameOrHashToQuery?: any): string {
@@ -167,70 +215,137 @@ class appUrl {
         } 
 
         var indexPart = indexToQueryComponent ? "/" + encodeURIComponent(indexToQueryComponent) : "";
-        return "#query" + indexPart + "?" + databasePart;
+        return "#databases/query/index" + indexPart + "?" + databasePart;
     }
 
-    static forReporting(db: database): string {
+    static forReporting(db: database, indexName?: string): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#reporting?" + databasePart;
+        var indexPart = indexName ? "/" + encodeURIComponent(indexName) : "";
+        return "#databases/query/reporting" + indexPart + "?" + databasePart;
     }
 
     static forTasks(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#tasks?" + databasePart;
+        return "#databases/tasks?" + databasePart;
     }
 
-    static forDatabaseQuery(db: database) {
-        if (db && !db.isSystem) {
-            return appUrl.baseUrl + "/databases/" + db.name;
+    static forResourceQuery(res: resource) {
+        if (res && res instanceof database && !res.isSystem) {
+            return appUrl.baseUrl + "/databases/" + res.name;
+        }
+        else if (res && res instanceof filesystem) {
+            return appUrl.baseUrl + "/ravenfs/" + res.name;
         }
 
         return this.baseUrl;
     }
 
-    static forExport(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
-        return "#tasks/export?" + databasePart;
-    }
-
     static forTerms(index: string, db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#indexes/terms/" + encodeURIComponent(index) + "?" + databasePart;
+        return "#databases/indexes/terms/" + encodeURIComponent(index) + "?" + databasePart;
     }
 
     static forImportDatabase(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#tasks/importDatabase?" + databasePart;
+        return "#databases/tasks/importDatabase?" + databasePart;
     }
 
     static forExportDatabase(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#tasks/exportDatabase?" + databasePart;
+        return "#databases/tasks/exportDatabase?" + databasePart;
     }
 
     static forBackupDatabase(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#tasks/backupDatabase?" + databasePart;
+        return "#databases/tasks/backupDatabase?" + databasePart;
     }
 
     static forRestoreDatabase(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#tasks/restoreDatabase?" + databasePart;
+        return "#databases/tasks/restoreDatabase?" + databasePart;
     }
 
     static forToggleIndexing(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#tasks/toggleIndexing?" + databasePart;
+        return "#databases/tasks/toggleIndexing?" + databasePart;
     }
 
     static forSampleData(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#tasks/sampleData?" + databasePart;
+        return "#databases/tasks/sampleData?" + databasePart;
     }
 
     static forCsvImport(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#tasks/csvImport?" + databasePart;
+        return "#databases/tasks/csvImport?" + databasePart;
+    }
+
+    static forFilesystem(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems?" + filesystemPart;
+    }
+
+    static forIndexesRawData(db: database): string {
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes";
+    }
+
+    static forIndexQueryRawData(db:database,indexName:string){
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes/" + indexName;
+    }
+
+    static forTransformersRawData(db: database): string {
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/transformers";
+    }
+
+    static forDatabasesRawData(): string {
+        return window.location.protocol + "//" + window.location.host + "/databases";
+    }
+
+    static forDocumentRawData(db: database, docId:string): string {
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/docs/" + docId;
+    }
+
+    static forFilesystemFiles(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/files?" + filesystemPart;
+    }
+
+    static forFilesystemSearch(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/search?" + filesystemPart;
+    }
+
+    static forFilesystemSynchronization(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/synchronization?" + filesystemPart;
+    }
+
+    static forFilesystemConfiguration(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/configuration?" + filesystemPart;
+    }
+
+    static forFilesystemConfigurationWithKey(fs: filesystem, key: string): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs) + "&key=" + encodeURIComponent(key);
+        return "#filesystems/configuration?" + filesystemPart;
+    }
+
+    static forFilesystemUploadFile(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/upload?" + filesystemPart;
+    }
+
+    /**
+    * Gets the resource from the current web browser address. Returns the system database if no resource name is found.
+    */
+    static getResource(): resource {
+        var appFilesystem = appUrl.getFilesystem()
+        if (!appFilesystem.isDefault) {
+            return appFilesystem;
+        }
+        else {
+            return appUrl.getDatabase();
+        }
     }
 
 	/**
@@ -257,7 +372,7 @@ class appUrl {
             return db;
         } else {
             // No database is specified in the URL. Assume it's the system database.
-            return this.getSystemDatabase();
+            return null;
         } 
     }
 
@@ -265,6 +380,40 @@ class appUrl {
         var db = new database("<system>");
         db.isSystem = true;
         return db;
+    }
+
+    /**
+    * Gets the filesystem from the current web browser address. Returns the no filesystem if no name is found.
+    */
+    static getFilesystem(): filesystem {
+
+        // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
+
+        var filesystemIndicator = "filesystem=";
+        var hash = window.location.hash;
+        var fsIndex = hash.indexOf(filesystemIndicator);
+        if (fsIndex >= 0) {
+            // A database is specified in the address.
+            var fsSegmentEnd = hash.indexOf("&", fsIndex);
+            if (fsSegmentEnd === -1) {
+                fsSegmentEnd = hash.length;
+            }
+
+            var filesystemName = hash.substring(fsIndex + filesystemIndicator.length, fsSegmentEnd);
+            var unescapedDatabaseName = decodeURIComponent(filesystemName);
+            var fs = new filesystem(unescapedDatabaseName);
+            fs.isDefault = unescapedDatabaseName === "<default>";
+            return fs;
+        } else {
+            // No filesystem is specified in the URL. Assume it's the system database.
+            return this.getDefaultFilesystem();
+        }
+    }
+
+    static getDefaultFilesystem(): filesystem {
+        var fs = new filesystem("<default>");
+        fs.isDefault = true;
+        return fs;
     }
  
     /**
@@ -284,20 +433,21 @@ class appUrl {
     }
 
     /**
-    * Gets the address for the current page but for the specified database.
+    * Gets the address for the current page but for the specified resource.
     */
-    static forCurrentPage(db: database) {
+    static forCurrentPage(rs: resource) {
         var routerInstruction = router.activeInstruction();
         if (routerInstruction) {
-            var dbNameInAddress = routerInstruction.queryParams ? routerInstruction.queryParams['database'] : null;
-            var isDifferentDbInAddress = !dbNameInAddress || dbNameInAddress !== db.name.toLowerCase();
+            var dbNameInAddress = routerInstruction.queryParams ? routerInstruction.queryParams[rs.type] : null;
+            var isDifferentDbInAddress = !dbNameInAddress || dbNameInAddress !== rs.name.toLowerCase();
             if (isDifferentDbInAddress) {
                 var existingAddress = window.location.hash;
-                var existingDbQueryString = dbNameInAddress ? "database=" + encodeURIComponent(dbNameInAddress) : null;
-                var newDbQueryString = "database=" + encodeURIComponent(db.name);
+                var existingDbQueryString = dbNameInAddress ? rs.type + "=" + encodeURIComponent(dbNameInAddress) : null;
+                var newDbQueryString = rs.type + "=" + encodeURIComponent(rs.name);
                 var newUrlWithDatabase = existingDbQueryString ?
                     existingAddress.replace(existingDbQueryString, newDbQueryString) :
-                    existingAddress + (window.location.hash.indexOf("?") >= 0 ? "&" : "?") + "database=" + encodeURIComponent(db.name);
+                    existingAddress + (window.location.hash.indexOf("?") >= 0 ? "&" : "?") + rs.type + "=" + encodeURIComponent(rs.name);
+
                 return newUrlWithDatabase;
             }
         }
@@ -310,9 +460,26 @@ class appUrl {
 		return appUrl.currentDbComputeds;
 	}
 
+    private static getEncodedResourcePart(res?: resource) {
+        if (!res)
+            return "";
+        if (res instanceof filesystem) {
+            return appUrl.getEncodedFsPart(<filesystem>res);
+        }
+        else {
+            return appUrl.getEncodedDbPart(<database>res);
+        }
+    }
+
 	private static getEncodedDbPart(db?: database) {
 		return db ? "&database=" + encodeURIComponent(db.name) : "";
-	}
+    }
+
+    private static getEncodedFsPart(fs?: filesystem) {
+        return fs ? "&filesystem=" + encodeURIComponent(fs.name) : "";
+    }
+
+    public static warnWhenUsingSystemDatabase: boolean = true;
 }
 
 export = appUrl;

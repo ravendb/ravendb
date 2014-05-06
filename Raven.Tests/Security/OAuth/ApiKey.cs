@@ -9,6 +9,8 @@ using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Extensions;
 
@@ -16,7 +18,7 @@ namespace Raven.Tests.Security.OAuth
 {
 	using Raven.Abstractions.Connection;
 
-	public class ApiKey : RemoteClientTest
+	public class ApiKey : RavenTest
 	{
 		private const string apiKey = "test/ThisIsMySecret";
 
@@ -30,7 +32,7 @@ namespace Raven.Tests.Security.OAuth
 
 		protected override void ModifyServer(Server.RavenDbServer ravenDbServer)
 		{
-			ravenDbServer.SystemDatabase.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+			ravenDbServer.SystemDatabase.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 			{
 				Name = "test",
 				Secret = "ThisIsMySecret",
@@ -77,7 +79,7 @@ namespace Raven.Tests.Security.OAuth
 			using (var server = GetNewServer(enableAuthentication: true))
 			{
 
-				server.SystemDatabase.Put("Raven/ApiKeys/sysadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
+				server.SystemDatabase.Documents.Put("Raven/ApiKeys/sysadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
 					Name = "sysadmin",
 					Secret = "ThisIsMySecret",
@@ -88,7 +90,7 @@ namespace Raven.Tests.Security.OAuth
 				}
 				}), new RavenJObject(), null);
 
-				server.SystemDatabase.Put("Raven/ApiKeys/dbadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
+				server.SystemDatabase.Documents.Put("Raven/ApiKeys/dbadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
 					Name = "dbadmin",
 					Secret = "ThisIsMySecret",

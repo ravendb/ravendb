@@ -7,6 +7,8 @@ using System;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Tasks;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Storage

@@ -1,5 +1,6 @@
 using Raven.Abstractions;
 using Raven.Client;
+using Raven.Tests.Common;
 
 namespace Raven.Tests.Bugs.LiveProjections
 {

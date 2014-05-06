@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Tests.Common;
+
 namespace Raven.Tests.Bugs
 {
 	using System.Linq;
@@ -77,7 +79,7 @@ namespace Raven.Tests.Bugs
 					session.Query<UsersByName.Result, UsersByName>().Customize(x => x.WaitForNonStaleResults()).ToList();
 				}
 
-                var indexId = store.DocumentDatabase.GetIndexDefinition(index.IndexName).IndexId;
+                var indexId = store.DocumentDatabase.Indexes.GetIndexDefinition(index.IndexName).IndexId;
 				storage.Batch(accessor =>
 				{
 					var stats = accessor.MapReduce.GetKeysStats(indexId, 0, 10).ToList();
@@ -86,7 +88,7 @@ namespace Raven.Tests.Bugs
 					Assert.Equal(1, stats.First(x => x.Key == "John").Count);
 				});
 
-				store.DocumentDatabase.Delete("Users/1", null, null); // delete "Adam" reduce key
+				store.DocumentDatabase.Documents.Delete("Users/1", null, null); // delete "Adam" reduce key
 
 				using (var session = store.OpenSession())
 				{

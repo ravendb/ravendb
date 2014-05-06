@@ -21,22 +21,21 @@ namespace Raven.Database.Storage.Voron.Impl
 
 	public class TableStorage : IDisposable
 	{
-		private readonly IPersistenceSource persistenceSource;
-
+	    private readonly StorageEnvironmentOptions _options;
 	    private readonly IBufferPool bufferPool;
 
 	    private readonly StorageEnvironment env;
 
-		public TableStorage(IPersistenceSource persistenceSource, IBufferPool bufferPool)
+		public TableStorage(StorageEnvironmentOptions options, IBufferPool bufferPool)
 		{
-			if (persistenceSource == null)
-				throw new ArgumentNullException("persistenceSource");
+            if (options == null)
+                throw new ArgumentNullException("options");
 
-			this.persistenceSource = persistenceSource;
+		    _options = options;
 		    this.bufferPool = bufferPool;
 
-		    Debug.Assert(persistenceSource.Options != null);
-			env = new StorageEnvironment(persistenceSource.Options);
+            Debug.Assert(options != null);
+            env = new StorageEnvironment(options);
 
 			Initialize();
 			CreateSchema();
@@ -46,10 +45,10 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			var reportData = new Dictionary<string, object>
 	        {
-	            {"MaxNodeSize", persistenceSource.Options.DataPager.MaxNodeSize},
-	            {"NumberOfAllocatedPages", persistenceSource.Options.DataPager.NumberOfAllocatedPages},
+	            {"MaxNodeSize", _options.DataPager.MaxNodeSize},
+	            {"NumberOfAllocatedPages", _options.DataPager.NumberOfAllocatedPages},
 	           // {"PageMaxSpace", persistenceSource.Options.DataPager.PageMaxSpace},
-	            {"PageMinSpace", persistenceSource.Options.DataPager.PageMinSpace},
+	            {"PageMinSpace", _options.DataPager.PageMinSpace},
 	           // {"PageSize", persistenceSource.Options.DataPager.PageSize},
                 {"Documents", GetEntriesCount(Documents)},
                 {"Indexes", GetEntriesCount(IndexingStats)},
@@ -72,6 +71,8 @@ namespace Raven.Database.Storage.Voron.Impl
 		public Table IndexingStats { get; private set; }
 
 		public Table ReduceStats { get; private set; }
+
+		public Table IndexingMetadata { get; private set; }
 
 		public Table LastIndexedEtags { get; private set; }
 
@@ -155,7 +156,8 @@ namespace Raven.Database.Storage.Voron.Impl
 		}
 
 		public void Dispose()
-		{			if (env != null)
+		{
+			if (env != null)
 				env.Dispose();
 		}
 
@@ -181,9 +183,15 @@ namespace Raven.Database.Storage.Voron.Impl
 				CreateReduceResultsSchema(tx);
 				CreateGeneralSchema(tx);
 				CreateReduceStatsSchema(tx);
+				CreateIndexingMetadataSchema(tx);
 
 				tx.Commit();
 			}
+		}
+
+		private void CreateIndexingMetadataSchema(Transaction tx)
+		{
+			env.CreateTree(tx, Tables.IndexingMetadata.TableName);
 		}
 
 		private void CreateReduceStatsSchema(Transaction tx)
@@ -234,7 +242,6 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			env.CreateTree(tx, Tables.ScheduledReductions.TableName);
 			env.CreateTree(tx, ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByView));
-			env.CreateTree(tx, ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByViewAndLevel));
 			env.CreateTree(tx, ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey));
 		}
 
@@ -305,12 +312,13 @@ namespace Raven.Database.Storage.Voron.Impl
 			Documents = new Table(Tables.Documents.TableName, bufferPool, Tables.Documents.Indices.KeyByEtag, Tables.Documents.Indices.Metadata);
 			Details = new Table(Tables.Details.TableName, bufferPool);
             IndexingStats = new Table(Tables.IndexingStats.TableName, bufferPool);
+			IndexingMetadata = new Table(Tables.IndexingMetadata.TableName, bufferPool);
             LastIndexedEtags = new Table(Tables.LastIndexedEtags.TableName, bufferPool);
             DocumentReferences = new Table(Tables.DocumentReferences.TableName, bufferPool, Tables.DocumentReferences.Indices.ByRef, Tables.DocumentReferences.Indices.ByView, Tables.DocumentReferences.Indices.ByViewAndKey, Tables.DocumentReferences.Indices.ByKey);
             Queues = new Table(Tables.Queues.TableName, bufferPool, Tables.Queues.Indices.ByName, Tables.Queues.Indices.Data);
             Lists = new Table(Tables.Lists.TableName, bufferPool, Tables.Lists.Indices.ByName, Tables.Lists.Indices.ByNameAndKey);
             Tasks = new Table(Tables.Tasks.TableName, bufferPool, Tables.Tasks.Indices.ByIndexAndType, Tables.Tasks.Indices.ByType, Tables.Tasks.Indices.ByIndex);
-            ScheduledReductions = new Table(Tables.ScheduledReductions.TableName, bufferPool, Tables.ScheduledReductions.Indices.ByView, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey, Tables.ScheduledReductions.Indices.ByViewAndLevel);
+            ScheduledReductions = new Table(Tables.ScheduledReductions.TableName, bufferPool, Tables.ScheduledReductions.Indices.ByView, Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
             MappedResults = new Table(Tables.MappedResults.TableName, bufferPool, Tables.MappedResults.Indices.ByView, Tables.MappedResults.Indices.ByViewAndDocumentId, Tables.MappedResults.Indices.ByViewAndReduceKey, Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket, Tables.MappedResults.Indices.Data);
             ReduceKeyCounts = new Table(Tables.ReduceKeyCounts.TableName, bufferPool, Tables.ReduceKeyCounts.Indices.ByView);
             ReduceKeyTypes = new Table(Tables.ReduceKeyTypes.TableName, bufferPool, Tables.ReduceKeyTypes.Indices.ByView);

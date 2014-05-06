@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Document
 {
-	public class DocumentIdTests : RemoteClientTest
+	public class DocumentIdTests : RavenTest
 	{
 		[Fact]
 		public void WithSynchronousApiIdsAreGeneratedOnStore()

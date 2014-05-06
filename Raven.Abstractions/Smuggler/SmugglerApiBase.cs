@@ -32,10 +32,10 @@ namespace Raven.Abstractions.Smuggler
 
         public SmugglerOptions SmugglerOptions { get; set; }
 
-		protected abstract Task<RavenJArray> GetIndexes(int totalCount);
-		protected abstract Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int limit);
-		protected abstract Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag);
-		protected abstract Task<RavenJArray> GetTransformers(int start);
+		protected abstract Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount);
+		protected abstract Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int limit);
+		protected abstract Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag);
+        protected abstract Task<RavenJArray> GetTransformers(RavenConnectionStringOptions src, int start);
 
         protected abstract void ExportDeletions(JsonTextWriter jsonWriter, SmugglerOptions options, ExportDataResult result, LastEtagsInfo maxEtagsToFetch);
         /// <summary>
@@ -45,7 +45,7 @@ namespace Raven.Abstractions.Smuggler
 	    public abstract LastEtagsInfo FetchCurrentMaxEtags();
 
 		protected abstract Task PutIndex(string indexName, RavenJToken index);
-		protected abstract Task PutAttachment(AttachmentExportInfo attachmentExportInfo);
+        protected abstract Task PutAttachment(RavenConnectionStringOptions dst, AttachmentExportInfo attachmentExportInfo);
 		protected abstract void PutDocument(RavenJObject document, SmugglerOptions options);
 		protected abstract Task PutTransformer(string transformerName, RavenJToken transformer);
 
@@ -53,7 +53,7 @@ namespace Raven.Abstractions.Smuggler
 	    protected abstract Task DeleteAttachment(string key);
         protected abstract void PurgeTombstones(ExportDataResult result);
 
-		protected abstract Task<string> GetVersion();
+		protected abstract Task<string> GetVersion(RavenConnectionStringOptions server);
 
 		protected abstract Task<DatabaseStatistics> GetStats();
 
@@ -115,7 +115,7 @@ namespace Raven.Abstractions.Smuggler
 
 			try
 			{
-				await DetectServerSupportedFeatures();
+				await DetectServerSupportedFeatures(exportOptions.From);
 			}
 			catch (WebException e)
 			{				
@@ -143,7 +143,7 @@ namespace Raven.Abstractions.Smuggler
 					jsonWriter.WriteStartArray();
 					if (options.OperateOnTypes.HasFlag(ItemType.Indexes))
 					{
-						await ExportIndexes(jsonWriter);
+						await ExportIndexes(exportOptions.From,jsonWriter);
 					}
 					jsonWriter.WriteEndArray();
 
@@ -156,7 +156,7 @@ namespace Raven.Abstractions.Smuggler
 					{
 					    try
 					    {
-                            result.LastDocsEtag = await ExportDocuments(options, jsonWriter, result.LastDocsEtag, maxEtags.LastDocsEtag);
+                            result.LastDocsEtag = await ExportDocuments(exportOptions.From,options, jsonWriter, result.LastDocsEtag, maxEtags.LastDocsEtag);
                         }
 					    catch (SmugglerExportException e)
 					    {
@@ -173,7 +173,7 @@ namespace Raven.Abstractions.Smuggler
 					{
 					    try
 					{
-						result.LastAttachmentsEtag = await ExportAttachments(jsonWriter, result.LastAttachmentsEtag, maxEtags.LastAttachmentsEtag);
+						result.LastAttachmentsEtag = await ExportAttachments(exportOptions.From, jsonWriter, result.LastAttachmentsEtag, maxEtags.LastAttachmentsEtag);
 					}
 					    catch (SmugglerExportException e)
 					    {
@@ -188,7 +188,7 @@ namespace Raven.Abstractions.Smuggler
 					jsonWriter.WriteStartArray();
 					if (options.OperateOnTypes.HasFlag(ItemType.Transformers) && lastException == null)
 					{
-						await ExportTransformers(jsonWriter);
+						await ExportTransformers(exportOptions.From,jsonWriter);
 					}
 					jsonWriter.WriteEndArray();
 
@@ -273,12 +273,12 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		private async Task ExportTransformers(JsonTextWriter jsonWriter)
+        private async Task ExportTransformers(RavenConnectionStringOptions src, JsonTextWriter jsonWriter)
 		{
 			int totalCount = 0;
 			while (true)
 			{
-				var transformers = await GetTransformers(totalCount);
+				var transformers = await GetTransformers(src, totalCount);
 				if (transformers.Length == 0)
 				{
 					ShowProgress("Done with reading transformers, total: {0}", totalCount);
@@ -295,7 +295,7 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		protected virtual async Task<Etag> ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+		protected virtual async Task<Etag> ExportDocuments(RavenConnectionStringOptions src, SmugglerOptions options, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
 		{
 		    var now = SystemTime.UtcNow;
 			var totalCount = 0;
@@ -312,7 +312,7 @@ namespace Raven.Abstractions.Smuggler
                     var maxRecords = options.Limit - totalCount;
                     if (maxRecords > 0 && reachedMaxEtag == false)
 			        {
-			            using (var documents = await GetDocuments(lastEtag, maxRecords))
+                        using (var documents = await GetDocuments(src, lastEtag, maxRecords))
 			            {
 			                var watch = Stopwatch.StartNew();
 
@@ -468,15 +468,15 @@ namespace Raven.Abstractions.Smuggler
             public string Key { get; set; }
         }
 
-		protected abstract Task EnsureDatabaseExists();
+		protected abstract Task EnsureDatabaseExists(RavenConnectionStringOptions to);
 
 		public async virtual Task ImportData(SmugglerImportOptions importOptions, SmugglerOptions options, Stream stream)
 		{
             SetSmugglerOptions(options);
 
-			await DetectServerSupportedFeatures();
+			await DetectServerSupportedFeatures(importOptions.To);
 
-			await EnsureDatabaseExists();
+			await EnsureDatabaseExists(importOptions.To);
 			Stream sizeStream;
 
 			var sw = Stopwatch.StartNew();
@@ -534,7 +534,7 @@ namespace Raven.Abstractions.Smuggler
 		    exportSectionRegistar.Add("Attachments", () =>
 		    {
                 ShowProgress("Begin reading attachments");
-		        var attachmentCount = ImportAttachments(jsonReader, options).Result;
+		        var attachmentCount = ImportAttachments(importOptions.To,jsonReader, options).Result;
                 ShowProgress(string.Format("Done with reading attachments, total: {0}", attachmentCount));
 		        return attachmentCount;
 		    });
@@ -671,7 +671,7 @@ namespace Raven.Abstractions.Smuggler
 			return count;
 		}
 
-		private async Task<int> ImportAttachments(JsonTextReader jsonReader, SmugglerOptions options)
+        private async Task<int> ImportAttachments(RavenConnectionStringOptions dst, JsonTextReader jsonReader, SmugglerOptions options)
 		{
 			var count = 0;
 
@@ -693,12 +693,12 @@ namespace Raven.Abstractions.Smuggler
 
 				ShowProgress("Importing attachment {0}", attachmentExportInfo.Key);
 
-				await PutAttachment(attachmentExportInfo);
+				await PutAttachment(dst, attachmentExportInfo);
 
 				count++;
 			}
 
-			await PutAttachment(null); // force flush
+			await PutAttachment(dst, null); // force flush
 
 			return count;
 		}
@@ -822,12 +822,12 @@ namespace Raven.Abstractions.Smuggler
 			return count;
 		}
 
-		protected async Task ExportIndexes(JsonTextWriter jsonWriter)
+		protected async Task ExportIndexes(RavenConnectionStringOptions src, JsonTextWriter jsonWriter)
 		{
 			int totalCount = 0;
 			while (true)
 			{
-				var indexes = await GetIndexes(totalCount);
+				var indexes = await GetIndexes(src, totalCount);
 				if (indexes.Length == 0)
 				{
 					ShowProgress("Done with reading indexes, total: {0}", totalCount);
@@ -842,9 +842,9 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		private async Task DetectServerSupportedFeatures()
+		private async Task DetectServerSupportedFeatures(RavenConnectionStringOptions server)
 		{
-			var serverVersion = await GetVersion();
+            var serverVersion = await GetVersion(server);
 			if (string.IsNullOrEmpty(serverVersion))
 			{
 				SetLegacyMode();

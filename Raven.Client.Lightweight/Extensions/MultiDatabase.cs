@@ -2,14 +2,13 @@ using System;
 using System.IO;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
-using Raven.Json.Linq;
 
 namespace Raven.Client.Extensions
 {
     ///<summary>
     /// Methods to create multitenant databases
     ///</summary>
-    internal static class MultiDatabase
+    public static class MultiDatabase
     {
         public static DatabaseDocument CreateDatabaseDocument(string name)
         {

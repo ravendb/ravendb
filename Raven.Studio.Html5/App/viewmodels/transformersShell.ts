@@ -2,19 +2,23 @@
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
+import editTransformer = require("viewmodels/editTransformer");
 
 class transformerShell extends viewModelBase {
     router: DurandalRootRouter;
     currentBreadcrumbTitle: KnockoutComputed<string>;
     indexesUrl = appUrl.forCurrentDatabase().indexes;
+    appUrls: computedAppUrls;
 
     constructor() {
         super();
 
+        this.appUrls = appUrl.forCurrentDatabase();
+
         this.router = durandalRouter.createChildRouter()
             .map([
-                { route: 'transformers', moduleId: 'viewmodels/transformers', title: 'Transformers', nav: true },
-                { route: 'transformers/edit(/:transformerName)', moduleId: 'viewmodels/editTransformer', title: 'Edit Transformer', nav: true }
+                { route: 'databases/transformers', moduleId: 'viewmodels/transformers', title: 'Transformers', nav: true },
+                { route: 'databases/transformers/edit(/:transformerName)', moduleId: 'viewmodels/editTransformer', title: 'Edit Transformer', nav: true }
                 
             ])
             .buildNavigationModel();
@@ -29,6 +33,11 @@ class transformerShell extends viewModelBase {
             return activeRoute != null ? activeRoute.title : "";
         });
     }
+
+    //todo: implement refresh of all transformers
+    modelPolling() {
+    }
+
 }
 
 export = transformerShell;

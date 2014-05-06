@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Spatial
@@ -17,7 +19,7 @@ namespace Raven.Tests.Spatial
 			// The gym is about 7.32 miles (11.79 kilometers) from my house.
 			var gym = new DummyGeoDoc(44.682861, -93.25);
 
-			using (var store = NewDocumentStore())
+			using (var store = NewRemoteDocumentStore())
 			{
 				store.Initialize();
 				store.ExecuteIndex(new KmGeoIndex());

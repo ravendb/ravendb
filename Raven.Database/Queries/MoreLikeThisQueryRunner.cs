@@ -68,7 +68,7 @@ namespace Raven.Database.Queries
 
 				if (string.IsNullOrWhiteSpace(query.StopWordsDocumentId) == false)
 				{
-					var stopWordsDoc = database.Get(query.StopWordsDocumentId, null);
+					var stopWordsDoc = database.Documents.Get(query.StopWordsDocumentId, null);
 					if (stopWordsDoc == null)
 						throw new InvalidOperationException("Stop words document " + query.StopWordsDocumentId + " could not be found");
 
@@ -104,7 +104,7 @@ namespace Raven.Database.Queries
 					var result = new MultiLoadResult();
 
 					var includedEtags = new List<byte>(jsonDocuments.SelectMany(x => x.Etag.ToByteArray()));
-					includedEtags.AddRange(database.GetIndexEtag(query.IndexName, null).ToByteArray());
+					includedEtags.AddRange(database.Indexes.GetIndexEtag(query.IndexName, null).ToByteArray());
 					var loadedIds = new HashSet<string>(jsonDocuments.Select(x => x.Key));
 					var addIncludesCommand = new AddIncludesCommand(database, transactionInformation, (etag, includedDoc) =>
 					{
@@ -150,13 +150,13 @@ namespace Raven.Database.Queries
 					.Distinct();
 
 				return documentIds
-					.Select(docId => database.Get(docId, null))
+					.Select(docId => database.Documents.Get(docId, null))
 					.Where(it => it != null)
 					.ToArray();
 			}
 
 			var fields = searcher.Doc(baseDocId).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct().ToArray();
-			var etag = database.GetIndexEtag(indexName, null);
+			var etag = database.Indexes.GetIndexEtag(indexName, null);
 			return hits
 				.Where(hit => hit.Doc != baseDocId)
 				.Select(hit => new JsonDocument

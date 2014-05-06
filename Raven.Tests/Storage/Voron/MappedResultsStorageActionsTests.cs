@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Database.Util;
+using Raven.Tests.Common;
 
 namespace Raven.Tests.Storage.Voron
 {
@@ -354,7 +355,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal("reduceKey1", result.ReduceKey);
 					Assert.True(result.Size > 0);
 					Assert.Null(result.Source);
-					Assert.True((DateTime.UtcNow - result.Timestamp).TotalMilliseconds < 100);
+                    Assert.Equal(UtcNow, result.Timestamp);
 					Assert.Equal("data1", result.Data["data"]);
 				});
 
@@ -373,7 +374,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal("reduceKey1", result1.ReduceKey);
 					Assert.True(result1.Size > 0);
 					Assert.Null(result1.Source);
-					Assert.True((DateTime.UtcNow - result1.Timestamp).TotalMilliseconds < 100);
+                    Assert.Equal(UtcNow, result1.Timestamp);
 					Assert.Equal("data1", result1.Data["data"]);
 
 					var result2 = results[1];
@@ -381,7 +382,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal("reduceKey1", result2.ReduceKey);
 					Assert.True(result2.Size > 0);
 					Assert.Null(result2.Source);
-					Assert.True((DateTime.UtcNow - result2.Timestamp).TotalMilliseconds < 100);
+                    Assert.Equal(UtcNow, result2.Timestamp);
 					Assert.Equal("data2", result2.Data["data"]);
 				});
 			}
@@ -1127,7 +1128,7 @@ namespace Raven.Tests.Storage.Voron
 
 					Assert.Equal(1, r1.Level);
 					Assert.Equal("reduceKey1", r1.Key);
-					Assert.True((SystemTime.UtcNow - r1.Timestamp).TotalMilliseconds < 100);
+                    Assert.Equal(UtcNow, r1.Timestamp);
 				});
 			}
 		}
@@ -1347,7 +1348,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal("reduceKey1", r1.ReduceKey);
 					Assert.True(r1.Size > 0);
 					Assert.Equal("2", r1.Source);
-					Assert.True((DateTime.UtcNow - r1.Timestamp).TotalMilliseconds < 100);
+                    Assert.Equal(UtcNow, r1.Timestamp);
 					Assert.Equal("data1", r1.Data["data"]);
 				});
 			}
@@ -1459,7 +1460,7 @@ namespace Raven.Tests.Storage.Voron
 
 		[Theory]
 		[PropertyData("Storages")]
-		public void GetReduceTypesPerKeys(string requestedStorage)
+		public void GetReduceTypesPerKeys1(string requestedStorage)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
@@ -1519,6 +1520,38 @@ namespace Raven.Tests.Storage.Voron
 				});
 			}
 		}
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void GetReduceTypesPerKeys2(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => Assert.Equal(0, accessor.MapReduce.GetReduceTypesPerKeys(303, 10, 10).Count()));
+
+                storage.Batch(accessor =>
+                {
+                    accessor.MapReduce.ScheduleReductions(303, 0, new ReduceKeyAndBucket(1, "reduceKey1"));
+                    accessor.MapReduce.ScheduleReductions(303, 0, new ReduceKeyAndBucket(2, "reduceKey1"));
+                    accessor.MapReduce.ScheduleReductions(303, 0, new ReduceKeyAndBucket(1, "reduceKey2"));
+                    accessor.MapReduce.ScheduleReductions(303, 1, new ReduceKeyAndBucket(1, "reduceKey3"));
+                    accessor.MapReduce.ScheduleReductions(404, 0, new ReduceKeyAndBucket(1, "reduceKey1"));
+                });
+
+                storage.Batch(accessor =>
+                {
+                    var results = accessor.MapReduce
+                        .GetReduceTypesPerKeys(303, 10, 10)
+                        .ToList();
+
+                    Assert.Equal(3, results.Count);
+                    Assert.True(results.Any(x => x.ReduceKey == "reduceKey1"));
+                    Assert.True(results.Any(x => x.ReduceKey == "reduceKey2"));
+                    Assert.True(results.Any(x => x.ReduceKey == "reduceKey3"));
+                    Assert.True(results.All(x => x.OperationTypeToPerform == ReduceType.SingleStep));
+                });
+            }
+        }
 
 		[Theory]
 		[PropertyData("Storages")]
@@ -1605,7 +1638,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal("reduceKey1", result.ReduceKey);
 					Assert.True(result.Size > 0);
 					Assert.Null(result.Source);
-					Assert.True((DateTime.UtcNow - result.Timestamp).TotalMilliseconds < 100);
+                    Assert.Equal(UtcNow, result.Timestamp);
 					Assert.Equal("data1", result.Data["data"]);
 
 					results = accessor.MapReduce

@@ -14,24 +14,31 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Server;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.MultiTenancy
 {
-	public class Basic : RemoteClientTest, IDisposable
+	public class Basic : RavenTest, IDisposable
 	{
 		protected RavenDbServer GetNewServer(int port)
 		{
-			return new RavenDbServer(new RavenConfiguration
-				{
-					Port = port,
-					RunInMemory = true,
-					DataDirectory = "Data",
-					AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
-				});
+		    RavenDbServer ravenDbServer = new RavenDbServer(new RavenConfiguration
+		    {
+		        Port = port,
+		        RunInMemory = true,
+		        DataDirectory = "Data",
+		        AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
+		    })
+		    {
+		        UseEmbeddedHttpServer = true
+		    };
+		    ravenDbServer.Initialize();
+		    return ravenDbServer;
 		}
 
-		[Fact]
+	    [Fact]
 		public void CanCreateDatabaseUsingExtensionMethod()
 		{
 			using (GetNewServer(8079))

@@ -16,13 +16,13 @@ namespace Raven.Client.Document
 		{
 			get
 			{
-				return operation.OperationId;
+				return Operation.OperationId;
 			}
 		}
 
 		private readonly IDocumentStore documentStore;
 		private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
-		private readonly ILowLevelBulkInsertOperation operation;
+		protected ILowLevelBulkInsertOperation Operation { get; set; }
 		public IAsyncDatabaseCommands DatabaseCommands { get; private set; }
 		private readonly EntityToJson entityToJson;
 
@@ -32,8 +32,8 @@ namespace Raven.Client.Document
 
 		public event Action<string> Report
 		{
-			add { operation.Report += value; }
-			remove { operation.Report -= value; }
+			add { Operation.Report += value; }
+			remove { Operation.Report -= value; }
 		}
 
 		public BulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners, BulkInsertOptions options, IDatabaseChanges changes)
@@ -48,18 +48,23 @@ namespace Raven.Client.Document
 				: documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
 			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity).ResultUnwrap());
-			operation = DatabaseCommands.GetBulkInsertOperation(options, changes);
+			Operation = GetBulkInsertOperation(options, DatabaseCommands, changes);
 			entityToJson = new EntityToJson(documentStore, listeners);
+		}
+
+		protected virtual ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes)
+		{
+			return commands.GetBulkInsertOperation(options, changes);
 		}
 
 		public Task DisposeAsync()
 		{
-			return operation.DisposeAsync();
+			return Operation.DisposeAsync();
 		}
 
 		public void Dispose()
 		{
-			operation.Dispose();
+			Operation.Dispose();
 		}
 
 		public string Store(object entity)
@@ -81,14 +86,14 @@ namespace Raven.Client.Document
 
 			OnBeforeEntityInsert(id, data, metadata);
 
-			operation.Write(id, metadata, data);
+			Operation.Write(id, metadata, data);
 		}
 
 		public void Store(RavenJObject document, RavenJObject metadata, string id)
 		{
 			OnBeforeEntityInsert(id, document, metadata);
 
-			operation.Write(id, metadata, document);
+			Operation.Write(id, metadata, document);
 		}
 
 		private string GetId(object entity)

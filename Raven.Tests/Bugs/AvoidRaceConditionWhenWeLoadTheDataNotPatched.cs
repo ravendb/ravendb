@@ -2,16 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
-using Raven.Tests;
-using Raven.Tests.MailingList;
+using Raven.Tests.Common;
+
 using Xunit;
 
-namespace Raven.Tryouts
+namespace Raven.Tests.Bugs
 {
 	public class AvoidRaceConditionWhenWeLoadTheDataNotPatched : RavenTest
 	{

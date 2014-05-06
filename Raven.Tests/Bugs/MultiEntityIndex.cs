@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
 using Raven.Tests.Document;
 using Xunit;
 using System.Linq;

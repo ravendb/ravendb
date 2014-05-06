@@ -313,7 +313,7 @@ namespace Raven.Imports.Newtonsoft.Json
 
 			int attemptCharReadCount = _chars.Length - _charsUsed - 1;
 
-			int charsRead = await _reader.ReadAsync(_chars, _charsUsed, attemptCharReadCount);
+			int charsRead = await _reader.ReadAsync(_chars, _charsUsed, attemptCharReadCount).ConfigureAwait(false);
 
 			_charsUsed += charsRead;
 
@@ -1328,12 +1328,17 @@ namespace Raven.Imports.Newtonsoft.Json
 					string number = _stringReference.ToString();
 
 					// it's faster to do 3 indexof with single characters than an indexofany
-					if (number.IndexOf('.') != -1 || number.IndexOf('E') != -1 || number.IndexOf('e') != -1)
+					if (number.IndexOf('E') != -1 || number.IndexOf('e') != -1)
+                    {
+                        numberValue = Convert.ToDouble(number, CultureInfo.InvariantCulture);
+                        numberType = JsonToken.Float;
+                    }
+                    else if (number.IndexOf('.') != -1)
 					{
-						numberValue = Convert.ToDouble(number, CultureInfo.InvariantCulture);
+						numberValue = Convert.ToDecimal(number, CultureInfo.InvariantCulture);
 						numberType = JsonToken.Float;
 					}
-					else
+                    else
 					{
 						try
 						{

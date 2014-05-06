@@ -21,9 +21,12 @@ using Microsoft.Win32;
 using NDesk.Options;
 using NLog.Config;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database;
+using Raven.Database.Actions;
 using Raven.Database.Config;
+using Raven.Database.Data;
 using Raven.Database.Server;
 using Raven.Database.Util;
 
@@ -160,6 +163,7 @@ namespace Raven.Server
 				{
 					ravenConfiguration.Settings["Raven/RunInMemory"] = "true";
 					ravenConfiguration.RunInMemory = true;
+					ravenConfiguration.Initialize();
 					actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.Admin, ravenConfiguration, launchBrowser, noLog);		
 				}},
 				{"debug", "Runs RavenDB in debug mode", key => actionToTake = () => RunInDebugMode(null, ravenConfiguration, launchBrowser, noLog)},
@@ -373,7 +377,12 @@ Configuration options:
 				{
 					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 				}
-				DocumentDatabase.Restore(ravenConfiguration, backupLocation, databaseLocation, Console.WriteLine, defrag);
+				MaintenanceActions.Restore(ravenConfiguration, new RestoreRequest
+				{
+				    BackupLocation = backupLocation,
+                    DatabaseLocation = databaseLocation,
+                    Defrag = defrag
+				}, Console.WriteLine);
 			}
 			catch (Exception e)
 			{
@@ -453,7 +462,7 @@ Configuration options:
 		private static bool RunServerInDebugMode(RavenConfiguration ravenConfiguration, bool launchBrowser)
 		{
 			var sp = Stopwatch.StartNew();
-			using (var server = new RavenDbServer(ravenConfiguration))
+			using (var server = new RavenDbServer(ravenConfiguration){ UseEmbeddedHttpServer = true }.Initialize())
 			{
 				sp.Stop();
 				var path = Path.Combine(Environment.CurrentDirectory, "default.raven");

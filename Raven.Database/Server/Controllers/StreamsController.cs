@@ -15,6 +15,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
+using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
@@ -27,121 +28,121 @@ namespace Raven.Database.Server.Controllers
 {
 	public class StreamsController : RavenDbApiController
 	{
-        [HttpGet]
-        [Route("streams/docs")]
-        [Route("databases/{databaseName}/streams/docs")]
-        public HttpResponseMessage StreamDocsGet()
-        {
-            var start = GetStart();
-            var etag = GetEtagFromQueryString();
-            var startsWith = GetQueryStringValue("startsWith");
-            var pageSize = GetPageSize(int.MaxValue);
-            var matches = GetQueryStringValue("matches");
-            var nextPageStart = GetNextPageStart();
-            if (string.IsNullOrEmpty(GetQueryStringValue("pageSize")))
-                pageSize = int.MaxValue;
+		[HttpGet]
+		[Route("streams/docs")]
+		[Route("databases/{databaseName}/streams/docs")]
+		public HttpResponseMessage StreamDocsGet()
+		{
+			var start = GetStart();
+			var etag = GetEtagFromQueryString();
+			var startsWith = GetQueryStringValue("startsWith");
+			var pageSize = GetPageSize(int.MaxValue);
+			var matches = GetQueryStringValue("matches");
+			var nextPageStart = GetNextPageStart();
+			if (string.IsNullOrEmpty(GetQueryStringValue("pageSize")))
+				pageSize = int.MaxValue;
 
-            return new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new PushStreamContent((stream, content, transportContext) =>
-                    StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart))
-                {
-                    Headers =
-                    {
-                        ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" }
-                    }
-                }
-            };
-        }
+			return new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = new PushStreamContent((stream, content, transportContext) =>
+					StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart))
+				{
+					Headers =
+					{
+						ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" }
+					}
+				}
+			};
+		}
 
-        private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart)
-        {
-            using (var cts = new CancellationTokenSource())
-            using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
-            using (var writer = new JsonTextWriter(new StreamWriter(stream)))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName("Results");
-                writer.WriteStartArray();
+		private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart)
+		{
+			using (var cts = new CancellationTokenSource())
+			using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+			using (var writer = new JsonTextWriter(new StreamWriter(stream)))
+			{
+				writer.WriteStartObject();
+				writer.WritePropertyName("Results");
+				writer.WriteStartArray();
 
-                Database.TransactionalStorage.Batch(accessor =>
-                {
-                    // we may be sending a LOT of documents to the user, and most 
-                    // of them aren't going to be relevant for other ops, so we are going to skip
-                    // the cache for that, to avoid filling it up very quickly
-                    using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
-                    {
-                        if (string.IsNullOrEmpty(startsWith))
-                            Database.GetDocuments(start, pageSize, etag, cts.Token, doc =>
-                            {
-                                timeout.Delay();
-                                doc.WriteTo(writer);
-                            });
-                        else
-                        {
-                            var nextPageStartInternal = nextPageStart;
+				Database.TransactionalStorage.Batch(accessor =>
+				{
+					// we may be sending a LOT of documents to the user, and most 
+					// of them aren't going to be relevant for other ops, so we are going to skip
+					// the cache for that, to avoid filling it up very quickly
+					using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+					{
+						if (string.IsNullOrEmpty(startsWith))
+							Database.Documents.GetDocuments(start, pageSize, etag, cts.Token, doc =>
+							{
+								timeout.Delay();
+								doc.WriteTo(writer);
+							});
+						else
+						{
+							var nextPageStartInternal = nextPageStart;
 
-                            Database.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, cts.Token, ref nextPageStartInternal, doc =>
-                            {
-                                timeout.Delay();
-                                doc.WriteTo(writer);
-                            });
+							Database.Documents.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, cts.Token, ref nextPageStartInternal, doc =>
+							{
+								timeout.Delay();
+								doc.WriteTo(writer);
+							});
 
-                            nextPageStart = nextPageStartInternal;
-                        }
-                    }
-                });
+							nextPageStart = nextPageStartInternal;
+						}
+					}
+				});
 
-                writer.WriteEndArray();
-                writer.WritePropertyName("NextPageStart");
-                writer.WriteValue(nextPageStart);
-                writer.WriteEndObject();
-                writer.Flush();
-            }
-        }
+				writer.WriteEndArray();
+				writer.WritePropertyName("NextPageStart");
+				writer.WriteValue(nextPageStart);
+				writer.WriteEndObject();
+				writer.Flush();
+			}
+		}
 
 		[HttpGet]
 		[Route("streams/query/{*id}")]
 		[Route("databases/{databaseName}/streams/query/{*id}")]
 		public HttpResponseMessage SteamQueryGet(string id)
 		{
-            using (var cts = new CancellationTokenSource())
-            using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
-            {
-                var msg = GetEmptyMessage();
+			using (var cts = new CancellationTokenSource())
+			using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+			{
+				var msg = GetEmptyMessage();
 
-                var index = id;
-                var query = GetIndexQuery(int.MaxValue);
-                if (string.IsNullOrEmpty(GetQueryStringValue("pageSize"))) query.PageSize = int.MaxValue;
-                var isHeadRequest = InnerRequest.Method == HttpMethod.Head;
-                if (isHeadRequest) query.PageSize = 0;
+				var index = id;
+				var query = GetIndexQuery(int.MaxValue);
+				if (string.IsNullOrEmpty(GetQueryStringValue("pageSize"))) query.PageSize = int.MaxValue;
+				var isHeadRequest = InnerRequest.Method == HttpMethod.Head;
+				if (isHeadRequest) query.PageSize = 0;
 
 				var accessor = Database.TransactionalStorage.CreateAccessor(); //accessor will be disposed in the StreamQueryContent.SerializeToStreamAsync!
 
-                try
-                {
-                    var queryOp = new DocumentDatabase.DatabaseQueryOperation(Database, index, query, accessor, cts.Token);
-                    queryOp.Init();
-				msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor,
-					mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" });
+				try
+				{
+					var queryOp = new QueryActions.DatabaseQueryOperation(Database, index, query, accessor, cts.Token);
+					queryOp.Init();
+					msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor,
+						mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" });
 
-                    msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
-                    msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
-                    msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStable ? "true" : "false");
-                    msg.Headers.Add("Raven-Index", queryOp.Header.Index);
-                    msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
-                    msg.Headers.Add(
-                        "Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
+					msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
+					msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
+					msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStale ? "true" : "false");
+					msg.Headers.Add("Raven-Index", queryOp.Header.Index);
+					msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
+					msg.Headers.Add(
+						"Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
 
-                }
-                catch (Exception)
-                {
-                    accessor.Dispose();
-                    throw;
-                }
+				}
+				catch (Exception)
+				{
+					accessor.Dispose();
+					throw;
+				}
 
-                return msg;
-            }
+				return msg;
+			}
 		}
 
 		[HttpPost]
@@ -158,18 +159,17 @@ namespace Raven.Database.Server.Controllers
 				return SteamQueryGet(id);
 			}
 
-			return GetMessageWithString("Not idea how to handle a POST on " + id + " with op=" +
-										(GetQueryStringValue("op") ?? "<no val specified>"));
+			return GetMessageWithString("Not idea how to handle a POST on " + id + " without a posted query", HttpStatusCode.BadRequest);
 		}
 
 		public class StreamQueryContent : HttpContent
 		{
 			private readonly HttpRequestMessage req;
-			private readonly DocumentDatabase.DatabaseQueryOperation queryOp;
+			private readonly QueryActions.DatabaseQueryOperation queryOp;
 			private readonly IStorageActionsAccessor accessor;
 			private readonly Action<string> outputContentTypeSetter;
 
-			public StreamQueryContent(HttpRequestMessage req, DocumentDatabase.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor,Action<string> contentTypeSetter)
+			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, Action<string> contentTypeSetter)
 			{
 				this.req = req;
 				this.queryOp = queryOp;
@@ -185,7 +185,7 @@ namespace Raven.Database.Server.Controllers
 				{
 					writer.WriteHeader();
 					queryOp.Execute(writer.Write);
-					outputContentTypeSetter(writer.ContentType);					
+					outputContentTypeSetter(writer.ContentType);
 				}
 
 				return Task.FromResult(true);
@@ -201,7 +201,7 @@ namespace Raven.Database.Server.Controllers
 		private static IOutputWriter GetOutputWriter(HttpRequestMessage req, Stream stream)
 		{
 			var useExcelFormat = "excel".Equals(GetQueryStringValue(req, "format"), StringComparison.InvariantCultureIgnoreCase);
-			return useExcelFormat ? (IOutputWriter) new ExcelOutputWriter(stream) : new JsonOutputWriter(stream);
+			return useExcelFormat ? (IOutputWriter)new ExcelOutputWriter(stream) : new JsonOutputWriter(stream);
 		}
 
 		public interface IOutputWriter : IDisposable
@@ -219,7 +219,7 @@ namespace Raven.Database.Server.Controllers
 			private readonly Stream stream;
 			private StreamWriter writer;
 
-			public ExcelOutputWriter( Stream stream)
+			public ExcelOutputWriter(Stream stream)
 			{
 				this.stream = stream;
 			}
@@ -323,7 +323,7 @@ namespace Raven.Database.Server.Controllers
 
 			public string ContentType
 			{
-				get {  return JsonContentType; }
+				get { return JsonContentType; }
 			}
 
 			public void WriteHeader()

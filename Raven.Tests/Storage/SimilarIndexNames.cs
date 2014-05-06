@@ -3,6 +3,8 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -30,7 +32,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void Index_with_similar_names_update_first()
 		{
-			db.PutIndex("Leases/SearchIndex",
+			db.Indexes.PutIndex("Leases/SearchIndex",
 						new IndexDefinition
 						{
 							Map = @"
@@ -40,7 +42,7 @@ namespace Raven.Tests.Storage
 "
 						});
 
-			db.PutIndex("Leases/SearchIndex2",
+			db.Indexes.PutIndex("Leases/SearchIndex2",
 						new IndexDefinition
 						{
 							Map = @"
@@ -77,7 +79,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void Index_with_similar_names_update_second()
 		{
-			db.PutIndex("Leases/SearchIndex",
+			db.Indexes.PutIndex("Leases/SearchIndex",
 						new IndexDefinition
 						{
 							Map = @"
@@ -87,7 +89,7 @@ namespace Raven.Tests.Storage
 "
 						});
 
-			db.PutIndex("Leases/SearchIndex2",
+			db.Indexes.PutIndex("Leases/SearchIndex2",
 						new IndexDefinition
 						{
 							Map = @"

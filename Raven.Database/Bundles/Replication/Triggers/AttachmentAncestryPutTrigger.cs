@@ -64,7 +64,7 @@ namespace Raven.Bundles.Replication.Triggers
 
 		private RavenJObject GetAttachmentMetadata(string key)
 		{
-			var attachment = Database.GetStatic(key);
+			var attachment = Database.Attachments.GetStatic(key);
 			if(attachment != null)
 				return attachment.Metadata;
 

@@ -4,11 +4,13 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryOptimizerOnStaticIndex : RemoteClientTest
+	public class QueryOptimizerOnStaticIndex : RavenTest
 	{
 		public class GameServers_ByName : AbstractIndexCreationTask<DynamicQuerySorting.GameServer>
 		{

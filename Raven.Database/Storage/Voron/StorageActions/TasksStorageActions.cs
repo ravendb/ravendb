@@ -34,7 +34,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private readonly Reference<WriteBatch> writeBatch;
 
-        public TasksStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool)
+        public TasksStorageActions(TableStorage tableStorage, IUuidGenerator generator, Reference<SnapshotReader> snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool)
 			: base(snapshot, bufferPool)
 		{
 			this.tableStorage = tableStorage;

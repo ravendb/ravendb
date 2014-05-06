@@ -8,6 +8,8 @@ import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import getStoredQueriesCommand = require("commands/getStoredQueriesCommand");
 import querySort = require("models/querySort");
 import app = require("durandal/app");
+import resetIndexConfirm = require("viewmodels/resetIndexConfirm");
+import router = require("plugins/router"); 
 
 class indexes extends viewModelBase {
 
@@ -15,7 +17,17 @@ class indexes extends viewModelBase {
     queryUrl = ko.observable<string>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     containerSelector = "#indexesContainer";
-    recentQueries = ko.observableArray<storedQueryDto>()
+    recentQueries = ko.observableArray<storedQueryDto>();
+    sortedGroups = ko.computed(()=> {
+        var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
+
+        groups.forEach((group: { entityName: string; indexes: KnockoutObservableArray<index> })=> {
+            group.indexes(group.indexes().slice(0).sort((l: index, r: index) => l.name.toLowerCase() > r.name.toLowerCase()?1:-1));
+        });
+
+        return groups;
+    });
+
     
     activate(args) {
         super.activate(args);
@@ -28,15 +40,12 @@ class indexes extends viewModelBase {
 
   modelPolling() {
     
-  }
+  }    
 
     attached() {
         // Alt+Minus and Alt+Plus are already setup. Since laptops don't have a dedicated key for plus, we'll also use the equal sign key (co-opted for plus).
-        this.createKeyboardShortcut("Alt+=", () => this.expandAll(), this.containerSelector);
-    }
-
-    deactivate() {
-        this.removeKeyboardShortcuts(this.containerSelector);
+        //this.createKeyboardShortcut("Alt+=", () => this.toggleExpandAll(), this.containerSelector);
+        ko.postbox.publish("SetRawJSONUrl",  appUrl.forIndexesRawData(this.activeDatabase()));
     }
 
     fetchIndexes() {
@@ -81,19 +90,25 @@ class indexes extends viewModelBase {
 
     putIndexIntoGroupNamed(i: index, groupName: string) {
         var group = this.indexGroups.first(g => g.entityName === groupName);
+        var indexExists: boolean;
         if (group) {
-            group.indexes.push(i);
+            indexExists = !!group.indexes.first((cur: index) => cur.name == i.name);
+            if (!indexExists) {
+                group.indexes.push(i);
+            }
         } else {
-            this.indexGroups.push({ entityName: groupName, indexes: ko.observableArray([i]) });
+            indexExists = !!this.indexGroups.first((curGroup: { entityName: string; indexes: KnockoutObservableArray<index> }) =>
+                !!curGroup.indexes.first((cur: index) => cur.name == i.name));
+
+            if (!indexExists) {
+
+                this.indexGroups.push({ entityName: groupName, indexes: ko.observableArray([i]) });
+            }
         }
     }
-
-    collapseAll() {
-        $(".index-group-content").collapse('hide');
-    }
-
-    expandAll() {
-        $(".index-group-content").collapse('show');
+    
+    toggleExpandAll() {
+        $(".index-group-content").collapse('toggle');
     }
 
     deleteIdleIndexes() {
@@ -119,13 +134,30 @@ class indexes extends viewModelBase {
         this.promptDeleteIndexes([i]);
     }
 
+    deleteIndexGroup(i: { entityName: string; indexes: KnockoutObservableArray<index> }) {
+        this.promptDeleteIndexes(i.indexes());
+    }
+
     promptDeleteIndexes(indexes: index[]) {
         if (indexes.length > 0) {
             var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
             app.showDialog(deleteIndexesVm);
-            deleteIndexesVm.deleteTask.done(() => this.removeIndexesFromAllGroups(indexes));
+            deleteIndexesVm.deleteTask
+                .done((aa) => {
+                    this.removeIndexesFromAllGroups(indexes);
+                })
+                .fail(() => {
+                    this.removeIndexesFromAllGroups(indexes);
+                    this.fetchIndexes();
+            });
         }
     }
+
+    resetIndex(indexToReset: index) {
+        var resetIndexVm = new resetIndexConfirm(indexToReset.name, this.activeDatabase());
+        app.showDialog(resetIndexVm);
+    }
+    
 
     removeIndexesFromAllGroups(indexes: index[]) {
         this.indexGroups().forEach(g => {

@@ -3,6 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Tests.Common;
+using Raven.Tests.Common.Dto;
+
 namespace Raven.Tests.Security
 {
 	using System.Collections.Generic;
@@ -16,8 +19,6 @@ namespace Raven.Tests.Security
 	using Raven.Database.Server.Security;
 	using Raven.Database.Server.Security.Windows;
 	using Raven.Json.Linq;
-	using Raven.Tests.Bundles.Replication;
-	using Raven.Tests.Bundles.Versioning;
 
 	using Xunit;
 
@@ -59,7 +60,7 @@ namespace Raven.Tests.Security
 
 			if (isApiDatabase)
 			{
-				database.Put(
+				database.Documents.Put(
 					"Raven/ApiKeys/" + apiKey.Split('/')[0],
 					null,
 					RavenJObject.FromObject(
@@ -81,7 +82,7 @@ namespace Raven.Tests.Security
 			}
 			else
 			{
-				database.Put("Raven/Authorization/WindowsSettings", null,
+				database.Documents.Put("Raven/Authorization/WindowsSettings", null,
 												   RavenJObject.FromObject(new WindowsAuthDocument
 												   {
 													   RequiredUsers = new List<WindowsAuthData>

@@ -12,6 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Util;
 
@@ -152,14 +153,7 @@ namespace Raven.Database.Server.Tenancy
                 config.Settings[securedSetting.Key] = securedSetting.Value;
             }
 
-            var dataDir = document.Settings[folderPropName];
-            if (dataDir.StartsWith("~/") || dataDir.StartsWith(@"~\"))
-            {
-                var baseDataPath = Path.GetDirectoryName(parentConfiguration.DataDirectory);
-                if (baseDataPath == null)
-                    throw new InvalidOperationException("Could not find root data path");
-                config.Settings[folderPropName] = Path.Combine(baseDataPath, dataDir.Substring(2));
-            }
+	        config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.DataDirectory);
             config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
 
             config.DatabaseName = tenantId;

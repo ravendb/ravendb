@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Voron.Tests</RootNamespace>
     <AssemblyName>Voron.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
@@ -63,6 +63,7 @@
   <ItemGroup>
     <Compile Include="Backups\Full.cs" />
     <Compile Include="Backups\Incremental.cs" />
+    <Compile Include="Bugs\AccessViolationWithIteratorUsage.cs" />
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
     <Compile Include="Bugs\MemoryAccess.cs" />
     <Compile Include="Bugs\FlushingToDataFile.cs" />
@@ -80,6 +81,8 @@
     <Compile Include="Bugs\PageSplitter.cs" />
     <Compile Include="Bugs\Recovery.cs" />
     <Compile Include="Bugs\InvalidReleasesOfScratchPages.cs" />
+    <Compile Include="Bugs\MultiReads.cs" />
+    <Compile Include="Bugs\Iterating.cs" />
     <Compile Include="Bugs\TreeRebalancer.cs" />
     <Compile Include="Bugs\Versioning.cs" />
     <Compile Include="Bugs\UpdateLastItem.cs" />
@@ -88,6 +91,7 @@
     <Compile Include="Journal\EdgeCases.cs" />
     <Compile Include="Journal\Mvcc.cs" />
     <Compile Include="Journal\UncommittedTransactions.cs" />
+    <Compile Include="MultiTreeSize.cs" />
     <Compile Include="MultiValueTree.cs" />
     <Compile Include="Optimizations\Writes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -96,6 +100,8 @@
     <Compile Include="Storage\Concurrency.cs" />
     <Compile Include="Storage\Files.cs" />
     <Compile Include="Storage\FreeScratchPages.cs" />
+    <Compile Include="Storage\Increments.cs" />
+    <Compile Include="Storage\InitialSize.cs" />
     <Compile Include="Storage\MemoryMapWithoutBackingPagerTest.cs" />
     <Compile Include="Storage\MultiTransactions.cs" />
     <Compile Include="Storage\Pagers.cs" />

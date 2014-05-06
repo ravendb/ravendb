@@ -1,9 +1,9 @@
 ﻿<div>
-    <div class="panel panel-primary">
+    <div class="panel panel-default">
         <div class="panel-heading">
-            <div class="pull-left panel-title">Automatic conflict resolution settings</div>
+            <div class="pull-left panel-title">Automatic Conflict Resolution</div>
             <div class="pull-right">
-                <button type="button" class="btn btn-default btn-xs" data-bind="click: saveAutomaticConflictResolutionSettings"><i class="fa fa-save"></i> Save Changes</button>
+                <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveAutomaticConflictResolutionSettings, enable: isConfigSaveEnabled" title="Save changes"><i class="fa fa-save"></i></button>
             </div>
             <div class="clearfix"></div>
         </div>
@@ -46,29 +46,29 @@
             </form>
         </div>
     </div>
-    <div class="panel panel-primary">
-        <div class="panel-heading">
-            <div class="pull-left panel-title">Replication destinations</div>
-            <div class="pull-right">
-                <button type="button" class="btn btn-default btn-xs" data-bind="click: createNewDestination"><i class="fa fa-plus"></i> Add Replication</button>
-                <button type="button" class="btn btn-default btn-xs" data-bind="click: saveChanges"><i class="fa fa-save"></i> Save Changes</button>
+    <form data-bind="submit: $root.saveChanges" class=" form-horizontal" role="form">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <div class="pull-left panel-title">Replication Destinations</div>
+                <div class="pull-right">
+                    <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add destination</button>
+                    <button type="submit" class="btn btn-primary use-bootstrap-tooltip" data-bind="enable: isSetupSaveEnabled" title="Save replication destinations (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+                </div>
+                <div class="clearfix"></div>
             </div>
-            <div class="clearfix"></div>
-        </div>
-        <div class="panel-body" data-bind="with: replicationsSetup">
-            <div data-bind="visible: destinations().length === 0">
-                No replication destinations specified.
-            </div>
-            <div data-bind="foreach: destinations">
-                <div class="panel replication-destination-card" data-bind="css: { 'panel-info': !disabled(), 'panel-warning': disabled }">
-                    <div class="panel-heading">
-                        <h3 class="panel-title">
-                            <span>&nbsp;</span>
-                            <button type="button" style="display:inline-block;" class="close" data-bind="click: $root.removeDestination.bind($root)" title="Remove this replication">×</button>
-                        </h3>
-                    </div>
-                    <div class="panel-body">
-                        <form class="form-horizontal" role="form">
+            <div class="panel-body" data-bind="with: replicationsSetup">
+                <div class="alert alert-warning" data-bind="visible: destinations().length === 0">
+                    You've got no replication destinations set up.
+                </div>
+                <div data-bind="foreach: destinations">
+                    <div class="panel replication-destination-card" data-bind="css: { 'panel-danger': !isValid(), 'panel-info': isValid() && !disabled(), 'panel-warning': isValid() && disabled() }">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">
+                                <span data-bind="text: name"></span>
+                                <span class="glyphicon glyphicon-remove remove-icon pull-right" data-bind="click: $root.removeDestination.bind($root)" title="Remove this replication destination"></span>
+                            </h3>
+                        </div>
+                        <div class="panel-body">
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">Disabled</label>
                                 <div class="col-sm-7">
@@ -85,70 +85,86 @@
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">Url</label>
                                 <div class="col-sm-7">
-                                    <input type="email" class="form-control" data-bind="value: url" />
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="col-sm-4 control-label">Client Visible Url</label>
-                                <div class="col-sm-7">
-                                    <input type="text" class="form-control" data-bind="value: clientVisibleUrl" />
+                                    <input required type="url" class="form-control" data-bind="value: url, valueUpdate: 'keyup'" />
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">Database</label>
                                 <div class="col-sm-7">
-                                    <input type="text" class="form-control" data-bind="value: database" />
+                                    <input required type="text" class="form-control" data-bind="value: database, valueUpdate: 'keyup'" />
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="col-sm-4 control-label">User Name</label>
+                                <label class="col-sm-4 control-label">Credentials</label>
                                 <div class="col-sm-7">
-                                    <input type="text" class="form-control" data-bind="value: username" />
+                                    <button type="button" class="btn btn-default" data-bind="click: toggleUserCredentials, css: {active:isUserCredentials}">User</button>
+                                    <button type="button" class="btn btn-default" data-bind="click: toggleApiKeyCredentials, css: {active:isApiKeyCredentials}">ApiKey</button>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label class="col-sm-4 control-label">Password</label>
-                                <div class="col-sm-7">
-                                    <input type="text" class="form-control" data-bind="value: password" />
+                            <div data-bind="if: isUserCredentials, visible: isUserCredentials">
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">User Name</label>
+                                    <div class="col-sm-7">
+                                        <input required type="text" class="form-control" data-bind="value: username, valueUpdate: 'keyup'" />
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="col-sm-4 control-label">Domain</label>
-                                <div class="col-sm-7">
-                                    <input type="text" class="form-control" data-bind="value: domain" />
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Password</label>
+                                    <div class="col-sm-7">
+                                        <input required type="text" class="form-control" data-bind="value: password, valueUpdate: 'keyup'" />
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="col-sm-4 control-label">API Key</label>
-                                <div class="col-sm-7">
-                                    <input type="text" class="form-control" data-bind="value: apiKey" />
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="col-sm-4 control-label">Skip Failover</label>
-                                <div class="col-sm-7">
-                                    <div class="btn-group" data-toggle="buttons">
-                                        <label class="btn btn-primary" data-bind="click: includeFailover, css: { active: !ignoredClient() }">
-                                            <input type="radio" name="options"> No
-                                        </label>
-                                        <label class="btn btn-primary" data-bind="click: skipFailover, css: { active: ignoredClient }">
-                                            <input type="radio" name="options"> Yes
-                                        </label>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Domain</label>
+                                    <div class="col-sm-7">
+                                        <input required type="text" class="form-control" data-bind="value: domain, valueUpdate: 'keyup'" />
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label class="col-sm-4 control-label">Transitive Replication</label>
-                                <div class="col-sm-7">
-                                    <select class="form-control" 
-                                            data-bind="options: [{ label: 'Changed only', value: 'None' }, { label: 'Changed and replicated', value: 'Replicate' }],
-                                                   optionsText: 'label', optionsValue: 'value', value: transitiveReplicationBehavior"></select>
+                            <div data-bind="if: isApiKeyCredentials, visible: isApiKeyCredentials">
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">API Key</label>
+                                    <div class="col-sm-7">
+                                        <input required type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'keyup'" />
+                                    </div>
                                 </div>
                             </div>
-                        </form>
+                            <a data-bind="click: toggleIsAdvancedShows" class="advanced-replication-settings">
+                                Advanced Options
+                            </a>
+                            <div data-bind="visible: false">
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Client Visible Url</label>
+                                    <div class="col-sm-7">
+                                        <input type="text" class="form-control" data-bind="value: clientVisibleUrl, valueUpdate: 'keyup'" />
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Skip Failover</label>
+                                    <div class="col-sm-7">
+                                        <div class="btn-group" data-toggle="buttons">
+                                            <label class="btn btn-primary" data-bind="click: includeFailover, css: { active: !ignoredClient() }">
+                                                <input type="radio" name="options"> No
+                                            </label>
+                                            <label class="btn btn-primary" data-bind="click: skipFailover, css: { active: ignoredClient }">
+                                                <input type="radio" name="options"> Yes
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Transitive Replication</label>
+                                    <div class="col-sm-7">
+                                        <select class="form-control"
+                                                data-bind="options: [{ label: 'Changed only', value: 'None' }, { label: 'Changed and replicated', value: 'Replicate' }],
+                                                   optionsText: 'label', optionsValue: 'value', value: transitiveReplicationBehavior"></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </form>
 </div>

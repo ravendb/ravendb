@@ -99,6 +99,7 @@ namespace Raven.Smuggler
 			    },
 			    {"timeout:", "The timeout to use for requests", s => options.Timeout = TimeSpan.FromMilliseconds(int.Parse(s))},
 			    {"batch-size:", "The batch size for requests", s => options.BatchSize = int.Parse(s)},
+				{"chunk-size:", "The number of documents to import before new connection will be opened", s => options.ChunkSize = int.Parse(s)},
 			    {"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
 			    {"d2|database2:", "The database to export to. If no specified, the operations will be on the default database. This parameter is used only in the between operation.", value => connectionStringOptions2.DefaultDatabase = value},
 			    {"u|user|username:", "The username to use when the database requires the client to authenticate.", value => ((NetworkCredential) connectionStringOptions.Credentials).UserName = value},
@@ -174,23 +175,23 @@ namespace Raven.Smuggler
 				PrintUsageAndExit(e);
 			}
 
-			var smugglerApi = new SmugglerApi(connectionStringOptions);
+            var smugglerApi = new SmugglerApi();
 
 			try
 			{
 				switch (action)
 				{
 					case SmugglerAction.Import:
-						smugglerApi.ImportData(new SmugglerImportOptions {FromFile = backupPath}, options).Wait();
+						smugglerApi.ImportData(new SmugglerImportOptions { FromFile = backupPath, To = connectionStringOptions }, options).Wait();
 						if (waitForIndexing)
 							smugglerApi.WaitForIndexing(options).Wait();
 						break;
 					case SmugglerAction.Export:
-                        smugglerApi.ExportData(new SmugglerExportOptions {ToFile = backupPath}, options).Wait();
+						smugglerApi.ExportData(new SmugglerExportOptions { From = connectionStringOptions, ToFile = backupPath }, options).Wait();
 						break;
-                    case SmugglerAction.Between:
+					case SmugglerAction.Between:
 						connectionStringOptions2.Url = backupPath;
-						SmugglerOperation.Between(new SmugglerBetweenOptions {From = connectionStringOptions, To = connectionStringOptions2}, options).Wait();
+						SmugglerOperation.Between(new SmugglerBetweenOptions { From = connectionStringOptions, To = connectionStringOptions2 }, options).Wait();
 						break;
 				}
 			}

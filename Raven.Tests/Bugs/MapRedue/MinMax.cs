@@ -3,6 +3,8 @@ using System.Linq;
 using System.Threading;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.MapRedue

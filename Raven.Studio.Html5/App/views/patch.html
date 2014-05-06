@@ -1,0 +1,192 @@
+﻿<div class="alert alert-danger">
+    <p>Note: not implemented yet</p>
+    <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2057">You can track progress here</a>
+</div>
+<div id="patchContainer" class="not-implemented-yet">
+    <div class="btn-toolbar" role="toolbar">
+        <div class="btn-group">
+            <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-placement="right" data-toggle="dropdown">
+                <!-- ko with: patchDocuments -->
+                <span data-bind="text: patchOnOption"></span>
+                <!-- /ko -->
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" role="menu">
+                <!-- ko foreach: ['Document', 'Collection', 'Index'] -->
+                <li data-bind="click: $root.setSelectedPatchOnOption.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
+                <!-- /ko -->
+            </ul>
+        </div>
+        <div class="btn-group">
+            <a class="btn btn-default use-bootstrap-tooltip" title="Test the patch script on the selected document"><i class="fa fa-question-circle"></i> Test</a>
+        </div>
+        <div class="btn-group">
+            <a class="btn btn-default use-bootstrap-tooltip" title="Save the current Patch"><i class="fa fa-save"></i> Save</a>
+            <a class="btn btn-default use-bootstrap-tooltip" title="Load a saved Patch"><i class="fa fa-arrow-up"></i> Load</a>
+        </div>
+        <div class="btn-group">
+            <a class="btn btn-default use-bootstrap-tooltip" title="Execute Patch"><i class="fa fa-play"></i> Patch</a>
+            <a class="btn btn-default use-bootstrap-tooltip" title="Patch just the selected documents"><i class="fa fa-play"></i> Patch Selected</a>
+            <a class="btn btn-default use-bootstrap-tooltip" title="Patch all matching documents"><i class="fa fa-forward"></i> Patch All</a>
+        </div>
+    </div>
+    <br />
+    <div class="form-horizontal" data-bind="with: patchDocuments">
+        <div class="form-group" data-bind="visible: isDocumentPatch()">
+            <div class="row">
+                <label for="documentToPatch" class="col-md-2 control-label">Document to patch:</label>
+                <div class="col-md-10">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <input id="documentToPatch" type="text" class="form-control" data-bind="value: selectedItem, event: { keyup: $root.loadDocumentToPatch.bind($root, $element.value) }" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-group" data-bind="visible: isCollectionPatch()">
+            <div class="row">
+                <label for="collectionToPatch" class="col-md-2 control-label">Collection to patch:</label>
+                <div class="col-md-10">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                    <span data-bind="text: selectedItem"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul id="collectionToPatch" class="dropdown-menu" role="menu">
+                                    <!-- ko foreach: $root.collections -->
+                                    <li data-bind="click: $root.setSelectedCollection.bind($root, $data)"><a href="#" data-bind="text: $data.name"></a></li>
+                                    <!-- /ko -->
+                                </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+        <div class="form-group" data-bind="visible: isIndexPatch()">
+            <div class="row">
+                <label for="indexToPatch" class="col-md-2 control-label">Index to patch:</label>
+                <div class="col-md-10">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                    <span data-bind="text: selectedItem"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul id="indexToPatch" class="dropdown-menu" role="menu">
+                                    <!-- ko foreach: $root.indexNames -->
+                                    <li data-bind="click: $root.setSelectedIndex.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
+                                    <!-- /ko -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-group" data-bind="visible: isIndexPatch()">
+            <div class="col-md-12">
+                <div>
+                    <label>Query</label>
+                </div>
+                <div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <pre class="form-control" data-bind="aceEditor: { code: query }" style="height:160px;"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-md-9">
+                <div>
+                    <label>Patch Scripts</label>
+                </div>
+                <div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <pre class="form-control" data-bind="aceEditor: { code: script }" style="height:160px;"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div>
+                    <label>Parameters</label>
+                </div>
+                <div>
+                    <div class="col-sm-12">
+                        <table class="table table-striped table-hover" data-bind="visible: parameters().length > 0">
+                            <thead>
+                                <tr>
+                                    <td width="35%">Name</td>
+                                    <td>Value</td>
+                                    <td></td>
+                                </tr>
+                            </thead>
+                            <tbody data-bind="foreach: parameters">
+                                <tr>
+                                    <td>
+                                        <input id="parametersName" type="text" class="form-control" data-bind="value: key" />
+                                    </td>
+                                    <td>
+                                        <input id="parametersValue" type="text" class="form-control"  data-bind="value: value" />
+                                    </td>
+                                    <td>
+                                        <button type="button" class="close use-bootstrap-tooltip" style="display:inline-block; font-size: 14px;" data-bind="click: $parent.removeParameter.bind($parent, $data)" title="Remove this parameter">
+                                            <span class="glyphicon glyphicon-remove remove"></span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: createParameter" title="Add a parameter">
+                            <i class="fa fa-plus"></i> Add parameter
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-group" data-bind="visible: isCollectionPatch() || isIndexPatch()">
+            <div class="col-md-12">
+                <div>
+                    <label>Matching Documents</label>
+                </div>
+                <div data-bind="with: $root">
+                    <div id="matchingDocumentsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#matchingDocumentsGrid' }"></div>
+                </div>
+            </div>
+        </div>
+        <div class="form-group" data-bind="with: $root">
+            <div class="col-md-6">
+                <div>
+                    <label>Before Patch</label>
+                </div>
+                <div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <pre class="form-control" data-bind="aceEditor: { code: beforePatch, readOnly: true }" style="height:160px;"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div>
+                    <label>After Patch</label>
+                </div>
+                <div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <pre class="form-control" data-bind="aceEditor: { code: afterPatch, readOnly: true }" style="height:160px;"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

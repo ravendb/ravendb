@@ -13,13 +13,18 @@ class savePeriodicBackupSetupCommand extends commandBase {
         this.reportInfo("Saving Periodic Backup setup.");
         return jQuery.when(this.saveAccountInformation(), this.saveSetup())
             .done(() => this.reportSuccess("Saved Periodic Backup setup."))
-            .fail((response: JQueryXHR) => this.reportError("Failed to save Peridic Backup setup.", response.responseText));
+            .fail((response: JQueryXHR) => this.reportError("Failed to save Periodic Backup setup.", response.responseText));
     }
 
     private saveAccountInformation(): JQueryPromise<any> {
+        var jQueryOptions: JQueryAjaxSettings = {
+            headers: {
+                'If-None-Match': this.setupToPersist.getEtag()
+            }
+        };
         var url = "/admin/databases/" + this.db.name;
         var putArgs = JSON.stringify(this.setupToPersist.toDatabaseSettingsDto());
-        return this.put(url, putArgs, null, { dataType: undefined });
+        return this.put(url, putArgs, null, jQueryOptions);
     }
 
     private saveSetup(): JQueryPromise<any> {

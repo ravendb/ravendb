@@ -94,6 +94,7 @@ public class OAuthTest extends RemoteClientTest  {
   public void can_use_oauth() throws Exception {
     stopServerAfter();
     startServerWithOAuth(DEFAULT_SERVER_PORT_1);
+
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).withApiKey("java/6B4G51NrO0P").initialize()) {
       try (IDocumentSession session = store.openSession()) {
         User user = new User();

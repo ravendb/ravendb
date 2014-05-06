@@ -14,6 +14,7 @@ class indexErrors extends viewModelBase {
         super();
 
         this.updateCurrentNowTime();
+        
     }
 
     modelPolling() {
@@ -24,7 +25,7 @@ class indexErrors extends viewModelBase {
         clearTimeout(this.updateNowTimeoutHandle);
     }
 
-    fetchIndexErrors(): JQueryPromise<serverErrorDto[]> {
+    fetchIndexErrors(): JQueryPromise<databaseStatisticsDto> {
         var db = this.activeDatabase();
         if (db) {
             // Index errors are actually the .ServerErrors returned from the database statistics query.

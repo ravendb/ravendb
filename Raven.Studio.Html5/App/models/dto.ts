@@ -1,32 +1,48 @@
-interface collectionInfoDto {
-	Results: documentDto[];
-	Includes: any[];
-	IsStale: boolean;
-	IndexTimestamp: string;
-	TotalResults: number;
-	SkippedResults: number;
-	IndexName: string; 
-	IndexEtag: string;
-	ResultEtag: string;
-	Highlightings: any;
-	NonAuthoritativeInformation: boolean;
-	LastQueryTime: string;
-	DurationMilliseconds: number;
+interface collectionInfoDto extends indexResultsDto<documentDto> {
 }
 
-interface documentDto {
-	'@metadata'?: documentMetadataDto;
+interface documentDto extends metadataAwareDto {
+
+}
+
+interface conflictsInfoDto extends indexResultsDto<conflictDto> {
+}
+
+interface dictionary<TValue> {
+    [key: string]: TValue;
+}
+
+interface metadataAwareDto {
+    '@metadata'?: documentMetadataDto;
+}
+interface documentChangeNotificationDto {
+    Type: documentChangeType;
+    Id: string;
+    CollectionName: string;
+    TypeName: string;
+    Etag: string;
+    Message: string;
+}
+
+interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
+    OperationId: string;
+}
+
+interface indexChangeNotificationDto {
+    Type: string;
+    Name: string;
+    Etag: string;
 }
 
 interface documentMetadataDto {
-	'Raven-Entity-Name'?: string;
-	'Raven-Clr-Type'?: string;
-	'Non-Authoritative-Information'?: boolean;
-	'@id'?: string;
-	'Temp-Index-Score'?: number;
-	'Last-Modified'?: string;
-	'Raven-Last-Modified'?: string;
-	'@etag'?: string;
+    'Raven-Entity-Name'?: string;
+    'Raven-Clr-Type'?: string;
+    'Non-Authoritative-Information'?: boolean;
+    '@id'?: string;
+    'Temp-Index-Score'?: number;
+    'Last-Modified'?: string;
+    'Raven-Last-Modified'?: string;
+    '@etag'?: string;
 }
 
 interface databaseStatisticsDto {
@@ -62,8 +78,8 @@ interface indexStatisticsDto {
     ReduceIndexingSuccesses: number;
     ReduceIndexingErrors: number;
     LastReducedEtag: string;
-    LastReducedTimestamp: string; 
-    CreatedTimestamp: string; 
+    LastReducedTimestamp: string;
+    CreatedTimestamp: string;
     LastIndexingTime: string;
     IsOnRam: string; // Yep, really. Example values: "false", "true (3 KBytes)"
     LockMode: string;
@@ -145,8 +161,7 @@ interface queryResultDto {
     Includes: any[];
 }
 
-interface alertContainerDto {
-    '@metadata': documentMetadataDto;
+interface alertContainerDto extends documentDto {
     Alerts: alertDto[];
 }
 
@@ -212,6 +227,7 @@ interface indexDefinitionDto {
     SpatialIndexes: any; // This will be an object with zero or more properties, each property being the name of one of the .Fields, its value being of type spatialIndexDto.
     InternalFieldsMapping: any;
     Type: string;
+    MaxIndexOutputsPerDocument;
 }
 
 /*
@@ -234,6 +250,7 @@ interface spatialIndexSuggestionDto {
 }
 
 interface periodicBackupSetupDto {
+    Disabled: boolean;
     GlacierVaultName: string;
     S3BucketName: string;
     AwsRegionEndpoint: string;
@@ -243,7 +260,7 @@ interface periodicBackupSetupDto {
     FullBackupIntervalMilliseconds: number;
 }
 
-interface indexQueryResultsDto {
+interface indexResultsDto<T extends metadataAwareDto> {
     DurationMilliseconds: number;
     Highlightings: any;
     Includes: any;
@@ -254,9 +271,13 @@ interface indexQueryResultsDto {
     LastQueryTime: string;
     NonAuthoritativeInformation: boolean;
     ResultEtag: string;
-    Results: documentDto[];
+    Results: T[];
     SkippedResults: number;
     TotalResults: number;
+}
+
+interface indexQueryResultsDto extends indexResultsDto<documentDto> {
+
 }
 
 interface replicationDestinationDto {
@@ -307,16 +328,20 @@ interface transformerDto {
     }
 }
 
+interface saveTransformerDto {
+    'Name': string;
+    'TransformResults': string;
+}
 
 interface getTransformerResultDto {
-    'Transformer':string;
+    'Transformer': string;
 }
 
 interface savedTransformerDto {
     "Transformer":
     {
         "TransformResults": string;
-        "Name":string;
+        "Name": string;
     }
 }
 
@@ -348,39 +373,39 @@ interface bulkDocumentDto {
 }
 
 interface backupRequestDto {
-  BackupLocation: string;
-  DatabaseDocument: databaseDocumentDto;
+    BackupLocation: string;
+    DatabaseDocument: databaseDocumentDto;
 }
 
 interface backupStatusDto {
-  Started: string;
-  Completed?: string;
-  IsRunning: boolean;
-  Messages: backupMessageDto[];
+    Started: string;
+    Completed?: string;
+    IsRunning: boolean;
+    Messages: backupMessageDto[];
 }
 
 interface backupMessageDto {
-  Message: string;
-  Timestamp: string;
-  Severity: string;
+    Message: string;
+    Timestamp: string;
+    Severity: string;
 }
 
 interface databaseDocumentDto {
-  Id: string;
-  Settings: {};
-  SecuredSettings: {};
-  Disabled: boolean;
+    Id: string;
+    Settings: {};
+    SecuredSettings: {};
+    Disabled: boolean;
 }
 
 interface restoreRequestDto {
-  RestoreLocation: string;
-  DatabaseLocation: string;
-  DatabaseName: string;
+    RestoreLocation: string;
+    DatabaseLocation: string;
+    DatabaseName: string;
 }
 
 interface restoreStatusDto {
-  Messages: string[];
-  IsRunning: boolean;
+    Messages: string[];
+    IsRunning: boolean;
 }
 
 interface sqlReplicationTableDto {
@@ -388,7 +413,7 @@ interface sqlReplicationTableDto {
     DocumentKeyColumn: string;
 }
 
-interface sqlReplicationDto {
+interface sqlReplicationDto extends documentDto {
     Name: string;
     Disabled: boolean;
     ParameterizeDeletesDisabled: boolean;
@@ -399,4 +424,116 @@ interface sqlReplicationDto {
     ConnectionStringName: string;
     ConnectionStringSettingName: string;
     SqlReplicationTables: sqlReplicationTableDto[];
+}
+
+interface facetDto {
+    Mode: number; // Default = 0, Ranges = 1
+    Aggregation: number; // None = 0, Count = 1, Max = 2, Min = 4, Average = 8, Sum = 16
+    AggregationField: string;
+    AggregationType: string;
+    Name: string;
+    DisplayName: string;
+    Ranges: any[];
+    MaxResults: number;
+    TermSortMode: number;
+    IncludeRemainingTerms: boolean;
+}
+
+interface facetResultSetDto {
+    Results: any; // An object containing keys that look like [FacetName]-[FacetAggregationField]. For example "Company-Total". Each key will be of type facetResultDto.
+    Duration: string;
+}
+
+interface facetResultDto {
+    Values: facetValueDto[];
+    RemainingTerms: string[];
+    RemainingTermsCount: number;
+    RemainingHits: number;
+}
+
+interface facetValueDto {
+    Range: string;
+    Hits: number;
+    Count: number;
+    Sum: number;
+    Max: number;
+    Min: number;
+    Average: number;
+}
+
+interface scriptedIndexDto extends documentDto {
+    IndexScript: string;
+    DeleteScript: string;
+}
+
+interface conflictDto extends documentDto {
+    Id: string;
+    ConflictDetectedAt: string;
+    Versions: conflictVersionsDto[];
+}
+
+interface replicationSourceDto extends documentDto {
+    LastDocumentEtag?: string;
+    LastAttachmentEtag?: string;
+    ServerInstanceId: string;
+    Source: string;
+}
+
+interface conflictVersionsDto {
+    Id: string;
+    SourceId: string;
+}
+
+interface documentBase {
+    getId(): string;
+    getDocumentPropertyNames(): Array<string>;
+}
+
+interface smugglerOptionsDto {
+    IncludeDocuments: boolean;
+    IncludeIndexes: boolean;
+    IncludeTransformers: boolean;
+    IncludeAttachments: boolean;
+    RemoveAnalyzers: boolean;
+
+}
+
+interface customColumnParamsDto {
+    Header?: string;
+    Binding: string;
+    DefaultWidth?: number;
+    Template?: string;
+}
+
+interface customColumnsDto {
+    Columns: Array<customColumnParamsDto>;
+}
+
+interface patchValueDto {
+    Key: string;
+    Value: string;
+}
+
+interface patchDto {
+    PatchOnOption: string;
+    Query: string;
+    Script: string;
+    SelectedItem: string;
+    Values: Array<patchValueDto>;
+}
+
+enum documentChangeType {
+    None = 0,
+    Put = 1,
+    Delete = 2,
+    Common= 3,
+    BulkInsertStarted = 4,
+    BulkInsertEnded = 8,
+    BulkInsertError = 16
+}
+
+interface filterSettingDto {
+    Path: string;
+    Values: string[];
+    ShouldMatch: boolean;
 }

@@ -13,10 +13,12 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Server.RavenFS.Storage.Voron.Impl;
-
+using Voron;
 using Voron.Impl;
-
+using Constants = Raven.Abstractions.Data.Constants;
 using VoronExceptions = Voron.Exceptions;
+using Raven.Json.Linq;
+using Raven.Database.Server.RavenFS.Extensions;
 
 namespace Raven.Database.Server.RavenFS.Storage.Voron
 {
@@ -38,10 +40,10 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         private IdGenerator idGenerator;
 
-        public TransactionalStorage(string path, NameValueCollection settings)
+        public TransactionalStorage(string path, RavenJObject settings)
         {
             this.path = path;
-            this.settings = settings;
+            this.settings = settings.ToNameValueCollection();
 
             bufferPool = new BufferPool(2L * 1024 * 1024 * 1024, int.MaxValue); // 2GB max buffer size (voron limit)
         }
@@ -70,33 +72,57 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 
         public Guid Id { get; private set; }
 
-        public bool Initialize()
+        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, NameValueCollection settings)
+        {
+            bool allowIncrementalBackupsSetting;
+            if (bool.TryParse(settings["Raven/Voron/AllowIncrementalBackups"] ?? "false", out allowIncrementalBackupsSetting) == false)
+                throw new ArgumentException("Raven/Voron/AllowIncrementalBackups settings key contains invalid value");
+
+            var directoryPath = path ?? AppDomain.CurrentDomain.BaseDirectory;
+            var filePathFolder = new DirectoryInfo(directoryPath);
+            if (filePathFolder.Exists == false)
+                filePathFolder.Create();
+
+            var tempPath = settings["Raven/Voron/TempPath"];
+            var journalPath = settings[Constants.RavenTxJournalPath];
+            var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
+            options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
+            return options;
+        }
+        public void Initialize()
         {
             bool runInMemory;
             bool.TryParse(settings["Raven/RunInMemory"], out runInMemory);
 
-            var persistenceSource = runInMemory ? (IPersistenceSource)new MemoryPersistenceSource() : new MemoryMapPersistenceSource(path, settings);
+            var persistenceSource = runInMemory ? StorageEnvironmentOptions.CreateMemoryOnly() :
+                CreateStorageOptionsFromConfiguration(path, settings);
 
             tableStorage = new TableStorage(persistenceSource, bufferPool);
+            SetupDatabaseId();
 
-            if (persistenceSource.CreatedNew)
+            idGenerator = new IdGenerator(tableStorage);
+
+        }
+
+
+        private void SetupDatabaseId()
+        {
+            using (var snapshot = tableStorage.CreateSnapshot())
             {
-                Id = Guid.NewGuid();
-
-                using (var writeIdBatch = new WriteBatch())
+                var read = tableStorage.Details.Read(snapshot, "id", null);
+                if (read == null) // new db
                 {
-                    tableStorage.Details.Add(writeIdBatch, "id", Id.ToByteArray());
-                    tableStorage.Write(writeIdBatch);
+                    Id = Guid.NewGuid();
+                    using (var writeIdBatch = new WriteBatch())
+                    {
+                        tableStorage.Details.Add(writeIdBatch, "id", Id.ToByteArray());
+                        tableStorage.Write(writeIdBatch);
+                    }
                 }
-            }
-            else
-            {
-                using (var snapshot = tableStorage.CreateSnapshot())
+                else
                 {
-                    var read = tableStorage.Details.Read(snapshot, "id", null);
-                    if (read == null || read.Reader == null || read.Reader.Length == 0) //precaution - might prevent NRE in edge cases
+                    if (read.Reader == null || read.Reader.Length != 16)//precaution - might prevent NRE in edge cases
                         throw new InvalidDataException("Failed to initialize Voron transactional storage. Possible data corruption.");
-
                     using (var stream = read.Reader.AsStream())
                     using (var reader = new BinaryReader(stream))
                     {
@@ -104,11 +130,8 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
                     }
                 }
             }
-
-            idGenerator = new IdGenerator(tableStorage);
-
-            return persistenceSource.CreatedNew;
         }
+
 
         public void Batch(Action<IStorageActionsAccessor> action)
         {

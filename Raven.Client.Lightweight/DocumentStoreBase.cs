@@ -39,7 +39,16 @@ namespace Raven.Client
 			TransactionRecoveryStorage = new VolatileOnlyTransactionRecoveryStorage();
 		}
 
-		public abstract void Dispose();
+	    public DocumentSessionListeners Listeners
+	    {
+	        get { return listeners; }
+	    }
+	    public void SetListeners(DocumentSessionListeners newListeners)
+	    {
+            this.listeners = newListeners;
+	    }
+
+	    public abstract void Dispose();
 		
 		/// <summary>
 		/// 
@@ -86,7 +95,7 @@ namespace Raven.Client
 		public abstract IDocumentSession OpenSession(string database);
 		public abstract IDocumentSession OpenSession(OpenSessionOptions sessionOptions);
 		public abstract IDatabaseCommands DatabaseCommands { get; }
-
+        
 		/// <summary>
 		/// Executes the index creation.
 		/// </summary>
@@ -191,7 +200,7 @@ namespace Raven.Client
 				throw new InvalidOperationException("You cannot open a session or access the database commands before initializing the document store. Did you forget calling Initialize()?");
 		}
 
-		protected readonly DocumentSessionListeners listeners = new DocumentSessionListeners();
+		private DocumentSessionListeners listeners = new DocumentSessionListeners();
 
 		/// <summary>
 		/// Registers the conversion listener.
@@ -341,5 +350,6 @@ namespace Raven.Client
 			Encryptor.Initialize(UseFipsEncryptionAlgorithms);
 		}
 #endif
-	}
+
+    }
 }

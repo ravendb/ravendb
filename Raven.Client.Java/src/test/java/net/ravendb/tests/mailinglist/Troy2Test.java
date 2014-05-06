@@ -36,7 +36,7 @@ public class Troy2Test extends RemoteClientTest {
         s.saveChanges();
 
         Reference<RavenQueryStatistics> statsRef = new Reference<>();
-        s.advanced().luceneQuery(Tester.class, TesterSearch.class)
+        s.advanced().documentQuery(Tester.class, TesterSearch.class)
             .waitForNonStaleResults()
             .statistics(statsRef)
             .usingDefaultField("Query")
@@ -52,7 +52,7 @@ public class Troy2Test extends RemoteClientTest {
 
         assertEquals(1, statsRef.value.getTotalResults());
 
-        s.advanced().luceneQuery(Tester.class, TesterSearch.class)
+        s.advanced().documentQuery(Tester.class, TesterSearch.class)
             .waitForNonStaleResults()
             .statistics(statsRef)
             .usingDefaultField("Query")

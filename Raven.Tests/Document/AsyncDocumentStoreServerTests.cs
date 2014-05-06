@@ -16,6 +16,8 @@ using Raven.Client;
 using Raven.Client.Connection.Async;
 using Raven.Database.Server;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Document
@@ -39,11 +41,11 @@ namespace Raven.Tests.Document
 
     public class AsyncRemoteDocumentStoreServerTests : AsyncDocumentStoreServerTests
     {
-        private readonly RemoteClientTest ravenTest;
+        private readonly RavenTest ravenTest;
 
         public AsyncRemoteDocumentStoreServerTests()
         {
-            ravenTest = new RemoteClientTest();
+            ravenTest = new RavenTest();
             DocumentStore = ravenTest.NewRemoteDocumentStore();
         }
 

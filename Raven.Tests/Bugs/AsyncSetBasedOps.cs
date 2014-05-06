@@ -8,6 +8,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Tests.Common;
+
 using Xunit;
 using Xunit.Extensions;
 
@@ -22,11 +24,11 @@ namespace Raven.Tests.Bugs
 			public string FullName;
 		}
 
-		[Theory]
+		[Theory(Skip = "causes issues")]
 		[PropertyData("Storages")]
 		public async Task AwaitAsyncPatchByIndexShouldWork(string storageTypeName)
 		{
-			using (var store = NewRemoteDocumentStore(fiddler:true,requestedStorage:storageTypeName))
+			using (var store = NewRemoteDocumentStore(fiddler:true,requestedStorage:storageTypeName,runInMemory:false))
 			{
 				string lastUserId = null;
 

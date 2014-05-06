@@ -233,6 +233,7 @@ namespace Voron.Tests.Bugs
 			{
 				for (var j = 0; j < 10; j++)
 				{
+					
 					foreach (var treeName in trees)
 					{
 					    var tree = tx.Environment.State.GetTree(tx,treeName);

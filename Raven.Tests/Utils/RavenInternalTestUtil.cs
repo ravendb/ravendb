@@ -8,7 +8,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+
+using Raven.Tests.Common;
 using Raven.Tests.Helpers;
+
 using Xunit;
 
 namespace Raven.Tests.Utils

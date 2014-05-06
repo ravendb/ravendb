@@ -13,6 +13,7 @@ using System.Web;
 using Microsoft.VisualBasic.Logging;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Impl;
 using Raven.Database.Server.Controllers;
@@ -152,7 +153,12 @@ namespace Raven.Database.Server.WebApi
 	            }
 	            catch (Exception e)
 	            {
-	                Logger.ErrorException("Could not finalize request properly", e);
+		            var aggregateException = e as AggregateException;
+		            if (aggregateException != null)
+		            {
+			            e = aggregateException.ExtractSingleInnerException();
+		            }
+		            Logger.ErrorException("Could not finalize request properly", e);
 	            }
 	        }
 
@@ -162,19 +168,26 @@ namespace Raven.Database.Server.WebApi
 	    // Cross-Origin Resource Sharing (CORS) is documented here: http://www.w3.org/TR/cors/
         public void AddAccessControlHeaders(RavenBaseApiController controller, HttpResponseMessage msg)
 		{
-			if (string.IsNullOrEmpty(landlord.SystemConfiguration.AccessControlAllowOrigin))
+	        var accessControlAllowOrigin = landlord.SystemConfiguration.AccessControlAllowOrigin;
+	        if (accessControlAllowOrigin.Count == 0)
 				return;
 
-			controller.AddHeader("Access-Control-Allow-Credentials", "true", msg);
+	        var originHeader = controller.GetHeader("Origin");
+	        if (originHeader == null || originHeader.Contains(controller.InnerRequest.Headers.Host))
+		        return; // no need
 
-			bool originAllowed = landlord.SystemConfiguration.AccessControlAllowOrigin == "*" ||
-					landlord.SystemConfiguration.AccessControlAllowOrigin.Split(' ')
-						.Any(o => o == controller.GetHeader("Origin"));
+
+	        bool originAllowed = accessControlAllowOrigin.Contains("*") ||
+	                             accessControlAllowOrigin.Contains(originHeader);
 			if (originAllowed)
 			{
-				controller.AddHeader("Access-Control-Allow-Origin", controller.GetHeader("Origin"), msg);
+				controller.AddHeader("Access-Control-Allow-Origin", originHeader, msg);
 			}
 
+	        if (controller.Request.Method.Method != "OPTIONS")
+		        return;
+
+			controller.AddHeader("Access-Control-Allow-Credentials", "true", msg);
 			controller.AddHeader("Access-Control-Max-Age", landlord.SystemConfiguration.AccessControlMaxAge, msg);
 			controller.AddHeader("Access-Control-Allow-Methods", landlord.SystemConfiguration.AccessControlAllowMethods, msg);
 			if (string.IsNullOrEmpty(landlord.SystemConfiguration.AccessControlRequestHeaders))
@@ -241,11 +254,6 @@ namespace Raven.Database.Server.WebApi
 			Interlocked.Increment(ref physicalRequestsCount);
 		}
 
-		public void DecrementRequestCount()
-		{
-			Interlocked.Decrement(ref physicalRequestsCount);
-		}
-
         private void FinalizeRequestProcessing(RavenBaseApiController controller, HttpResponseMessage response, Stopwatch sw)
 		{
 			LogHttpRequestStatsParams logHttpRequestStatsParam = null;
@@ -272,7 +280,7 @@ namespace Raven.Database.Server.WebApi
 		            GetHeaders(controller.InnerHeaders), 
 		            controller.InnerRequest.Method.Method,
 		            response != null ? (int) response.StatusCode : 500,
-		            controller.InnerRequest.RequestUri.PathAndQuery,
+		            controller.InnerRequest.RequestUri.ToString(),
 		            sb != null ? sb.ToString() : null
 		            );
 		    }
@@ -288,7 +296,7 @@ namespace Raven.Database.Server.WebApi
 
 		    controller.MarkRequestDuration(sw.ElapsedMilliseconds);
 
-			LogHttpRequestStats(logHttpRequestStatsParam, controller.TenantName);
+			LogHttpRequestStats(controller,logHttpRequestStatsParam, controller.TenantName);
 
 			TraceRequest(logHttpRequestStatsParam, controller.TenantName);
 
@@ -332,9 +340,12 @@ namespace Raven.Database.Server.WebApi
 			return result;
 		}
 
-		private void LogHttpRequestStats(LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName)
+		private void LogHttpRequestStats(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName)
 		{
 			if (Logger.IsDebugEnabled == false)
+				return;
+
+			if (controller is StudioController || controller is HardRouteController || controller is SilverlightController)
 				return;
 
 			// we filter out requests for the UI because they fill the log with information

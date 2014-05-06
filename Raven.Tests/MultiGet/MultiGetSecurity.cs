@@ -7,11 +7,13 @@ using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Tests.Bugs;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.MultiGet
 {
-	public class MultiGetSecurity : RemoteClientTest
+	public class MultiGetSecurity : RavenTest
 	{
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration ravenConfiguration)
 		{

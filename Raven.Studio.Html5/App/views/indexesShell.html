@@ -7,15 +7,18 @@
         </h3>
     </li>
     <li data-bind="with: activeDatabase">
-        <a data-bind="text: name"></a>
+        <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
     </li>
     <li>
-        <a>Indexes</a>
+        <a data-bind="attr: { href: appUrls.indexes }">Indexes</a>
+    </li>
+    <li class="active" data-bind="visible: isIndexNameVisible">
+        <span data-bind="text: indexName"></span>
     </li>
     <li class="active">
         <span data-bind="text: currentBreadcrumbTitle"></span>
     </li>
 </ul>
-<section data-bind="router: { cacheViews:true } ">
+<section data-bind="router: { cacheViews: false } ">
     
 </section>

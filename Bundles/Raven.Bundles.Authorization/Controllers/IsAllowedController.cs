@@ -34,7 +34,7 @@ namespace Raven.Bundles.Authorization.Controllers
 			// we don't want security to take hold when we are trying to ask about security
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var documents = docIds.Select(docId => Database.GetDocumentMetadata(docId, transactionInformation)).ToArray();
+				var documents = docIds.Select(docId => Database.Documents.GetDocumentMetadata(docId, transactionInformation)).ToArray();
 				var etag = CalculateEtag(documents, userId);
 				if (MatchEtag(etag))
 				{
@@ -76,26 +76,26 @@ namespace Raven.Bundles.Authorization.Controllers
 
 		private Etag CalculateEtag(IEnumerable<JsonDocumentMetadata> documents, string userId)
 		{
-			var etags = new List<byte>();
+				var etags = new List<byte>();
 
-			etags.AddRange(documents.SelectMany(x => x == null ? Guid.Empty.ToByteArray() : (x.Etag ?? Etag.Empty).ToByteArray()));
+				etags.AddRange(documents.SelectMany(x => x == null ? Guid.Empty.ToByteArray() : (x.Etag ?? Etag.Empty).ToByteArray()));
 
-			var userDoc = Database.Get(userId, null);
-			if (userDoc == null)
-			{
-				etags.AddRange(Guid.Empty.ToByteArray());
-			}
-			else
-			{
-				etags.AddRange((userDoc.Etag ?? Etag.Empty).ToByteArray());
-				var user = userDoc.DataAsJson.JsonDeserialization<AuthorizationUser>();
-				foreach (var roleMetadata in user.Roles.Select(role => Database.GetDocumentMetadata(role, null)))
+				var userDoc = Database.Documents.Get(userId, null);
+				if (userDoc == null)
 				{
-					etags.AddRange(roleMetadata == null ? Guid.Empty.ToByteArray() : (roleMetadata.Etag ?? Etag.Empty).ToByteArray());
+					etags.AddRange(Guid.Empty.ToByteArray());
 				}
-			}
+				else
+				{
+					etags.AddRange((userDoc.Etag ?? Etag.Empty).ToByteArray());
+					var user = userDoc.DataAsJson.JsonDeserialization<AuthorizationUser>();
+					foreach (var roleMetadata in user.Roles.Select(role => Database.Documents.GetDocumentMetadata(role, null)))
+					{
+						etags.AddRange(roleMetadata == null ? Guid.Empty.ToByteArray() : (roleMetadata.Etag ?? Etag.Empty).ToByteArray());
+					}
+				}
 
 			return Etag.Parse(Encryptor.Current.Hash.Compute16(etags.ToArray()));
-		}
+			}
 	}
 }

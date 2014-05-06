@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -13,12 +12,12 @@ using System.Web.Http.Routing;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Config;
-using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using System.Linq;
@@ -115,7 +114,7 @@ namespace Raven.Database.Server.Controllers
 		public override HttpResponseMessage GetEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
 		{
 			var result = base.GetEmptyMessage(code, etag);
-			AddAccessControlHeaders(result);
+			RequestManager.AddAccessControlHeaders(this, result);
 			HandleReplication(result);
 			return result;
 		}
@@ -124,7 +123,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var result = base.GetMessageWithObject(item, code, etag);
 
-			AddAccessControlHeaders(result);
+			RequestManager.AddAccessControlHeaders(this, result);
 			HandleReplication(result);
 			return result;
 		}
@@ -132,39 +131,9 @@ namespace Raven.Database.Server.Controllers
 		public override HttpResponseMessage GetMessageWithString(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
 		{
 			var result =base.GetMessageWithString(msg, code, etag);
-			AddAccessControlHeaders(result);
+			RequestManager.AddAccessControlHeaders(this, result);
 			HandleReplication(result);
 			return result;
-		}
-
-		private void AddAccessControlHeaders(HttpResponseMessage msg)
-		{
-			if (string.IsNullOrEmpty(DatabasesLandlord.SystemConfiguration.AccessControlAllowOrigin))
-				return;
-
-			AddHeader("Access-Control-Allow-Credentials", "true", msg);
-
-			var originAllowed = DatabasesLandlord.SystemConfiguration.AccessControlAllowOrigin == "*" ||
-					DatabasesLandlord.SystemConfiguration.AccessControlAllowOrigin.Split(' ')
-						.Any(o => o == GetHeader("Origin"));
-			if (originAllowed)
-			{
-				AddHeader("Access-Control-Allow-Origin", GetHeader("Origin"), msg);
-			}
-
-			AddHeader("Access-Control-Max-Age", DatabasesLandlord.SystemConfiguration.AccessControlMaxAge, msg);
-			AddHeader("Access-Control-Allow-Methods", DatabasesLandlord.SystemConfiguration.AccessControlAllowMethods, msg);
-
-			if (string.IsNullOrEmpty(DatabasesLandlord.SystemConfiguration.AccessControlRequestHeaders))
-			{
-				// allow whatever headers are being requested
-				var hdr = GetHeader("Access-Control-Request-Headers"); // typically: "x-requested-with"
-				if (hdr != null) AddHeader("Access-Control-Allow-Headers", hdr, msg);
-			}
-			else
-			{
-				AddHeader("Access-Control-Request-Headers", DatabasesLandlord.SystemConfiguration.AccessControlRequestHeaders, msg);
-			}
 		}
 
 		private DatabasesLandlord landlord;
@@ -293,7 +262,7 @@ namespace Raven.Database.Server.Controllers
 			SpatialUnits units;
 			var unitsSpecified = Enum.TryParse(GetQueryStringValue("spatialUnits"), out units);
 			double distanceErrorPct;
-			if (!double.TryParse(GetQueryStringValue("distErrPrc"), out distanceErrorPct))
+			if (!double.TryParse(GetQueryStringValue("distErrPrc"), NumberStyles.Any, CultureInfo.InvariantCulture, out distanceErrorPct))
 				distanceErrorPct = Constants.DefaultSpatialDistanceErrorPct;
 			SpatialRelation spatialRelation;
 			
@@ -509,7 +478,7 @@ namespace Raven.Database.Server.Controllers
             }
             catch (Exception e)
             {
-                var msg = "Could open database named: " + tenantId;
+                var msg = "Could not open database named: " + tenantId;
                 Logger.WarnException(msg, e);
                 throw new HttpException(503, msg, e);
             }
@@ -537,7 +506,14 @@ namespace Raven.Database.Server.Controllers
                 }
                 catch (Exception e)
                 {
-                    var msg = "Could open database named: " + tenantId;
+                    string exceptionMessage = e.Message;
+                    var aggregateException = e as AggregateException;
+                    if (aggregateException != null)
+                    {
+                        exceptionMessage = aggregateException.ExtractSingleInnerException().Message;
+                    }
+                    var msg = "Could not open database named: " + tenantId + Environment.NewLine + exceptionMessage;
+
                     Logger.WarnException(msg, e);
                     throw new HttpException(503, msg, e);
                 }
@@ -560,7 +536,21 @@ namespace Raven.Database.Server.Controllers
 
 	    public override void MarkRequestDuration(long duration)
 	    {
+	        if (Database == null)
+	            return;
 	        Database.WorkContext.MetricsCounters.RequestDuationMetric.Update(duration);
+	    }
+
+	    public bool ClientIsV3OrHigher
+	    {
+	        get
+	        {
+	            IEnumerable<string> values;
+	            if (Request.Headers.TryGetValues("Raven-Client-Version", out values) == false)
+                    return false; // probably 1.0 client?
+
+	            return values.All(x => string.IsNullOrEmpty(x) == false && (x[0] != '1' && x[0] != '2'));
+	        }
 	    }
 	}
 }

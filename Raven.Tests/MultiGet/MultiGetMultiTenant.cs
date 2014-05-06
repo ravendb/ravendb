@@ -3,13 +3,15 @@ using System.Linq;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Tests.Bugs;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Linq;
 using Raven.Client.Extensions;
 
 namespace Raven.Tests.MultiGet
 {
-	public class MultiGetMultiTenant : RemoteClientTest
+	public class MultiGetMultiTenant : RavenTest
 	{
 		[Fact]
 		public void CanUseLazyWithMultiTenancy()

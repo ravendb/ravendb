@@ -1,0 +1,29 @@
+﻿<div class="alert alert-danger">
+    <p>Note: not implemented yet</p>
+    <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2061">You can track progress here</a>
+</div>
+
+<div class="conflicts-page not-implemented-yet">
+    <div class="row">
+        <div class="col-md-12">
+            <div id="conflictsGrid" data-bind="widget: {
+    kind: 'virtualTable', itemsSource: currentConflictsPagedItems,
+    selectedIndices: selectedDocumentIndices, gridSelector: '#conflictsGrid',
+    showCheckboxes: false, useContextMenu: false,
+    customColumns: currentColumnsParams
+
+}"></div>
+        </div>
+    </div>
+</div>
+
+<script type="text/html" id="versions-template">
+    
+    <span data-bind="foreach: { data: $data, as: 'version' }">
+        <a href="#" data-bind="attr: {
+    href: $parents[4].getUrlForConflict(version),
+    title: 'Document Id: ' + version.id + ' Server Id: ' + $parents[4].getServerUrlForVersion(version)
+}"><span data-bind="    text: ($index() + 1) + $parents[4].getTextForVersion(version)"></span></a>
+    </span>
+    
+</script>

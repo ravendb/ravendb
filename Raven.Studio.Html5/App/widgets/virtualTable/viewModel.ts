@@ -1,7 +1,4 @@
-﻿/// <reference path="../../../Scripts/typings/knockout.postbox/knockout-postbox.d.ts" />
-/// <reference path="../../../Scripts/typings/durandal/durandal.d.ts" />
-
-import router = require("plugins/router");
+﻿import router = require("plugins/router");
 import widget = require("plugins/widget");
 import app = require("durandal/app");
 
@@ -10,11 +7,13 @@ import appUrl = require("common/appUrl");
 import document = require("models/document");
 import collection = require("models/collection");
 import database = require("models/database");
-import pagedResultSet = require("common/pagedResultSet"); 
-import deleteDocuments = require("viewmodels/deleteDocuments");
+import pagedResultSet = require("common/pagedResultSet");
+import deleteItems = require("viewmodels/deleteItems");
 import copyDocuments = require("viewmodels/copyDocuments");
 import row = require("widgets/virtualTable/row");
 import column = require("widgets/virtualTable/column");
+import customColumnParams = require('models/customColumnParams');
+import customColumns = require('models/customColumns');
 
 class ctor {
 
@@ -34,8 +33,11 @@ class ctor {
     gridViewport: JQuery;
     scrollThrottleTimeoutHandle = 0;
     firstVisibleRow: row = null;
+    itemsSourceSubscription: KnockoutSubscription = null;
+    isIndexMapReduce: KnockoutObservable<boolean>;
+
     settings: {
-        documentsSource: KnockoutObservable<pagedList>;
+        itemsSource: KnockoutObservable<pagedList>;
         dynamicHeightTargetSelector: string;
         dynamicHeightBottomMargin: number;
         gridSelector: string;
@@ -44,44 +46,63 @@ class ctor {
         showIds: boolean;
         useContextMenu: boolean;
         maxHeight: string;
-    }
-
-    constructor() {
+        customColumnParams: { [column: string]: customColumnParams };
+        isIndexMapReduce: KnockoutObservable<boolean>;
+        isCopyAllowed: boolean;
+        contextMenuOptions: string[];
+        selectionEnabled: boolean;
+        customColumns: KnockoutObservable<customColumns>;
     }
 
     activate(settings: any) {
         var defaults = {
             dynamicHeightTargetSelector: "footer",
             dynamicHeightBottomMargin: 0,
+            selectedIndices: ko.observableArray(),
             showCheckboxes: true,
             showIds: true,
             useContextMenu: true,
-            maxHeight: 'none'
+            maxHeight: 'none',
+            customColumnParams: {},
+            isIndexMapReduce: ko.observable<boolean>(true),
+            isCopyAllowed: true,
+            contextMenuOptions: ["CopyItems", "CopyIDs", "Delete"],
+            selectionEnabled: true,
+            customColumns: ko.observable(customColumns.empty())
         };
         this.settings = $.extend(defaults, settings);
 
-        this.items = this.settings.documentsSource();
-        this.focusableGridSelector = this.settings.gridSelector + " .ko-grid";
-        this.virtualHeight = ko.computed(() => this.rowHeight * this.virtualRowCount());
-        if (this.settings.showCheckboxes !== false) {
-            this.columns.push(new column("__IsChecked", 38));
-        }
-        if (this.settings.showIds !== false) {
-            this.columns.push(new column("Id", ctor.idColumnWidth));
+
+        if (!!settings.isIndexMapReduce) {
+            this.isIndexMapReduce = settings.isIndexMapReduce;
+        } else {
+            this.isIndexMapReduce = ko.observable<boolean>(false);
         }
 
-        this.settings.documentsSource.subscribe(list => {
+        this.items = this.settings.itemsSource();
+        this.focusableGridSelector = this.settings.gridSelector + " .ko-grid";
+        this.virtualHeight = ko.computed(() => this.rowHeight * this.virtualRowCount());
+
+        this.refreshIdAndCheckboxColumn();
+
+        this.itemsSourceSubscription = this.settings.itemsSource.subscribe(list => {
             this.recycleRows().forEach(r => {
                 r.resetCells();
+                this.recycleRows.valueHasMutated();
+                this.columns.valueHasMutated();
                 r.isInUse(false);
             });
             this.items = list;
             this.settings.selectedIndices.removeAll();
-            this.columns.remove(c => (c.name !== 'Id' && c.name !== '__IsChecked'));
+            this.columns.remove(c => (c.binding !== 'Id' && c.binding !== '__IsChecked'));
             this.gridViewport.scrollTop(0);
             this.onGridScrolled();
+
+            this.refreshIdAndCheckboxColumn();
         });
     }
+
+
 
     // Attached is called by Durandal when the view is attached to the DOM.
     // We use this to setup some UI-specific things like context menus, row creation, keyboard shortcuts, etc.
@@ -94,6 +115,7 @@ class ctor {
         this.gridViewport = this.grid.find(".ko-grid-viewport-container");
         this.gridViewport.on('DynamicHeightSet', () => this.onWindowHeightChanged());
         this.gridViewport.scroll(() => this.onGridScrolled());
+
         this.setupKeyboardShortcuts();
         if (this.settings.useContextMenu) {
             this.setupContextMenu();
@@ -102,7 +124,11 @@ class ctor {
 
     detached() {
         $(this.settings.gridSelector).unbind('keydown.jwerty');
+
         this.gridViewport.off('DynamicHeightSet');
+        if (this.itemsSourceSubscription) {
+            this.itemsSourceSubscription.dispose();
+        }
     }
 
     calculateRecycleRowCount() {
@@ -114,8 +140,8 @@ class ctor {
     createRecycleRows(rowCount: number) {
         var rows = [];
         for (var i = 0; i < rowCount; i++) {
-            var newRow = new row(this.settings.showIds);
-            newRow.createPlaceholderCells(this.columns().map(c => c.name));
+            var newRow = new row(this.settings.showIds, this);
+            newRow.createPlaceholderCells(this.columns().map(c => c.binding));
             newRow.rowIndex(i);
             var desiredTop = i * this.rowHeight;
             newRow.top(desiredTop);
@@ -130,7 +156,7 @@ class ctor {
 
         window.clearTimeout(this.scrollThrottleTimeoutHandle);
         this.scrollThrottleTimeoutHandle = setTimeout(() => this.loadRowData(), 100);
-        
+
         // COMMENTED OUT: while requestAnimationFrame works, there are some problems:
         // 1. It needs polyfill on IE9 and earlier.
         // 2. While the screen redraws much faster, it results in a more laggy scroll.
@@ -144,12 +170,11 @@ class ctor {
         var desiredRowCount = this.calculateRecycleRowCount();
         this.recycleRows(this.createRecycleRows(desiredRowCount));
         this.ensureRowsCoverViewport();
-        this.loadRowData();        
+        this.loadRowData();
     }
 
     setupKeyboardShortcuts() {
-        this.setupKeyboardShortcut("DELETE", () => this.deleteSelectedDocs());
-        this.setupKeyboardShortcut("F2", () => this.editLastSelectedDoc());
+        this.setupKeyboardShortcut("DELETE", () => this.deleteSelectedItems());
         this.setupKeyboardShortcut("Ctrl+C,D", () => this.copySelectedDocs());
         this.setupKeyboardShortcut("Ctrl+C,I", () => this.copySelectedDocIds());
     }
@@ -165,22 +190,41 @@ class ctor {
         var untypedGrid: any = this.grid;
         untypedGrid.contextmenu({
             target: '#gridContextMenu',
-            before: (e: MouseEvent) => { 
+            before: (e: MouseEvent) => {
 
-                // Select any right-clicked row.
-                var parentRow = $(e.target).parent(".ko-grid-row");
-                var rightClickedElement: row = parentRow.length ? ko.dataFor(parentRow[0]) : null;
-                if (rightClickedElement && rightClickedElement.isChecked != null && !rightClickedElement.isChecked()) {
-                    this.toggleRowChecked(rightClickedElement, e.shiftKey);
+                if (this.settings.showCheckboxes == true && !this.isIndexMapReduce()) {
+                    // Select any right-clicked row.
+                    var parentRow = $(e.target).parent(".ko-grid-row");
+                    var rightClickedElement: row = parentRow.length ? ko.dataFor(parentRow[0]) : null;
+                    if (rightClickedElement && rightClickedElement.isChecked != null && !rightClickedElement.isChecked()) {
+                        this.toggleRowChecked(rightClickedElement, e.shiftKey);
+                    }
                 }
-
                 return true;
             }
         });
     }
 
+    refreshIdAndCheckboxColumn() {
+        var containsId = this.columns().first(x=> x.binding == "Id");
+
+        if (!containsId && !this.isIndexMapReduce()) {
+            if (this.settings.showCheckboxes !== false) {
+                this.columns.push(new column("__IsChecked", 38));
+            }
+            if (this.settings.showIds !== false) {
+                this.columns.push(new column("Id", ctor.idColumnWidth));
+            }
+            this.columns.valueHasMutated();
+        } else if (containsId && this.isIndexMapReduce()) {
+            this.columns.remove(c => c.binding === 'Id' || c.binding === "__IsChecked");
+            this.columns.valueHasMutated();
+        }
+    }
+
     loadRowData() {
         if (this.items && this.firstVisibleRow) {
+            var that = this;
             // The scrolling has paused for a minute. See if we have all the data needed.
             var firstVisibleIndex = this.firstVisibleRow.rowIndex();
             var fetchTask = this.items.fetch(firstVisibleIndex, this.recycleRows().length);
@@ -195,69 +239,153 @@ class ctor {
         }
     }
 
-    fillRow(rowData: document, rowIndex: number) {
+    fillRow(rowData: documentBase, rowIndex: number) {
         var rowAtIndex: row = ko.utils.arrayFirst(this.recycleRows(), (r: row) => r.rowIndex() === rowIndex);
         if (rowAtIndex) {
             rowAtIndex.fillCells(rowData);
             rowAtIndex.collectionClass(this.getCollectionClassFromDocument(rowData));
-            rowAtIndex.editUrl(appUrl.forEditDoc(rowData.getId(), rowData.__metadata.ravenEntityName, rowIndex, appUrl.getDatabase()));
+            rowAtIndex.editUrl(appUrl.forEditItem(rowData.getId(), appUrl.getResource(), rowIndex, this.getEntityName(rowData)));
         }
     }
 
-    editLastSelectedDoc() {
-        var selectedDoc = this.getSelectedDocs(1).first();
-        if (selectedDoc) {
-            var id = selectedDoc.getId();
+    editLastSelectedItem() {
+        var selectedItem = this.getSelectedItems(1).first();
+        if (selectedItem) {
             var collectionName = this.items.collectionName;
             var itemIndex = this.settings.selectedIndices().first();
-            router.navigate(appUrl.forEditDoc(id, collectionName, itemIndex, appUrl.getDatabase()));
+            router.navigate(appUrl.forEditItem(selectedItem.getId(), appUrl.getResource(), itemIndex, collectionName));
         }
     }
 
-    getCollectionClassFromDocument(doc: document): string {
-        var entityName = doc.__metadata.ravenEntityName;
-        return collection.getCollectionCssClass(entityName);
+    getEntityName(item: documentBase) {
+        var obj: any = item;
+        if (obj && obj instanceof document && obj.getEntityName) {
+            var documentObj = <document> obj;
+            return documentObj.getEntityName();
+        }
+        return null;
     }
 
-    ensureColumnsForRows(rows: Array<document>) {
+    getCollectionClassFromDocument(doc: documentBase): string {
+        return collection.getCollectionCssClass(this.getEntityName(doc));
+    }
+
+    getColumnWidth(binding: string, defaultColumnWidth: number = 100): number {
+        var customColumns = this.settings.customColumns();
+        var customConfig = customColumns.findConfigFor(binding);
+        if (customConfig && customColumns.customMode() === true) {
+            return customConfig.width();
+        }
+
+        if (binding === "Id" && defaultColumnWidth > ctor.idColumnWidth) {
+            return ctor.idColumnWidth;
+        }
+        return defaultColumnWidth;
+    }
+
+    getColumnName(binding: string): string {
+        if (this.settings.customColumns().hasOverrides()) {
+            var customConfig = this.settings.customColumns().findConfigFor(binding);
+            if (customConfig) {
+                return customConfig.header();
+            }
+        }
+        return binding;
+    }
+
+    ensureColumnsForRows(rows: Array<documentBase>) {
         // This is called when items finish loading and are ready for display.
         // Keep allocations to a minimum.
 
-        // Enforce a max number of columns. Having many columns is unweildy to the user
-        // and greatly slows down scroll speed.
-        var maxColumns = 10;
-        if (this.columns().length >= maxColumns) {
-            return;
-        }
-
         var columnsNeeded = {};
-        for (var i = 0; i < rows.length; i++) {
-            var currentRow = rows[i];
-            var rowProperties = currentRow.getDocumentPropertyNames();
-            for (var j = 0; j < rowProperties.length; j++) {
-                var property = rowProperties[j];
-                columnsNeeded[property] = null;
+        
+        if (this.settings.customColumns().hasOverrides()) {
+            var colParams = this.settings.customColumns().columns();
+            for (var i = 0; i < colParams.length; i++) {
+                var colParam = colParams[i];
+                columnsNeeded[colParam.binding()] = null;
+            }
+        } else {
+            for (var i = 0; i < rows.length; i++) {
+                var currentRow = rows[i];
+                var rowProperties = currentRow.getDocumentPropertyNames();
+                for (var j = 0; j < rowProperties.length; j++) {
+                    var property = rowProperties[j];
+                    columnsNeeded[property] = null;
+                }
             }
         }
 
         for (var i = 0; i < this.columns().length; i++) {
-            var colName = this.columns()[i].name;
+            var colName = this.columns()[i].binding;
             delete columnsNeeded[colName];
         }
 
-        for (var prop in columnsNeeded) {
-            var defaultColumnWidth = 200;
-            var columnWidth = defaultColumnWidth;
-            if (prop === "Id") {
-                columnWidth = ctor.idColumnWidth;
+        var idColumn = this.columns.first(x=> x.binding == "Id");
+        var idColumnExists = idColumn ? 1 : 0;
+
+        var unneededColumns = new Array<string>();
+        ko.utils.arrayForEach(this.columns(), col => {
+            if (col.binding !== "Id" && col.binding !== "__IsChecked" &&
+                rows.every(row => !row.getDocumentPropertyNames().contains(col.binding)))
+                unneededColumns.push(col.binding);
+        });
+
+        this.columns.remove(c => unneededColumns.contains(c.binding));
+        this.columns.valueHasMutated();
+        this.settings.customColumns().columns.remove(c => unneededColumns.contains(c.binding()));
+
+        var columnsCurrentTotalWidth = 0;
+        for (var i = 2; i < this.columns().length; i++) {
+            columnsCurrentTotalWidth += this.columns()[i].width();
+        }
+
+        var availiableWidth = this.grid.width() - 200 * idColumnExists - columnsCurrentTotalWidth;
+        var freeWidth = availiableWidth;
+        var fontSize = parseInt(this.grid.css("font-size"));
+        var columnCount = 0;
+        for (var binding in columnsNeeded) {
+            var curColWidth = (binding.length + 2) * fontSize;
+            if (freeWidth - curColWidth < 0) {
+                break;
             }
+            freeWidth -= curColWidth;
+            columnCount++;
+        }
+        var freeWidthPerColumn = (freeWidth / (columnCount + 1));
+
+        var firstRow = this.recycleRows().length > 0 ? this.recycleRows()[0] : null;
+        for (var binding in columnsNeeded) {
+            var curColWidth = (binding.length + 2) * fontSize + freeWidthPerColumn;
+            var columnWidth = this.getColumnWidth(binding, curColWidth);
+            availiableWidth -= columnWidth;
+            if (availiableWidth <= 0) {
+                break;
+            }
+            var columnName = this.getColumnName(binding);
 
             // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.
-            var newColumn = new column(prop, columnWidth);
-            if (prop === "Name") {
+            var newColumn = new column(binding, columnWidth, columnName);
+            if ((binding === "Name") && (!this.settings.customColumns().customMode())){
                 this.columns.splice(2, 0, newColumn);
-            } else if (this.columns().length < 10) {
+            } else {
                 this.columns.push(newColumn);
+            }
+
+            var curColumnConfig = this.settings.customColumns().findConfigFor(binding);
+            if (!curColumnConfig && !!firstRow) {
+                var curColumnTemplate: string = firstRow.getCellTemplate(binding);
+                var newCustomColumn = new customColumnParams({
+                    Binding: binding,
+                    Header: binding,
+                    Template: curColumnTemplate,
+                    DefaultWidth: availiableWidth > 0 ? Math.floor(columnWidth) : 0
+                });
+                if ((binding === "Name") && (!this.settings.customColumns().customMode())) {
+                    this.settings.customColumns().columns.splice(0, 0, newCustomColumn);
+                } else {
+                    this.settings.customColumns().columns.push(newCustomColumn);
+                }
             }
         }
     }
@@ -325,6 +453,16 @@ class ctor {
         return null;
     }
 
+    getTemplateFor(columnName: string): string {
+        if (this.settings.customColumns().hasOverrides()) {
+            var customConfig = this.settings.customColumns().findConfigFor(columnName);
+            if (customConfig) {
+                return customConfig.template();
+            }
+        }
+        return undefined;
+    }
+
     toggleRowChecked(row: row, isShiftSelect = false) {
         var rowIndex = row.rowIndex();
         var isChecked = row.isChecked();
@@ -381,13 +519,13 @@ class ctor {
     }
 
     showCopyDocDialog(idsOnly: boolean) {
-        var selectedDocs = this.getSelectedDocs();
+        var selectedDocs = this.getSelectedItems();
         var copyDocumentsVm = new copyDocuments(selectedDocs, this.focusableGridSelector);
         copyDocumentsVm.isCopyingDocs(idsOnly === false);
         app.showDialog(copyDocumentsVm);
     }
 
-    getSelectedDocs(max?: number): Array<document> {
+    getSelectedItems(max?: number): Array<any> {
         if (!this.items || this.settings.selectedIndices().length === 0) {
             return [];
         }
@@ -396,19 +534,29 @@ class ctor {
         return this.items.getCachedItemsAt(maxSelectedIndices);
     }
 
-    deleteSelectedDocs() {
-        var documents = this.getSelectedDocs();
-        var deleteDocsVm = new deleteDocuments(documents, this.focusableGridSelector);
+    deleteSelectedItems() {
+        var documents = this.getSelectedItems();
+        var deleteDocsVm = new deleteItems(documents, this.focusableGridSelector);
+        var self = this;
         deleteDocsVm.deletionTask.done(() => {
-            var deletedDocIndices = documents.map(d => this.items.indexOf(d));
-            deletedDocIndices.forEach(i => this.settings.selectedIndices.remove(i));
-            this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
-            this.items.invalidateCache(); // Causes the cache of items to be discarded.
-            this.onGridScrolled(); // Forces a re-fetch of the rows in view.
+            var deletedDocIndices = documents.map(d => self.items.indexOf(d));
+            deletedDocIndices.forEach(i => self.settings.selectedIndices.remove(i));
+            self.recycleRows().forEach(r => r.isChecked(self.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
+            self.items.invalidateCache(); // Causes the cache of items to be discarded.
+            self.onGridScrolled(); // Forces a re-fetch of the rows in view.
         });
 
         app.showDialog(deleteDocsVm);
     }
+
+    getDocumentHref(documentId): string {
+        if (typeof documentId == "string") {
+            return appUrl.forEditItem(documentId, appUrl.getDatabase(), null, null);
+        } else {
+            return "#";
+        }
+    }
 }
 
 export = ctor;
+

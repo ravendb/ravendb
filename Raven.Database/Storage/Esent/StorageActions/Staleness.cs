@@ -10,13 +10,7 @@ using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Exceptions;
-using Raven.Database.Impl;
-using Raven.Database.Impl.Synchronization;
-using Raven.Database.Json;
 using Raven.Database.Storage;
-using Raven.Database.Extensions;
-using System.Linq;
-using Raven.Json.Linq;
 
 namespace Raven.Storage.Esent.StorageActions
 {

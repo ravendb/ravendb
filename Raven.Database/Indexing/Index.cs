@@ -856,39 +856,39 @@ namespace Raven.Database.Indexing
 
 	    public static void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQuery indexQuery, AbstractViewGenerator viewGenerator)
         {
-            if (string.IsNullOrWhiteSpace(indexQuery.Query))
-                return;
-            HashSet<string> hashSet = SimpleQueryParser.GetFields(indexQuery);
-            foreach (string field in hashSet)
-            {
-                string f = field;
-                if (f.EndsWith("_Range"))
-                {
-                    f = f.Substring(0, f.Length - "_Range".Length);
-                }
-                if (viewGenerator.ContainsField(f) == false &&
-                    viewGenerator.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
-                    throw new ArgumentException("The field '" + f + "' is not indexed, cannot query on fields that are not indexed");
-            }
-
-            if (indexQuery.SortedFields == null)
-                return;
-
-            foreach (SortedField field in indexQuery.SortedFields)
-            {
-                string f = field.Field;
-                if (f == Constants.TemporaryScoreValue)
-                    continue;
-                if (f.EndsWith("_Range"))
-                {
-                    f = f.Substring(0, f.Length - "_Range".Length);
-                }
-                if (f.StartsWith(Constants.RandomFieldName))
-                    continue;
-                if (viewGenerator.ContainsField(f) == false && f != Constants.DistanceFieldName
-                    && viewGenerator.ContainsField("_") == false)// the catch all field name means that we have dynamic fields names
-                    throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
-            }
+		    if (string.IsNullOrWhiteSpace(indexQuery.Query) == false)
+		    {
+			    HashSet<string> hashSet = SimpleQueryParser.GetFields(indexQuery);
+			    foreach (string field in hashSet)
+			    {
+				    string f = field;
+				    if (f.EndsWith("_Range"))
+				    {
+					    f = f.Substring(0, f.Length - "_Range".Length);
+				    }
+				    if (viewGenerator.ContainsField(f) == false &&
+				        viewGenerator.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
+					    throw new ArgumentException("The field '" + f + "' is not indexed, cannot query on fields that are not indexed");
+			    }
+		    }
+		    if (indexQuery.SortedFields != null)
+		    {
+			    foreach (SortedField field in indexQuery.SortedFields)
+			    {
+				    string f = field.Field;
+				    if (f == Constants.TemporaryScoreValue)
+					    continue;
+				    if (f.EndsWith("_Range"))
+				    {
+					    f = f.Substring(0, f.Length - "_Range".Length);
+				    }
+				    if (f.StartsWith(Constants.RandomFieldName))
+					    continue;
+				    if (viewGenerator.ContainsField(f) == false && f != Constants.DistanceFieldName
+				        && viewGenerator.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
+					    throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
+			    }
+		    }
         }
 
 
@@ -1554,7 +1554,7 @@ namespace Raven.Database.Indexing
 
 		protected object LoadDocument(string key)
 		{
-			var jsonDocument = context.Database.Get(key, null);
+			var jsonDocument = context.Database.Documents.Get(key, null);
 			if (jsonDocument == null)
 				return new DynamicNullObject();
 			return new DynamicJsonObject(jsonDocument.ToJson());
@@ -1623,7 +1623,7 @@ namespace Raven.Database.Indexing
                 });    
             }
 
-            context.Database.RaiseNotifications(new IndexChangeNotification()
+            context.Database.Notifications.RaiseNotifications(new IndexChangeNotification()
             {
                 Name = PublicName,
                 Type = IndexChangeTypes.IndexMarkedAsErrored 

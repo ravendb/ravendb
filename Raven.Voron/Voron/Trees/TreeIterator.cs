@@ -22,23 +22,9 @@ namespace Voron.Trees
 			_cmp = cmp;
 		}
 
-
 		public int GetCurrentDataSize()
 		{
 			return NodeHeader.GetDataSize(_tx, Current);
-		}
-
-		public IIterator CreateMutliValueIterator()
-		{
-			var item = Current;
-			if (item->Flags == NodeFlags.MultiValuePageRef)
-			{
-				var tree = _tree.OpenOrCreateMultiValueTree(_tx, _currentKey, item);
-
-				return tree.Iterate(_tx);
-			}
-
-			return new SingleEntryIterator(_cmp, item, _tx);
 		}
 
 		public bool Seek(Slice key)
@@ -60,18 +46,36 @@ namespace Voron.Trees
 		{
 			get
 			{
-				if (_currentPage == null || _currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
+				if (_currentPage == null)
 					throw new InvalidOperationException("No current page was set");
+
+				if (_currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
+					throw new InvalidOperationException(string.Format("Current page is invalid. Search position ({0}) exceeds number of entries ({1}). Page: {2}.", _currentPage.LastSearchPosition, _currentPage.NumberOfEntries, _currentPage));
+					
 				return _currentKey;
 			}
+		}
+
+		/// <summary>
+		/// Deletes the current key/value pair and returns true if there is 
+		/// another key after it
+		/// </summary>
+		public bool DeleteCurrentAndMoveNext()
+		{
+			_tree.Delete(_tx, CurrentKey);
+			return MovePrev() && MoveNext();
 		}
 
 		public NodeHeader* Current
 		{
 			get
 			{
-				if (_currentPage == null || _currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
+				if (_currentPage == null)
 					throw new InvalidOperationException("No current page was set");
+
+				if (_currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
+					throw new InvalidOperationException(string.Format("Current page is invalid. Search position ({0}) exceeds number of entries ({1}). Page: {2}.", _currentPage.LastSearchPosition, _currentPage.NumberOfEntries, _currentPage));
+					
 				return _currentPage.GetNode(_currentPage.LastSearchPosition);
 			}
 		}
@@ -155,17 +159,6 @@ namespace Voron.Trees
 			return NodeHeader.Reader(_tx, Current);
 		}
 
-		public IEnumerable<string> DumpValues()
-		{
-			if(Seek(Slice.BeforeAllKeys) == false)
-				yield break;
-
-			do
-			{
-				yield return CurrentKey.ToString();
-			} while (MoveNext());
-		}
-
 		public void Dispose()
 		{
 		}
@@ -182,6 +175,17 @@ namespace Voron.Trees
 
 	public static class IteratorExtensions
 	{
+		public static IEnumerable<string> DumpValues(this IIterator self)
+		{
+			if (self.Seek(Slice.BeforeAllKeys) == false)
+				yield break;
+
+			do
+			{
+				yield return self.CurrentKey.ToString();
+			} while (self.MoveNext());
+		}
+
 		public unsafe static bool ValidateCurrentKey(this IIterator self, NodeHeader* node, SliceComparer cmp)
 		{
 			if (self.RequiredPrefix != null)

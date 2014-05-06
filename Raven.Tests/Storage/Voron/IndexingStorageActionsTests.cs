@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Tests.Common;
+
 namespace Raven.Tests.Storage.Voron
 {
 	using System;
@@ -61,7 +63,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(0, stat1.IndexingErrors);
 					Assert.Equal(IndexingPriority.Normal, stat1.Priority);
 					Assert.Equal(0, stat1.TouchCount);
-					Assert.True((SystemTime.UtcNow - stat1.CreatedTimestamp).TotalSeconds < 10);
+                    Assert.Equal(UtcNow, stat1.CreatedTimestamp);
 					Assert.Equal(DateTime.MinValue, stat1.LastIndexingTime);
 					Assert.Null(stat1.ReduceIndexingAttempts);
 					Assert.Null(stat1.ReduceIndexingSuccesses);
@@ -79,7 +81,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(0, stat2.IndexingErrors);
 					Assert.Equal(IndexingPriority.Normal, stat2.Priority);
 					Assert.Equal(0, stat2.TouchCount);
-					Assert.True((SystemTime.UtcNow - stat2.CreatedTimestamp).TotalSeconds < 10);
+                    Assert.Equal(UtcNow, stat2.CreatedTimestamp);
 					Assert.Equal(DateTime.MinValue, stat2.LastIndexingTime);
 					Assert.Equal(0, stat2.ReduceIndexingAttempts);
 					Assert.Equal(0, stat2.ReduceIndexingSuccesses);
@@ -178,7 +180,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(0, stat1.IndexingErrors);
 					Assert.Equal(IndexingPriority.Normal, stat1.Priority);
 					Assert.Equal(0, stat1.TouchCount);
-					Assert.True((SystemTime.UtcNow - stat1.CreatedTimestamp).TotalSeconds < 10);
+                    Assert.Equal(UtcNow, stat1.CreatedTimestamp);
 					Assert.Equal(DateTime.MinValue, stat1.LastIndexingTime);
 					Assert.Null(stat1.ReduceIndexingAttempts);
 					Assert.Null(stat1.ReduceIndexingSuccesses);
@@ -196,7 +198,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(0, stat2.IndexingErrors);
 					Assert.Equal(IndexingPriority.Normal, stat2.Priority);
 					Assert.Equal(0, stat2.TouchCount);
-					Assert.True((SystemTime.UtcNow - stat2.CreatedTimestamp).TotalSeconds < 10);
+                    Assert.Equal(UtcNow, stat2.CreatedTimestamp);
 					Assert.Equal(DateTime.MinValue, stat2.LastIndexingTime);
 					Assert.Equal(0, stat2.ReduceIndexingAttempts);
 					Assert.Equal(0, stat2.ReduceIndexingSuccesses);
@@ -379,7 +381,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(11, stat.IndexingAttempts);
 					Assert.Equal(3, stat.IndexingErrors);
 					Assert.Equal(2, stat.IndexingSuccesses);
-					Assert.True((SystemTime.UtcNow - stat.LastIndexingTime).TotalSeconds < 10);
+                    Assert.Equal(UtcNow, stat.LastIndexingTime);
 					Assert.Equal(0, stat.ReduceIndexingAttempts);
 					Assert.Equal(0, stat.ReduceIndexingErrors);
 					Assert.Equal(0, stat.ReduceIndexingSuccesses);

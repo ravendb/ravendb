@@ -6,6 +6,7 @@ import java.util.Map;
 
 import net.ravendb.abstractions.basic.Reference;
 import net.ravendb.abstractions.json.linq.RavenJToken;
+import net.ravendb.abstractions.util.EscapingHelper;
 import net.ravendb.abstractions.util.NetDateFormat;
 import net.ravendb.client.utils.UrlUtils;
 
@@ -45,6 +46,7 @@ public class IndexQuery {
   private Date cutoff;
   private Etag cutoffEtag;
   private boolean waitForNonStaleResultsAsOfNow;
+  private boolean waitForNonStaleResults;
   private String defaultField;
   private QueryOperator defaultOperator = QueryOperator.OR;
   private boolean skipTransformResults;
@@ -62,6 +64,13 @@ public class IndexQuery {
     return waitForNonStaleResultsAsOfNow;
   }
 
+  public boolean isWaitForNonStaleResults() {
+    return waitForNonStaleResults;
+  }
+
+  public void setWaitForNonStaleResults(boolean waitForNonStaleResults) {
+    this.waitForNonStaleResults = waitForNonStaleResults;
+  }
 
   public void setWaitForNonStaleResultsAsOfNow(boolean waitForNonStaleResultsAsOfNow) {
     this.waitForNonStaleResultsAsOfNow = waitForNonStaleResultsAsOfNow;
@@ -294,8 +303,13 @@ public class IndexQuery {
 
 
   public String getIndexQueryUrl(String operationUrl, String index, String operationName) {
-    return getIndexQueryUrl(operationUrl, index, operationName, true);
+    return getIndexQueryUrl(operationUrl, index, operationName, true, true);
   }
+
+  public String getIndexQueryUrl(String operationUrl, String index, String operationName, boolean includePageSizeEvenIfNotExplicitlySet) {
+    return getIndexQueryUrl(operationUrl, index, operationName, includePageSizeEvenIfNotExplicitlySet, true);
+  }
+
   /**
    * Gets the index query URL.
    * @param operationUrl
@@ -304,7 +318,7 @@ public class IndexQuery {
    * @param includePageSizeEvenIfNotExplicitlySet
    * @return
    */
-  public String getIndexQueryUrl(String operationUrl, String index, String operationName, boolean includePageSizeEvenIfNotExplicitlySet) {
+  public String getIndexQueryUrl(String operationUrl, String index, String operationName, boolean includePageSizeEvenIfNotExplicitlySet, boolean includeQuery) {
     if (operationUrl.endsWith("/"))
       operationUrl = operationUrl.substring(0, operationUrl.length() - 1);
     StringBuilder path = new StringBuilder()
@@ -314,14 +328,14 @@ public class IndexQuery {
     .append("/")
     .append(index);
 
-    appendQueryString(path, includePageSizeEvenIfNotExplicitlySet);
+    appendQueryString(path, includePageSizeEvenIfNotExplicitlySet, includeQuery);
 
     return path.toString();
   }
 
   public String getMinimalQueryString() {
     StringBuilder sb = new StringBuilder();
-    appendMinimalQueryString(sb);
+    appendMinimalQueryString(sb, true);
     return sb.toString();
   }
 
@@ -333,13 +347,13 @@ public class IndexQuery {
   }
 
   public void appendQueryString(StringBuilder path){
-    appendQueryString(path, true);
+    appendQueryString(path, true, true);
   }
 
-  public void appendQueryString(StringBuilder path, boolean includePageSizeEvenIfNotExplicitlySet) {
+  public void appendQueryString(StringBuilder path, boolean includePageSizeEvenIfNotExplicitlySet, boolean includeQuery) {
     path.append("?");
 
-    appendMinimalQueryString(path);
+    appendMinimalQueryString(path, includeQuery);
 
     if (start != 0) {
       path.append("&start=").append(start);
@@ -412,9 +426,9 @@ public class IndexQuery {
     }
   }
 
-  private void appendMinimalQueryString(StringBuilder path) {
-    if (StringUtils.isNotEmpty(query)) {
-      path.append("&query=").append(UrlUtils.escapeDataString(query));
+  private void appendMinimalQueryString(StringBuilder path, boolean appendQuery) {
+    if (StringUtils.isNotEmpty(query) && appendQuery) {
+      path.append("&query=").append(EscapingHelper.escapeLongDataString(query));
     }
 
     if (StringUtils.isNotEmpty(defaultField)) {

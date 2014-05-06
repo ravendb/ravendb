@@ -1,10 +1,12 @@
-﻿using Raven.Client.Indexes;
-using System;
+﻿using System;
 using System.Linq;
+
+using Raven.Client.Indexes;
 using Raven.Tests.Helpers;
+
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace Raven.Tests.Bugs
 {
     public class NullableDateTimeOffsetFromDateTimeParse : RavenTestBase
     {

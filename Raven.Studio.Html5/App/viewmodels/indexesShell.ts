@@ -7,15 +7,20 @@ class indexesShell extends viewModelBase {
     router: DurandalRootRouter;
     currentBreadcrumbTitle: KnockoutComputed<string>;
     indexesUrl = appUrl.forCurrentDatabase().indexes;
+    appUrls: computedAppUrls;
+    isIndexNameVisible = ko.observable(false);
+    indexName = ko.observable();
 
     constructor() {
         super();
 
+        this.appUrls = appUrl.forCurrentDatabase();
+
         this.router = durandalRouter.createChildRouter()
             .map([
-                { route: 'indexes', moduleId: 'viewmodels/indexes', title: 'Indexes', nav: true },
-                { route: 'indexes/edit(/:indexName)', moduleId: 'viewmodels/editIndex', title: 'Edit Index', nav: true },
-                { route: 'indexes/terms/(:indexName)', moduleId: 'viewmodels/indexTerms', title: 'Terms', nav: true }
+                { route: 'databases/indexes', moduleId: 'viewmodels/indexes', title: 'Indexes', nav: true },
+                { route: 'databases/indexes/edit(/:indexName)', moduleId: 'viewmodels/editIndex', title: 'Edit Index', nav: true },
+                { route: 'databases/indexes/terms/(:indexName)', moduleId: 'viewmodels/indexTerms', title: 'Terms', nav: true }
             ])
             .buildNavigationModel();
 
@@ -28,6 +33,13 @@ class indexesShell extends viewModelBase {
 
             return activeRoute != null ? activeRoute.title : "";
         });
+    }
+
+    activate(indexName?) {
+        if (indexName != null) {
+            this.indexName(indexName);
+            this.isIndexNameVisible(true);
+        }
     }
 }
 

@@ -7,9 +7,11 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Database;
+using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
 using Raven.Tests.Storage;
 using Xunit;
 using Xunit.Extensions;
@@ -30,9 +32,9 @@ namespace Raven.Tests
 		}
 
         public override void Dispose()
-        {
+		{
+			db.Dispose();
             base.Dispose();
-            db.Dispose();
         }
 
 
@@ -49,7 +51,7 @@ namespace Raven.Tests
 	                {"Raven/Esent/CircularLog", "false"}
 	            }
 	        });
-	        db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
+	        db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 	    }
 
         [Theory]
@@ -59,15 +61,15 @@ namespace Raven.Tests
             InitializeDocumentDatabase(storageName);
             IOExtensions.DeleteDirectory(BackupDir);
 
-            db.Put("Foo", null, RavenJObject.Parse("{'email':'foo@bar.com'}"), new RavenJObject(), null);
+            db.Documents.Put("Foo", null, RavenJObject.Parse("{'email':'foo@bar.com'}"), new RavenJObject(), null);
 
-            db.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
             WaitForBackup(db, true);
 
             db.Dispose();
             IOExtensions.DeleteDirectory(DataDir);
 
-            DocumentDatabase.Restore(new RavenConfiguration
+            MaintenanceActions.Restore(new RavenConfiguration
             {
                 DefaultStorageTypeName = storageName,
                 DataDirectory = DataDir,
@@ -75,14 +77,20 @@ namespace Raven.Tests
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
                 Settings =
 	            {
-	                {"Raven/Esent/CircularLog", "false"}
+	                {"Raven/Esent/CircularLog", "false"},
+					{"Raven/Voron/AllowIncrementalBackups", "true"}
 	            }
 
-            }, BackupDir, DataDir, s => { }, defrag: true);
+            }, new RestoreRequest
+            {
+                BackupLocation = BackupDir,
+                DatabaseLocation = DataDir,
+                Defrag = true
+            }, s => { });
 
             db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
 
-            var fetchedData = db.Get("Foo", null);
+            var fetchedData = db.Documents.Get("Foo", null);
             Assert.NotNull(fetchedData);
 
             var jObject = fetchedData.ToJson();
@@ -99,16 +107,16 @@ namespace Raven.Tests
             InitializeDocumentDatabase(storageName);
             IOExtensions.DeleteDirectory(BackupDir);
 
-            db.Put("Foo", null, RavenJObject.Parse("{'email':'foo@bar.com'}"), new RavenJObject(), null);
+            db.Documents.Put("Foo", null, RavenJObject.Parse("{'email':'foo@bar.com'}"), new RavenJObject(), null);
 
-            db.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
             WaitForBackup(db, true);
 
             db.Dispose();
 
             //data directiory still exists --> should fail to restore backup
             Assert.Throws<IOException>(() => 
-                DocumentDatabase.Restore(new RavenConfiguration
+                MaintenanceActions.Restore(new RavenConfiguration
                 {
                     DefaultStorageTypeName = storageName,
                     DataDirectory = DataDir,
@@ -119,7 +127,12 @@ namespace Raven.Tests
                         {"Raven/Esent/CircularLog", "false"}
                     }
 
-                }, BackupDir, DataDir, s => { }, defrag: true));
+                }, new RestoreRequest
+                {
+                    BackupLocation = BackupDir,
+                    DatabaseLocation = DataDir,
+                    Defrag = true
+                }, s => { }));
         }
         
     }

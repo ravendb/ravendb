@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Raven.Abstractions</RootNamespace>
     <AssemblyName>Raven.Abstractions</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
@@ -47,16 +47,8 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ICSharpCode.NRefactory">
-      <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.dll</HintPath>
-    </Reference>
-    <Reference Include="ICSharpCode.NRefactory.CSharp">
-      <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="ICSharpCode.NRefactory.Xml">
-      <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
     <Reference Include="Lucene.Net">
-      <HintPath>..\Raven.Database\bin\Debug\Lucene.Net.dll</HintPath>
+      <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -122,7 +114,9 @@
     <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
     <Compile Include="Data\AttachmentInformation.cs" />
+    <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Data\DatabaseMetrics.cs" />
+    <Compile Include="Data\DocumentsChanges.cs" />
     <Compile Include="Data\FacetQuery.cs" />
     <Compile Include="Data\FailoverServers.cs" />
     <Compile Include="Data\HighlightedField.cs" />
@@ -133,6 +127,7 @@
     <Compile Include="Data\PeriodicBackupSetup.cs" />
     <Compile Include="Data\QueryHeaderInformation.cs" />
     <Compile Include="Data\ReplicationInfoStatus.cs" />
+    <Compile Include="Data\RestoreRequest.cs" />
     <Compile Include="Data\RestoreStatus.cs" />
     <Compile Include="Data\ScriptedIndexResults.cs" />
     <Compile Include="Data\ScriptedPatchRequest.cs" />
@@ -183,6 +178,7 @@
     <Compile Include="Data\UuidType.cs" />
     <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Exceptions\DocumentDoesNotExistsException.cs" />
+    <Compile Include="Exceptions\SmugglerException.cs" />
     <Compile Include="Exceptions\SmugglerExportException.cs" />
     <Compile Include="Exceptions\TransformCompilationException.cs" />
     <Compile Include="Exceptions\IndexCompilationException.cs" />

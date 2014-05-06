@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Data;
 using Raven.Database.Extensions;
 
 namespace Raven.Database.Storage
@@ -17,29 +18,24 @@ namespace Raven.Database.Storage
 
         protected readonly string backupLocation;
 
-        protected readonly InMemoryRavenConfiguration configuration;
-        protected string databaseLocation { get { return configuration.DataDirectory.ToFullPath(); } }
-        protected string indexLocation { get { return configuration.IndexStoragePath.ToFullPath(); } }
+        protected readonly RestoreRequest _restoreRequest;
+        protected readonly InMemoryRavenConfiguration Configuration;
+        protected readonly string databaseLocation, indexLocation, journalLocation;
 
-        protected BaseRestoreOperation(string backupLocation, InMemoryRavenConfiguration configuration, Action<string> output)
+        protected BaseRestoreOperation(RestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> output)
         {
-            this.backupLocation = backupLocation;
-            this.configuration = configuration;
+            _restoreRequest = restoreRequest;
+            backupLocation = restoreRequest.BackupLocation;
+            databaseLocation = _restoreRequest.DatabaseLocation.ToFullPath();
+			indexLocation = (_restoreRequest.IndexesLocation ?? Path.Combine(_restoreRequest.DatabaseLocation, "Indexes")).ToFullPath();
+            journalLocation = (_restoreRequest.JournalsLocation ?? _restoreRequest.DatabaseLocation).ToFullPath();
+            Configuration = configuration;
             this.output = output;			
         }
 
         public abstract void Execute();
 
-        protected void LogFailureAndRethrow(Exception e)
-        {
-            output("Restore Operation: Failure! Could not restore database!");
-            output(e.ToString());
-            log.WarnException("Could not complete restore", e);
-
-            throw e;
-        }
-
-        protected string ValidateRestorePreconditions(string backupFilename)
+        protected void ValidateRestorePreconditionsAndReturnLogsPath(string backupFilename)
         {
             if (File.Exists(BackupFilenamePath(backupFilename)) == false)
             {
@@ -61,17 +57,8 @@ namespace Raven.Database.Storage
             if (Directory.Exists(indexLocation) == false)
                 Directory.CreateDirectory(indexLocation);
 
-            var logsPath = databaseLocation;
-
-            if (string.IsNullOrWhiteSpace(configuration.Settings[Constants.RavenLogsPath])) return logsPath;
-
-            logsPath = configuration.Settings[Constants.RavenLogsPath].ToFullPath();
-
-            if (Directory.Exists(logsPath) == false)
-            {
-                Directory.CreateDirectory(logsPath);
-            }
-            return logsPath;
+            if (Directory.Exists(journalLocation) == false)
+                Directory.CreateDirectory(journalLocation);
         }
 
         protected string BackupIndexesPath()

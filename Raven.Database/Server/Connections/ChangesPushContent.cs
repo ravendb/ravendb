@@ -36,11 +36,9 @@ namespace Raven.Database.Server.Connections
 
 		protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
 		{
-			Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
-
 			using (var writer = new StreamWriter(stream))
 			{
-				await writer.WriteAsync("data: { 'Type': 'Heartbeat' }\r\n\r\n");
+                await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n");
 				await writer.FlushAsync();
 							
 				while (Connected)
@@ -53,7 +51,7 @@ namespace Raven.Database.Server.Connections
 
 						if (result == false)
 						{
-							await writer.WriteAsync("data: { 'Type': 'Heartbeat' }\r\n\r\n");
+                            await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n");
 							await writer.FlushAsync();
 							continue;
 						}

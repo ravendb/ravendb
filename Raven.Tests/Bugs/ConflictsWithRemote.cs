@@ -4,11 +4,13 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class ConflictsWithRemote: RemoteClientTest
+	public class ConflictsWithRemote: RavenTest
 	{
 		public class DeviceStatusRecord
 		{

@@ -4,6 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Client.Util;
+using Raven.Tests.Common;
+
 using Xunit;
 using Xunit.Extensions;
 

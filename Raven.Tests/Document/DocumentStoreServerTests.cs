@@ -18,6 +18,9 @@ using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Json.Linq;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Attributes;
+using Raven.Tests.Common.Util;
 using Raven.Tests.Indexes;
 using Raven.Tests.Spatial;
 using Xunit;
@@ -25,7 +28,7 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Document
 {
-	public class DocumentStoreServerTests : RemoteClientTest
+	public class DocumentStoreServerTests : RavenTest
 	{
 		private readonly IDocumentStore documentStore;
 

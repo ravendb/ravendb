@@ -14,8 +14,6 @@ namespace Raven.Abstractions.Data
 			InDatabaseKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
 		}
 
-		public const string RavenEtagSynchronization = "Raven/Etag/Synchronization";
-
 		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
 		public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
 		public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
@@ -50,13 +48,21 @@ namespace Raven.Abstractions.Data
 
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
-		public const string RavenLogsPath = "Raven/Esent/LogsPath";
+        public const string RavenTxJournalPath = "Raven/TransactionJouranlsPath";
 		public const string RavenIndexPath = "Raven/IndexStoragePath";
+
+		//Files
+		public const int WindowsMaxPath = 260 - 30;
+		public const int LinuxMaxPath = 4096;
+		public const int LinuxMaxFileNameLength = WindowsMaxPath;
+		public static readonly string[] WindowsReservedFileNames = { "con", "prn", "aux", "nul", "com1", "com2","com3", "com4", "com5", "com6", "com7", "com8", "com9",
+																		"lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9", "clock$" };
 
 		//Encryption
 		public const string DontEncryptDocumentsStartingWith = "Raven/";
 		public const string AlgorithmTypeSetting = "Raven/Encryption/Algorithm";
 		public const string EncryptionKeySetting = "Raven/Encryption/Key";
+		public const string EncryptionKeyBitsPreferenceSetting = "Raven/Encryption/KeyBitsPreference";
 		public const string EncryptIndexes = "Raven/Encryption/EncryptIndexes";
 
 		public const string InDatabaseKeyVerificationDocumentName = "Raven/Encryption/Verification";

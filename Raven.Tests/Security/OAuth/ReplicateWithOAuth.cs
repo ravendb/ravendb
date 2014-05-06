@@ -4,7 +4,7 @@ using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
-using Raven.Tests.Bundles.Replication;
+using Raven.Tests.Common;
 using Raven.Tests.Document;
 using Xunit;
 
@@ -23,7 +23,7 @@ namespace Raven.Tests.Security.OAuth
 
 		protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)
 		{
-			database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+			database.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 			{
 				Name = "test",
 				Secret = "ThisIsMySecret",

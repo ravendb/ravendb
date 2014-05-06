@@ -1,3 +1,4 @@
+/// <reference path="../../Scripts/typings/ace/ace.d.ts" />
 import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
@@ -18,11 +19,20 @@ import deleteDocumentsMatchingQueryConfirm = require("viewmodels/deleteDocuments
 import getStoredQueriesCommand = require("commands/getStoredQueriesCommand");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
 import document = require("models/document");
+import customColumnParams = require('models/customColumnParams');
+import customColumns = require('models/customColumns');
+import selectColumns = require('viewmodels/selectColumns');
+import getCustomColumnsCommand = require('commands/getCustomColumnsCommand');
+import ace = require("ace/ace");
+import getDocumentsByEntityNameCommand = require("commands/getDocumentsByEntityNameCommand");
+import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
+import getIndexTermsCommand = require("commands/getIndexTermsCommand");
+import queryStatsDialog = require("viewmodels/queryStatsDialog");
 
 class query extends viewModelBase {
 
     selectedIndex = ko.observable<string>();
-    indexNames = ko.observableArray<string>();
+    indexes = ko.observableArray<{name:string; hasReduce:boolean}>();
     editIndexUrl: KnockoutComputed<string>;
     termsUrl: KnockoutComputed<string>;
     statsUrl: KnockoutComputed<string>;
@@ -44,27 +54,54 @@ class query extends viewModelBase {
     rawJsonUrl = ko.observable<string>();
     collectionNames = ko.observableArray<string>();
     selectedIndexLabel: KnockoutComputed<string>;
+    appUrls: computedAppUrls;
+    isIndexMapReduce = ko.computed(() => {
+        var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
+        return !!currentIndex && currentIndex.hasReduce == true;
+    });
+    contextName = ko.observable<string>();
+    didDynamicChangeIndex: KnockoutComputed<boolean>;
+
+    currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
 
     static containerSelector = "#queryContainer";
 
     constructor() {
         super();
-
+        this.appUrls = appUrl.forCurrentDatabase();
         this.editIndexUrl = ko.computed(() => this.selectedIndex() ? appUrl.forEditIndex(this.selectedIndex(), this.activeDatabase()) : null);
         this.termsUrl = ko.computed(() => this.selectedIndex() ? appUrl.forTerms(this.selectedIndex(), this.activeDatabase()) : null);
         this.statsUrl = ko.computed(() => appUrl.forStatus(this.activeDatabase()));
         this.hasSelectedIndex = ko.computed(() => this.selectedIndex() != null);
+        this.rawJsonUrl.subscribe((value: string) => ko.postbox.publish("SetRawJSONUrl", value));
         this.selectedIndexLabel = ko.computed(() => this.selectedIndex() === "dynamic" ? "All Documents" : this.selectedIndex());
         this.selectedIndexEditUrl = ko.computed(() => {
-            var index = this.selectedIndex();
-            if (index && index.indexOf("dynamic/") !== 0) {
-                return appUrl.forEditIndex(this.selectedIndex(), this.activeDatabase());
+            if (this.queryStats()){
+                var index = this.queryStats().IndexName;
+                if (index && index.indexOf("dynamic/") !== 0) {
+                    return appUrl.forEditIndex(index, this.activeDatabase());
+                }
             }
 
             return "";
         });
+
+        this.didDynamicChangeIndex = ko.computed(() => {
+            if (this.queryStats()) {
+                var recievedIndex = this.queryStats().IndexName;
+                var selectedIndex = this.selectedIndex();
+                return selectedIndex.indexOf("dynamic/") === 0 && this.indexes()[0].name !== recievedIndex;
+            } else {
+                return false;
+            }
+        });
         
         aceEditorBindingHandler.install();        
+    }
+
+    openQueryStats() {
+        var viewModel = new queryStatsDialog(this.queryStats(), this.selectedIndexEditUrl(), this.didDynamicChangeIndex(), this.rawJsonUrl());
+        app.showDialog(viewModel);
     }
 
     activate(indexNameOrRecentQueryHash?: string) {
@@ -74,14 +111,48 @@ class query extends viewModelBase {
         $.when(
             this.fetchAllCollections(),
             this.fetchAllIndexes(),
-            this.fetchRecentQueries())
-            .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
+            this.fetchRecentQueries()
+            ).done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
+
+        this.selectedIndex.subscribe(index => this.onIndexChanged(index));
+    }
+
+    attached() {
+        this.createKeyboardShortcut("F2", () => this.editSelectedIndex(), query.containerSelector);
+        this.createKeyboardShortcut("ctrl+enter", () => this.runQuery(), query.containerSelector);
+        this.createKeyboardShortcut("alt+c", () => this.focusOnQuery(), query.containerSelector);
+        $("#indexQueryLabel").popover({
+            html: true,
+            trigger: 'hover',
+            container: '.form-horizontal',
+            content: 'Queries use Lucene syntax. Examples:<pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
+        });
+        ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexQueryRawData(this.activeDatabase(), this.selectedIndex()));
+
+        this.focusOnQuery();
+    }
+
+    onIndexChanged(newIndexName: string) {
+        var command = getCustomColumnsCommand.forIndex(newIndexName, this.activeDatabase());
+        this.contextName(command.docName);
+
+        command.execute().done((dto: customColumnsDto) => {
+            if (dto) {
+                this.currentColumnsParams().columns($.map(dto.Columns, c => new customColumnParams(c)));
+                this.currentColumnsParams().customMode(true);
+            } else {
+                // use default values!
+                this.currentColumnsParams().columns.removeAll();
+                this.currentColumnsParams().customMode(false);
+            }
+            
+        });
     }
 
     selectInitialQuery(indexNameOrRecentQueryHash: string) {
-        if (!indexNameOrRecentQueryHash && this.indexNames().length > 0) {
-            this.setSelectedIndex(this.indexNames.first());
-        } else if (this.indexNames.contains(indexNameOrRecentQueryHash) || indexNameOrRecentQueryHash.indexOf("dynamic/") === 0 || indexNameOrRecentQueryHash === "dynamic") {
+        if (!indexNameOrRecentQueryHash && this.indexes().length > 0) {
+            this.setSelectedIndex(this.indexes.first().name);
+        } else if (this.indexes.first( i => i.name == indexNameOrRecentQueryHash) || indexNameOrRecentQueryHash.indexOf("dynamic/") === 0 || indexNameOrRecentQueryHash === "dynamic") {
             this.setSelectedIndex(indexNameOrRecentQueryHash);
         }
         else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
@@ -93,29 +164,29 @@ class query extends viewModelBase {
         }
     }
 
-    attached() {
-        this.createKeyboardShortcut("F2", () => this.editSelectedIndex(), query.containerSelector);
-        $("#indexQueryLabel").popover({
-            html: true,
-            trigger: 'hover',
-            container: '.form-horizontal',
-            content: 'Queries use Lucene syntax. Examples:<pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
-        });
-    }
-
-    deactivate() {
-        super.deactivate();
-        this.removeKeyboardShortcuts(query.containerSelector);
+    focusOnQuery() {
+        var editorElement = $("#queryEditor").length == 1 ? $("#queryEditor")[0] : null;
+        if (editorElement) {
+            var docEditor = ko.utils.domData.get($("#queryEditor")[0], "aceEditor");
+            if (docEditor) {
+                docEditor.focus();
+            }
+        }
     }
 
     editSelectedIndex() {
-        router.navigate(this.editIndexUrl());
+        this.navigate(this.editIndexUrl());
     }
 
     fetchAllIndexes(): JQueryPromise<any> {
         return new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
-            .done((results: databaseStatisticsDto) => this.indexNames(results.Indexes.map(i => i.PublicName)));
+            .done((results: databaseStatisticsDto) => this.indexes(results.Indexes.map(i=> {
+            return {
+                name: i.PublicName,
+                hasReduce: !!i.LastReducedTimestamp
+            };
+        })));
     }
 
     fetchAllCollections(): JQueryPromise<any> {
@@ -125,13 +196,14 @@ class query extends viewModelBase {
     }
 
     fetchRecentQueries(): JQueryPromise<any> {
-        return new getStoredQueriesCommand(this.activeDatabase())
-            .execute()
+        var result = $.Deferred();
+        var storedQueriesCommand = new getStoredQueriesCommand(this.activeDatabase());
+        storedQueriesCommand.execute()
             .fail(_ => {
                 var newStoredQueryContainer: storedQueryContainerDto = {
                     '@metadata': {},
                     Queries: []
-                }
+                };
                 this.recentQueriesDoc(newStoredQueryContainer);
                 this.recentQueries(newStoredQueryContainer.Queries);
             })
@@ -139,7 +211,10 @@ class query extends viewModelBase {
                 var dto = <storedQueryContainerDto>doc.toDto(true);
                 this.recentQueriesDoc(dto);
                 this.recentQueries(dto.Queries);
-            });
+            })
+            .always(() => result.resolve());
+
+        return result;
     }
 
     fetchAllTransformers() {
@@ -168,8 +243,11 @@ class query extends viewModelBase {
             var transformer = this.transformer();
             var showFields = this.showFields();
             var indexEntries = this.indexEntries();
+
+            this.currentColumnsParams().enabled(this.showFields() === false && this.indexEntries() === false);
+
             var useAndOperator = this.isDefaultOperatorOr() === false;
-            this.rawJsonUrl(appUrl.forDatabaseQuery(this.activeDatabase()) + new queryIndexCommand(selectedIndex, database, 0, 1024, queryText, sorts, transformer, showFields, indexEntries, useAndOperator).getUrl());
+            this.rawJsonUrl(appUrl.forResourceQuery(this.activeDatabase()) + new queryIndexCommand(selectedIndex, database, 0, 1024, queryText, sorts, transformer, showFields, indexEntries, useAndOperator).getUrl());
             var resultsFetcher = (skip: number, take: number) => {
                 var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator);
                 return command
@@ -184,6 +262,70 @@ class query extends viewModelBase {
         }
 
         return null;
+    }
+        
+
+    queryCompleter(editor: any, session: any,pos:AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
+        var currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
+
+        if (!currentToken || typeof currentToken.type == "string") {
+            // if in beginning of text or in free text token
+            if (!currentToken || currentToken.type == "text") {
+                callback(null, this.indexFields().map(curColumn => {
+                    return { name: curColumn, value: curColumn, score: 10, meta: "field" };
+                }));
+            }
+            // if right after, or a whitespace after keyword token ([column name]:)
+            else if (currentToken.type == "keyword" || currentToken.type == "value") {
+
+                // first, calculate and validate the column name
+                var currentColumnName: string = null;
+                var currentValue:string = "";
+
+                if (currentToken.type == "keyword") {
+                    currentColumnName = currentToken.value.substring(0, currentToken.value.length - 1);
+                } else {
+                    currentValue = currentToken.value.trim();
+                    var rowTokens: any[] = session.getTokens(pos.row);
+                    if (!!rowTokens && rowTokens.length > 1) {
+                        currentColumnName = rowTokens[rowTokens.length - 2].value.trim();
+                        currentColumnName = currentColumnName.substring(0, currentColumnName.length - 1);
+                    }
+                }
+
+                // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
+                
+                if (!!currentColumnName && !!this.indexFields.first(x=> x === currentColumnName)) {
+
+                    if (this.selectedIndex().indexOf("dynamic/") !== 0) {
+                        new getIndexTermsCommand(this.selectedIndex(), currentColumnName, this.activeDatabase())
+                            .execute()
+                            .done(terms => {
+                                if (!!terms && terms.length > 0) {
+                                    callback(null, terms.map(curVal => {
+                                        return { name: curVal, value: curVal, score: 10, meta: "value" };
+                                    }));
+                                }
+                        });
+                    } else {
+
+                        if (currentValue.length > 0) {
+                            new getDocumentsMetadataByIDPrefixCommand(currentValue, 10, this.activeDatabase())
+                                .execute()
+                                .done((results: string[]) => {
+                                    if (!!results && results.length > 0) {
+                                        callback(null, results.map(curVal => {
+                                            return { name: curVal['@metadata']['@id'], value: curVal['@metadata']['@id'], score: 10, meta: "value" };
+                                        }));
+                                    }
+                                });
+                        } else {
+                            callback([{ error: "notext" }], null);
+                        }
+                    }
+            }
+            }
+        }
     }
 
     recordQueryRun(indexName: string, queryText: string, sorts: string[], transformer: string, showFields: boolean, indexEntries: boolean, useAndOperator: boolean) {
@@ -201,11 +343,7 @@ class query extends viewModelBase {
 
         // Put the query into the URL, so that if the user refreshes the page, he's still got this query loaded.
         var queryUrl = appUrl.forQuery(this.activeDatabase(), newQuery.Hash);
-        var options: DurandalNavigationOptions = {
-            replace: true,
-            trigger: false
-        };
-        router.navigate(queryUrl, options);
+        this.updateUrl(queryUrl);
 
         // Add this query to our recent queries list in the UI, or move it to the top of the list if it's already there.
         var existing = this.recentQueries.first(q => q.Hash === newQuery.Hash);
@@ -214,7 +352,6 @@ class query extends viewModelBase {
             this.recentQueries.unshift(existing);
         } else {
             this.recentQueries.unshift(newQuery);
-            console.log("zanzibar new", (indexName + (queryText || "") + sorts.reduce((a, b) => a + b, "") + (transformer || "") + showFields + indexEntries + useAndOperator), (indexName + queryText + sorts.reduce((a, b) => a + b, "") + transformer + showFields + indexEntries + useAndOperator).hashCode());
         }
 
         // Limit us to 15 query recent runs.
@@ -251,22 +388,35 @@ class query extends viewModelBase {
         // Reflect the new index in the address bar.
         var indexQuery = query.getIndexUrlPartFromIndexName(indexName);
         var url = appUrl.forQuery(this.activeDatabase(), indexQuery);
-        var navOptions: DurandalNavigationOptions = {
-            replace: true,
-            trigger: false
-        };
-        router.navigate(url, navOptions);
+        this.updateUrl(url);
         NProgress.done();
 
         // Fetch the index definition so that we get an updated list of fields to be used as sort by options.
         // Fields don't show for All Documents.
         var isAllDocumentsDynamicQuery = indexName === "All Documents";
         if (!isAllDocumentsDynamicQuery) {
-            new getIndexDefinitionCommand(indexQuery, this.activeDatabase())
-                .execute()
-                .done((result: indexDefinitionContainerDto) => {
-                    this.indexFields(result.Index.Fields);
+
+            //if index is dynamic, get columns using index definition, else get it using first index result
+            if (indexName.indexOf('dynamic/') == 0) {
+                var collectionName = indexName.substring(8);
+                new getDocumentsByEntityNameCommand(new collection(collectionName, this.activeDatabase()), 0, 1)
+                    .execute()
+                    .done((result: pagedResultSet) => {
+                        if (!!result && result.totalResultCount >0) {
+                            var dynamicIndexPattern: document = new document(result.items[0]);
+                            if (!!dynamicIndexPattern) {
+                                this.indexFields(dynamicIndexPattern.getDocumentPropertyNames());
+                            }
+
+                        }
                 });
+            } else {
+                new getIndexDefinitionCommand(indexQuery, this.activeDatabase())
+                    .execute()
+                    .done((result: indexDefinitionContainerDto) => {
+                        this.indexFields(result.Index.Fields);
+                    });
+            }
         }
     }
 
@@ -344,6 +494,18 @@ class query extends viewModelBase {
             .showDialog(viewModel)
             .done(() => this.runQuery());
     }
+
+    selectColumns() {
+        var selectColumnsViewModel: selectColumns = new selectColumns(this.currentColumnsParams().clone(), this.contextName(), this.activeDatabase());
+        app.showDialog(selectColumnsViewModel);
+        selectColumnsViewModel.onExit().done((cols: customColumns) => {
+            this.currentColumnsParams(cols);
+
+            this.runQuery();
+            
+        });
+    }
+
 }
 
 export = query;

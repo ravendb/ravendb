@@ -41,7 +41,7 @@ namespace Raven.Database.Server.Controllers
             }
             else
             {
-                var jsonDocument = Database.Get(facetSetupDoc, null);
+                var jsonDocument = Database.Documents.Get(facetSetupDoc, null);
 	            if (jsonDocument == null)
 		            return GetMessageWithString("Could not find facet document: " + facetSetupDoc, HttpStatusCode.NotFound);
 
@@ -126,10 +126,9 @@ namespace Raven.Database.Server.Controllers
             return null;
         }
 
-
         private Etag GetFacetsEtag(string index, byte[] additionalEtagBytes)
         {
-            var etagBytes = Encryptor.Current.Hash.Compute16(Database.GetIndexEtag(index, null).ToByteArray().Concat(additionalEtagBytes).ToArray());
+            var etagBytes = Encryptor.Current.Hash.Compute16(Database.Indexes.GetIndexEtag(index, null).ToByteArray().Concat(additionalEtagBytes).ToArray());
             return Etag.Parse(etagBytes);
         }
 

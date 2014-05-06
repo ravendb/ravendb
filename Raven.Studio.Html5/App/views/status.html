@@ -7,7 +7,7 @@
         </h3>
     </li>
     <li data-bind="with: activeDatabase">
-        <a data-bind="text: name"></a>
+        <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
     </li>
     <li class="active">
         <span data-bind="text: currentRouteTitle"></span>
@@ -23,8 +23,7 @@
 				</li>
 			</ul>
 		</div>
-		<div class="col-md-10">
-			<!--ko router: {  cacheViews:true }--><!--/ko-->
-		</div>
+        <div class="col-md-10" data-bind="router: { cacheViews: false }">
+        </div>
     </div>
 </div>

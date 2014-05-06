@@ -3,8 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -59,20 +63,22 @@ namespace Raven.Client.Connection.Async
 			return json.Deserialize<AdminStatistics>(innerAsyncServerClient.convention);
 		}
 
-		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, string databaseName)
+		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
 		{
-			RavenJObject backupSettings;
-			var request = adminRequest.StartBackup(backupLocation, databaseDocument, databaseName, out backupSettings);
+		    var request = adminRequest.StartBackup(backupLocation, databaseDocument, databaseName, incremental);
 
-			return request.WriteAsync(backupSettings.ToString(Formatting.None));
+            return request.WriteAsync(RavenJObject.FromObject(new BackupRequest
+            {
+                BackupLocation = backupLocation,
+                DatabaseDocument = databaseDocument
+            }));
 		}
 
-		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false)
+		public Task StartRestoreAsync(RestoreRequest restoreRequest)
 		{
-			RavenJObject restoreSettings;
-			var request = adminRequest.StartRestore(restoreLocation, databaseLocation, databaseName, defrag, out restoreSettings);
+		    var request = adminRequest.CreateRestoreRequest();
 
-			return request.WriteAsync(restoreSettings.ToString(Formatting.None));
+			return request.WriteAsync(RavenJObject.FromObject(restoreRequest));
 		}
 
 		public Task<string> GetIndexingStatusAsync()
@@ -84,5 +90,31 @@ namespace Raven.Client.Connection.Async
 				return result.Value<string>("IndexingStatus");
 			});
 		}
+
+		
+		public async Task EnsureDatabaseExistsAsync(string name, bool ignoreFailures = false)
+		{
+			var serverClient = (AsyncServerClient) (innerAsyncServerClient.ForSystemDatabase());
+
+			var doc = MultiDatabase.CreateDatabaseDocument(name);
+
+			serverClient.ForceReadFromMaster();
+
+			var get = await serverClient.GetAsync(doc.Id).ConfigureAwait(false);
+			if (get != null)
+				return;
+
+			try
+			{
+				await serverClient.GlobalAdmin.CreateDatabaseAsync(doc).ConfigureAwait(false);
+			}
+			catch (Exception)
+			{
+				if (ignoreFailures == false)
+					throw;
+			}
+			await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention()).ConfigureAwait(false);
+		}
+
 	}
 }

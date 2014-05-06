@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Raven.Abstractions;
@@ -14,6 +15,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Backup;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
+using Voron.Impl.Backup;
 
 namespace Raven.Database.Storage
 {
@@ -141,14 +143,14 @@ namespace Raven.Database.Storage
             try
             {
                 log.Info("Backup completed");
-                var jsonDocument = database.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
+                var jsonDocument = database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
                 if (jsonDocument == null)
                     return;
 
                 var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
                 backupStatus.IsRunning = false;
                 backupStatus.Completed = SystemTime.UtcNow;
-                database.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus),
+                database.Documents.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus),
                              jsonDocument.Metadata,
                              null);
             }
@@ -157,7 +159,7 @@ namespace Raven.Database.Storage
                 log.WarnException("Failed to update completed backup status, will try deleting document", e);
                 try
                 {
-                    database.Delete(BackupStatus.RavenBackupStatusDocumentKey, null, null);
+                    database.Documents.Delete(BackupStatus.RavenBackupStatusDocumentKey, null, null);
                 }
                 catch (Exception ex)
                 {
@@ -171,7 +173,7 @@ namespace Raven.Database.Storage
             try
             {
                 log.Info(newMsg);
-                var jsonDocument = database.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
+                var jsonDocument = database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
                 if (jsonDocument == null)
                     return;
                 var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
@@ -181,7 +183,7 @@ namespace Raven.Database.Storage
                     Timestamp = SystemTime.UtcNow,
                     Severity = severity
                 });
-                database.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus),
+                database.Documents.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus),
                              jsonDocument.Metadata,
                              null);
             }

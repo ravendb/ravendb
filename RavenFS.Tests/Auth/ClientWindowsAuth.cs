@@ -33,7 +33,7 @@ namespace RavenFS.Tests.Auth
 
         protected override void ConfigureServer(RavenDbServer server, string fileSystemName)
         {
-            server.SystemDatabase.Put("Raven/Authorization/WindowsSettings", null,
+            server.SystemDatabase.Documents.Put("Raven/Authorization/WindowsSettings", null,
                                       RavenJObject.FromObject(new WindowsAuthDocument
                                       {
                                           RequiredUsers = new List<WindowsAuthData>
@@ -94,7 +94,7 @@ namespace RavenFS.Tests.Auth
 
             Assert.NotEqual(Guid.Empty, guid);
 
-            await client.UpdateMetadataAsync("/dir/sm.bin", new NameValueCollection() { { "Meta", "Data" } });
+            await client.UpdateMetadataAsync("/dir/sm.bin", new RavenJObject() { { "Meta", "Data" } });
 
             var results = await client.SearchAsync("Meta:Data");
 
@@ -135,7 +135,7 @@ namespace RavenFS.Tests.Auth
 
             await configClient.SetConfig("test-conf", new NameValueCollection() { { "key", "value" } });
 
-            var config = await configClient.GetConfig("test-conf");
+            var config = await configClient.GetConfig<NameValueCollection>("test-conf");
 
             Assert.Equal("value", config["key"]);
 

@@ -159,6 +159,9 @@ namespace Raven.Database.Indexing
 
 		static IEnumerable<IList<T>> Partition<T>(IList<T> source, int size)
 		{
+			if (size <= 0)
+				throw new ArgumentException("Size cannot be 0");
+
 			for (int i = 0; i < source.Count; i += size)
 			{
 				yield return source.Skip(i).Take(size).ToList();

@@ -492,12 +492,17 @@ namespace Raven.Client.Connection.Async
         /// <summary>
         /// Begins an async restore operation
         /// </summary>
-        Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false);
+        Task StartRestoreAsync(RestoreRequest restoreRequest);
 
         /// <summary>
         /// Begins an async backup operation
         /// </summary>
-        Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, string databaseName);
+        Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName);
+
+		///<summary>
+		/// Ensures that the database exists, creating it if needed
+		///</summary>
+		Task EnsureDatabaseExistsAsync(string name, bool ignoreFailures = false);
 	}
 
 	public interface IAsyncAdminDatabaseCommands

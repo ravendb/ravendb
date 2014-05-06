@@ -32,11 +32,11 @@
             <table class="table table-condensed single-line-row-table" data-bind="event: { keydown: tableKeyDown }" tabindex="1">
                 <thead>
                     <tr>
-                        <th style="width: 5%">Level</th>
-                        <th style="width: 15%">Reported</th>
-                        <th style="width: 20%">Title</th>
-                        <th style="width: 35%">Message</th>
-                        <th style="width: 20%">Exception</th>
+                        <th class="col-md-1">Level</th>
+                        <th class="col-md-2">Reported</th>
+                        <th class="col-md-4">Title</th>
+                        <th class="col-md-4" >Message</th>
+                        <th class="col-md-2">Exception</th>
                     </tr>
                 </thead>
                 <tbody data-bind="foreach: allAlerts, delegatedHandler: 'click'">

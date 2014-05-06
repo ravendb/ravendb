@@ -1,5 +1,7 @@
 ﻿using System.Linq;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Spatial
@@ -25,7 +27,7 @@ namespace Raven.Tests.Spatial
 		[Fact]
 		public void PointTest()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewRemoteDocumentStore())
 			{
 				store.Initialize();
 				store.ExecuteIndex(new PointIndex());

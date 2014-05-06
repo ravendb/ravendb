@@ -8,6 +8,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 
+import net.ravendb.abstractions.basic.CloseableIterator;
 import net.ravendb.abstractions.basic.Lazy;
 import net.ravendb.abstractions.basic.Reference;
 import net.ravendb.abstractions.basic.Tuple;
@@ -34,10 +36,12 @@ import net.ravendb.abstractions.data.MultiLoadResult;
 import net.ravendb.abstractions.data.QueryHeaderInformation;
 import net.ravendb.abstractions.data.StreamResult;
 import net.ravendb.abstractions.exceptions.ConcurrencyException;
+import net.ravendb.abstractions.exceptions.ServerClientException;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.abstractions.json.linq.RavenJToken;
 import net.ravendb.client.IDocumentQuery;
 import net.ravendb.client.IDocumentSessionImpl;
+import net.ravendb.client.ILoadConfiguration;
 import net.ravendb.client.ISyncAdvancedSessionOperation;
 import net.ravendb.client.LoadConfigurationFactory;
 import net.ravendb.client.RavenPagingInformation;
@@ -158,6 +162,13 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
       existingEntity = entitiesByKey.get(id);
       return (T) existingEntity;
     }
+
+    if (includedDocumentsByKey.containsKey(id)) {
+      JsonDocument value = includedDocumentsByKey.get(id);
+      includedDocumentsByKey.remove(id);
+      return (T) trackEntity(clazz, value);
+    }
+
     incrementRequestCount();
 
     LoadOperation loadOperation = new LoadOperation(this, new DisableAllCachingCallback(), id);
@@ -304,7 +315,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
 
     List<Object> result = new ArrayList<>();
     for (String id: ids) {
-      result.add(entitiesByKey.get(id));
+      result.add(load(clazz, id));
     }
     return result.toArray((T[]) Array.newInstance(clazz, 0));
   }
@@ -502,40 +513,46 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(IRavenQueryable<T> query) {
+  public <T> CloseableIterator<StreamResult<T>> stream(IRavenQueryable<T> query) {
     Reference<QueryHeaderInformation> _ = new Reference<>();
     return stream(query, _);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(IRavenQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformationRef) {
+  public <T> CloseableIterator<StreamResult<T>> stream(IRavenQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformationRef) {
     IRavenQueryProvider queryProvider = (IRavenQueryProvider)query.getProvider();
-    IDocumentQuery<T> docQuery = (IDocumentQuery<T>) queryProvider.toLuceneQuery(query.getElementType(), query.getExpression());
+    IDocumentQuery<T> docQuery = (IDocumentQuery<T>) queryProvider.toDocumentQuery(query.getElementType(), query.getExpression());
     return stream(docQuery, queryHeaderInformationRef);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(IDocumentQuery<T> query) {
+  public <T> CloseableIterator<StreamResult<T>> stream(IDocumentQuery<T> query) {
     Reference<QueryHeaderInformation> _ = new Reference<>();
     return stream(query, _);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(IDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation) {
+  public <T> CloseableIterator<StreamResult<T>> stream(IDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation) {
     IRavenQueryInspector ravenQueryInspector = (IRavenQueryInspector) query;
     IndexQuery indexQuery = ravenQueryInspector.getIndexQuery();
-    Iterator<RavenJObject> iterator = databaseCommands.streamQuery(ravenQueryInspector.getIndexQueried(), indexQuery, queryHeaderInformation);
+
+    if (indexQuery.isWaitForNonStaleResults() || indexQuery.isWaitForNonStaleResultsAsOfNow()) {
+      throw new IllegalArgumentException(
+          "Since stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
+    }
+
+    CloseableIterator<RavenJObject> iterator = databaseCommands.streamQuery(ravenQueryInspector.getIndexQueried(), indexQuery, queryHeaderInformation);
     return new StreamIterator<>(query, iterator);
   }
 
 
-  private static class StreamIterator<T> implements Iterator<StreamResult<T>> {
+  private static class StreamIterator<T> implements CloseableIterator<StreamResult<T>> {
 
-    private Iterator<RavenJObject> innerIterator;
+    private CloseableIterator<RavenJObject> innerIterator;
     private DocumentQuery<T> query;
     private QueryOperation queryOperation;
 
-    public StreamIterator(IDocumentQuery<T> query, Iterator<RavenJObject> innerIterator) {
+    public StreamIterator(IDocumentQuery<T> query, CloseableIterator<RavenJObject> innerIterator) {
       super();
       this.innerIterator = innerIterator;
       this.query = (DocumentQuery<T>) query;
@@ -546,6 +563,11 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     @Override
     public boolean hasNext() {
       return innerIterator.hasNext();
+    }
+
+    @Override
+    public void close() {
+      innerIterator.close();
     }
 
     @Override
@@ -579,38 +601,38 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass) {
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass) {
     return stream(entityClass, null, null, null, 0, Integer.MAX_VALUE);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag) {
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag) {
     return stream(entityClass, fromEtag, null, null, 0, Integer.MAX_VALUE);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith) {
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith) {
     return stream(entityClass, fromEtag, startsWith, null, 0, Integer.MAX_VALUE);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches) {
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches) {
     return stream(entityClass, fromEtag, startsWith, matches, 0, Integer.MAX_VALUE);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start) {
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start) {
     return stream(entityClass, fromEtag, startsWith, matches, start, Integer.MAX_VALUE);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize) {
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize) {
     return stream(entityClass, fromEtag, startsWith, matches, start, pageSize, null);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize, RavenPagingInformation pagingInformation) {
-    Iterator<RavenJObject> iterator = databaseCommands.streamDocs(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation);
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize, RavenPagingInformation pagingInformation) {
+    CloseableIterator<RavenJObject> iterator = databaseCommands.streamDocs(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation);
     return new SimpleSteamIterator<>(iterator, entityClass);
   }
 
@@ -619,11 +641,12 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return databaseCommands.getMultiFacets(facetQueries);
   }
 
-  private class SimpleSteamIterator<T> implements Iterator<StreamResult<T>> {
-    private Iterator<RavenJObject> innerIterator;
+  private class SimpleSteamIterator<T> implements CloseableIterator<StreamResult<T>> {
+    private CloseableIterator<RavenJObject> innerIterator;
     private Class<T> entityClass;
+    private boolean closed = false;
 
-    public SimpleSteamIterator(Iterator<RavenJObject> innerIterator, Class<T> entityClass) {
+    public SimpleSteamIterator(CloseableIterator<RavenJObject> innerIterator, Class<T> entityClass) {
       super();
       this.innerIterator = innerIterator;
       this.entityClass = entityClass;
@@ -634,8 +657,18 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
       return innerIterator.hasNext();
     }
 
+    public void close() {
+      closed = true;
+      innerIterator.close();
+    }
+
+
+
     @Override
     public StreamResult<T> next() {
+      if (closed) {
+        throw new IllegalStateException("Stream is closed");
+      }
       RavenJObject next = innerIterator.next();
       JsonDocument document = SerializationHelper.ravenJObjectToJsonDocument(next);
       StreamResult<T> streamResult = new StreamResult<>();
@@ -683,18 +716,18 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * @return
    */
   @Override
-  public <T, TIndexCreator extends AbstractIndexCreationTask> IDocumentQuery<T> luceneQuery(Class<T> clazz, Class<TIndexCreator> indexClazz) {
+  public <T, TIndexCreator extends AbstractIndexCreationTask> IDocumentQuery<T> documentQuery(Class<T> clazz, Class<TIndexCreator> indexClazz) {
     try {
       TIndexCreator index = indexClazz.newInstance();
-      return luceneQuery(clazz, index.getIndexName(), index.isMapReduce());
+      return documentQuery(clazz, index.getIndexName(), index.isMapReduce());
     } catch (InstantiationException | IllegalAccessException e) {
       throw new RuntimeException(indexClazz.getName() + " does not have argumentless constructor.");
     }
   }
 
   @Override
-  public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz, String indexName) {
-    return luceneQuery(clazz, indexName, false);
+  public <T> IDocumentQuery<T> documentQuery(Class<T> clazz, String indexName) {
+    return documentQuery(clazz, indexName, false);
   }
 
   /**
@@ -705,8 +738,8 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * @return
    */
   @Override
-  public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz, String indexName, boolean isMapReduce) {
-    return new DocumentQuery<>(clazz, this, getDatabaseCommands(), indexName, null, null, listeners.getQueryListeners(), isMapReduce);
+  public <T> IDocumentQuery<T> documentQuery(Class<T> clazz, String indexName, boolean isMapReduce) {
+    return new DocumentQuery<>(clazz, this, getDatabaseCommands(), indexName, null, null, theListeners.getQueryListeners(), isMapReduce);
   }
 
   /**
@@ -728,12 +761,12 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * Dynamically query RavenDB using Lucene syntax
    */
   @Override
-  public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz) {
+  public <T> IDocumentQuery<T> documentQuery(Class<T> clazz) {
     String indexName = "dynamic";
     if (Types.isEntityType(clazz)) {
       indexName += "/" + getConventions().getTypeTagName(clazz);
     }
-    return advanced().luceneQuery(clazz, indexName);
+    return advanced().documentQuery(clazz, indexName);
   }
 
   @SuppressWarnings("unchecked")
@@ -784,14 +817,17 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   }
 
   @Override
-  public void executeAllPendingLazyOperations() {
+  public ResponseTimeInformation executeAllPendingLazyOperations() {
     if (pendingLazyOperations.size() == 0)
-      return;
+      return new ResponseTimeInformation();
 
     try {
       incrementRequestCount();
+
+      ResponseTimeInformation responseTimeDuration = new ResponseTimeInformation();
+      long time1 = new Date().getTime();
       try {
-        while (executeLazyOperationsSingleStep()) {
+        while (executeLazyOperationsSingleStep(responseTimeDuration)) {
           Thread.sleep(100);
         }
       } catch (InterruptedException e) {
@@ -802,12 +838,18 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
           onEvaluateLazy.get(pendingLazyOperation).apply(pendingLazyOperation.getResult());
         }
       }
+
+      long time2 = new Date().getTime();
+      responseTimeDuration.setTotalClientDuration(time2 - time1);
+
+      return responseTimeDuration;
     } finally {
       pendingLazyOperations.clear();
     }
   }
 
-  private boolean executeLazyOperationsSingleStep() {
+  private boolean executeLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation) {
+
     List<AutoCloseable> disposables = new ArrayList<>();
     for (ILazyOperation lazyOp: pendingLazyOperations) {
       AutoCloseable context = lazyOp.enterContext();
@@ -823,6 +865,19 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
       }
       GetResponse[] responses = databaseCommands.multiGet(requests.toArray(new GetRequest[0]));
       for (int i = 0; i < pendingLazyOperations.size(); i++) {
+
+        String tempRequestTime = responses[0].getHeaders().get("Temp-Request-Time");
+        Long parsedValue = 0L;
+        try {
+          parsedValue = Long.parseLong(tempRequestTime);
+        } catch (NumberFormatException e)  {
+          // ignore
+        }
+        ResponseTimeInformation.ResponseTimeItem responseTimeItem = new ResponseTimeInformation.ResponseTimeItem();
+        responseTimeItem.setUrl(requests.get(i).getUrlAndQuery());
+        responseTimeItem.setDuration(parsedValue);
+        responseTimeInformation.getDurationBreakdown().add(responseTimeItem);
+
         if (responses[i].isRequestHasErrors()) {
           throw new IllegalStateException("Got an error from server, status code: " + responses[i].getStatus()  + "\n" + responses[i].getResult());
         }
@@ -873,5 +928,29 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return results.toArray((T[])Array.newInstance(clazz, 0));
   }
 
+  @Override
+  public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult[] loadStartingWith(Class<TResult> clazz, Class<TTransformer> transformerClass,
+    String keyPrefix, String matches, int start, int pageSize, String exclude,
+    RavenPagingInformation pagingInformation, Action1<ILoadConfiguration> configure) {
+
+    try {
+      String transformer = transformerClass.newInstance().getTransformerName();
+      RavenLoadConfiguration configuration = new RavenLoadConfiguration();
+      if (configure != null) {
+        configure.apply(configuration);
+      }
+
+      List<JsonDocument> documents = getDatabaseCommands().startsWith(keyPrefix, matches, start, pageSize, false, exclude, pagingInformation, transformer, configuration.getQueryInputs());
+      List<TResult> result = new ArrayList<>(documents.size());
+      for (JsonDocument document : documents) {
+        result.add((TResult)trackEntity(clazz, document));
+      }
+
+      return result.toArray((TResult[])Array.newInstance(clazz, 0));
+    } catch (InstantiationException | IllegalAccessException e) {
+      throw new ServerClientException(e);
+    }
+
+  }
 
 }

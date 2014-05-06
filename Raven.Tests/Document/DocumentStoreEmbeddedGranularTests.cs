@@ -2,11 +2,13 @@
 using System.Linq;
 using Raven.Client.Embedded;
 using Raven.Database.Extensions;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Document
 {
-	public class DocumentStoreEmbeddedGranularTests : RemoteClientTest, IDisposable
+	public class DocumentStoreEmbeddedGranularTests : RavenTest, IDisposable
 	{
 		private string path;
 

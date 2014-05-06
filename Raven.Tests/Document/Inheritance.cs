@@ -5,12 +5,14 @@
 //-----------------------------------------------------------------------
 using System;
 using Raven.Client.Embedded;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.Document
 {
-	public class Inheritance : RemoteClientTest
+	public class Inheritance : RavenTest
 	{
 		protected override void ModifyStore(EmbeddableDocumentStore documentStore)
 		{

@@ -2,11 +2,12 @@
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database;
+using Raven.Database.Data;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Voron;
 using Raven.Database.Storage.Voron.Backup;
 using Raven.Database.Util.Streams;
-
+using Voron;
 using VoronExceptions = Voron.Exceptions;
 using Task = System.Threading.Tasks.Task;
 
@@ -47,7 +48,7 @@ namespace Raven.Storage.Voron
 
 		private TableStorage tableStorage;
 
-	    private IBufferPool bufferPool;
+	    private readonly IBufferPool bufferPool;
 
 		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
 		{
@@ -65,14 +66,20 @@ namespace Raven.Storage.Voron
 			{
 				if (disposed)
 					return;
+
 				disposed = true;
-				current.Dispose();
+
+				var exceptionAggregator = new ExceptionAggregator("Could not properly dispose TransactionalStorage");
+
+				exceptionAggregator.Execute(() => current.Dispose());
 
 				if (tableStorage != null)
-					tableStorage.Dispose();
+					exceptionAggregator.Execute(() => tableStorage.Dispose());
 
-                if (bufferPool != null)
-                    bufferPool.Dispose();
+				if (bufferPool != null)
+					exceptionAggregator.Execute(() => bufferPool.Dispose());
+
+				exceptionAggregator.ThrowIfNeeded();
 			}
 			finally
 			{
@@ -96,15 +103,19 @@ namespace Raven.Storage.Voron
 
 		public IStorageActionsAccessor CreateAccessor()
 		{
-			var snapshot = tableStorage.CreateSnapshot();
+		    var snapshotReference = new Reference<SnapshotReader> { Value = tableStorage.CreateSnapshot() };
 			var writeBatchReference = new Reference<WriteBatch> { Value = new WriteBatch() };
 			
 			var accessor = new StorageActionsAccessor(uuidGenerator, _documentCodecs,
-                    documentCacher, writeBatchReference, snapshot, tableStorage, this, bufferPool);
+                    documentCacher, writeBatchReference, snapshotReference, tableStorage, this, bufferPool);
 			accessor.OnDispose += () =>
 			{
-				snapshot.Dispose();
-                writeBatchReference.Value.Dispose();
+				var exceptionAggregator = new ExceptionAggregator("Could not properly dispose StorageActionsAccessor");
+
+				exceptionAggregator.Execute(() => snapshotReference.Value.Dispose());
+				exceptionAggregator.Execute(() => writeBatchReference.Value.Dispose());
+
+				exceptionAggregator.ThrowIfNeeded();
 			};
 
 			return accessor;
@@ -157,40 +168,39 @@ namespace Raven.Storage.Voron
 			onCommit(); // call user code after we exit the lock
 		}
 
-		private IStorageActionsAccessor ExecuteBatch(Action<IStorageActionsAccessor> action)
-		{
-			using (var snapshot = tableStorage.CreateSnapshot())
-			{
-			    var writeBatchRef = new Reference<WriteBatch>();
-                try
-                {
-                    writeBatchRef.Value = new WriteBatch() {DisposeAfterWrite = false};// prevent from disposing after write to allow read from batch OnStorageCommit
-                    var storageActionsAccessor = new StorageActionsAccessor(uuidGenerator, _documentCodecs,
-                                                                            documentCacher, writeBatchRef, snapshot,
-                                                                            tableStorage, this, bufferPool);
+        private IStorageActionsAccessor ExecuteBatch(Action<IStorageActionsAccessor> action)
+        {
+            var snapshotRef = new Reference<SnapshotReader>();
+            var writeBatchRef = new Reference<WriteBatch>();
+            try
+            {
+                snapshotRef.Value = tableStorage.CreateSnapshot();
+                writeBatchRef.Value = new WriteBatch { DisposeAfterWrite = false }; // prevent from disposing after write to allow read from batch OnStorageCommit
+                var storageActionsAccessor = new StorageActionsAccessor(uuidGenerator, _documentCodecs,
+                                                                        documentCacher, writeBatchRef, snapshotRef,
+                                                                        tableStorage, this, bufferPool);
 
-                    if (disableBatchNesting.Value == null)
-                        current.Value = storageActionsAccessor;
+                if (disableBatchNesting.Value == null)
+                    current.Value = storageActionsAccessor;
 
-                    action(storageActionsAccessor);
-                    storageActionsAccessor.SaveAllTasks();
+                action(storageActionsAccessor);
+                storageActionsAccessor.SaveAllTasks();
 
-                    tableStorage.Write(writeBatchRef.Value);
+                tableStorage.Write(writeBatchRef.Value);
 
-                    storageActionsAccessor.ExecuteOnStorageCommit();
+                storageActionsAccessor.ExecuteOnStorageCommit();
 
-                    return storageActionsAccessor;
-                }
-                finally
-                {
-                    if (writeBatchRef.Value != null)
-                    {
-                        writeBatchRef.Value.Dispose();
-                    }
-                }
-			   
-			}
-		}
+                return storageActionsAccessor;
+            }
+            finally
+            {
+                if (snapshotRef.Value != null)
+                    snapshotRef.Value.Dispose();
+
+                if (writeBatchRef.Value != null)
+                    writeBatchRef.Value.Dispose();
+            }
+        }
 
 		public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
 		{
@@ -202,46 +212,76 @@ namespace Raven.Storage.Voron
             current.Value.OnStorageCommit += action;
         }
 
-		public bool Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
+		public void Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
 		{
 		    if (generator == null) throw new ArgumentNullException("generator");
 		    if (documentCodecs == null) throw new ArgumentNullException("documentCodecs");
 
 		    uuidGenerator = generator;
-			_documentCodecs = documentCodecs;
+		    _documentCodecs = documentCodecs;
 
-			var persistenceSource = configuration.RunInMemory ? (IPersistenceSource)new MemoryPersistenceSource() : new MemoryMapPersistenceSource(configuration);
+		    StorageEnvironmentOptions options = configuration.RunInMemory ?
+				CreateMemoryStorageOptionsFromConfiguration(configuration) :
+		        CreateStorageOptionsFromConfiguration(configuration);
 
-			tableStorage = new TableStorage(persistenceSource, bufferPool);
-
-			if (persistenceSource.CreatedNew)
-			{
-				Id = Guid.NewGuid();
-
-				using (var writeIdBatch = new WriteBatch())
-				{
-					tableStorage.Details.Add(writeIdBatch, "id", Id.ToByteArray());
-					tableStorage.Write(writeIdBatch);
-				}
-			}
-			else
-			{
-				using (var snapshot = tableStorage.CreateSnapshot())
-				{
-					var read = tableStorage.Details.Read(snapshot, "id", null);
-					if (read == null || read.Reader == null || read.Reader.Length == 0) //precaution - might prevent NRE in edge cases
-						throw new InvalidDataException("Failed to initialize Voron transactional storage. Possible data corruption.");
-
-					using (var stream = read.Reader.AsStream())
-					using (var reader = new BinaryReader(stream))
-					{
-						Id = new Guid(reader.ReadBytes((int) stream.Length));
-					}
-				}
-			}
-
-			return persistenceSource.CreatedNew;
+		    tableStorage = new TableStorage(options, bufferPool);
+		    SetupDatabaseId();
 		}
+
+	    private void SetupDatabaseId()
+	    {
+	        using (var snapshot = tableStorage.CreateSnapshot())
+	        {
+	            var read = tableStorage.Details.Read(snapshot, "id", null);
+	            if (read == null) // new db
+	            {
+	                Id = Guid.NewGuid();
+	                using (var writeIdBatch = new WriteBatch())
+	                {
+	                    tableStorage.Details.Add(writeIdBatch, "id", Id.ToByteArray());
+	                    tableStorage.Write(writeIdBatch);
+	                }
+	            }
+	            else
+	            {
+                    if (read.Reader == null || read.Reader.Length != 16)//precaution - might prevent NRE in edge cases
+	                    throw new InvalidDataException("Failed to initialize Voron transactional storage. Possible data corruption.");
+	                using (var stream = read.Reader.AsStream())
+	                using (var reader = new BinaryReader(stream))
+	                {
+	                    Id = new Guid(reader.ReadBytes((int) stream.Length));
+	                }
+	            }
+	        }
+	    }
+
+		private static StorageEnvironmentOptions CreateMemoryStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
+		{
+			var options = StorageEnvironmentOptions.CreateMemoryOnly();
+			options.InitialFileSize = configuration.VoronInitialFileSize;
+
+			return options;
+		}
+
+	    private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
+        {
+            bool allowIncrementalBackupsSetting;
+            if (bool.TryParse(configuration.Settings["Raven/Voron/AllowIncrementalBackups"] ?? "false", out allowIncrementalBackupsSetting) == false)
+                throw new ArgumentException("Raven/Voron/AllowIncrementalBackups settings key contains invalid value");
+
+            var directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
+            var filePathFolder = new DirectoryInfo(directoryPath);
+            if (filePathFolder.Exists == false)
+                filePathFolder.Create();
+
+            var tempPath = configuration.Settings["Raven/Voron/TempPath"];
+	        var journalPath = configuration.Settings[Abstractions.Data.Constants.RavenTxJournalPath] ?? configuration.JournalsStoragePath;
+            var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
+            options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
+		    options.InitialFileSize = configuration.VoronInitialFileSize;
+
+            return options;
+        }
 
 		public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup,
 			DatabaseDocument documentDatabase)
@@ -251,13 +291,17 @@ namespace Raven.Storage.Voron
 			
 			var backupOperation = new BackupOperation(database, database.Configuration.DataDirectory,
 		        backupDestinationDirectory, tableStorage.Environment, incrementalBackup,documentDatabase);
-			
-            Task.Factory.StartNew(backupOperation.Execute);
+
+		    Task.Factory.StartNew(() =>
+		    {
+                using(backupOperation)
+		            backupOperation.Execute();
+		    });
 		}       
 
-		public void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
+		public void Restore(RestoreRequest restoreRequest, Action<string> output)
 		{
-			new RestoreOperation(backupLocation, configuration, output).Execute();
+			new RestoreOperation(restoreRequest, configuration, output).Execute();
 		}
 
 	    public DatabaseSizeInformation GetDatabaseSize()

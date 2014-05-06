@@ -59,7 +59,7 @@ namespace Raven.Database.Impl.DTC
 			RavenJObject metadata,
 			TransactionInformation transactionInformation,
 			Etag committedEtag,
-			SequentialUuidGenerator uuidGenerator)
+			IUuidGenerator uuidGenerator)
 		{
 			metadata.EnsureCannotBeChangeAndEnableSnapshotting();
 			data.EnsureCannotBeChangeAndEnableSnapshotting();
@@ -82,7 +82,7 @@ namespace Raven.Database.Impl.DTC
 			string key,
 			Etag etag,
 			Etag committedEtag,
-			SequentialUuidGenerator uuidGenerator)
+			IUuidGenerator uuidGenerator)
 		{
 			AddToTransactionState(key, etag, transactionInformation, committedEtag, new DocumentInTransactionData
 			{

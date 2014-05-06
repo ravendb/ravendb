@@ -33,12 +33,14 @@ namespace Raven.Database.Server.Security.Windows
 				// we allow this to go through and we will authenticate that on the OAuth Request Authorizer
 				return AuthenticationSchemes.Anonymous;
 			}
-			if (NeverSecret.Urls.Contains(request.Url.AbsolutePath))
+			if (NeverSecret.IsNeverSecretUrl(request.Url.AbsolutePath))
 				return AuthenticationSchemes.Anonymous;
 
 			//CORS pre-flight.
-			if(!String.IsNullOrEmpty(configuration.AccessControlAllowOrigin) && request.HttpMethod == "OPTIONS") 
-				{ return AuthenticationSchemes.Anonymous; }
+			if (configuration.AccessControlAllowOrigin.Count > 0 && request.HttpMethod == "OPTIONS")
+			{
+				return AuthenticationSchemes.Anonymous;
+			}
 
 			if (IsAdminRequest.IsMatch(request.RawUrl) && 
 				configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)

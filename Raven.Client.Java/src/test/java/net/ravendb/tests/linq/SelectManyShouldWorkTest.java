@@ -3,6 +3,8 @@ package net.ravendb.tests.linq;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -75,6 +77,12 @@ public class SelectManyShouldWorkTest extends RemoteClientTest {
             .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
             .toList();
         assertEquals(2, result.size());
+        Collections.sort(result, new Comparator<ReduceResult>() {
+          @Override
+          public int compare(ReduceResult o1, ReduceResult o2) {
+            return o1.getCreativeId().compareTo(o2.getCreativeId());
+          }
+        });
         assertEquals("creative/1", result.get(0).getCreativeId());
         assertEquals("creative/2", result.get(result.size() - 1).getCreativeId());
       }

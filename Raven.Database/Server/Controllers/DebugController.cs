@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Security.Principal;
@@ -15,6 +16,7 @@ using System.Web.Http.Routing;
 using System.Web.Routing;
 using Raven.Abstractions.Data;
 using Raven.Client.Util;
+using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
@@ -36,6 +38,21 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage Changes()
 		{
 			return GetMessageWithObject(Database.TransportState.DebugStatuses);
+		}
+
+		[HttpGet]
+		[Route("debug/sql-replication-stats")]
+		[Route("databases/{databaseName}/debug/sql-replication-stats")]
+		public HttpResponseMessage SqlReplicationStats()
+		{
+			var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
+			if (task == null)
+				return GetMessageWithObject(new
+				{
+					Error = "SQL Replication bundle is not installed"
+				}, HttpStatusCode.NotFound);
+
+			return GetMessageWithObject(task.Statistics);
 		}
 
 
@@ -116,15 +133,32 @@ namespace Raven.Database.Server.Controllers
 			Database.TransactionalStorage.Batch(accessor =>
 			{
 				listItem = accessor.Lists.Read(listName, key);
-				if (listItem == null)
-					throw new HttpException(400, "Not found");
 			});
 
-			if (listItem == null)
-				throw new HttpException(400, "Not found");
+		    if (listItem == null)
+		        return GetEmptyMessage(HttpStatusCode.NotFound);
 
 			return GetMessageWithObject(listItem);
 		}
+
+        [HttpGet]
+        [Route("debug/list-all")]
+        [Route("databases/{databaseName}/debug/list-all")]
+        public HttpResponseMessage ListAll(string id)
+        {
+            var listName = id;
+
+            List<ListItem> listItems = null;
+            Database.TransactionalStorage.Batch(accessor =>
+            {
+                listItems = accessor.Lists.Read(listName, Etag.Empty, null, GetPageSize(Database.Configuration.MaxPageSize)).ToList();
+            });
+
+            if (listItems == null)
+                return GetEmptyMessage(HttpStatusCode.NotFound);
+
+            return GetMessageWithObject(listItems);
+        }
 
 		[HttpGet]
 		[Route("debug/queries")]

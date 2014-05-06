@@ -6,6 +6,8 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.MapRedue
@@ -81,7 +83,7 @@ namespace Raven.Tests.Bugs.MapRedue
 
         private void RemoveAllDocuments(IDocumentStore aStore)
         {
-            aStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery { Query = "Tag:Documents" }, allowStale: false);
+            aStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery { Query = "Tag:Documents" }, allowStale: false).WaitForCompletion();
         }
 
         private void InserDocumentIntoDb(IDocumentSession aSession,

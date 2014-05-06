@@ -91,8 +91,18 @@ namespace Raven.Bundles.Replication.Responders
 			TExternal resolvedItemToSave;
 			if (TryResolveConflict(id, metadata, incoming, existingItem, out resolvedMetadataToSave, out resolvedItemToSave))
 			{
-				AddWithoutConflict(id, existingEtag, resolvedMetadataToSave, resolvedItemToSave);
-				return;
+                if (metadata.ContainsKey("Raven-Remove-Document-Marker") &&
+                   metadata.Value<bool>("Raven-Remove-Document-Marker"))
+                {
+                    DeleteItem(id, null);
+                    MarkAsDeleted(id, metadata);
+                }
+                else
+                {
+                    var etag = deleted == false ? existingEtag : null;
+					AddWithoutConflict(id, etag, resolvedMetadataToSave, resolvedItemToSave);
+                }
+                return;
 			}
 
 			CreatedConflict createdConflict;
@@ -115,9 +125,9 @@ namespace Raven.Bundles.Replication.Responders
 				createdConflict = CreateConflict(id, newDocumentConflictId, existingDocumentConflictId, existingItem,
 					existingMetadata);
 			}
-			
+
 			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
-				Database.RaiseNotifications(new ReplicationConflictNotification()
+				Database.Notifications.RaiseNotifications(new ReplicationConflictNotification()
 				                            {
 					                            Id = id,
 					                            Etag = createdConflict.Etag,
@@ -201,6 +211,13 @@ namespace Raven.Bundles.Replication.Responders
 			}
 			else
 			{
+                RavenJObject resolvedMetadataToSave;
+                TExternal resolvedItemToSave;
+                if (TryResolveConflict(id, metadata, incoming, existingItem, out resolvedMetadataToSave, out resolvedItemToSave))
+                {
+                    AddWithoutConflict(id, existingEtag, resolvedMetadataToSave, resolvedItemToSave);
+                    return;
+                }
 				var newConflictId = SaveConflictedItem(id, metadata, incoming, existingEtag);
 				log.Debug("Existing item {0} is in conflict with replicated delete from {1}, marking item as conflicted", id, Src);
 
@@ -210,7 +227,7 @@ namespace Raven.Bundles.Replication.Responders
 			}
 
 			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
-				Database.RaiseNotifications(new ReplicationConflictNotification()
+				Database.Notifications.RaiseNotifications(new ReplicationConflictNotification()
 				                            {
 					                            Id = id,
 					                            Etag = createdConflict.Etag,

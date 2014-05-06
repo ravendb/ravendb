@@ -26,10 +26,10 @@ namespace Raven.Abstractions.Util
 
 		public static void CollectGarbage(bool compactLoh, Action afterCollect)
 		{
-			GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
-
 			if (compactLoh)
 				SetCompactLog.Value();
+
+			GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
 
 			if (afterCollect != null)
 				afterCollect();

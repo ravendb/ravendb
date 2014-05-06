@@ -12,6 +12,8 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Storage

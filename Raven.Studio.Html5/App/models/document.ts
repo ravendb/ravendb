@@ -1,6 +1,6 @@
 import documentMetadata = require("models/documentMetadata");
 
-class document {
+class document implements documentBase {
     __metadata: documentMetadata;
     constructor(dto: documentDto) {
         this.__metadata = new documentMetadata(dto['@metadata']);
@@ -9,6 +9,10 @@ class document {
                 this[property] = dto[property];
             }
         }
+    }
+
+    getEntityName() {
+        return this.__metadata.ravenEntityName;
     }
 
     getId() {
@@ -37,7 +41,8 @@ class document {
         }
 
         if (includeMeta && this.__metadata) {
-            dto['@metadata'] = this.__metadata.toDto();
+            var newDocumentMetadata = new documentMetadata(this.__metadata);
+            dto['@metadata'] = newDocumentMetadata.toDto();
         }
 
         return <any>dto;
@@ -81,7 +86,7 @@ class document {
         // TODO: is there a better/more reliable way to do this?
         var slashIndex = id.lastIndexOf('/');
         if (slashIndex >= 1) {
-            return id.substring(0, slashIndex);
+            return id.substring(0, 1).toUpperCase() + id.substring(1, slashIndex);
         }
 
         return id;

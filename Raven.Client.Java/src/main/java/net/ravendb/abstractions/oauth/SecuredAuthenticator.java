@@ -10,6 +10,7 @@ import net.ravendb.abstractions.closure.Action1;
 import net.ravendb.abstractions.connection.OAuthHelper;
 import net.ravendb.abstractions.connection.WebRequestEventArgs;
 import net.ravendb.abstractions.exceptions.HttpOperationException;
+import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.client.connection.implementation.HttpJsonRequestFactory;
 
 import org.apache.commons.io.IOUtils;
@@ -120,7 +121,9 @@ public class SecuredAuthenticator extends AbstractAuthenticator {
 
         HttpEntity httpEntity = httpResponse.getEntity();
         try {
-          currentOauthToken = "Bearer " + IOUtils.toString(httpEntity.getContent());
+          String token = IOUtils.toString(httpEntity.getContent());
+          RavenJObject jToken = RavenJObject.parse(token);
+          currentOauthToken = "Bearer " + jToken;
         } finally {
           EntityUtils.consumeQuietly(httpResponse.getEntity());
         }

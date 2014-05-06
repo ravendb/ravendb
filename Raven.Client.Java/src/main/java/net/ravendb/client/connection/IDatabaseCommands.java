@@ -32,6 +32,7 @@ import net.ravendb.abstractions.data.SuggestionQuery;
 import net.ravendb.abstractions.data.SuggestionQueryResult;
 import net.ravendb.abstractions.exceptions.ServerClientException;
 import net.ravendb.abstractions.indexing.IndexDefinition;
+import net.ravendb.abstractions.indexing.IndexMergeResults;
 import net.ravendb.abstractions.indexing.TransformerDefinition;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.abstractions.json.linq.RavenJToken;
@@ -110,6 +111,9 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @return
    */
   public List<JsonDocument> startsWith(String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly, String exclude, RavenPagingInformation pagingInformation);
+
+  public List<JsonDocument> startsWith(String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly,
+    String exclude, RavenPagingInformation pagingInformation, String transformer, Map<String, RavenJToken> queryInputs);
 
   /**
    * Retrieves the document for the specified key
@@ -736,7 +740,7 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @param pageSize
    * @return
    */
-  public Collection<TransformerDefinition> getTransformers(int start, int pageSize);
+  public List<TransformerDefinition> getTransformers(int start, int pageSize);
 
   /**
    *  Gets the transformer definition for the specified name
@@ -752,6 +756,8 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
   public void deleteTransformer(String name);
 
   public AttachmentInformation[] getAttachments(Etag startEtag, int batchSize);
+
+  public IndexMergeResults getIndexMergeSuggestions();
 
   /**
    * Tries to resolve conflict using registered listeners

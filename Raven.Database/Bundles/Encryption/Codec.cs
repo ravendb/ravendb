@@ -36,7 +36,8 @@ namespace Raven.Bundles.Encryption
 				provider = GetCryptoProvider(null);
 				encryptor = provider.CreateEncryptor();
 				stream = new CryptoStream(dataStream, encryptor, CryptoStreamMode.Write);
-				return stream.WriteSalt(key).DisposeTogetherWith(provider, encryptor);
+				var disposingStream = stream.WriteSalt(key).DisposeTogetherWith(provider, encryptor);
+				return disposingStream;
 			}
 			catch
 			{
@@ -121,6 +122,7 @@ namespace Raven.Bundles.Encryption
 				GetCryptoProvider(null);
 			}
 
+// ReSharper disable once PossibleInvalidOperationException
 			return encryptionIVSize.Value;
 		}
 
@@ -145,12 +147,13 @@ namespace Raven.Bundles.Encryption
 			return GetCryptoProvider(iv);
 		}
 
+
 		private Tuple<byte[], byte[]> GetStartingKeyAndIVForEncryption(SymmetricAlgorithm algorithm)
 		{
-			int bits = algorithm.ValidKeySize(Constants.DefaultKeySizeToUseInActualEncryptionInBits) ? 
-				Constants.DefaultKeySizeToUseInActualEncryptionInBits : 
+			int bits = algorithm.ValidKeySize(EncryptionSettings.PreferedEncryptionKeyBitsSize) ? 
+				EncryptionSettings.PreferedEncryptionKeyBitsSize :
 				algorithm.LegalKeySizes[0].MaxSize;
-
+			
 			encryptionKeySize = bits / 8;
 			encryptionIVSize = algorithm.IV.Length;
 

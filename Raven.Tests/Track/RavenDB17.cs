@@ -1,6 +1,9 @@
 ﻿using System.Threading;
 using System.Transactions;
 using Raven.Tests.Bugs;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Util;
+
 using Xunit;
 
 namespace Raven.Tests.Track
@@ -19,8 +22,8 @@ namespace Raven.Tests.Track
 				using (var scope = new TransactionScope())
 				using (var session = store.OpenSession())
 				{
-					Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-					                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+					Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id,
+					                                  new DummyEnlistmentNotification(),
 					                                  EnlistmentOptions.None);
 
 					session.Advanced.UseOptimisticConcurrency = true;
@@ -36,8 +39,8 @@ namespace Raven.Tests.Track
 				using (var scope = new TransactionScope())
 				using (var session = store.OpenSession())
 				{
-					Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-					                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+					Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id,
+					                                  new DummyEnlistmentNotification(),
 					                                  EnlistmentOptions.None);
 
 					session.Advanced.UseOptimisticConcurrency = true;
@@ -58,8 +61,8 @@ namespace Raven.Tests.Track
 				using (var scope = new TransactionScope())
 				using (var session = store.OpenSession())
 				{
-					Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-					                                  new ManyDocumentsViaDTC.DummyEnlistmentNotification(),
+					Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id,
+					                                  new DummyEnlistmentNotification(),
 					                                  EnlistmentOptions.None);
 
 					session.Advanced.UseOptimisticConcurrency = true;

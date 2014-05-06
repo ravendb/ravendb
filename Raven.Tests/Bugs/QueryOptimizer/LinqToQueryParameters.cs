@@ -1,5 +1,7 @@
 using ICSharpCode.NRefactory.CSharp;
 using Raven.Database.Linq.Ast;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 

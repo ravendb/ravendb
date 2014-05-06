@@ -111,7 +111,7 @@ namespace Raven.Client.Document
                     JsonDocument document;
                     try
                     {
-                        document = await GetDocumentAsync(databaseCommands);
+                        document = await GetDocumentAsync(databaseCommands).ConfigureAwait(false);
                     }
                     catch (ConflictException e)
                     {
@@ -119,7 +119,7 @@ namespace Raven.Client.Document
                         document = null;
                     }
                     if (ce != null)
-                        return await HandleConflictsAsync(databaseCommands, ce, minNextMax);
+                        return await HandleConflictsAsync(databaseCommands, ce, minNextMax).ConfigureAwait(false);
 
                     long min, max;
                     if (document == null)
@@ -144,7 +144,7 @@ namespace Raven.Client.Document
                         document.DataAsJson["Max"] = max;
                     }
 
-                    await PutDocumentAsync(databaseCommands, document);
+                    await PutDocumentAsync(databaseCommands, document).ConfigureAwait(false);
                     return new RangeValue(min, max);
                 }
                 catch (ConcurrencyException)
@@ -162,7 +162,7 @@ namespace Raven.Client.Document
 	            throw new InvalidOperationException("Got conflict exception, but no conflicted versions",e);
 	        foreach (var conflictedVersionId in e.ConflictedVersionIds)
 	        {
-	            var doc = await databaseCommands.GetAsync(conflictedVersionId);
+	            var doc = await databaseCommands.GetAsync(conflictedVersionId).ConfigureAwait(false);
 	            highestMax = Math.Max(highestMax, GetMaxFromDocument(doc, minNextMax));
 	        }
 
@@ -172,8 +172,8 @@ namespace Raven.Client.Document
                     Metadata = new RavenJObject(),
                     DataAsJson = RavenJObject.FromObject(new { Max = highestMax }),
                     Key = HiLoDocumentKey
-                });
-	        return await GetNextRangeAsync(databaseCommands);
+                }).ConfigureAwait(false);
+	        return await GetNextRangeAsync(databaseCommands).ConfigureAwait(false);
 	    }
 
 	    private Task PutDocumentAsync(IAsyncDatabaseCommands databaseCommands, JsonDocument document)
@@ -185,7 +185,7 @@ namespace Raven.Client.Document
 
 		private async Task<JsonDocument> GetDocumentAsync(IAsyncDatabaseCommands databaseCommands)
 		{
-		    var documents = await databaseCommands.GetAsync(new[] {HiLoDocumentKey, RavenKeyServerPrefix}, new string[0]);
+		    var documents = await databaseCommands.GetAsync(new[] {HiLoDocumentKey, RavenKeyServerPrefix}, new string[0]).ConfigureAwait(false);
 		    if (documents.Results.Count == 2 && documents.Results[1] != null)
 		    {
 		        lastServerPrefix = documents.Results[1].Value<string>("ServerPrefix");

@@ -1,5 +1,7 @@
 ﻿using Raven.Database.Prefetching;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -53,9 +55,9 @@ namespace Raven.Tests.Bugs
 				store.DocumentDatabase.WorkContext.StopIndexing(); // stop indexing to be able manually manage the prefetcher
 				store.DocumentDatabase.WorkContext.Configuration.MaxNumberOfItemsToPreFetchForIndexing = 1;
 
-				var putResult1 = store.DocumentDatabase.Put("key/1", null, new RavenJObject(), new RavenJObject(), null);
-				var putResult2 = store.DocumentDatabase.Put("key/2", null, new RavenJObject(), new RavenJObject(), null);
-				var putResult3 = store.DocumentDatabase.Put("key/2", null, new RavenJObject(), new RavenJObject(), null); // update
+				var putResult1 = store.DocumentDatabase.Documents.Put("key/1", null, new RavenJObject(), new RavenJObject(), null);
+				var putResult2 = store.DocumentDatabase.Documents.Put("key/2", null, new RavenJObject(), new RavenJObject(), null);
+				var putResult3 = store.DocumentDatabase.Documents.Put("key/2", null, new RavenJObject(), new RavenJObject(), null); // update
 
 				var docs = store.DocumentDatabase.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer, null).GetDocumentsBatchFrom(Raven.Abstractions.Data.Etag.Empty);
 
@@ -74,9 +76,9 @@ namespace Raven.Tests.Bugs
 				store.DocumentDatabase.WorkContext.Configuration.DisableDocumentPreFetchingForIndexing = true;
 				store.DocumentDatabase.WorkContext.StopIndexing(); // stop indexing to be able manually manage the prefetcher
 
-				var putResult1 = store.DocumentDatabase.Put("key/1", null, new RavenJObject(), new RavenJObject(), null);
-				var putResult2 = store.DocumentDatabase.Put("key/2", null, new RavenJObject(), new RavenJObject(), null);
-				var putResult3 = store.DocumentDatabase.Put("key/2", null, new RavenJObject(), new RavenJObject(), null); // update
+				var putResult1 = store.DocumentDatabase.Documents.Put("key/1", null, new RavenJObject(), new RavenJObject(), null);
+				var putResult2 = store.DocumentDatabase.Documents.Put("key/2", null, new RavenJObject(), new RavenJObject(), null);
+				var putResult3 = store.DocumentDatabase.Documents.Put("key/2", null, new RavenJObject(), new RavenJObject(), null); // update
 
 				var docs = store.DocumentDatabase.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer, null).GetDocumentsBatchFrom(Raven.Abstractions.Data.Etag.Empty);
 				Assert.Equal(2, docs.Count);
@@ -94,10 +96,10 @@ namespace Raven.Tests.Bugs
 				store.DocumentDatabase.WorkContext.StopIndexing(); // stop indexing to be able manually manage the prefetcher
 				store.DocumentDatabase.WorkContext.Configuration.MaxNumberOfItemsToPreFetchForIndexing = 1;
 
-				var putResult1 = store.DocumentDatabase.Put("key/1", null, new RavenJObject(), new RavenJObject(), null); // will go to prefetching queue
-				var putResult2 = store.DocumentDatabase.Put("key/1", null, new RavenJObject(), new RavenJObject(), null); // update - will not go into prefetching queue because MaxNumberOfItemsToPreFetchForIndexing = 1;
+				var putResult1 = store.DocumentDatabase.Documents.Put("key/1", null, new RavenJObject(), new RavenJObject(), null); // will go to prefetching queue
+				var putResult2 = store.DocumentDatabase.Documents.Put("key/1", null, new RavenJObject(), new RavenJObject(), null); // update - will not go into prefetching queue because MaxNumberOfItemsToPreFetchForIndexing = 1;
 
-				var deleted = store.DocumentDatabase.Delete("key/1", null, null); // delete
+				var deleted = store.DocumentDatabase.Documents.Delete("key/1", null, null); // delete
 
 				Assert.True(deleted);
 

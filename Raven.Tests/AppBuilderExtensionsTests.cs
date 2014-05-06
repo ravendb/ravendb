@@ -3,6 +3,8 @@ using Microsoft.Owin.Builder;
 using Owin;
 using Raven.Database.Config;
 using Raven.Database.Server;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests

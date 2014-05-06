@@ -7,6 +7,7 @@ using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Runtime.Caching;
+using Raven.Abstractions.Data;
 using Raven.Database.Config.Settings;
 
 namespace Raven.Database.Config
@@ -22,6 +23,8 @@ namespace Raven.Database.Config
 
 		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
+		    EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting],
+		        Constants.DefaultKeySizeToUseInActualEncryptionInBits);
 			MaxPageSize =
 				new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
 			MemoryCacheLimitMegabytes =
@@ -128,7 +131,7 @@ namespace Raven.Database.Config
 				                    TimeSpanArgumentType.FromParse);
             
 			TimeToWaitBeforeRunningIdleIndexes = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeRunningIdleIndexes"], TimeSpan.FromMinutes(10), TimeSpanArgumentType.FromParse);
-            
+
 			DatbaseOperationTimeout = new TimeSpanSetting(settings["Raven/DatbaseOperationTimeout"], TimeSpan.FromMinutes(5), TimeSpanArgumentType.FromParse);
             
 			TimeToWaitBeforeMarkingAutoIndexAsIdle = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle"], TimeSpan.FromHours(1), TimeSpanArgumentType.FromParse);
@@ -144,10 +147,11 @@ namespace Raven.Database.Config
 			MaxStepsForScript = new IntegerSetting(settings["Raven/MaxStepsForScript"], 10*1000);
 			AdditionalStepsForScriptBasedOnDocumentSize = new IntegerSetting(settings["Raven/AdditionalStepsForScriptBasedOnDocumentSize"], 5);
 
+			MaxRecentTouchesToRemember = new IntegerSetting(settings["Raven/MaxRecentTouchesToRemember"], 1024);
             VoronMaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
+			VoronInitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
 		}
 
-	    
 		private string GetDefaultWebDir()
 		{
 			return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Raven/WebUI");
@@ -167,6 +171,8 @@ namespace Raven.Database.Config
 
 			return val;
 		}
+
+		public IntegerSetting EncryptionKeyBitsPreference { get; private set; }
 
 		public IntegerSettingWithMin MaxPageSize { get; private set; }
 
@@ -275,6 +281,8 @@ namespace Raven.Database.Config
     
 		public TimeSpanSetting DatbaseOperationTimeout { get; private set; }
 
+		public IntegerSetting MaxRecentTouchesToRemember { get; set; }
         public IntegerSetting VoronMaxBufferPoolSize { get; private set; }
+		public NullableIntegerSetting VoronInitialFileSize { get; private set; }
 	}
 }

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Linq;
@@ -132,14 +133,11 @@ namespace Raven.Client.Document.SessionOperations
 		public IList<T> Complete<T>()
 		{
 			var queryResult = currentQueryResults.CreateSnapshot();
-			foreach (var include in queryResult.Includes)
+			foreach (var include in SerializationHelper.RavenJObjectsToJsonDocuments(queryResult.Includes))
 			{
-				var metadata = include.Value<RavenJObject>("@metadata");
-
-				sessionOperations.TrackEntity<object>(metadata.Value<string>("@id"),
-											   include,
-											   metadata, disableEntitiesTracking);
+				sessionOperations.TrackIncludedDocument(include);
 			}
+
 			var list = queryResult.Results
 				.Select(Deserialize<T>)
 				.ToList();
@@ -298,9 +296,10 @@ namespace Raven.Client.Document.SessionOperations
 				if (sortByHint.Value == null)
 					continue;
 
-				setOperationHeaders(
+			    var nonNullableType = (Nullable.GetUnderlyingType(sortByHint.Value) ?? sortByHint.Value);
+			    setOperationHeaders(
 					string.Format("SortHint-{0}", Uri.EscapeDataString(sortByHint.Key.Trim('-'))),
-					sessionOperations.Conventions.GetDefaultSortOption(sortByHint.Value.Name).ToString());
+                    sessionOperations.Conventions.GetDefaultSortOption(nonNullableType.Name).ToString());
 			}
 		}
 	}

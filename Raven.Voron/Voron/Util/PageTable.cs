@@ -123,20 +123,6 @@ namespace Voron.Util
 
 		}
 
-		public void SetItemsNoTransaction(Dictionary<long, JournalFile.PagePosition> ptt)
-		{
-			foreach (var item in ptt)
-			{
-				var result = _values.TryAdd(item.Key, ImmutableAppendOnlyList<PageValue>.Empty.Append(new PageValue
-				{
-					Transaction = -1,
-					Value = item.Value
-				}));
-				if (result == false)
-					throw new InvalidOperationException("Duplicate item or calling SetItemsNoTransaction twice? " + item.Key);
-			}
-		}
-
 		public long GetLastSeenTransaction()
 		{
 			return Thread.VolatileRead(ref _maxSeenTransaction);

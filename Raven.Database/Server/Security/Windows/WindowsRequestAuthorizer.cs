@@ -34,7 +34,7 @@ namespace Raven.Database.Server.Security.Windows
 
 		public void UpdateSettings()
 		{
-			var doc = server.SystemDatabase.Get("Raven/Authorization/WindowsSettings", null);
+			var doc = server.SystemDatabase.Documents.Get("Raven/Authorization/WindowsSettings", null);
 
 			if (doc == null)
 			{

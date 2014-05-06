@@ -353,7 +353,7 @@
             batch1.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("tree1")), "tree1");
 
             var batch2 = new WriteBatch();
-            batch2.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("tree2")), "tree2");
+            batch2.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("tree2")), "tree2", version: 1);
 
             var batch3 = new WriteBatch();
             batch3.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("tree3")), "tree3");
@@ -374,7 +374,7 @@
             }
             catch (AggregateException e)
             {
-                Assert.Equal("No such tree: tree2", e.InnerException.Message);
+				Assert.Equal("Cannot add 'key/1' to 'tree2' tree. Version mismatch. Expected: 1. Actual: 0.", e.InnerException.Message);
 
                 using (var tx = Env.NewTransaction(TransactionFlags.Read))
                 {
@@ -393,7 +393,7 @@
             batch1.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("tree1")), "tree1");
 
             var batch2 = new WriteBatch();
-            batch2.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("tree2")), "tree2");
+            batch2.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("tree2")), "tree2", version: 1);
 
             var batch3 = new WriteBatch();
             batch3.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("tree3")), "tree3");
@@ -424,7 +424,7 @@
             }
             catch (AggregateException e)
             {
-                Assert.Equal("No such tree: tree2", e.InnerException.Message);
+				Assert.Equal("Cannot add 'key/1' to 'tree2' tree. Version mismatch. Expected: 1. Actual: 0.", e.InnerException.Message);
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))

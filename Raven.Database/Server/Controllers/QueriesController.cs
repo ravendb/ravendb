@@ -66,10 +66,14 @@ namespace Raven.Database.Server.Controllers
 					if (loadedIds.Add(value) == false)
 						continue;
 					var documentByKey = string.IsNullOrEmpty(transformer)
-										? Database.Get(value, transactionInformation)
-										: Database.GetWithTransformer(value, transformer, transactionInformation, queryInputs);
-					if (documentByKey == null)
-						continue;
+										? Database.Documents.Get(value, transactionInformation)
+										: Database.Documents.GetWithTransformer(value, transformer, transactionInformation, queryInputs);
+				    if (documentByKey == null)
+				    {
+                        if(ClientIsV3OrHigher)
+                            result.Results.Add(null); 
+                        continue;
+				    }
 					result.Results.Add(documentByKey.ToJson());
 
 					if (documentByKey.Etag != null)
@@ -105,5 +109,6 @@ namespace Raven.Database.Server.Controllers
 
 			return msg;
 		}
+        
 	}
 }

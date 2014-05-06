@@ -2,7 +2,9 @@ package net.ravendb.client;
 
 import java.util.Iterator;
 
+import net.ravendb.abstractions.basic.CloseableIterator;
 import net.ravendb.abstractions.basic.Reference;
+import net.ravendb.abstractions.closure.Action1;
 import net.ravendb.abstractions.data.Etag;
 import net.ravendb.abstractions.data.FacetQuery;
 import net.ravendb.abstractions.data.FacetResults;
@@ -11,6 +13,7 @@ import net.ravendb.abstractions.data.StreamResult;
 import net.ravendb.client.document.batches.IEagerSessionOperations;
 import net.ravendb.client.document.batches.ILazySessionOperations;
 import net.ravendb.client.indexes.AbstractIndexCreationTask;
+import net.ravendb.client.indexes.AbstractTransformerCreationTask;
 import net.ravendb.client.linq.IRavenQueryable;
 
 
@@ -18,6 +21,8 @@ import net.ravendb.client.linq.IRavenQueryable;
  * Advanced synchronous session operations
  */
 public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionOperations {
+
+
   /**
    * Refreshes the specified entity from Raven server.
    * @param entity
@@ -85,6 +90,23 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
   public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize, String exclude, RavenPagingInformation pagingInformation);
 
 
+  /**
+   * Loads documents with the specified key prefix and applies the specified results transformer against the results
+   * @param clazz
+   * @param transformerClass
+   * @param keyPrefix
+   * @param matches
+   * @param start
+   * @param pageSize
+   * @param exclude
+   * @param pagingInformation
+   * @param configure
+   * @return
+   */
+  public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult[] loadStartingWith(Class<TResult> clazz, Class<TTransformer> transformerClass,
+    String keyPrefix, String matches, int start, int pageSize, String exclude,
+    RavenPagingInformation pagingInformation, Action1<ILoadConfiguration> configure);
+
 
   /**
    * Access the lazy operations
@@ -104,7 +126,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param indexClass The type of the index creator.
    * @return
    */
-  public <T, S extends AbstractIndexCreationTask> IDocumentQuery<T> luceneQuery(Class<T> clazz, Class<S> indexClass);
+  public <T, S extends AbstractIndexCreationTask> IDocumentQuery<T> documentQuery(Class<T> clazz, Class<S> indexClass);
 
   /**
    * Query the specified index using Lucene syntax
@@ -112,7 +134,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param isMapReduce Control how we treat identifier properties in map/reduce indexes
    * @return
    */
-  public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz, String indexName, boolean isMapReduce);
+  public <T> IDocumentQuery<T> documentQuery(Class<T> clazz, String indexName, boolean isMapReduce);
 
   /**
    * Query the specified index using Lucene syntax
@@ -120,7 +142,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param isMapReduce Control how we treat identifier properties in map/reduce indexes
    * @return
    */
-  public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz, String indexName);
+  public <T> IDocumentQuery<T> documentQuery(Class<T> clazz, String indexName);
 
 
   /**
@@ -128,7 +150,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param clazz
    * @return
    */
-  public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz);
+  public <T> IDocumentQuery<T> documentQuery(Class<T> clazz);
 
   /**
    * Gets the document URL for the specified entity.
@@ -144,7 +166,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param query
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(IRavenQueryable<T> query);
+  public <T> CloseableIterator<StreamResult<T>> stream(IRavenQueryable<T> query);
 
   /**
    * Stream the results on the query to the client, converting them to
@@ -154,7 +176,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param queryHeaderInformation
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(IRavenQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
+  public <T> CloseableIterator<StreamResult<T>> stream(IRavenQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
 
 
   /**
@@ -164,7 +186,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param query
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(IDocumentQuery<T> query);
+  public <T> CloseableIterator<StreamResult<T>> stream(IDocumentQuery<T> query);
 
   /**
    * Stream the results on the query to the client, converting them to
@@ -173,7 +195,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param query
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(IDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
+  public <T> CloseableIterator<StreamResult<T>> stream(IDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
 
   /**
    * Stream the results on the query to the client, converting them to
@@ -182,7 +204,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param fromEtag
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass);
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass);
 
 
   /**
@@ -192,7 +214,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param fromEtag
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag);
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag);
 
   /**
    * Stream the results on the query to the client, converting them to
@@ -202,7 +224,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param startsWith
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith);
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith);
 
   /**
    * Stream the results on the query to the client, converting them to
@@ -213,7 +235,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param matches
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches);
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches);
 
   /**
    * Stream the results on the query to the client, converting them to
@@ -225,7 +247,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param start
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start);
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start);
 
   /**
    * Stream the results on the query to the client, converting them to
@@ -238,7 +260,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param pageSize
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize);
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize);
 
   /**
    * Stream the results on the query to the client, converting them to
@@ -251,7 +273,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @param pageSize
    * @return
    */
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize, RavenPagingInformation pagingInformation);
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize, RavenPagingInformation pagingInformation);
 
   /**
    *

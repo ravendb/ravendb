@@ -36,7 +36,7 @@ namespace Raven.Database.Json
 		{
 			if (patchCmd.Name == null)
 				throw new InvalidOperationException("Patch property must have a name property");
-			foreach (var result in document.SelectTokenWithRavenSyntaxReturningFlatStructure( patchCmd.Name ))
+			foreach (var result in document.SelectTokenWithRavenSyntaxReturningFlatStructure( patchCmd.Name, true))
 			{
 			    var token = result.Item1;
 			    var parent = result.Item2;
@@ -282,7 +282,7 @@ namespace Raven.Database.Json
 		private static void EnsurePreviousValueMatchCurrentValue(PatchRequest patchCmd, RavenJToken property)
 		{
 			var prevVal = patchCmd.PrevVal;
-			if (prevVal == null)
+            if (prevVal == null || prevVal.Type == JTokenType.Null)
 				return;
 			switch (prevVal.Type)
 			{

@@ -15,6 +15,9 @@ using Raven.Database.Linq;
 
 namespace Raven.Database.Queries
 {
+    using Raven.Abstractions;
+    using Raven.Abstractions.Util;
+
     public class FacetedQueryRunner
     {
         private readonly DocumentDatabase database;
@@ -46,7 +49,11 @@ namespace Raven.Database.Queries
                                                             facet.Aggregation + " without having a value in AggregationField");
 
                     if (facet.AggregationField.EndsWith("_Range") == false)
-                        facet.AggregationField = facet.AggregationField + "_Range";
+                    {
+                        if( QueryForFacets.IsAggregationTypeNumerical(facet.AggregationType))
+                             facet.AggregationField = facet.AggregationField + "_Range";
+                    }
+                       
                 }
 
 
@@ -112,9 +119,24 @@ namespace Raven.Database.Queries
             if (parsedRange.HighValue == "NULL" || parsedRange.HighValue == "*")
                 parsedRange.HighValue = null;
 
-
+            parsedRange.LowValue = UnescapeValueIfNecessary(parsedRange.LowValue);
+            parsedRange.HighValue = UnescapeValueIfNecessary(parsedRange.HighValue);
 
             return parsedRange;
+        }
+
+        private static string UnescapeValueIfNecessary(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return value;
+
+            var unescapedValue = QueryBuilder.Unescape(value);
+
+            DateTime _;
+            if (DateTime.TryParseExact(unescapedValue, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out _))
+                return unescapedValue;
+
+            return value;
         }
 
         private static string NumericStringToSortableNumeric(string value)
@@ -319,7 +341,7 @@ namespace Raven.Database.Queries
                 }
             }
 
-            private static bool IsAggregationTypeNumerical(string aggregationType)
+            public static bool IsAggregationTypeNumerical(string aggregationType)
             {
                 var type = Type.GetType(aggregationType, false, true);
                 if (type == null)
@@ -409,7 +431,7 @@ namespace Raven.Database.Queries
 
             private void CompleteFacetCalculationsStage1(IndexSearcherHolder.IndexSearcherHoldingState state)
             {
-                var fieldsToRead = new HashSet<string>(Facets
+                 var fieldsToRead = new HashSet<string>(Facets
                         .Where(x => x.Value.Aggregation != FacetAggregation.None && x.Value.Aggregation != FacetAggregation.Count)
                         .Select(x => x.Value.AggregationField)
                         .Where(x => x != null));

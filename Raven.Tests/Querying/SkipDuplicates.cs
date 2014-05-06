@@ -4,6 +4,8 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Tests.Bugs.QueryOptimizer;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Querying
@@ -64,7 +66,7 @@ namespace Raven.Tests.Querying
 
 					WaitForIndexing(store);
 
-					var result = store.DocumentDatabase.Query("BlogPosts/PostsCountByTag", new IndexQuery{SkipDuplicateChecking = true}, CancellationToken.None);
+					var result = store.DocumentDatabase.Queries.Query("BlogPosts/PostsCountByTag", new IndexQuery{SkipDuplicateChecking = true}, CancellationToken.None);
 					Assert.Equal(2, result.Results.Count);
 				}
 			}

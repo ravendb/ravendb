@@ -1,11 +1,13 @@
 using System;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class Profiling : RemoteClientTest
+	public class Profiling : RavenTest
 	{
 		[Fact]
 		public void CanTrackLoadActions()

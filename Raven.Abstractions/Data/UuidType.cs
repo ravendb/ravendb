@@ -11,7 +11,6 @@
         Queue = 7,
         Tasks = 8,
         Indexing = 9,
-		EtagSynchronization = 10,
 		DocumentReferences = 11
     }
 }

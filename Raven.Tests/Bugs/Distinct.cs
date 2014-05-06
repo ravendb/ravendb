@@ -2,6 +2,8 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -21,7 +23,7 @@ namespace Raven.Tests.Bugs
 					s.SaveChanges();
 				}
 
-				store.DocumentDatabase.PutIndex("test", new IndexDefinition
+				store.DocumentDatabase.Indexes.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.Name }",
 					Stores = { { "Name", FieldStorage.Yes } }
@@ -57,7 +59,7 @@ namespace Raven.Tests.Bugs
 					s.SaveChanges();
 				}
 
-				store.DocumentDatabase.PutIndex("test", new IndexDefinition
+				store.DocumentDatabase.Indexes.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.Name }",
 					Stores = { { "Name", FieldStorage.Yes } }
@@ -91,7 +93,7 @@ namespace Raven.Tests.Bugs
 					s.SaveChanges();
 				}
 
-				store.DocumentDatabase.PutIndex("test", new IndexDefinition
+				store.DocumentDatabase.Indexes.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.Name }",
 					Stores = { { "Name", FieldStorage.Yes } }
@@ -126,7 +128,7 @@ namespace Raven.Tests.Bugs
 					s.SaveChanges();
 				}
 
-				store.DocumentDatabase.PutIndex("test", new IndexDefinition
+				store.DocumentDatabase.Indexes.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { doc.Name }",
 					Stores = { { "Name", FieldStorage.Yes } }

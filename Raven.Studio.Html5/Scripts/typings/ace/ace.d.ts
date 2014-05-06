@@ -50,6 +50,7 @@ declare module AceAjax {
     export interface TokenInfo {
 
         value: string;
+        type: any;
     }
 
     export interface Position {
@@ -1105,6 +1106,19 @@ declare module AceAjax {
          * @param force If `true`, recomputes the size, even if the height and width haven't changed
         **/
         resize(force?: boolean);
+
+        /**
+         * Enables automatic scrolling of the cursor into view when editor itself is inside scrollable element
+         * @param {Boolean} enable default true
+         **/
+        setAutoScrollEditorIntoView(enable?: boolean);
+
+        /**
+        * Setting an option for the editor
+        * @param {string} property name
+        * @param {number} property value
+        **/
+        setOption(name: string, value: any);
 
         /**
          * {:VirtualRenderer.setTheme}
