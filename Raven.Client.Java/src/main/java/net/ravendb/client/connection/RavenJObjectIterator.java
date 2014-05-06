@@ -3,6 +3,7 @@ package net.ravendb.client.connection;
 import java.io.IOException;
 import java.util.Iterator;
 
+import net.ravendb.abstractions.basic.CloseableIterator;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 
 import org.apache.http.HttpEntity;
@@ -13,7 +14,7 @@ import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 
 
-public class RavenJObjectIterator implements Iterator<RavenJObject>, AutoCloseable {
+public class RavenJObjectIterator implements CloseableIterator<RavenJObject> {
 
   private HttpEntity httpEntity;
   private CloseableHttpResponse httpResponse;
@@ -67,7 +68,7 @@ public class RavenJObjectIterator implements Iterator<RavenJObject>, AutoCloseab
   }
 
   @Override
-  public void close() throws Exception {
+  public void close() {
     EntityUtils.consumeQuietly(httpEntity);
   }
 

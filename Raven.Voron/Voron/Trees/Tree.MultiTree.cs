@@ -148,7 +148,7 @@ namespace Voron.Trees
 						(ushort)(nodeHeader->Version - 1)); // we dec by one because AdddataNode will inc by one, and we don't want to change those values
 				}
 
-				newNestedPage.Search(key, _cmp);
+				newNestedPage.Search(value, _cmp);
 				newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, value, 0, 0);
 			}
 		}

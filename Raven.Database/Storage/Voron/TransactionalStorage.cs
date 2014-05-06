@@ -221,7 +221,7 @@ namespace Raven.Storage.Voron
 		    _documentCodecs = documentCodecs;
 
 		    StorageEnvironmentOptions options = configuration.RunInMemory ?
-		        StorageEnvironmentOptions.CreateMemoryOnly() :
+				CreateMemoryStorageOptionsFromConfiguration(configuration) :
 		        CreateStorageOptionsFromConfiguration(configuration);
 
 		    tableStorage = new TableStorage(options, bufferPool);
@@ -255,6 +255,14 @@ namespace Raven.Storage.Voron
 	        }
 	    }
 
+		private static StorageEnvironmentOptions CreateMemoryStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
+		{
+			var options = StorageEnvironmentOptions.CreateMemoryOnly();
+			options.InitialFileSize = configuration.VoronInitialFileSize;
+
+			return options;
+		}
+
 	    private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
         {
             bool allowIncrementalBackupsSetting;
@@ -270,9 +278,10 @@ namespace Raven.Storage.Voron
 	        var journalPath = configuration.Settings[Abstractions.Data.Constants.RavenTxJournalPath] ?? configuration.JournalsStoragePath;
             var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
             options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
+		    options.InitialFileSize = configuration.VoronInitialFileSize;
+
             return options;
         }
-
 
 		public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup,
 			DatabaseDocument documentDatabase)

@@ -74,6 +74,7 @@ namespace Raven.Client.UniqueConstraints
 			return LoadByUniqueConstraintInternal<T>(session, keyName, values);
 		}
 
+        public const string DummyId = "E1972AA7-148D-4035-9779-0EDFB3A7DBFF";
 		private static T[] LoadByUniqueConstraintInternal<T>(this IDocumentSession session, string propertyName, params object[] values)
 		{
 			if (values == null) throw new ArgumentNullException("value", "The unique value cannot be null");
@@ -105,19 +106,18 @@ namespace Raven.Client.UniqueConstraints
                 var existingDocsIds = new List<string>();
                 for (var i = 0; i < constraintDocs.Length; i++)
                 {
-                    var nullId = Guid.NewGuid().ToString(); // simple way to maintain parallel results array - this ID should never exist in the DB
-
+                    // simple way to maintain parallel results array - DummyId should never exist in the DB
                     var constraintDoc = constraintDocs[i];
                     if (constraintDoc == null)
                     {
-                        existingDocsIds.Add(nullId);
+                        existingDocsIds.Add(DummyId);
                         continue;
                     }
 
                     var constraintId = constraintsIds[i];
                     var relatedId = constraintDoc.GetRelatedIdFor(constraintId.Key);
                      
-                    existingDocsIds.Add(!string.IsNullOrEmpty(relatedId) ? relatedId : nullId);
+                    existingDocsIds.Add(!string.IsNullOrEmpty(relatedId) ? relatedId : DummyId);
                 }
 
 			    return session.Load<T>(existingDocsIds);

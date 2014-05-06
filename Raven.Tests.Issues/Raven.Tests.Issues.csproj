@@ -113,6 +113,7 @@
     <Compile Include="RaveDB-1279.cs" />
     <Compile Include="RavenDB-1847.cs" />
     <Compile Include="RavenDb-1934.cs" />
+    <Compile Include="RavenDB-2036.cs" />
     <Compile Include="RavenDB1009.cs" />
     <Compile Include="RavenDB1019.cs" />
     <Compile Include="RavenDB1025.cs" />
@@ -241,6 +242,8 @@
     <Compile Include="RavenDB_2124.cs" />
     <Compile Include="RavenDB_2129.cs" />
     <Compile Include="RavenDB_2183.cs" />
+    <Compile Include="RavenDB_2205.cs" />
+    <Compile Include="RavenDb_2215.cs" />
     <Compile Include="RavenDB_295.cs" />
     <Compile Include="RavenDB_299.cs" />
     <Compile Include="RavenDB_301.cs" />

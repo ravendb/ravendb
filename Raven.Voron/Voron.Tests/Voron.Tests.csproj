@@ -81,6 +81,8 @@
     <Compile Include="Bugs\PageSplitter.cs" />
     <Compile Include="Bugs\Recovery.cs" />
     <Compile Include="Bugs\InvalidReleasesOfScratchPages.cs" />
+    <Compile Include="Bugs\MultiReads.cs" />
+    <Compile Include="Bugs\Iterating.cs" />
     <Compile Include="Bugs\TreeRebalancer.cs" />
     <Compile Include="Bugs\Versioning.cs" />
     <Compile Include="Bugs\UpdateLastItem.cs" />
@@ -99,6 +101,7 @@
     <Compile Include="Storage\Files.cs" />
     <Compile Include="Storage\FreeScratchPages.cs" />
     <Compile Include="Storage\Increments.cs" />
+    <Compile Include="Storage\InitialSize.cs" />
     <Compile Include="Storage\MemoryMapWithoutBackingPagerTest.cs" />
     <Compile Include="Storage\MultiTransactions.cs" />
     <Compile Include="Storage\Pagers.cs" />

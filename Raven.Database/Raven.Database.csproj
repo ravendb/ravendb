@@ -257,6 +257,7 @@
     <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualDeleteTrigger.cs" />
     <Compile Include="Client\EmbeddableDocumentStore.cs" />
     <Compile Include="Client\EmbeddedDocumentStore.cs" />
+    <Compile Include="Config\Settings\NullableIntegerSetting.cs" />
     <Compile Include="Embedded\ResponseStream.cs" />
     <Compile Include="Impl\DTC\DtcNotSupportedTransactionalState.cs" />
     <Compile Include="Indexing\IndexMerging\ChangeRootReferenceVisitor.cs" />
@@ -268,6 +269,7 @@
     <Compile Include="Embedded\OwinEmbeddedHost.cs" />
     <Compile Include="Embedded\OwinClientHandler.cs" />
     <Compile Include="Bundles\ScriptedIndexResults\ScriptedIndexResultsJsonPatcherScope.cs" />
+    <Compile Include="Json\JintOperationScope.cs" />
     <Compile Include="Json\ScriptedJsonPatcherOperationScope.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcherOperationScope.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyDeleteTrigger.cs" />
@@ -1088,7 +1090,6 @@
     <EmbeddedResource Include="Json\ToJson.js" />
     <EmbeddedResource Include="Json\RavenDB.js" />
     <EmbeddedResource Include="Json\lodash.js" />
-    <EmbeddedResource Include="Json\ECMAScript5.js" />
     <Content Include="FodyWeavers.xml" />
   </ItemGroup>
   <ItemGroup>

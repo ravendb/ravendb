@@ -633,7 +633,6 @@ namespace Raven.Client.Document
 		{
 			if (queryOperation != null) 
 				return;
-			theSession.IncrementRequestCount();
 			ClearSortHints(DatabaseCommands);
 			ExecuteBeforeQueryListeners();
 			queryOperation = InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
@@ -650,6 +649,7 @@ namespace Raven.Client.Document
 
 		protected virtual void ExecuteActualQuery()
 		{
+			theSession.IncrementRequestCount();
 			while (true)
 			{
 				using (queryOperation.EnterQueryContext())
@@ -773,7 +773,6 @@ namespace Raven.Client.Document
 			ExecuteBeforeQueryListeners();
 
 			queryOperation = InitializeQueryOperation((key, val) => AsyncDatabaseCommands.OperationsHeaders[key] = val);
-			theSession.IncrementRequestCount();
 			return await ExecuteActualQueryAsync();
 		}
 
@@ -1778,18 +1777,22 @@ If you really want to do in memory filtering on the data returned from the query
 
 		protected virtual async Task<QueryOperation> ExecuteActualQueryAsync()
 		{
-			using (queryOperation.EnterQueryContext())
+			theSession.IncrementRequestCount();
+			while (true)
 			{
-				queryOperation.LogQuery();
-				var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray());
+				using (queryOperation.EnterQueryContext())
+				{
+					queryOperation.LogQuery();
+					var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray());
 
-				if (queryOperation.IsAcceptable(result) == false)
+					if (queryOperation.IsAcceptable(result) == false)
 					{
-					await Task.Delay(100);
-					return await ExecuteActualQueryAsync();
-						}
-						InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
-				return queryOperation;
+						await Task.Delay(100);
+						continue;
+					}
+					InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
+					return queryOperation;
+				}
 			}
 		}
 

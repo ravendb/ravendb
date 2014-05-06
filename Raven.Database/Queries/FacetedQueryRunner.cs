@@ -49,7 +49,11 @@ namespace Raven.Database.Queries
                                                             facet.Aggregation + " without having a value in AggregationField");
 
                     if (facet.AggregationField.EndsWith("_Range") == false)
-                        facet.AggregationField = facet.AggregationField + "_Range";
+                    {
+                        if( QueryForFacets.IsAggregationTypeNumerical(facet.AggregationType))
+                             facet.AggregationField = facet.AggregationField + "_Range";
+                    }
+                       
                 }
 
 
@@ -337,7 +341,7 @@ namespace Raven.Database.Queries
                 }
             }
 
-            private static bool IsAggregationTypeNumerical(string aggregationType)
+            public static bool IsAggregationTypeNumerical(string aggregationType)
             {
                 var type = Type.GetType(aggregationType, false, true);
                 if (type == null)
@@ -427,7 +431,7 @@ namespace Raven.Database.Queries
 
             private void CompleteFacetCalculationsStage1(IndexSearcherHolder.IndexSearcherHoldingState state)
             {
-                var fieldsToRead = new HashSet<string>(Facets
+                 var fieldsToRead = new HashSet<string>(Facets
                         .Where(x => x.Value.Aggregation != FacetAggregation.None && x.Value.Aggregation != FacetAggregation.Count)
                         .Select(x => x.Value.AggregationField)
                         .Where(x => x != null));

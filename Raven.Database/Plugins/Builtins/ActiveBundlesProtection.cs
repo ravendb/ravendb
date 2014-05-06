@@ -65,8 +65,8 @@ namespace Raven.Database.Plugins.Builtins
 
 		    return VetoResult.Deny(
 		        "You should not change 'Raven/ActiveBundles' setting for a database. This setting should be set only once when a database is created. " +
-		        "If you really need to override it you have to specify {'" + Constants.ActiveBundles +
-		        "':'true'} in metadata of a database document every time when you send it." + Environment.NewLine +
+				"If you really need to override it you have to specify {\"" + Constants.AllowBundlesChange +
+		        "\": true} in metadata of a database document every time when you send it." + Environment.NewLine +
 		        "Current: " + string.Join("; ", currentBundles) + Environment.NewLine +
 		        "New: " + string.Join("; '", newBundles));
 		}

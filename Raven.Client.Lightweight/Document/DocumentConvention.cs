@@ -212,7 +212,6 @@ namespace Raven.Client.Document
 		}
 
 		private static IDictionary<Type, string> cachedDefaultTypeTagNames = new Dictionary<Type, string>();
-		private int requestCount;
 
 		/// <summary>
 		/// Get the default tag name for the specified type.
@@ -544,11 +543,6 @@ namespace Raven.Client.Document
 		/// this to inject your own replication / failover logic.
 		/// </summary>
 		public Func<string, IDocumentStoreReplicationInformer> ReplicationInformerFactory { get; set; }
-
-		public int IncrementRequestCount()
-		{
-			return Interlocked.Increment(ref requestCount);
-		}
 
 		public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 

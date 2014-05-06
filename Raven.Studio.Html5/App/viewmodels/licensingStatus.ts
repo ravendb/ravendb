@@ -1,16 +1,23 @@
-import document = require("models/document");
 import dialog = require("plugins/dialog");
 import createDatabaseCommand = require("commands/createDatabaseCommand");
-import collection = require("models/collection");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
-class createEncryptionConfirmation extends dialogViewModelBase {
+class licensingStatus extends dialogViewModelBase {
 
-    message = ko.observable();
+    bundles = ["SQL Replication", "Scripted Index"];
+    bundleMap = { compression: "Compression", encryption: "Encryption:", documentExpiration: "Expiration", quotas: "Quotas", replication: "Replication", versioning: "Versioning", periodicBackup: "Periodic Backup"};
+    bundleString = "";
 
-    constructor(message) {
+    constructor(private licenseStatus: licenseStatusDto) {
         super();
-        this.message(message);
+        for (var key in licenseStatus.Attributes) {
+            var name = this.bundleMap[key];
+            var isBundle = (name !== undefined);
+            if (licenseStatus.Attributes.hasOwnProperty(key) && isBundle) {
+                this.bundles.push(name);
+            }
+        }
+        this.bundleString = this.bundles.sort().join(", ");
     }
 
     cancel() {
@@ -20,6 +27,11 @@ class createEncryptionConfirmation extends dialogViewModelBase {
     ok() {
         dialog.close(this);
     }
+
+    private isBundle(bundle) {
+        return this.bundleMap[bundle] !== undefined;
+    }
+
 }
 
-export = createEncryptionConfirmation;
+export = licensingStatus;

@@ -64,6 +64,32 @@ html, body {
     }
 }
 
+.replicationError{
+    color:red;
+}
+
+.query-stats{
+    width: 600px; 
+	margin: -250px 0 0 -450px; 
+    ul{
+        li{        
+            padding: 0 10px 0 10px;
+            strong{
+                padding: 0 10px 0 10px;
+                display:inline-block;
+            }                
+            span{
+                padding: 0 10px 0 10px;
+                display:inline-block;
+            }                
+            border-bottom:0!important;
+            border-top:0!important;
+            border-left:0!important;
+            border-right:0!important;        
+        }
+    }
+}
+
 .side-panel {
     li {
         max-width: 20%;
@@ -79,11 +105,54 @@ html, body {
     }
 }
 
+/// taken from https://github.com/ajaxorg/ace-demos/blob/master/scrolling-editor.html
+/*
+.ace_editor {
+		border: 1px solid lightgray;
+		margin: auto;
+		height: 200px;
+		width: 80%;
+		position: relative !important
+	}*/
+
+.fullScreen .fullScreen-editor{ 
+	height: auto!important;
+	width: auto!important;
+	border: 0;
+    margin: 0;
+    position: fixed !important;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+	z-index: 10000
+}
+
+.fullScreen {
+	overflow: hidden
+}
+///
+
 .dropdown-menu{
     .selected{
         color: #555;
         background-color: #e7e7e7;
     }
+}
+
+.vertical-bottom-container{    
+    width: 10%!important;
+    padding: 0 40% 0 40% !important;    
+}
+
+.vertical-navbar-menu-item{    
+        float: none!important;
+        display: block;
+        padding:0 0 0 0;
+        a{
+            padding:0 0 0 0;
+        }
+    
 }
 
 .panel span {
@@ -388,7 +457,14 @@ html, body {
         }
     }
 }
-
+.fieldControl{
+    text-align:left!important;
+    @media(max-device-height:1024px) {
+        padding-left:1%;
+        padding-right:1%;        
+        font-size:95%;
+    }
+}
 .control-label-additional-link{
     display: block;
     font-size: 80%;
@@ -846,6 +922,31 @@ footer {
     width: 600px;
 }
 
+.license-error {
+    color: #d2322d;
+}
+
+:invalid {
+    box-shadow: none; /* FF */
+    outline: 0;       /* IE 10 */
+}
+
+// Start of icons
+.remove-icon{
+    color: #d2322d;
+    border-color: #ac2925;
+    cursor: pointer;
+}
+
+.remove-icon:hover{
+    color: #d2322d;
+}
+
+.fa-plus{
+    color: #58cc46;
+}
+// End of icons
+
 // Start of Filesystems
 // TODO: as this styles are apparently the same than .database-page, consider renaming the original ones to a generic name
 .filesystem-page {
@@ -931,20 +1032,6 @@ footer {
         border-color: red;
         margin-top: 5px;
     }
-}
-
-.remove-icon{
-    color: #d2322d;
-    border-color: #ac2925;
-    cursor: pointer;
-}
-
-.remove-icon:hover{
-    color: #d2322d;
-}
-
-.fa-plus{
-    color: #58cc46;
 }
 // End of Filesystems
 

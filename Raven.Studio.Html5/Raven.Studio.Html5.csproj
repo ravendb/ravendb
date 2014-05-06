@@ -55,6 +55,7 @@
     <TypeScriptCompile Include="App\commands\queryFacetsCommand.ts" />
     <TypeScriptCompile Include="App\commands\resetIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveCsvFileCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveDatabaseSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchByQueryCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\searchByTermCommand.ts" />
@@ -104,6 +105,7 @@
     <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\fileUploadBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
     <TypeScriptCompile Include="App\models\filesystem\configurationKey.ts" />
@@ -1314,7 +1316,6 @@
     <TypeScriptCompile Include="Scripts\typings\nprogress\nprogress.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\requirejs\require.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\typeahead\typeahead.d.ts" />
-    <TypeScriptCompile Include="Scripts\typings\webshim\webshim.d.ts" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />

@@ -120,6 +120,14 @@ class periodicBackupSetup {
         return this.dbSettingsDto;
     }
 
+    getEtag() {
+        return this.toDatabaseSettingsDto()['@metadata']['@etag'];
+    }
+
+    setEtag(newEtag) {
+        this.toDatabaseSettingsDto()['@metadata']['@etag'] = newEtag;
+    }
+
     private setupTypeAndMainValue(dto: periodicBackupSetupDto) {
         var count = 0;
         if (dto.LocalFolderName) {

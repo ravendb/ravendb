@@ -10,7 +10,7 @@ class viewSystemDatabaseConfirm extends dialogViewModelBase {
     private wasConfirmed:boolean = false;
     
     
-    constructor(private previousDb:database = null) {
+    constructor(private confirmationMessage: string, private previousDb:database = null) {
         super();
     }
 

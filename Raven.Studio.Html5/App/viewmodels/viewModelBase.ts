@@ -63,29 +63,11 @@ class viewModelBase {
         }
 
         this.modelPollingStart();
-
-        window.onbeforeunload = (e: any) => {
-            //this.saveInObservable();
-            var isDirty = viewModelBase.dirtyFlag().isDirty();
-            if (isDirty) {
-                var message = "You have unsaved data.";
-                e = e || window.event;
-                // For IE and Firefox
-                if (e) {
-                    e.returnValue = message;
-                }
-                // For Safari
-                return message;
-            }
-            return null;
-        };
-
-        ko.postbox.publish("SetRawJSONUrl", "");
+		window.onbeforeunload = (e: any) => this.beforeUnload(e);        ko.postbox.publish("SetRawJSONUrl", "");
     }
 
     // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
-        this.createResizableTextBoxes();
         viewModelBase.dirtyFlag().reset(); //Resync Changes
     }
 
@@ -109,38 +91,6 @@ class viewModelBase {
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
     }
-
-    createResizableTextBoxes() {
-        var self = this;
-        $("pre").each(function () {
-            self.createResizableTextBox(this);
-        });
-    }
-
-    createResizableTextBox(element) {
-        var editor = ace.edit(element);
-        //editor.setOption('vScrollBarAlwaysVisible', true);
-        //editor.setOption('hScrollBarAlwaysVisible', true);
-        var minHeight = 100;
-        if ($(element).height() < 150) {
-            $(element).height(minHeight);
-        }
-        $(element).resizable({
-            minHeight: minHeight,
-            handles: "s, se",
-            grid: [10000000000000000, 1],
-            resize: function (event, ui) {
-                editor.resize();
-            }
-        });
-        $(element).find('.ui-resizable-se').removeClass('ui-icon-gripsmall-diagonal-se');
-        $(element).find('.ui-resizable-se').addClass('ui-icon-carat-1-s');
-        $('.ui-resizable-se').css('cursor', 's-resize');
-        window.onresize = function (event) {
-            editor.resize();
-        };
-    }
-
     /*
      * Creates a keyboard shortcut local to the specified element and its children.
      * The shortcut will be removed as soon as the view model is deactivated.
@@ -156,12 +106,6 @@ class viewModelBase {
             this.keyboardShortcutDomContainers.push(elementSelector);
         }
     }
-
-    //A method to save the current value in the observables from text boxes and inputs before a refresh/page close.
-    //Should be implemented on the inheriting class.
-    //saveInObservable() {
-
-    //}
 
     private removeKeyboardShortcuts(elementSelector: string) {
         $(elementSelector).unbind('keydown.jwerty');
@@ -209,7 +153,7 @@ class viewModelBase {
 
         var canNavTask = $.Deferred<any>();
 
-        var systemDbConfirm = new viewSystemDatabaseConfirm();
+        var systemDbConfirm = new viewSystemDatabaseConfirm("Meddling with the system database could cause irreversible damage");
         systemDbConfirm.viewTask
             .fail(() => canNavTask.resolve({ redirect: 'databases' }))
             .done(() => {
@@ -221,10 +165,13 @@ class viewModelBase {
         return canNavTask;
     }
 
-    stringifyUploadQueue(queue: uploadItem[]): string {
+    private stringifyUploadQueue(queue: uploadItem[]): string {
         return ko.toJSON(queue);
     }
 
+    // TODO: move this. It doesn't belong in the viewModelBase; it is file 
+    // system-specific functionality. It is used only by file system code, and the shell.
+    // Maybe move into its own class, like UploadParser, or derive a new viewModel base class, e.g. fileSystemViewModelBase.
     parseUploadQueue(queue: string, fs : filesystem): uploadItem[] {
         var stringArray: any[] = JSON.parse(queue);
         var uploadQueue: uploadItem[] = [];
@@ -237,10 +184,12 @@ class viewModelBase {
         return uploadQueue;
     }
 
+    // TODO: move this. It doesn't belong in the viewModelBase. Only the shell and file system view models use it.
     updateLocalStorage(x: uploadItem[], fs : filesystem) {
         window.localStorage.setItem(this.localStorageUploadQueueKey + fs.name, this.stringifyUploadQueue(x));
     }
 
+    // TODO: move this. It doesn't belong in the viewModelBase. Only the shell and file system view models use it.
     updateQueueStatus(guid: string, status: string, queue: uploadItem[]) {
         var items = ko.utils.arrayFilter(queue, (i: uploadItem) => {
             return i.id() === guid
@@ -250,6 +199,21 @@ class viewModelBase {
         }
     }
 
+    private beforeUnload(e: any) {
+        var isDirty = viewModelBase.dirtyFlag().isDirty();
+        if (isDirty) {
+            var message = "You have unsaved data.";
+            e = e || window.event;
+
+            // For IE and Firefox
+            if (e) {
+                e.returnValue = message;
+            }
+
+            // For Safari
+            return message;
+        }
+    }
 }
 
 export = viewModelBase;

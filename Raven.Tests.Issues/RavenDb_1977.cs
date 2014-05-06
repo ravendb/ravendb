@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Embedded;
@@ -512,16 +513,106 @@ namespace Raven.Tests.Issues
                      session.SaveChanges();
                  }
              }
+
+
          }
+
+        [Fact]
+        public void CanDetectChangesInNestedObject()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Friend
+                    {
+                        UserData = new UserData
+                        {
+                            Id = 123,
+                            Name = "user1",
+                            Salary = 12.5,
+                            Exam1Marks = new []{1,2,},
+                            Date = DateTime.Now
+                        }
+                    }, "friends/1");
+                    
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var friend = session.Load<Friend>(1);
+
+                    friend.UserData.Name = "Foo";
+                    friend.UserData.Exam1Marks = new[] {1, 2, 3};
+
+                    var changes3 = session.Advanced.WhatChanged();
+
+                    Assert.Equal("UserData.Name", changes3["friends/1"][0].FieldName);
+                    Assert.Equal("UserData.Exam1Marks", changes3["friends/1"][1].FieldName);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanDetectBigChangesInNestedObject()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new BigFriend
+                    {
+                        Descr="Test",
+                        UserData = new UserData
+                        {
+                            Id = 123,
+                            Name = "user1",
+                            Salary = 12.5,
+                            Exam1Marks = new[] { 1, 2, },
+                            Date = DateTime.Now
+                        }
+                    }, "bigfriends/1");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var bigFriend = session.Load<BigFriend>(1);
+                    bigFriend.Descr = "New descr";
+                    bigFriend.UserData.Name = "Foo";
+                    bigFriend.UserData.Exam1Marks = new[] { 1, 2, 3 };
+
+                    var changes3 = session.Advanced.WhatChanged();
+
+                    Assert.Equal("Descr", changes3["bigfriends/1"][0].FieldName);
+                    Assert.Equal("UserData.Name", changes3["bigfriends/1"][1].FieldName);
+                    Assert.Equal("UserData.Exam1Marks", changes3["bigfriends/1"][2].FieldName);
+                }
+            }
+        }
+
+        public class UserData
+        {
+            public DateTime Date;
+            public int[] Exam1Marks;
+            public int[] Exam2Marks;
+            public int Id;
+            public string Name;
+            public double Salary;
+        }
+
+        public class Friend
+        {
+            public UserData UserData { get; set; }
+        }
+        public class BigFriend
+        {
+            public UserData UserData { get; set; }
+            public string Descr;
+        }
     }
 
-    internal class UserData
-    {
-        public DateTime Date;
-        public int[] Exam1Marks;
-        public int[] Exam2Marks;
-        public int Id;
-        public string Name;
-        public double Salary;
-    }
+  
 }
