@@ -8,6 +8,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Raven.Tests.Core.Utils.Indexes;
 
 namespace Raven.Tests.Core.Querying
 {
@@ -132,5 +133,92 @@ namespace Raven.Tests.Core.Querying
 				}
 			}
 		}
+
+        [Fact]
+        public void CanDoSpatialSearch()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var eventsSpatialIndex = new Events_SpatialIndex();
+                eventsSpatialIndex.Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Event
+                    {
+                        Name = "Event1",
+                        Latitude = 10.1234,
+                        Longitude = 10.1234
+                    });
+                    session.Store(new Event
+                    {
+                        Name = "Event2",
+                        Latitude = 0.3,
+                        Longitude = 10.1234
+                    });
+                    session.Store(new Event
+                    {
+                        Name = "Event3",
+                        Latitude = 19.1234,
+                        Longitude = 10.789
+                    });
+                    session.Store(new Event
+                    {
+                        Name = "Event4",
+                        Latitude = 10.1234,
+                        Longitude = -0.2
+                    });
+                    session.Store(new Event
+                    {
+                        Name = "Event5",
+                        Latitude = 10.1234,
+                        Longitude = 19.789
+                    });
+                    session.Store(new Event
+                    {
+                        Name = "Event6",
+                        Latitude = 60.1234,
+                        Longitude = 19.789
+                    });
+                    session.Store(new Event
+                    {
+                        Name = "Event7",
+                        Latitude = -60.1234,
+                        Longitude = 19.789
+                    });
+                    session.Store(new Event
+                    {
+                        Name = "Event8",
+                        Latitude = 10.1234,
+                        Longitude = -19.789
+                    });
+                    session.Store(new Event
+                    {
+                        Name = "Event9",
+                        Latitude = 10.1234,
+                        Longitude = 79.789
+                    });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+
+
+                    var events = session.Query<Event, Events_SpatialIndex>()
+                        .Customize(x => x.WithinRadiusOf(
+                            fieldName: "Coordinates",
+                            radius: 1243.0, //km
+                            latitude: 10.1230,
+                            longitude: 10.1230))
+                        .OrderBy(x => x.Name)
+                        .ToArray();
+
+                    Assert.Equal(5, events.Length);
+                    Assert.Equal("Event1", events[0].Name);
+                    Assert.Equal("Event2", events[1].Name);
+                    Assert.Equal("Event3", events[2].Name);
+                    Assert.Equal("Event4", events[3].Name);
+                    Assert.Equal("Event5", events[4].Name);
+                }
+            }
+        }
 	}
 }
