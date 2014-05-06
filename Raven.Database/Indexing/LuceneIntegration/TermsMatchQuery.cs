@@ -102,7 +102,7 @@ namespace Raven.Database.Indexing.LuceneIntegration
 
 			private bool CompareTermAndMoveToNext(Term term, bool move)
 			{
-				if (term.Field != termsMatchQuery.field)
+				if (term == null || term.Field != termsMatchQuery.field)
 				{
 					endEnum = true;
 					return false;
