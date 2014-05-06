@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Linq;
+using System.Threading;
+
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
@@ -26,7 +28,7 @@ namespace Raven.Tests.Storage
 
 			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
-				tx.Batch(viewer => Assert.Equal(new[] { "Ayende" }, viewer.Documents.GetDocumentsAfter(Etag.Empty,5).Select(x=>x.Key).ToArray()));
+				tx.Batch(viewer => Assert.Equal(new[] { "Ayende" }, viewer.Documents.GetDocumentsAfter(Etag.Empty,5, CancellationToken.None).Select(x=>x.Key).ToArray()));
 			}
 		}
 	}

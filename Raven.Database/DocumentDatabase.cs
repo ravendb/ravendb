@@ -127,7 +127,7 @@ namespace Raven.Database
                 {
                     uuidGenerator = new SequentialUuidGenerator();
                     initializer.InitializeTransactionalStorage(uuidGenerator);
-                    lastCollectionEtags = new LastCollectionEtags(TransactionalStorage);
+                    lastCollectionEtags = new LastCollectionEtags(TransactionalStorage, WorkContext);
                 }
                 catch (Exception)
                 {
