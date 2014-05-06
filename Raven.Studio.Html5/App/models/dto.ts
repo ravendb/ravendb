@@ -16,12 +16,16 @@ interface metadataAwareDto {
     '@metadata'?: documentMetadataDto;
 }
 interface documentChangeNotificationDto {
-    Type: string;
+    Type: documentChangeType;
     Id: string;
     CollectionName: string;
     TypeName: string;
     Etag: string;
     Message: string;
+}
+
+interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
+    OperationId: string;
 }
 
 interface indexChangeNotificationDto {
@@ -223,6 +227,7 @@ interface indexDefinitionDto {
     SpatialIndexes: any; // This will be an object with zero or more properties, each property being the name of one of the .Fields, its value being of type spatialIndexDto.
     InternalFieldsMapping: any;
     Type: string;
+    MaxIndexOutputsPerDocument;
 }
 
 /*
@@ -245,6 +250,7 @@ interface spatialIndexSuggestionDto {
 }
 
 interface periodicBackupSetupDto {
+    Disabled: boolean;
     GlacierVaultName: string;
     S3BucketName: string;
     AwsRegionEndpoint: string;
@@ -459,6 +465,7 @@ interface scriptedIndexDto extends documentDto {
     IndexScript: string;
     DeleteScript: string;
 }
+
 interface conflictDto extends documentDto {
     Id: string;
     ConflictDetectedAt: string;
@@ -638,4 +645,20 @@ interface debugDocumentStatsDto {
     NoCollection: number;
     Collections: dictionary<number>;
     TimeToGenerate: string;
+}
+
+enum documentChangeType {
+    None = 0,
+    Put = 1,
+    Delete = 2,
+    Common= 3,
+    BulkInsertStarted = 4,
+    BulkInsertEnded = 8,
+    BulkInsertError = 16
+}
+
+interface filterSettingDto {
+    Path: string;
+    Values: string[];
+    ShouldMatch: boolean;
 }

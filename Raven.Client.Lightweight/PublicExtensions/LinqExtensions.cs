@@ -420,6 +420,29 @@ namespace Raven.Client
 			return SuggestAsync(queryable, new SuggestionQuery());
 		}
 
+        /// <summary>
+        /// Register the query as a lazy async query in the session and return a lazy async
+        /// instance that will evaluate the query only when needed
+        /// </summary>
+          public static Lazy<Task<IEnumerable<T>>> LazilyAsync<T>(this IQueryable<T> source)  
+        {
+            return LazilyAsync(source, null);
+        }
+
+        /// <summary>
+        /// Register the query as a lazy async query in the session and return a lazy async
+        /// instance that will evaluate the query only when needed
+        /// As well as a function to execute when the value is evaluated
+        /// </summary>
+    
+        public static Lazy<Task<IEnumerable<T>>> LazilyAsync<T>(this IQueryable<T> source, Action<IEnumerable<T>> onEval)  
+        {
+            var provider = source.Provider as IRavenQueryProvider;
+            if (provider == null)
+                throw new ArgumentException("You can only use Raven Queryable with Lazily");
+
+            return provider.LazilyAsync(source.Expression, onEval);
+        }
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy

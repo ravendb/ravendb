@@ -14,9 +14,8 @@ class changesApi {
 
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
     private allIndexesHandlers = ko.observableArray<changesCallback<indexChangeNotificationDto>>();
-
     private watchedPrefixes = {};
-
+    private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
     private commandBase = new commandBase();
 
     constructor(private db: database) {
@@ -26,9 +25,9 @@ class changesApi {
 
     private connect() {
         if (!!window.EventSource) {
-            var dbUrl = appUrl.forDatabaseQuery(this.db);
+            var dbUrl = appUrl.forResourceQuery(this.db);
 
-            console.log("Connecting to changes API (db = " + this.db.name + ")");
+            //console.log("Connecting to changes API (db = " + this.db.name + ")");
 
             this.source = new EventSource(dbUrl + '/changes/events?id=' + this.eventsId);
             this.source.onmessage = (e) => this.onEvent(e);
@@ -44,8 +43,8 @@ class changesApi {
             id: this.eventsId,
             command: command
         };
-        if (typeof(value) !== "undefined") {
-            args['value'] = value;
+        if (value !== undefined) {
+            args["value"] = value;
         }
         //TODO: exception handling?
         this.commandBase.query('/changes/config', args, this.db);
@@ -126,10 +125,38 @@ class changesApi {
             }
         });
     }
-    
+
+    watchBulks(onChange: (e: bulkInsertChangeNotificationDto) => void) {
+        var callback = new changesCallback<bulkInsertChangeNotificationDto>(onChange);
+        if (this.allBulkInsertsHandlers().length == 0) {
+            this.send('watch-bulk-operation');
+        }
+        this.allBulkInsertsHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allDocsHandlers.remove(callback);
+            if (this.allDocsHandlers().length == 0) {
+                this.send('unwatch-bulk-operation');
+            }
+        });
+    }
+
+    watchDocPrefix(onChange: (e: documentChangeNotificationDto) => void, prefix?:string) {
+        var callback = new changesCallback<documentChangeNotificationDto>(onChange);
+        if (this.allDocsHandlers().length == 0) {
+            this.send('watch-prefix', prefix);
+        }
+        this.allDocsHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allDocsHandlers.remove(callback);
+            if (this.allDocsHandlers().length == 0) {
+                this.send('unwatch-prefix', prefix);
+            }
+        });
+    }
+
     dispose() {
         if (this.source) {
-            console.log("Disconnecting from changes API");
+            //console.log("Disconnecting from changes API");
             this.send('disconnect');
             this.source.close();
         }

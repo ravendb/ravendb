@@ -7,20 +7,31 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 class viewSystemDatabaseConfirm extends dialogViewModelBase {
 
     public viewTask = $.Deferred();
+    private wasConfirmed:boolean = false;
     
     
-    constructor(private previousDb:database = null) {
+    constructor(private confirmationMessage: string, private previousDb:database = null) {
         super();
     }
 
     viewSystemDatabase() {
         this.viewTask.resolve();
+        this.wasConfirmed = true;
         dialog.close(this);
     }
 
     cancel() {
         this.viewTask.reject(this.previousDb);
+        this.wasConfirmed = false;
         dialog.close(this);
+    }
+
+    detached() {
+        super.detached();
+
+        if (!this.wasConfirmed) {
+            this.viewTask.reject(this.previousDb);
+        }
     }
 }
 

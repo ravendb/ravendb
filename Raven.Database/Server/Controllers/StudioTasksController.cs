@@ -6,19 +6,27 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
+using System.Security.Permissions;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
-using Kent.Boogaart.KBCsv;
+using Microsoft.VisualBasic.FileIO;
+using Newtonsoft.Json;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
 using Raven.Client.Util;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
-using Newtonsoft.Json;
+using Raven.Database.Extensions;
+using System.Text.RegularExpressions;
+using System.Reflection;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -31,38 +39,75 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/studio-tasks/import")]
 		public async Task<HttpResponseMessage> ImportDatabase()
 		{
+            if (!this.Request.Content.IsMimeMultipartContent()) 
+            { 
+                throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType); 
+            }
+
+            var streamProvider = new MultipartMemoryStreamProvider();
+            await Request.Content.ReadAsMultipartAsync(streamProvider);
+            var fileStream = await streamProvider.Contents.First().ReadAsStreamAsync();
 			var dataDumper = new DataDumper(Database);
-			var importData = dataDumper.ImportData(new SmugglerImportOptions
+            var importOptions = new SmugglerImportOptions
 			{
-				FromStream = await InnerRequest.Content.ReadAsStreamAsync()
-			}, new SmugglerOptions());
-			throw new InvalidOperationException();
+                FromStream = fileStream
+			};
+            var options = new SmugglerOptions();
+			await dataDumper.ImportData(importOptions, options);
+            return GetEmptyMessage();
 		}
 
-
-		[HttpPost]
+	    public class ExportData
+	    {
+            public string SmugglerOptions { get; set; }
+	    }
+        
+	    [HttpPost]
 		[Route("studio-tasks/exportDatabase")]
 		[Route("databases/{databaseName}/studio-tasks/exportDatabase")]
-		public async Task<HttpResponseMessage> ExportDatabase(SmugglerOptionsDto dto)
+        public async Task<HttpResponseMessage> ExportDatabase(ExportData smugglerOptionsJson)
 		{
-			var smugglerOptions = new SmugglerOptions();
-			// smugglerOptions.OperateOnTypes = ;
+            var requestString = smugglerOptionsJson.SmugglerOptions;
+	        SmugglerOptions smugglerOptions;
+      
+            using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
+			{
+				var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+                smugglerOptions = (SmugglerOptions)serializer.Deserialize(jsonReader, typeof(SmugglerOptions));
+			}
 
-			var result = GetEmptyMessage();
+
+            var result = GetEmptyMessage();
+            
+            // create PushStreamContent object that will be called when the output stream will be ready.
 			result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
 			{
-				{
-					
-				};
-				await new DataDumper(Database).ExportData(new SmugglerExportOptions
-				{
-					ToStream = outputStream
-				}, smugglerOptions);
+			    try
+			    {
+			        await new DataDumper(Database).ExportData(new SmugglerExportOptions
+			        {
+			            ToStream = outputStream
+			        }, smugglerOptions).ConfigureAwait(false);
+			    }
+                    // close the output stream, so the PushStremContent mechanism will know that the process is finished
+			    finally
+			    {
+			        outputStream.Close();
+			    }
+
+				
 			});
+
+            result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+            {
+                FileName = "Dump of " + this.DatabaseName + ", " + DateTime.Now.ToString("dd MMM yyyy HH-mm")
+            };
 			
 			return result;
-		}
 
+
+		}
+        
 		[HttpPost]
 		[Route("studio-tasks/createSampleData")]
 		[Route("databases/{databaseName}/studio-tasks/createSampleData")]
@@ -105,7 +150,7 @@ namespace Raven.Database.Server.Controllers
         [Route("studio-tasks/is-base-64-key")]
         public async Task<HttpResponseMessage> IsBase64Key(string path = null)
         {
-            bool result = true;
+            string message = null;
             try
             {
                 //Request is of type HttpRequestMessage
@@ -119,10 +164,10 @@ namespace Raven.Database.Server.Controllers
             }
             catch (Exception e)
             {
-                result = false;
+				message = "The key must be in Base64 encoding format!";
             }
 
-            HttpResponseMessage response = Request.CreateResponse(HttpStatusCode.OK, result);
+			HttpResponseMessage response = Request.CreateResponse((message == null) ? HttpStatusCode.OK : HttpStatusCode.BadRequest, message);
             return response;
         }
 
@@ -202,9 +247,10 @@ namespace Raven.Database.Server.Controllers
 
                 var stream = await file.ReadAsStreamAsync();
 
-                using (var csvReader = new CsvReader(stream))
+                using (var csvReader = new TextFieldParser(stream))
                 {
-                    var header = csvReader.ReadHeaderRecord();
+	                csvReader.SetDelimiters(",");
+                    var headers = csvReader.ReadFields();
                     var entity =
                         Inflector.Pluralize(CSharpClassName.ConvertToValidClassName(Path.GetFileNameWithoutExtension(filename)));
                     if (entity.Length > 0 && char.IsLower(entity[0]))
@@ -212,42 +258,44 @@ namespace Raven.Database.Server.Controllers
 
                     var totalCount = 0;
                     var batch = new List<RavenJObject>();
-                    var columns = header.Values.Where(x => x.StartsWith("@") == false).ToArray();
+                    var columns = headers.Where(x => x.StartsWith("@") == false).ToArray();
 
                     batch.Clear();
-                    foreach (var record in csvReader.DataRecords)
-                    {
+	                while (csvReader.EndOfData == false)
+	                {
+		                var record = csvReader.ReadFields();
                         var document = new RavenJObject();
                         string id = null;
                         RavenJObject metadata = null;
-                        foreach (var column in columns)
-                        {
-                            if (string.IsNullOrEmpty(column))
-                                continue;
+		                for (int index = 0; index < columns.Length; index++)
+		                {
+			                var column = columns[index];
+			                if (string.IsNullOrEmpty(column))
+				                continue;
 
-                            if (string.Equals("id", column, StringComparison.OrdinalIgnoreCase))
-                            {
-                                id = record[column];
-                            }
-                            else if (string.Equals(Constants.RavenEntityName, column, StringComparison.OrdinalIgnoreCase))
-                            {
-                                metadata = metadata ?? new RavenJObject();
-                                metadata[Constants.RavenEntityName] = record[column];
-                                id = id ?? record[column] + "/";
-                            }
-                            else if (string.Equals(Constants.RavenClrType, column, StringComparison.OrdinalIgnoreCase))
-                            {
-                                metadata = metadata ?? new RavenJObject();
-                                metadata[Constants.RavenClrType] = record[column];
-                                id = id ?? record[column] + "/";
-                            }
-                            else
-                            {
-                                document[column] = SetValueInDocument(record[column]);
-                            }
-                        }
+			                if (string.Equals("id", column, StringComparison.OrdinalIgnoreCase))
+			                {
+								id = record[index];
+			                }
+			                else if (string.Equals(Constants.RavenEntityName, column, StringComparison.OrdinalIgnoreCase))
+			                {
+				                metadata = metadata ?? new RavenJObject();
+								metadata[Constants.RavenEntityName] = record[index];
+								id = id ?? record[index] + "/";
+			                }
+			                else if (string.Equals(Constants.RavenClrType, column, StringComparison.OrdinalIgnoreCase))
+			                {
+				                metadata = metadata ?? new RavenJObject();
+								metadata[Constants.RavenClrType] = record[index];
+								id = id ?? record[index] + "/";
+			                }
+			                else
+			                {
+								document[column] = SetValueInDocument(record[index]);
+			                }
+		                }
 
-                        metadata = metadata ?? new RavenJObject { { "Raven-Entity-Name", entity } };
+		                metadata = metadata ?? new RavenJObject { { "Raven-Entity-Name", entity } };
                         document.Add("@metadata", metadata);
                         metadata.Add("@id", id ?? Guid.NewGuid().ToString());
 
@@ -283,3 +331,4 @@ namespace Raven.Database.Server.Controllers
 		public bool RemoveAnalyzers { get; set; }
 	}
 }
+

@@ -9,6 +9,8 @@ using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Database.Data;
 using Raven.Database.Json;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs

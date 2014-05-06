@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 

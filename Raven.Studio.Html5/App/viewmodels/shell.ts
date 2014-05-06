@@ -6,9 +6,11 @@ import app = require("durandal/app");
 import sys = require("durandal/system");
 
 import database = require("models/database");
+import filesystem = require("models/filesystem/filesystem");
 import document = require("models/document");
 import appUrl = require("common/appUrl");
 import collection = require("models/collection");
+import uploadItem = require("models/uploadItem");
 import deleteDocuments = require("viewmodels/deleteDocuments");
 import dialogResult = require("common/dialogResult");
 import alertArgs = require("common/alertArgs");
@@ -16,6 +18,7 @@ import alertType = require("common/alertType");
 import pagedList = require("common/pagedList");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
+
 import getBuildVersionCommand = require("commands/getBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
@@ -26,8 +29,15 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 import changesApi = require("common/changesApi");
 import changeSubscription = require("models/changeSubscription");
 
+import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
+import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
+
+import changeSubscription = require('models/changeSubscription');
+
+
 class shell extends viewModelBase {
     private router = router;
+
     databases = ko.observableArray<database>();
     currentAlert = ko.observable<alertArgs>();
     queuedAlert: alertArgs;
@@ -39,20 +49,33 @@ class shell extends viewModelBase {
     recordedErrors = ko.observableArray<alertArgs>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
+    filesystems = ko.observableArray<filesystem>();
+    filesystemsLoadedTask: JQueryPromise<any>;
+
+    canShowFilesystemNavbar = ko.computed(() => this.filesystems().length > 0 && this.appUrls.isAreaActive('filesystems'));
+
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
+    activeArea = ko.observable<string>("Databases");
     goToDocumentSearch = ko.observable<string>();
-    goToDocumentSearchResults = ko.observableArray<string>();    
+    goToDocumentSearchResults = ko.observableArray<string>();
+    refreshTimeoutFlag: boolean = true;
 
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
 
+    globalDocPrefixChangesSubscription: changeSubscription;
+
+    modelPollingTimeoutFlag:boolean=true;
+    
     constructor() {
         super();
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
+        ko.postbox.subscribe("ActivateFilesystemWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateChangesApi(db); this.fetchDbStats(db); });
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => this.updateChangesApi(db); this.fetchDbStats(db););
+        ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         this.appUrls = appUrl.forCurrentDatabase();
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
@@ -66,17 +89,24 @@ class shell extends viewModelBase {
 
         NProgress.set(.7);
         router.map([
-            { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: false, hash: this.appUrls.databasesManagement },
-            { route: 'documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: this.appUrls.documents },
-            { route: 'conflicts', title: 'Conflicts', moduleId: 'viewmodels/conflicts', nav: true, hash: this.appUrls.conflicts },
-            { route: 'patch', title: 'Patch', moduleId: 'viewmodels/patch', nav: true, hash: this.appUrls.patch },
-            { route: 'indexes*details', title: 'Indexes', moduleId: 'viewmodels/indexesShell', nav: true, hash: this.appUrls.indexes },
-            { route: 'transformers*details', title: 'Transformers', moduleId: 'viewmodels/transformersShell', nav: false, hash: this.appUrls.transformers },
-            { route: 'query*details', title: 'Query', moduleId: 'viewmodels/queryShell', nav: true, hash: this.appUrls.query(null) },
-            { route: 'tasks*details', title: 'Tasks', moduleId: 'viewmodels/tasks', nav: true, hash: this.appUrls.tasks, },
-            { route: 'settings*details', title: 'Settings', moduleId: 'viewmodels/settings', nav: true, hash: this.appUrls.settings },
-            { route: 'status*details', title: 'Status', moduleId: 'viewmodels/status', nav: true, hash: this.appUrls.status },
-            { route: 'edit', title: 'Edit Document', moduleId: 'viewmodels/editDocument', nav: false }
+            { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: true, hash: this.appUrls.databasesManagement },
+            { route: 'databases/documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: this.appUrls.documents },
+            { route: 'databases/conflicts', title: 'Conflicts', moduleId: 'viewmodels/conflicts', nav: true, hash: this.appUrls.conflicts },
+            { route: 'databases/patch', title: 'Patch', moduleId: 'viewmodels/patch', nav: true, hash: this.appUrls.patch },
+            { route: 'databases/indexes*details', title: 'Indexes', moduleId: 'viewmodels/indexesShell', nav: true, hash: this.appUrls.indexes },
+            { route: 'databases/transformers*details', title: 'Transformers', moduleId: 'viewmodels/transformersShell', nav: false, hash: this.appUrls.transformers },
+            { route: 'databases/query*details', title: 'Query', moduleId: 'viewmodels/queryShell', nav: true, hash: this.appUrls.query(null) },
+            { route: 'databases/tasks*details', title: 'Tasks', moduleId: 'viewmodels/tasks', nav: true, hash: this.appUrls.tasks, },
+            { route: 'databases/settings*details', title: 'Settings', moduleId: 'viewmodels/settings', nav: true, hash: this.appUrls.settings },
+            { route: 'databases/status*details', title: 'Status', moduleId: 'viewmodels/status', nav: true, hash: this.appUrls.status },
+            { route: 'databases/edit', title: 'Edit Document', moduleId: 'viewmodels/editDocument', nav: false },
+            { route: ['', 'filesystems'], title: 'File Systems', moduleId: 'viewmodels/filesystem/filesystems', nav: true, hash: this.appUrls.filesystemsManagement },
+            { route: 'filesystems/files', title: 'Files', moduleId: 'viewmodels/filesystem/filesystemFiles', nav: true, hash: this.appUrls.filesystemFiles },
+            { route: 'filesystems/search', title: 'Search', moduleId: 'viewmodels/filesystem/search', nav: true, hash: this.appUrls.filesystemSearch },
+            { route: 'filesystems/synchronization', title: 'Synchronization', moduleId: 'viewmodels/filesystem/filesystemSynchronization', nav: true, hash: this.appUrls.filesystemSynchronization },
+            { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
+            { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
+            { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
         ]).buildNavigationModel();
 
         // Show progress whenever we navigate.
@@ -99,7 +129,36 @@ class shell extends viewModelBase {
             trigger: 'hover'
         });
 
+        router.activeInstruction.subscribe(val => {
+            if (val.config.route.split('/').length == 1) //if it's a root navigation item.
+                this.activeArea(val.config.title);
+        });
+
+        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+
+
+        shell.globalChangesApi.watchDocPrefix((e: documentChangeNotificationDto) => {
+            if (!!e.Id && e.Id.indexOf("Raven/Databases") == 0 && 
+                (e.Type == documentChangeType.Put || e.Type == documentChangeType.Delete)) {
+
+                if (e.Type == documentChangeType.Delete) {
+                    var deletedDbName = e.Id.substring(16, e.Id.length);
+                    
+                    this.databases.remove((dbToRemove: database) => {
+                    
+                        return dbToRemove.name === deletedDbName;
+                    });
+                    
+                }
+
+                if (this.refreshTimeoutFlag) {
+                    setTimeout(() => this.modelPolling(), 5000);
+                }
+            }
+        }, "Raven/Databases");
     }
+
+
 
     showNavigationProgress(isNavigating: boolean) {
         if (isNavigating) {
@@ -110,6 +169,8 @@ class shell extends viewModelBase {
             NProgress.set(newProgress);
         } else {
             NProgress.done();
+            this.activeArea(appUrl.checkIsAreaActive("filesystems") ? "File Systems" : "Databases");
+            $('.tooltip.fade').remove(); // Fix for tooltips that are shown right before navigation - they get stuck and remain in the UI.
         }
     }
 
@@ -127,9 +188,15 @@ class shell extends viewModelBase {
         if (this.databases().length == 1) {
             systemDatabase.activate();
         } else {
-            this.databases.first(x=> x.isVisible()).activate();
+            this.databases.first(x => x.isVisible()).activate();
         }
-        
+    }
+
+    filesystemsLoaded(filesystems) {
+        this.filesystems(filesystems);
+        if (this.filesystems().length != 0) {
+            this.filesystems.first(x=> x.isVisible()).activate();
+        }
     }
 
     launchDocEditor(docId?: string, docsList?: pagedList) {
@@ -148,6 +215,10 @@ class shell extends viewModelBase {
                 this.fetchLicenseStatus();
                 router.activate();
             });
+
+        this.filesystemsLoadedTask = new getFilesystemsCommand()
+            .execute()
+            .done(results => this.filesystemsLoaded(results));
     }
 
     fetchStudioConfig() {
@@ -228,11 +299,39 @@ class shell extends viewModelBase {
         }
     }
 
+    activateFilesystemWithName(filesystemName: string) {
+        if (this.filesystemsLoadedTask) {
+            this.filesystemsLoadedTask.done(() => {
+                var matchingFilesystem = this.filesystems().first(d => d.name == filesystemName);
+                if (matchingFilesystem && this.activeFilesystem() !== matchingFilesystem) {
+                    ko.postbox.publish("ActivateFilesystem", matchingFilesystem);
+                }
+            });
+        }
+    }
+
     updateChangesApi(newDb: database) {
         if (shell.currentDbChangesApi()) {
             shell.currentDbChangesApi().dispose();
         }
         shell.currentDbChangesApi(new changesApi(newDb));
+
+        shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
+            if (this.modelPollingTimeoutFlag === true) {
+                this.modelPollingTimeoutFlag = false;
+                setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+                this.modelPolling();
+            } 
+        });
+
+        shell.currentDbChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => {
+            if (this.modelPollingTimeoutFlag === true) {
+                this.modelPollingTimeoutFlag = false;
+                this.modelPolling();
+            } else {
+                setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+            }
+        });
     }
 
     reloadDatabases() {
@@ -246,7 +345,19 @@ class shell extends viewModelBase {
                 if (!existingDb ) {
                     this.databases.unshift(result);
                     }
+                });
+            });
                 
+        new getFilesystemsCommand()
+            .execute()
+            .done(results => {
+                ko.utils.arrayForEach(results, (result: filesystem) => {
+                    var existingFs = this.filesystems().first(d=> {
+                        return d.name == result.name;
+                });
+                    if (!existingFs) {
+                        this.filesystems.unshift(result);
+                    }
                 });
         });
     }
@@ -257,12 +368,27 @@ class shell extends viewModelBase {
                 .execute()
                 .done(result=> db.statistics(result));
         }
+
+        var fs = this.activeFilesystem();
+        if (fs) {
+            new getFilesystemStatsCommand(fs)
+                .execute()
+                .done(result=> fs.statistics(result));
+        }
     }
 
     selectDatabase(db: database) {
         if (db.name != this.activeDatabase().name) {
             db.activate();
             var updatedUrl = appUrl.forCurrentPage(db);
+            this.navigate(updatedUrl);
+        }
+    }
+
+    selectFilesystem(fs: filesystem) {
+        if (fs.name != this.activeFilesystem().name) {
+            fs.activate();
+            var updatedUrl = appUrl.forCurrentPage(fs);
             this.navigate(updatedUrl);
         }
     }
@@ -297,12 +423,27 @@ class shell extends viewModelBase {
                         this.goToDocumentSearchResults(results);
                     }
                 });
+        } else if (query.length == 0) {
+            this.goToDocumentSearchResults.removeAll();
         }
     }
 
     showErrorsDialog() {
         require(["viewmodels/recentErrors"], ErrorDetails => {
             var dialog = new ErrorDetails(this.recordedErrors);
+            app.showDialog(dialog);
+        });
+    }
+
+    uploadStatusChanged(item: uploadItem) {
+        var queue: uploadItem[] = this.parseUploadQueue(window.localStorage[this.localStorageUploadQueueKey + item.filesystem.name], item.filesystem);
+        this.updateQueueStatus(item.id(), item.status(), queue);
+        this.updateLocalStorage(queue, item.filesystem);
+    }
+
+    showLicenseStatusDialog() {
+        require(["viewmodels/licensingStatus"], licensingStatus => {
+            var dialog = new licensingStatus(this.licenseStatus());
             app.showDialog(dialog);
         });
     }

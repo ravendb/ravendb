@@ -6,6 +6,8 @@
 using System.Threading;
 using Raven.Abstractions.Indexing;
 using Raven.Tests.Bugs;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 

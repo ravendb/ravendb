@@ -12,6 +12,9 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Linq;
+using Raven.Tests.Common.Attributes;
+using Raven.Tests.Common.Dto.Faceted;
+
 using Xunit;
 using Raven.Abstractions.Indexing;
 using System.Linq.Expressions;
@@ -191,7 +194,7 @@ namespace Raven.Tests.Faceted
 						var filteredData = _data.Where(exp.Compile()).ToList();
 						CheckFacetResultsMatchInMemoryData(facetResults.Value, filteredData);
 
-						Assert.Equal(oldRequests +1, s.Advanced.NumberOfRequests);
+						Assert.Equal(oldRequests +2, s.Advanced.NumberOfRequests);
 					}
 				}
 			}
@@ -230,7 +233,7 @@ namespace Raven.Tests.Faceted
 						var filteredData = _data.Where(exp.Compile()).ToList();
 						CheckFacetResultsMatchInMemoryData(facetResults.Value, filteredData);
 						var forceLoading = load.Value;
-						Assert.Equal(oldRequests + 1, s.Advanced.NumberOfRequests);
+						Assert.Equal(oldRequests + 2, s.Advanced.NumberOfRequests);
 					}
 				}
 			}

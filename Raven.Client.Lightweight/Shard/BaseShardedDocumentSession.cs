@@ -16,8 +16,8 @@ namespace Raven.Client.Shard
 	public abstract class BaseShardedDocumentSession<TDatabaseCommands> : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ITransactionalDocumentSession
 		where TDatabaseCommands : class
 	{
-		protected readonly List<Tuple<ILazyOperation, IList<TDatabaseCommands>>> pendingLazyOperations = new List<Tuple<ILazyOperation, IList<TDatabaseCommands>>>();
-		protected readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
+		protected new readonly List<Tuple<ILazyOperation, IList<TDatabaseCommands>>> pendingLazyOperations = new List<Tuple<ILazyOperation, IList<TDatabaseCommands>>>();
+		protected new readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
 		protected readonly IDictionary<string, List<ICommandData>> deferredCommandsByShard = new Dictionary<string, List<ICommandData>>();
 		protected readonly ShardStrategy shardStrategy;
 		protected readonly IDictionary<string, TDatabaseCommands> shardDbCommands;
@@ -92,11 +92,8 @@ namespace Raven.Client.Shard
 
 		protected string GetDynamicIndexName<T>()
 		{
-			string indexName = "dynamic";
-			if (typeof(T).IsEntityType())
-			{
-				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-			}
+            string indexName = CreateDynamicIndexName<T>();
+			
 			return indexName;
 		}
 
@@ -255,11 +252,8 @@ namespace Raven.Client.Shard
 		/// <typeparam name="T">The result of the query</typeparam>
 		public IRavenQueryable<T> Query<T>()
 		{
-			var indexName = "dynamic";
-			if (typeof(T).IsEntityType())
-			{
-				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-			}
+            var indexName = CreateDynamicIndexName<T>();
+			
 			return Query<T>(indexName)
 #pragma warning disable 612,618
 				.Customize(x => x.TransformResults((query, results) => results.Take(query.PageSize)));

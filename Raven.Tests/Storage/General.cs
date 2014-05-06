@@ -4,6 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Storage
@@ -42,13 +45,13 @@ namespace Raven.Tests.Storage
 			var dataDir = NewDataPath();
 
 			Guid id;
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
 				Assert.Equal(tx.Id, tx.Id);
 				id = tx.Id;
 			}
 
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
 				Assert.Equal(id, tx.Id);
 			}
@@ -59,7 +62,7 @@ namespace Raven.Tests.Storage
 		{
 			var dataDir = NewDataPath();
 
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory:false))
 			{
 				tx.Batch(mutator =>
 				{
@@ -71,7 +74,7 @@ namespace Raven.Tests.Storage
 				});
 			}
 
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
 
 				tx.Batch(mutator =>

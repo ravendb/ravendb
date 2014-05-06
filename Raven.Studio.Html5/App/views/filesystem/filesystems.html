@@ -1,0 +1,43 @@
+﻿<div class="alert alert-danger">
+    <p>Note: not finished implementation yet</p>
+    <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2063">You can track progress here</a>
+</div>
+
+<section class="filesystem-page">
+
+    <div class="text-center" data-bind="visible: !hasFilesystems()">
+        <h3 class="page-header text-info">No file systems are available. <small>Go ahead and <a href="#" data-bind="click: newFilesystem">create a distributed file system</a>.</small></h3>
+    </div>
+
+    <div data-bind="visible: hasFilesystems()">
+
+        <div style="position: relative">
+            <ul class="breadcrumb">
+                <li>
+                    <h3>
+                        <a href="#filesystems">
+                            Files
+                        </a>
+                    </h3>
+                </li>
+            </ul>
+            <div class="btn-toolbar">
+                <button type="button" class="btn btn-primary" data-bind="click: newFilesystem" accesskey="n" title="Create a new file system. (Alt+N)"><i class="fa fa-plus"></i> New File System</button>
+                <!--<form class="form-inline" style="display: inline-block; vertical-align: middle;">
+                    <input type="text" accesskey="s" class="form-control col-md-8" placeholder="Search" data-bind="value: searchFilesystemByText, valueUpdate: 'afterkeydown'" title="Search for a file system (Alt+S)">
+                </form>-->
+            </div>
+            <br />
+
+            <div class="filesystems-container" data-bind="foreach: filesystems">
+                <div class="filesystem" data-bind="visible: isVisible, click: function () { $root.selectFilesystem($data); return true; }, css: { selected: isSelected }">
+                    <h4><a data-bind="text: name, attr: { href: $root.getFilesystemFilesUrl($data) }"></a></h4>
+                    <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: itemCount() + ' files'"></span>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</section>

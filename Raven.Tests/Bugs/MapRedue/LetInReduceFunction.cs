@@ -3,6 +3,8 @@ using System.Linq;
 using Raven.Abstractions.Linq;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.MapRedue

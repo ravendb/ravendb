@@ -45,9 +45,7 @@ namespace Voron
 	    private EndOfDiskSpaceEvent _endOfDiskSpace;
 	    private int _sizeOfUnflushedTransactionsInJournalFile;
 
-
-	    public TemporaryPage TemporaryPage { get; private set; }
-
+		private Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>(); 
 
         public TransactionMergingWriter Writer { get; private set; }
 
@@ -74,10 +72,9 @@ namespace Voron
         {
             try
             {
-                TemporaryPage = new TemporaryPage();
                 _options = options;
                 _dataPager = options.DataPager;
-                _freeSpaceHandling = new FreeSpaceHandling(this);
+                _freeSpaceHandling = new FreeSpaceHandling();
                 _sliceComparer = NativeMethods.memcmp;
                 _headerAccessor = new HeaderAccessor(this);
                 var isNew = _headerAccessor.Initialize();
@@ -322,8 +319,8 @@ namespace Voron
                     _headerAccessor,
                     _scratchBufferPool,
                     _options.OwnsPagers ? _options : null,
-                    _journal, TemporaryPage
-                })
+                    _journal
+                }.Concat(_tempPagesPool))
                 {
                     try
                     {
@@ -369,14 +366,13 @@ namespace Voron
                     }
                 }
 
-                long txId;
-                Transaction tx;
+	            Transaction tx;
 
                 _txCommit.EnterReadLock();
                 try
                 {
-                    txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
-                    tx = new Transaction(this, txId, flags, _freeSpaceHandling);
+	                long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
+	                tx = new Transaction(this, txId, flags, _freeSpaceHandling);
                 }
                 finally
                 {
@@ -461,7 +457,6 @@ namespace Voron
 
 			return new EnvironmentStats
 			{
-				FreePages = _freeSpaceHandling.GetFreePageCount(),
 				FreePagesOverhead = State.FreeSpaceRoot.State.PageCount,
 				RootPages = State.Root.State.PageCount,
 				UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,
@@ -536,6 +531,53 @@ namespace Voron
 
 		    _cancellationTokenSource.Cancel();
 			_endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DriveInfo);
+	    }
+
+	    public IDisposable GetTemporaryPage(Transaction tx, out TemporaryPage tmp)
+	    {
+		    if (tx.Flags != TransactionFlags.ReadWrite)
+			    throw new ArgumentException("Temporary pages are only available for write transactions");
+		    if (_tempPagesPool.Count > 0)
+		    {
+			    tmp = _tempPagesPool.Dequeue();
+			    return tmp.ReturnTemporaryPageToPool;
+		    }
+
+			tmp = new TemporaryPage();
+		    try
+		    {
+			    return tmp.ReturnTemporaryPageToPool = new ReturnTemporaryPageToPool(this, tmp);
+		    }
+		    catch (Exception)
+		    {
+			    tmp.Dispose();
+			    throw;
+		    }
+	    }
+
+	    private class ReturnTemporaryPageToPool : IDisposable
+	    {
+		    private readonly TemporaryPage _tmp;
+		    private readonly StorageEnvironment _env;
+
+		    public ReturnTemporaryPageToPool(StorageEnvironment env, TemporaryPage tmp)
+		    {
+			    _tmp = tmp;
+			    _env = env;
+		    }
+
+		    public void Dispose()
+		    {
+			    try
+			    {
+				    _env._tempPagesPool.Enqueue(_tmp);
+			    }
+			    catch (Exception)
+			    {
+					_tmp.Dispose();
+				    throw;
+			    }
+		    }
 	    }
     }
 }

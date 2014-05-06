@@ -37,14 +37,73 @@ class autoCompleteBindingHandler {
         element.style.display = "none";
         element.style.position = "absolute";
         element.style.left = "auto";
-        element.style.width = input.width() + "px";
         element.style.top = (input.height() + 20) + "px";
+        
+        //This makes elements with long names overflow the container... commenting it for the moment
+        //element.style.width = input.width() + "px";
+
 
         // Clicking an element in the auto complete list should hide it.
-        $element.on('click', () => setTimeout(() => element.style.display = "none", 0));
+        $element.on('click', () => {
+            setTimeout(() => element.style.display = "none", 0)
+        });
 
         // Leaving the textbox should hide the auto complete list.
-        input.on('blur', (args) => setTimeout(() => element.style.display = "none", 200));
+        input.on('blur', (args: JQueryEventObject) => {
+            setTimeout(() => element.style.display = "none", 200);
+        });
+        
+        input.on('keydown', (args: JQueryEventObject) => {
+            var lis, curSelected;
+            if (element.style.display == "none" && args.which == 40) {
+                if ($element.children("li").length > 0) {
+                    setTimeout(() => element.style.display = "block", 0);
+                    return true;
+                }
+            }
+
+            if (args.which == 40 || args.which == 38 || args.which == 13) {
+                lis = $element.children("li");
+                curSelected = $element.find('.selected');
+            }
+
+            if (args.which == 40) {
+                if (curSelected.length > 0) {
+                    curSelected.removeClass("selected");
+                    var nextSelected = curSelected.next();
+
+                    if (nextSelected.length) {
+                        nextSelected.addClass("selected");
+                    } else {
+                        lis.first().addClass('selected');
+                    }
+
+                } else {
+                    curSelected = lis.first().addClass("selected");
+                }
+            } else if (args.which == 38) {
+                if (curSelected.length > 0) {
+                    curSelected.removeClass("selected");
+                    var prevSelected = curSelected.prev();
+
+                    if (prevSelected.length) {
+                        prevSelected.addClass("selected");
+                    } else {
+                        lis.last().addClass('selected');
+                    }
+
+                } else {
+                    curSelected = lis.last().addClass("selected");
+                }
+            }
+            else if (args.which == 13) {
+                if (curSelected.length) {
+                    curSelected.click();
+
+                }
+            }
+            
+        });
 
         // When the results change and we have 1 or more, display the auto complete container.
         var results: KnockoutObservableArray<any> = allBindings()['foreach'];
@@ -59,6 +118,7 @@ class autoCompleteBindingHandler {
         ko.utils.domNodeDisposal.addDisposeCallback(element, () => {
             input.off('blur');
             $element.off('click');
+            input.off('keydown');
             subscription.dispose();
         });
     }

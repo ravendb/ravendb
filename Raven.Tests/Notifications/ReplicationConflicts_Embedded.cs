@@ -9,7 +9,8 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Json.Linq;
-using Raven.Tests.Bundles.Replication;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Notifications

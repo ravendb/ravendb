@@ -5,6 +5,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs

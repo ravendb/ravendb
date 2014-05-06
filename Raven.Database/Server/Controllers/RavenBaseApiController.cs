@@ -149,8 +149,10 @@ namespace Raven.Database.Server.Controllers
 		public int GetPageSize(int maxPageSize)
 		{
 			int pageSize;
-			if (int.TryParse(GetQueryStringValue("pageSize"), out pageSize) == false || pageSize < 0)
+			if (int.TryParse(GetQueryStringValue("pageSize"), out pageSize) == false)
 				pageSize = 25;
+		    if (pageSize < 0)
+		        return 0;
 			if (pageSize > maxPageSize)
 				pageSize = maxPageSize;
 			return pageSize;
@@ -209,12 +211,6 @@ namespace Raven.Database.Server.Controllers
 		{
 			if (string.IsNullOrWhiteSpace(etag))
 				return;
-			//string clientVersion = GetHeader("Raven-Client-Version");
-			//if (string.IsNullOrEmpty(clientVersion))
-			//{
-			//	msg.Headers.ETag = new EntityTagHeaderValue(etag);
-			//	return;
-			//}
 
 			msg.Headers.ETag = new EntityTagHeaderValue("\"" + etag + "\"");
 		}
@@ -436,7 +432,10 @@ namespace Raven.Database.Server.Controllers
 			if (string.IsNullOrEmpty(zipPath) == false)
 			{
 			    var fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, zipPath + ".zip");
-			    if (File.Exists(zipPath))
+				if (File.Exists(fullZipPath) == false)
+					fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bin", zipPath + ".zip");
+
+				if (File.Exists(fullZipPath))
 				{
                     return WriteFileFromZip(fullZipPath, docPath);
 				}
@@ -452,12 +451,12 @@ namespace Raven.Database.Server.Controllers
 			if (etagValue == currentFileEtag)
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
-			var fileStream = new FileStream(zipPath + ".zip", FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+			var fileStream = new FileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 			var zipFile = new ZipFile(fileStream);
 			var zipEntry = zipFile.GetEntry(docPath);
 
 			if (zipEntry == null || zipEntry.IsFile == false)
-				return EmbeddedFileNotFount(docPath);
+				return EmbeddedFileNotFound(docPath);
 
 			var entry = zipFile.GetInputStream(zipEntry);
 			var msg = new HttpResponseMessage
@@ -511,12 +510,12 @@ namespace Raven.Database.Server.Controllers
 			var lowercasedResourceName = resourceNames.FirstOrDefault(s => string.Equals(s, resourceName, StringComparison.OrdinalIgnoreCase));
 		    if (lowercasedResourceName == null)
 		    {
-				return EmbeddedFileNotFount(docPath);
+				return EmbeddedFileNotFound(docPath);
 		    }
 			using (var resource = resourceAssembly.GetManifestResourceStream(lowercasedResourceName))
 			{
 				if (resource == null)
-					return EmbeddedFileNotFount(docPath);
+					return EmbeddedFileNotFound(docPath);
 
 				bytes = resource.ReadData();
 			}
@@ -533,7 +532,7 @@ namespace Raven.Database.Server.Controllers
 			return msg;
 		}
 
-		private HttpResponseMessage EmbeddedFileNotFount(string docPath)
+		private HttpResponseMessage EmbeddedFileNotFound(string docPath)
 		{
 			var message = "The following embedded file was not available: " + docPath +
 			              ". Please make sure that the Raven.Studio.Html.zip file exist in the main directory (near to the Raven.Database.dll).";

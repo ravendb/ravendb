@@ -1,4 +1,6 @@
-﻿namespace Voron.Tests.Bugs
+﻿using System.IO;
+
+namespace Voron.Tests.Bugs
 {
 	using System;
 	using System.Collections.Generic;
@@ -106,6 +108,59 @@
 						Assert.Equal(2, count);
 						Assert.Equal(2, keys.Count);
 					}
+				}
+			}
+		}
+
+		[Fact]
+		public void ShouldNotThrowThatPageIsFullDuringTreeRebalancing()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = Env.CreateTree(tx, "rebalancing-issue");
+
+				var aKey = new string('a', 1024);
+				var bKey = new string('b', 1024);
+				var cKey = new string('c', 1024);
+				var dKey = new string('d', 1024);
+				var eKey = new string('e', 600);
+				var fKey = new string('f', 920);
+
+				tree.Add(tx, aKey, new MemoryStream(new byte[1000]));
+				tree.Add(tx, bKey, new MemoryStream(new byte[1000]));
+				tree.Add(tx, cKey, new MemoryStream(new byte[1000]));
+				tree.Add(tx, dKey, new MemoryStream(new byte[1000]));
+				tree.Add(tx, eKey, new MemoryStream(new byte[800]));
+				tree.Add(tx, fKey, new MemoryStream(new byte[10]));
+
+				RenderAndShow(tx, 1, "rebalancing-issue");
+
+				// to expose the bug we need to delete the last item from the left most page
+				// tree rebalance will try to fix the first reference (the implicit ref page node) in the parent page which is almost full 
+				// and will fail because there is no space to put a new node
+
+				tree.Delete(tx, aKey); // this line throws "The page is full and cannot add an entry, this is probably a bug"
+
+				tx.Commit();
+
+				using (var iterator = tree.Iterate(tx))
+				{
+					Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+
+					Assert.Equal(bKey, iterator.CurrentKey);
+					Assert.True(iterator.MoveNext());
+
+					Assert.Equal(cKey, iterator.CurrentKey);
+					Assert.True(iterator.MoveNext());
+
+					Assert.Equal(dKey, iterator.CurrentKey);
+					Assert.True(iterator.MoveNext());
+
+					Assert.Equal(eKey, iterator.CurrentKey);
+					Assert.True(iterator.MoveNext());
+
+					Assert.Equal(fKey, iterator.CurrentKey);
+					Assert.False(iterator.MoveNext());
 				}
 			}
 		}

@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Raven.Json.Linq;
+using Raven.Database.Server.RavenFS.Extensions;
+using System;
 using System.Collections.Specialized;
 using System.Linq;
 using Xunit;
@@ -7,10 +9,7 @@ namespace RavenFS.Tests.Bugs
 {
     public class FileRenaming : StorageTest
     {
-		private readonly NameValueCollection metadataWithEtag = new NameValueCollection()
-		                                               	{
-		                                               		{"ETag", "\"" + Guid.Empty +"\""}
-		                                               	};
+        private readonly RavenJObject metadataWithEtag = new RavenJObject().WithETag(Guid.Empty);
 
         [Fact]
         public void Should_rename_file_and_content()

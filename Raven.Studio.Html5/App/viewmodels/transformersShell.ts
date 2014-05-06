@@ -17,8 +17,8 @@ class transformerShell extends viewModelBase {
 
         this.router = durandalRouter.createChildRouter()
             .map([
-                { route: 'transformers', moduleId: 'viewmodels/transformers', title: 'Transformers', nav: true },
-                { route: 'transformers/edit(/:transformerName)', moduleId: 'viewmodels/editTransformer', title: 'Edit Transformer', nav: true }
+                { route: 'databases/transformers', moduleId: 'viewmodels/transformers', title: 'Transformers', nav: true },
+                { route: 'databases/transformers/edit(/:transformerName)', moduleId: 'viewmodels/editTransformer', title: 'Edit Transformer', nav: true }
                 
             ])
             .buildNavigationModel();

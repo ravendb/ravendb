@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.RavenFS;
+using Raven.Json.Linq;
 
 namespace Raven.Client.RavenFS.Shard
 {
@@ -159,10 +160,9 @@ namespace Raven.Client.RavenFS.Shard
 
 			var results = new List<FileInfo>();
 
-			var applyAsync =
-			   await
-			   ShardStrategy.ShardAccessStrategy.ApplyAsync(ShardClients.Values.ToList(), new ShardRequestData(),
-															(client, i) => client.BrowseAsync(indexes[i], pageSize));
+			var applyAsync = await ShardStrategy.ShardAccessStrategy.ApplyAsync(ShardClients.Values.ToList(), 
+                                                                                new ShardRequestData(),
+															                    (client, i) => client.BrowseAsync(indexes[i], pageSize));
 			var originalIndexes = pagingInfo.GetPagingInfo(pagingInfo.CurrentPage);
 			while (results.Count < pageSize)
 			{
@@ -174,7 +174,7 @@ namespace Raven.Client.RavenFS.Shard
 			}
 
 			pagingInfo.SetPagingInfo(indexes);
-
+            
 			return results.ToArray();
 		}
 
@@ -248,9 +248,8 @@ namespace Raven.Client.RavenFS.Shard
 
 			var result = new SearchResults();
 
-			var applyAsync =
-			   await
-			   ShardStrategy.ShardAccessStrategy.ApplyAsync(ShardClients.Values.ToList(), new ShardRequestData(),
+			var applyAsync = await ShardStrategy.ShardAccessStrategy.ApplyAsync(
+                                                            ShardClients.Values.ToList(), new ShardRequestData(),
 															(client, i) => client.SearchAsync(query, sortFields, indexes[i], pageSize));
 
 			var originalIndexes = pagingInfo.GetPagingInfo(pagingInfo.CurrentPage);
@@ -269,7 +268,7 @@ namespace Raven.Client.RavenFS.Shard
 				result.FileCount++;
 				result.Files = files.ToArray();
 				result.PageSize = pageSize;
-				result.Start = 0;//todo: update start
+				result.Start = 0; //todo: update start
 			}
 
 			pagingInfo.SetPagingInfo(indexes);
@@ -279,13 +278,13 @@ namespace Raven.Client.RavenFS.Shard
 			return result;
 		}
 
-		public Task<NameValueCollection> GetMetadataForAsync(string filename)
+        public Task<RavenJObject> GetMetadataForAsync(string filename)
 		{
 			var client = TryGetClintFromFileName(filename);
 			return client.GetMetadataForAsync(filename);
 		}
 
-		public Task<NameValueCollection> DownloadAsync(string filename, Stream destination, long? @from = null, long? to = null)
+        public Task<RavenJObject> DownloadAsync(string filename, Stream destination, long? @from = null, long? to = null)
 		{
 			var client = TryGetClintFromFileName(filename);
 			return client.DownloadAsync(filename, destination, from, to);
@@ -293,22 +292,22 @@ namespace Raven.Client.RavenFS.Shard
 
 		public Task<string> UploadAsync(string filename, Stream source)
 		{
-			return UploadAsync(filename, new NameValueCollection(), source, null);
+            return UploadAsync(filename, new RavenJObject(), source, null);
 		}
 
-		public Task<string> UploadAsync(string filename, NameValueCollection metadata, Stream source)
+        public Task<string> UploadAsync(string filename, RavenJObject metadata, Stream source)
 		{
 			return UploadAsync(filename, metadata, source, null);
 		}
 
-		public Task UpdateMetadataAsync(string filename, NameValueCollection metadata)
+        public Task UpdateMetadataAsync(string filename, RavenJObject metadata)
 		{
 			var client = TryGetClintFromFileName(filename);
 
 			return client.UpdateMetadataAsync(filename, metadata);
 		}
 
-		public async Task<string> UploadAsync(string filename, NameValueCollection metadata, Stream source, Action<string, long> progress)
+        public async Task<string> UploadAsync(string filename, RavenJObject metadata, Stream source, Action<string, long> progress)
 		{
 			var resolutionResult = ShardStrategy.ShardResolutionStrategy.GetShardIdForUpload(filename, metadata);
 
@@ -471,9 +470,9 @@ namespace Raven.Client.RavenFS.Shard
 				}
 				else
 				{
-					var currentItem = current.Metadata[field];
-					var smallestItem = smallest.Metadata[field];
-
+                    var currentItem = current.Metadata.Value<string>(field);
+                    var smallestItem = smallest.Metadata.Value<string>(field);
+                    
 					var compare = string.Compare(currentItem, smallestItem, StringComparison.InvariantCultureIgnoreCase);
 					if (compare != 0)
 						return compare * multiplay;

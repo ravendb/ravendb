@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Tests;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Attributes;
+
 using Xunit;
 
 namespace Raven.SlowTests.Issues

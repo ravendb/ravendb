@@ -1,11 +1,13 @@
 using System;
 using System.Linq;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class AggressiveCaching : RemoteClientTest
+	public class AggressiveCaching : RavenTest
 	{
 		public AggressiveCaching()
 		{

@@ -41,7 +41,8 @@ class document implements documentBase {
         }
 
         if (includeMeta && this.__metadata) {
-            dto['@metadata'] = this.__metadata.toDto();
+            var newDocumentMetadata = new documentMetadata(this.__metadata);
+            dto['@metadata'] = newDocumentMetadata.toDto();
         }
 
         return <any>dto;
@@ -85,9 +86,7 @@ class document implements documentBase {
         // TODO: is there a better/more reliable way to do this?
         var slashIndex = id.lastIndexOf('/');
         if (slashIndex >= 1) {
-            return id.substring(0, slashIndex).replace(/^./, function (char) {
-                return char.toUpperCase();
-            });
+            return id.substring(0, 1).toUpperCase() + id.substring(1, slashIndex);
         }
 
         return id;

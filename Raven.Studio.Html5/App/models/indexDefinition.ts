@@ -20,6 +20,7 @@ class indexDefinition {
     termVectors: any;
     transformResults = ko.observable<string>().extend({ required: true });
     type: string;
+    maxIndexOutputsPerDocument = ko.observable<number>(0).extend({ required: true });
 
     // This is an amalgamation of several properties from the index (Fields, Stores, Indexes, SortOptions, Analyzers, Suggestions, TermVectors) 
     // Stored as multiple luceneFields for the sake of data binding.
@@ -49,6 +50,8 @@ class indexDefinition {
 
         this.luceneFields(this.parseFields());
         this.spatialFields(this.parseSpatialFields());
+
+        this.maxIndexOutputsPerDocument(dto.MaxIndexOutputsPerDocument? dto.MaxIndexOutputsPerDocument:0);
     }
 
     toDto(): indexDefinitionDto {
@@ -70,7 +73,8 @@ class indexDefinition {
             Suggestions: this.makeFieldObject(f => f.suggestionDistance() !== "None", f => f.toSuggestionDto()),
             TermVectors: this.makeFieldObject(f => f.termVector() !== "No", f => f.termVector()),
             TransformResults: this.transformResults(),
-            Type: this.type
+            Type: this.type,
+            MaxIndexOutputsPerDocument: this.maxIndexOutputsPerDocument()? this.maxIndexOutputsPerDocument()> 0 ? this.maxIndexOutputsPerDocument() :null:null
         };
     }
 
@@ -93,7 +97,8 @@ class indexDefinition {
             Suggestions: {},
             TermVectors: {},
             TransformResults: null,
-            Type: "Map"
+            Type: "Map",
+            MaxIndexOutputsPerDocument:null
         });
     }
 
@@ -116,7 +121,7 @@ class indexDefinition {
             .filter(name => this.analyzers[name] != null || this.indexes[name] != null || this.sortOptions[name] != null || this.stores[name] != null || this.suggestions[name] != null || this.termVectors[name] != null) // A field is configured and shows up in the index edit UI as a field when it appears in one of the aforementioned objects.
             .map(fieldName => {
                 var suggestion: any = this.suggestions && this.suggestions[fieldName] ? this.suggestions[fieldName] : {};
-                return new luceneField(fieldName, this.stores[fieldName], this.indexes[fieldName], this.sortOptions[fieldName], this.analyzers[fieldName], suggestion['Distance'], suggestion['Accuracy'], this.termVectors[fieldName]);
+                return new luceneField(fieldName, this.stores[fieldName], this.indexes[fieldName], this.sortOptions[fieldName], this.analyzers[fieldName], suggestion['Distance'], suggestion['Accuracy'], this.termVectors[fieldName], this.fields());
             });        
     }
 

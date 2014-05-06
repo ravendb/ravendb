@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Shard.BlogModel

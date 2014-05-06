@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class ComplexQueryOnSameObject : RemoteClientTest
+	public class ComplexQueryOnSameObject : RavenTest
 	{
 		[Fact]
 		public void WillSucceed()

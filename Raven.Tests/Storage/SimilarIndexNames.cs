@@ -3,6 +3,8 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 

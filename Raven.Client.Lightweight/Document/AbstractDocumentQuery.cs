@@ -34,6 +34,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
+using Raven.Client.Document.Async;
 
 namespace Raven.Client.Document
 {
@@ -632,7 +633,6 @@ namespace Raven.Client.Document
 		{
 			if (queryOperation != null) 
 				return;
-			theSession.IncrementRequestCount();
 			ClearSortHints(DatabaseCommands);
 			ExecuteBeforeQueryListeners();
 			queryOperation = InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
@@ -649,6 +649,7 @@ namespace Raven.Client.Document
 
 		protected virtual void ExecuteActualQuery()
 		{
+			theSession.IncrementRequestCount();
 			while (true)
 			{
 				using (queryOperation.EnterQueryContext())
@@ -713,6 +714,26 @@ namespace Raven.Client.Document
 			return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
 
+        /// <summary>
+        /// Register the query as a lazy query in the session and return a lazy
+        /// instance that will evaluate the query only when needed
+        /// </summary>
+        public virtual Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval)
+        {
+            var headers = new Dictionary<string, string>();
+            if (queryOperation == null)
+            {
+                ExecuteBeforeQueryListeners();
+                queryOperation = InitializeQueryOperation((key, val) => headers[key] = val);
+            }
+
+            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
+            lazyQueryOperation.SetHeaders(headers);
+
+            return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
+        }
+
+
 		/// <summary>
 		/// Register the query as a lazy-count query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
@@ -752,7 +773,6 @@ namespace Raven.Client.Document
 			ExecuteBeforeQueryListeners();
 
 			queryOperation = InitializeQueryOperation((key, val) => AsyncDatabaseCommands.OperationsHeaders[key] = val);
-			theSession.IncrementRequestCount();
 			return await ExecuteActualQueryAsync();
 		}
 
@@ -1757,18 +1777,22 @@ If you really want to do in memory filtering on the data returned from the query
 
 		protected virtual async Task<QueryOperation> ExecuteActualQueryAsync()
 		{
-			using (queryOperation.EnterQueryContext())
+			theSession.IncrementRequestCount();
+			while (true)
 			{
-				queryOperation.LogQuery();
-				var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray());
+				using (queryOperation.EnterQueryContext())
+				{
+					queryOperation.LogQuery();
+					var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray());
 
-				if (queryOperation.IsAcceptable(result) == false)
+					if (queryOperation.IsAcceptable(result) == false)
 					{
-					await Task.Delay(100);
-					return await ExecuteActualQueryAsync();
-						}
-						InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
-				return queryOperation;
+						await Task.Delay(100);
+						continue;
+					}
+					InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
+					return queryOperation;
+				}
 			}
 		}
 

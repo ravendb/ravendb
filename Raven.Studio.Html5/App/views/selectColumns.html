@@ -1,29 +1,31 @@
-﻿<div class="messageBox" tabindex="-1">
-    <form data-bind="submit: changeCurrentColumns" id="select-columns-form">
+﻿<div class="messageBox" tabindex="-1" style="width:720px;">
+    <form data-bind="submit: changeCurrentColumns" id="select-columns-form" onkeypress="return event.keyCode != 13;">
         <div class="modal-header">
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">&times;</button>
             <h4 class="modal-title">Choose columns</h4>
         </div>
-        
+
         <div class="modal-body">
             <div class="row">
                 <div class="col-md-12">
                     <div class="form-group">
-                        <label for="mode">Mode</label>
-                            <div class="btn-group" data-toggle="buttons">
-                                <label class="btn btn-primary" data-bind="click: customScheme.bind($data, false), css: { active: !customColumns.customMode() }" title="RavenDB will choose columns based on visible document contents.">
-                                    <input type="radio" name="options"> Automatic
-                                </label>
-                                <label class="btn btn-primary" data-bind="click: customScheme.bind($data, true), css: { active: customColumns.customMode() }" title="Specify desired columns manualy">
-                                    <input type="radio" name="options"> Custom
-                                </label>                            
-                            </div>
+                        <label for="mode">Mode: </label>
+                        <div class="btn-group" data-toggle="buttons">
+                            <label class="btn btn-primary" data-bind="click: customScheme.bind($data, false), css: { active: !customColumns.customMode() }" title="RavenDB will choose columns based on visible document contents.">
+                                <input type="radio" name="options"> Automatic
+                            </label>
+                            <label class="btn btn-primary" data-bind="click: customScheme.bind($data, true), css: { active: customColumns.customMode() }" title="Specify desired columns manualy">
+                                <input type="radio" name="options"> Custom
+                            </label>
                         </div>
+
+                    </div>
                 </div>
             </div>
-            <div  data-bind="visible: !customColumns.customMode()" class="alert alert-info">RavenDB will choose columns based on visible document contents.</div>
 
-            <table class="table table-hover" data-bind="if: customColumns.customMode()">
+            <div data-bind="slideVisible: !customColumns.customMode()" class="alert alert-info">RavenDB will choose columns based on visible document contents</div>
+
+            <table class="table table-hover" data-bind="slideVisible: customColumns.customMode()">
                 <thead>
                     <tr>
                         <th>Binding</th>
@@ -32,15 +34,15 @@
                         <th>Options</th>
                     </tr>
                 </thead>
-                <tbody data-bind="foreach: customColumns.columns">
+                <tbody data-bind="foreach: customColumns.columns" id="qqq">
                     <tr>
-                        <td><input class="form-control" required type="text" data-bind="value: binding" /></td>
-                        <td><input class="form-control" required type="text" data-bind="value: header" /></td>
-                        <td><input class="form-control input-sm" required type="number" data-bind="value: width" /></td>
+                        <td><input class="form-control" required type="text" data-bind="value: binding, valueUpdate: 'keyup'" /></td>
+                        <td><input class="form-control" required type="text" data-bind="value: header, valueUpdate: 'keyup'" /></td>
+                        <td><input class="form-control input-sm" required type="number" data-bind="value: width, valueUpdate: 'keyup'" /></td>
                         <td>
                             <div class="btn-group">
-                                <button data-bind="click: $root.moveUp.bind($root, $data), enable: ($index() > 0)" type="button" class="btn btn-default"><i class="fa fa-arrow-up"></i></button>
-                                <button data-bind="click: $root.moveDown.bind($root, $data), enable: ($index() < $root.customColumns.columns().length - 1)" type="button" class="btn btn-default"><i class="fa fa-arrow-down"></i></button>
+                                <button data-bind="click: $root.moveUp.bind($root, $data), disable: ($index() === 0)" type="button" class="btn btn-default"><i class="fa fa-arrow-up"></i></button>
+                                <button data-bind="click: $root.moveDown.bind($root, $data), disable: ($index() === $root.customColumns.columns().length - 1)" type="button" class="btn btn-default"><i class="fa fa-arrow-down"></i></button>
                                 <button type="button" class="btn btn-default" data-bind="click: $root.deleteRow.bind($root, $data)"><i class="fa fa-trash-o"></i></button>
                             </div>
                         </td>

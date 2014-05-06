@@ -6,16 +6,16 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
+
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Database.Indexing;
 using Raven.Database.Indexing.Sorting;
 using Raven.Database.Linq;
-using Raven.Database.Server;
 using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Database.Extensions
@@ -24,20 +24,25 @@ namespace Raven.Database.Extensions
 	{
 		public static Analyzer CreateAnalyzerInstance(string name, string analyzerTypeAsString)
 		{
-			var analyzerType = typeof(StandardAnalyzer).Assembly.GetType(analyzerTypeAsString) ??
-				Type.GetType(analyzerTypeAsString);
+			var analyzerType = typeof(StandardAnalyzer).Assembly.GetType(analyzerTypeAsString) ?? Type.GetType(analyzerTypeAsString);
 			if (analyzerType == null)
 				throw new InvalidOperationException("Cannot find analyzer type '" + analyzerTypeAsString + "' for field: " + name);
+			
 			try
 			{
+				var assembly = analyzerType.Assembly;
+
 				// try to get parameterless ctor
 				var ctors = analyzerType.GetConstructor(Type.EmptyTypes);
 				if (ctors != null)
-					return (Analyzer)Activator.CreateInstance(analyzerType);
+					return (Analyzer)Activator.CreateInstance(assembly.FullName, analyzerType.FullName).Unwrap();
 
-				ctors = analyzerType.GetConstructor(new[] { typeof(Lucene.Net.Util.Version) });
-				if (ctors != null)
-					return (Analyzer)Activator.CreateInstance(analyzerType, Lucene.Net.Util.Version.LUCENE_30);
+				var type = analyzerType.Assembly.GetType(typeof(Lucene.Net.Util.Version).FullName);
+				ctors = analyzerType.GetConstructor(new[] { type });
+				if (ctors != null) 
+					return (Analyzer)Activator
+						.CreateInstance(assembly.FullName, analyzerType.FullName, false, BindingFlags.CreateInstance | BindingFlags.Public | BindingFlags.Instance, null, new object[] { Lucene.Net.Util.Version.LUCENE_30 }, CultureInfo.InvariantCulture, null)
+						.Unwrap();
 			}
 			catch (Exception e)
 			{

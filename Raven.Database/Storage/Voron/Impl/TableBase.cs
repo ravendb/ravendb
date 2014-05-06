@@ -64,6 +64,11 @@ namespace Raven.Database.Storage.Voron.Impl
 			writeBatch.Add(key, stream, TableName, expectedVersion);
 		}
 
+		public virtual void Increment(WriteBatch writeBatch, Slice key, long delta, ushort? expectedVersion = null)
+		{
+			writeBatch.Increment(key, delta, TableName, expectedVersion);
+		}
+
 		public virtual void MultiAdd(WriteBatch writeBatch, Slice key, Slice value, ushort? expectedVersion = null)
 		{
 			writeBatch.MultiAdd(key, value, TableName, expectedVersion);

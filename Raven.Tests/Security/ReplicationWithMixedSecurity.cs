@@ -3,6 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Tests.Common;
+using Raven.Tests.Common.Dto;
+
 namespace Raven.Tests.Security
 {
 	using System.Collections.Generic;
@@ -16,8 +19,6 @@ namespace Raven.Tests.Security
 	using Raven.Database.Server.Security;
 	using Raven.Database.Server.Security.Windows;
 	using Raven.Json.Linq;
-	using Raven.Tests.Bundles.Replication;
-	using Raven.Tests.Bundles.Versioning;
 
 	using Xunit;
 

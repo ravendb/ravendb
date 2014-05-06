@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -35,9 +36,18 @@ namespace Raven.Database.Server.Controllers
 				var requests = await ReadJsonObjectAsync<GetRequest[]>();
 				var results = new HttpResponseMessage[requests.Length];
 
+			    string clientVersion = null;
+			    IEnumerable<string> values;
+			    if (Request.Headers.TryGetValues("Raven-Client-Version", out values))
+			    {
+			        clientVersion = values.FirstOrDefault(x => string.IsNullOrEmpty(x) == false);
+			    }
+
 				foreach (var getRequest in requests.Where(getRequest => getRequest != null))
 				{
-					getRequest.Headers.Add("Raven-internal-request", "true");
+					getRequest.Headers.Add("Raven-Internal-Request", "true");
+                    if (string.IsNullOrEmpty(clientVersion) == false)
+                        getRequest.Headers.Add("Raven-Client-Version", clientVersion);
 					if (DatabaseName != null)
 					{
 						getRequest.Url = "databases/" + DatabaseName + getRequest.Url;

@@ -14,20 +14,21 @@ namespace Voron
 		public static Slice BeforeAllKeys = new Slice(SliceOptions.BeforeAllKeys);
 		public static Slice Empty = new Slice(new byte[0]);
 
-		private ushort _pointerSize;
-		public SliceOptions Options;
+		private ushort _size;
 		private readonly byte[] _array;
 		private byte* _pointer;
 
+		public SliceOptions Options;
+
 		public ushort Size
 		{
-			get { return (ushort)(_array == null ? _pointerSize : _array.Length); }
+			get { return _size; }
 		}
 
 		public void Set(byte* p, ushort size)
 		{
 			_pointer = p;
-			_pointerSize = size;
+			_size = size;
 		}
 
 		public Slice(SliceOptions options)
@@ -35,21 +36,26 @@ namespace Voron
 			Options = options;
 			_pointer = null;
 			_array = null;
-			_pointerSize = 0;
+			_size = 0;
 		}
 
 		public Slice(byte* key, ushort size)
 		{
-			_pointerSize = size;
+			_size = size;
 			Options = SliceOptions.Key;
 			_array = null;
 			_pointer = key;
 		}
 
-		public Slice(byte[] key)
+		public Slice(byte[] key) : this(key, (ushort)key.Length)
+		{
+			
+		}
+
+		public Slice(byte[] key, ushort size)
 		{
 			if (key == null) throw new ArgumentNullException("key");
-			_pointerSize = 0;
+			_size = size;
 			Options = SliceOptions.Key;
 			_pointer = null;
 			_array = key;
@@ -61,7 +67,7 @@ namespace Voron
 			Set(node);
 		}
 
-		protected bool Equals(Slice other)
+		public bool Equals(Slice other)
 		{
 			return Compare(other, NativeMethods.memcmp) == 0;
 		}
@@ -88,7 +94,7 @@ namespace Voron
 				const int p = 16777619;
 				int hash = (int)2166136261;
 
-				for (int i = 0; i < _pointerSize; i++)
+				for (int i = 0; i < _size; i++)
 					hash = (hash ^ _pointer[i]) * p;
 
 				hash += hash << 13;
@@ -107,7 +113,7 @@ namespace Voron
 				const int p = 16777619;
 				int hash = (int)2166136261;
 
-				for (int i = 0; i < _array.Length; i++)
+				for (int i = 0; i < _size; i++)
 					hash = (hash ^ _array[i]) * p;
 
 				hash += hash << 13;
@@ -126,9 +132,9 @@ namespace Voron
 				return Options.ToString();
 
 			if (_array != null)
-				return Encoding.UTF8.GetString(_array);
+				return Encoding.UTF8.GetString(_array,0, _size);
 
-			return new string((sbyte*)_pointer, 0, _pointerSize, Encoding.UTF8);
+			return new string((sbyte*)_pointer, 0, _size, Encoding.UTF8);
 		}
 
 		public int Compare(Slice other, SliceComparer cmp)
@@ -184,12 +190,12 @@ namespace Voron
 		{
 			if (_array == null)
 			{
-				NativeMethods.memcpy(dest, _pointer, _pointerSize);
+				NativeMethods.memcpy(dest, _pointer, _size);
 				return;
 			}
 			fixed (byte* a = _array)
 			{
-				NativeMethods.memcpy(dest, a, _array.Length);
+				NativeMethods.memcpy(dest, a, _size);
 			}
 		}
 
@@ -198,10 +204,10 @@ namespace Voron
 			if (_array == null)
 			{
 				fixed (byte* p = dest)
-					NativeMethods.memcpy(p, _pointer, _pointerSize);
+					NativeMethods.memcpy(p, _pointer, _size);
 				return;
 			}
-			Buffer.BlockCopy(_array, 0, dest, 0, _array.Length);
+			Buffer.BlockCopy(_array, 0, dest, 0, _size);
 		}
 
 		public void Set(NodeHeader* node)
@@ -217,7 +223,7 @@ namespace Voron
 			{
 				fixed (byte* dest = buffer)
 				{
-					NativeMethods.memcpy(dest, _pointer, _pointerSize);
+					NativeMethods.memcpy(dest, _pointer, _size);
 				}
 			}
 			else
@@ -237,7 +243,7 @@ namespace Voron
 			var buffer = new byte[Size];
 			fixed (byte* dest = buffer)
 			{
-				NativeMethods.memcpy(dest, _pointer, _pointerSize);
+				NativeMethods.memcpy(dest, _pointer, _size);
 			}
 
 			return EndianBitConverter.Big.ToInt64(buffer, 0);

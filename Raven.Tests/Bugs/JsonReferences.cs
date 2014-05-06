@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Client.Embedded;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs

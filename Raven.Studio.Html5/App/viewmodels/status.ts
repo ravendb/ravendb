@@ -17,13 +17,13 @@ class status extends viewModelBase {
 
         this.router = durandalRouter.createChildRouter()
             .map([
-                { route: 'status',                  moduleId: 'viewmodels/statistics',          title: 'Stats',             nav: true, hash: appUrl.forCurrentDatabase().status },
-                { route: 'status/logs',             moduleId: 'viewmodels/logs',                title: 'Logs',              nav: true, hash: appUrl.forCurrentDatabase().logs },
-                { route: 'status/alerts',           moduleId: 'viewmodels/alerts',              title: 'Alerts',            nav: true, hash: appUrl.forCurrentDatabase().alerts },
-                { route: 'status/indexErrors',      moduleId: 'viewmodels/indexErrors',         title: 'Index Errors',      nav: true, hash: appUrl.forCurrentDatabase().indexErrors },
-                { route: 'status/replicationStats', moduleId: 'viewmodels/replicationStats',    title: 'Replication Stats', nav: true, hash: appUrl.forCurrentDatabase().replicationStats },
-                { route: 'status/userInfo',         moduleId: 'viewmodels/userInfo',            title: 'User Info',         nav: true, hash: appUrl.forCurrentDatabase().userInfo },
-                { route: 'status/debug*details',    moduleId: 'viewmodels/statusDebug',         title: 'Debug',             nav: true, hash: appUrl.forCurrentDatabase().statusDebug },
+                { route: 'databases/status',                  moduleId: 'viewmodels/statistics',          title: 'Stats',             nav: true, hash: appUrl.forCurrentDatabase().status },
+                { route: 'databases/status/logs',             moduleId: 'viewmodels/logs',                title: 'Logs',              nav: true, hash: appUrl.forCurrentDatabase().logs },
+                { route: 'databases/status/alerts',           moduleId: 'viewmodels/alerts',              title: 'Alerts',            nav: true, hash: appUrl.forCurrentDatabase().alerts },
+                { route: 'databases/status/indexErrors',      moduleId: 'viewmodels/indexErrors',         title: 'Index Errors',      nav: true, hash: appUrl.forCurrentDatabase().indexErrors },
+                { route: 'databases/status/replicationStats', moduleId: 'viewmodels/replicationStats',    title: 'Replication Stats', nav: true, hash: appUrl.forCurrentDatabase().replicationStats },
+                { route: 'databases/status/userInfo',         moduleId: 'viewmodels/userInfo',            title: 'User Info',         nav: true, hash: appUrl.forCurrentDatabase().userInfo },
+                { route: 'databases/status/debug*details',    moduleId: 'viewmodels/statusDebug',         title: 'Debug',             nav: true, hash: appUrl.forCurrentDatabase().statusDebug }
 			])
             .buildNavigationModel();
 

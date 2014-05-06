@@ -68,7 +68,7 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
 			var read = table.Read(Snapshot, key, writeBatch);
 			if (read == null)
 			{
-				version = 0;
+				version = table.ReadVersion(Snapshot, key, writeBatch) ?? 0;
 				return null;
 			} 
 			

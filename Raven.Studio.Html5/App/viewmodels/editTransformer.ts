@@ -60,15 +60,6 @@ class editTransformer extends viewModelBase {
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults]);
     }
 
-    // Called back after the entire composition has finished (parents and children included)
-    compositionComplete() { }
-
-    saveInObservable() {
-        var docEditor = ko.utils.domData.get($("#transformerAceEditor")[0], "aceEditor");
-        var docEditorText = docEditor.getSession().getValue();
-        this.editedTransformer().transformResults(docEditorText);
-    }
-
     addTransformerHelpPopover() {
         $("#transformerResultsLabel").popover({
             html: true,

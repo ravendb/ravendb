@@ -17,6 +17,8 @@ import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadat
 import viewModelBase = require("viewmodels/viewModelBase");
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
+import verifyDocumentsIDsCommand = require("commands/verifyDocumentsIDsCommand");
+import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class editDocument extends viewModelBase {
 
@@ -24,6 +26,7 @@ class editDocument extends viewModelBase {
     metadata: KnockoutComputed<documentMetadata>;
     documentText = ko.observable('').extend({ required: true });
     metadataText = ko.observable('').extend({ required: true });
+    text: KnockoutComputed<string>;
     isEditingMetadata = ko.observable(false);
     isBusy = ko.observable(false);
     metaPropsToRestoreOnSave = [];
@@ -37,14 +40,17 @@ class editDocument extends viewModelBase {
     relatedDocumentHrefs=ko.observableArray<{id:string;href:string}>();
     docEditroHasFocus = ko.observable(true);
     documentMatchRegexp = /\w+\/\w+/ig;
+    lodaedDocumentName = ko.observable('');
+    isSaveEnabled: KnockoutComputed<Boolean>;
+    textarea: any;
 
     static editDocSelector = "#editDocumentContainer";
     static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
 
-    private loadedDocumentName : string;
-
     constructor() {
         super();
+        aceEditorBindingHandler.install();
+
         this.metadata = ko.computed(() => this.document() ? this.document().__metadata : null);
 
         this.document.subscribe(doc => {
@@ -59,23 +65,59 @@ class editDocument extends viewModelBase {
         this.editedDocId.subscribe((docId: string)=> ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), docId)));
 
         // When we programmatically change the document text or meta text, push it into the editor.
-        this.metadataText.subscribe(() => this.updateDocEditorText());
-        this.documentText.subscribe(() => this.updateDocEditorText());
-        this.isEditingMetadata.subscribe(() => this.updateDocEditorText());
+        this.isEditingMetadata.subscribe(()=> {
+            if (this.docEditor) {
+                var text = this.isEditingMetadata() ? this.metadataText() : this.documentText();
+                this.docEditor.getSession().setValue(text);
+            }
+        });
+        this.text = ko.computed({
+            read: () => {
+                return this.isEditingMetadata() ? this.metadataText() : this.documentText();
+            },
+            write: (text: string) => {
+                var currentObservable = this.isEditingMetadata() ? this.metadataText : this.documentText;
+                currentObservable(text);
+            },
+            owner: this
+        });
     }
 
     // Called by Durandal when seeing if we can activate this view.
     canActivate(args: any) {
         super.canActivate(args);
         if (args && args.id) {
-
             var canActivateResult = $.Deferred();
-            new getDocumentWithMetadataCommand(args.id, this.activeDatabase())
+            new getDocumentWithMetadataCommand(args.id, appUrl.getDatabase())
                 .execute()
                 .done((document) => {
                     this.document(document);
                     canActivateResult.resolve({ can: true });
-                    this.relatedDocumentHrefs(this.findRelatedDocuments(document));
+
+                    var relatedDocumentsCandidates:string[] = this.findRelatedDocumentsCandidates(document);
+
+                    var docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.activeDatabase(), true, true);
+                    var response = docIDsVerifyCommand.execute();
+
+                    if (response.then) {
+                        response.done(verifiedIDs => {
+                            this.relatedDocumentHrefs(verifiedIDs.map(verified => {
+                                return {
+                                    id: verified.toString(),
+                                    href: appUrl.forEditDoc(verified.toString(), null, null, this.activeDatabase())
+                                };
+                            }));
+                        });
+                    } else {
+
+                        this.relatedDocumentHrefs(response.map(verified => {
+                            return {
+                                id: verified.toString(),
+                                href: appUrl.forEditDoc(verified.toString(), null, null, this.activeDatabase())
+                            };
+                        }));                        
+                    }
+                    
                 })
                 .fail(() => {
                     ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not find " + args.id + " document", null));
@@ -90,6 +132,13 @@ class editDocument extends viewModelBase {
 
     activate(navigationArgs) {
         super.activate(navigationArgs);
+
+        this.lodaedDocumentName(this.userSpecifiedId());
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
+
+        this.isSaveEnabled = ko.computed(()=> {
+            return (viewModelBase.dirtyFlag().isDirty() || this.lodaedDocumentName() == "");// && !!self.userSpecifiedId(); || 
+        }, this);
 
         // Find the database and collection we're supposed to load.
         // Used for paging through items.
@@ -130,35 +179,21 @@ class editDocument extends viewModelBase {
         } else {
             this.editNewDocument();
         }
-
-        this.loadedDocumentName = this.userSpecifiedId();
     }
 
     // Called when the view is attached to the DOM.
     attached() {
-        this.initializeDocEditor();
         this.setupKeyboardShortcuts();
-        this.focusOnEditor();
     }
 
-    // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
-        //this.userSpecifiedId(''); // Don't clear this out: it will remove the ID of the document we're editing.
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId]);
-    }
+        super.compositionComplete();
+        this.docEditor = ko.utils.domData.get($("#docEditor")[0], "aceEditor");
+        this.textarea = $(this.docEditor.container).find('textarea')[0];
+        this.focusOnEditor();
 
-    saveInObservable() {
-        this.storeDocEditorTextIntoObservable();
-    }
-
-    initializeDocEditor() {
-        // Startup the Ace editor with JSON syntax highlighting.
-        this.docEditor = ace.edit("docEditor");
-        this.docEditor.setTheme("ace/theme/github");
-        this.docEditor.setFontSize("16px");
-        this.docEditor.getSession().setMode("ace/mode/json");
-        $("#docEditor").on('blur', ".ace_text-input", () => this.storeDocEditorTextIntoObservable());
-        this.updateDocEditorText();
+        this.subscribeToObservable(this.documentText, this.metadataText, "data", "metadata");
+        this.subscribeToObservable(this.metadataText, this.documentText, "metadata", "data");
     }
 
     setupKeyboardShortcuts() {        
@@ -196,14 +231,14 @@ class editDocument extends viewModelBase {
     }
 
     saveDocument() {
-        //the name of the document was changed and we have to save it as a new one
-        var meta = JSON.parse(this.metadataText());
         var currentDocumentId = this.userSpecifiedId();
-        if (this.loadedDocumentName && this.loadedDocumentName != currentDocumentId) {
+        if ((currentDocumentId == "") || (this.lodaedDocumentName() != currentDocumentId)) {
+            //the name of the document was changed and we have to save it as a new one
             this.isCreatingNewDocument(true);
         }
 
         var updatedDto = JSON.parse(this.documentText());
+        var meta = JSON.parse(this.metadataText());
         updatedDto['@metadata'] = meta;
 
         // Fix up the metadata: if we're a new doc, attach the expected reserved properties like ID, ETag, and RavenEntityName.
@@ -213,7 +248,18 @@ class editDocument extends viewModelBase {
         } else {
             // If we're editing a document, we hide some reserved properties from the user.
             // Restore these before we save.
-            this.metaPropsToRestoreOnSave.forEach(p => meta[p.name] = p.value);
+            this.metaPropsToRestoreOnSave.forEach(p => {
+                if (p.name !== "Origin"){
+                    meta[p.name] = p.value;
+                }
+            });
+        }
+
+        // skip some not necessary meta in headers
+        var metaToSkipInHeaders = ['Raven-Replication-History'];
+        for (var i in metaToSkipInHeaders) {
+            var skippedHeader = metaToSkipInHeaders[i];
+            delete meta[skippedHeader];
         }
 
         this.docsList().invalidateCache();
@@ -222,10 +268,7 @@ class editDocument extends viewModelBase {
         var saveCommand = new saveDocumentCommand(currentDocumentId, newDoc, appUrl.getDatabase());
         var saveTask = saveCommand.execute();
         saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
-            // Resync Changes
-            viewModelBase.dirtyFlag().reset();
-
-            this.loadedDocumentName = currentDocumentId;
+            viewModelBase.dirtyFlag().reset(); //Resync Changes
             this.isCreatingNewDocument(false);
             this.loadDocument(idAndEtag.Key);
             this.updateUrl(idAndEtag.Key);
@@ -233,8 +276,8 @@ class editDocument extends viewModelBase {
     }
 
     attachReservedMetaProperties(id: string, target: documentMetadataDto) {
-        target['@etag'] = '00000000-0000-0000-0000-000000000000';
-        target['Raven-Entity-Name'] = document.getEntityNameFromId(id);
+        target['@etag'] = '';
+        target['Raven-Entity-Name'] = !target['Raven-Entity-Name'] ? document.getEntityNameFromId(id) : target['Raven-Entity-Name'];
         target['@id'] = id;
     }
 
@@ -251,22 +294,30 @@ class editDocument extends viewModelBase {
         this.isEditingMetadata(false);
     }
 
-    findRelatedDocuments(doc: documentBase): { id: string; href: string }[] {
-        var results: { id: string; href: string }[] = [];
-        var documentFields = doc.getDocumentPropertyNames();
+    findRelatedDocumentsCandidates(doc: documentBase): string[] {
+        var results: string[] = [];
+        var initialDocumentFields = doc.getDocumentPropertyNames();
+        var documentNodesFlattenedList = [];
 
-        
+        // get initial nodes list to work with
+        initialDocumentFields.forEach(curField => {
+            documentNodesFlattenedList.push(doc[curField]);
+        });
 
-        for (var key in documentFields) {
-            if (typeof doc[documentFields[key]] === "string" && this.documentMatchRegexp.test(doc[documentFields[key]])) {
-                results.push({
-                    id: doc[documentFields[key]].toString(),
-                    href: appUrl.forEditDoc(doc[documentFields[key]].toString(), null, null, this.activeDatabase())}
-                );
+        for (var documentNodesCursor = 0; documentNodesCursor < documentNodesFlattenedList.length; documentNodesCursor++) {
+            var curField = documentNodesFlattenedList[documentNodesCursor];
+            if (typeof curField === "string" && /\w+\/\w+/ig.test(curField)) {
+                
+                if (!results.first(x=>x === curField.toString())){
+                    results.push(curField.toString());
+                }
             }
-            
+            else if (typeof curField == "object" && !!curField) {
+                    for (var curInnerField in curField) {
+                        documentNodesFlattenedList.push(curField[curInnerField]);
+                    }
+            }
         }
-
         return results;
     }
 
@@ -274,11 +325,8 @@ class editDocument extends viewModelBase {
         var loadDocTask = new getDocumentWithMetadataCommand(id, this.databaseForEditedDoc).execute();
         loadDocTask.done(document=> {
             this.document(document);
-
-            // Resync Changes
-            viewModelBase.dirtyFlag().reset();
-            this.loadedDocumentName = document.getId();
-
+            this.lodaedDocumentName(this.userSpecifiedId());
+            viewModelBase.dirtyFlag().reset(); //Resync Changes
         });
         loadDocTask.fail(response => this.failedToLoadDoc(id, response));
         loadDocTask.always(() => this.isBusy(false));
@@ -305,23 +353,19 @@ class editDocument extends viewModelBase {
         if (doc) {
             var viewModel = new deleteDocuments([doc]);
             viewModel.deletionTask.done(() => {
-                if (this.docsList() != null) {
-                    this.docsList().invalidateCache();
-                }
-                this.nextDocumentOrFirst()
+                viewModelBase.dirtyFlag().reset(); //Resync Changes
+                this.nextDocumentOrFirst();
             });
             app.showDialog(viewModel, editDocument.editDocSelector);
-        }
-
-        // Resync Changes
-        viewModelBase.dirtyFlag().reset();
+        } 
     }
 
     formatDocument() {
-        var docText = this.documentText();
-        var tempDoc = JSON.parse(docText);
+        var docEditorText = this.docEditor.getSession().getValue();
+        var observableToUpdate = this.isEditingMetadata() ? this.metadataText : this.documentText;
+        var tempDoc = JSON.parse(docEditorText);
         var formatted = this.stringify(tempDoc);
-        this.documentText(formatted);
+        observableToUpdate(formatted);
     }
 
     nextDocumentOrFirst() {
@@ -332,6 +376,8 @@ class editDocument extends viewModelBase {
                 nextIndex = 0;
             }
             this.pageToItem(nextIndex);
+        } else {
+            this.navigateToDocuments();
         }
     }
 
@@ -386,27 +432,15 @@ class editDocument extends viewModelBase {
         router.navigate(editDocUrl, false);
     }
 
-    updateDocEditorText() {
-        if (this.docEditor) {
-            var text = this.isEditingMetadata() ? this.metadataText() : this.documentText();
-            this.docEditor.getSession().setValue(text);
-        }
-    }
-
-    storeDocEditorTextIntoObservable() {
-        if (this.docEditor) {
-            var docEditorText = this.docEditor.getSession().getValue();
-            var observableToUpdate = this.isEditingMetadata() ? this.metadataText : this.documentText;
-            observableToUpdate(docEditorText);
-        }
-    }
-
     getTopRecentDocuments() {
         var currentDbName = this.activeDatabase().name;
         var recentDocumentsForCurDb = editDocument.recentDocumentsInDatabases().first(x => x.databaseName === currentDbName);
         if (recentDocumentsForCurDb) {
             var value = recentDocumentsForCurDb
                 .recentDocuments()
+                .filter((x:string) => {
+                  return x !== this.userSpecifiedId();
+                })
                 .slice(0, 5)
                 .map((docId: string) => {
                     return {
@@ -447,8 +481,31 @@ class editDocument extends viewModelBase {
 
             var metaString = this.stringify(metaDto);
             this.metadataText(metaString);
-            this.userSpecifiedId(meta.id);
+            if (meta.id != undefined) {
+                this.userSpecifiedId(meta.id);
+            }
         }
+    }
+
+    private subscribeToObservable(subscribedObservable, secondObservable, textType1: string, textType2: string) {
+        subscribedObservable.subscribe(text=> {
+            var message = "";
+            try {
+                var text1 = JSON.parse(text);
+                var text2 = JSON.parse(secondObservable());
+            }
+            catch (e1) {
+                if (text1 == undefined) {
+                    message = "The " + textType1 + " isn't a legal JSON expression!";
+                }
+                else if (text2 == undefined) {
+                    message = "The " + textType2 + " isn't a legal JSON expression!";
+                }
+            }
+            finally {
+                this.textarea.setCustomValidity(message);
+            }
+        });
     }
 }
 

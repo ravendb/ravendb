@@ -10,6 +10,7 @@ using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Abstractions.Exceptions;
+using Raven.Tests.Common;
 using Raven.Tests.Storage;
 using Xunit;
 

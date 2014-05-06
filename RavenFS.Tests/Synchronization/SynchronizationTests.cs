@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
@@ -10,6 +11,8 @@ using Raven.Imports.Newtonsoft.Json;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 using Xunit.Extensions;
+using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace RavenFS.Tests.Synchronization
 {
@@ -18,7 +21,7 @@ namespace RavenFS.Tests.Synchronization
 		[Theory]
 		[InlineData(1)]
 		[InlineData(5000)]
-		public void Synchronize_file_with_different_beginning(int size)
+		public async void Synchronize_file_with_different_beginning(int size)
 		{
 			var differenceChunk = new MemoryStream();
 			var sw = new StreamWriter(differenceChunk);
@@ -31,18 +34,18 @@ namespace RavenFS.Tests.Synchronization
 			var destinationContent = new CombinedStream(differenceChunk, sourceContent) {Position = 0};
 			var sourceClient = NewClient(0);
 			var destinationClient = NewClient(1);
-			var sourceMetadata = new NameValueCollection
+            var sourceMetadata = new RavenJObject
 				                     {
 					                     {"SomeTest-metadata", "some-value"}
 				                     };
-			var destinationMetadata = new NameValueCollection
+            var destinationMetadata = new RavenJObject
 				                          {
 					                          {"SomeTest-metadata", "should-be-overwritten"}
 				                          };
 
-			destinationClient.UploadAsync("test.txt", destinationMetadata, destinationContent).Wait();
+			await destinationClient.UploadAsync("test.txt", destinationMetadata, destinationContent);
 			sourceContent.Position = 0;
-			sourceClient.UploadAsync("test.txt", sourceMetadata, sourceContent).Wait();
+			await sourceClient.UploadAsync("test.txt", sourceMetadata, sourceContent);
 
 			var result = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.txt");
 
@@ -52,7 +55,9 @@ namespace RavenFS.Tests.Synchronization
 			using (var resultFileContent = new MemoryStream())
 			{
 				var metadata = destinationClient.DownloadAsync("test.txt", resultFileContent).Result;
-				Assert.Equal("some-value", metadata["SomeTest-metadata"]);
+
+                // REVIEW: (Oren) The xxx-yyy-zzz headers are being transformed to: Xxx-Yyy-Zzz by the underlying implementation of HTTP Client. Is that OK? The old test was able to handle it "case insensitively".
+				Assert.Equal("some-value", metadata.Value<string>("SomeTest-Metadata"));
 				resultFileContent.Position = 0;
 				resultMd5 = resultFileContent.GetMD5Hash();
 				resultFileContent.Position = 0;
@@ -114,9 +119,9 @@ namespace RavenFS.Tests.Synchronization
 			var destinationClient = NewClient(0);
 			var sourceClient = NewClient(1);
 
-			destinationClient.UploadAsync("test.txt", new NameValueCollection(), destinationContent).Wait();
+            destinationClient.UploadAsync("test.txt", new RavenJObject(), destinationContent).Wait();
 			sourceContent.Position = 0;
-			sourceClient.UploadAsync("test.txt", new NameValueCollection(), sourceContent).Wait();
+            sourceClient.UploadAsync("test.txt", new RavenJObject(), sourceContent).Wait();
 
 			var result = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.txt");
 
@@ -137,7 +142,7 @@ namespace RavenFS.Tests.Synchronization
 		}
 
 		[Theory]
-		[InlineData(1024*1024, 1)] // this pair of parameters heleped to discover storage reading issue 
+		[InlineData(1024*1024, 1)] // this pair of parameters helped to discover storage reading issue 
 		[InlineData(1024*1024, null)]
 		public void Synchronization_of_already_synchronized_file_should_detect_that_no_work_is_needed(int size, int? seed)
 		{
@@ -159,8 +164,8 @@ namespace RavenFS.Tests.Synchronization
 			var dstMd5 = (new RandomlyModifiedStream(new RandomStream(size, 1), 0.01, seed)).GetMD5Hash();
 
 
-			destinationClient.UploadAsync("test.bin", new NameValueCollection(), destinationContent).Wait();
-			sourceClient.UploadAsync("test.bin", new NameValueCollection(), sourceContent).Wait();
+            destinationClient.UploadAsync("test.bin", new RavenJObject(), destinationContent).Wait();
+            sourceClient.UploadAsync("test.bin", new RavenJObject(), sourceContent).Wait();
 
 			var firstSynchronization = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
 
@@ -207,11 +212,11 @@ namespace RavenFS.Tests.Synchronization
 			var destinationContent = new RandomlyModifiedStream(new RandomStream(size), 0.01);
 			var destinationClient = NewClient(0);
 			var sourceClient = NewClient(1);
-			var sourceMetadata = new NameValueCollection
+            var sourceMetadata = new RavenJObject
 				                     {
 					                     {"SomeTest-metadata", "some-value"}
 				                     };
-			var destinationMetadata = new NameValueCollection
+            var destinationMetadata = new RavenJObject
 				                          {
 					                          {"SomeTest-metadata", "should-be-overwritten"}
 				                          };
@@ -219,33 +224,31 @@ namespace RavenFS.Tests.Synchronization
 			destinationClient.UploadAsync("test.bin", destinationMetadata, destinationContent).Wait();
 			sourceClient.UploadAsync("test.bin", sourceMetadata, sourceContent).Wait();
 
-			SynchronizationReport result = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient,
-			                                                                           "test.bin");
+			SynchronizationReport result = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
 			Assert.Equal(sourceContent.Length, result.BytesCopied + result.BytesTransfered);
 		}
 
 		[Theory]
 		[InlineData(1024*1024*10)]
-		public void Big_character_file_test(long size)
+		public async void Big_character_file_test(long size)
 		{
 			var sourceContent = new RandomCharacterStream(size);
 			var destinationContent = new RandomlyModifiedStream(new RandomCharacterStream(size), 0.01);
 			var destinationClient = NewClient(0);
 			var sourceClient = NewClient(1);
-			var sourceMetadata = new NameValueCollection
+            var sourceMetadata = new RavenJObject
 				                     {
 					                     {"SomeTest-metadata", "some-value"}
 				                     };
-			var destinationMetadata = new NameValueCollection
+            var destinationMetadata = new RavenJObject
 				                          {
 					                          {"SomeTest-metadata", "should-be-overwritten"}
 				                          };
 
-			destinationClient.UploadAsync("test.bin", destinationMetadata, destinationContent).Wait();
-			sourceClient.UploadAsync("test.bin", sourceMetadata, sourceContent).Wait();
+			await destinationClient.UploadAsync("test.bin", destinationMetadata, destinationContent);
+			await sourceClient.UploadAsync("test.bin", sourceMetadata, sourceContent);
 
-			SynchronizationReport result = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient,
-			                                                                           "test.bin");
+			SynchronizationReport result = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
 			Assert.Equal(sourceContent.Length, result.BytesCopied + result.BytesTransfered);
 		}
 
@@ -253,7 +256,7 @@ namespace RavenFS.Tests.Synchronization
 		public async Task Destination_should_know_what_is_last_file_etag_after_synchronization()
 		{
 			var sourceContent = new RandomStream(10);
-			var sourceMetadata = new NameValueCollection
+            var sourceMetadata = new RavenJObject
 				                     {
 					                     {"SomeTest-metadata", "some-value"}
 				                     };
@@ -276,7 +279,7 @@ namespace RavenFS.Tests.Synchronization
 		public async Task Destination_should_not_override_last_etag_if_greater_value_exists()
 		{
 			var sourceContent = new RandomStream(10);
-			var sourceMetadata = new NameValueCollection
+            var sourceMetadata = new RavenJObject
 				                     {
 					                     {"SomeTest-metadata", "some-value"}
 				                     };
@@ -310,7 +313,7 @@ namespace RavenFS.Tests.Synchronization
 		public async Task Source_should_upload_file_to_destination_if_doesnt_exist_there()
 		{
 			var sourceContent = new RandomStream(10);
-			var sourceMetadata = new NameValueCollection
+            var sourceMetadata = new RavenJObject
 				                     {
 					                     {"SomeTest-metadata", "some-value"}
 				                     };
@@ -324,30 +327,27 @@ namespace RavenFS.Tests.Synchronization
 			var resultFileMetadata = await destinationClient.GetMetadataForAsync("test.bin");
 
 			Assert.Equal(sourceContent.Length, sourceSynchronizationReport.BytesCopied + sourceSynchronizationReport.BytesTransfered);
-			Assert.Equal("some-value", resultFileMetadata["SomeTest-metadata"]);
+			Assert.Equal("some-value", resultFileMetadata.Value<string>("SomeTest-metadata"));
 		}
 
 		[Fact]
-		public void Shold_change_history_after_upload()
+		public async void Should_change_history_after_upload()
 		{
 			var sourceContent1 = new RandomStream(10);
 			var sourceClient = NewClient(1);
-			sourceClient.UploadAsync("test.bin", sourceContent1).Wait();
-			var historySerialized =
-				sourceClient.GetMetadataForAsync("test.bin").Result[SynchronizationConstants.RavenSynchronizationHistory];
-			var history =
-				new JsonSerializer().Deserialize<List<HistoryItem>>(new JsonTextReader(new StringReader(historySerialized)));
+            await sourceClient.UploadAsync("test.bin", sourceContent1);
+            var historySerialized = (RavenJArray)sourceClient.GetMetadataForAsync("test.bin").Result[SynchronizationConstants.RavenSynchronizationHistory];
+            var history = historySerialized.Select(x => JsonExtensions.JsonDeserialization<HistoryItem>((RavenJObject)x));
 
-			Assert.Equal(0, history.Count);
+			Assert.Equal(0, history.Count());
 
-			sourceClient.UploadAsync("test.bin", sourceContent1).Wait();
-			historySerialized =
-				sourceClient.GetMetadataForAsync("test.bin").Result[SynchronizationConstants.RavenSynchronizationHistory];
-			history = new JsonSerializer().Deserialize<List<HistoryItem>>(new JsonTextReader(new StringReader(historySerialized)));
+            await sourceClient.UploadAsync("test.bin", sourceContent1);
+            historySerialized = (RavenJArray)sourceClient.GetMetadataForAsync("test.bin").Result[SynchronizationConstants.RavenSynchronizationHistory];
+            history = historySerialized.Select(x => JsonExtensions.JsonDeserialization<HistoryItem>((RavenJObject)x));
 
-			Assert.Equal(1, history.Count);
-			Assert.Equal(1, history[0].Version);
-			Assert.NotNull(history[0].ServerId);
+			Assert.Equal(1, history.Count());
+			Assert.Equal(1, history.First().Version);
+			Assert.NotNull(history.First().ServerId);
 		}
 
 		[Fact]
@@ -355,23 +355,21 @@ namespace RavenFS.Tests.Synchronization
 		{
 			var sourceContent1 = new RandomStream(10);
 			var sourceClient = NewClient(1);
-			sourceClient.UploadAsync("test.bin", new NameValueCollection {{"test", "Change me"}}, sourceContent1).Wait();
-			var historySerialized =
-				sourceClient.GetMetadataForAsync("test.bin").Result[SynchronizationConstants.RavenSynchronizationHistory];
-			var history =
-				new JsonSerializer().Deserialize<List<HistoryItem>>(new JsonTextReader(new StringReader(historySerialized)));
+            sourceClient.UploadAsync("test.bin", new RavenJObject { { "test", "Change me" } }, sourceContent1).Wait();
+            var historySerialized = (RavenJArray)sourceClient.GetMetadataForAsync("test.bin").Result[SynchronizationConstants.RavenSynchronizationHistory];
+            var history = historySerialized.Select(x => JsonExtensions.JsonDeserialization<HistoryItem>((RavenJObject)x));
 
-			Assert.Equal(0, history.Count);
+			Assert.Equal(0, history.Count());
 
-			sourceClient.UpdateMetadataAsync("test.bin", new NameValueCollection {{"test", "Changed"}}).Wait();
+            sourceClient.UpdateMetadataAsync("test.bin", new RavenJObject { { "test", "Changed" } }).Wait();
 			var metadata = sourceClient.GetMetadataForAsync("test.bin").Result;
-			historySerialized = metadata[SynchronizationConstants.RavenSynchronizationHistory];
-			history = new JsonSerializer().Deserialize<List<HistoryItem>>(new JsonTextReader(new StringReader(historySerialized)));
+            historySerialized = (RavenJArray)metadata[SynchronizationConstants.RavenSynchronizationHistory];
+            history = historySerialized.Select(x => JsonExtensions.JsonDeserialization<HistoryItem>((RavenJObject)x));
 
-			Assert.Equal(1, history.Count);
-			Assert.Equal(1, history[0].Version);
-			Assert.NotNull(history[0].ServerId);
-			Assert.Equal("Changed", metadata["test"]);
+			Assert.Equal(1, history.Count());
+            Assert.Equal(1, history.First().Version);
+            Assert.NotNull(history.First().ServerId);
+			Assert.Equal("Changed", metadata.Value<string>("test"));
 		}
 
 		[Fact]
@@ -439,15 +437,13 @@ namespace RavenFS.Tests.Synchronization
 			var sourceClient = NewClient(0);
 			var destinationClient = NewClient(1);
 
-			await sourceClient.Config.SetConfig(SynchronizationConstants.RavenSynchronizationLimit,
-			                              new NameValueCollection {{"value", "\"-1\""}});
+            await sourceClient.Config.SetConfig(SynchronizationConstants.RavenSynchronizationLimit, -1);
 
 			await sourceClient.UploadAsync("test.bin", sourceContent);
 
 			var synchronizationReport = await sourceClient.Synchronization.StartAsync("test.bin", destinationClient);
 
-			Assert.Contains(
-				"The limit of active synchronizations to " + destinationClient.ServerUrl, synchronizationReport.Exception.Message);
+			Assert.Contains("The limit of active synchronizations to " + destinationClient.ServerUrl, synchronizationReport.Exception.Message);
             Assert.Contains("server has been achieved. Cannot process a file 'test.bin'.", synchronizationReport.Exception.Message);
 		}
 
@@ -464,8 +460,8 @@ namespace RavenFS.Tests.Synchronization
 			sourceContent.Position = 0;
 			var resultFileMetadata = sourceClient.GetMetadataForAsync("test.bin").Result;
 
-			Assert.Contains("Content-MD5", resultFileMetadata.AllKeys);
-			Assert.Equal(sourceContent.GetMD5Hash(), resultFileMetadata["Content-MD5"]);
+            Assert.Contains("Content-MD5", resultFileMetadata.Keys);
+            Assert.Equal(sourceContent.GetMD5Hash(), resultFileMetadata.Value<string>("Content-MD5"));
 		}
 
 		[Fact]
@@ -487,8 +483,8 @@ namespace RavenFS.Tests.Synchronization
 			SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
 			var resultFileMetadata = destinationClient.GetMetadataForAsync("test.bin").Result;
 
-			Assert.Contains("Content-MD5", resultFileMetadata.AllKeys);
-			Assert.Equal(sourceContent.GetMD5Hash(), resultFileMetadata["Content-MD5"]);
+            Assert.Contains("Content-MD5", resultFileMetadata.Keys);
+            Assert.Equal(sourceContent.GetMD5Hash(), resultFileMetadata.Value<string>("Content-MD5"));
 		}
 
 		[Fact]
@@ -501,13 +497,13 @@ namespace RavenFS.Tests.Synchronization
 			var sourceClient = NewClient(0);
 
 			sourceClient.UploadAsync("test.bin", sourceContent).Wait();
-			sourceClient.UpdateMetadataAsync("test.bin", new NameValueCollection {{"someKey", "someValue"}}).Wait();
+            sourceClient.UpdateMetadataAsync("test.bin", new RavenJObject { { "someKey", "someValue" } }).Wait();
 
 			sourceContent.Position = 0;
 			var resultFileMetadata = sourceClient.GetMetadataForAsync("test.bin").Result;
 
-			Assert.Contains("Content-MD5", resultFileMetadata.AllKeys);
-			Assert.Equal(sourceContent.GetMD5Hash(), resultFileMetadata["Content-MD5"]);
+            Assert.Contains("Content-MD5", resultFileMetadata.Keys);
+            Assert.Equal(sourceContent.GetMD5Hash(), resultFileMetadata.Value<string>("Content-MD5"));
 		}
 
 		[Fact]
@@ -518,7 +514,7 @@ namespace RavenFS.Tests.Synchronization
 			var sourceClient = NewClient(0);
 			var destinationClient = NewClient(1);
 
-			sourceClient.UploadAsync("test.bin", new NameValueCollection {{"difference", "metadata"}}, content).Wait();
+            sourceClient.UploadAsync("test.bin", new RavenJObject { { "difference", "metadata" } }, content).Wait();
 			content.Position = 0;
 			destinationClient.UploadAsync("test.bin", content).Wait();
 
@@ -528,7 +524,7 @@ namespace RavenFS.Tests.Synchronization
 
 			var destinationMetadata = destinationClient.GetMetadataForAsync("test.bin").Result;
 
-			Assert.Equal("metadata", destinationMetadata["difference"]);
+			Assert.Equal("metadata", destinationMetadata.Value<string>("difference"));
 		}
 
 		[Fact]
@@ -539,9 +535,9 @@ namespace RavenFS.Tests.Synchronization
 			var sourceClient = NewClient(0);
 			var destinationClient = NewClient(1);
 
-			await sourceClient.UploadAsync("test.bin", new NameValueCollection {{"key", "value"}}, content);
+            await sourceClient.UploadAsync("test.bin", new RavenJObject { { "key", "value" } }, content);
 			content.Position = 0;
-			await destinationClient.UploadAsync("test.bin", new NameValueCollection {{"key", "value"}}, content);
+            await destinationClient.UploadAsync("test.bin", new RavenJObject { { "key", "value" } }, content);
 
 			await sourceClient.RenameAsync("test.bin", "renamed.bin");
 
@@ -568,7 +564,7 @@ namespace RavenFS.Tests.Synchronization
 			var source = NewClient(0);
 			var destination = NewClient(1);
 
-			await source.UploadAsync("empty.test", new NameValueCollection {{"should-be-transferred", "true"}}, new MemoryStream());
+            await source.UploadAsync("empty.test", new RavenJObject { { "should-be-transferred", "true" } }, new MemoryStream());
 			var result = await source.Synchronization.StartAsync("empty.test", destination);
 
 			Assert.Null(result.Exception);
@@ -577,7 +573,8 @@ namespace RavenFS.Tests.Synchronization
 			{
 				var metadata = await destination.DownloadAsync("empty.test", ms);
 
-				Assert.Equal("true", metadata["should-be-transferred"]);
+                // REVIEW: (Oren) The xxx-yyy-zzz headers are being transformed to: Xxx-Yyy-Zzz by the underlying implementation of HTTP Client. Is that OK? The old test was able to handle it "case insensitively".
+                Assert.Equal("true", metadata.Value<string>("Should-Be-Transferred"));
 				Assert.Equal(0, ms.Length);
 			}
 		}
@@ -640,7 +637,7 @@ namespace RavenFS.Tests.Synchronization
 			Assert.Null(result.Exception);
 			Assert.Equal(size5Mb, result.BytesTransfered + result.BytesCopied);
 			sourceContent.Position = 0;
-			Assert.Equal(sourceContent.GetMD5Hash(), destination.GetMetadataForAsync("test.bin").Result["Content-MD5"]);
+            Assert.Equal(sourceContent.GetMD5Hash(), destination.GetMetadataForAsync("test.bin").Result.Value<string>("Content-MD5"));
 		}
 
 		[Fact]
@@ -675,7 +672,7 @@ namespace RavenFS.Tests.Synchronization
 			Assert.Null(result.Exception);
 			Assert.Equal(size1Mb, result.BytesTransfered + result.BytesCopied);
 			sourceContent.Position = 0;
-			Assert.Equal(sourceContent.GetMD5Hash(), destination.GetMetadataForAsync("test.bin").Result["Content-MD5"]);
+            Assert.Equal(sourceContent.GetMD5Hash(), destination.GetMetadataForAsync("test.bin").Result.Value<string>("Content-MD5"));
 		}
 
 		[Fact]
@@ -709,7 +706,7 @@ namespace RavenFS.Tests.Synchronization
 			Assert.Null(result.Exception);
 			Assert.Equal(size1B, result.BytesTransfered);
 			sourceContent.Position = 0;
-			Assert.Equal(sourceContent.GetMD5Hash(), destination.GetMetadataForAsync("test.bin").Result["Content-MD5"]);
+			Assert.Equal(sourceContent.GetMD5Hash(), destination.GetMetadataForAsync("test.bin").Result.Value<string>("Content-MD5"));
 		}
 
 		[Fact]
@@ -732,8 +729,7 @@ namespace RavenFS.Tests.Synchronization
 			var destContent = new MemoryStream();
 			var destMetadata = await destination.DownloadAsync("test.bin", destContent);
 
-			Assert.True(destMetadata[SynchronizationConstants.RavenDeleteMarker] == null,
-			            "Metedata should not containt Raven-Delete-Marker");
+			Assert.True(destMetadata[SynchronizationConstants.RavenDeleteMarker] == null, "Metadata should not containt Raven-Delete-Marker");
 
 			sourceContent.Position = destContent.Position = 0;
 			Assert.Equal(sourceContent.GetMD5Hash(), destContent.GetMD5Hash());

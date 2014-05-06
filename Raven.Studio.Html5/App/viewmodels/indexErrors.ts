@@ -16,6 +16,7 @@ class indexErrors extends viewModelBase {
         super();
 
         this.updateCurrentNowTime();
+        
     }
 
     createNotifications(): Array<changeSubscription> {

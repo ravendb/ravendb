@@ -31,7 +31,7 @@ class dynamicHeightBindingHandler {
     // Called by Knockout a single time when the binding handler is setup.
     init(element: HTMLElement, valueAccessor: () => { resizeTrigger: number; target?: string; bottomMargin: number }, allBindings: any, viewModel: any, bindingContext: KnockoutBindingContext) {
         if (valueAccessor().target) {
-            element.style.overflowY = "auto";
+            //element.style.overflowY = "auto";
             element.style.overflowX = "hidden";
         }
     }

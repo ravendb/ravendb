@@ -1,4 +1,5 @@
 import document = require("models/document");
+import documentMetadata = require("models/documentMetadata");
 
 class scriptedIndex extends document {
 
@@ -36,9 +37,9 @@ class scriptedIndex extends document {
     }
 
     markToDelete() {
-        this.deleteLater(true);
         this.indexScript("");
         this.deleteScript("");
+        this.deleteLater(true);
     }
 
     cancelDeletion() {

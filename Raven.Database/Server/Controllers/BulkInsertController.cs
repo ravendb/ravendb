@@ -64,7 +64,7 @@ namespace Raven.Database.Server.Controllers
 			var documents = 0;
 			var mre = new ManualResetEventSlim(false);
 
-			var inputStream = await InnerRequest.Content.ReadAsStreamAsync();
+			var inputStream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false);
 			var currentDatabase = Database;
 			var task = Task.Factory.StartNew(() =>
 			{
@@ -134,7 +134,10 @@ namespace Raven.Database.Server.Controllers
 
 				for (var i = 0; i < count; i++)
 				{
-					var doc = (RavenJObject)RavenJToken.ReadFrom(new BsonReader(reader));
+					var doc = (RavenJObject)RavenJToken.ReadFrom(new BsonReader(reader)
+					                                             {
+						                                             DateTimeKindHandling = DateTimeKind.Unspecified
+					                                             });
 
 					var metadata = doc.Value<RavenJObject>("@metadata");
 

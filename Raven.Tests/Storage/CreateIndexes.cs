@@ -7,6 +7,8 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 

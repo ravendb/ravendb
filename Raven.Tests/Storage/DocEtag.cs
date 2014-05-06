@@ -6,6 +6,8 @@
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Storage
@@ -22,7 +24,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void EtagsAreAlwaysIncreasing()
 		{
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory:false))
 			{
 				tx.Batch(mutator =>
 				{
@@ -31,7 +33,7 @@ namespace Raven.Tests.Storage
 				});
 			}
 
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
 				tx.Batch(viewer =>
 				{
@@ -46,7 +48,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanGetDocumentByEtag()
 		{
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
 				tx.Batch(mutator =>
 				{
@@ -55,7 +57,7 @@ namespace Raven.Tests.Storage
 				});
 			}
 
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
 				tx.Batch(viewer =>
 				{
@@ -71,7 +73,7 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanGetDocumentByUpdateOrder()
 		{
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
 				tx.Batch(mutator =>
 				{
@@ -80,7 +82,7 @@ namespace Raven.Tests.Storage
 				});
 			}
 
-			using (var tx = NewTransactionalStorage(dataDir: dataDir))
+			using (var tx = NewTransactionalStorage(dataDir: dataDir, runInMemory: false))
 			{
 				tx.Batch(viewer =>
 				{

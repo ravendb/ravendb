@@ -198,11 +198,11 @@ namespace Raven.Database.Indexing
 
 			try
 			{
-				transactionalStorage.Batch(actions => IndexDocuments(actions, batchForIndex.IndexId, batchForIndex.Batch));
+				transactionalStorage.Batch(actions => IndexDocuments(actions, batchForIndex));
 			}
 			catch (Exception e)
 			{
-				Log.Warn("Failed to index " + batchForIndex.IndexId, e);
+				Log.WarnException("Failed to index " + batchForIndex.IndexId, e);
 			}
 			finally
 			{
@@ -343,11 +343,13 @@ namespace Raven.Database.Indexing
 			return true;
 		}
 
-		private void IndexDocuments(IStorageActionsAccessor actions, int index, IndexingBatch batch)
+		private void IndexDocuments(IStorageActionsAccessor actions, IndexingBatchForIndex indexingBatchForIndex)
 		{
-			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(index);
+			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexingBatchForIndex.IndexId);
 			if (viewGenerator == null)
 				return; // index was deleted, probably
+
+			var batch = indexingBatchForIndex.Batch;
 			try
 			{
 				if (Log.IsDebugEnabled)
@@ -359,12 +361,12 @@ namespace Raven.Database.Indexing
 					{
 						ids = string.Join(", ", batch.Ids.Take(128)) + " ... " + string.Join(", ", batch.Ids.Skip(batch.Ids.Count - 128));
 					}
-					Log.Debug("Indexing {0} documents for index: {1}. ({2})", batch.Docs.Count, index, ids);
+					Log.Debug("Indexing {0} documents for index: {1}. ({2})", batch.Docs.Count, indexingBatchForIndex.Index.PublicName, ids);
 				}
 				context.CancellationToken.ThrowIfCancellationRequested();
 
-			    var instance = context.IndexStorage.GetIndexInstance(index);
-				context.IndexStorage.Index(instance.indexId, viewGenerator, batch, context, actions, batch.DateTime ?? DateTime.MinValue);
+				
+				context.IndexStorage.Index(indexingBatchForIndex.IndexId, viewGenerator, batch, context, actions, batch.DateTime ?? DateTime.MinValue);
 			}
 			catch (OperationCanceledException)
 			{
@@ -374,7 +376,8 @@ namespace Raven.Database.Indexing
 			{
 				if (actions.IsWriteConflict(e))
 					return;
-				Log.WarnException(string.Format("Failed to index documents for index: {0}", index), e);
+				Log.WarnException(string.Format("Failed to index documents for index: {0}", indexingBatchForIndex.Index.PublicName), e);
+				context.AddError(indexingBatchForIndex.IndexId, indexingBatchForIndex.Index.PublicName, null, e.Message);
 			}
 		}
 

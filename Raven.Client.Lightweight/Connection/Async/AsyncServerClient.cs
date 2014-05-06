@@ -50,15 +50,15 @@ namespace Raven.Client.Connection.Async
 	/// <summary>
 	/// Access the database commands in async fashion
 	/// </summary>
-	public class AsyncServerClient : IAsyncDatabaseCommands, IAsyncAdminDatabaseCommands, IAsyncInfoDatabaseCommands,
-									 IAsyncGlobalAdminDatabaseCommands
+	public class AsyncServerClient : IAsyncDatabaseCommands, IAsyncInfoDatabaseCommands
 	{
-		private readonly ProfilingInformation profilingInformation;
+	    private const int MaxQuerySizeForGetRequest = 8 * 1024;
+	    private readonly ProfilingInformation profilingInformation;
 		private readonly IDocumentConflictListener[] conflictListeners;
 		private readonly string url;
 		private readonly string rootUrl;
 		private readonly OperationCredentials credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
-		internal readonly DocumentConvention convention; 
+		internal readonly DocumentConvention convention;
 		private NameValueCollection operationsHeaders = new NameValueCollection();
 		internal readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly Guid? sessionId;
@@ -85,7 +85,7 @@ namespace Raven.Client.Connection.Async
 				return credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
 			}
 		}
-		
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
 		/// </summary>
@@ -113,6 +113,8 @@ namespace Raven.Client.Connection.Async
 			this.replicationInformerGetter = replicationInformerGetter;
 			this.replicationInformer = replicationInformerGetter(databaseName);
 			this.readStripingBase = replicationInformer.GetReadStripingBase();
+
+			this.replicationInformer.UpdateReplicationInformationIfNeeded(this);
 		}
 
 		/// <summary>
@@ -137,7 +139,7 @@ namespace Raven.Client.Connection.Async
 														   .AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer,
 																						convention.FailoverBehavior,
 																						HandleReplicationStatusChanges)
-														   .ReadResponseJsonAsync();
+														   .ReadResponseJsonAsync().ConfigureAwait(false);
 
 				return json.Select(x => x.Value<string>()).ToArray();
 			});
@@ -158,7 +160,7 @@ namespace Raven.Client.Connection.Async
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
 													HandleReplicationStatusChanges);
 
-				var json = (RavenJArray)await request.ReadResponseJsonAsync();
+				var json = (RavenJArray)await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
 				return json.Select(x =>
 				{
@@ -178,11 +180,11 @@ namespace Raven.Client.Connection.Async
 			{
 				var url2 = (operationMetadata.Url + "/transformers?start=" + start + "&pageSize=" + pageSize).NoCache();
 				var request =
-                    jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", operationMetadata.Credentials, convention));
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", operationMetadata.Credentials, convention));
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
 													HandleReplicationStatusChanges);
 
-				var json = (RavenJArray)await request.ReadResponseJsonAsync();
+				var json = (RavenJArray)await request.ReadResponseJsonAsync().ConfigureAwait(false);
 
 				//NOTE: To review, I'm not confidence this is the correct way to deserialize the transformer definition
 				return
@@ -205,7 +207,7 @@ namespace Raven.Client.Connection.Async
 			{
 				var httpJsonRequestAsync =
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/indexes/" + name,
-                                                                                             "RESET", operationMetadata.Credentials, convention));
+																							 "RESET", operationMetadata.Credentials, convention));
 				httpJsonRequestAsync.AddOperationHeaders(OperationsHeaders);
 				httpJsonRequestAsync.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
 																 HandleReplicationStatusChanges);
@@ -250,7 +252,7 @@ namespace Raven.Client.Connection.Async
 		{
 			var requestUri = operationMetadata.Url + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes";
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
-                new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", operationMetadata.Credentials, convention)
+				new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", operationMetadata.Credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
 			webRequest.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
@@ -258,7 +260,7 @@ namespace Raven.Client.Connection.Async
 
 			try
 			{
-				await webRequest.ExecuteRequestAsync();
+				await webRequest.ExecuteRequestAsync().ConfigureAwait(false);
 				if (overwrite == false)
 					throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 			}
@@ -269,7 +271,7 @@ namespace Raven.Client.Connection.Async
 			}
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-                new CreateHttpJsonRequestParams(this, requestUri, "PUT", operationMetadata.Credentials, convention)
+				new CreateHttpJsonRequestParams(this, requestUri, "PUT", operationMetadata.Credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
 			var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
@@ -277,8 +279,8 @@ namespace Raven.Client.Connection.Async
 			ErrorResponseException responseException;
 			try
 			{
-				await request.WriteAsync(serializeObject);
-				var result = await request.ReadResponseJsonAsync();
+				await request.WriteAsync(serializeObject).ConfigureAwait(false); ;
+				var result = await request.ReadResponseJsonAsync().ConfigureAwait(false); ;
 				return result.Value<string>("Index");
 			}
 			catch (ErrorResponseException e)
@@ -290,7 +292,7 @@ namespace Raven.Client.Connection.Async
 			var error =
 				await
 				responseException.TryReadErrorResponseObject(
-																	new { Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = "" });
+																	new { Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = "" }).ConfigureAwait(false); ;
 			if (error == null)
 				throw responseException;
 
@@ -310,7 +312,7 @@ namespace Raven.Client.Connection.Async
 			var requestUri = operationMetadata.Url + "/transformers/" + name;
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-                new CreateHttpJsonRequestParams(this, requestUri, "PUT", operationMetadata.Credentials, convention)
+				new CreateHttpJsonRequestParams(this, requestUri, "PUT", operationMetadata.Credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
 			var serializeObject = JsonConvert.SerializeObject(transformerDefinition, Default.Converters);
@@ -318,8 +320,8 @@ namespace Raven.Client.Connection.Async
 			ErrorResponseException responseException;
 			try
 			{
-				await request.WriteAsync(serializeObject);
-				var result = await request.ReadResponseJsonAsync();
+				await request.WriteAsync(serializeObject).ConfigureAwait(false);
+				var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				return result.Value<string>("Transformer");
 			}
 			catch (ErrorResponseException e)
@@ -329,7 +331,7 @@ namespace Raven.Client.Connection.Async
 
 				responseException = e;
 			}
-			var error = await responseException.TryReadErrorResponseObject(new { Error = "", Message = "" });
+			var error = await responseException.TryReadErrorResponseObject(new { Error = "", Message = "" }).ConfigureAwait(false);
 			if (error == null)
 				throw responseException;
 
@@ -343,7 +345,7 @@ namespace Raven.Client.Connection.Async
 		public Task DeleteIndexAsync(string name)
 		{
 			return ExecuteWithReplication("DELETE", operationMetadata => operationMetadata.Url.Indexes(name)
-                                                                                .ToJsonRequest(this, operationMetadata.Credentials, convention,
+																				.ToJsonRequest(this, operationMetadata.Credentials, convention,
 																							   OperationsHeaders, "DELETE")
 																				.AddReplicationStatusHeaders(url, operationMetadata.Url,
 																											 replicationInformer,
@@ -360,7 +362,7 @@ namespace Raven.Client.Connection.Async
 			{
 				string path = queryToDelete.GetIndexQueryUrl(operationMetadata.Url, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-                        new CreateHttpJsonRequestParams(this, path, "DELETE", operationMetadata.Credentials, convention)
+						new CreateHttpJsonRequestParams(this, path, "DELETE", operationMetadata.Credentials, convention)
 								.AddOperationHeaders(OperationsHeaders));
 
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
@@ -368,7 +370,7 @@ namespace Raven.Client.Connection.Async
 				RavenJToken jsonResponse;
 				try
 				{
-					jsonResponse = await request.ReadResponseJsonAsync();
+					jsonResponse = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				}
 				catch (ErrorResponseException e)
 				{
@@ -399,9 +401,9 @@ namespace Raven.Client.Connection.Async
 		public Task DeleteTransformerAsync(string name)
 		{
 			return ExecuteWithReplication("DELETE", operationMetadata => operationMetadata.Url.Transformer(name)
-                                                                                          .ToJsonRequest(this, operationMetadata.Credentials, convention, OperationsHeaders, "DELETE")
-			                                                                              .AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
-			                                                                              .ExecuteRequestAsync());
+																						  .ToJsonRequest(this, operationMetadata.Credentials, convention, OperationsHeaders, "DELETE")
+																						  .AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
+																						  .ExecuteRequestAsync());
 		}
 
 		/// <summary>
@@ -413,7 +415,7 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("DELETE", operationMetadata =>
 			{
 				return operationMetadata.Url.Doc(id)
-                    .ToJsonRequest(this, operationMetadata.Credentials, convention, OperationsHeaders, "DELETE")
+					.ToJsonRequest(this, operationMetadata.Credentials, convention, OperationsHeaders, "DELETE")
 					.ExecuteRequestAsync();
 			});
 		}
@@ -582,8 +584,8 @@ namespace Raven.Client.Connection.Async
 			ErrorResponseException responseException;
 			try
 			{
-				await request.WriteAsync(document);
-				var result = await request.ReadResponseJsonAsync();
+				await request.WriteAsync(document).ConfigureAwait(false);
+				var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				return convention.CreateSerializer().Deserialize<PutResult>(new RavenJTokenReader(result));
 			}
 			catch (ErrorResponseException e)
@@ -643,6 +645,8 @@ namespace Raven.Client.Connection.Async
 			get { return operationsHeaders; }
 			set { operationsHeaders = value; }
 		}
+		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin { get { return new AsyncAdminServerClient(this); } }
+		public IAsyncAdminDatabaseCommands Admin { get { return new AsyncAdminServerClient(this); } }
 
 		/// <summary>
 		/// Begins an async get operation
@@ -671,9 +675,9 @@ namespace Raven.Client.Connection.Async
 				{
 					var transformerDefinitionJson = (RavenJObject)await operationMetadata.Url.Transformer(name)
 						.NoCache()
-                        .ToJsonRequest(this, operationMetadata.Credentials, convention)
+						.ToJsonRequest(this, operationMetadata.Credentials, convention)
 						.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges)
-						.ReadResponseJsonAsync();
+						.ReadResponseJsonAsync().ConfigureAwait(false);
 
 					var value = transformerDefinitionJson.Value<RavenJObject>("Transformer");
 					return convention.CreateSerializer().Deserialize<TransformerDefinition>(new RavenJTokenReader(value));
@@ -701,12 +705,12 @@ namespace Raven.Client.Connection.Async
 				{
 					var indexDefinitionJson = (RavenJObject)await operationMetadata.Url.IndexDefinition(name)
 																			   .NoCache()
-                                                                               .ToJsonRequest(this, operationMetadata.Credentials, convention)
+																			   .ToJsonRequest(this, operationMetadata.Credentials, convention)
 																			   .AddReplicationStatusHeaders(url, operationMetadata.Url,
 																											replicationInformer,
 																											convention.FailoverBehavior,
 																											HandleReplicationStatusChanges)
-																			   .ReadResponseJsonAsync();
+																			   .ReadResponseJsonAsync().ConfigureAwait(false);
 
 					var value = indexDefinitionJson.Value<RavenJObject>("Index");
 					return convention.CreateSerializer().Deserialize<IndexDefinition>(new RavenJTokenReader(value));
@@ -727,7 +731,7 @@ namespace Raven.Client.Connection.Async
 			if (key.Length > 127)
 			{
 				// avoid hitting UrlSegmentMaxLength limits in Http.sys
-				var multiLoadResult = await DirectGetAsync(operationMetadata, new[] { key }, new string[0], null, new Dictionary<string, RavenJToken>(), false);
+				var multiLoadResult = await DirectGetAsync(operationMetadata, new[] { key }, new string[0], null, new Dictionary<string, RavenJToken>(), false).ConfigureAwait(false);
 				var result = multiLoadResult.Results.FirstOrDefault();
 				if (result == null)
 					return null;
@@ -738,16 +742,16 @@ namespace Raven.Client.Connection.Async
 			AddTransactionInformation(metadata);
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (operationMetadata.Url + "/docs?id=" + Uri.EscapeDataString(key)), "GET", metadata, operationMetadata.Credentials, convention);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders))
-			                                .AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+											.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			Task<JsonDocument> resolveConflictTask;
 			try
 			{
-				var requestJson = await request.ReadResponseJsonAsync();
+				var requestJson = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				var docKey = request.ResponseHeaders.Get(Constants.DocumentIdFieldName) ?? key;
 				docKey = Uri.UnescapeDataString(docKey);
 				request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
-				var deserializeJsonDocument = SerializationHelper.DeserializeJsonDocument(docKey, requestJson, request.ResponseHeaders,  request.ResponseStatusCode);
+				var deserializeJsonDocument = SerializationHelper.DeserializeJsonDocument(docKey, requestJson, request.ResponseHeaders, request.ResponseStatusCode);
 				return deserializeJsonDocument;
 			}
 			catch (ErrorResponseException e)
@@ -763,7 +767,7 @@ namespace Raven.Client.Connection.Async
 						throw;
 				}
 			}
-			return await resolveConflictTask;
+			return await resolveConflictTask.ConfigureAwait(false);
 		}
 
 		private async Task<JsonDocument> ResolveConflict(string httpResponse, Etag etag, OperationMetadata operationMetadata, string key)
@@ -771,10 +775,10 @@ namespace Raven.Client.Connection.Async
 			var conflicts = new StringReader(httpResponse);
 			var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
 			var result =
-				await TryResolveConflictOrCreateConcurrencyException(operationMetadata, key, conflictsDoc, etag);
+				await TryResolveConflictOrCreateConcurrencyException(operationMetadata, key, conflictsDoc, etag).ConfigureAwait(false);
 			if (result != null)
 				throw result;
-			return await DirectGetAsync(operationMetadata, key);
+			return await DirectGetAsync(operationMetadata, key).ConfigureAwait(false);
 		}
 
 		/// <summary>
@@ -817,23 +821,23 @@ namespace Raven.Client.Connection.Async
 			{
 				path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
 				request =
-                    jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", metadata, operationMetadata.Credentials,
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", metadata, operationMetadata.Credentials,
 																							 convention)
 																 .AddOperationHeaders(OperationsHeaders));
 
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
 													HandleReplicationStatusChanges);
 
-				var result = await request.ReadResponseJsonAsync();
-				return await CompleteMultiGetAsync(operationMetadata, keys, includes, result);
+				var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+				return await CompleteMultiGetAsync(operationMetadata, keys, includes, result).ConfigureAwait(false);
 			}
 			request =
-                jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "POST", metadata, operationMetadata.Credentials, convention)
+				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "POST", metadata, operationMetadata.Credentials, convention)
 															 .AddOperationHeaders(OperationsHeaders));
 
-			await request.WriteAsync(new RavenJArray(uniqueIds));
-			var responseResult = await request.ReadResponseJsonAsync();
-			return await CompleteMultiGetAsync(operationMetadata, keys, includes, responseResult);
+			await request.WriteAsync(new RavenJArray(uniqueIds)).ConfigureAwait(false);
+			var responseResult = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+			return await CompleteMultiGetAsync(operationMetadata, keys, includes, responseResult).ConfigureAwait(false);
 		}
 
 		private async Task<MultiLoadResult> CompleteMultiGetAsync(OperationMetadata operationMetadata, string[] keys, string[] includes,
@@ -845,7 +849,7 @@ namespace Raven.Client.Connection.Async
 				var multiLoadResult = new MultiLoadResult
 				{
 					Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-					Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
+					Results = result.Value<RavenJArray>("Results").Select(x => x as RavenJObject).ToList()
 				};
 
 				var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);
@@ -853,7 +857,7 @@ namespace Raven.Client.Connection.Async
 				return
 					await
 					RetryOperationBecauseOfConflict(operationMetadata, docResults, multiLoadResult,
-													() => DirectGetAsync(operationMetadata, keys, includes, null, null, false));
+													() => DirectGetAsync(operationMetadata, keys, includes, null, null, false)).ConfigureAwait(false);
 			}
 			catch (ErrorResponseException e)
 			{
@@ -874,44 +878,44 @@ namespace Raven.Client.Connection.Async
 		{
 			return ExecuteWithReplication("GET", async operationMetadata =>
 			{
-                var result = await GetDocumentsInternalAsync(start, null, pageSize, operationMetadata, metadataOnly);
+				var result = await GetDocumentsInternalAsync(start, null, pageSize, operationMetadata, metadataOnly).ConfigureAwait(false);
 
-			    return result.Cast<RavenJObject>()
-			                 .ToJsonDocuments()
-			                 .ToArray();
+				return result.Cast<RavenJObject>()
+							 .ToJsonDocuments()
+							 .ToArray();
 			});
 		}
 
-	    public Task<JsonDocument[]> GetDocumentsAsync(Etag fromEtag, int pageSize, bool metadataOnly = false)
-	    {
-            return ExecuteWithReplication("GET", async operationMetadata =>
-            {
-                var result = await GetDocumentsInternalAsync(null, fromEtag, pageSize, operationMetadata, metadataOnly);
-                return result.Cast<RavenJObject>()
-                             .ToJsonDocuments()
-                             .ToArray();
-            });
-	    }
+		public Task<JsonDocument[]> GetDocumentsAsync(Etag fromEtag, int pageSize, bool metadataOnly = false)
+		{
+			return ExecuteWithReplication("GET", async operationMetadata =>
+			{
+				var result = await GetDocumentsInternalAsync(null, fromEtag, pageSize, operationMetadata, metadataOnly).ConfigureAwait(false);
+				return result.Cast<RavenJObject>()
+							 .ToJsonDocuments()
+							 .ToArray();
+			});
+		}
 
-        public async Task<RavenJArray> GetDocumentsInternalAsync(int? start, Etag fromEtag, int pageSize, OperationMetadata operationMetadata, bool metadataOnly = false)
-        {
-            var requestUri = url + "/docs/?";
-            if (start.HasValue && start.Value > 0)
-            {
-                requestUri += "start=" + start;
-            }
+		public async Task<RavenJArray> GetDocumentsInternalAsync(int? start, Etag fromEtag, int pageSize, OperationMetadata operationMetadata, bool metadataOnly = false)
+		{
+			var requestUri = url + "/docs/?";
+			if (start.HasValue && start.Value > 0)
+			{
+				requestUri += "start=" + start;
+			}
 			else if (fromEtag != null)
-            {
-                requestUri += "etag=" + fromEtag;
-            }
-            requestUri += "&pageSize=" + pageSize;
-	        if (metadataOnly)
-	            requestUri += "&metadata-only=true";
-	        var @params = new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", operationMetadata.Credentials, convention)
-	            .AddOperationHeaders(OperationsHeaders);
-	        return (RavenJArray) await jsonRequestFactory.CreateHttpJsonRequest(@params)
-	                                                    .ReadResponseJsonAsync();
-	    }
+			{
+				requestUri += "etag=" + fromEtag;
+			}
+			requestUri += "&pageSize=" + pageSize;
+			if (metadataOnly)
+				requestUri += "&metadata-only=true";
+			var @params = new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", operationMetadata.Credentials, convention)
+				.AddOperationHeaders(OperationsHeaders);
+			return (RavenJArray)await jsonRequestFactory.CreateHttpJsonRequest(@params)
+														.ReadResponseJsonAsync().ConfigureAwait(false);
+		}
 
 		public Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
 		{
@@ -935,11 +939,11 @@ namespace Raven.Client.Connection.Async
 				var metadata = new RavenJObject();
 				AddTransactionInformation(metadata);
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-                        new CreateHttpJsonRequestParams(this, operationMetadata.Url + requestUrl, "GET", metadata, operationMetadata.Credentials, convention)
+						new CreateHttpJsonRequestParams(this, operationMetadata.Url + requestUrl, "GET", metadata, operationMetadata.Credentials, convention)
 								.AddOperationHeaders(OperationsHeaders));
 
 				return await request.ReadResponseJsonAsync();
-			});
+			}).ConfigureAwait(false);
 			return ((RavenJObject)result).Deserialize<MultiLoadResult>(convention);
 		}
 
@@ -948,9 +952,9 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("POST", async operationMetadata =>
 			{
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-                        new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/identity/next?name=" + Uri.EscapeDataString(name), "POST", operationMetadata.Credentials, convention)
+						new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/identity/next?name=" + Uri.EscapeDataString(name), "POST", operationMetadata.Credentials, convention)
 								.AddOperationHeaders(OperationsHeaders));
-				var readResponseJson = await request.ReadResponseJsonAsync();
+				var readResponseJson = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				return readResponseJson.Value<long>("Value");
 			});
 		}
@@ -962,14 +966,14 @@ namespace Raven.Client.Connection.Async
 				string path = queryToUpdate.GetIndexQueryUrl(operationMetadata.Url, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-                        new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention));
+						new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
-				await request.WriteAsync(requestData);
+				await request.WriteAsync(requestData).ConfigureAwait(false);
 
 				RavenJToken jsonResponse;
 				try
 				{
-					jsonResponse = await request.ReadResponseJsonAsync();
+					jsonResponse = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				}
 				catch (ErrorResponseException e)
 				{
@@ -1003,13 +1007,13 @@ namespace Raven.Client.Connection.Async
 				pageSize);
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", operationMetadata.Credentials, convention)
+					new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", operationMetadata.Credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
 
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
 													HandleReplicationStatusChanges);
 
-				var json = (RavenJObject)await request.ReadResponseJsonAsync();
+				var json = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				return json.JsonDeserialization<FacetResults>();
 			});
 		}
@@ -1022,15 +1026,15 @@ namespace Raven.Client.Connection.Async
 				var requestUri = operationMetadata.Url + "/facets/multisearch";
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "POST", operationMetadata.Credentials, convention)
+					new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "POST", operationMetadata.Credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
 
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
 													HandleReplicationStatusChanges);
 
 				var data = JsonConvert.SerializeObject(facetedQueries);
-				await request.WriteAsync(data);
-				var response = (RavenJArray)await request.ReadResponseJsonAsync();
+				await request.WriteAsync(data).ConfigureAwait(false);
+				var response = (RavenJArray)await request.ReadResponseJsonAsync().ConfigureAwait(false);
 
 				return convention.CreateSerializer().Deserialize<FacetResults[]>(new RavenJTokenReader(response));
 			});
@@ -1062,7 +1066,7 @@ namespace Raven.Client.Connection.Async
 					requestUri += "&facets=" + Uri.EscapeDataString(facetsJson);
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(this, requestUri.NoCache(), method, operationMetadata.Credentials, convention)
+					new CreateHttpJsonRequestParams(this, requestUri.NoCache(), method, operationMetadata.Credentials, convention)
 						.AddOperationHeaders(OperationsHeaders))
 												.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer,
 																			 convention.FailoverBehavior,
@@ -1071,7 +1075,7 @@ namespace Raven.Client.Connection.Async
 				if (method != "GET")
 					request.WriteAsync(facetsJson).Wait();
 
-				var json = (RavenJObject)await request.ReadResponseJsonAsync();
+				var json = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				return json.JsonDeserialization<FacetResults>();
 			});
 		}
@@ -1086,12 +1090,12 @@ namespace Raven.Client.Connection.Async
 
 				var request =
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET",
-                                                                                             operationMetadata.Credentials, convention));
+																							 operationMetadata.Credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
 													HandleReplicationStatusChanges);
 
-				var result = await request.ReadResponseJsonAsync();
+				var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				return convention.CreateSerializer().Deserialize<LogItem[]>(new RavenJTokenReader(result));
 			});
 		}
@@ -1103,7 +1107,7 @@ namespace Raven.Client.Connection.Async
 																						 "GET", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 
-			var result = await request.ReadResponseJsonAsync();
+			var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 			return convention.CreateSerializer().Deserialize<LicensingStatus>(new RavenJTokenReader(result));
 		}
 
@@ -1114,82 +1118,22 @@ namespace Raven.Client.Connection.Async
 																						 "GET", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 
-            var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+			var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 			return convention.CreateSerializer().Deserialize<BuildNumber>(new RavenJTokenReader(result));
 		}
-        public async Task<IndexMergeResults> GetIndexMergeSuggestionsAsync()
-        {
-            var request =
-                jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/debug/suggest-index-merge").NoCache(),
-                                                                                         "GET", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
-            request.AddOperationHeaders(OperationsHeaders);
-
-            var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-            return convention.CreateSerializer().Deserialize<IndexMergeResults>(new RavenJTokenReader(result));
-        }
-
-		public Task StartIndexingAsync()
+		public async Task<IndexMergeResults> GetIndexMergeSuggestionsAsync()
 		{
-			return ExecuteWithReplication("POST", operationMetadata =>
-			{
-				var request =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-																							 (operationMetadata.Url + "/admin/StartIndexing")
-																								 .NoCache(),
-                                                                                             "POST", operationMetadata.Credentials, convention));
-
-				request.AddOperationHeaders(OperationsHeaders);
-				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
-													HandleReplicationStatusChanges);
-
-				return request.ExecuteRequestAsync();
-			});
-		}
-
-		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
-		{
-		    var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-		        (MultiDatabase.GetDatabaseUrl(url, databaseName) + "/admin/backup?incremental=" + incremental).NoCache(),
-		        "POST", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
+			var request =
+				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/debug/suggest-index-merge").NoCache(),
+																						 "GET", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
 			request.AddOperationHeaders(OperationsHeaders);
-			return request.WriteAsync(RavenJObject.FromObject(new BackupRequest
-			{
-			    BackupLocation = backupLocation,
-                DatabaseDocument = databaseDocument
-			}));
+
+			var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+			return convention.CreateSerializer().Deserialize<IndexMergeResults>(new RavenJTokenReader(result));
 		}
 
-		public Task StartRestoreAsync(RestoreRequest restoreRequest)
-		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/restore").NoCache(), "POST", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention));
-			request.AddOperationHeaders(OperationsHeaders);
-			return request.WriteAsync(RavenJObject.FromObject(restoreRequest));
-		}
-
-		public Task<string> GetIndexingStatusAsync()
-		{
-			throw new NotImplementedException();
-		}
-
-		public Task StopIndexingAsync()
-		{
-			return ExecuteWithReplication("POST", operationMetadata =>
-			{
-				var request =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-																							 (operationMetadata.Url + "/admin/StopIndexing")
-																								 .NoCache(),
-                                                                                             "POST", operationMetadata.Credentials, convention));
-				request.AddOperationHeaders(OperationsHeaders);
-				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
-													HandleReplicationStatusChanges);
-
-				return request.ExecuteRequestAsync();
-			});
-		}
-
-        public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize,
-		                            RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null,
+		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize,
+									RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null,
 									string transformer = null, Dictionary<string, RavenJToken> queryInputs = null)
 		{
 			return ExecuteWithReplication("GET", async operationMetadata =>
@@ -1230,7 +1174,7 @@ namespace Raven.Client.Connection.Async
 
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-				var result = (RavenJArray) await request.ReadResponseJsonAsync();
+				var result = (RavenJArray)await request.ReadResponseJsonAsync().ConfigureAwait(false);
 
 				int nextPageStart;
 				if (pagingInformation != null && int.TryParse(request.ResponseHeaders[Constants.NextPageStart], out nextPageStart))
@@ -1249,9 +1193,9 @@ namespace Raven.Client.Connection.Async
 													   ", conflict must be resolved before the document will be accessible", true)
 												   {
 													   ConflictedVersionIds = new[] { conflictedResultId }
-												   });
+												   }).ConfigureAwait(false);
 			});
-        }
+		}
 
 		/// <summary>
 		/// Perform a single POST request containing multiple nested GET requests
@@ -1265,7 +1209,7 @@ namespace Raven.Client.Connection.Async
 				var httpJsonRequest =
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
 																							 multiGetOperation.RequestUri.NoCache(),
-                                                                                             "POST", operationMetadata.Credentials, convention)
+																							 "POST", operationMetadata.Credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
 
 				httpJsonRequest.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
@@ -1281,8 +1225,8 @@ namespace Raven.Client.Connection.Async
 					return cachedResponses;
 				}
 
-				await httpJsonRequest.WriteAsync(postedData);
-				var result = await httpJsonRequest.ReadResponseJsonAsync();
+				await httpJsonRequest.WriteAsync(postedData).ConfigureAwait(false);
+				var result = await httpJsonRequest.ReadResponseJsonAsync().ConfigureAwait(false);
 				var responses = convention.CreateSerializer().Deserialize<GetResponse[]>(new RavenJTokenReader(result));
 				return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
 			});
@@ -1298,7 +1242,7 @@ namespace Raven.Client.Connection.Async
 		/// <returns></returns>
 		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
-			var method = query.Query != null && query.Query.Length > 32760 ? "POST" : "GET";
+			var method = query.Query != null && query.Query.Length > MaxQuerySizeForGetRequest ? "POST" : "GET";
 
 			return ExecuteWithReplication(method, async operationMetadata =>
 			{
@@ -1331,7 +1275,7 @@ namespace Raven.Client.Connection.Async
 				ErrorResponseException responseException;
 				try
 				{
-					var result = (RavenJObject)await request.ReadResponseJsonAsync();
+					var result = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
 					var queryResult = SerializationHelper.ToQueryResult(result, request.ResponseHeaders.GetEtagHeader(),
 																									 request.ResponseHeaders.Get("Temp-Request-Time"));
 
@@ -1345,7 +1289,7 @@ namespace Raven.Client.Connection.Async
 													   ", conflict must be resolved before the document will be accessible", true)
 												   {
 													   ConflictedVersionIds = new[] { conflictedResultId }
-												   });
+												   }).ConfigureAwait(false);
 				}
 				catch (ErrorResponseException e)
 				{
@@ -1373,8 +1317,8 @@ namespace Raven.Client.Connection.Async
 		{
 			if (e.StatusCode == HttpStatusCode.InternalServerError)
 			{
-			    var content = e.ResponseString;
-                var json = RavenJObject.Load(new JsonTextReader(new StringReader(content)));
+				var content = e.ResponseString;
+				var json = RavenJObject.Load(new JsonTextReader(new StringReader(content)));
 				var error = json.Deserialize<ServerRequestError>(convention);
 
 				throw new ErrorResponseException(e, error.Error);
@@ -1408,13 +1352,13 @@ namespace Raven.Client.Connection.Async
 					requestUri += "&distance=" + suggestionQuery.Distance;
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", operationMetadata.Credentials, convention)
+					new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", operationMetadata.Credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
 
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
 													HandleReplicationStatusChanges);
 
-				var json = (RavenJObject)await request.ReadResponseJsonAsync();
+				var json = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				return new SuggestionQueryResult
 				{
 					Suggestions = ((RavenJArray)json["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
@@ -1427,27 +1371,27 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="commandDatas">The command data.</param>
 		/// <returns></returns>
-        public Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas)
-        {
-            return ExecuteWithReplication("POST", async operationMetadata =>
-            {
-                var metadata = new RavenJObject();
-                AddTransactionInformation(metadata);
-                var req =
-                    jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/bulk_docs", "POST",
-                                                                                             metadata, operationMetadata.Credentials, convention)
-                    .AddOperationHeaders(OperationsHeaders));
+		public Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas)
+		{
+			return ExecuteWithReplication("POST", async operationMetadata =>
+			{
+				var metadata = new RavenJObject();
+				AddTransactionInformation(metadata);
+				var req =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/bulk_docs", "POST",
+																							 metadata, operationMetadata.Credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
 
-                req.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
-                                                HandleReplicationStatusChanges);
+				req.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
+												HandleReplicationStatusChanges);
 
-                var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
+				var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 
 				ErrorResponseException responseException;
 				try
 				{
-					await req.WriteAsync(jArray);
-					var response = (RavenJArray)await req.ReadResponseJsonAsync();
+					await req.WriteAsync(jArray).ConfigureAwait(false);
+					var response = (RavenJArray)await req.ReadResponseJsonAsync().ConfigureAwait(false);
 					return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
 				}
 				catch (ErrorResponseException e)
@@ -1462,22 +1406,22 @@ namespace Raven.Client.Connection.Async
 
 		private static ConcurrencyException FetchConcurrencyException(ErrorResponseException e)
 		{
-		    var text = e.ResponseString;
-		    var errorResults = JsonConvert.DeserializeAnonymousType(text, new
-		    {
-		        url = (string) null,
-		        actualETag = Etag.Empty,
-		        expectedETag = Etag.Empty,
-		        error = (string) null
-		    });
-		    return new ConcurrencyException(errorResults.error)
-		    {
-		        ActualETag = errorResults.actualETag,
-		        ExpectedETag = errorResults.expectedETag
-		    };
+			var text = e.ResponseString;
+			var errorResults = JsonConvert.DeserializeAnonymousType(text, new
+			{
+				url = (string)null,
+				actualETag = Etag.Empty,
+				expectedETag = Etag.Empty,
+				error = (string)null
+			});
+			return new ConcurrencyException(errorResults.error)
+			{
+				ActualETag = errorResults.actualETag,
+				ExpectedETag = errorResults.expectedETag
+			};
 		}
 
-	    private void AddTransactionInformation(RavenJObject metadata)
+		private void AddTransactionInformation(RavenJObject metadata)
 		{
 #if !NETFX_CORE
 			if (convention.EnlistInDistributedTransactions == false)
@@ -1507,7 +1451,7 @@ namespace Raven.Client.Connection.Async
 			var json = (RavenJObject)await url.Stats()
 				.NoCache()
 				.ToJsonRequest(this, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
-											   .ReadResponseJsonAsync();
+											   .ReadResponseJsonAsync().ConfigureAwait(false);
 
 			return json.Deserialize<DatabaseStatistics>(convention);
 		}
@@ -1520,27 +1464,27 @@ namespace Raven.Client.Connection.Async
 			var result = await url.Databases(pageSize, start)
 				.NoCache()
 				.ToJsonRequest(this, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
-								  .ReadResponseJsonAsync();
+								  .ReadResponseJsonAsync().ConfigureAwait(false);
 			var json = (RavenJArray)result;
 			return json.Select(x => x.ToString())
 				.ToArray();
 		}
 
-        public Task<AttachmentInformation[]> GetAttachmentsAsync(Etag startEtag, int pageSize)
-	    {
-	        return ExecuteWithReplication("GET", async operationMetadata =>
-	        {
-                var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (operationMetadata.Url + "/static/?pageSize=" + pageSize + "&etag=" + startEtag).NoCache(), "GET", operationMetadata.Credentials, convention)
-	                .AddOperationHeaders(OperationsHeaders));
+		public Task<AttachmentInformation[]> GetAttachmentsAsync(Etag startEtag, int pageSize)
+		{
+			return ExecuteWithReplication("GET", async operationMetadata =>
+			{
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (operationMetadata.Url + "/static/?pageSize=" + pageSize + "&etag=" + startEtag).NoCache(), "GET", operationMetadata.Credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
 
-                request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-                var json = (RavenJArray)await request.ReadResponseJsonAsync();
-                return convention.CreateSerializer().Deserialize<AttachmentInformation[]>(new RavenJTokenReader(json));
-	        });
-	    }
+				var json = (RavenJArray)await request.ReadResponseJsonAsync().ConfigureAwait(false);
+				return convention.CreateSerializer().Deserialize<AttachmentInformation[]>(new RavenJTokenReader(json));
+			});
+		}
 
-	    /// <summary>
+		/// <summary>
 		/// Puts the attachment with the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>
@@ -1559,7 +1503,7 @@ namespace Raven.Client.Connection.Async
 
 				var request =
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(operationMetadata.Url, key), "PUT",
-                                                                                             metadata, operationMetadata.Credentials, convention));
+																							 metadata, operationMetadata.Credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
 													HandleReplicationStatusChanges);
@@ -1593,12 +1537,12 @@ namespace Raven.Client.Connection.Async
 			AddTransactionInformation(metadata);
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (operationMetadata.Url + "/static/" + key).NoCache(), method, metadata, operationMetadata.Credentials, convention);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders))
-			                                .AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+											.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			ErrorResponseException responseException;
 			try
 			{
-				var result = await request.ReadResponseBytesAsync();
+				var result = await request.ReadResponseBytesAsync().ConfigureAwait(false);
 				HandleReplicationStatusChanges(request.ResponseHeaders, Url, operationMetadata.Url);
 
 				if (method == "GET")
@@ -1632,22 +1576,32 @@ namespace Raven.Client.Connection.Async
 			{
 				if (e.StatusCode == HttpStatusCode.NotFound)
 					return null;
-				if (e.StatusCode != HttpStatusCode.Conflict) 
+				if (e.StatusCode != HttpStatusCode.Conflict)
 					throw;
 				responseException = e;
 			}
 
-            using (var stream = await responseException.Response.GetResponseStreamWithHttpDecompression())
-            {
-                var conflictsDoc = stream.ToJObject();
-                var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
-                throw new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the attachment will be accessible", true)
-                {
-                    ConflictedVersionIds = conflictIds,
-                    Etag = responseException.Etag
-                };
-            }
+
+			using (var stream = await responseException.Response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
+			{
+				string[] conflictIds;
+				if (method == "GET")
+				{
+					var conflictsDoc = stream.ToJObject();
+					conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+				}
+				else
+				{
+					conflictIds = new[] { "Cannot get conflict ids in HEAD requesT" };
+				}
+
+				throw new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the attachment will be accessible", true)
+				{
+					ConflictedVersionIds = conflictIds,
+					Etag = responseException.Etag
+				};
+			}
 		}
 
 
@@ -1667,7 +1621,7 @@ namespace Raven.Client.Connection.Async
 
 				var request =
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(operationMetadata.Url, key), "DELETE",
-                                                                                             metadata, operationMetadata.Credentials, convention));
+																							 metadata, operationMetadata.Credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
 													HandleReplicationStatusChanges);
@@ -1701,11 +1655,11 @@ namespace Raven.Client.Connection.Async
 			{
 				var result = await operationMetadata.Url.Terms(index, field, fromValue, pageSize)
 					.NoCache()
-                    .ToJsonRequest(this, operationMetadata.Credentials, convention)
+					.ToJsonRequest(this, operationMetadata.Credentials, convention)
 											   .AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer,
 																			convention.FailoverBehavior,
 																			HandleReplicationStatusChanges)
-											   .ReadResponseJsonAsync();
+											   .ReadResponseJsonAsync().ConfigureAwait(false);
 				var json = ((RavenJArray)result);
 				return json.Select(x => x.Value<string>()).ToArray();
 			});
@@ -1760,252 +1714,258 @@ namespace Raven.Client.Connection.Async
 #else
 		public Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo)
 		{
-		    return ExecuteWithReplication("GET", operationMetadata => DirectStreamQueryAsync(index, query, queryHeaderInfo, operationMetadata));
+			return ExecuteWithReplication("GET", operationMetadata => DirectStreamQueryAsync(index, query, queryHeaderInfo, operationMetadata));
 		}
 
-        private async Task<IAsyncEnumerator<RavenJObject>> DirectStreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo, OperationMetadata operationMetadata)
-	    {
-            var method = query.Query != null && query.Query.Length > 32760 ? "POST" : "GET";
+		private async Task<IAsyncEnumerator<RavenJObject>> DirectStreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo, OperationMetadata operationMetadata)
+		{
+			EnsureIsNotNullOrEmpty(index, "index");
+			string path;
+			string method;
+			if (query.Query != null && query.Query.Length > MaxQuerySizeForGetRequest)
+			{
+				path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: false) + "&postQuery=true";
+				method = "POST";
+			}
+			else
+			{
+				method = "GET";
+				path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: true);
+			}
 
-            EnsureIsNotNullOrEmpty(index, "index");
-            string path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: method == "GET");
+			var request = jsonRequestFactory
+				.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), method, operationMetadata.Credentials, convention)
+				.AddOperationHeaders(OperationsHeaders))
+				.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-            if (method == "POST")
-                path += "&postQuery=true";
+			request.RemoveAuthorizationHeader();
+			var token = await GetSingleAuthToken(operationMetadata).ConfigureAwait(false);
+			try
+			{
+				token = await ValidateThatWeCanUseAuthenticateTokens(operationMetadata, token).ConfigureAwait(false);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException(
+					"Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+					e);
+			}
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
 
-            var request = jsonRequestFactory
-                .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), method, operationMetadata.Credentials, convention)
-                .AddOperationHeaders(OperationsHeaders))
-                .AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+			HttpResponseMessage response;
+			try
+			{
+				if (method == "POST")
+				{
+					response = await request.ExecuteRawResponseAsync(query.Query).ConfigureAwait(false);
+				}
+				else
+				{
+					response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
+				}
+			}
+			catch (Exception e)
+			{
+				if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) && request.ResponseStatusCode == HttpStatusCode.NotFound)
+				{
+					throw new InvalidOperationException(
+						@"StreamQuery does not support querying dynamic indexes. It is designed to be used with large data-sets and is unlikely to return all data-set after 15 sec of indexing, like Query() does.",
+						e);
+				}
 
-            request.RemoveAuthorizationHeader();
-            var token = await GetSingleAuthToken(operationMetadata).ConfigureAwait(false);
-            try
-            {
-                token = await ValidateThatWeCanUseAuthenticateTokens(operationMetadata, token).ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException(
-                    "Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
-                    e);
-            }
-            request.AddOperationHeader("Single-Use-Auth-Token", token);
+				throw;
+			}
 
-            HttpResponseMessage response;
-            try
-            {
-                if (method == "POST")
-                {
-                    response = await request.ExecuteRawResponseAsync(query.Query).ConfigureAwait(false);
-                }
-                else
-                {
-                    response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
-                }
-            }
-            catch (Exception e)
-            {
-                if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) && request.ResponseStatusCode == HttpStatusCode.NotFound)
-                {
-                    throw new InvalidOperationException(
-                        @"StreamQuery does not support querying dynamic indexes. It is designed to be used with large data-sets and is unlikely to return all data-set after 15 sec of indexing, like Query() does.",
-                        e);
-                }
+			queryHeaderInfo.Value = new QueryHeaderInformation
+			{
+				Index = response.Headers.GetFirstValue("Raven-Index"),
+				IndexTimestamp = DateTime.ParseExact(response.Headers.GetFirstValue("Raven-Index-Timestamp"), Default.DateTimeFormatsToRead,
+																CultureInfo.InvariantCulture, DateTimeStyles.None),
+				IndexEtag = Etag.Parse(response.Headers.GetFirstValue("Raven-Index-Etag")),
+				ResultEtag = Etag.Parse(response.Headers.GetFirstValue("Raven-Result-Etag")),
+				IsStale = bool.Parse(response.Headers.GetFirstValue("Raven-Is-Stale")),
+				TotalResults = int.Parse(response.Headers.GetFirstValue("Raven-Total-Results"))
+			};
 
-                throw;
-            }
+			return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+		}
 
-            queryHeaderInfo.Value = new QueryHeaderInformation
-            {
-                Index = response.Headers.GetFirstValue("Raven-Index"),
-                IndexTimestamp = DateTime.ParseExact(response.Headers.GetFirstValue("Raven-Index-Timestamp"), Default.DateTimeFormatsToRead,
-                                                                CultureInfo.InvariantCulture, DateTimeStyles.None),
-                IndexEtag = Etag.Parse(response.Headers.GetFirstValue("Raven-Index-Etag")),
-                ResultEtag = Etag.Parse(response.Headers.GetFirstValue("Raven-Result-Etag")),
-                IsStale = bool.Parse(response.Headers.GetFirstValue("Raven-Is-Stale")),
-                TotalResults = int.Parse(response.Headers.GetFirstValue("Raven-Total-Results"))
-            };
+		public class YieldStreamResults : IAsyncEnumerator<RavenJObject>
+		{
+			private readonly int start;
 
-            return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression());
-	    }
+			private readonly int pageSize;
 
-	    public class YieldStreamResults : IAsyncEnumerator<RavenJObject>
-        {
-            private readonly int start;
+			private readonly RavenPagingInformation pagingInformation;
 
-            private readonly int pageSize;
+			private readonly Stream stream;
+			private readonly StreamReader streamReader;
+			private readonly JsonTextReaderAsync reader;
+			private bool complete;
 
-            private readonly RavenPagingInformation pagingInformation;
-
-            private readonly Stream stream;
-            private readonly StreamReader streamReader;
-            private readonly JsonTextReaderAsync reader;
-            private bool complete;
-
-            private bool wasInitialized;
+			private bool wasInitialized;
 
 			public YieldStreamResults(Stream stream, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null)
-            {
-                this.start = start;
-                this.pageSize = pageSize;
-                this.pagingInformation = pagingInformation;
+			{
+				this.start = start;
+				this.pageSize = pageSize;
+				this.pagingInformation = pagingInformation;
 				this.stream = stream;
-                streamReader = new StreamReader(stream);
-                reader = new JsonTextReaderAsync(streamReader);
-            }
+				streamReader = new StreamReader(stream);
+				reader = new JsonTextReaderAsync(streamReader);
+			}
 
-            private async Task InitAsync()
-            {
-                if (await reader.ReadAsync().ConfigureAwait(false) == false || reader.TokenType != JsonToken.StartObject)
-                    throw new InvalidOperationException("Unexpected data at start of stream");
+			private async Task InitAsync()
+			{
+				if (await reader.ReadAsync().ConfigureAwait(false) == false || reader.TokenType != JsonToken.StartObject)
+					throw new InvalidOperationException("Unexpected data at start of stream");
 
-                if (await reader.ReadAsync().ConfigureAwait(false) == false || reader.TokenType != JsonToken.PropertyName || Equals("Results", reader.Value) == false)
-                    throw new InvalidOperationException("Unexpected data at stream 'Results' property name");
+				if (await reader.ReadAsync().ConfigureAwait(false) == false || reader.TokenType != JsonToken.PropertyName || Equals("Results", reader.Value) == false)
+					throw new InvalidOperationException("Unexpected data at stream 'Results' property name");
 
-                if (await reader.ReadAsync().ConfigureAwait(false) == false || reader.TokenType != JsonToken.StartArray)
-                    throw new InvalidOperationException("Unexpected data at 'Results', could not find start results array");
-            }
+				if (await reader.ReadAsync().ConfigureAwait(false) == false || reader.TokenType != JsonToken.StartArray)
+					throw new InvalidOperationException("Unexpected data at 'Results', could not find start results array");
+			}
 
-            public void Dispose()
-            {
-                reader.Close();
-                streamReader.Close();
-                stream.Close();
-            }
+			public void Dispose()
+			{
+				reader.Close();
+				streamReader.Close();
+				stream.Close();
+			}
 
-            public async Task<bool> MoveNextAsync()
-            {
-                if (complete)
-                {
-                    // to parallel IEnumerable<T>, subsequent calls to MoveNextAsync after it has returned false should
-                    // also return false, rather than throwing
-                    return false;
-                }
+			public async Task<bool> MoveNextAsync()
+			{
+				if (complete)
+				{
+					// to parallel IEnumerable<T>, subsequent calls to MoveNextAsync after it has returned false should
+					// also return false, rather than throwing
+					return false;
+				}
 
-                if (wasInitialized == false)
-                {
-                    await InitAsync();
-                    wasInitialized = true;
-                }
+				if (wasInitialized == false)
+				{
+					await InitAsync().ConfigureAwait(false);
+					wasInitialized = true;
+				}
 
-                if (await reader.ReadAsync().ConfigureAwait(false) == false)
-                    throw new InvalidOperationException("Unexpected end of data");
+				if (await reader.ReadAsync().ConfigureAwait(false) == false)
+					throw new InvalidOperationException("Unexpected end of data");
 
-                if (reader.TokenType == JsonToken.EndArray)
-                {
-                    complete = true;
+				if (reader.TokenType == JsonToken.EndArray)
+				{
+					complete = true;
 
-                    await TryReadNextPageStart();
+					await TryReadNextPageStart().ConfigureAwait(false);
 
-                    return false;
-                }
+					return false;
+				}
 
-                Current = (RavenJObject)await RavenJToken.ReadFromAsync(reader).ConfigureAwait(false);
-                return true;
-            }
+				Current = (RavenJObject)await RavenJToken.ReadFromAsync(reader).ConfigureAwait(false);
+				return true;
+			}
 
-            private async Task TryReadNextPageStart()
-            {
-                if (pagingInformation == null || !(await reader.ReadAsync()) || reader.TokenType != JsonToken.PropertyName || !Equals("NextPageStart", reader.Value))
-                    return;
+			private async Task TryReadNextPageStart()
+			{
+				if (pagingInformation == null || !(await reader.ReadAsync().ConfigureAwait(false)) || reader.TokenType != JsonToken.PropertyName || !Equals("NextPageStart", reader.Value))
+					return;
 
-                var nextPageStart = await reader.ReadAsInt32();
-                if (nextPageStart.HasValue == false)
-                    throw new InvalidOperationException("Unexpected end of data");
+				var nextPageStart = await reader.ReadAsInt32().ConfigureAwait(false);
+				if (nextPageStart.HasValue == false)
+					throw new InvalidOperationException("Unexpected end of data");
 
-                pagingInformation.Fill(start, pageSize, nextPageStart.Value);
-            }
+				pagingInformation.Fill(start, pageSize, nextPageStart.Value);
+			}
 
-            public RavenJObject Current { get; private set; }
-        }
+			public RavenJObject Current { get; private set; }
+		}
 
 		public async Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(
 						Etag fromEtag = null, string startsWith = null,
 						string matches = null, int start = 0,
 						int pageSize = Int32.MaxValue,
 						string exclude = null,
-                        RavenPagingInformation pagingInformation = null)
+						RavenPagingInformation pagingInformation = null)
 		{
-            if (fromEtag != null && startsWith != null)
-                throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
+			if (fromEtag != null && startsWith != null)
+				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
 
-            if (fromEtag != null) // etags does not match between servers
-                return await DirectStreamDocsAsync(fromEtag, null, matches, start, pageSize, exclude, pagingInformation, new OperationMetadata(url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication));
+			if (fromEtag != null) // etags does not match between servers
+				return await DirectStreamDocsAsync(fromEtag, null, matches, start, pageSize, exclude, pagingInformation, new OperationMetadata(url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication)).ConfigureAwait(false);
 
-            return await ExecuteWithReplication("GET", operationMetadata => DirectStreamDocsAsync(null, startsWith, matches, start, pageSize, exclude, pagingInformation, operationMetadata));
+			return await ExecuteWithReplication("GET", operationMetadata => DirectStreamDocsAsync(null, startsWith, matches, start, pageSize, exclude, pagingInformation, operationMetadata)).ConfigureAwait(false);
 		}
 
-	    private async Task<IAsyncEnumerator<RavenJObject>> DirectStreamDocsAsync(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, OperationMetadata operationMetadata)
-	    {
-	        if (fromEtag != null && startsWith != null)
-	            throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
+		private async Task<IAsyncEnumerator<RavenJObject>> DirectStreamDocsAsync(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, OperationMetadata operationMetadata)
+		{
+			if (fromEtag != null && startsWith != null)
+				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
 
-	        var sb = new StringBuilder(operationMetadata.Url).Append("/streams/docs?");
+			var sb = new StringBuilder(operationMetadata.Url).Append("/streams/docs?");
 
-	        if (fromEtag != null)
-	        {
-	            sb.Append("etag=").Append(fromEtag).Append("&");
-	        }
-	        else
-	        {
-	            if (startsWith != null)
-	            {
-	                sb.Append("startsWith=").Append(Uri.EscapeDataString(startsWith)).Append("&");
-	            }
-	            if (matches != null)
-	            {
-	                sb.Append("matches=").Append(Uri.EscapeDataString(matches)).Append("&");
-	            }
-	            if (exclude != null)
-	            {
-	                sb.Append("exclude=").Append(Uri.EscapeDataString(exclude)).Append("&");
-	            }
-	        }
+			if (fromEtag != null)
+			{
+				sb.Append("etag=").Append(fromEtag).Append("&");
+			}
+			else
+			{
+				if (startsWith != null)
+				{
+					sb.Append("startsWith=").Append(Uri.EscapeDataString(startsWith)).Append("&");
+				}
+				if (matches != null)
+				{
+					sb.Append("matches=").Append(Uri.EscapeDataString(matches)).Append("&");
+				}
+				if (exclude != null)
+				{
+					sb.Append("exclude=").Append(Uri.EscapeDataString(exclude)).Append("&");
+				}
+			}
 
-	        var actualStart = start;
+			var actualStart = start;
 
-	        var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
-	        if (nextPage)
-	            actualStart = pagingInformation.NextPageStart;
+			var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
+			if (nextPage)
+				actualStart = pagingInformation.NextPageStart;
 
-	        if (actualStart != 0)
-	            sb.Append("start=").Append(actualStart).Append("&");
+			if (actualStart != 0)
+				sb.Append("start=").Append(actualStart).Append("&");
 
-	        if (pageSize != int.MaxValue)
-	            sb.Append("pageSize=").Append(pageSize).Append("&");
+			if (pageSize != int.MaxValue)
+				sb.Append("pageSize=").Append(pageSize).Append("&");
 
-	        if (nextPage)
-	            sb.Append("next-page=true").Append("&");
+			if (nextPage)
+				sb.Append("next-page=true").Append("&");
 
-	        var request = jsonRequestFactory
-                .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString().NoCache(), "GET", operationMetadata.Credentials, convention)
-                .AddOperationHeaders(OperationsHeaders))
-                .AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+			var request = jsonRequestFactory
+				.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString().NoCache(), "GET", operationMetadata.Credentials, convention)
+				.AddOperationHeaders(OperationsHeaders))
+				.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-	        request.RemoveAuthorizationHeader();
+			request.RemoveAuthorizationHeader();
 
-	        var token = await GetSingleAuthToken(operationMetadata).ConfigureAwait(false);
-	        try
-	        {
-	            token = await ValidateThatWeCanUseAuthenticateTokens(operationMetadata, token).ConfigureAwait(false);
-	        }
-	        catch (Exception e)
-	        {
-	            throw new InvalidOperationException("Could not authenticate token for docs streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration", e);
-	        }
+			var token = await GetSingleAuthToken(operationMetadata).ConfigureAwait(false);
+			try
+			{
+				token = await ValidateThatWeCanUseAuthenticateTokens(operationMetadata, token).ConfigureAwait(false);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException("Could not authenticate token for docs streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration", e);
+			}
 
-	        request.AddOperationHeader("Single-Use-Auth-Token", token);
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
 
-	        var response = await request.ExecuteRawResponseAsync();
-	        return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression(), start, pageSize, pagingInformation);
-	    }
+			var response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
+			return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false), start, pageSize, pagingInformation);
+		}
 
-	    public Task DeleteAsync(string key, Etag etag)
+		public Task DeleteAsync(string key, Etag etag)
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
 			return ExecuteWithReplication("DELETE", operationMetadata => operationMetadata.Url.Doc(key)
-             .ToJsonRequest(this, operationMetadata.Credentials, convention, OperationsHeaders, "DELETE")
+			 .ToJsonRequest(this, operationMetadata.Credentials, convention, OperationsHeaders, "DELETE")
 			 .ExecuteRequestAsync());
 		}
 
@@ -2032,7 +1992,7 @@ namespace Raven.Client.Connection.Async
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			HttpJsonRequest request = jsonRequestFactory.CreateHttpJsonRequest(
-                                                                               new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/docs/" + key, "HEAD", operationMetadata.Credentials, convention)
+																			   new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/docs/" + key, "HEAD", operationMetadata.Credentials, convention)
 																				   .AddOperationHeaders(OperationsHeaders))
 														.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer,
 																					 convention.FailoverBehavior,
@@ -2040,7 +2000,7 @@ namespace Raven.Client.Connection.Async
 
 			try
 			{
-				await request.ReadResponseJsonAsync();
+				await request.ReadResponseJsonAsync().ConfigureAwait(false);
 				return SerializationHelper.DeserializeJsonDocumentMetadata(key, request.ResponseHeaders,
 																		   request.ResponseStatusCode);
 			}
@@ -2061,20 +2021,20 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-        public Task<RavenJToken> ExecuteGetRequest(string requestUrl)
-        {
-            EnsureIsNotNullOrEmpty(requestUrl, "url");
-            return ExecuteWithReplication("GET", operationMetadata =>
-            {
-                var metadata = new RavenJObject();
-                AddTransactionInformation(metadata);
-                var request = jsonRequestFactory.CreateHttpJsonRequest(
-                        new CreateHttpJsonRequestParams(this, operationMetadata.Url + requestUrl, "GET", metadata, operationMetadata.Credentials, convention)
-                                .AddOperationHeaders(OperationsHeaders));
+		public Task<RavenJToken> ExecuteGetRequest(string requestUrl)
+		{
+			EnsureIsNotNullOrEmpty(requestUrl, "url");
+			return ExecuteWithReplication("GET", operationMetadata =>
+			{
+				var metadata = new RavenJObject();
+				AddTransactionInformation(metadata);
+				var request = jsonRequestFactory.CreateHttpJsonRequest(
+						new CreateHttpJsonRequestParams(this, operationMetadata.Url + requestUrl, "GET", metadata, operationMetadata.Credentials, convention)
+								.AddOperationHeaders(OperationsHeaders));
 
-                return request.ReadResponseJsonAsync();
-            });
-        }
+				return request.ReadResponseJsonAsync();
+			});
+		}
 
 		public HttpJsonRequest CreateRequest(string requestUrl, string method, bool disableRequestCompression = false)
 		{
@@ -2086,15 +2046,15 @@ namespace Raven.Client.Connection.Async
 			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 		}
 
-        public HttpJsonRequest CreateRequest(OperationMetadata operationMetadata, string requestUrl, string method, bool disableRequestCompression = false)
-        {
-            var metadata = new RavenJObject();
-            AddTransactionInformation(metadata);
-            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (operationMetadata.Url + requestUrl).NoCache(), method, metadata, operationMetadata.Credentials, convention)
-                .AddOperationHeaders(OperationsHeaders);
-            createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
-            return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
-        }
+		public HttpJsonRequest CreateRequest(OperationMetadata operationMetadata, string requestUrl, string method, bool disableRequestCompression = false)
+		{
+			var metadata = new RavenJObject();
+			AddTransactionInformation(metadata);
+			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (operationMetadata.Url + requestUrl).NoCache(), method, metadata, operationMetadata.Credentials, convention)
+				.AddOperationHeaders(OperationsHeaders);
+			createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
+			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
+		}
 
 		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false)
 		{
@@ -2122,13 +2082,13 @@ namespace Raven.Client.Connection.Async
 				metadata["ETag"] = etag.ToString();
 			}
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/" + key, "POST", metadata, operationMetadata.Credentials, convention))
+					new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/" + key, "POST", metadata, operationMetadata.Credentials, convention))
 							.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			ErrorResponseException responseException;
 			try
 			{
-				await webRequest.ExecuteRequestAsync();
+				await webRequest.ExecuteRequestAsync().ConfigureAwait(false);
 				return;
 			}
 			catch (ErrorResponseException e)
@@ -2146,26 +2106,28 @@ namespace Raven.Client.Connection.Async
 
 		private async Task<IAsyncEnumerator<Attachment>> DirectGetAttachmentHeadersStartingWith(string method, string idPrefix, int start, int pageSize, OperationMetadata operationMetadata)
 		{
-			var webRequest =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-																																									 operationMetadata.Url + "/static/?startsWith=" +
-																																									 idPrefix + "&start=" + start + "&pageSize=" +
-																																									 pageSize, method, operationMetadata.Credentials, convention))
-																																									 .AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+			var webRequest = jsonRequestFactory
+				.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/?startsWith=" + idPrefix + "&start=" + start + "&pageSize=" + pageSize, method, operationMetadata.Credentials, convention))
+				.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-			RavenJToken result = await webRequest.ReadResponseJsonAsync();
+			RavenJToken result = await webRequest.ReadResponseJsonAsync().ConfigureAwait(false);
 
-			List<Attachment> attachments =
-					convention.CreateSerializer().Deserialize<Attachment[]>(new RavenJTokenReader(result))
-							.Select(x => new Attachment
-							{
-								Etag = x.Etag,
-								Metadata = x.Metadata,
-								Size = x.Size,
-								Key = x.Key,
-								Data =
-										() => { throw new InvalidOperationException("Cannot get attachment data from an attachment header"); }
-							}).ToList();
+			List<Attachment> attachments = convention
+				.CreateSerializer()
+				.Deserialize<Attachment[]>(new RavenJTokenReader(result))
+				.Select(x => new Attachment
+							 {
+								 Etag = x.Etag,
+								 Metadata = x.Metadata.WithCaseInsensitivePropertyNames(),
+								 Size = x.Size,
+								 Key = x.Key,
+								 Data = () =>
+								 {
+									 throw new InvalidOperationException("Cannot get attachment data from an attachment header");
+								 }
+							 })
+				.ToList();
+
 			return new AsyncEnumeratorBridge<Attachment>(attachments.GetEnumerator());
 
 		}
@@ -2253,7 +2215,7 @@ namespace Raven.Client.Connection.Async
 			currentlyExecuting = true;
 			try
 			{
-				return await replicationInformer.ExecuteWithReplicationAsync(method, Url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, currentRequest, readStripingBase, operation);
+				return await replicationInformer.ExecuteWithReplicationAsync(method, Url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, currentRequest, readStripingBase, operation).ConfigureAwait(false);
 			}
 			finally
 			{
@@ -2273,7 +2235,7 @@ namespace Raven.Client.Connection.Async
 			if (metadata.Value<int>("@Http-Status-Code") == 409)
 			{
 				var etag = HttpExtensions.EtagHeaderToEtag(metadata.Value<string>("@etag"));
-                var e = await TryResolveConflictOrCreateConcurrencyException(operationMetadata, metadata.Value<string>("@id"), docResult, etag).ConfigureAwait(false);
+				var e = await TryResolveConflictOrCreateConcurrencyException(operationMetadata, metadata.Value<string>("@id"), docResult, etag).ConfigureAwait(false);
 				if (e != null)
 					throw e;
 				return true;
@@ -2297,7 +2259,7 @@ namespace Raven.Client.Connection.Async
 
 			var conflictIds = ravenJArray.Select(x => x.Value<string>()).ToArray();
 
-			var result = await TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, operationMetadata);
+			var result = await TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, operationMetadata).ConfigureAwait(false);
 			if (result)
 				return null;
 
@@ -2321,7 +2283,7 @@ namespace Raven.Client.Connection.Async
 				resolvingConflict = true;
 				try
 				{
-					var result = await DirectGetAsync(operationMetadata, conflictIds, null, null, null, false);
+					var result = await DirectGetAsync(operationMetadata, conflictIds, null, null, null, false).ConfigureAwait(false);
 					var results = result.Results.Select(SerializationHelper.ToJsonDocument).ToArray();
 
 					foreach (var conflictListener in conflictListeners)
@@ -2329,7 +2291,7 @@ namespace Raven.Client.Connection.Async
 						JsonDocument resolvedDocument;
 						if (conflictListener.TryResolveConflict(key, results, out resolvedDocument))
 						{
-							await DirectPutAsync(operationMetadata, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata);
+							await DirectPutAsync(operationMetadata, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata).ConfigureAwait(false);
 							return true;
 						}
 					}
@@ -2351,7 +2313,7 @@ namespace Raven.Client.Connection.Async
 			bool requiresRetry = false;
 			foreach (var docResult in docResults)
 			{
-                requiresRetry |= await AssertNonConflictedDocumentAndCheckIfNeedToReload(operationMetadata, docResult, onConflictedQueryResult).ConfigureAwait(false);
+				requiresRetry |= await AssertNonConflictedDocumentAndCheckIfNeedToReload(operationMetadata, docResult, onConflictedQueryResult).ConfigureAwait(false);
 			}
 			if (!requiresRetry)
 				return currentResult;
@@ -2362,7 +2324,7 @@ namespace Raven.Client.Connection.Async
 			resolvingConflictRetries = true;
 			try
 			{
-                return await nextTry().ConfigureAwait(false);
+				return await nextTry().ConfigureAwait(false);
 			}
 			finally
 			{
@@ -2379,7 +2341,7 @@ namespace Raven.Client.Connection.Async
 
 			try
 			{
-				return await request.ReadResponseJsonAsync();
+				return await request.ReadResponseJsonAsync().ConfigureAwait(false);
 			}
 			catch (ErrorResponseException e)
 			{
@@ -2389,33 +2351,13 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-
-		#region IAsyncGlobalAdminDatabaseCommands
-
-		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin
+		private async Task<string> GetSingleAuthToken(OperationMetadata operationMetadata)
 		{
-            get { return (IAsyncGlobalAdminDatabaseCommands)this.ForSystemDatabase(); }
+			var tokenRequest = CreateRequest(operationMetadata, "/singleAuthToken", "GET", disableRequestCompression: true);
+
+			var response = await tokenRequest.ReadResponseJsonAsync().ConfigureAwait(false);
+			return response.Value<string>("Token");
 		}
-
-		async Task<AdminStatistics> IAsyncGlobalAdminDatabaseCommands.GetStatisticsAsync()
-		{
-			var json = (RavenJObject)await rootUrl.AdminStats()
-					.NoCache()
-					.ToJsonRequest(this, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
-												   .ReadResponseJsonAsync();
-
-			return json.Deserialize<AdminStatistics>(convention);
-		}
-
-		#endregion
-
-        private async Task<string> GetSingleAuthToken(OperationMetadata operationMetadata)
-        {
-            var tokenRequest = CreateRequest(operationMetadata, "/singleAuthToken", "GET", disableRequestCompression: true);
-
-            var response = await tokenRequest.ReadResponseJsonAsync().ConfigureAwait(false);
-            return response.Value<string>("Token");
-        }
 
 		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(OperationMetadata operationMetadata, string token)
 		{
@@ -2423,48 +2365,9 @@ namespace Raven.Client.Connection.Async
 
 			request.DisableAuthentication();
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
-            var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+			var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 			return result.Value<string>("Token");
 		}
-
-		#region IAsyncAdminDatabaseCommands
-
-		/// <summary>
-		/// Admin operations, like create/delete database.
-		/// </summary>
-		public IAsyncAdminDatabaseCommands Admin
-		{
-			get { return this; }
-		}
-
-		public Task CreateDatabaseAsync(DatabaseDocument databaseDocument)
-		{
-			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
-				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
-
-			var dbname = databaseDocument.Id.Replace("Raven/Databases/", "");
-            MultiDatabase.AssertValidName(dbname);
-			var doc = RavenJObject.FromObject(databaseDocument);
-			doc.Remove("Id");
-
-
-			var req = CreateRequest("/admin/databases/" + Uri.EscapeDataString(dbname), "PUT");
-			return req.WriteAsync(doc.ToString(Formatting.Indented));
-		}
-
-		public Task DeleteDatabaseAsync(string databaseName, bool hardDelete = false)
-		{
-			throw new NotImplementedException();
-		}
-
-		public Task CompactDatabaseAsync(string databaseName)
-		{
-			throw new NotImplementedException();
-		}
-
-		#endregion
-
-		#region IAsyncInfoDatabaseCommands
 
 		public IAsyncInfoDatabaseCommands Info
 		{
@@ -2476,14 +2379,10 @@ namespace Raven.Client.Connection.Async
 			var json = (RavenJObject)await url.ReplicationInfo()
 					.NoCache()
 					.ToJsonRequest(this, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)
-											   .ReadResponseJsonAsync();
+											   .ReadResponseJsonAsync().ConfigureAwait(false);
 
 			return json.Deserialize<ReplicationStatistics>(convention);
 		}
-
-		#endregion
-
-
 
 		/// <summary>
 		/// Returns a new <see cref="IAsyncDatabaseCommands"/> using the specified credentials

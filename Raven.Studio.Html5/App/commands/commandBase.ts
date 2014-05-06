@@ -1,6 +1,8 @@
 import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
 import database = require("models/database");
+import filesystem = require("models/filesystem/filesystem");
+import resource = require("models/resource");
 import appUrl = require("common/appUrl");
 
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
@@ -51,41 +53,80 @@ class commandBase {
         return "?" + propNameAndValues.join("&");
     }
 
-    query<T>(relativeUrl: string, args: any, database?: database, resultsSelector?: (results: any) => T): JQueryPromise<T> {
-        var ajax = this.ajax(relativeUrl, args, "GET", database);
+    query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T): JQueryPromise<T> {
+        var ajax = this.ajax(relativeUrl, args, "GET", resource);
         if (resultsSelector) {
             var task = $.Deferred();
             ajax.done((results, status, xhr) => {
+                //if we fetched a database document, save the etag from the header
+                if (results.hasOwnProperty('SecuredSettings')) {
+                    results['__metadata'] = { '@etag': xhr.getResponseHeader('Etag') };
+                }
                 var transformedResults = resultsSelector(results);
                 task.resolve(transformedResults);
             });
-            ajax.fail((request, status, error) => task.reject(request, status, error));
+            ajax.fail((request, status, error) => {
+                task.reject(request, status, error);
+                });
             return task;
         } else {
             return ajax;
         }
     }
 
-    put(relativeUrl: string, args: any, database?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "PUT", database, options);
+    head<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T): JQueryPromise<T> {
+        var ajax = this.ajax(relativeUrl, args, "HEAD", resource);
+        if (resultsSelector) {
+            var task = $.Deferred();
+            ajax.done((results, status, xhr) => {
+                var allHeaders = xhr.getAllResponseHeaders();
+                if (allHeaders) {
+                    var headersObject = {};
+                    var headersArray = xhr.getAllResponseHeaders().trim().split(/\r?\n/);
+                    for (var n = 0; n < headersArray.length; n++) {
+                        var keyValue = headersArray[n].split(": ");
+                        if (keyValue.length == 2) {
+                            keyValue[1] = keyValue[1].replaceAll("\"", "");
+                            headersObject[keyValue[0]] = keyValue[1];
+                        }
+                    }
+                    var transformedResults = resultsSelector(headersObject);
+                    task.resolve(transformedResults);
+                }
+            });
+            ajax.fail((request, status, error) => {
+                task.reject(request, status, error);
+                });
+            return task;
+        } else {
+            return ajax;
+        }
     }
 
-    reset(relativeUrl: string, args: any, database?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "RESET", database, options);
+    put(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "PUT", resource, options);
+    }
+
+    reset(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "RESET", resource, options);
     }
 
     /*
      * Performs a DELETE rest call.
     */
-    del(relativeUrl: string, args: any, database?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "DELETE", database, options);
+    del(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "DELETE", resource, options);
     }
 
-    post(relativeUrl: string, args: any, database?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "POST", database, options);
+    post(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "POST", resource, options);
     }
 
-    private ajax(relativeUrl: string, args: any, method: string, database?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
+    patch(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "PATCH", resource, options);
+    }
+
+    private ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings): JQueryPromise<any> {
         // ContentType:
         //
         // Can't use application/json in cross-domain requests, otherwise it 
@@ -99,7 +140,7 @@ class commandBase {
             "application/json; charset=utf-8";
         var defaultOptions = {
             cache: false,
-            url: appUrl.forDatabaseQuery(database) + relativeUrl,
+            url: appUrl.forResourceQuery(resource) + relativeUrl,
             data: args,
             dataType: "json",
             contentType: contentType, 

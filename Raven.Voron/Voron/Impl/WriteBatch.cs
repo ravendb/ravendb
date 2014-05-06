@@ -1,15 +1,13 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Security.Policy;
+using System.IO;
+using System.Linq;
+
 using Voron.Exceptions;
 
 namespace Voron.Impl
 {
-	using System;
-	using System.Collections.Generic;
-	using System.IO;
-	using System.Linq;
-
 	public class WriteBatch : IDisposable
 	{
 		private readonly Dictionary<string, Dictionary<Slice, BatchOperation>> _lastOperations;
@@ -32,27 +30,21 @@ namespace Voron.Impl
 			}
 		}
 
-		public Func<long> Size
+		public long Size()
 		{
-			get
-			{
-				return () =>
-				{
-					long totalSize = 0;
+			long totalSize = 0;
 
-					if (_lastOperations.Count > 0)
-						totalSize += _lastOperations.Sum(
-							operation =>
-							operation.Value.Values.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
+			if (_lastOperations.Count > 0)
+				totalSize += _lastOperations.Sum(
+					operation =>
+					operation.Value.Values.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
 
-					if (_multiTreeOperations.Count > 0)
-						totalSize += _multiTreeOperations.Sum(
-							tree =>
-							tree.Value.Sum(
-								multiOp => multiOp.Value.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size)));
-					return totalSize;
-				};
-			}
+			if (_multiTreeOperations.Count > 0)
+				totalSize += _multiTreeOperations.Sum(
+					tree =>
+					tree.Value.Sum(
+						multiOp => multiOp.Value.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size)));
+			return totalSize;
 		}
 
 		public bool IsEmpty { get { return _lastOperations.Count == 0 && _multiTreeOperations.Count == 0; } }
@@ -115,19 +107,26 @@ namespace Voron.Impl
 			_sliceEqualityComparer = new SliceEqualityComparer();
 		}
 
-		public void Add(Slice key, Stream value, string treeName, ushort? version = null,bool shouldIgnoreConcurrencyExceptions = false)
+		public void Add(Slice key, Slice value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
 		{
-			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
+			AssertValidTreeName(treeName);
 			if (value == null) throw new ArgumentNullException("value");
-			//TODO : check up if adding empty values make sense in Voron --> in order to be consistent with existing behavior of Esent, this should be allowed
-			//			if (value.Length == 0)
-			//				throw new ArgumentException("Cannot add empty value");
+
+			var batchOperation = BatchOperation.Add(key, value, version, treeName);
+			if (shouldIgnoreConcurrencyExceptions)
+				batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
+			AddOperation(batchOperation);
+		}
+
+		public void Add(Slice key, Stream value, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
+		{
+			AssertValidTreeName(treeName);
+			if (value == null) throw new ArgumentNullException("value");
 			if (value.Length > int.MaxValue)
 				throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 
-
-			var batchOperation = new BatchOperation(key, value, version, treeName, BatchOperationType.Add);
-			if(shouldIgnoreConcurrencyExceptions)
+			var batchOperation = BatchOperation.Add(key, value, version, treeName);
+			if (shouldIgnoreConcurrencyExceptions)
 				batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
 			AddOperation(batchOperation);
 		}
@@ -136,40 +135,53 @@ namespace Voron.Impl
 		{
 			AssertValidRemove(treeName);
 
-			AddOperation(new BatchOperation(key, null as Stream, version, treeName, BatchOperationType.Delete));
+			AddOperation(BatchOperation.Delete(key, version, treeName));
 		}
 
 		private static void AssertValidRemove(string treeName)
 		{
-			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
+			AssertValidTreeName(treeName);
 		}
 
 		public void MultiAdd(Slice key, Slice value, string treeName, ushort? version = null)
 		{
 			AssertValidMultiOperation(value, treeName);
 
-			AddOperation(new BatchOperation(key, value, version, treeName, BatchOperationType.MultiAdd));
-		}
-
-		private static void AssertValidMultiOperation(Slice value, string treeName)
-		{
-			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
-			if (value == null) throw new ArgumentNullException("value");
-			if (value.Size == 0)
-				throw new ArgumentException("Cannot add empty value");
+			AddOperation(BatchOperation.MultiAdd(key, value, version, treeName));
 		}
 
 		public void MultiDelete(Slice key, Slice value, string treeName, ushort? version = null)
 		{
 			AssertValidMultiOperation(value, treeName);
 
-			AddOperation(new BatchOperation(key, value, version, treeName, BatchOperationType.MultiDelete));
+			AddOperation(BatchOperation.MultiDelete(key, value, version, treeName));
+		}
+
+		public void Increment(Slice key, long delta, string treeName, ushort? version = null)
+		{
+			AssertValidTreeName(treeName);
+
+			AddOperation(BatchOperation.Increment(key, delta, version, treeName));
+		}
+
+		private static void AssertValidTreeName(string treeName)
+		{
+			if (treeName != null && treeName.Length == 0) 
+				throw new ArgumentException("treeName must not be empty", "treeName");
+		}
+
+		private static void AssertValidMultiOperation(Slice value, string treeName)
+		{
+			AssertValidTreeName(treeName);
+			if (value == null) throw new ArgumentNullException("value");
+			if (value.Size == 0)
+				throw new ArgumentException("Cannot add empty value");
 		}
 
 		private void AddOperation(BatchOperation operation)
 		{
 			var treeName = operation.TreeName;
-			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
+			AssertValidTreeName(treeName);
 
 			if (treeName == null)
 				treeName = Constants.RootTreeName;
@@ -208,7 +220,7 @@ namespace Voron.Impl
 			}
 		}
 
-		public class BatchOperation
+		public class BatchOperation : IComparable<BatchOperation>
 		{
 #if DEBUG
 			private readonly StackTrace stackTrace;
@@ -219,10 +231,41 @@ namespace Voron.Impl
 #endif
 
 			private readonly long originalStreamPosition;
-			private readonly HashSet<Type> exceptionTypesToIgnore = new HashSet<Type>(); 
+			private readonly HashSet<Type> exceptionTypesToIgnore = new HashSet<Type>();
 			private readonly Action reset = delegate { };
+			private readonly Slice valSlice;
 
-			public BatchOperation(Slice key, Stream value, ushort? version, string treeName, BatchOperationType type)
+			public static BatchOperation Add(Slice key, Slice value, ushort? version, string treeName)
+			{
+				return new BatchOperation(key, value, version, treeName, BatchOperationType.Add);
+			}
+
+			public static BatchOperation Add(Slice key, Stream stream, ushort? version, string treeName)
+			{
+				return new BatchOperation(key, stream, version, treeName, BatchOperationType.Add);
+			}
+
+			public static BatchOperation Delete(Slice key, ushort? version, string treeName)
+			{
+				return new BatchOperation(key, null as Stream, version, treeName, BatchOperationType.Delete);
+			}
+
+			public static BatchOperation MultiAdd(Slice key, Slice value, ushort? version, string treeName)
+			{
+				return new BatchOperation(key, value, version, treeName, BatchOperationType.MultiAdd);
+			}
+
+			public static BatchOperation MultiDelete(Slice key, Slice value, ushort? version, string treeName)
+			{
+				return new BatchOperation(key, value, version, treeName, BatchOperationType.MultiDelete);
+			}
+
+			public static BatchOperation Increment(Slice key, long delta, ushort? version, string treeName)
+			{
+				return new BatchOperation(key, delta, version, treeName, BatchOperationType.Increment);
+			}
+
+			private BatchOperation(Slice key, Stream value, ushort? version, string treeName, BatchOperationType type)
 				: this(key, value as object, version, treeName, type)
 			{
 				if (value != null)
@@ -238,11 +281,12 @@ namespace Voron.Impl
 #endif
 			}
 
-			public BatchOperation(Slice key, Slice value, ushort? version, string treeName, BatchOperationType type)
+			private BatchOperation(Slice key, Slice value, ushort? version, string treeName, BatchOperationType type)
 				: this(key, value as object, version, treeName, type)
 			{
 				if (value != null)
 				{
+					valSlice = value;
 					originalStreamPosition = 0;
 					ValueSize = value.Size;
 				}
@@ -268,7 +312,7 @@ namespace Voron.Impl
 			public BatchOperationType Type { get; private set; }
 
 			public ushort? Version { get; private set; }
-			
+
 			public HashSet<Type> ExceptionTypesToIgnore
 			{
 				get { return exceptionTypesToIgnore; }
@@ -290,7 +334,25 @@ namespace Voron.Impl
 			public void SetIgnoreExceptionOnExecution<T>()
 				where T : Exception
 			{
-				ExceptionTypesToIgnore.Add(typeof (T));
+				ExceptionTypesToIgnore.Add(typeof(T));
+			}
+
+			public unsafe int CompareTo(BatchOperation other)
+			{
+				var r = SliceEqualityComparer.Instance.Compare(Key, other.Key);
+				if (r != 0)
+					return r;
+				if (valSlice != null)
+				{
+					if (other.valSlice == null)
+						return -1;
+					return valSlice.Compare(other.valSlice, NativeMethods.memcmp);
+				}
+				else if (other.valSlice != null)
+				{
+					return 1;
+				}
+				return 0;
 			}
 		}
 
@@ -301,6 +363,7 @@ namespace Voron.Impl
 			Delete = 2,
 			MultiAdd = 3,
 			MultiDelete = 4,
+			Increment = 5
 		}
 
 		public void Dispose()

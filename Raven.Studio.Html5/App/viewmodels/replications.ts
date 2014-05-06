@@ -7,36 +7,65 @@ import getReplicationsCommand = require("commands/getReplicationsCommand");
 import saveReplicationDocumentCommand = require("commands/saveReplicationDocumentCommand");
 import getAutomaticConflictResolutionDocumentCommand = require("commands/getAutomaticConflictResolutionDocumentCommand");
 import saveAutomaticConflictResolutionDocument = require("commands/saveAutomaticConflictResolutionDocument");
+import appUrl = require("common/appUrl");
 
 class replications extends viewModelBase {
 
-    replicationConfig = ko.observable<replicationConfig>();
-    replicationsSetup = ko.observable<replicationsSetup>();
+    replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None", AttachmentConflictResolution: "None" }));
+    replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ Destinations: [], Source: null }));
     
-    replicationConfigDirtyFlag = ko.observable(new ko.DirtyFlag([]));
-    replicationsSetupDirtyFlag = ko.observable(new ko.DirtyFlag([]));
+    replicationConfigDirtyFlag = new ko.DirtyFlag([]);
+    replicationsSetupDirtyFlag = new ko.DirtyFlag([]);
 
-    activate() {
+    isConfigSaveEnabled: KnockoutComputed<boolean>;
+    isSetupSaveEnabled: KnockoutComputed<boolean>;
 
-        this.replicationConfig(new replicationConfig({DocumentConflictResolution: "None", AttachmentConflictResolution: "None"}));
-        this.replicationsSetup(new replicationsSetup({ Destinations: [], Source: null }));
-
+    canActivate(args: any): JQueryPromise<any> {
+        var deferred = $.Deferred();
         var db = this.activeDatabase();
-        var automaticConflictResolution = new getAutomaticConflictResolutionDocumentCommand(db).execute();
-        var replicationDestinations = new getReplicationsCommand(db).execute();
+        if (db) {
+            $.when(this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
+                .done(() => deferred.resolve({ can: true }) )
+                .fail(() => deferred.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) }));
+        }
+        return deferred;
+    }
+
+    activate(args) {
+        super.activate(args);
 
         var self = this;
-        $.when(automaticConflictResolution, replicationDestinations)
-            .done((repConfig, repSetup) => {
-                this.replicationConfig(new replicationConfig(repConfig));
-                this.replicationsSetup(new replicationsSetup(repSetup));
-                this.replicationConfigDirtyFlag = ko.observable(new ko.DirtyFlag([this.replicationConfig]));
-                this.replicationsSetupDirtyFlag = ko.observable(new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations()]));
-                var combinedFlag = ko.computed(function () {
-                    return (self.replicationConfigDirtyFlag()().isDirty() || self.replicationsSetupDirtyFlag()().isDirty());
-                });
-                viewModelBase.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
+        this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
+        this.isConfigSaveEnabled = ko.computed(function () {
+            return self.replicationConfigDirtyFlag().isDirty();
         });
+        this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations()]);
+        this.isSetupSaveEnabled = ko.computed(function () {
+            return self.replicationsSetupDirtyFlag().isDirty();
+        });
+
+        var combinedFlag = ko.computed(function () {
+            return (self.replicationConfigDirtyFlag().isDirty() || self.replicationsSetupDirtyFlag().isDirty());
+        });
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
+    }
+
+    fetchAutomaticConflictResolution(db): JQueryPromise<any> {
+        var deferred = $.Deferred();
+        new getAutomaticConflictResolutionDocumentCommand(db)
+            .execute()
+            .done(repConfig => this.replicationConfig(new replicationConfig(repConfig)))
+            .always(() => deferred.resolve({ can: true }));
+        return deferred;
+    }
+
+    fetchReplications(db): JQueryPromise<any> {
+        var deferred = $.Deferred();
+        new getReplicationsCommand(db)
+            .execute()
+            .done(repSetup => this.replicationsSetup(new replicationsSetup(repSetup)))
+            .always(() => deferred.resolve({ can: true }));
+        return deferred;
     }
 
     createNewDestination() {
@@ -80,7 +109,7 @@ class replications extends viewModelBase {
         if (db) {
             new saveReplicationDocumentCommand(this.replicationsSetup().toDto(), db)
                 .execute()
-                .done(() => this.replicationsSetupDirtyFlag()().reset() );
+                .done(() => this.replicationsSetupDirtyFlag().reset() );
         }
     }
 
@@ -89,7 +118,7 @@ class replications extends viewModelBase {
         if (db) {
             new saveAutomaticConflictResolutionDocument(this.replicationConfig().toDto(), db)
                 .execute()
-                .done(() => this.replicationConfigDirtyFlag()().reset() );
+                .done(() => this.replicationConfigDirtyFlag().reset() );
         }
     }
 }

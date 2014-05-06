@@ -6,7 +6,7 @@ using Voron.Impl.Backup;
 
 namespace Raven.Database.Storage.Voron.Backup
 {
-    public class BackupOperation : BaseBackupOperation
+    public class BackupOperation : BaseBackupOperation, IDisposable
     {
         private readonly StorageEnvironment env;
 
@@ -30,9 +30,15 @@ namespace Raven.Database.Storage.Voron.Backup
             if (string.IsNullOrWhiteSpace(backupPath)) throw new ArgumentNullException("backupPath");
 
             if (isIncrementalBackup)
-                BackupMethods.Incremental.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename));
+                BackupMethods.Incremental.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename),
+					infoNotify: s => UpdateBackupStatus(s, BackupStatus.BackupMessageSeverity.Informational));
             else
-                BackupMethods.Full.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename));
+                BackupMethods.Full.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename),
+					infoNotify: s => UpdateBackupStatus(s, BackupStatus.BackupMessageSeverity.Informational));
+        }
+
+        public void Dispose()
+        {
         }
     }
 }

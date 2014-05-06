@@ -1,7 +1,7 @@
 class sqlReplicationTable {
 
-    tableName = ko.observable<string>();
-    documentKeyColumn = ko.observable<string>();
+    tableName = ko.observable<string>().extend({ required: true });
+    documentKeyColumn = ko.observable<string>().extend({ required: true });
 
     constructor(dto: sqlReplicationTableDto) {
         this.tableName(dto.TableName);

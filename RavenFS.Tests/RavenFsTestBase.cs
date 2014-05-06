@@ -24,7 +24,6 @@ using Raven.Database.Server;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.Security;
 using Raven.Server;
-using Xunit;
 
 namespace RavenFS.Tests
 {
@@ -33,7 +32,7 @@ namespace RavenFS.Tests
         private readonly List<RavenDbServer> servers = new List<RavenDbServer>();
         private readonly List<RavenFileSystemClient> ravenFileSystemClients = new List<RavenFileSystemClient>();
         private readonly HashSet<string> pathsToDelete = new HashSet<string>();
-        public static readonly int[] Ports = { 19079, 19078, 19077 };
+        public static readonly int[] Ports = { 19069, 19068, 19067 };
 
         protected RavenDbServer CreateRavenDbServer(int port,
                                                     string dataDirectory = null,
@@ -49,6 +48,7 @@ namespace RavenFS.Tests
             {
 				Port = port,
 				DataDirectory = directory,
+				FileSystemDataDirectory = Path.Combine(directory, "FileSystem"),
 				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 #if DEBUG
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
@@ -62,7 +62,12 @@ namespace RavenFS.Tests
                 Authentication.EnableOnce();
             }
 
-            var ravenDbServer = new RavenDbServer(ravenConfiguration);
+            var ravenDbServer = new RavenDbServer(ravenConfiguration)
+            {
+	            UseEmbeddedHttpServer = true
+            };
+	        ravenDbServer.Initialize();
+
             servers.Add(ravenDbServer);
 
             if (enableAuthentication)
@@ -76,11 +81,11 @@ namespace RavenFS.Tests
         }
 
         protected virtual RavenFileSystemClient NewClient(int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
-                                                          ICredentials credentials = null, [CallerMemberName] string fileSystemName = null)
+                                                          ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
-            var server = CreateRavenDbServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication);
+            var server = CreateRavenDbServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage);
 
             var client = new RavenFileSystemClient(GetServerUrl(fiddler, server.SystemDatabase.ServerUrl), fileSystemName, apiKey: apiKey, credentials: credentials);
 
@@ -121,7 +126,11 @@ namespace RavenFS.Tests
 
         protected string NewDataPath(string prefix = null)
         {
-            var newDataDir = Path.GetFullPath(string.Format(@".\{0}-{1}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "RavenFS_Test", Guid.NewGuid().ToString("N")));
+            // Federico: With a filesystem name too large, we can easily pass the filesystem path limit. 
+            // The truncation of the Guid to 8 still provides enough entropy to avoid collisions.
+            string suffix = Guid.NewGuid().ToString("N").Substring(0, 8);
+
+            var newDataDir = Path.GetFullPath(string.Format(@".\{0}-{1}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "RavenFS_Test", suffix));
             Directory.CreateDirectory(newDataDir);
             pathsToDelete.Add(newDataDir);
             return newDataDir;
@@ -129,14 +138,15 @@ namespace RavenFS.Tests
 
         protected string NormalizeFileSystemName(string fileSystemName)
         {
-            if (string.IsNullOrEmpty(fileSystemName)) 
+            if (string.IsNullOrEmpty(fileSystemName))
                 return null;
 
             if (fileSystemName.Length < 50)
                 return fileSystemName;
 
-            var prefix = fileSystemName.Substring(0, 30);
-            var suffix = fileSystemName.Substring(fileSystemName.Length - 10, 10);
+            // Federico: With a too large value (say 30) it is very easy to pass the filesystem limit when the test name is large. 
+            var prefix = fileSystemName.Substring(0, 10);
+            var suffix = fileSystemName.Substring(fileSystemName.Length - 5, 5);
             var hash = new Guid(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(fileSystemName))).ToString("N").Substring(0, 8);
 
             return string.Format("{0}_{1}_{2}", prefix, hash, suffix);
@@ -176,14 +186,14 @@ namespace RavenFS.Tests
 
         public static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
         {
-            var field = database.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.NotNull(field);
-            var validateLicense = field.GetValue(database);
+			var field = database.GetType().GetField("initializer", BindingFlags.Instance | BindingFlags.NonPublic);
+			var initializer = field.GetValue(database);
+			var validateLicenseField = initializer.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
+			var validateLicense = validateLicenseField.GetValue(initializer);
 
-            var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
-            Assert.NotNull(currentLicenseProp);
+			var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
 
-            return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
+			return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
         }
 
         public virtual void Dispose()

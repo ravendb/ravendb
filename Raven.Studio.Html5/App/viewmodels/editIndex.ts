@@ -14,6 +14,7 @@ import dialog = require("plugins/dialog");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import alertType = require("common/alertType");
 import alertArgs = require("common/alertArgs");
+import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 
 class editIndex extends viewModelBase { 
 
@@ -26,13 +27,16 @@ class editIndex extends viewModelBase {
     hasExistingTransform: KnockoutComputed<string>;
     hasMultipleMaps: KnockoutComputed<boolean>;
     termsUrl = ko.observable<string>();
-    statsUrl = ko.observable<string>();
     queryUrl = ko.observable<string>();
+    editMaxIndexOutputsPerDocument = ko.observable<boolean>(false);
+    indexErrorsList = ko.observableArray<string>();
+    
 
     constructor() {
         super();
 
         aceEditorBindingHandler.install();
+        autoCompleteBindingHandler.install();
 
         this.priorityFriendlyName = ko.computed(() => this.getPriorityFriendlyName());
         this.priorityLabel = ko.computed(() => this.priorityFriendlyName() ? "Priority: " + this.priorityFriendlyName() : "Priority");
@@ -40,7 +44,7 @@ class editIndex extends viewModelBase {
         this.hasExistingTransform = ko.computed(() => this.editedIndex() && this.editedIndex().transformResults());
         this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
     }
-
+    
     canActivate(indexToEditName: string) {
         if (indexToEditName) {
             var canActivateResult = $.Deferred();
@@ -68,34 +72,22 @@ class editIndex extends viewModelBase {
             this.priority(indexPriority.normal);
             this.editedIndex(this.createNewIndexDefinition());
         }
+
+        var indexDef = this.editedIndex();
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.fields, indexDef.transformResults, indexDef.spatialFields, indexDef.maxIndexOutputsPerDocument]);
+        //need to add more fields like: this.editedIndex().luceneFields()[0].name, this.editedIndex().luceneFields()[0].indexing()
     }
 
     attached() {
         this.addMapHelpPopover();
         this.addReduceHelpPopover();
         this.addTransformHelpPopover();
-
-        var indexDef = this.editedIndex();
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.priority, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.fields, indexDef.transformResults, indexDef.spatialFields]);
-        //need to add more fields like: this.editedIndex().luceneFields()[0].name, this.editedIndex().luceneFields()[0].indexing()
     }
-
-    // Called back after the entire composition has finished (parents and children included)
-    compositionComplete() {
-        super.compositionComplete();
-    }
-
-    /*saveInObservable() {
-        var docEditor = ace.edit("docEditor");
-        var docEditorText = docEditor.getSession().getValue();
-        this.editedTransformer().transformResults(docEditorText);
-    }*/
 
     editExistingIndex(unescapedIndexName: string) {
         var indexName = decodeURIComponent(unescapedIndexName);
         this.fetchIndexPriority(indexName);
         this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
-        this.statsUrl(appUrl.forStatus(this.activeDatabase()));
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
     }
 
@@ -126,7 +118,10 @@ class editIndex extends viewModelBase {
     fetchIndexToEdit(indexName: string) : JQueryPromise<any>{
         return new getIndexDefinitionCommand(indexName, this.activeDatabase())
             .execute()
-            .done((results: indexDefinitionContainerDto) => this.editedIndex(new indexDefinition(results.Index)));
+            .done((results: indexDefinitionContainerDto) => {
+                this.editedIndex(new indexDefinition(results.Index));
+                this.editMaxIndexOutputsPerDocument(results.Index.MaxIndexOutputsPerDocument ? results.Index.MaxIndexOutputsPerDocument > 0 ? true : false : false);
+        });
     }
 
     fetchIndexPriority(indexName: string) {
@@ -247,14 +242,21 @@ class editIndex extends viewModelBase {
 
     addField() {
         var field = new luceneField("");
+        field.indexFieldNames = this.editedIndex().fields();
+        field.calculateFieldNamesAutocomplete();
         this.editedIndex().luceneFields.push(field);
+    }
+
+    removeMaxIndexOutputs() {
+        this.editedIndex().maxIndexOutputsPerDocument(0);
+        this.editMaxIndexOutputsPerDocument(false);
     }
 
     addSpatialField() {
         var field = spatialIndexField.empty();
         this.editedIndex().spatialFields.push(field);
     }
-
+    
     removeMap(mapIndex: number) {
         this.editedIndex().maps.splice(mapIndex, 1);
     }

@@ -1,6 +1,9 @@
-﻿using Raven.Abstractions.Data;
+﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Linq;
+using Raven.Tests.Common.Attributes;
+using Raven.Tests.Common.Dto.Faceted;
 using Raven.Tests.Faceted;
 using System;
 using System.Collections.Generic;
@@ -55,8 +58,8 @@ namespace Raven.Tests.Bugs.Facets
                 var session = store.OpenSession();
                 //CameraCostIndex does not include zoom, bad index specified.
                 var query = session.Query<Camera, CameraCostIndex>().Where(x => x.Zoom > 3);
-                Assert.Throws<System.ArgumentException>(()=>query.ToList());
-                Assert.Throws<System.ArgumentException>(()=>query.ToFacets(facets));
+                Assert.Throws<System.InvalidOperationException>(() => query.ToList());
+                Assert.Throws<ErrorResponseException>(() => query.ToFacets(facets));
             }
         }
     }

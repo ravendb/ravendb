@@ -79,7 +79,7 @@ namespace Raven.Client.Document
 			FindIdentityProperty = q => q.Name == "Id";
 			FindClrType = (id, doc, metadata) => metadata.Value<string>(Abstractions.Data.Constants.RavenClrType);
 
-			FindClrTypeName = entityType => ReflectionUtil.GetFullNameWithoutVersionInformation(entityType);
+			FindClrTypeName = ReflectionUtil.GetFullNameWithoutVersionInformation;
 			TransformTypeTagNameToDocumentKeyPrefix = DefaultTransformTypeTagNameToDocumentKeyPrefix;
 			FindFullDocumentKeyFromNonStringIdentifier = DefaultFindFullDocumentKeyFromNonStringIdentifier;
 			FindIdentityPropertyNameFromEntityName = entityName => "Id";
@@ -212,7 +212,6 @@ namespace Raven.Client.Document
 		}
 
 		private static IDictionary<Type, string> cachedDefaultTypeTagNames = new Dictionary<Type, string>();
-		private int requestCount;
 
 		/// <summary>
 		/// Get the default tag name for the specified type.
@@ -457,6 +456,7 @@ namespace Raven.Client.Document
 				TypeNameHandling = TypeNameHandling.Auto,
 				TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple,
 				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+                FloatParseHandling = FloatParseHandling.Decimal,
 				Converters =
 					{
 						new JsonLuceneDateTimeConverter(),
@@ -543,11 +543,6 @@ namespace Raven.Client.Document
 		/// this to inject your own replication / failover logic.
 		/// </summary>
 		public Func<string, IDocumentStoreReplicationInformer> ReplicationInformerFactory { get; set; }
-
-		public int IncrementRequestCount()
-		{
-			return Interlocked.Increment(ref requestCount);
-		}
 
 		public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 

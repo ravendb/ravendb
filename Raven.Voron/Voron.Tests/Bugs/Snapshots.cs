@@ -1,4 +1,5 @@
-﻿using Voron.Debugging;
+﻿using System.Linq;
+using Voron.Debugging;
 
 namespace Voron.Tests.Bugs
 {
@@ -68,7 +69,8 @@ namespace Voron.Tests.Bugs
 					Assert.NotNull(result);
 
 					{
-                        Assert.Equal(testBuffer, result.Reader.ReadBytes(result.Reader.Length));
+						int used;
+						Assert.Equal(testBuffer, result.Reader.ReadBytes(result.Reader.Length, out used).Take(used).ToArray());
 					}
 				}
 			}
@@ -125,7 +127,8 @@ namespace Voron.Tests.Bugs
 					Assert.NotNull(result);
 
 					{
-						Assert.Equal(testBuffer, result.Reader.ReadBytes(result.Reader.Length));
+						int used;
+						Assert.Equal(testBuffer, result.Reader.ReadBytes(result.Reader.Length, out used).Take(used).ToArray());
 					}
 				}
 			}

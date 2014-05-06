@@ -28,13 +28,13 @@ class tasks extends viewModelBase {
 
         this.router = durandalRouter.createChildRouter()
             .map([
-            { route: ['tasks', 'tasks/importDatabase'], moduleId: 'viewmodels/importDatabase', title: 'Import Database', nav: true, hash: importDatabaseUrl },
-            { route: 'tasks/exportDatabase', moduleId: 'viewmodels/exportDatabase', title: 'Export Database', nav: true, hash: exportDatabaseUrl },
-            { route: 'tasks/backupDatabase', moduleId: 'viewmodels/backupDatabase', title: 'Backup Database', nav: true, hash: backupDatabaseUrl },
-            { route: 'tasks/restoreDatabase', moduleId: 'viewmodels/restoreDatabase', title: 'Restore Database', nav: true, hash: restoreDatabaseUrl },
-            { route: 'tasks/toggleIndexing', moduleId: 'viewmodels/toggleIndexing', title: 'Toggle Indexing', nav: true, hash: toggleIndexingUrl },
-            { route: 'tasks/sampleData', moduleId: 'viewmodels/createSampledata', title: 'Create Sample Data', nav: true, hash: sampleDataUrl },
-            { route: 'tasks/csvImport', moduleId: 'viewmodels/csvImport', title: 'CSV Import', nav: true, hash: csvImportUrl }
+            { route: ['databases/tasks', 'databases/tasks/importDatabase'], moduleId: 'viewmodels/importDatabase', title: 'Import Database', nav: true, hash: importDatabaseUrl },
+            { route: 'databases/tasks/exportDatabase', moduleId: 'viewmodels/exportDatabase', title: 'Export Database', nav: true, hash: exportDatabaseUrl },
+            { route: 'databases/tasks/backupDatabase', moduleId: 'viewmodels/backupDatabase', title: 'Backup Database', nav: true, hash: backupDatabaseUrl },
+            { route: 'databases/tasks/restoreDatabase', moduleId: 'viewmodels/restoreDatabase', title: 'Restore Database', nav: true, hash: restoreDatabaseUrl },
+            { route: 'databases/tasks/toggleIndexing', moduleId: 'viewmodels/toggleIndexing', title: 'Toggle Indexing', nav: true, hash: toggleIndexingUrl },
+            { route: 'databases/tasks/sampleData', moduleId: 'viewmodels/createSampledata', title: 'Create Sample Data', nav: true, hash: sampleDataUrl },
+            { route: 'databases/tasks/csvImport', moduleId: 'viewmodels/csvImport', title: 'CSV Import', nav: true, hash: csvImportUrl }
             ])
             .buildNavigationModel();
 

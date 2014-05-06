@@ -4,11 +4,14 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+
+using Raven.Tests.Helpers;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-    public class SyncAsync : Raven.Tests.Helpers.RavenTestBase
+    public class SyncAsync : RavenTestBase
     {
         [Fact]
         public void Async()

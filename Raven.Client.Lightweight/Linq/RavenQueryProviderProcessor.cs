@@ -16,6 +16,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
+using System.Threading.Tasks;
 
 namespace Raven.Client.Linq
 {
@@ -1508,7 +1509,34 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 			return q.SelectFields<T>(FieldsToFetch.ToArray());
 		}
+        /// <summary>
+        /// Gets the lucene query.
+        /// </summary>
+        /// <value>The lucene query.</value>
+        public IAsyncDocumentQuery<T> GetDocumentQueryForAsync(Expression expression)
+        {            
+            var q = queryGenerator.AsyncQuery<T>(indexName, isMapReduce);
 
+            documentQuery = (IAbstractDocumentQuery<T>)q;
+            documentQuery.SetResultTransformer(resultsTransformer);
+            try
+            {
+                VisitExpression(expression);
+            }
+            catch (ArgumentException e)
+            {
+                throw new ArgumentException("Could not understand expression: " + expression, e);
+            }
+            catch (NotSupportedException e)
+            {
+                throw new NotSupportedException("Could not understand expression: " + expression, e);
+            }
+
+            if (customizeQuery != null)
+                customizeQuery((IDocumentQueryCustomization)documentQuery);
+            
+            return q.SelectFields<T>(FieldsToFetch.ToArray());
+        }
 		/// <summary>
 		/// Gets the lucene query.
 		/// </summary>
@@ -1577,8 +1605,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			}).ToArray();
 
 			var finalQuery = ((IDocumentQuery<T>)documentQuery).SelectFields<TProjection>(FieldsToFetch.ToArray(), renamedFields);
-
-			finalQuery.SetResultTransformer(resultsTransformer);
+            
+            //no reason to override a value that may or may not exist there
+            if(!String.IsNullOrEmpty(resultsTransformer))
+			    finalQuery.SetResultTransformer(resultsTransformer);
 			finalQuery.SetQueryInputs(queryInputs);
 
 			if (FieldsToRename.Count > 0)
