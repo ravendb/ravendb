@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Raven.Tests.Core.Utils.Indexes;
+using Raven.Abstractions.Data;
 
 namespace Raven.Tests.Core.Querying
 {
@@ -255,6 +256,45 @@ namespace Raven.Tests.Core.Querying
                     Assert.Equal(2, users.Length);
                     Assert.Equal("Name", users[0].Name);
                     Assert.Equal("Bob", users[1].Name);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanProvideSuggestions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Users_ByName().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { 
+                        Name = "John Smith"
+                    });
+                    session.Store(new User
+                    {
+                        Name = "Jack Johnson"
+                    });
+                    session.Store(new User
+                    {
+                        Name = "Robery Jones"
+                    });
+                    session.Store(new User
+                    {
+                        Name = "David Jones"
+                    });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+
+                    var users = session.Query<User, Users_ByName>()
+                        .Where(x => x.Name == "johne");
+
+                    SuggestionQueryResult suggestionResult = users.Suggest();
+                    Assert.Equal(3, suggestionResult.Suggestions.Length);
+                    Assert.Equal("john", suggestionResult.Suggestions[0]);
+                    Assert.Equal("jones", suggestionResult.Suggestions[1]);
+                    Assert.Equal("johnson", suggestionResult.Suggestions[2]);
                 }
             }
         }
