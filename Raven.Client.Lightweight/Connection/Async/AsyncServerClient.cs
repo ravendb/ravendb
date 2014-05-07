@@ -846,16 +846,33 @@ namespace Raven.Client.Connection.Async
 			ErrorResponseException responseException;
 			try
 			{
-				var results = result
+				var uniqueKeys = new HashSet<string>(keys);
+
+				var results =  result
 					.Value<RavenJArray>("Results")
 					.OfType<RavenJObject>()
-					.Where(x => x.ContainsKey("@metadata"))
+					.ToList();
+
+				var documents = results
+					.Where(x => x.ContainsKey("@metadata") && x["@metadata"].Value<string>("@id") != null)
 					.ToDictionary(x => x["@metadata"].Value<string>("@id"), x => x, StringComparer.OrdinalIgnoreCase);
+
+				if (results.Count >= uniqueKeys.Count)
+				{
+					for (var i = 0; i < uniqueKeys.Count; i++)
+					{
+						var key = keys[i];
+						if (documents.ContainsKey(key)) 
+							continue;
+
+						documents.Add(key, results[i]);
+					}
+				}
 
 				var multiLoadResult = new MultiLoadResult
 				{
 					Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-					Results = keys.Select(key => results.ContainsKey(key) ? results[key] : null).ToList()
+					Results = keys.Select(key => documents.ContainsKey(key) ? documents[key] : null).ToList()
 				};
 
 				var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);
