@@ -21,9 +21,11 @@ import deleteDestinationCommand = require("commands/filesystem/deleteDestination
 import synchronizeNowCommand = require("commands/filesystem/synchronizeNowCommand");
 import synchronizeWithDestinationCommand = require("commands/filesystem/synchronizeWithDestinationCommand");
 import resolveConflictCommand = require("commands/filesystem/resolveConflictCommand");
+import virtualTable = require("widgets/virtualTable/viewModel");
 
 import filesystemAddDestination = require("viewmodels/filesystem/filesystemAddDestination");
 import resolveConflict = require("viewmodels/filesystem/resolveConflict");
+import filesystem = require("models/filesystem/filesystem");
 
 class filesystemSynchronization extends viewModelBase {
 
@@ -43,18 +45,35 @@ class filesystemSynchronization extends viewModelBase {
     isIncomingActivityVisible = ko.computed(() => true);
           
     private router = router;
+    private pollingInterval: any;
     synchronizationUrl = appUrl.forCurrentDatabase().filesystemSynchronization;
+
+    static outgoingGridSelector = "#outgoingGrid";
+    static incomingGridSelector = "#incomingGrid";
 
     constructor() {
         super();
     }
 
     canActivate(args: any) {
+        this.loadActivity();
+
         return true;
     }
 
     activate(args) {
         super.activate(args);
+        this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
+
+        this.startPolling();
+    }
+
+    startPolling() {
+        this.pollingInterval = setInterval(() => { this.modelPolling() }, 10000);
+    }
+
+    deactivate() {
+        window.clearInterval(this.pollingInterval);
     }
 
     addDestination() {
@@ -75,6 +94,12 @@ class filesystemSynchronization extends viewModelBase {
             new saveDestinationCommand(fs, url).execute()
                 .done(x => self.forceModelPolling());
         }
+    }
+
+    loadActivity() {
+        var incomingGrid = this.getIncomingActivityTable();
+        this.outgoingActivityPagedList(this.createOutgoingActivityPagedList());
+        this.incomingActivityPagedList(this.createIncomingActivityPagedList());
     }
 
     synchronizeNow() {
@@ -110,9 +135,15 @@ class filesystemSynchronization extends viewModelBase {
             new getFilesConflictsCommand(fs).execute()
                 .done(x => this.conflicts(x));
 
-            this.outgoingActivityPagedList(this.createOutgoingActivityPagedList());
+            var incomingGrid = this.getIncomingActivityTable();
+            if (incomingGrid) {
+                incomingGrid.loadRowData();
+            }
 
-            this.incomingActivityPagedList(this.createIncomingActivityPagedList());
+            var outgoingGrid = this.getOutgoingActivityTable();
+            if (outgoingGrid) {
+                outgoingGrid.loadRowData();
+            }
         }
     }
 
@@ -123,7 +154,7 @@ class filesystemSynchronization extends viewModelBase {
     }
 
     incomingActivityFetchTask(skip: number, take: number): JQueryPromise<pagedResultSet> {
-        var task = new getSyncIncomingActivitiesCommand(appUrl.getFilesystem(), skip, take).execute();
+        var task = new getSyncIncomingActivitiesCommand(this.activeFilesystem(), skip, take).execute();
         return task;
     }
 
@@ -134,7 +165,7 @@ class filesystemSynchronization extends viewModelBase {
     }
 
     outgoingActivityFetchTask(skip: number, take: number): JQueryPromise<pagedResultSet> {
-        var task = new getSyncOutgoingActivitiesCommand(appUrl.getFilesystem(), skip, take).execute();
+        var task = new getSyncOutgoingActivitiesCommand(this.activeFilesystem(), skip, take).execute();
         return task;
     }
 
@@ -183,6 +214,32 @@ class filesystemSynchronization extends viewModelBase {
             app.showDialog(resolveConflictViewModel);
         });
 
+    }
+
+    getOutgoingActivityTable(): virtualTable {
+        var gridContents = $(filesystemSynchronization.outgoingGridSelector).children()[0];
+        if (gridContents) {
+            return ko.dataFor(gridContents);
+        }
+
+        return null;
+    }
+
+    getIncomingActivityTable(): virtualTable {
+        var gridContents = $(filesystemSynchronization.incomingGridSelector).children()[0];
+        if (gridContents) {
+            return ko.dataFor(gridContents);
+        }
+
+        return null;
+    }
+
+    fileSystemChanged(fs: filesystem) {
+        if (fs) {
+            window.clearInterval(this.pollingInterval);
+            this.loadActivity();
+            this.startPolling();
+        }
     }
 }
 
