@@ -9,6 +9,7 @@ import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 import document = require("models/document");
 import appUrl = require("common/appUrl");
+import uploadQueueHelper = require("common/uploadQueueHelper");
 import collection = require("models/collection");
 import uploadItem = require("models/uploadItem");
 import deleteDocuments = require("viewmodels/deleteDocuments");
@@ -427,9 +428,9 @@ class shell extends viewModelBase {
     }
 
     uploadStatusChanged(item: uploadItem) {
-        var queue: uploadItem[] = this.parseUploadQueue(window.localStorage[this.localStorageUploadQueueKey + item.filesystem.name], item.filesystem);
-        this.updateQueueStatus(item.id(), item.status(), queue);
-        this.updateLocalStorage(queue, item.filesystem);
+        var queue: uploadItem[] = uploadQueueHelper.parseUploadQueue(window.localStorage[uploadQueueHelper.localStorageUploadQueueKey + item.filesystem.name], item.filesystem);
+        uploadQueueHelper.updateQueueStatus(item.id(), item.status(), queue);
+        uploadQueueHelper.updateLocalStorage(queue, item.filesystem);
     }
 
     showLicenseStatusDialog() {
@@ -438,6 +439,8 @@ class shell extends viewModelBase {
             app.showDialog(dialog);
         });
     }
+
+    
 }
 
 export = shell;
