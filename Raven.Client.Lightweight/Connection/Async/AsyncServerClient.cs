@@ -846,10 +846,16 @@ namespace Raven.Client.Connection.Async
 			ErrorResponseException responseException;
 			try
 			{
+				var results = result
+					.Value<RavenJArray>("Results")
+					.OfType<RavenJObject>()
+					.Where(x => x.ContainsKey("@metadata"))
+					.ToDictionary(x => x["@metadata"].Value<string>("@id"), x => x, StringComparer.OrdinalIgnoreCase);
+
 				var multiLoadResult = new MultiLoadResult
 				{
 					Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-					Results = result.Value<RavenJArray>("Results").Select(x => x as RavenJObject).ToList()
+					Results = keys.Select(key => results.ContainsKey(key) ? results[key] : null).ToList()
 				};
 
 				var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);

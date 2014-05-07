@@ -57,7 +57,7 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        public void Cleanup(string db, bool skipIfActive)
+        public void Cleanup(string db, bool skipIfActive,Func<TResource,bool> shouldSkip = null)
         {
             using (ResourcesStoresCache.WithAllLocks())
             {
@@ -80,8 +80,9 @@ namespace Raven.Database.Server.Tenancy
                 }
 
                 var database = databaseTask.Result;
-                if (skipIfActive &&
-                    (SystemTime.UtcNow - LastWork(database)).TotalMinutes < 10)
+                if ((skipIfActive &&
+					(SystemTime.UtcNow - LastWork(database)).TotalMinutes < 10) || 
+					(shouldSkip != null && shouldSkip(database)))
                 {
                     // this document might not be actively working with user, but it is actively doing indexes, we will 
                     // wait with unloading this database until it hasn't done indexing for a while.

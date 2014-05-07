@@ -323,6 +323,7 @@
     <Compile Include="QueryingUsingOr.cs" />
     <Compile Include="QueryNotAnyTest.cs" />
     <Compile Include="QueryOnItems.cs" />
+    <Compile Include="QueryWhereInTests.cs" />
     <Compile Include="RacielRod.cs" />
     <Compile Include="Random.cs" />
     <Compile Include="RangeQueriesOverSum.cs" />

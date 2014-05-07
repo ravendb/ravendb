@@ -155,7 +155,7 @@ namespace Voron.Trees
 
 		private void MultiAddOnNewValue(Transaction tx, Slice key, Slice value, ushort? version, int maxNodeSize)
 		{
-			var requiredPageSize = Constants.PageHeaderSize + Constants.NodeHeaderSize + Constants.NodeOffsetSize + value.Size;
+			var requiredPageSize = Constants.PageHeaderSize + SizeOf.LeafEntry(-1, value, 0) + Constants.NodeOffsetSize;
 			if (requiredPageSize > maxNodeSize)
 			{
 				// no choice, very big value, we might as well just put it in its own tree from the get go...
