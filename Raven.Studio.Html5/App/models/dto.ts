@@ -514,7 +514,7 @@ interface patchValueDto {
     Value: string;
 }
 
-interface patchDto extends documentDto {
+interface patchDto {
     PatchOnOption: string;
     Query: string;
     Script: string;

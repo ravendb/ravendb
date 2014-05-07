@@ -249,7 +249,7 @@
     <TypeScriptCompile Include="App\common\changesApi.ts" />
     <TypeScriptCompile Include="App\models\changeSubscription.ts" />
     <TypeScriptCompile Include="App\common\changesCallback.ts" />
-    <TypeScriptCompile Include="App\models\patchDocument.ts" />
+    <TypeScriptCompile Include="App\models\patchDocuments.ts" />
     <TypeScriptCompile Include="App\models\patchParam.ts" />
     <TypeScriptCompile Include="App\viewmodels\savePatch.ts" />
     <TypeScriptCompile Include="App\viewmodels\loadPatch.ts" />
@@ -278,6 +278,10 @@
     <TypeScriptCompile Include="App\models\statusDebugQueriesGroup.ts" />
     <TypeScriptCompile Include="App\models\statusDebugQueriesQuery.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugTasks.ts" />
+    <Content Include="App\views\alerts.html" />
+    <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\selectColumns.html" />
+    <TypeScriptCompile Include="App\viewmodels\patch.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\statusDebugTasks.html" />

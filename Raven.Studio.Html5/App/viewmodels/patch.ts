@@ -1,6 +1,5 @@
-import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
-import patchDocument = require("models/patchDocument");
+import patchDocuments = require("models/patchDocuments");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import patchParam = require("models/patchParam");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
@@ -11,9 +10,6 @@ import document = require("models/document");
 import pagedList = require("common/pagedList");
 import queryIndexCommand = require("commands/queryIndexCommand");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
-import savePatch = require('viewmodels/savePatch');
-import loadPatch = require('viewmodels/loadPatch');
-import savePatchCommand = require('commands/savePatchCommand');
 
 class patch extends viewModelBase {
 
@@ -24,7 +20,7 @@ class patch extends viewModelBase {
     currentCollectionPagedItems = ko.observable<pagedList>();
     selectedDocumentIndices = ko.observableArray<number>();
 
-    patchDocument = ko.observable<patchDocument>();
+    patchDocuments = ko.observable<patchDocuments>();
 
     beforePatch = ko.observable<string>();
     afterPatch = ko.observable<string>();
@@ -37,16 +33,14 @@ class patch extends viewModelBase {
 
     activate() {
         var self = this;
-        this.patchDocument(patchDocument.empty());
+        this.patchDocuments(patchDocuments.empty());
     }
 
     loadDocumentToPatch(selectedItem: string) {
-        if (selectedItem) {
-            var loadDocTask = new getDocumentWithMetadataCommand(selectedItem, this.activeDatabase()).execute();
-            loadDocTask.done(document => {
-                this.beforePatch(JSON.stringify(document.toDto(), null, 4));
-            }).fail(this.clearDocumentPreview());
-        }
+        var loadDocTask = new getDocumentWithMetadataCommand(selectedItem, this.activeDatabase()).execute();
+        loadDocTask.done(document => {
+            this.beforePatch(JSON.stringify(document.toDto(), null, 4));
+        }).fail(this.clearDocumentPreview());
     }
 
     private clearDocumentPreview() {
@@ -55,8 +49,8 @@ class patch extends viewModelBase {
     }
 
     setSelectedPatchOnOption(patchOnOption: string) {
-        this.patchDocument().patchOnOption(patchOnOption);
-        this.patchDocument().selectedItem('');
+        this.patchDocuments().patchOnOption(patchOnOption);
+        this.patchDocuments().selectedItem('');
         this.clearDocumentPreview();
         switch (patchOnOption) {
             case "Collection":
@@ -80,7 +74,7 @@ class patch extends viewModelBase {
     }
 
     setSelectedCollection(coll: collection) {
-        this.patchDocument().selectedItem(coll.name);
+        this.patchDocuments().selectedItem(coll.name);
         this.currentCollectionPagedItems(coll.getDocuments());
     }
 
@@ -96,14 +90,14 @@ class patch extends viewModelBase {
     }
 
     setSelectedIndex(indexName: string) {
-        this.patchDocument().selectedItem(indexName);
+        this.patchDocuments().selectedItem(indexName);
         this.runQuery();
     }
 
     runQuery(): pagedList {
-        var selectedIndex = this.patchDocument().selectedItem();
+        var selectedIndex = this.patchDocuments().selectedItem();
         if (selectedIndex) {
-            var queryText = this.patchDocument().query();
+            var queryText = this.patchDocuments().query();
             var database = this.activeDatabase();
             var resultsFetcher = (skip: number, take: number) => {
                 var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, []);
@@ -115,23 +109,6 @@ class patch extends viewModelBase {
         }
 
         return null;
-    }
-
-    savePatch() {
-        var savePatchViewModel: savePatch = new savePatch();
-        app.showDialog(savePatchViewModel);
-        savePatchViewModel.onExit().done((patchName) => {
-            new savePatchCommand(patchName, this.patchDocument(), this.activeDatabase()).execute();
-        });
-    }
-
-    loadPatch() {
-        var loadPatchViewModel: loadPatch = new loadPatch(this.activeDatabase());
-        app.showDialog(loadPatchViewModel);
-        loadPatchViewModel.onExit().done((patch) => {
-            this.patchDocument(patch.cloneWithoutMetadata());
-            this.loadDocumentToPatch(patch.selectedItem());
-        });
     }
 }
 
