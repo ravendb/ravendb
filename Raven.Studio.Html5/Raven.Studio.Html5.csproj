@@ -222,8 +222,6 @@
     <TypeScriptCompile Include="App\commands\getConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getReplicationSourcesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomColumnsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getPatchesCommand.ts" />
-    <TypeScriptCompile Include="App\commands\savePatchCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugChangesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugMetricsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugConfigCommand.ts" />
@@ -251,8 +249,6 @@
     <TypeScriptCompile Include="App\common\changesCallback.ts" />
     <TypeScriptCompile Include="App\models\patchDocuments.ts" />
     <TypeScriptCompile Include="App\models\patchParam.ts" />
-    <TypeScriptCompile Include="App\viewmodels\savePatch.ts" />
-    <TypeScriptCompile Include="App\viewmodels\loadPatch.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugRoutes.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugRequestTracing.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugSqlReplication.ts" />
