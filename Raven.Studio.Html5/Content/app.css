@@ -1,4 +1,4 @@
-html,
+﻿html,
 body {
   height: 100%;
 }
@@ -377,10 +377,10 @@ body {
   height: 120px;
 }
 @media (max-device-height: 1024px) {
-    .innerWindowsStyle .popover {
-        width: 45% !important;
-        max-width: 45% !important;
-    }
+  .innerWindowsStyle .popover {
+    width: 45% !important;
+    max-width: 45% !important;
+  }
 }
 .popover {
   max-width: 30%;
@@ -735,12 +735,14 @@ footer ul {
   max-width: 800px;
   width: 600px;
 }
-:invalid {
-  box-shadow: none; /* FF */
-  outline: 0;       /* IE 10 */
-}
 .license-error {
   color: #d2322d;
+}
+:invalid {
+  box-shadow: none;
+  /* FF */
+  outline: 0;
+  /* IE 10 */
 }
 .remove-icon {
   color: #d2322d;
@@ -816,3 +818,4 @@ footer ul {
   border-color: red;
   margin-top: 5px;
 }
+/*# sourceMappingURL=app.css.map */
