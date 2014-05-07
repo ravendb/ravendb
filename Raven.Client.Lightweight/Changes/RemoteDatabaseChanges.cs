@@ -33,6 +33,7 @@ namespace Raven.Client.Changes
 		private readonly ConcurrentSet<string> watchedBulkInserts = new ConcurrentSet<string>();
 		private bool watchAllDocs;
 		private bool watchAllIndexes;
+	    private bool watchAllTransformers;
 #if !NETFX_CORE
 		private Timer clientSideHeartbeatTimer;
 #endif
@@ -153,6 +154,9 @@ namespace Raven.Client.Changes
 
 			if (watchAllIndexes)
                 await Send("watch-indexes", null).ConfigureAwait(false);
+
+            if (watchAllTransformers)
+                await Send("watch-transformers", null).ConfigureAwait(false);
 
 			foreach (var watchedDoc in watchedDocs)
 			{
@@ -408,6 +412,35 @@ namespace Raven.Client.Changes
 			return taskedObservable;
 		}
 
+        public IObservableWithTask<TransformerChangeNotification> ForAllTransformers()
+        {
+            var counter = counters.GetOrAdd("all-transformers", s =>
+            {
+                var indexSubscriptionTask = AfterConnection(() =>
+                {
+                    watchAllTransformers = true;
+                    return Send("watch-transformers", null);
+                });
+
+                return new LocalConnectionState(
+                    () =>
+                    {
+                        watchAllTransformers = false;
+                        Send("unwatch-transformers", null);
+                        counters.Remove("all-transformers");
+                    },
+                    indexSubscriptionTask);
+            });
+            var taskedObservable = new TaskedObservable<TransformerChangeNotification>(
+                counter,
+                notification => true);
+
+            counter.OnTransformerChangeNotification += taskedObservable.Send;
+            counter.OnError += taskedObservable.Error;
+
+            return taskedObservable;
+        }
+
 		public IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix)
 		{
 			var counter = counters.GetOrAdd("prefixes/" + docIdPrefix, s =>
@@ -634,6 +667,13 @@ namespace Raven.Client.Changes
 						counter.Value.Send(indexChangeNotification);
 					}
 					break;
+                case "TransformerChangeNotification":
+			        var transformerChangeNotification = value.JsonDeserialization<TransformerChangeNotification>();
+                    foreach (var counter in counters)
+                    {
+                        counter.Value.Send(transformerChangeNotification);
+                    }
+			        break;
 				case "ReplicationConflictNotification":
 					var replicationConflictNotification = value.JsonDeserialization<ReplicationConflictNotification>();
 					foreach (var counter in counters)
