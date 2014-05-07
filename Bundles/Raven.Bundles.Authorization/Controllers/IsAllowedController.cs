@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Bundles.Authorization.Model;
 using Raven.Database.Server.Controllers;
 
@@ -75,10 +76,6 @@ namespace Raven.Bundles.Authorization.Controllers
 
 		private Etag CalculateEtag(IEnumerable<JsonDocumentMetadata> documents, string userId)
 		{
-			Etag etag;
-
-			using (var md5 = MD5.Create())
-			{
 				var etags = new List<byte>();
 
 				etags.AddRange(documents.SelectMany(x => x == null ? Guid.Empty.ToByteArray() : (x.Etag ?? Etag.Empty).ToByteArray()));
@@ -98,9 +95,7 @@ namespace Raven.Bundles.Authorization.Controllers
 					}
 				}
 
-				etag = Etag.Parse(md5.ComputeHash(etags.ToArray()));
+			return Etag.Parse(Encryptor.Current.Hash.Compute16(etags.ToArray()));
 			}
-			return etag;
-		}
 	}
 }

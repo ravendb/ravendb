@@ -1072,19 +1072,19 @@ namespace Raven.Database
                 AppDomain.CurrentDomain.ProcessExit -= DomainUnloadOrProcessExit;
             }
 
-            public void InitializeEncryption()
-            {
-                string fipsAsString;
-                bool fips;
-                if (Commercial.ValidateLicense.CurrentLicense.Attributes.TryGetValue("fips", out fipsAsString) && bool.TryParse(fipsAsString, out fips))
-                {
-                    if (!fips && configuration.UseFips)
-                        throw new InvalidOperationException("Your license does not allow you to use FIPS compliant encryption on the server.");
-                }
+			public void InitializeEncryption()
+			{
+				string fipsAsString;
+				bool fips;
+				if (Commercial.ValidateLicense.CurrentLicense.Attributes.TryGetValue("fips", out fipsAsString) && bool.TryParse(fipsAsString, out fips))
+				{
+					if (!fips && configuration.UseFips)
+						throw new InvalidOperationException("Your license does not allow you to use FIPS compliant encryption on the server.");
+				}
 
-                Encryptor.Initialize(configuration.UseFips);
-                Cryptography.FIPSCompliant = configuration.UseFips;
-            }
+				Encryptor.Initialize(configuration.UseFips);
+				Cryptography.FIPSCompliant = configuration.UseFips;
+			}
 
             private void DomainUnloadOrProcessExit(object sender, EventArgs eventArgs)
             {

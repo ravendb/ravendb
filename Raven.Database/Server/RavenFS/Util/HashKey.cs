@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography;
+using Raven.Abstractions.Util.Encryptors;
 
 namespace Raven.Database.Server.RavenFS.Util
 {
@@ -6,11 +7,8 @@ namespace Raven.Database.Server.RavenFS.Util
 	{
 		public HashKey(byte[] buffer, int size)
 		{
-			using (var sha256 = SHA256.Create())
-			{
-				Strong = sha256.ComputeHash(buffer, 0, size);
-				Weak = new RabinKarpHasher(size).Init(buffer, 0, size);
-			}
+		    Strong = Encryptor.Current.Hash.Compute20(buffer, 0, size);
+            Weak = new RabinKarpHasher(size).Init(buffer, 0, size);
 		}
 
 		public HashKey()
