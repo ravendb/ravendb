@@ -1,4 +1,4 @@
-﻿<div id="scriptedIndexes">
+﻿<div id="scriptedIndexes" class="innerWindowsStyle">
     <form id="scriptedIndexesForm" data-bind="submit: saveChanges" class=" form-horizontal" role="form">
         <nav class="navbar navbar-default" role="navigation">
             <div class="collapse navbar-collapse">
@@ -17,6 +17,9 @@
                 </div>
             </div>
         </nav>
+        <div class="alert alert-warning" data-bind="visible: activeScriptedIndexes().length === 0">
+            You've got no scripted indexes set up.
+        </div>
         <div class="panel-group" id="accordion" data-bind="foreach: activeScriptedIndexes">
             <div class="panel panel-default panel-info">
                 <div class="panel-heading">

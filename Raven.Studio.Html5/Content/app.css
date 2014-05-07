@@ -376,6 +376,12 @@ body {
 #editIndex .map {
   height: 120px;
 }
+@media (max-device-height: 1024px) {
+    .innerWindowsStyle .popover {
+        width: 45% !important;
+        max-width: 45% !important;
+    }
+}
 .popover {
   max-width: 30%;
 }
