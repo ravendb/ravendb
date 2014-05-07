@@ -153,7 +153,7 @@ namespace Raven.Database.Actions
 
             if (indexName.Contains("//"))
             {
-                throw new InvalidOperationException(error+ "Index names cannot contains __ (double _)");
+                throw new InvalidOperationException(error+ "Index names cannot contains // (double slashes)");
 
             }         
             return true;
