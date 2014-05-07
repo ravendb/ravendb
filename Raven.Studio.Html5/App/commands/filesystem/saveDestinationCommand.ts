@@ -3,7 +3,7 @@ import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
 import synchronizationDestination = require("models/filesystem/synchronizationDestination");
 
-class saveFilesystemConfigurationCommand extends commandBase {
+class saveDestinationCommand extends commandBase {
 
     constructor(private fs: filesystem, private destination: synchronizationDestination) {
         super();
@@ -31,7 +31,7 @@ class saveFilesystemConfigurationCommand extends commandBase {
                 var url = "/config?name=" + encodeURIComponent("Raven/Synchronization/Destinations");       
 
                 var doc = {
-                    destination: dtos.map(y => JSON.stringify(y))
+                    destination: dtos
                 };
 
                 var docAsString = JSON.stringify(doc);
@@ -46,4 +46,4 @@ class saveFilesystemConfigurationCommand extends commandBase {
     }
 }
 
-export = saveFilesystemConfigurationCommand;
+export = saveDestinationCommand;
