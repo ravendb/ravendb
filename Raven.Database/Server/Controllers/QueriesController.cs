@@ -61,10 +61,10 @@ namespace Raven.Database.Server.Controllers
 
 		    if (string.IsNullOrEmpty(transformer) == false)
 		    {
-		        var transformerDef = Database.Transformers.GetTransformerDefinition(transformer);
+                var transformerDef = Database.IndexDefinitionStorage.GetTransformer(transformer);
 		        if (transformerDef == null)
 		            return GetMessageWithObject(new {Error = "No such transformer: " + transformer}, HttpStatusCode.BadRequest);
-                includedEtags.AddRange(BitConverter.GetBytes(transformerDef.GetHashCode()));
+                includedEtags.AddRange(transformerDef.GetHashCodeBytes());
 
 		    }
 

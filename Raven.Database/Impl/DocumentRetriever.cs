@@ -302,26 +302,30 @@ namespace Raven.Database.Impl
 			if (jId != null)
 				return Include(jId.Value.ToString());
 
+		    var items = new List<dynamic>();
 			foreach (var itemId in (IEnumerable)maybeId)
 			{
-				Include(itemId);
+			    var include = Include(itemId);// this is where the real work happens
+			    items.Add(include);
 			}
-			return new DynamicNullObject();
+		    return new DynamicList(items);
 
 		}
 		public dynamic Include(string id)
 		{
 			ItemsToInclude.Add(id);
-			return new DynamicNullObject();
+		    return Load(id);
 		}
 
 		public dynamic Include(IEnumerable<string> ids)
 		{
-			foreach (var id in ids)
-			{
-				ItemsToInclude.Add(id);
-			}
-			return new DynamicNullObject();
+            var items = new List<dynamic>();
+            foreach (var itemId in ids)
+            {
+                var include = Include(itemId);// this is where the real work happens
+                items.Add(include);
+            }
+            return new DynamicList(items);
 		}
 
 		public dynamic Load(string id)
