@@ -85,10 +85,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Querying\Intersection.cs" />
     <Compile Include="Querying\Searching.cs" />
     <Compile Include="Utils\Entities\Event.cs" />
+    <Compile Include="Utils\Entities\TShirt.cs" />
+    <Compile Include="Utils\Entities\TShirtType.cs" />
     <Compile Include="Utils\Indexes\Events_SpatialIndex.cs" />
     <Compile Include="Utils\Indexes\Post_LoadAttachment.cs" />
+    <Compile Include="Utils\Indexes\TShirtIndex.cs" />
     <Compile Include="Utils\Transformers\CompanyFullAddressTransformer.cs" />
     <Compile Include="Utils\Transformers\PostWithAsDocumentTransformer.cs" />
     <Compile Include="Utils\Transformers\PostWithMetadataForTransformer.cs" />

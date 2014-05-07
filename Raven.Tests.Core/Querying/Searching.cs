@@ -3,13 +3,13 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Tests.Core.Utils.Entities;
-using Xunit;
 using Raven.Tests.Core.Utils.Indexes;
-using Raven.Abstractions.Data;
+using System.Linq;
+using Xunit;
 
 namespace Raven.Tests.Core.Querying
 {
