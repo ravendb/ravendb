@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -58,6 +59,15 @@ namespace Raven.Database.Server.Controllers
 			var transactionInformation = GetRequestTransaction();
 			var includedEtags = new List<byte>();
 
+		    if (string.IsNullOrEmpty(transformer) == false)
+		    {
+		        var transformerDef = Database.Transformers.GetTransformerDefinition(transformer);
+		        if (transformerDef == null)
+		            return GetMessageWithObject(new {Error = "No such transformer: " + transformer}, HttpStatusCode.BadRequest);
+                includedEtags.AddRange(BitConverter.GetBytes(transformerDef.GetHashCode()));
+
+		    }
+
 			Database.TransactionalStorage.Batch(actions =>
 			{
 				foreach (RavenJToken item in itemsToLoad)
@@ -81,8 +91,7 @@ namespace Raven.Database.Server.Controllers
 
 					includedEtags.Add((documentByKey.NonAuthoritativeInformation ?? false) ? (byte)0 : (byte)1);
 				}
-                if (includes.Length==0)
-                    includes = includedIds.ToArray();
+              
 				var addIncludesCommand = new AddIncludesCommand(Database, transactionInformation, (etag, includedDoc) =>
 				{
 					includedEtags.AddRange(etag.ToByteArray());
@@ -95,7 +104,18 @@ namespace Raven.Database.Server.Controllers
 				}
 			});
 
-			Etag computedEtag;
+		    foreach (var includedId in includedIds)
+		    {
+		        var doc = Database.Documents.Get(includedId, transactionInformation);
+		        if (doc == null)
+		        {
+                    continue;
+		        }
+                includedEtags.AddRange(doc.Etag.ToByteArray());
+		        result.Includes.Add(doc.ToJson());
+		    }
+
+		    Etag computedEtag;
 
 			using (var md5 = MD5.Create())
 			{
