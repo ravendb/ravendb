@@ -54,10 +54,11 @@
                                         <h4 class="pull-left">
                                             <a class="use-bootstrap-tooltip">
                                                 <span data-bind="text: $data.ServerUrl"></span>
+                                                <span data-bind="text: $data.FileSystem"></span>
                                             </a>
                                         </h4>
                                         <div class="pull-right">
-                                            <button class="btn btn-danger use-bootstrap-tooltip" data-bind="click: $root.deleteDestination.bind($root, $data.ServerUrl)" title="Delete destination">
+                                            <button class="btn btn-danger use-bootstrap-tooltip" data-bind="click: $root.deleteDestination.bind($root, $data)" title="Delete destination">
                                                 <i class="fa fa-trash-o"></i>
                                             </button>
                                             <button class="btn btn-success use-bootstrap-tooltip" data-bind="click: $root.synchronizeWithDestination.bind($root, $data.ServerUrl)" title="Synchronize Now">

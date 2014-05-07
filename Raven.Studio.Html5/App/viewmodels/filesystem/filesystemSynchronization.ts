@@ -29,7 +29,7 @@ import filesystem = require("models/filesystem/filesystem");
 
 class filesystemSynchronization extends viewModelBase {
 
-    destinations = ko.observableArray<string>();
+    destinations = ko.observableArray<synchronizationDestinationDto>();
     isDestinationsVisible = ko.computed(() => this.destinations().length > 0);
 
     conflicts = ko.observableArray<string>();
@@ -116,7 +116,7 @@ class filesystemSynchronization extends viewModelBase {
         }
     }
 
-    deleteDestination(destination: string) {
+    deleteDestination(destination: synchronizationDestinationDto) {
         var fs = this.activeFilesystem();
         var self = this;
         if (fs) {

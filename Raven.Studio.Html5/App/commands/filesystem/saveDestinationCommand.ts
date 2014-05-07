@@ -24,7 +24,7 @@ class saveDestinationCommand extends commandBase {
                     if (!(value instanceof Array))
                         value = [value];
                                                                                          
-                    dtos = dtos.concat(value.map(x => <synchronizationDestinationDto> JSON.parse(x)));                    
+                    dtos = dtos.concat(value.map(x => <synchronizationDestinationDto> x));                    
                 }
             })
             .always(x => {
