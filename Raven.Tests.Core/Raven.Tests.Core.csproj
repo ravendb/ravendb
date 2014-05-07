@@ -87,9 +87,11 @@
   <ItemGroup>
     <Compile Include="Querying\Intersection.cs" />
     <Compile Include="Querying\Searching.cs" />
+    <Compile Include="Utils\Entities\Camera.cs" />
     <Compile Include="Utils\Entities\Event.cs" />
     <Compile Include="Utils\Entities\TShirt.cs" />
     <Compile Include="Utils\Entities\TShirtType.cs" />
+    <Compile Include="Utils\Indexes\CameraCost.cs" />
     <Compile Include="Utils\Indexes\Events_SpatialIndex.cs" />
     <Compile Include="Utils\Indexes\Post_LoadAttachment.cs" />
     <Compile Include="Utils\Indexes\TShirtIndex.cs" />

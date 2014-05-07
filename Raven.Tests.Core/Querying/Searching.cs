@@ -8,6 +8,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Indexes;
+using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 
@@ -295,6 +296,98 @@ namespace Raven.Tests.Core.Querying
                     Assert.Equal("john", suggestionResult.Suggestions[0]);
                     Assert.Equal("jones", suggestionResult.Suggestions[1]);
                     Assert.Equal("johnson", suggestionResult.Suggestions[2]);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanPerformFacetedSearch()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new CameraCost().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.Store(new Camera 
+                        {
+                            Id = "cameras/" + i,
+                            Manufacturer = i % 2 == 0 ? "Manufacturer1" : "Manufacturer2",
+                            Cost = i * 100D,
+                            Megapixels = i * 1D
+                        });
+                    }
+
+                    var facets = new List<Facet>
+                    {
+                        new Facet 
+                        {
+                            Name = "Manufacturer"
+                        },
+                        new Facet 
+                        {
+                            Name = "Cost_Range",
+                            Mode = FacetMode.Ranges,
+                            Ranges = 
+                            {
+                                "[NULL TO Dx200.0]",
+                                "[Dx300.0 TO Dx400.0]",
+                                "[Dx500.0 TO Dx600.0]",
+                                "[Dx700.0 TO Dx800.0]",
+                                "[Dx900.0 TO NULL]"
+                            }
+                        },
+                        new Facet 
+                        {
+                            Name = "Megapixels_Range",
+                            Mode = FacetMode.Ranges,
+                            Ranges = 
+                            {
+                                "[NULL TO Dx3.0]",
+                                "[Dx4.0 TO Dx7.0]",
+                                "[Dx8.0 TO Dx10.0]",
+                                "[Dx11.0 TO NULL]"
+                            }
+                        }
+                    };
+                    session.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = facets });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+
+                    var facetResults = session.Query<Camera, CameraCost>()
+                        .ToFacets("facets/CameraFacets");
+
+                    Assert.Equal(3, facetResults.Results.Count);
+
+                    Assert.Equal(2, facetResults.Results["Manufacturer"].Values.Count);
+                    Assert.Equal("manufacturer1", facetResults.Results["Manufacturer"].Values[0].Range);
+                    Assert.Equal(5, facetResults.Results["Manufacturer"].Values[0].Hits);
+                    Assert.Equal("manufacturer2", facetResults.Results["Manufacturer"].Values[1].Range);
+                    Assert.Equal(5, facetResults.Results["Manufacturer"].Values[1].Hits);
+
+                    Assert.Equal(5, facetResults.Results["Cost_Range"].Values.Count);
+                    Assert.Equal("[NULL TO Dx200.0]", facetResults.Results["Cost_Range"].Values[0].Range);
+                    Assert.Equal(3, facetResults.Results["Cost_Range"].Values[0].Hits);
+                    Assert.Equal("[Dx300.0 TO Dx400.0]", facetResults.Results["Cost_Range"].Values[1].Range);
+                    Assert.Equal(2, facetResults.Results["Cost_Range"].Values[1].Hits);
+                    Assert.Equal("[Dx500.0 TO Dx600.0]", facetResults.Results["Cost_Range"].Values[2].Range);
+                    Assert.Equal(2, facetResults.Results["Cost_Range"].Values[2].Hits);
+                    Assert.Equal("[Dx700.0 TO Dx800.0]", facetResults.Results["Cost_Range"].Values[3].Range);
+                    Assert.Equal(2, facetResults.Results["Cost_Range"].Values[3].Hits);
+                    Assert.Equal("[Dx900.0 TO NULL]", facetResults.Results["Cost_Range"].Values[4].Range);
+                    Assert.Equal(1, facetResults.Results["Cost_Range"].Values[4].Hits);
+
+                    Assert.Equal(4, facetResults.Results["Megapixels_Range"].Values.Count);
+                    Assert.Equal("[NULL TO Dx3.0]", facetResults.Results["Megapixels_Range"].Values[0].Range);
+                    Assert.Equal(4, facetResults.Results["Megapixels_Range"].Values[0].Hits);
+                    Assert.Equal("[Dx4.0 TO Dx7.0]", facetResults.Results["Megapixels_Range"].Values[1].Range);
+                    Assert.Equal(4, facetResults.Results["Megapixels_Range"].Values[1].Hits);
+                    Assert.Equal("[Dx8.0 TO Dx10.0]", facetResults.Results["Megapixels_Range"].Values[2].Range);
+                    Assert.Equal(2, facetResults.Results["Megapixels_Range"].Values[2].Hits);
+                    Assert.Equal("[Dx11.0 TO NULL]", facetResults.Results["Megapixels_Range"].Values[3].Range);
+                    Assert.Equal(0, facetResults.Results["Megapixels_Range"].Values[3].Hits);
                 }
             }
         }
