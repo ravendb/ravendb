@@ -37,8 +37,6 @@ namespace Raven.Tests.Issues
             {
                 using (var session = store.OpenSession())
                 {
-                    store.Conventions.CustomizeJsonSerializer = s => s.TypeNameHandling = TypeNameHandling.All;
-
                     session.Store(new Parent
                     {
                         Id = parentId,
@@ -54,6 +52,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
                
+                WaitForUserToContinueTheTest(store);
                    
                 using (var session = store.OpenSession())
                 {
