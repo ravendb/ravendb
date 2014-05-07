@@ -37,6 +37,8 @@ class fileUploadBindingHandler {
         var filesystem = ko.utils.unwrapObservable<filesystem>(bindingContext.$data["activeFilesystem"]);
         
         if (options) {
+            // Access the files observable now so that .update is called whenever it changes.
+            options.files();
             if (element.files.length) {
                 var files = element.files;
                 for (var i = 0; i < files.length; i++) {
