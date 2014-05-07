@@ -105,8 +105,12 @@ interface apiKeyDto extends documentDto {
     Databases: Array<databaseAccessDto>;
 }
 
-interface buildVersionDto {
+interface serverBuildVersionDto {
     ProductVersion: string;
+    BuildVersion: string;
+}
+
+interface clientBuildVersionDto {
     BuildVersion: string;
 }
 

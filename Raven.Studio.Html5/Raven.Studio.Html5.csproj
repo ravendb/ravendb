@@ -40,6 +40,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeNowCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getClientBuildVersionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsMetadataByIDPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationByKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getDestinationsCommand.ts" />
@@ -49,6 +50,7 @@
     <TypeScriptCompile Include="App\commands\filesystem\getSyncStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexingStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getNewEncryptionKey.ts" />
+    <TypeScriptCompile Include="App\commands\getServerBuildVersionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSingleTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\exportDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\saveConfigurationCommand.ts" />
@@ -76,7 +78,6 @@
     <TypeScriptCompile Include="App\commands\getAlertsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getAllDocumentsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getApiKeysCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getBuildVersionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCollectionInfoCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCollectionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDatabasesCommand.ts" />

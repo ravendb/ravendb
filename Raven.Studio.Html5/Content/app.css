@@ -1,4 +1,4 @@
-html,
+﻿html,
 body {
   height: 100%;
 }
@@ -377,10 +377,10 @@ body {
   height: 120px;
 }
 @media (max-device-height: 1024px) {
-    .innerWindowsStyle .popover {
-        width: 45% !important;
-        max-width: 45% !important;
-    }
+  .innerWindowsStyle .popover {
+    width: 45% !important;
+    max-width: 45% !important;
+  }
 }
 .popover {
   max-width: 30%;
@@ -633,6 +633,9 @@ body {
   #shellFooter .server-build-link {
     display: none;
   }
+  #shellFooter .client-build-link {
+    display: none;
+  }
 }
 #editTransformerContainer .transformer {
   height: 600px;
@@ -835,3 +838,4 @@ footer ul {
   border-color: red;
   margin-top: 5px;
 }
+/*# sourceMappingURL=app.css.map */

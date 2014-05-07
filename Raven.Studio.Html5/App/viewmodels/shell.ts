@@ -19,7 +19,8 @@ import pagedList = require("common/pagedList");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
 
-import getBuildVersionCommand = require("commands/getBuildVersionCommand");
+import getServerBuildVersionCommand = require("commands/getServerBuildVersionCommand");
+import getClientBuildVersionCommand = require("commands/getClientBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
@@ -39,7 +40,8 @@ class shell extends viewModelBase {
     currentAlert = ko.observable<alertArgs>();
     queuedAlert: alertArgs;
     databasesLoadedTask: JQueryPromise<any>;
-    buildVersion = ko.observable<buildVersionDto>();
+    serverBuildVersion = ko.observable<serverBuildVersionDto>();
+    clientBuildVersion = ko.observable<clientBuildVersionDto>();
     licenseStatus = ko.observable<licenseStatusDto>();
     windowHeightObservable: KnockoutObservable<number>;
     appUrls: computedAppUrls;
@@ -208,7 +210,8 @@ class shell extends viewModelBase {
             .done(results => {
                 this.databasesLoaded(results);
                 this.fetchStudioConfig();
-                this.fetchBuildVersion();
+                this.fetchServerBuildVersion();
+                this.fetchClientBuildVersion();
                 this.fetchLicenseStatus();
                 router.activate();
             });
@@ -399,10 +402,16 @@ class shell extends viewModelBase {
         return collection.getCollectionCssClass(doc['@metadata']['Raven-Entity-Name']);
     }
 
-    fetchBuildVersion() {
-        new getBuildVersionCommand()
+    fetchServerBuildVersion() {
+        new getServerBuildVersionCommand()
             .execute()
-            .done((result: buildVersionDto) => this.buildVersion(result));
+            .done((result: serverBuildVersionDto) => { this.serverBuildVersion(result); });
+    }
+
+    fetchClientBuildVersion() {
+        new getClientBuildVersionCommand()
+            .execute()
+            .done((result: clientBuildVersionDto) => { this.clientBuildVersion(result); });
     }
 
     fetchLicenseStatus() {
