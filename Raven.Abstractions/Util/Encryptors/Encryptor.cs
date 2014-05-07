@@ -3,8 +3,6 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Lucene.Net.Support;
-
 namespace Raven.Abstractions.Util.Encryptors
 {
 	using System;
@@ -13,8 +11,7 @@ namespace Raven.Abstractions.Util.Encryptors
 	{
 		static Encryptor()
 		{
-            Current = new FipsEncryptor();
-		    Cryptography.FIPSCompliant = true;
+			Current = new DefaultEncryptor();
 		}
 
 		public static IEncryptor Current { get; private set; }
@@ -42,7 +39,7 @@ namespace Raven.Abstractions.Util.Encryptors
 
 		public static void Initialize(bool useFips)
 		{
-		    Current = new FipsEncryptor();//TODO: revert me
+			Current = useFips ? (IEncryptor)new FipsEncryptor() : new DefaultEncryptor();
 		}
 	}
 }

@@ -13,7 +13,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
-using Lucene.Net.Support;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Client.RavenFS;
@@ -35,11 +34,6 @@ namespace RavenFS.Tests
         private readonly HashSet<string> pathsToDelete = new HashSet<string>();
         public static readonly int[] Ports = { 19069, 19068, 19067 };
 
-        public RavenFsTestBase()
-        {
-            Cryptography.FIPSCompliant = true;
-        }
-
         protected RavenDbServer CreateRavenDbServer(int port,
                                                     string dataDirectory = null,
                                                     bool runInMemory = true,
@@ -53,7 +47,6 @@ namespace RavenFS.Tests
             var ravenConfiguration = new RavenConfiguration()
             {
 				Port = port,
-                UseFips = true,
 				DataDirectory = directory,
 				FileSystemDataDirectory = Path.Combine(directory, "FileSystem"),
 				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
