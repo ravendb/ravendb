@@ -34,6 +34,11 @@ interface indexChangeNotificationDto {
     Etag: string;
 }
 
+interface transformerChangeNotificationDto {
+    Type: transformerChangeType;
+    Name: string;
+}
+
 interface documentMetadataDto {
     'Raven-Entity-Name'?: string;
     'Raven-Clr-Type'?: string;
@@ -673,6 +678,12 @@ enum indexChangeType {
     IndexDemotedToAbandoned = 128,
     IndexDemotedToDisabled = 256,
     IndexMarkedAsErrored =  512
+}
+
+enum transformerChangeType {
+    None = 0,
+    TransformerAdded = 1,
+    TransformerRemoved = 2
 }
 
 interface filterSettingDto {
