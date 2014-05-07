@@ -20,6 +20,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -71,39 +72,37 @@ namespace Raven.Database.Actions
             var indexDefinition = GetIndexDefinition(indexName);
             if (indexDefinition == null)
                 return Etag.Empty; // this ensures that we will get the normal reaction of IndexNotFound later on.
-            using (var md5 = MD5.Create())
+
+            var list = new List<byte>();
+            list.AddRange(indexDefinition.GetIndexHash());
+            list.AddRange(Encoding.Unicode.GetBytes(indexName));
+            if (string.IsNullOrWhiteSpace(resultTransformer) == false)
             {
-                var list = new List<byte>();
-                list.AddRange(indexDefinition.GetIndexHash());
-                list.AddRange(Encoding.Unicode.GetBytes(indexName));
-                if (string.IsNullOrWhiteSpace(resultTransformer) == false)
-                {
-                    var abstractTransformer = IndexDefinitionStorage.GetTransformer(resultTransformer);
-                    if (abstractTransformer == null)
-                        throw new InvalidOperationException("The result transformer: " + resultTransformer + " was not found");
-                    list.AddRange(abstractTransformer.GetHashCodeBytes());
-                }
-                list.AddRange(lastDocEtag.ToByteArray());
-                list.AddRange(BitConverter.GetBytes(touchCount));
-                list.AddRange(BitConverter.GetBytes(isStale));
-                if (lastReducedEtag != null)
-                {
-                    list.AddRange(lastReducedEtag.ToByteArray());
-                }
-
-                var indexEtag = Etag.Parse(md5.ComputeHash(list.ToArray()));
-
-                if (previousEtag != null && previousEtag != indexEtag)
-                {
-                    // the index changed between the time when we got it and the time 
-                    // we actually call this, we need to return something random so that
-                    // the next time we won't get 304
-
-                    return Etag.InvalidEtag;
-                }
-
-                return indexEtag;
+                var abstractTransformer = IndexDefinitionStorage.GetTransformer(resultTransformer);
+                if (abstractTransformer == null)
+                    throw new InvalidOperationException("The result transformer: " + resultTransformer + " was not found");
+                list.AddRange(abstractTransformer.GetHashCodeBytes());
             }
+            list.AddRange(lastDocEtag.ToByteArray());
+            list.AddRange(BitConverter.GetBytes(touchCount));
+            list.AddRange(BitConverter.GetBytes(isStale));
+            if (lastReducedEtag != null)
+            {
+                list.AddRange(lastReducedEtag.ToByteArray());
+            }
+
+            var indexEtag = Etag.Parse(Encryptor.Current.Hash.Compute16(list.ToArray()));
+
+            if (previousEtag != null && previousEtag != indexEtag)
+            {
+                // the index changed between the time when we got it and the time 
+                // we actually call this, we need to return something random so that
+                // the next time we won't get 304
+
+                return Etag.InvalidEtag;
+            }
+
+            return indexEtag;
         }
 
 
