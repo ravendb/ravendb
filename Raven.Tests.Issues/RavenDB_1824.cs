@@ -3,42 +3,66 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Security.Cryptography;
 using System.Text;
-using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Issues
 {
-    public class RavenDB_1824
-    {
-        [Fact]
-        public void VerifyMD5Core()
-        {
-            Assert.Equal("d5fad0cda8f1079681ec510bb20a586c", ComputeHash("marcin"));
+	public class RavenDB_1824 : NoDisposalNeeded
+	{
+		[Fact]
+		public void VerifyMD5Core()
+		{
+			Assert.Equal("d5fad0cda8f1079681ec510bb20a586c", ComputeHashUsingMD5Core("marcin"));
 
-            Assert.Equal("d5fad0cda8f1079681ec510bb20a586c", ComputeHash("m", "a", "r", "c", "i", "n"));
+			Assert.Equal("d5fad0cda8f1079681ec510bb20a586c", ComputeHashUsingMD5Core("m", "a", "r", "c", "i", "n"));
 
-            Assert.Equal("0e2ce420a49e9f242b6d113a4deea594", ComputeHash("The MD5 message-digest algorithm is a widely used cryptographic hash function producing a 128-bit (16-byte) hash value"));
+			Assert.Equal("0e2ce420a49e9f242b6d113a4deea594", ComputeHashUsingMD5Core("The MD5 message-digest algorithm is a widely used cryptographic hash function producing a 128-bit (16-byte) hash value"));
 
-            Assert.Equal("0e2ce420a49e9f242b6d113a4deea594", ComputeHash("The MD5", " message-digest algorithm is a widely used cryptographic hash function producing a 128-bit (16-byte) hash value"));
-            
-        } 
+			Assert.Equal("0e2ce420a49e9f242b6d113a4deea594", ComputeHashUsingMD5Core("The MD5", " message-digest algorithm is a widely used cryptographic hash function producing a 128-bit (16-byte) hash value"));
+		}
 
-        public string ComputeHash(params string[] blocks)
-        {
-            using (var hash = new FipsEncryptor().CreateHash())
-            {
-                foreach (var block in blocks)
-                {
-                    hash.TransformBlock(Encoding.UTF8.GetBytes(block), 0, block.Length);
-                }
-                
-                return IOExtensions.GetMD5Hex(hash.TransformFinalBlock());
-            }
-        }
+		[Fact]
+		public void VerifyMD5()
+		{
+			Assert.Equal("d5fad0cda8f1079681ec510bb20a586c", ComputeHashUsingMD5("marcin"));
 
-    }
+			Assert.Equal("d5fad0cda8f1079681ec510bb20a586c", ComputeHashUsingMD5("m", "a", "r", "c", "i", "n"));
+
+			Assert.Equal("0e2ce420a49e9f242b6d113a4deea594", ComputeHashUsingMD5("The MD5 message-digest algorithm is a widely used cryptographic hash function producing a 128-bit (16-byte) hash value"));
+
+			Assert.Equal("0e2ce420a49e9f242b6d113a4deea594", ComputeHashUsingMD5("The MD5", " message-digest algorithm is a widely used cryptographic hash function producing a 128-bit (16-byte) hash value"));
+		}
+		
+		private string ComputeHashUsingMD5(params string[] blocks)
+		{
+			using (var hash = new DefaultEncryptor().CreateHash())
+			{
+				return ComputeHash(hash, blocks);
+			}
+		}
+
+		private string ComputeHashUsingMD5Core(params string[] blocks)
+		{
+			using (var hash = new FipsEncryptor().CreateHash())
+			{
+				return ComputeHash(hash, blocks);
+			}
+		}
+
+		private string ComputeHash(IHashEncryptor hash, params string[] blocks)
+		{
+			foreach (var block in blocks)
+			{
+				hash.TransformBlock(Encoding.UTF8.GetBytes(block), 0, block.Length);
+			}
+
+			return IOExtensions.GetMD5Hex(hash.TransformFinalBlock());
+		}
+
+	}
 }

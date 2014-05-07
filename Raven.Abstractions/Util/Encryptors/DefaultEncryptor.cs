@@ -33,27 +33,24 @@ namespace Raven.Abstractions.Util.Encryptors
 		    public void TransformBlock(byte[] bytes, int offset, int length)
 		    {
                 if (md5 == null)
-                {
                     md5 = MD5.Create();
-                }
+
 		        md5.TransformBlock(bytes, offset, length, null, 0);
 		    }
 
 		    public byte[] TransformFinalBlock()
 		    {
                 if (md5 == null)
-                {
                     md5 = MD5.Create();
-                }
-		        return md5.TransformFinalBlock(new byte[0], 0, 0);
+
+		        md5.TransformFinalBlock(new byte[0], 0, 0);
+			    return md5.Hash;
 		    }
 
 		    public void Dispose()
 		    {
                 if (md5 != null)
-                {
                     md5.Dispose();
-                }
 		    }
 
 		    public byte[] ComputeForStorage(byte[] bytes)
