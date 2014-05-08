@@ -475,22 +475,35 @@ namespace Raven.Tests.Helpers
 
 		protected void WaitForRestore(IDatabaseCommands databaseCommands)
 		{
+			var systemDatabaseCommands = databaseCommands.ForSystemDatabase(); // need to be sure that we are checking system database
+
+			var failureMessages = new[]
+			                      {
+				                      "Esent Restore: Failure! Could not restore database!", 
+									  "Error: Restore Canceled", 
+									  "Restore Operation: Failure! Could not restore database!"
+			                      };
+
+			var restoreFinishMessages = new[]
+			                            {
+				                            "The new database was created", 
+											"Esent Restore: Restore Complete", 
+											"Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name",
+			                            };
+
 			var done = SpinWait.SpinUntil(() =>
 			{
 				// We expect to get the doc from the <system> database
-				var doc = databaseCommands.Get(RestoreStatus.RavenRestoreStatusDocumentKey);
+				var doc = systemDatabaseCommands.Get(RestoreStatus.RavenRestoreStatusDocumentKey);
 
 				if (doc == null)
 					return false;
 
 				var status = doc.DataAsJson.Deserialize<RestoreStatus>(new DocumentConvention());
 
-				var restoreFinishMessages = new[]
-				{
-					"The new database was created",
-					"Esent Restore: Restore Complete", 
-					"Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name",
-				};
+				if (failureMessages.Any(status.Messages.Contains))
+					throw new InvalidOperationException("Restore failure: " + status.Messages.Aggregate(string.Empty, (output, message) => output + (message + Environment.NewLine)));
+				
 				return restoreFinishMessages.Any(status.Messages.Contains);
 			}, TimeSpan.FromMinutes(5));
 

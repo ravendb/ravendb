@@ -40,6 +40,8 @@ namespace Raven.Client.Linq
 				renames[propertyPath] = tmp;
 				propertyPath = tmp;
 			}
+		    if (displayName == null)
+		        displayName = propertyPath;
 		    if (facets.Count > 0)
 		    {
 	           if (facets.Any(facet => facet.DisplayName == displayName))

@@ -91,7 +91,16 @@ namespace Voron.Trees
                 _tx.ClearRecentFoundPages(_tree);
             }
 
-            if (_page.LastSearchPosition >= _page.NumberOfEntries)
+	        if (_tree.Name == Constants.FreeSpaceTreeName)
+	        {
+				// we need to refresh the LastSearchPosition of the split page which is used by the free space handling
+				// because the allocation of a new page called above could remove some sections
+				// from the page that is being split
+
+		        _page.NodePositionFor(_newKey, _cmp);
+	        }
+
+	        if (_page.LastSearchPosition >= _page.NumberOfEntries)
             {
                 // when we get a split at the end of the page, we take that as a hint that the user is doing 
                 // sequential inserts, at that point, we are going to keep the current page as is and create a new 
