@@ -262,7 +262,9 @@ class editDocument extends viewModelBase {
             delete meta[skippedHeader];
         }
 
-        this.docsList().invalidateCache();
+        if (!!this.docsList()) {
+            this.docsList().invalidateCache();
+        }
 
         var newDoc = new document(updatedDto);
         var saveCommand = new saveDocumentCommand(currentDocumentId, newDoc, appUrl.getDatabase());
