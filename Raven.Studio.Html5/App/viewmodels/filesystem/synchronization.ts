@@ -27,7 +27,7 @@ import filesystemAddDestination = require("viewmodels/filesystem/filesystemAddDe
 import resolveConflict = require("viewmodels/filesystem/resolveConflict");
 import filesystem = require("models/filesystem/filesystem");
 
-class filesystemSynchronization extends viewModelBase {
+class synchronization extends viewModelBase {
 
     destinations = ko.observableArray<synchronizationDestinationDto>();
     isDestinationsVisible = ko.computed(() => this.destinations().length > 0);
@@ -217,7 +217,7 @@ class filesystemSynchronization extends viewModelBase {
     }
 
     getOutgoingActivityTable(): virtualTable {
-        var gridContents = $(filesystemSynchronization.outgoingGridSelector).children()[0];
+        var gridContents = $(synchronization.outgoingGridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);
         }
@@ -226,7 +226,7 @@ class filesystemSynchronization extends viewModelBase {
     }
 
     getIncomingActivityTable(): virtualTable {
-        var gridContents = $(filesystemSynchronization.incomingGridSelector).children()[0];
+        var gridContents = $(synchronization.incomingGridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);
         }
@@ -243,4 +243,4 @@ class filesystemSynchronization extends viewModelBase {
     }
 }
 
-export = filesystemSynchronization;
+export = synchronization;
