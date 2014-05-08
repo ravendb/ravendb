@@ -80,36 +80,6 @@ namespace Raven.Database.Server.Controllers.Admin
 			return (etag == null) ? GetEmptyMessage() : GetMessageWithObject(putResult);
 		}
 
-		[HttpPost]
-		[Route("admin/databases/{*id}")]
-		private async Task<HttpResponseMessage> DatabasePost(string id)
-		{
-			var docKey = "Raven/Databases/" + id;
-			var existingDatabase = Database.Documents.Get(docKey, null);
-			if (existingDatabase == null)
-			{
-				return GetMessageWithString(string.Format("Database with the name '{0}' doesn't exist", id), HttpStatusCode.BadRequest);
-			}
-
-			var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
-			if (dbDoc.Settings.ContainsKey("Bundles") && dbDoc.Settings["Bundles"].Contains("Encryption"))
-			{
-				if (!dbDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
-					!dbDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
-				{
-					return GetMessageWithString(string.Format("Failed to modify '{0}' database, becuase of not valid encryption configuration.", id), HttpStatusCode.BadRequest);
-				}
-			}
-
-			DatabasesLandlord.Protect(dbDoc);
-			var json = RavenJObject.FromObject(dbDoc);
-			json.Remove("Id");
-
-			var putResult = Database.Documents.Put(docKey, GetEtag(), json, InnerHeaders.FilterHeadersToObject(), null);
-			return GetMessageWithObject(putResult, HttpStatusCode.Created);
-			return GetEmptyMessage(HttpStatusCode.OK, GetEtag());
-		}
-
 
 		[HttpDelete][Route("admin/databases/{*id}")]
 		public HttpResponseMessage DatabasesDelete(string id)
