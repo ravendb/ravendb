@@ -477,7 +477,7 @@ namespace Raven.Database.Server.Controllers
 
 		public HttpResponseMessage WriteFile(string filePath)
 		{
-			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-None-Match");
+			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
 			var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
 			if (etagValue == fileEtag)
 				return GetEmptyMessage(HttpStatusCode.NotModified);
