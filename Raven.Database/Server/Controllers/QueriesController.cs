@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -52,11 +53,21 @@ namespace Raven.Database.Server.Controllers
 
 			var result = new MultiLoadResult();
 			var loadedIds = new HashSet<string>();
+            var includedIds = new HashSet<string>();
 			var includes = GetQueryStringValues("include") ?? new string[0];
 			var transformer = GetQueryStringValue("transformer") ?? GetQueryStringValue("resultTransformer");
 			var queryInputs = ExtractQueryInputs();
 			var transactionInformation = GetRequestTransaction();
 			var includedEtags = new List<byte>();
+
+		    if (string.IsNullOrEmpty(transformer) == false)
+		    {
+                var transformerDef = Database.IndexDefinitionStorage.GetTransformer(transformer);
+		        if (transformerDef == null)
+		            return GetMessageWithObject(new {Error = "No such transformer: " + transformer}, HttpStatusCode.BadRequest);
+                includedEtags.AddRange(transformerDef.GetHashCodeBytes());
+
+		    }
 
 			Database.TransactionalStorage.Batch(actions =>
 			{
@@ -67,7 +78,7 @@ namespace Raven.Database.Server.Controllers
 						continue;
 					var documentByKey = string.IsNullOrEmpty(transformer)
 										? Database.Documents.Get(value, transactionInformation)
-										: Database.Documents.GetWithTransformer(value, transformer, transactionInformation, queryInputs);
+                                        : Database.Documents.GetWithTransformer(value, transformer, transactionInformation, queryInputs, out includedIds);
 				    if (documentByKey == null)
 				    {
                         if(ClientIsV3OrHigher)
@@ -94,6 +105,19 @@ namespace Raven.Database.Server.Controllers
 				}
 			});
 
+
+			foreach (var includedId in includedIds)
+		    {
+		        var doc = Database.Documents.Get(includedId, transactionInformation);
+		        if (doc == null)
+		        {
+                    continue;
+		        }
+                includedEtags.AddRange(doc.Etag.ToByteArray());
+		        result.Includes.Add(doc.ToJson());
+		    }
+
+		    Etag computedEtag;
             var computeHash = Encryptor.Current.Hash.Compute16(includedEtags.ToArray());
             Etag computedEtag = Etag.Parse(computeHash);
 
