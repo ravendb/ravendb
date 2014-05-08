@@ -9,6 +9,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Client.Document;
 #if NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
@@ -67,10 +68,7 @@ namespace Raven.Client.Shard
 #if  NETFX_CORE
 			indexEtag = new Etag(Convert.ToBase64String(MD5.HashCore(buffer)));			
 #else
-			using (var md5 = MD5.Create())
-			{
-				indexEtag = Etag.Parse(md5.ComputeHash(buffer));
-			}
+		    indexEtag = Etag.Parse(Encryptor.Current.Hash.Compute16(buffer));
 #endif
 			var results = queryResults.SelectMany(x => x.Results);
 

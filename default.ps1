@@ -56,6 +56,8 @@ task Compile -depends Init, CompileHtml5 {
 
 task CompileHtml5 {
 	
+	"{ ""BuildVersion"": $env:buildlabel }" | Out-File "Raven.Studio.Html5\version.json" -Encoding UTF8
+	
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
 	Write-Host "Compiling HTML5" -ForegroundColor Yellow

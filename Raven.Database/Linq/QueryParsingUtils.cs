@@ -25,13 +25,13 @@ using Lucene.Net.Documents;
 using Microsoft.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
-using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Plugins;
+using Raven.Database.Storage;
 using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
 namespace Raven.Database.Linq
@@ -133,7 +133,7 @@ namespace Raven.Database.Linq
 				variable.AcceptVisitor(new TransformNullCoalescingOperatorTransformer(), null);
 				variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
 				variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
-			    variable.AcceptVisitor(new TransformDynamicInvocationExpressions(), null);
+                variable.AcceptVisitor(new TransformDynamicInvocationExpressions(), null);
 				variable.AcceptVisitor(new TransformObsoleteMethods(), null);
 				return variable;
 			}
@@ -280,35 +280,57 @@ namespace Raven.Database.Linq
 		public static Type Compile(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath, InMemoryRavenConfiguration configuration)
 		{
 			source = source.Replace("AbstractIndexCreationTask.SpatialGenerate", "SpatialGenerate"); // HACK, should probably be on the client side
+			var indexCacheDir = GetIndexCacheDir(configuration);
+			var indexFilePath = GetIndexFilePath(source, indexCacheDir);
 
-            // Look up the index in the in-memory cache.
-			CacheEntry entry;
-			if (cacheEntries.TryGetValue(source, out entry))
+			var shouldCachedIndexBeRecompiled = ShouldIndexCacheBeRecompiled(indexFilePath);
+			if (shouldCachedIndexBeRecompiled == false)
 			{
-				Interlocked.Increment(ref entry.Usages);
-				return entry.Type;
-			}
+				// Look up the index in the in-memory cache.
+				CacheEntry entry;
+				if (cacheEntries.TryGetValue(source, out entry))
+				{
+					Interlocked.Increment(ref entry.Usages);
+					return entry.Type;
+				}
 
-			Type type;
-			string indexFilePath;
-			if (TryGetDiskCacheResult(source, name, configuration, out indexFilePath, out type)) 
-				return type;
+				Type type;
+
+				if (TryGetDiskCacheResult(source, name, configuration, indexFilePath, out type))
+					return type;
+			}
 
 			var result = DoActualCompilation(source, name, queryText, extensions, basePath, indexFilePath);
 
-			AddResultToCache(source, result);
+			// ReSharper disable once RedundantArgumentName
+			AddResultToCache(source, result, shouldUpdateIfExists: shouldCachedIndexBeRecompiled);
 
 			return result;
 		}
 
-		private static void AddResultToCache(string source, Type result)
+		private static bool ShouldIndexCacheBeRecompiled(string indexFilePath)
 		{
-			cacheEntries.TryAdd(source, new CacheEntry
+			var ravenDatabaseFileInfo = new FileInfo(typeof(IndexDefinitionStorage).Assembly.Location);
+			var indexFileInfo = new FileInfo(indexFilePath);
+			if (indexFileInfo.Exists == false)
+				return true;
+
+			return DateTime.Compare(ravenDatabaseFileInfo.LastWriteTimeUtc, indexFileInfo.LastWriteTimeUtc) > 0;
+		}
+
+		private static void AddResultToCache(string source, Type result, bool shouldUpdateIfExists = false)
+		{
+			var cacheEntry = new CacheEntry
 			{
 				Source = source,
 				Type = result,
 				Usages = 1
-			});
+			};
+
+			if (shouldUpdateIfExists)
+				cacheEntries.AddOrUpdate(source, cacheEntry, (key, existingValue) => cacheEntry);
+			else
+				cacheEntries.TryAdd(source, cacheEntry);
 
 			if (cacheEntries.Count > 256)
 			{
@@ -321,8 +343,8 @@ namespace Raven.Database.Linq
 			}
 		}
 
-		private static bool TryGetDiskCacheResult(string source, string name, InMemoryRavenConfiguration configuration, out string indexFilePath,
-		                                          out Type type)
+		private static bool TryGetDiskCacheResult(string source, string name, InMemoryRavenConfiguration configuration, string indexFilePath,
+												  out Type type)
 		{
 			// It's not in the in-memory cache. See if it's been cached on disk.
 			//
@@ -334,16 +356,6 @@ namespace Raven.Database.Linq
 			//
 			// For more info, see http://ayende.com/blog/161218/robs-sprint-idly-indexing?key=f37cf4dc-0e5c-43be-9b27-632f61ba044f#comments-form-location
 			var indexCacheDir = GetIndexCacheDir(configuration);
-
-			string sourceHashed;
-			using (var md5 = MD5.Create())
-			{
-				var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(source));
-				sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
-			}
-			indexFilePath = Path.Combine(indexCacheDir,
-			                             IndexingUtil.StableInvariantIgnoreCaseStringHash(source) + "." + sourceHashed + "." +
-			                             (Debugger.IsAttached ? "debug" : "nodebug") + ".dll");
 
 			try
 			{
@@ -379,6 +391,20 @@ namespace Raven.Database.Linq
 			return false;
 		}
 
+		private static string GetIndexFilePath(string source, string indexCacheDir)
+		{
+			string sourceHashed;
+			using (var md5 = MD5.Create())
+			{
+				var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(source));
+				sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
+			}
+			var indexFilePath = Path.Combine(indexCacheDir,
+				IndexingUtil.StableInvariantIgnoreCaseStringHash(source) + "." + sourceHashed + "." +
+				(Debugger.IsAttached ? "debug" : "nodebug") + ".dll");
+			return indexFilePath;
+		}
+
 		private static string GetIndexCacheDir(InMemoryRavenConfiguration configuration)
 		{
 			var indexCacheDir = configuration.CompiledIndexCacheDirectory;
@@ -395,7 +421,7 @@ namespace Raven.Database.Linq
 				{
 					if (Directory.Exists(indexCacheDir) == false)
 						Directory.CreateDirectory(indexCacheDir);
-					var touchFile = Path.Combine(indexCacheDir, Guid.NewGuid() +  ".temp");
+					var touchFile = Path.Combine(indexCacheDir, Guid.NewGuid() + ".temp");
 					File.WriteAllText(touchFile, "test that we can write to this path");
 					File.Delete(touchFile);
 					return indexCacheDir;
@@ -404,39 +430,34 @@ namespace Raven.Database.Linq
 				{
 				}
 
-				return Path.Combine(configuration.IndexStoragePath, "Raven", "CompiledIndexCache");		
+                indexCacheDir = Path.Combine(configuration.IndexStoragePath, "Raven", "CompiledIndexCache");
+                if (Directory.Exists(indexCacheDir) == false)
+                    Directory.CreateDirectory(indexCacheDir);
 			}
 
 			return indexCacheDir;
 		}
 
 		private static Type DoActualCompilation(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions,
-		                                        string basePath, string indexFilePath)
+												string basePath, string indexFilePath)
 		{
-			var provider = new CSharpCodeProvider(new Dictionary<string, string> {{"CompilerVersion", "v4.0"}});
-		    var currentAssembly = typeof(QueryParsingUtils).Assembly;
-
-		    var assembliesToLoad = new Dictionary<string, string>();
-
+			var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
 			var assemblies = new HashSet<string>
 			{
-                AssemblyHelper.GetExtractedAssemblyLocationFor(typeof(SystemTime), currentAssembly),
-                AssemblyHelper.GetExtractedAssemblyLocationFor(typeof(Field), currentAssembly),
-                typeof (AbstractViewGenerator).Assembly.Location,
+				typeof (SystemTime).Assembly.Location,
+				typeof (AbstractViewGenerator).Assembly.Location,
 				typeof (NameValueCollection).Assembly.Location,
 				typeof (Enumerable).Assembly.Location,
 				typeof (Binder).Assembly.Location,
+				typeof (Field).Assembly.Location,
 			};
-
-			foreach (var assembly in extensions.SelectMany(extension => extension.Value.GetAssembliesToReference()))
-			    assemblies.Add(assembly);
-
-		    foreach (var assembly in assemblies)
-		    {
-		        var dll = Path.GetFileNameWithoutExtension(assembly);
-		        assembliesToLoad[dll] = assembly;
-		    }
-
+			foreach (var extension in extensions)
+			{
+				foreach (var assembly in extension.Value.GetAssembliesToReference())
+				{
+					assemblies.Add(assembly);
+				}
+			}
 			var compilerParameters = new CompilerParameters
 			{
 				GenerateExecutable = false,
@@ -447,9 +468,9 @@ namespace Raven.Database.Linq
 			if (basePath != null)
 				compilerParameters.TempFiles = new TempFileCollection(basePath, false);
 
-			foreach (var assembly in assembliesToLoad)
+			foreach (var assembly in assemblies)
 			{
-				compilerParameters.ReferencedAssemblies.Add(assembly.Value);
+				compilerParameters.ReferencedAssemblies.Add(assembly);
 			}
 
 			CompilerResults compileAssemblyFromFile;
@@ -458,7 +479,7 @@ namespace Raven.Database.Linq
 				var sourceFileName = indexFilePath + ".cs";
 				File.WriteAllText(sourceFileName, source);
 				compileAssemblyFromFile = provider.CompileAssemblyFromFile(compilerParameters, sourceFileName);
-			}	
+			}
 			else
 			{
 				compileAssemblyFromFile = provider.CompileAssemblyFromSource(compilerParameters, source);
@@ -467,25 +488,28 @@ namespace Raven.Database.Linq
 
 			if (results.Errors.HasErrors)
 			{
-			    var sb = new StringBuilder()
-                    .AppendLine("Compilation Errors:")
-                    .AppendLine();
-                
-                foreach (CompilerError error in results.Errors)
-                {
-                    sb.AppendFormat("Line {0}, Position {1}: Error {2} - {3}\n", error.Line, error.Column, error.ErrorNumber, error.ErrorText);
-                }
+				var sb = new StringBuilder()
+					.AppendLine("Compilation Errors:")
+					.AppendLine();
 
-			    sb.AppendLine();
+				foreach (CompilerError error in results.Errors)
+				{
+					sb.AppendFormat("Line {0}, Position {1}: Error {2} - {3}\n", error.Line, error.Column, error.ErrorNumber, error.ErrorText);
+				}
 
-			    sb.AppendLine("Source code:")
-			      .AppendLine(queryText)
-			      .AppendLine();
+				sb.AppendLine();
+
+				sb.AppendLine("Source code:")
+				  .AppendLine(queryText)
+				  .AppendLine();
 
 				throw new InvalidOperationException(sb.ToString());
 			}
 
 			var asm = Assembly.Load(File.ReadAllBytes(indexFilePath)); // avoid locking the file
+
+			// ReSharper disable once AssignNullToNotNullAttribute
+			File.SetCreationTime(indexFilePath, DateTime.UtcNow);
 
 			CodeVerifier.AssertNoSecurityCriticalCalls(asm);
 
@@ -497,24 +521,24 @@ namespace Raven.Database.Linq
 		}
 
 		private static Type TryGetIndexFromDisk(string indexFilePath, string typeName)
-        {
-            try
-            {
-                if (File.Exists(indexFilePath))
-                {
+		{
+			try
+			{
+				if (File.Exists(indexFilePath))
+				{
 					// we don't use LoadFrom to avoid locking the file
-                    return System.Reflection.Assembly.Load(File.ReadAllBytes(indexFilePath)).GetType(typeName);
-                }
-            }
-            catch
-            {
-                // If there were any problems loading this index from disk,
-                // just delete it if we can. It will be regenerated later.
-                try { File.Delete(indexFilePath); }
-                catch { }
-            }
+					return System.Reflection.Assembly.Load(File.ReadAllBytes(indexFilePath)).GetType(typeName);
+				}
+			}
+			catch
+			{
+				// If there were any problems loading this index from disk,
+				// just delete it if we can. It will be regenerated later.
+				try { File.Delete(indexFilePath); }
+				catch { }
+			}
 
-            return null;
-        }
+			return null;
+		}
 	}
 }

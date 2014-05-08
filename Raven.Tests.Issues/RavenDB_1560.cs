@@ -39,7 +39,7 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-        [Fact(Skip = "MetadataOnly is not supported for embedded")]
+        [Fact]
         public void MetadataOnlyShouldWorkForIndexes_Embedded()
         {
             using (var store = NewDocumentStore())
@@ -57,7 +57,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact(Skip = "MetadataOnly is not supported for embedded")]
+        [Fact]
         public void MetadataOnlyShouldWorkForStartsWith_Embedded()
         {
             using (var store = NewDocumentStore())
@@ -75,7 +75,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact(Skip = "MetadataOnly is not supported for embedded")]
+        [Fact]
         public void MetadataOnlyShouldWorkForGetDocuments_Embedded()
         {
             using (var store = NewDocumentStore())
@@ -93,7 +93,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact(Skip = "MetadataOnly is not supported for embedded")]
+        [Fact]
         public void MetadataOnlyShouldWorkForGet_Embedded()
         {
             using (var store = NewDocumentStore())

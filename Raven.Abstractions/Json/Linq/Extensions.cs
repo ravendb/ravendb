@@ -266,7 +266,7 @@ namespace Raven.Json.Linq
                     {
                         changes.FieldNewValue = token.ToString();
                         changes.FieldNewType = token.Type.ToString();
-                        changes.Change = DocumentsChanges.ChangeType.ArrayValueAdded;
+                        changes.Change = DocumentsChanges.ChangeType.NewField;
 
                         changes.FieldName = kvp.Key;
                     }
@@ -292,13 +292,13 @@ namespace Raven.Json.Linq
 
 	            if (selfObj.Count < otherObj.Count)
                 {
-                    changes.Change = DocumentsChanges.ChangeType.ArrayValueRemoved;
+                    changes.Change = DocumentsChanges.ChangeType.RemovedField;
 
                     changes.FieldOldValue = diffData[key];
                 }
                 else
                 {
-                    changes.Change = DocumentsChanges.ChangeType.ArrayValueAdded;
+                    changes.Change = DocumentsChanges.ChangeType.NewField;
                     changes.FieldNewValue = diffData[key];
                 }
                 docChanges.Add(changes);

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
+using Lucene.Net.Store;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -89,6 +90,8 @@ namespace Raven.Database.Server.Controllers
 		{
 			base.InnerInitialization(controllerContext);
 			landlord = (DatabasesLandlord)controllerContext.Configuration.Properties[typeof(DatabasesLandlord)];
+			fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
+			countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
 			requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
 
 			var values = controllerContext.Request.GetRouteData().Values;
@@ -144,6 +147,17 @@ namespace Raven.Database.Server.Controllers
 				if (Configuration == null)
 					return landlord;
 				return (DatabasesLandlord)Configuration.Properties[typeof(DatabasesLandlord)];
+			}
+		}
+
+		private CountersLandlord countersLandlord;
+		public CountersLandlord CountersLandlord
+		{
+			get
+			{
+				if (Configuration == null)
+					return countersLandlord;
+				return (CountersLandlord)Configuration.Properties[typeof(CountersLandlord)];
 			}
 		}
 

@@ -176,7 +176,6 @@ class editDocument extends viewModelBase {
             }
 
             ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), navigationArgs.id));
-            return true;
         } else {
             this.editNewDocument();
         }
@@ -261,6 +260,10 @@ class editDocument extends viewModelBase {
         for (var i in metaToSkipInHeaders) {
             var skippedHeader = metaToSkipInHeaders[i];
             delete meta[skippedHeader];
+        }
+
+        if (!!this.docsList()) {
+            this.docsList().invalidateCache();
         }
 
         var newDoc = new document(updatedDto);

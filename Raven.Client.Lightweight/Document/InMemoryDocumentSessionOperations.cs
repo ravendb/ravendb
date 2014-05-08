@@ -717,7 +717,7 @@ more responsive application.
 			AssertNoNonUniqueInstance(entity, id);
 
 			var metadata = new RavenJObject();
-			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
+			var tag = documentStore.Conventions.GetDynamicTagName(entity);
 			if (tag != null)
 				metadata.Add(Constants.RavenEntityName, tag);
 			if (id != null)
@@ -965,10 +965,27 @@ more responsive application.
 
         private void GetAllEntitiesChanges(IDictionary<string, DocumentsChanges[]> changes)
         {
-            foreach (var pair in entitiesAndMetadata)
-            {
-                EntityChanged(pair.Key, pair.Value, changes);
-            }
+            
+
+                foreach (var pair in entitiesAndMetadata)
+                {
+                    if (pair.Value.OriginalValue.Count == 0)
+                    {
+                        var docChanges = new List<DocumentsChanges>() { };
+                        var change = new DocumentsChanges()
+                        {
+
+                            Change = DocumentsChanges.ChangeType.DocumentAdded
+                        };
+
+                        docChanges.Add(change);
+                        changes[pair.Value.Key] = docChanges.ToArray();
+                        continue;
+
+                    }
+                    EntityChanged(pair.Key, pair.Value, changes);
+                }
+            
         }
 
         private void PrepareForEntitiesDeletion(SaveChangesData result, IDictionary<string, DocumentsChanges[]> changes)

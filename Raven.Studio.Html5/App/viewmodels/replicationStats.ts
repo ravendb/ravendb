@@ -40,7 +40,7 @@ class replicationStats extends viewModelBase {
                 s['LastFailureTimestampHumanized'] = this.createHumanReadableTime(s.LastFailureTimestamp);
                 s['LastHeartbeatReceivedHumanized'] = this.createHumanReadableTime(s.LastHeartbeatReceived);
                 s['LastSuccessTimestampHumanized'] = this.createHumanReadableTime(s.LastSuccessTimestamp);
-                s['isHotFailure'] = this.checkDiffFromNow(s.LastFailureTimestamp,10);
+                s['isHotFailure'] = this.isFailEarlierThanSuccess(s.LastFailureTimestamp, s.LastSuccessTimestamp);
             });
         }
 
@@ -62,18 +62,16 @@ class replicationStats extends viewModelBase {
     }
 
 
-    checkDiffFromNow(time: string, numOfMinutes:number): KnockoutComputed<boolean> {
-        if (time) {
-            // Return a computed that returns a humanized string based off the current time, e.g. "7 minutes ago".
-            // It's a computed so that it updates whenever we update this.now (scheduled to occur every minute.)
-            return ko.computed(() => {
-                var dateMoment = moment(time);
-                var agoInMs = this.now().diff(dateMoment);
-                return moment.duration(agoInMs).asMinutes() < numOfMinutes;
-            });
+    isFailEarlierThanSuccess(lastFailureTime: string, lastSuccessTime:string): boolean {
+        if (!!lastFailureTime) {
+            if (!!lastSuccessTime) {
+                return lastFailureTime >= lastSuccessTime;
+            } else {
+                return true;
+            }
         }
 
-        return ko.computed(() => false);
+        return false;
     }
 
     updateCurrentNowTime() {

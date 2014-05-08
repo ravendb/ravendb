@@ -57,14 +57,14 @@ namespace Raven.Tests.Issues
                     new AggregationQuery
                     {
                         Aggregation = FacetAggregation.Sum,
-                        AggregationField = "Total",
+                        AggregationField = "Total_Range",
                         DisplayName = "Product-Total",
                         Name = "Product",
                     },
                     new AggregationQuery
                     {
                         Aggregation = FacetAggregation.Sum,
-                        AggregationField = "Quantity",
+                        AggregationField = "Quantity_Range",
                         DisplayName = "Product-Quantity",
                         Name = "Product",
                     },

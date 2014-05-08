@@ -102,7 +102,7 @@ namespace Voron.Trees
 			if (value == null) throw new ArgumentNullException("value");
 
 			State.IsModified = true;
-			var pos = DirectAdd(tx, key, (int)value.Length, version: version);
+			var pos = DirectAdd(tx, key, value.Length, version: version);
 
 			fixed (byte* src = value)
 			{

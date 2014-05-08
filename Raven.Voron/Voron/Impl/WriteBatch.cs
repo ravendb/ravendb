@@ -13,21 +13,40 @@ namespace Voron.Impl
 		private readonly Dictionary<string, Dictionary<Slice, BatchOperation>> _lastOperations;
 		private readonly Dictionary<string, Dictionary<Slice, List<BatchOperation>>> _multiTreeOperations;
 
+		private readonly HashSet<string> _trees = new HashSet<string>(); 
+
 		private readonly SliceEqualityComparer _sliceEqualityComparer;
 		private bool _disposeAfterWrite = true;
 
-		public IEnumerable<BatchOperation> Operations
+		public HashSet<string> Trees
 		{
 			get
 			{
-				var allOperations = _lastOperations.SelectMany(x => x.Value.Values);
-
-				if (_multiTreeOperations.Count == 0)
-					return allOperations;
-
-				return allOperations.Concat(_multiTreeOperations.SelectMany(x => x.Value.Values)
-												.SelectMany(x => x));
+				return _trees;
 			}
+		}
+
+		public IEnumerable<BatchOperation> GetSortedOperations(string treeName)
+		{
+			Dictionary<Slice, BatchOperation> operations;
+			if (_lastOperations.TryGetValue(treeName, out operations))
+			{
+				foreach (var operation in operations.OrderBy(x => x.Key, _sliceEqualityComparer))
+					yield return operation.Value;
+			}
+
+			if (_multiTreeOperations.Count == 0)
+				yield break;
+
+			Dictionary<Slice, List<BatchOperation>> multiOperations;
+			if (_multiTreeOperations.TryGetValue(treeName, out multiOperations) == false)
+				yield break;
+
+			foreach (var operation in multiOperations
+				.OrderBy(x => x.Key, _sliceEqualityComparer)
+				.SelectMany(x => x.Value)
+				.OrderBy(x => (Slice)x.Value, _sliceEqualityComparer))
+				yield return operation;
 		}
 
 		public long Size()
@@ -185,6 +204,8 @@ namespace Voron.Impl
 
 			if (treeName == null)
 				treeName = Constants.RootTreeName;
+
+			_trees.Add(treeName);
 
 			if (operation.Type == BatchOperationType.MultiAdd || operation.Type == BatchOperationType.MultiDelete)
 			{

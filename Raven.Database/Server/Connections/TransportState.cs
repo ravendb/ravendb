@@ -62,6 +62,17 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
+        public event Action<object, TransformerChangeNotification> OnTransformerChangeNotification = delegate { }; 
+
+        public void Send(TransformerChangeNotification transformerChangeNotification)
+        {
+            OnTransformerChangeNotification(this, transformerChangeNotification);
+            foreach (var connectionState in connections)
+            {
+                connectionState.Value.Send(transformerChangeNotification);
+            }
+        }
+
 		public event Action<object, DocumentChangeNotification> OnDocumentChangeNotification = delegate { }; 
 
 		public void Send(DocumentChangeNotification documentChangeNotification)

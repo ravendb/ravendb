@@ -120,7 +120,7 @@ namespace Voron
 		}
 
 
-		public long ReadbigEndianInt64()
+		public long ReadBigEndianInt64()
 		{
 			if (_len - _pos < sizeof(long))
 				throw new EndOfStreamException();

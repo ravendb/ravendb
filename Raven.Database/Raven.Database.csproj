@@ -257,6 +257,12 @@
     <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualDeleteTrigger.cs" />
     <Compile Include="Client\EmbeddableDocumentStore.cs" />
     <Compile Include="Client\EmbeddedDocumentStore.cs" />
+    <Compile Include="Counters\Controllers\CounterReplicationController.cs" />
+    <Compile Include="Counters\Controllers\RavenCounterReplication.cs" />
+    <Compile Include="Counters\Controllers\RavenCountersApiController.cs" />
+    <Compile Include="Counters\ReplicationMessage.cs" />
+    <Compile Include="Counters\Counter.cs" />
+    <Compile Include="Counters\CounterStorage.cs" />
     <Compile Include="Config\Settings\NullableIntegerSetting.cs" />
     <Compile Include="Embedded\ResponseStream.cs" />
     <Compile Include="Impl\DTC\DtcNotSupportedTransactionalState.cs" />
@@ -275,6 +281,7 @@
     <Compile Include="Plugins\Builtins\ReadOnlyDeleteTrigger.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyPutTrigger.cs" />
     <Compile Include="Linq\Ast\TransformDynamicInvocationExpressions.cs" />
+    <Compile Include="Counters\Controllers\CountersController.cs" />
     <Compile Include="Server\RavenDbServer.cs" />
     <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
@@ -954,6 +961,7 @@
     <Compile Include="Server\Connections\TimeSensitiveStore.cs" />
     <Compile Include="Server\Startup.cs" />
     <Compile Include="Server\Tenancy\AbstractLandlord.cs" />
+    <Compile Include="Server\Tenancy\CountersLandlord.cs" />
     <Compile Include="Server\Tenancy\DatabaseLandlord.cs" />
     <Compile Include="Server\Tenancy\FileSystemsLandlord.cs" />
     <Compile Include="Server\WebApi\Attributes\HttpEvalAttribute.cs" />

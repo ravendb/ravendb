@@ -103,7 +103,7 @@ namespace Voron.Impl
 				writes = BuildBatchGroup(mine);
 				using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					HandleOperations(tx, writes.SelectMany(x => x.Batch.Operations), _cancellationToken);
+					HandleOperations(tx, writes, _cancellationToken);
 
 					try
 					{
@@ -147,62 +147,66 @@ namespace Voron.Impl
 			SplitWrites(writes);
 		}
 
-		private void HandleOperations(Transaction tx, IEnumerable<WriteBatch.BatchOperation> operations, CancellationToken token)
+		private void HandleOperations(Transaction tx, List<OutstandingWrite> writes, CancellationToken token)
 		{
-			foreach (var g in operations.GroupBy(x => x.TreeName))
+			var trees = writes
+				.SelectMany(x => x.Trees)
+				.Distinct();
+
+			foreach (var treeName in trees)
 			{
 				token.ThrowIfCancellationRequested();
 
-				var tree = tx.State.GetTree(tx, g.Key);
-				// note that the ordering is done purely for performance reasons
-				// we rely on the fact that there can be only a single operation per key in
-				// each batch, and that we don't make any guarantees regarding ordering between
-				// concurrent merged writes
-				foreach (var operation in g.OrderBy(x => x))
+				var tree = tx.State.GetTree(tx, treeName);
+				foreach (var write in writes)
 				{
-					token.ThrowIfCancellationRequested();
-
-					operation.Reset();
-					try
+					foreach (var operation in write.GetOperations(treeName))
 					{
-						DebugActionType actionType;
-						switch (operation.Type)
+						token.ThrowIfCancellationRequested();
+
+						operation.Reset();
+
+						try
 						{
-							case WriteBatch.BatchOperationType.Add:
-								var stream = operation.Value as Stream;
-								if (stream != null)
-									tree.Add(tx, operation.Key, stream, operation.Version);
-								else
-									tree.Add(tx, operation.Key, (Slice)operation.Value, operation.Version);
-								actionType = DebugActionType.Add;
-								break;
-							case WriteBatch.BatchOperationType.Delete:
-								tree.Delete(tx, operation.Key, operation.Version);
-								actionType = DebugActionType.Delete;
-								break;
-							case WriteBatch.BatchOperationType.MultiAdd:
-								tree.MultiAdd(tx, operation.Key, operation.Value as Slice, version: operation.Version);
-								actionType = DebugActionType.MultiAdd;
-								break;
-							case WriteBatch.BatchOperationType.MultiDelete:
-								tree.MultiDelete(tx, operation.Key, operation.Value as Slice, operation.Version);
-								actionType = DebugActionType.MultiDelete;
-								break;
-							case WriteBatch.BatchOperationType.Increment:
-								tree.Increment(tx, operation.Key, (long)operation.Value, operation.Version);
-								actionType = DebugActionType.Increment;
-								break;
-							default:
-								throw new ArgumentOutOfRangeException();
-						}
+							DebugActionType actionType;
+							switch (operation.Type)
+							{
+								case WriteBatch.BatchOperationType.Add:
+									var stream = operation.Value as Stream;
+									if (stream != null)
+										tree.Add(tx, operation.Key, stream, operation.Version);
+									else
+										tree.Add(tx, operation.Key, (Slice)operation.Value, operation.Version);
+									actionType = DebugActionType.Add;
+									break;
+								case WriteBatch.BatchOperationType.Delete:
+									tree.Delete(tx, operation.Key, operation.Version);
+									actionType = DebugActionType.Delete;
+									break;
+								case WriteBatch.BatchOperationType.MultiAdd:
+									tree.MultiAdd(tx, operation.Key, operation.Value as Slice, version: operation.Version);
+									actionType = DebugActionType.MultiAdd;
+									break;
+								case WriteBatch.BatchOperationType.MultiDelete:
+									tree.MultiDelete(tx, operation.Key, operation.Value as Slice, operation.Version);
+									actionType = DebugActionType.MultiDelete;
+									break;
+								case WriteBatch.BatchOperationType.Increment:
+									tree.Increment(tx, operation.Key, (long)operation.Value, operation.Version);
+									actionType = DebugActionType.Increment;
+									break;
+								default:
+									throw new ArgumentOutOfRangeException();
+							}
 
-						if (ShouldRecordToDebugJournal)
-							_debugJournal.RecordAction(actionType, operation.Key, g.Key, operation.Value);
-					}
-					catch (Exception e)
-					{
-						if (operation.ExceptionTypesToIgnore.Contains(e.GetType()) == false)
-							throw;
+							if (ShouldRecordToDebugJournal)
+								_debugJournal.RecordAction(actionType, operation.Key, treeName, operation.Value);
+						}
+						catch (Exception e)
+						{
+							if (operation.ExceptionTypesToIgnore.Contains(e.GetType()) == false)
+								throw;
+						}
 					}
 				}
 			}
@@ -219,7 +223,7 @@ namespace Voron.Impl
 
 					using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
 					{
-						HandleOperations(tx, write.Batch.Operations, _cancellationToken);
+						HandleOperations(tx, new List<OutstandingWrite> { write }, _cancellationToken);
 						tx.Commit();
 						write.Completed();
 					}
@@ -261,14 +265,20 @@ namespace Voron.Impl
 
 		private class OutstandingWrite : IDisposable
 		{
+			private readonly WriteBatch _batch;
+
 			private readonly TransactionMergingWriter _transactionMergingWriter;
 			private Exception _exception;
 			private readonly ManualResetEventSlim _completed;
 
+			private readonly Dictionary<string, List<WriteBatch.BatchOperation>> _operations = new Dictionary<string, List<WriteBatch.BatchOperation>>(); 
+
 			public OutstandingWrite(WriteBatch batch, TransactionMergingWriter transactionMergingWriter)
 			{
+				_batch = batch;
 				_transactionMergingWriter = transactionMergingWriter;
-				Batch = batch;
+
+				_operations = CreateOperations(batch);
 				Size = batch.Size();
 
 				if (transactionMergingWriter._eventsBuffer.TryDequeue(out _completed) == false)
@@ -276,14 +286,34 @@ namespace Voron.Impl
 				_completed.Reset();
 			}
 
-			public WriteBatch Batch { get; private set; }
+			private static Dictionary<string, List<WriteBatch.BatchOperation>> CreateOperations(WriteBatch batch)
+			{
+				return batch.Trees.ToDictionary(tree => tree, tree => batch.GetSortedOperations(tree).ToList());
+			}
+
+			public IEnumerable<string> Trees
+			{
+				get
+				{
+					return _batch.Trees;
+				}
+			} 
+
+			public IEnumerable<WriteBatch.BatchOperation> GetOperations(string treeName)
+			{
+				List<WriteBatch.BatchOperation> operations;
+				if (_operations.TryGetValue(treeName, out operations))
+					return operations;
+
+				return Enumerable.Empty<WriteBatch.BatchOperation>();
+			}
 
 			public long Size { get; private set; }
 
 			public void Dispose()
 			{
-				if (Batch.DisposeAfterWrite)
-					Batch.Dispose();
+				if (_batch.DisposeAfterWrite)
+					_batch.Dispose();
 
 				_transactionMergingWriter._eventsBuffer.Enqueue(_completed);
 			}

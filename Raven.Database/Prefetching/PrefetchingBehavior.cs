@@ -194,6 +194,7 @@ namespace Raven.Database.Prefetching
 					.GetDocumentsAfter(
 						etag,
 						autoTuner.NumberOfItemsToIndexInSingleBatch,
+						context.CancellationToken,
 						autoTuner.MaximumSizeAllowedToFetchFromStorage,
 						untilEtag: untilEtag)
 					.Where(x => x != null)

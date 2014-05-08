@@ -3,8 +3,12 @@ import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 import router = require("plugins/router");
 import app = require("durandal/app");
-import uploadItem = require("models/uploadItem");
+import changesApi = require("common/changesApi");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
+import shell = require("viewmodels/shell");
+import changesCallback = require("common/changesCallback");
+import changeSubscription = require("models/changeSubscription");
+import uploadItem = require("models/uploadItem");
 import ace = require("ace/ace");
 
 /*
@@ -16,6 +20,7 @@ class viewModelBase {
 
     private keyboardShortcutDomContainers: string[] = [];
     private modelPollingHandle: number;
+    private notifications: Array<changeSubscription> = [];
     static dirtyFlag = new ko.DirtyFlag([]);
     private static isConfirmedUsingSystemDatabase: boolean;
 
@@ -44,6 +49,17 @@ class viewModelBase {
         return true;
     }
 
+    createNotifications(): Array<changeSubscription> {
+        return [];
+    }
+
+    cleanupNotifications() {
+        for (var i = 0; i < this.notifications.length; i++) {
+            this.notifications[i].off();
+        }
+        this.notifications = [];
+    }
+
     /*
     * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
     */
@@ -53,6 +69,7 @@ class viewModelBase {
         if (!!db && db !== null && (!currentDb || currentDb.name !== db.name)) {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
         }
+        this.notifications = this.createNotifications();
 
         var fs = appUrl.getFilesystem();
         var currentFilesystem = this.activeFilesystem();
@@ -61,7 +78,7 @@ class viewModelBase {
         }
 
         this.modelPollingStart();
-		window.onbeforeunload = (e: any) => this.beforeUnload(e);        ko.postbox.publish("SetRawJSONUrl", "");
+        window.onbeforeunload = (e: any) => this.beforeUnload(e); ko.postbox.publish("SetRawJSONUrl", "");
     }
 
     // Called back after the entire composition has finished (parents and children included)
@@ -88,6 +105,7 @@ class viewModelBase {
         this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
+        this.cleanupNotifications();
     }
     /*
      * Creates a keyboard shortcut local to the specified element and its children.
@@ -127,15 +145,16 @@ class viewModelBase {
         router.navigate(url, options);
     }
 
-    modelPolling() {
+    modelPolling() { 
     }
 
-    forceModelPolling() {
+    forceModelPolling() {  
         this.modelPolling();
     }
 
     private modelPollingStart() {
         this.modelPolling();
+        this.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
         this.activeDatabase.subscribe(() => this.forceModelPolling());
         this.activeFilesystem.subscribe(() => this.forceModelPolling());
     }

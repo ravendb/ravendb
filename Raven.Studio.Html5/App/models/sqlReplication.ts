@@ -66,14 +66,14 @@ class sqlReplication extends document {
 
         });
 
-        this.script.subscribe(() => {
+        this.script.subscribe((newValue) => {
             var message = "";
             var currentEditor = aceEditorBindingHandler.currentEditor;
-            var editorValue = currentEditor.getSession().getValue();
-            if (editorValue === "") {
+            var textarea: any = $(currentEditor.container).find('textarea')[0];
+
+            if (newValue === "") {
                 message = "Please fill out this field.";
             }
-            var textarea: any = $(currentEditor.container).find('textarea')[0];
             textarea.setCustomValidity(message);
             setTimeout(() => {
                 var annotations = currentEditor.getSession().getAnnotations();

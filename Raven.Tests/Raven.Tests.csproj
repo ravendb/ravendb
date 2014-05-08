@@ -244,7 +244,6 @@
     <Compile Include="Bugs\Andrew.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
     <Compile Include="Bugs\ArrayOfMaybeNull.cs" />
-    <Compile Include="Bugs\AsyncSetBasedOps.cs" />
     <Compile Include="Bugs\Async\WebApi.cs" />
     <Compile Include="Bugs\Async\DynamicGeneratedIds.cs" />
     <Compile Include="Bugs\Attachments.cs" />
@@ -266,6 +265,7 @@
     <Compile Include="Embedded\EmbeddedTests.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
     <Compile Include="Bugs\CanPatchADocumentThatContainsBytes.cs" />
+    <Compile Include="Bugs\CompilingIndexesCreatesCacheDirectory.cs" />
     <Compile Include="Bugs\DefaultOperatorTest.cs" />
     <Compile Include="Bugs\DyanmicId.cs" />
     <Compile Include="Bugs\DynamicId.cs" />
