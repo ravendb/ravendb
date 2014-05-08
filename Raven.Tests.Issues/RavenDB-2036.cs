@@ -182,7 +182,7 @@ namespace Raven.Tests.Issues
             using (var store = NewDocumentStore())
             {
                 var ex = Assert.Throws<IndexCompilationException>(() => new Index__TestByName().Execute(store));
-                Assert.True(ex.Message.Contains("Index names cannot contains __ (double _)"));
+                Assert.True(ex.Message.Contains("Index names cannot contains // (double slashes)"));
             }
 
 
