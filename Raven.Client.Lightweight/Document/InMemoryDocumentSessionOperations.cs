@@ -717,7 +717,7 @@ more responsive application.
 			AssertNoNonUniqueInstance(entity, id);
 
 			var metadata = new RavenJObject();
-			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
+			var tag = documentStore.Conventions.GetDynamicTagName(entity);
 			if (tag != null)
 				metadata.Add(Constants.RavenEntityName, tag);
 			if (id != null)
