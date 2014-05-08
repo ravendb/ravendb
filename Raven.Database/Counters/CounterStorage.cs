@@ -232,8 +232,8 @@ namespace Raven.Database.Counters
 						result.ServerValues.Add(new Counter.PerServerValue
 						{
 							SourceId = EndianBitConverter.Big.ToInt32(serverIdBytes, 0),
-                            Positive = reader.ReadLittleEndianInt64(),
-                            Negative = reader.ReadLittleEndianInt64()
+                            Positive = reader.ReadBigEndianInt64(),
+                            Negative = reader.ReadBigEndianInt64()
 						});
 					} while (it.MoveNext());
 					return result;
