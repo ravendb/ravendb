@@ -117,7 +117,6 @@ namespace Raven.Database.Server.Controllers
 		        result.Includes.Add(doc.ToJson());
 		    }
 
-		    Etag computedEtag;
             var computeHash = Encryptor.Current.Hash.Compute16(includedEtags.ToArray());
             Etag computedEtag = Etag.Parse(computeHash);
 
