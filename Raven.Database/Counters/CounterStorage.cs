@@ -85,7 +85,8 @@ namespace Raven.Database.Counters
 				}
 				else // existing db
 				{
-					Id = new Guid(id.Reader.ReadBytes(16));
+				    int used;
+				    Id = new Guid(id.Reader.ReadBytes(16, out used));
 					var nameResult = metadata.Read(tx, "name");
 					if (nameResult == null)
 						throw new InvalidOperationException("Could not read name from the store, something bad happened");
@@ -101,7 +102,7 @@ namespace Raven.Database.Counters
 						{
 							do
 							{
-								var serverId = it.CreateReaderForCurrent().ReadInt32();
+								var serverId = it.CreateReaderForCurrent().ReadLittleEndianInt32();
 								var serverName = it.CurrentKey.ToString();
 								serverNamesToIds[serverName] = serverId;
 								serverIdstoName[serverId] = serverName;
@@ -214,7 +215,7 @@ namespace Raven.Database.Counters
 				var etagResult = countersEtags.Read(transaction, slice);
 				if (etagResult == null)
 					return null;
-				var etag = etagResult.Reader.ReadInt64();
+                var etag = etagResult.Reader.ReadLittleEndianInt64();
 				using (var it = counters.Iterate(transaction))
 				{
 					it.RequiredPrefix = slice;
@@ -231,8 +232,8 @@ namespace Raven.Database.Counters
 						result.ServerValues.Add(new Counter.PerServerValue
 						{
 							SourceId = EndianBitConverter.Big.ToInt32(serverIdBytes, 0),
-							Positive = reader.ReadInt64(),
-							Negative = reader.ReadInt64()
+                            Positive = reader.ReadLittleEndianInt64(),
+                            Negative = reader.ReadLittleEndianInt64()
 						});
 					} while (it.MoveNext());
 					return result;
