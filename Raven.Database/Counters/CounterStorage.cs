@@ -342,11 +342,17 @@ namespace Raven.Database.Counters
 		    {
 		        Store(server, counter, result =>
 		        {
-		            var valPos = delta > 0 ? 0 : 8;
+		            int valPos = 0;
+		            if (delta < 0)
+		            {
+		                valPos = 8;
+		                delta = -delta;
+		            }
+
 		            if (result == null)
 		            {
 		                EndianBitConverter.Big.CopyBytes(delta, storeBuffer, valPos);
-		                EndianBitConverter.Big.CopyBytes(0L, storeBuffer, delta > 0 ? 8 : 0);
+		                EndianBitConverter.Big.CopyBytes(0L, storeBuffer, valPos == 0 ? 8 : 0);
 		            }
 		            else
 		            {
