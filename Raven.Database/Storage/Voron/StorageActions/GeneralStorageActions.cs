@@ -65,7 +65,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var readResult = storage.General.Read(Snapshot, lowerKeyName, writeBatch.Value); 
             if (readResult == null)
             {
-				storage.General.Increment(writeBatch.Value, lowerKeyName, 1, expectedVersion: 0);
+                storage.General.Add(writeBatch.Value, lowerKeyName, BitConverter.GetBytes((long)1), expectedVersion: 0);
                 return 1;
             }
 
@@ -73,7 +73,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             {
                 var newValue = stream.ReadInt64() + 1;
 
-				storage.General.Increment(writeBatch.Value, lowerKeyName, 1, expectedVersion: readResult.Version);
+                storage.General.Add(writeBatch.Value, lowerKeyName, BitConverter.GetBytes(newValue), expectedVersion: readResult.Version);
                 return newValue;
             }
         }
