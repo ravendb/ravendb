@@ -13,11 +13,11 @@ class saveDestinationCommand extends commandBase {
 
         var result = $.Deferred();
 
-        var dtos = [];
+        var dtos = [].concat(this.destination);
 
         this.query<synchronizationDestinationDto[]>("/config", { name: "Raven/Synchronization/Destinations" }, this.fs)
             .done(data => {
-                dtos = dtos.concat(this.destination);
+                
                 if (data && data.hasOwnProperty('destination')) {      
 
                     var value = data['destination'];
