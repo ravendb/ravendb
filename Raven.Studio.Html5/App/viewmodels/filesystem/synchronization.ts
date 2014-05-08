@@ -37,15 +37,14 @@ class synchronization extends viewModelBase {
     isConflictsVisible = ko.computed(() => this.conflicts().length > 0);
 
     outgoingActivityPagedList = ko.observable<pagedList>();
-    //isOutgoingActivityVisible = ko.computed(() => this.outgoingActivityPagedList() ? this.outgoingActivityPagedList().totalResultCount() > 0 : false);
     isOutgoingActivityVisible = ko.computed(() => true);
     
     incomingActivityPagedList = ko.observable<pagedList>();   
-    //isIncomingActivityVisible = ko.computed(() => this.incomingActivityPagedList() ? this.incomingActivityPagedList().totalResultCount() > 0 : false);
     isIncomingActivityVisible = ko.computed(() => true);
           
     private router = router;
     private pollingInterval: any;
+    private activeFilesystemSubscription: any;
     synchronizationUrl = appUrl.forCurrentDatabase().filesystemSynchronization;
 
     static outgoingGridSelector = "#outgoingGrid";
@@ -63,17 +62,16 @@ class synchronization extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-        this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
-
-        this.startPolling();
-    }
-
-    startPolling() {
-        this.pollingInterval = setInterval(() => { this.modelPolling() }, 10000);
+        this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
     }
 
     deactivate() {
-        window.clearInterval(this.pollingInterval);
+
+        super.deactivate();
+        this.activeFilesystemSubscription.dispose();
+    }
+
+    forceModelPolling() {
     }
 
     addDestination() {
@@ -236,9 +234,9 @@ class synchronization extends viewModelBase {
 
     fileSystemChanged(fs: filesystem) {
         if (fs) {
-            window.clearInterval(this.pollingInterval);
+            this.modelPollingStop();
             this.loadActivity();
-            this.startPolling();
+            this.modelPollingStart();
         }
     }
 }
