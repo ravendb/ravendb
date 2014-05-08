@@ -116,10 +116,13 @@ namespace Raven.Tests.Issues
                     session.Load<PropertyTransformer, object>(property.Id);
                     var before = session.Advanced.NumberOfRequests;
                     var result = session.Load<Property>(property.Id);
+                     Assert.True(before == 1); //The .Load<> Call
+                     Assert.True(session.Advanced.IsLoaded(result.CityId));
                     var city = session.Load<City>(result.CityId);
                     session.Load<Region>(city.RegionId);
 
                     Assert.Equal(before, session.Advanced.NumberOfRequests);
+                  
                 }
             }
         }
