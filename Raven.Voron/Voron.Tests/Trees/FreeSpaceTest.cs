@@ -105,7 +105,7 @@ namespace Voron.Tests.Trees
 			// some freed pages can be used internally by free space handling
 			// 80% should be definitely a safe value
 
-			var minNumberOfFreePages = numberOfFreedPages*0.8;
+			var minNumberOfFreePages = numberOfFreedPages * 0.8;
 
 			for (int i = 0; i < minNumberOfFreePages; i++)
 			{
