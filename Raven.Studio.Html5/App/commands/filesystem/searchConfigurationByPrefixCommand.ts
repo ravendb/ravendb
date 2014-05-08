@@ -12,7 +12,7 @@ class searchFilesystemConfigurationByPrefixCommand extends commandBase {
         var url = "/config";
         var args = {
             prefix: this.prefix
-        }
+        };
 
         return this.query<filesystemConfigSearchResultsDto>(url, args, this.fs);
     }
