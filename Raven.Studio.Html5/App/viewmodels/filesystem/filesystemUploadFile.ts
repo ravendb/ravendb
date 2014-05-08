@@ -9,7 +9,6 @@ import fileUploadBindingHandler = require("common/fileUploadBindingHandler");
 
 class filesystemUploadFile extends viewModelBase {
 
-    localStorageUploadQueueKey: string;
     files = ko.observable<File[]>();
     uploadQueue = ko.observableArray<uploadItem>();
 
@@ -23,7 +22,7 @@ class filesystemUploadFile extends viewModelBase {
     activate(navigationArgs) {
         super.activate(navigationArgs);
 
-        var storageKeyForFs = this.localStorageUploadQueueKey + this.activeFilesystem().name;
+        var storageKeyForFs = uploadQueueHelper.localStorageUploadQueueKey + this.activeFilesystem().name;
         if (window.localStorage.getItem(storageKeyForFs)) {
             this.uploadQueue(
                 uploadQueueHelper.parseUploadQueue(
@@ -32,7 +31,7 @@ class filesystemUploadFile extends viewModelBase {
     }
 
     clearUploadQueue() {
-        window.localStorage.removeItem(this.localStorageUploadQueueKey + this.activeFilesystem().name);
+        window.localStorage.removeItem(uploadQueueHelper.localStorageUploadQueueKey + this.activeFilesystem().name);
         this.uploadQueue.removeAll();
     }
 

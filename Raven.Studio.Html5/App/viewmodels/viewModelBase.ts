@@ -152,14 +152,14 @@ class viewModelBase {
         this.modelPolling();
     }
 
-    private modelPollingStart() {
+    modelPollingStart() {
         this.modelPolling();
         this.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
         this.activeDatabase.subscribe(() => this.forceModelPolling());
         this.activeFilesystem.subscribe(() => this.forceModelPolling());
     }
 
-    private modelPollingStop() {
+    modelPollingStop() {
         clearInterval(this.modelPollingHandle);
     }
 
