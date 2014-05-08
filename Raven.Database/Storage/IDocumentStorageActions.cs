@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-
+using Jint.Runtime.References;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 

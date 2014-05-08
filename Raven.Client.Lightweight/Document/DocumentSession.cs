@@ -970,7 +970,6 @@ namespace Raven.Client.Document
 
 	    public Lazy<TResult[]> MoreLikeThis<TResult>(MoreLikeThisQuery query)
         {
-			IncrementRequestCount();
             var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, null, null);
             var lazyOp = new LazyMoreLikeThisOperation<TResult>(multiLoadOperation, query);
             return AddLazyOperation<TResult[]>(lazyOp, null);

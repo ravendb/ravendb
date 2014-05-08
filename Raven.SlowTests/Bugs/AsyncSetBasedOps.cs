@@ -3,17 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Tests.Common;
-
 using Xunit;
 using Xunit.Extensions;
 
-namespace Raven.Tests.Bugs
+namespace Raven.SlowTests.Bugs
 {
 	public class AsyncSetBasedOps : RavenTest
 	{
@@ -24,7 +23,7 @@ namespace Raven.Tests.Bugs
 			public string FullName;
 		}
 
-		[Theory(Skip = "causes issues")]
+		[Theory]
 		[PropertyData("Storages")]
 		public async Task AwaitAsyncPatchByIndexShouldWork(string storageTypeName)
 		{
