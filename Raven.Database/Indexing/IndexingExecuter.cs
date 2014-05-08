@@ -115,7 +115,7 @@ namespace Raven.Database.Indexing
                               jsonDocs.Count, lastIndexedEtagForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
 				}
 
-				context.ReportIndexingActualBatchSize(jsonDocs.Count);
+				context.ReportIndexingActualBatchInfo(jsonDocs.Count, jsonDocs.Sum(x => x.SerializedSizeOnDisk));
 				context.CancellationToken.ThrowIfCancellationRequested();
 
 				if (jsonDocs.Count <= 0)

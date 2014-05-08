@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using NetTopologySuite.Utilities;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -161,6 +162,12 @@ namespace Raven.Database.Prefetching
 		{
 			if (context.Configuration.DisableDocumentPreFetchingForIndexing)
 				return false;
+
+			//don't allow to grow prefetching queue over certain size
+			var prefetchingQueueSize = prefetchingQueue.AsQueryableFromSnapshot().Sum(x => x.SerializedSizeOnDisk);
+			if (prefetchingQueueSize > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+				return false;
+
 			try
 			{
 				FutureIndexBatch nextBatch;
@@ -171,9 +178,7 @@ namespace Raven.Database.Prefetching
 					return false;
 
 				foreach (var jsonDocument in nextBatch.Task.Result)
-				{
 					prefetchingQueue.Add(jsonDocument);
-				}
 
 				return true;
 			}
@@ -220,6 +225,18 @@ namespace Raven.Database.Prefetching
 				return;
 			if (past.Count == 0)
 				return;
+
+			var alreadyLoadedSize = futureIndexBatches.Values.Sum(x =>
+			{
+				if (x.Task.IsCompleted)
+					return x.Task.Result.Sum(doc => doc.SerializedSizeOnDisk);
+
+				return autoTuner.AverageBatchSize;
+			});
+
+			if (alreadyLoadedSize > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+				return;
+
 			if (futureIndexBatches.Count > 5) // we limit the number of future calls we do
 			{
 				int alreadyLoaded = futureIndexBatches.Values.Sum(x =>
@@ -352,8 +369,8 @@ namespace Raven.Database.Prefetching
 			foreach (FutureIndexBatch source in futureIndexBatches.Values.Where(x => (indexingAge - x.Age) > numberOfIndexingGenerationsAllowed).ToList())
 			{
 				ObserveDiscardedTask(source);
-				FutureIndexBatch _;
-				futureIndexBatches.TryRemove(source.StartingEtag, out _);
+				FutureIndexBatch batch;
+				futureIndexBatches.TryRemove(source.StartingEtag, out batch);
 			}
 		}
 
@@ -363,7 +380,8 @@ namespace Raven.Database.Prefetching
 				return;
 
 			if (prefetchingQueue.Count >= // don't use too much, this is an optimization and we need to be careful about using too much mem
-				context.Configuration.MaxNumberOfItemsToPreFetchForIndexing)
+				context.Configuration.MaxNumberOfItemsToPreFetchForIndexing ||
+				prefetchingQueue.AsQueryableFromSnapshot().Sum(x => x.SerializedSizeOnDisk) > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
 				return;
 
 			foreach (var jsonDocument in docs)
@@ -482,6 +500,7 @@ namespace Raven.Database.Prefetching
 			public int Age;
 			public Etag StartingEtag;
 			public Task<List<JsonDocument>> Task;
+
 		}
 
 		#endregion

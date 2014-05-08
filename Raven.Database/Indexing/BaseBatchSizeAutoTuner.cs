@@ -11,7 +11,7 @@ namespace Raven.Database.Indexing
 		protected readonly WorkContext context;
 
 		private int currentNumber;
-
+		
 		private DateTime lastIncrease;
 
 		protected BaseBatchSizeAutoTuner(WorkContext context)
@@ -31,6 +31,7 @@ namespace Raven.Database.Indexing
 
 		public void AutoThrottleBatchSize(int amountOfItemsToIndex, long size, TimeSpan indexingDuration)
 		{
+			AverageBatchSize = RunningAverage(size, AverageBatchSize, amountOfItemsToIndex);
 			try
 			{
 				if (ReduceBatchSizeIfCloseToMemoryCeiling())
@@ -45,6 +46,14 @@ namespace Raven.Database.Indexing
 				RecordAmountOfItems(amountOfItemsToIndex);
 			}
 		}
+
+		//adapted from http://invisibleblocks.com/2008/07/30/long-running-averages-without-the-sum-of-preceding-values/
+		private static long RunningAverage(long value, long existingAverage, long count)
+		{
+			existingAverage += (value - existingAverage) / ++count;
+			return existingAverage;
+		}
+
 
 		private bool ConsiderIncreasingBatchSize(int amountOfItemsToIndex, long size, TimeSpan indexingDuration)
 		{
@@ -106,8 +115,23 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		public void ReportMemoryUsageIncrease(int amount)
+		{
+			
+		}
+		
+		public void ReportMemoryUsageDecrease(int amount)
+		{
+			
+		}
+
 		private bool ReduceBatchSizeIfCloseToMemoryCeiling()
 		{
+			if (context.LastActualIndexingBatchInfo.ToArray().Sum(x => x.TotalDocumentSize) > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+			{
+				return true;
+			}
+
 			if (MemoryStatistics.AvailableMemory >= context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
 			{
 				// there is enough memory available for the next indexing run
@@ -133,7 +157,7 @@ namespace Raven.Database.Indexing
 			}
 
 			// we are still too high, let us reduce the size and see what is going on.
-
+			
 			NumberOfItemsToIndexInSingleBatch = Math.Max(InitialNumberOfItems,
 														 NumberOfItemsToIndexInSingleBatch / 2);
 
@@ -207,6 +231,7 @@ namespace Raven.Database.Indexing
 		protected abstract int MaxNumberOfItems { get; }
 		protected abstract int CurrentNumberOfItems { get; set; }
 		protected abstract int LastAmountOfItemsToRemember { get; set; }
+		public long AverageBatchSize { get; private set; }
 		protected abstract void RecordAmountOfItems(int numberOfItems);
 		protected abstract IEnumerable<int> GetLastAmountOfItems();
 	}
