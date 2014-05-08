@@ -40,10 +40,11 @@ class replicationStats extends viewModelBase {
                 s['LastFailureTimestampHumanized'] = this.createHumanReadableTime(s.LastFailureTimestamp);
                 s['LastHeartbeatReceivedHumanized'] = this.createHumanReadableTime(s.LastHeartbeatReceived);
                 s['LastSuccessTimestampHumanized'] = this.createHumanReadableTime(s.LastSuccessTimestamp);
+                s['isHotFailure'] = this.isFailEarlierThanSuccess(s.LastFailureTimestamp, s.LastSuccessTimestamp);
             });
         }
 
-        this.replStatsDoc(results)
+        this.replStatsDoc(results);
     }
 
     createHumanReadableTime(time: string): KnockoutComputed<string> {
@@ -58,6 +59,19 @@ class replicationStats extends viewModelBase {
         }
 
         return ko.computed(() => time);
+    }
+
+
+    isFailEarlierThanSuccess(lastFailureTime: string, lastSuccessTime:string): boolean {
+        if (!!lastFailureTime) {
+            if (!!lastSuccessTime) {
+                return lastFailureTime >= lastSuccessTime;
+            } else {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     updateCurrentNowTime() {

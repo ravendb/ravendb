@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Specialized;
 using Raven.Client.RavenFS;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Storage
 {
@@ -15,13 +16,12 @@ namespace Raven.Database.Server.RavenFS.Storage
 			get { return Humane(TotalSize); }
 		}
 
-
 		public string HumaneUploadedSize
 		{
 			get { return Humane(UploadedSize); }
 		}
 
-		public NameValueCollection Metadata { get; set; }
+		public RavenJObject Metadata { get; set; }
 
 		public static string Humane(long? size)
 		{
@@ -44,14 +44,12 @@ namespace Raven.Database.Server.RavenFS.Storage
 
 		public bool IsFileBeingUploadedOrUploadHasBeenBroken()
 		{
-			return TotalSize == null || TotalSize != UploadedSize ||
-				   (Metadata[SynchronizationConstants.RavenDeleteMarker] == null && Metadata["Content-MD5"] == null);
+			return TotalSize == null || TotalSize != UploadedSize || (Metadata[SynchronizationConstants.RavenDeleteMarker] == null && Metadata["Content-MD5"] == null);
 		}
 
 		protected bool Equals(FileHeader other)
 		{
-			return string.Equals(Name, other.Name) && TotalSize == other.TotalSize && UploadedSize == other.UploadedSize &&
-				   Equals(Metadata, other.Metadata);
+			return string.Equals(Name, other.Name) && TotalSize == other.TotalSize && UploadedSize == other.UploadedSize && Equals(Metadata, other.Metadata);
 		}
 
 		public override bool Equals(object obj)

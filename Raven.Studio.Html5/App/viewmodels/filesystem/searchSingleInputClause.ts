@@ -1,25 +1,21 @@
-﻿import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+﻿import searchDialogViewModel = require("viewmodels/filesystem/searchDialogViewModel");
 import dialog = require("plugins/dialog");
 
-class searchSingleInputClause extends dialogViewModelBase {
+class searchSingleInputClause extends searchDialogViewModel {
 
     public applyFilterTask = $.Deferred();
-    filterText = ko.observable("");
-    label = ko.observable("");
+    label = "";
 
     constructor(label: string) {
-        super();
+        super([ko.observable("")]);
 
-        this.label(label);
-    }
-
-    cancel() {
-        dialog.close(this);
+        this.label = label;
     }
 
     applyFilter() {
-        this.applyFilterTask.resolve(this.filterText());
-        dialog.close(this);
+        this.applyFilterTask.resolve(this.inputs[0]());
+
+        this.close();
     }
 }
 

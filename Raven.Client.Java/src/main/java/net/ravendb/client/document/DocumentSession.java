@@ -17,6 +17,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 
+import net.ravendb.abstractions.basic.CloseableIterator;
 import net.ravendb.abstractions.basic.Lazy;
 import net.ravendb.abstractions.basic.Reference;
 import net.ravendb.abstractions.basic.Tuple;
@@ -512,26 +513,26 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(IRavenQueryable<T> query) {
+  public <T> CloseableIterator<StreamResult<T>> stream(IRavenQueryable<T> query) {
     Reference<QueryHeaderInformation> _ = new Reference<>();
     return stream(query, _);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(IRavenQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformationRef) {
+  public <T> CloseableIterator<StreamResult<T>> stream(IRavenQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformationRef) {
     IRavenQueryProvider queryProvider = (IRavenQueryProvider)query.getProvider();
     IDocumentQuery<T> docQuery = (IDocumentQuery<T>) queryProvider.toDocumentQuery(query.getElementType(), query.getExpression());
     return stream(docQuery, queryHeaderInformationRef);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(IDocumentQuery<T> query) {
+  public <T> CloseableIterator<StreamResult<T>> stream(IDocumentQuery<T> query) {
     Reference<QueryHeaderInformation> _ = new Reference<>();
     return stream(query, _);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(IDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation) {
+  public <T> CloseableIterator<StreamResult<T>> stream(IDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation) {
     IRavenQueryInspector ravenQueryInspector = (IRavenQueryInspector) query;
     IndexQuery indexQuery = ravenQueryInspector.getIndexQuery();
 
@@ -540,18 +541,18 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
           "Since stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
     }
 
-    Iterator<RavenJObject> iterator = databaseCommands.streamQuery(ravenQueryInspector.getIndexQueried(), indexQuery, queryHeaderInformation);
+    CloseableIterator<RavenJObject> iterator = databaseCommands.streamQuery(ravenQueryInspector.getIndexQueried(), indexQuery, queryHeaderInformation);
     return new StreamIterator<>(query, iterator);
   }
 
 
-  private static class StreamIterator<T> implements Iterator<StreamResult<T>> {
+  private static class StreamIterator<T> implements CloseableIterator<StreamResult<T>> {
 
-    private Iterator<RavenJObject> innerIterator;
+    private CloseableIterator<RavenJObject> innerIterator;
     private DocumentQuery<T> query;
     private QueryOperation queryOperation;
 
-    public StreamIterator(IDocumentQuery<T> query, Iterator<RavenJObject> innerIterator) {
+    public StreamIterator(IDocumentQuery<T> query, CloseableIterator<RavenJObject> innerIterator) {
       super();
       this.innerIterator = innerIterator;
       this.query = (DocumentQuery<T>) query;
@@ -562,6 +563,11 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     @Override
     public boolean hasNext() {
       return innerIterator.hasNext();
+    }
+
+    @Override
+    public void close() {
+      innerIterator.close();
     }
 
     @Override
@@ -595,38 +601,38 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass) {
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass) {
     return stream(entityClass, null, null, null, 0, Integer.MAX_VALUE);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag) {
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag) {
     return stream(entityClass, fromEtag, null, null, 0, Integer.MAX_VALUE);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith) {
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith) {
     return stream(entityClass, fromEtag, startsWith, null, 0, Integer.MAX_VALUE);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches) {
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches) {
     return stream(entityClass, fromEtag, startsWith, matches, 0, Integer.MAX_VALUE);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start) {
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start) {
     return stream(entityClass, fromEtag, startsWith, matches, start, Integer.MAX_VALUE);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize) {
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize) {
     return stream(entityClass, fromEtag, startsWith, matches, start, pageSize, null);
   }
 
   @Override
-  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize, RavenPagingInformation pagingInformation) {
-    Iterator<RavenJObject> iterator = databaseCommands.streamDocs(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation);
+  public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize, RavenPagingInformation pagingInformation) {
+    CloseableIterator<RavenJObject> iterator = databaseCommands.streamDocs(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation);
     return new SimpleSteamIterator<>(iterator, entityClass);
   }
 
@@ -635,11 +641,12 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return databaseCommands.getMultiFacets(facetQueries);
   }
 
-  private class SimpleSteamIterator<T> implements Iterator<StreamResult<T>> {
-    private Iterator<RavenJObject> innerIterator;
+  private class SimpleSteamIterator<T> implements CloseableIterator<StreamResult<T>> {
+    private CloseableIterator<RavenJObject> innerIterator;
     private Class<T> entityClass;
+    private boolean closed = false;
 
-    public SimpleSteamIterator(Iterator<RavenJObject> innerIterator, Class<T> entityClass) {
+    public SimpleSteamIterator(CloseableIterator<RavenJObject> innerIterator, Class<T> entityClass) {
       super();
       this.innerIterator = innerIterator;
       this.entityClass = entityClass;
@@ -650,8 +657,18 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
       return innerIterator.hasNext();
     }
 
+    public void close() {
+      closed = true;
+      innerIterator.close();
+    }
+
+
+
     @Override
     public StreamResult<T> next() {
+      if (closed) {
+        throw new IllegalStateException("Stream is closed");
+      }
       RavenJObject next = innerIterator.next();
       JsonDocument document = SerializationHelper.ravenJObjectToJsonDocument(next);
       StreamResult<T> streamResult = new StreamResult<>();

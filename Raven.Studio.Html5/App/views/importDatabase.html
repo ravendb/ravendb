@@ -1,49 +1,137 @@
-﻿<div class="alert alert-danger">
-    <p>Note: not implemented yet</p>
-    <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2058">You can track progress here</a>
-</div>
-<div class="panel panel-default not-implemented-yet">
+﻿<div class="panel panel-default">
     <div class="panel-heading">
         <h3 class="panel-title">Import Database</h3>
     </div>
     <div class="panel-body">
-        <h5 class="pull-left">Import data to the current database.</h5>
+        <h5 class="pull-left">Import data from a .ravendump file into the current database.</h5>
         <div class="alert alert-warning pull-right">
             <i class="fa fa-warning"></i>
             Importing will overwrite any existing documents and indexes.
         </div>
         <br />
         <br />
-        <div class="btn-toolbar">
+        <input id="importDatabaseFilePicker" type="file" data-bind="event: { change: fileSelected }" />
+        <br />
+        <div class="btn-toolbar" data-bind="visible: hasFileSelected">
             <div class="btn-group">
-                <button class="btn btn-primary" data-bind="">
+                <button class="btn btn-primary" data-bind="click: importDb">
                     <div class="glyphicon glyphicon-import"></div>
                     Import Database
                 </button>
             </div>
         </div>
         <br />
+        <div class="progress progress-striped active" data-bind="visible: isImporting">
+            <div class="progress-bar" role="progressbar" style="width: 100%"></div>
+        </div>
         <ul class="nav nav-tabs">
-            <li class="active"><a href="#">Options</a></li>
-            <li><a href="#">Advanced</a></li>
+            <li data-bind="click: selectOptions, css: { active: !showAdvancedOptions() }"><a href="#">General</a></li>
+            <li data-bind="click: selectAdvancedOptions, css: { active: showAdvancedOptions }"><a href="#">Advanced</a></li>
         </ul>
         <br />
-        <div class="btn-group-vertical" data-toggle="buttons">
-            <label class="btn btn-default active">
+        <div class="btn-group-vertical" data-toggle="buttons" data-bind="visible: !showAdvancedOptions()">
+            <label class="btn btn-primary active">
                 <input type="checkbox"> Include documents
             </label>
-            <label class="btn btn-default active">
+            <label class="btn btn-primary active">
                 <input type="checkbox"> Include indexes
             </label>
-            <label class="btn btn-default">
+            <label class="btn btn-primary">
                 <input type="checkbox"> Include attachments
             </label>
-            <label class="btn btn-default active">
+            <label class="btn btn-primary active">
                 <input type="checkbox"> Include transformers
             </label>
-            <label class="btn btn-default">
+            <label class="btn btn-primary">
                 <input type="checkbox"> Remove analyzers
             </label>
+        </div>
+        <div data-bind="visible: showAdvancedOptions">
+            <form class="form-horizontal" role="form">
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Batch size</label>
+                    <div class="col-sm-2">
+                        <input class="form-control" type="number" min="0" data-bind="value: batchSize" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Expired documents</label>
+                    <div class="col-sm-10">
+                        <div class="btn-group">
+                            <label class="btn btn-primary" data-bind="click: includeExpiredDocuments.bind(includeExpiredDocuments, true), css: { active: includeExpiredDocuments }">
+                                Include
+                            </label>
+                            <label class="btn btn-primary" data-bind="click: includeExpiredDocuments.bind(includeExpiredDocuments, false), css: { active: !includeExpiredDocuments() }">
+                                Exclude
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Collections</label>
+                    <div class="col-sm-10">
+                        <div class="btn-group">
+                            <label class="btn btn-primary" data-bind="click: includeAllCollections.bind(includeAllCollections, true), css: { active: includeAllCollections }">
+                                All collections
+                            </label>
+                            <label class="btn btn-primary" data-bind="click: includeAllCollections.bind(includeAllCollections, false), css: { active: !includeAllCollections() }">
+                                Specified collections only
+                            </label>
+                        </div>
+                        <div style="margin-left: 20px;" data-bind="visible: !includeAllCollections()">
+                            <p class="form-control-static">Choose collections:</p>
+                            <div class="btn-group-vertical" data-bind="foreach: includedCollections">
+                                <label class="btn btn-primary" data-bind="text: collection, click: isIncluded.bind(isIncluded, !isIncluded()), css: { active: isIncluded }"></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Filters <a title="External link: RavenDB filter settings documentation" target="_blank" href="http://ravendb.net/docs/server/administration/export-import"><i class="fa fa-question-circle"></i></a></label>
+                    <div class="col-sm-10">
+                        <div class="btn-group">
+                            <table class="table table-striped" style="max-width: 500px;" data-bind="visible: filters().length">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40%;">Path</th>
+                                        <th style="width: 45%;">Value</th>
+                                        <th style="width: 10%">Should Match</th>
+                                        <th>&nbsp;</th>
+                                    </tr>
+                                </thead>
+                                <tbody data-bind="foreach: filters">
+                                    <tr>
+                                        <td><input class="form-control" type="text" data-bind="value: Path" /></td>
+                                        <td><input class="form-control" type="text" data-bind="value: Values[0]" /></td>
+                                        <td>
+                                            <div class="checkbox">
+                                                <label>
+                                                    <input type="checkbox" data-bind="checked: ShouldMatch" />
+                                                </label>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="close" data-bind="click: $root.removeFilter.bind($root, $data)" title="Remove this filter">×</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <button class="btn btn-default" data-bind="click: addFilter"><i class="fa fa-plus"></i> Add filter</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label id="transformScriptHelp" class="col-sm-2 control-label">
+                        Transform script&nbsp;
+                        <i class="fa fa-info-circle help-cursor"></i>
+                    </label>
+                    <div class="col-sm-10">
+                        <pre style="height: 200px;" data-bind="aceEditor: { code: transformScript, lang: 'ace/mode/javascript' }">
+                        </pre>
+                    </div>
+                </div>
+            </form>
+            
         </div>
     </div>
 </div>

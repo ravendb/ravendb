@@ -102,8 +102,9 @@
     <Reference Include="ICSharpCode.SharpZipLib">
       <HintPath>..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
-    <Reference Include="Jint.Raven">
-      <HintPath>..\SharedLibs\Jint.Raven.dll</HintPath>
+    <Reference Include="Jint, Version=2.1.0.0, Culture=neutral, PublicKeyToken=2e92ba9c8d81157f, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Jint.dll</HintPath>
     </Reference>
     <Reference Include="Lucene.Net, Version=2.3.2.1, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -262,6 +263,7 @@
     <Compile Include="Counters\ReplicationMessage.cs" />
     <Compile Include="Counters\Counter.cs" />
     <Compile Include="Counters\CounterStorage.cs" />
+    <Compile Include="Config\Settings\NullableIntegerSetting.cs" />
     <Compile Include="Embedded\ResponseStream.cs" />
     <Compile Include="Impl\DTC\DtcNotSupportedTransactionalState.cs" />
     <Compile Include="Indexing\IndexMerging\ChangeRootReferenceVisitor.cs" />
@@ -272,6 +274,10 @@
     <Compile Include="Indexing\PrecomputedIndexing.cs" />
     <Compile Include="Embedded\OwinEmbeddedHost.cs" />
     <Compile Include="Embedded\OwinClientHandler.cs" />
+    <Compile Include="Bundles\ScriptedIndexResults\ScriptedIndexResultsJsonPatcherScope.cs" />
+    <Compile Include="Json\JintOperationScope.cs" />
+    <Compile Include="Json\ScriptedJsonPatcherOperationScope.cs" />
+    <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcherOperationScope.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyDeleteTrigger.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyPutTrigger.cs" />
     <Compile Include="Linq\Ast\TransformDynamicInvocationExpressions.cs" />
@@ -1086,13 +1092,12 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Server\WebUI\raven-data.ico" />
-    <Content Include="Server\WebUI\studio.html" />
-    <Content Include="Server\WebUI\studio_not_found.html" />
+    <EmbeddedResource Include="Server\WebUI\studio.html" />
+    <EmbeddedResource Include="Server\WebUI\studio_not_found.html" />
     <EmbeddedResource Include="Server\WebUI\Raven.Studio.xap" />
     <EmbeddedResource Include="Json\ToJson.js" />
     <EmbeddedResource Include="Json\RavenDB.js" />
     <EmbeddedResource Include="Json\lodash.js" />
-    <EmbeddedResource Include="Json\ECMAScript5.js" />
     <Content Include="FodyWeavers.xml" />
   </ItemGroup>
   <ItemGroup>

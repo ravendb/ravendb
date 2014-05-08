@@ -28,6 +28,8 @@ namespace Voron
 			handler(this, new RecoveryErrorEventArgs(message, e));
 		}
 
+		public long? InitialFileSize { get; set; }
+
 		public long MaxLogFileSize
 		{
 			get { return _maxLogFileSize; }
@@ -63,6 +65,7 @@ namespace Voron
 		public int IdleFlushTimeout { get; set; }
 
 		public long? MaxStorageSize { get; set; }
+		public abstract string BasePath { get; }
 
 		public abstract IJournalWriter CreateJournalWriter(long journalNumber, long journalSize);
 
@@ -129,7 +132,7 @@ namespace Voron
                 if (_journalPath != tempPath && Directory.Exists(_journalPath) == false)
                     Directory.CreateDirectory(_journalPath);
 
-				_dataPager = new Lazy<IVirtualPager>(() => new Win32MemoryMapPager(Path.Combine(_basePath, Constants.DatabaseFilename)));
+				_dataPager = new Lazy<IVirtualPager>(() => new Win32MemoryMapPager(Path.Combine(_basePath, Constants.DatabaseFilename), InitialFileSize));
 			}
 
 			public override IVirtualPager DataPager
@@ -140,7 +143,7 @@ namespace Voron
 				}
 			}
 
-			public string BasePath
+			public override string BasePath
 			{
 				get { return _basePath; }
 			}
@@ -249,7 +252,7 @@ namespace Voron
 			    if (File.Exists(scratchFile)) 
                     File.Delete(scratchFile);
 
-                return new Win32MemoryMapPager(scratchFile, (NativeFileAttributes.DeleteOnClose | NativeFileAttributes.Temporary));
+                return new Win32MemoryMapPager(scratchFile, InitialFileSize, (NativeFileAttributes.DeleteOnClose | NativeFileAttributes.Temporary));
 			}
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)
@@ -274,12 +277,17 @@ namespace Voron
 
 			public PureMemoryStorageEnvironmentOptions()
 			{
-				_dataPager = new Win32PageFileBackedMemoryMappedPager("data.pager");
+				_dataPager = new Win32PageFileBackedMemoryMappedPager("data.pager", InitialFileSize);
 			}
 
 			public override IVirtualPager DataPager
 			{
 				get { return _dataPager; }
+			}
+
+			public override string BasePath
+			{
+				get { return ":memory:"; }
 			}
 
 			public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
@@ -345,7 +353,7 @@ namespace Voron
 
 			public override IVirtualPager CreateScratchPager(string name)
 			{
-				return new Win32PageFileBackedMemoryMappedPager(name);
+				return new Win32PageFileBackedMemoryMappedPager(name, InitialFileSize);
 			}
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)

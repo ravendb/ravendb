@@ -173,7 +173,7 @@ public class IncludesTest extends RemoteClientTest {
 
         for (Order order : orders) {
           //this will not require querying the server!
-          Customer cust = session.load(Customer.class, order.customerId);
+          Customer cust = session.load(Customer.class, order.getCustomerId());
           assertNotNull(cust);
         }
         assertEquals(1, session.advanced().getNumberOfRequests());
@@ -261,9 +261,9 @@ public class IncludesTest extends RemoteClientTest {
       QIncludesTest_Order x = QIncludesTest_Order.order;
       try(IDocumentSession session = store.openSession()) {
         Order order = session.include(x.supplierIds).load(Order.class, "orders/1234");
-        assertEquals(3, order.supplierIds.size());
+        assertEquals(3, order.getSupplierIds().size());
 
-        for (String supplierId : order.supplierIds) {
+        for (String supplierId : order.getSupplierIds()) {
           // this will not require querying the server!
           Supplier supp = session.load(Supplier.class, supplierId);
           assertNotNull(supp);
@@ -404,7 +404,7 @@ public class IncludesTest extends RemoteClientTest {
         Order order = session.include(x.lineItems.select().productId).load(Order.class, "orders/1234");
         for (LineItem lineItem : order.getLineItems()) {
           // this will not require querying the server!
-          Product product = session.load(Product.class, lineItem.productId);
+          Product product = session.load(Product.class, lineItem.getProductId());
           assertNotNull(product);
         }
         assertEquals(1, session.advanced().getNumberOfRequests());
@@ -486,7 +486,7 @@ public class IncludesTest extends RemoteClientTest {
         Order3 order = session.include(Customer2.class, x.customer.id).load(Order3.class, "orders/1234");
         // this will not require querying the server!
 
-        Customer2 fullCustomer = session.load(Customer2.class, order.customer.id);
+        Customer2 fullCustomer = session.load(Customer2.class, order.getCustomer().getId());
         assertNotNull(fullCustomer);
         assertEquals(1, session.advanced().getNumberOfRequests());
       }
@@ -543,7 +543,7 @@ public class IncludesTest extends RemoteClientTest {
 
   @QueryEntity
   public static class Order2 {
-    private int customer2Id;
+    protected int customer2Id;
     private List<UUID> supplier2Ids;
     private Referral2 refferal2;
     private List<LineItem2> lineItem2s;

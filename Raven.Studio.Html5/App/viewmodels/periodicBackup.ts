@@ -1,16 +1,17 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getPeriodicBackupSetupCommand = require("commands/getPeriodicBackupSetupCommand");
 import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
-import periodicBackupSetup = require("models/periodicBackupSetup");
 import savePeriodicBackupSetupCommand = require("commands/savePeriodicBackupSetupCommand");
+import document = require("models/document");
+import periodicBackupSetup = require("models/periodicBackupSetup");
 import appUrl = require("common/appUrl");
 
 class periodicBackup extends viewModelBase {
 
-    backupSetup = ko.observable<periodicBackupSetup>();
+    backupSetup = ko.observable<periodicBackupSetup>().extend({ required: true });
     isSaveEnabled: KnockoutComputed<boolean>;
-    static containerId = "#periodicBackupContainer";
-    private form: JQuery;
+    backupStatusDirtyFlag = new ko.DirtyFlag([]);
+    backupConfigDirtyFlag = new ko.DirtyFlag([]);
 
     canActivate(args: any): any {
         super.canActivate(args);
@@ -28,14 +29,17 @@ class periodicBackup extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-        this.isSaveEnabled = ko.computed(function() {
-            return true;
+        
+        this.backupStatusDirtyFlag = new ko.DirtyFlag([this.backupSetup().disabled]);
+        this.backupConfigDirtyFlag = new ko.DirtyFlag([this.backupSetup]);
+        
+        var self = this;
+        this.isSaveEnabled = ko.computed(function () {
+            return (self.backupConfigDirtyFlag().isDirty()) &&
+                (!self.backupSetup().disabled() || (self.backupSetup().disabled() && self.backupStatusDirtyFlag().isDirty()));
         });
-        //viewModelBase.dirtyFlag = new ko.DirtyFlag([combinedFlag]);
-    }
 
-    attached() {
-        this.form = $("#save-periodic-backup-form");
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.isSaveEnabled]);
     }
 
     fetchPeriodicBackupSetup(db): JQueryPromise<any> {
@@ -51,22 +55,27 @@ class periodicBackup extends viewModelBase {
         var deferred = $.Deferred();
         new getDatabaseSettingsCommand(db)
             .execute()
-            .done(document => this.backupSetup().fromDatabaseSettingsDto(document.toDto()) )
+            .done((document: document)=> { this.backupSetup().fromDatabaseSettingsDto(document.toDto(true)); })
             .always(() => deferred.resolve({ can: true }));
         return deferred;
     }
 
     activatePeriodicBackup() {
-        this.backupSetup().activated(true);
+        var action: boolean = !this.backupSetup().disabled();
+        this.backupSetup().disabled(action);
     }
 
     saveChanges() {
-        //if ((<any>this.form[0]).checkValidity() === true) {
-            var db = this.activeDatabase();
-            if (db) {
-                new savePeriodicBackupSetupCommand(this.backupSetup(), db).execute();
-            }
-        //}
+        var db = this.activeDatabase();
+        if (db) {
+            var saveTask = new savePeriodicBackupSetupCommand(this.backupSetup(), db).execute();
+            saveTask.done((resultArray) => {
+                var newEtag = resultArray[0].ETag;
+                this.backupSetup().setEtag(newEtag);
+                this.backupStatusDirtyFlag().reset(); //Resync Changes
+                this.backupConfigDirtyFlag().reset(); //Resync Changes
+            });
+        }
     }
 }
 

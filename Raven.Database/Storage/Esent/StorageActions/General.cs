@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
@@ -238,7 +239,29 @@ namespace Raven.Storage.Esent.StorageActions
 			return Api.EscrowUpdate(session, Identity, tableColumnsCache.IdentityColumns["val"], 1) + 1;
 		}
 
+		public IEnumerable<KeyValuePair<string, long>> GetIdentities(int start, int take, out long totalCount)
+		{
+			Api.JetSetCurrentIndex(session, Identity, "by_key");
+
+			int numRecords;
+			Api.JetIndexRecordCount(session, Identity, out numRecords, 0);
+
+			totalCount = numRecords;
+			if (totalCount <= 0 || Api.TryMoveFirst(session, Identity) == false || TryMoveTableRecords(Identity, start, backward: false))
+				return Enumerable.Empty<KeyValuePair<string, long>>();
+
+			var results = new List<KeyValuePair<string, long>>();
+
+			do
+			{
+				var identityName = Api.RetrieveColumnAsString(session, Identity, tableColumnsCache.IdentityColumns["key"]);
+				var identityValue = Api.RetrieveColumnAsInt32(session, Identity, tableColumnsCache.IdentityColumns["val"]);
+
+				results.Add(new KeyValuePair<string, long>(identityName, identityValue.Value));
+			}
+			while (Api.TryMoveNext(session, Identity) && results.Count < take);
+
+			return results;
+		}
 	}
-
-
 }

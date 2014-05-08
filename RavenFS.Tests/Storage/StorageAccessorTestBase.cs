@@ -5,6 +5,7 @@ using System.IO;
 
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Json.Linq;
 
 namespace RavenFS.Tests.Storage
 {
@@ -47,7 +48,7 @@ namespace RavenFS.Tests.Storage
         {
             path = path ?? NewDataPath();
 
-            var settings = new NameValueCollection
+            var settings = new RavenJObject
                            {
                                {"Raven/RunInMemory", runInMemory.ToString()}
                            };

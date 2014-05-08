@@ -22,9 +22,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		private DataInfo fileDataInfo;
 		private SynchronizationMultipartRequest multipartRequest;
 
-		public ContentUpdateWorkItem(string file, string sourceServerUrl, ITransactionalStorage storage,
-									 SigGenerator sigGenerator)
-			: base(file, sourceServerUrl, storage)
+		public ContentUpdateWorkItem(string file, string sourceServerUrl, ITransactionalStorage storage, SigGenerator sigGenerator) : base(file, sourceServerUrl, storage)
 		{
 			this.sigGenerator = sigGenerator;
 		}
@@ -153,8 +151,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		{
 			Cts.Token.ThrowIfCancellationRequested();
 
-			multipartRequest = new SynchronizationMultipartRequest(destination, ServerInfo, FileName, FileMetadata,
-																   sourceFileStream, needList);
+			multipartRequest = new SynchronizationMultipartRequest(destination, ServerInfo, FileName, FileMetadata, sourceFileStream, needList);
 
 			var bytesToTransferCount = needList.Where(x => x.BlockType == RdcNeedType.Source).Sum(x => (double)x.BlockLength);
 
@@ -177,9 +174,10 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			{
 				return null;
 			}
+
 			return new DataInfo
 			{
-				CreatedAt = Convert.ToDateTime(fileAndPages.Metadata["Last-Modified"]).ToUniversalTime(),
+				CreatedAt = Convert.ToDateTime(fileAndPages.Metadata.Value<string>("Last-Modified")).ToUniversalTime(),
 				Length = fileAndPages.TotalSize ?? 0,
 				Name = fileAndPages.Name
 			};

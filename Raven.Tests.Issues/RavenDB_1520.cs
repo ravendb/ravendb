@@ -3,6 +3,7 @@ using Raven.Backup;
 using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 

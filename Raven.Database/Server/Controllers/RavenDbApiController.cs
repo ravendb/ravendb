@@ -117,7 +117,7 @@ namespace Raven.Database.Server.Controllers
 		public override HttpResponseMessage GetEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
 		{
 			var result = base.GetEmptyMessage(code, etag);
-			AddAccessControlHeaders(result);
+			RequestManager.AddAccessControlHeaders(this, result);
 			HandleReplication(result);
 			return result;
 		}
@@ -126,7 +126,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var result = base.GetMessageWithObject(item, code, etag);
 
-			AddAccessControlHeaders(result);
+			RequestManager.AddAccessControlHeaders(this, result);
 			HandleReplication(result);
 			return result;
 		}
@@ -134,39 +134,9 @@ namespace Raven.Database.Server.Controllers
 		public override HttpResponseMessage GetMessageWithString(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
 		{
 			var result =base.GetMessageWithString(msg, code, etag);
-			AddAccessControlHeaders(result);
+			RequestManager.AddAccessControlHeaders(this, result);
 			HandleReplication(result);
 			return result;
-		}
-
-		private void AddAccessControlHeaders(HttpResponseMessage msg)
-		{
-			if (string.IsNullOrEmpty(DatabasesLandlord.SystemConfiguration.AccessControlAllowOrigin))
-				return;
-
-			AddHeader("Access-Control-Allow-Credentials", "true", msg);
-
-			var originAllowed = DatabasesLandlord.SystemConfiguration.AccessControlAllowOrigin == "*" ||
-					DatabasesLandlord.SystemConfiguration.AccessControlAllowOrigin.Split(' ')
-						.Any(o => o == GetHeader("Origin"));
-			if (originAllowed)
-			{
-				AddHeader("Access-Control-Allow-Origin", GetHeader("Origin"), msg);
-			}
-
-			AddHeader("Access-Control-Max-Age", DatabasesLandlord.SystemConfiguration.AccessControlMaxAge, msg);
-			AddHeader("Access-Control-Allow-Methods", DatabasesLandlord.SystemConfiguration.AccessControlAllowMethods, msg);
-
-			if (string.IsNullOrEmpty(DatabasesLandlord.SystemConfiguration.AccessControlRequestHeaders))
-			{
-				// allow whatever headers are being requested
-				var hdr = GetHeader("Access-Control-Request-Headers"); // typically: "x-requested-with"
-				if (hdr != null) AddHeader("Access-Control-Allow-Headers", hdr, msg);
-			}
-			else
-			{
-				AddHeader("Access-Control-Request-Headers", DatabasesLandlord.SystemConfiguration.AccessControlRequestHeaders, msg);
-			}
 		}
 
 		private DatabasesLandlord landlord;

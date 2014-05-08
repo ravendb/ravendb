@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Amazon.EC2.Model;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Data;
 using Raven.Json.Linq;
 
@@ -93,13 +94,8 @@ namespace Raven.Database.Server.Controllers
 				}
 			});
 
-			Etag computedEtag;
-
-			using (var md5 = MD5.Create())
-			{
-				var computeHash = md5.ComputeHash(includedEtags.ToArray());
-				computedEtag = Etag.Parse(computeHash);
-			}
+            var computeHash = Encryptor.Current.Hash.Compute16(includedEtags.ToArray());
+            Etag computedEtag = Etag.Parse(computeHash);
 
 			if (MatchEtag(computedEtag))
 			{

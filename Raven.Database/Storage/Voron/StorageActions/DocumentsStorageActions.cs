@@ -1,4 +1,7 @@
-﻿namespace Raven.Database.Storage.Voron.StorageActions
+﻿using System.Diagnostics;
+using System.Threading;
+
+namespace Raven.Database.Storage.Voron.StorageActions
 {
 	using System.Linq;
 
@@ -95,7 +98,7 @@
 			}
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, long? maxSize = null, Etag untilEtag = null)
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null)
 		{
 			if (take < 0)
 				throw new ArgumentException("must have zero or positive value", "take");
@@ -117,6 +120,8 @@
 
 				do
 				{
+					cancellationToken.ThrowIfCancellationRequested();
+
 					if (iterator.CurrentKey == null || iterator.CurrentKey.Equals(Slice.Empty))
 						yield break;
 
@@ -579,8 +584,41 @@
 
 		public DebugDocumentStats GetDocumentStatsVerySlowly()
 		{
-			//TODO : write implementation _before_ finishing merge of Voron stuff into 3.0
-			throw new NotImplementedException();
+			var sp = Stopwatch.StartNew();
+			var stat = new DebugDocumentStats { Total = GetDocumentsCount() };
+
+			var documentsByEtag = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
+			using (var iterator = documentsByEtag.Iterate(Snapshot, writeBatch.Value))
+			{
+				if (!iterator.Seek(Slice.BeforeAllKeys))
+				{
+					stat.TimeToGenerate = sp.Elapsed;
+					return stat;
+				}
+
+				do
+				{
+					var key = GetKeyFromCurrent(iterator);
+					if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+						stat.System++;
+
+					var metadata = ReadDocumentMetadata(key);
+
+					var entityName = metadata.Metadata.Value<string>(Constants.RavenEntityName);
+					if (string.IsNullOrEmpty(entityName))
+						stat.NoCollection++;
+					else
+						stat.IncrementCollection(entityName);
+
+					if (metadata.Metadata.ContainsKey(Constants.RavenDeleteMarker))
+						stat.Tombstones++;
+
+				}
+				while (iterator.MoveNext());
+
+				stat.TimeToGenerate = sp.Elapsed;
+				return stat;
+			}
 		}
 	}
 }

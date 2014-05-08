@@ -31,7 +31,13 @@ namespace Raven.Server
 		public RavenDbServer(InMemoryRavenConfiguration configuration)
 		{
 		    this.configuration = configuration;
-		    documentStore = new DocumentStore();
+		    documentStore = new DocumentStore
+		    {
+			    Conventions =
+			    {
+				    FailoverBehavior = FailoverBehavior.FailImmediately
+			    }
+		    };
 		}
 
 	    public InMemoryRavenConfiguration Configuration

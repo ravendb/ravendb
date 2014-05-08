@@ -1,14 +1,13 @@
 ﻿<div id="transformersContainer">
-    <div class="btn-group" role="toolbar">
+    <div class="btn-toolbar" role="toolbar">
         <div class="btn-group">
             <a class="btn btn-primary use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="attr: { href: newTransformerUrl}" title="Add a new transformer (Alt+N)" accesskey="N"><i class="fa fa-plus"></i></a>
         </div>
         <div class="btn-group">
-            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: collapseAll" title="Collapse All Groups" accesskey="-"><i class="fa fa-minus-square-o"></i></button>
-            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: expandAll" title="Expand All Groups" accesskey="+"><i class="fa fa-plus-square-o"></i></button>
-            <div class="btn-group">
-                <button type="button" class="btn btn-danger use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: deleteAllTransformers" title="Delete All Transformers"><i class="fa fa-trash-o"></i></button>
-            </div>
+            <a class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: toggleExpandAll" title="Toggle Expand All Groups (Alt+=)" accesskey="="><i class="fa fa-plus-square-o"></i></a>
+        </div>
+        <div class="btn-group">
+            <button type="button" class="btn btn-danger use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: deleteAllTransformers" title="Delete All Transformers"><i class="fa fa-trash-o"></i></button>
         </div>
     </div>    
     <br />

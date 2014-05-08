@@ -113,6 +113,7 @@
     <Compile Include="RaveDB-1279.cs" />
     <Compile Include="RavenDB-1847.cs" />
     <Compile Include="RavenDb-1934.cs" />
+    <Compile Include="RavenDB-2036.cs" />
     <Compile Include="RavenDB1009.cs" />
     <Compile Include="RavenDB1019.cs" />
     <Compile Include="RavenDB1025.cs" />
@@ -126,6 +127,7 @@
     <Compile Include="RavenDB1369.cs" />
     <Compile Include="RavenDB1508.cs" />
     <Compile Include="RavenDB1519.cs" />
+    <Compile Include="RavenDb1962.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_LoadTests.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_QueryDynamicTests.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_QueryMapReduceAnalyzedTests.cs" />
@@ -228,14 +230,22 @@
     <Compile Include="RavenDB_1761.cs" />
     <Compile Include="RavenDB_1762.cs" />
     <Compile Include="RavenDB_1765.cs" />
+    <Compile Include="RavenDb_1816.cs" />
+    <Compile Include="RavenDB_1824.cs" />
+    <Compile Include="RavenDB_1825.cs" />
     <Compile Include="RavenDB_1828.cs" />
     <Compile Include="RavenDB_1829.cs" />
     <Compile Include="RavenDB_187.cs" />
     <Compile Include="RavenDB_1877.cs" />
     <Compile Include="RavenDb_1977.cs" />
+    <Compile Include="RavenDb_2016.cs" />
     <Compile Include="RavenDB_2113.cs" />
     <Compile Include="RavenDB_2124.cs" />
     <Compile Include="RavenDB_2129.cs" />
+    <Compile Include="RavenDB_2183.cs" />
+    <Compile Include="RavenDB_2205.cs" />
+    <Compile Include="RavenDb_2215.cs" />
+    <Compile Include="RavenDB_2233.cs" />
     <Compile Include="RavenDB_295.cs" />
     <Compile Include="RavenDB_299.cs" />
     <Compile Include="RavenDB_301.cs" />
@@ -336,6 +346,10 @@
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
       <Project>{381234cc-8aa7-41ff-8cad-22330e15f993}</Project>
       <Name>Raven.Tests.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
+      <Project>{1B88473F-743B-4F6B-8E5E-97BB816E6C68}</Project>
+      <Name>Raven.Tests.Helpers</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.MailingList\Raven.Tests.MailingList.csproj">
       <Project>{EA32FD05-8537-4A31-879E-20A0F2C87479}</Project>

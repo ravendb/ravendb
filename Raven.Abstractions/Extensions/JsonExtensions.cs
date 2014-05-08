@@ -15,6 +15,8 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Json.Linq;
+using System.Collections.Specialized;
+using System.Collections.Generic;
 
 namespace Raven.Abstractions.Extensions
 {
@@ -31,6 +33,11 @@ namespace Raven.Abstractions.Extensions
             if (result is string || result is ValueType)
                 return new RavenJObject { { "Value", new RavenJValue(result) } };
             return RavenJObject.FromObject(result, CreateDefaultJsonSerializer());
+        }
+
+        public static RavenJArray ToJArray<T>(IEnumerable<T> result)
+        {
+            return (RavenJArray) RavenJArray.FromObject(result, CreateDefaultJsonSerializer());
         }
 
         /// <summary>

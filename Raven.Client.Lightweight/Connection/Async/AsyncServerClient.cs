@@ -52,7 +52,8 @@ namespace Raven.Client.Connection.Async
 	/// </summary>
 	public class AsyncServerClient : IAsyncDatabaseCommands, IAsyncInfoDatabaseCommands
 	{
-		private readonly ProfilingInformation profilingInformation;
+	    private const int MaxQuerySizeForGetRequest = 8 * 1024;
+	    private readonly ProfilingInformation profilingInformation;
 		private readonly IDocumentConflictListener[] conflictListeners;
 		private readonly string url;
 		private readonly string rootUrl;
@@ -845,10 +846,33 @@ namespace Raven.Client.Connection.Async
 			ErrorResponseException responseException;
 			try
 			{
+				var uniqueKeys = new HashSet<string>(keys);
+
+				var results =  result
+					.Value<RavenJArray>("Results")
+					.OfType<RavenJObject>()
+					.ToList();
+
+				var documents = results
+					.Where(x => x.ContainsKey("@metadata") && x["@metadata"].Value<string>("@id") != null)
+					.ToDictionary(x => x["@metadata"].Value<string>("@id"), x => x, StringComparer.OrdinalIgnoreCase);
+
+				if (results.Count >= uniqueKeys.Count)
+				{
+					for (var i = 0; i < uniqueKeys.Count; i++)
+					{
+						var key = keys[i];
+						if (documents.ContainsKey(key)) 
+							continue;
+
+						documents.Add(key, results[i]);
+					}
+				}
+
 				var multiLoadResult = new MultiLoadResult
 				{
 					Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-					Results = result.Value<RavenJArray>("Results").Select(x => x as RavenJObject).ToList()
+					Results = keys.Select(key => documents.ContainsKey(key) ? documents[key] : null).ToList()
 				};
 
 				var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);
@@ -1241,7 +1265,7 @@ namespace Raven.Client.Connection.Async
 		/// <returns></returns>
 		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
-			var method = query.Query != null && query.Query.Length > 32 * 1024 ? "POST" : "GET";
+			var method = query.Query != null && query.Query.Length > MaxQuerySizeForGetRequest ? "POST" : "GET";
 
 			return ExecuteWithReplication(method, async operationMetadata =>
 			{
@@ -1721,7 +1745,7 @@ namespace Raven.Client.Connection.Async
 			EnsureIsNotNullOrEmpty(index, "index");
 			string path;
 			string method;
-			if (query.Query != null && query.Query.Length > 32 * 1024)
+			if (query.Query != null && query.Query.Length > MaxQuerySizeForGetRequest)
 			{
 				path = query.GetIndexQueryUrl(operationMetadata.Url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: false) + "&postQuery=true";
 				method = "POST";

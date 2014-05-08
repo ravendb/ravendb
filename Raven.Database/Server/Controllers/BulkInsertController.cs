@@ -64,7 +64,7 @@ namespace Raven.Database.Server.Controllers
 			var documents = 0;
 			var mre = new ManualResetEventSlim(false);
 
-			var inputStream = await InnerRequest.Content.ReadAsStreamAsync();
+			var inputStream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false);
 			var currentDatabase = Database;
 			var task = Task.Factory.StartNew(() =>
 			{

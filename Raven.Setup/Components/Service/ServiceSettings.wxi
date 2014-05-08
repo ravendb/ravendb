@@ -8,5 +8,11 @@
                      Type="raw" />
   </Property>
 
-  <Property Id="SERVICE_PORT" Value="8080" />
+	<Property Id="SERVICE_PORT" Value="8080">
+		<RegistrySearch Id="ServicePortFromRegistry"
+												 Root="HKLM"
+												 Key="SOFTWARE\[Manufacturer]\[ProductName]"
+												 Name="SERVICE_PORT"
+												 Type="raw" />
+	</Property>
 </Include>

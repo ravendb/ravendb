@@ -147,61 +147,80 @@ namespace Raven.Database.Actions
             return result;
         }
 
-        public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag, ScriptedPatchRequest patch,
-                                                       TransactionInformation transactionInformation, bool debugMode = false)
-        {
-            ScriptedJsonPatcher scriptedJsonPatcher = null;
-            var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
-                jsonDoc =>
-                {
-                    scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
-                    return scriptedJsonPatcher.Apply(jsonDoc.ToJson(), patch, jsonDoc.SerializedSizeOnDisk, jsonDoc.Key);
-                },
-                () => null,
-                () =>
-                {
-                    if (scriptedJsonPatcher == null)
-                        return null;
-                    return scriptedJsonPatcher
-                        .GetPutOperations()
-                        .ToList();
-                }, debugMode);
-            return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
-        }
+		public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag, ScriptedPatchRequest patch,
+													   TransactionInformation transactionInformation, bool debugMode = false)
+		{
+			ScriptedJsonPatcher scriptedJsonPatcher = null;
+			DefaultScriptedJsonPatcherOperationScope scope = null;
+			try
+			{
+				var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
+					jsonDoc =>
+					{
+						scope = new DefaultScriptedJsonPatcherOperationScope(Database);
+						scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
+						return scriptedJsonPatcher.Apply(scope, jsonDoc.ToJson(), patch, jsonDoc.SerializedSizeOnDisk, jsonDoc.Key);
+					},
+					() => null,
+					() =>
+					{
+						if (scope == null)
+							return null;
+						return scope
+							.GetPutOperations()
+							.ToList();
+					}, debugMode);
 
-        public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag,
-                                                               ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata,
-                                                               TransactionInformation transactionInformation, bool debugMode = false)
-        {
-            ScriptedJsonPatcher scriptedJsonPatcher = null;
-            var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
-                jsonDoc =>
-                {
-                    scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
-                    return scriptedJsonPatcher.Apply(jsonDoc.ToJson(), patchExisting, jsonDoc.SerializedSizeOnDisk, jsonDoc.Key);
-                },
-                () =>
-                {
-                    if (patchDefault == null)
-                        return null;
+				return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
+			}
+			finally
+			{
+				if (scope != null)
+					scope.Dispose();
+			}
+		}
 
-                    scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
-                    var jsonDoc = new RavenJObject();
-                    jsonDoc[Constants.Metadata] = defaultMetadata ?? new RavenJObject();
-                    return scriptedJsonPatcher.Apply(new RavenJObject(), patchDefault, 0, docId);
-                },
-                () =>
-                {
-                    if (scriptedJsonPatcher == null)
-                        return null;
-                    return scriptedJsonPatcher
-                        .GetPutOperations()
-                        .ToList();
-                }, debugMode);
-            return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
-        }
+		public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag,
+															   ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata,
+															   TransactionInformation transactionInformation, bool debugMode = false)
+		{
+			ScriptedJsonPatcher scriptedJsonPatcher = null;
+			DefaultScriptedJsonPatcherOperationScope scope = null;
 
+			try
+			{
+				var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
+					jsonDoc =>
+					{
+						scope = new DefaultScriptedJsonPatcherOperationScope(Database);
+						scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
+						return scriptedJsonPatcher.Apply(scope, jsonDoc.ToJson(), patchExisting, jsonDoc.SerializedSizeOnDisk, jsonDoc.Key);
+					},
+					() =>
+					{
+						if (patchDefault == null)
+							return null;
 
-
+						scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
+						var jsonDoc = new RavenJObject();
+						jsonDoc[Constants.Metadata] = defaultMetadata ?? new RavenJObject();
+						return scriptedJsonPatcher.Apply(scope, new RavenJObject(), patchDefault, 0, docId);
+					},
+					() =>
+					{
+						if (scope == null)
+							return null;
+						return scope
+							.GetPutOperations()
+							.ToList();
+					}, debugMode);
+				return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
+			}
+			finally
+			{
+				if (scope != null)
+					scope.Dispose();
+			}
+		}
     }
 }

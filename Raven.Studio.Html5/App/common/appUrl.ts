@@ -40,6 +40,20 @@ class appUrl {
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
         scriptedIndexes: ko.computed(() => appUrl.forScriptedIndexes(appUrl.currentDatabase())),
 
+        statusDebug: ko.computed(() => appUrl.forStatusDebug(appUrl.currentDatabase())),
+        statusDebugChanges: ko.computed(() => appUrl.forStatusDebugChanges(appUrl.currentDatabase())),
+        statusDebugMetrics: ko.computed(() => appUrl.forStatusDebugMetrics(appUrl.currentDatabase())),
+        statusDebugConfig: ko.computed(() => appUrl.forStatusDebugConfig(appUrl.currentDatabase())),
+        statusDebugDocrefs: ko.computed(() => appUrl.forStatusDebugDocrefs(appUrl.currentDatabase())),
+        statusDebugCurrentlyIndexing: ko.computed(() => appUrl.forStatusDebugCurrentlyIndexing(appUrl.currentDatabase())),
+        statusDebugQueries: ko.computed(() => appUrl.forStatusDebugQueries(appUrl.currentDatabase())),
+        statusDebugTasks: ko.computed(() => appUrl.forStatusDebugTasks(appUrl.currentDatabase())),
+        statusDebugRoutes: ko.computed(() => appUrl.forStatusDebugRoutes(appUrl.currentDatabase())),
+        statusDebugRequestTracing: ko.computed(() => appUrl.forStatusDebugRequestTracing(appUrl.currentDatabase())),
+        statusDebugSqlReplication: ko.computed(() => appUrl.forStatusDebugSqlReplication(appUrl.currentDatabase())),
+        statusDebugIndexFields: ko.computed(() => appUrl.forStatusDebugIndexFields(appUrl.currentDatabase())),
+        statusDebugSlowDocCounts: ko.computed(() => appUrl.forStatusDebugSlowDocCounts(appUrl.currentDatabase())),
+
         isAreaActive: (routeRoot: string) => ko.computed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
         databasesManagement: ko.computed(() => appUrl.forDatabases() + "?database=" + appUrl.getEncodedDbPart(appUrl.currentDatabase())),
@@ -108,6 +122,58 @@ class appUrl {
 	*/
 	static forStatus(db: database): string {
         return "#databases/status?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebug(db: database): string {
+        return "#databases/status/debug?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugChanges(db: database): string {
+        return "#databases/status/debug?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugMetrics(db: database): string {
+        return "#databases/status/debug/metrics?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugConfig(db: database): string {
+        return "#databases/status/debug/config?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugDocrefs(db: database): string {
+        return "#databases/status/debug/docrefs?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugCurrentlyIndexing(db: database): string {
+        return "#databases/status/debug/currentlyIndexing?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugQueries(db: database): string {
+        return "#databases/status/debug/queries?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugTasks(db: database): string {
+        return "#databases/status/debug/tasks?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugRoutes(db): string {
+        return "#databases/status/debug/routes?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugRequestTracing(db): string {
+        return "#databases/status/debug/requestTracing?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugSqlReplication(db: database): string {
+        return "#databases/status/debug/sqlReplication?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugIndexFields(db: database): string {
+        return "#databases/status/debug/indexFields?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugSlowDocCounts(db: database): string {
+        return "#databases/status/debug/slowDocCounts?" + appUrl.getEncodedDbPart(db);
     }
 
     static forSettings(db: database): string {

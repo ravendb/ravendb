@@ -22,14 +22,14 @@ namespace Voron.Impl.Paging
 	    private readonly int _instanceId;
 
 
-	    public Win32PageFileBackedMemoryMappedPager(string name)
+	    public Win32PageFileBackedMemoryMappedPager(string name, long? initialFileSize = null)
 		{
 		    _name = name;
 		    NativeMethods.SYSTEM_INFO systemInfo;
 			NativeMethods.GetSystemInfo(out systemInfo);
 
 			AllocationGranularity = systemInfo.allocationGranularity;
-			_totalAllocationSize = systemInfo.allocationGranularity;
+			_totalAllocationSize = initialFileSize.HasValue ? NearestSizeToAllocationGranularity(initialFileSize.Value) : systemInfo.allocationGranularity;
 
 		    _instanceId = Interlocked.Increment(ref _counter);
 

@@ -1,19 +1,25 @@
-﻿
+﻿class synchronizationDetail implements documentBase {
 
-
-
-class synchronizationDetail {
-
-    filename: string;
+    fileName: string;
     fileETag: string;
-    destinationUrl: string;
-    type: filesystemSynchronizationType;
+    DestinationUrl: string;
+    Type: filesystemSynchronizationType;
+    Status: string;
 
-    constructor(dto: filesystemSynchronizationDetailsDto) {
-        this.filename = dto.Filename;
+    constructor(dto: filesystemSynchronizationDetailsDto, status?: string) {
+        this.fileName = dto.FileName;
         this.fileETag = dto.FileETag;
-        this.destinationUrl = dto.DestinationUrl;
-        this.type = dto.Type;
+        this.DestinationUrl = dto.DestinationUrl;
+        this.Type = dto.Type;
+        this.Status = status;
+    }
+
+    getId() {
+        return this.fileName;
+    }
+
+    getDocumentPropertyNames(): Array<string> {
+        return ["Id", "DestinationUrl", "Type", "Status"];
     }
 }
 

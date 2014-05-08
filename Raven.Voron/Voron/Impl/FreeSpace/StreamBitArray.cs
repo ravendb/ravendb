@@ -49,15 +49,11 @@ namespace Voron.Impl.FreeSpace
 
         public StreamBitArray(ValueReader reader)
         {
-	        using (var stream = reader.AsStream())
-			using (var br = new BinaryReader(stream))
-	        {
-				SetCount = br.ReadInt32();
-				for (var i = 0; i < _inner.Length; i++)
-				{
-					_inner[i] = br.ReadInt32();
-				}
-	        }
+            SetCount = reader.ReadLittleEndianInt32();
+            for (var i = 0; i < _inner.Length; i++)
+            {
+                _inner[i] = reader.ReadLittleEndianInt32();
+            }
         }
 
         public int FirstSetBit()

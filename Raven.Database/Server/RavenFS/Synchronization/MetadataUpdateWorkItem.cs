@@ -3,20 +3,24 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Storage;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
 	public class MetadataUpdateWorkItem : SynchronizationWorkItem
 	{
-		private readonly NameValueCollection destinationMetadata;
+        private readonly RavenJObject destinationMetadata;
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
 
-		public MetadataUpdateWorkItem(string fileName, string sourceServerUrl, NameValueCollection destinationMetadata,
-									  ITransactionalStorage storage)
-			: base(fileName, sourceServerUrl, storage)
-		{
-			this.destinationMetadata = destinationMetadata;
-		}
+        public MetadataUpdateWorkItem(string fileName, string sourceServerUrl, ITransactionalStorage storage)
+            : this(fileName, sourceServerUrl, new RavenJObject(), storage)
+        {            
+        }
+        public MetadataUpdateWorkItem(string fileName, string sourceServerUrl, RavenJObject destinationMetadata, ITransactionalStorage storage)
+            : base(fileName, sourceServerUrl, storage)
+        {
+            this.destinationMetadata = destinationMetadata;
+        }
 
 		public override SynchronizationType SynchronizationType
 		{

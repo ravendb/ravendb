@@ -564,11 +564,8 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>()
 		{
-			var indexName = "dynamic";
-			if (typeof(T).IsEntityType())
-			{
-				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-			}
+            var indexName = CreateDynamicIndexName<T>();
+			
 			return new AsyncDocumentQuery<T>(this, null, AsyncDatabaseCommands, indexName, new string[0], new string[0], theListeners.QueryListeners, false);
 		}
 
@@ -854,7 +851,7 @@ namespace Raven.Client.Document.Async
 
 			using (EntityToJson.EntitiesToJsonCachingScope())
 			{
-				var data = PrepareForSaveChanges(null);
+				var data = PrepareForSaveChanges();
 				if (data.Commands.Count == 0)
 					return;
 
@@ -897,11 +894,8 @@ namespace Raven.Client.Document.Async
 		/// <typeparam name="T">The result of the query</typeparam>
 		public IRavenQueryable<T> Query<T>()
 		{
-			string indexName = "dynamic";
-			if (typeof(T).IsEntityType())
-			{
-				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-			}
+            string indexName = CreateDynamicIndexName<T>();
+			
 
 			return Query<T>(indexName);
 		}
@@ -955,11 +949,5 @@ namespace Raven.Client.Document.Async
 		{
 			return Conventions.GenerateDocumentKeyAsync(dbName, AsyncDatabaseCommands, entity);
 		}
-
-
-	    public DocumentsChanges WhatChanged()
-	    {
-	        throw new NotImplementedException();
-	    }
 	}
 }

@@ -66,8 +66,23 @@ namespace Voron.Trees
             }
             else
             {
-                // we already popped the page, so the current one on the stack is what the parent of the page
-                _parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _cursor.CurrentPage);
+                // we already popped the page, so the current one on the stack is the parent of the page
+
+	            if (_tree.Name == Constants.FreeSpaceTreeName)
+	            {
+					// a special case for FreeSpaceTree because the allocation of a new page called above
+					// can cause a delete of a free space section resulting in a run of the tree rebalancer
+					// and here the parent page that exists in cursor can be outdated
+
+					_parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, null); // pass _null_ to make sure we'll get the most updated parent page
+					_parentPage.LastSearchPosition = _cursor.CurrentPage.LastSearchPosition;
+					_parentPage.LastMatch = _cursor.CurrentPage.LastMatch;
+	            }
+	            else
+	            {
+					_parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _cursor.CurrentPage);
+	            }
+
                 _cursor.Update(_cursor.Pages.First, _parentPage);
             }
 

@@ -15,7 +15,8 @@ namespace Raven.Client.Changes
 		IObservableWithTask<DocumentChangeNotification> ForDocument(string docId);
 		IObservableWithTask<DocumentChangeNotification> ForAllDocuments();
 		IObservableWithTask<IndexChangeNotification> ForAllIndexes();
-		IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix);
+	    IObservableWithTask<TransformerChangeNotification> ForAllTransformers();
+        IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix);
 		IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection(string collectionName);
 		IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection<TEntity>();
 		IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(string typeName);

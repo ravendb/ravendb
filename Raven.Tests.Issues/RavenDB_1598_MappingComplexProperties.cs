@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 namespace Raven.Tests.Issues
 {

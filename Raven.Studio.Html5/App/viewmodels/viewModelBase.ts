@@ -3,8 +3,12 @@ import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
 import router = require("plugins/router");
 import app = require("durandal/app");
-import uploadItem = require("models/uploadItem");
+import changesApi = require("common/changesApi");
 import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
+import shell = require("viewmodels/shell");
+import changesCallback = require("common/changesCallback");
+import changeSubscription = require("models/changeSubscription");
+import uploadItem = require("models/uploadItem");
 import ace = require("ace/ace");
 
 /*
@@ -17,6 +21,7 @@ class viewModelBase {
 
     private keyboardShortcutDomContainers: string[] = [];
     private modelPollingHandle: number;
+    private notifications: Array<changeSubscription> = [];
     static dirtyFlag = new ko.DirtyFlag([]);
     private static isConfirmedUsingSystemDatabase: boolean;
 
@@ -28,9 +33,11 @@ class viewModelBase {
      * p.s. from Judah: a big scary prompt when loading the system DB is a bit heavy-handed, no? 
      */
     canActivate(args: any): any {
-        var database = (appUrl.getDatabase()!=null) ? appUrl.getDatabase() : appUrl.getSystemDatabase(); //TODO: temporary fix for routing problem for system databse - remove this when fixed
+        var database = (appUrl.getDatabase() != null) ? appUrl.getDatabase() : appUrl.getSystemDatabase(); //TODO: temporary fix for routing problem for system databse - remove this when fixed
+        var filesystem = appUrl.getFilesystem();
 
-        if (database.isSystem) {
+        // we only want to prompt warning to system db if we are in the databases section, not in the filesystems one
+        if (database.isSystem && filesystem.isDefault) {
             if (viewModelBase.isConfirmedUsingSystemDatabase) {
                 return true;
             }
@@ -43,16 +50,29 @@ class viewModelBase {
         return true;
     }
 
+    createNotifications(): Array<changeSubscription> {
+        return [];
+    }
+
+    cleanupNotifications() {
+        for (var i = 0; i < this.notifications.length; i++) {
+            this.notifications[i].off();
+        }
+        this.notifications = [];
+    }
+
     /*
     * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
     */
     activate(args) {
+
         this.localStorageUploadQueueKey = "ravenFs-uploadQueue.";
         var db = appUrl.getDatabase();
         var currentDb = this.activeDatabase();
         if (!!db && db !== null && (!currentDb || currentDb.name !== db.name)) {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
         }
+        this.notifications = this.createNotifications();
 
         var fs = appUrl.getFilesystem();
         var currentFilesystem = this.activeFilesystem();
@@ -61,45 +81,12 @@ class viewModelBase {
         }
 
         this.modelPollingStart();
-
-        window.onbeforeunload = (e: any) => {
-            //this.saveInObservable();
-            var isDirty = viewModelBase.dirtyFlag().isDirty();
-            if (isDirty) {
-                var message = "You have unsaved data.";
-                e = e || window.event;
-                // For IE and Firefox
-                if (e) {
-                    e.returnValue = message;
-                }
-                // For Safari
-                return message;
-            }
-            return null;
-        };
-
-        ko.postbox.publish("SetRawJSONUrl", "");
+        window.onbeforeunload = (e: any) => this.beforeUnload(e); ko.postbox.publish("SetRawJSONUrl", "");
     }
 
     // Called back after the entire composition has finished (parents and children included)
     compositionComplete() {
-        // Resync Changes
-        viewModelBase.dirtyFlag().reset();
-
-        $("pre").each(function() {
-            var editor = ace.edit(this);
-            editor.setOption('vScrollBarAlwaysVisible', true);
-            editor.setOption('hScrollBarAlwaysVisible', true);
-            $(this).resizable({
-                minHeight: 100,
-                maxWidth: $(this).width() > 150 ? ($(this).width() + 26) : $(".panel-title").width() - 265,
-                handles: "e, s, se",
-                resize: function (event, ui) {
-                    editor.resize();
-                    //$('.ui-resizable-se').css({ 'right': '3px', 'bottom': '3px' });
-                }
-            })
-        });
+        viewModelBase.dirtyFlag().reset(); //Resync Changes
     }
 
     /*
@@ -121,8 +108,8 @@ class viewModelBase {
         this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
+        this.cleanupNotifications();
     }
-
     /*
      * Creates a keyboard shortcut local to the specified element and its children.
      * The shortcut will be removed as soon as the view model is deactivated.
@@ -138,12 +125,6 @@ class viewModelBase {
             this.keyboardShortcutDomContainers.push(elementSelector);
         }
     }
-
-    //A method to save the current value in the observables from text boxes and inputs before a refresh/page close.
-    //Should be implemented on the inheriting class.
-    //saveInObservable() {
-
-    //}
 
     private removeKeyboardShortcuts(elementSelector: string) {
         $(elementSelector).unbind('keydown.jwerty');
@@ -167,15 +148,16 @@ class viewModelBase {
         router.navigate(url, options);
     }
 
-    modelPolling() {
+    modelPolling() { 
     }
 
-    forceModelPolling() {
+    forceModelPolling() {  
         this.modelPolling();
     }
 
     private modelPollingStart() {
         this.modelPolling();
+        this.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
         this.activeDatabase.subscribe(() => this.forceModelPolling());
         this.activeFilesystem.subscribe(() => this.forceModelPolling());
     }
@@ -191,7 +173,7 @@ class viewModelBase {
 
         var canNavTask = $.Deferred<any>();
 
-        var systemDbConfirm = new viewSystemDatabaseConfirm();
+        var systemDbConfirm = new viewSystemDatabaseConfirm("Meddling with the system database could cause irreversible damage");
         systemDbConfirm.viewTask
             .fail(() => canNavTask.resolve({ redirect: 'databases' }))
             .done(() => {
@@ -203,10 +185,13 @@ class viewModelBase {
         return canNavTask;
     }
 
-    stringifyUploadQueue(queue: uploadItem[]): string {
+    private stringifyUploadQueue(queue: uploadItem[]): string {
         return ko.toJSON(queue);
     }
 
+    // TODO: move this. It doesn't belong in the viewModelBase; it is file 
+    // system-specific functionality. It is used only by file system code, and the shell.
+    // Maybe move into its own class, like UploadParser, or derive a new viewModel base class, e.g. fileSystemViewModelBase.
     parseUploadQueue(queue: string, fs : filesystem): uploadItem[] {
         var stringArray: any[] = JSON.parse(queue);
         var uploadQueue: uploadItem[] = [];
@@ -219,10 +204,12 @@ class viewModelBase {
         return uploadQueue;
     }
 
+    // TODO: move this. It doesn't belong in the viewModelBase. Only the shell and file system view models use it.
     updateLocalStorage(x: uploadItem[], fs : filesystem) {
         window.localStorage.setItem(this.localStorageUploadQueueKey + fs.name, this.stringifyUploadQueue(x));
     }
 
+    // TODO: move this. It doesn't belong in the viewModelBase. Only the shell and file system view models use it.
     updateQueueStatus(guid: string, status: string, queue: uploadItem[]) {
         var items = ko.utils.arrayFilter(queue, (i: uploadItem) => {
             return i.id() === guid
@@ -232,6 +219,21 @@ class viewModelBase {
         }
     }
 
+    private beforeUnload(e: any) {
+        var isDirty = viewModelBase.dirtyFlag().isDirty();
+        if (isDirty) {
+            var message = "You have unsaved data.";
+            e = e || window.event;
+
+            // For IE and Firefox
+            if (e) {
+                e.returnValue = message;
+            }
+
+            // For Safari
+            return message;
+        }
+    }
 }
 
 export = viewModelBase;

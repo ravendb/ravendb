@@ -4,7 +4,7 @@
         durandal: '../Scripts/durandal',
         plugins: '../Scripts/durandal/plugins',
         transitions: '../Scripts/durandal/transitions',
-        ace: '../Scripts/ace',
+        ace: '../Scripts/ace',        
         moment: '../Scripts/moment'
     },
     shim: {
@@ -13,7 +13,6 @@
             exports: 'Handlebars'
          }
     },
-    urlArgs: "bust=" + (new Date()).getTime()
 });
 
 define('jquery', function() { return jQuery; });

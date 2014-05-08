@@ -50,6 +50,14 @@ namespace Raven.Database.Server.Controllers
 			{
 				connectionState.UnwatchAllIndexes();
 			}
+            else if (Match(cmd, "watch-transformers"))
+            {
+                connectionState.WatchTransformers();
+            } 
+            else if (Match(cmd, "unwatch-transformers"))
+            {
+                connectionState.UnwatchTransformers();
+            }
 			else if (Match(cmd, "watch-doc"))
 			{
 				connectionState.WatchDocument(name);

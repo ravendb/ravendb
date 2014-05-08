@@ -1,7 +1,7 @@
 class periodicBackupSetup {
 
     unsupported = ko.observable<boolean>(false);
-    activated = ko.observable<boolean>(false);
+    disabled = ko.observable<boolean>(true);
 
     type = ko.observable<string>();
     mainValue = ko.observable<string>();
@@ -58,24 +58,24 @@ class periodicBackupSetup {
     }, this);
 
     fromDto(dto: periodicBackupSetupDto) {
-
         this.awsRegionEndpoint(dto.AwsRegionEndpoint);
 
         this.setupTypeAndMainValue(dto);
 
         var incr = this.prepareBackupInterval(dto.IntervalMilliseconds);
-        this.incrementalBackupInterval(incr[0]);
+        this.incrementalBackupInterval(incr[0] ? incr[0].toString() : incr[0]);
         this.incrementalBackupIntervalUnit(incr[1]);
 
         var full = this.prepareBackupInterval(dto.FullBackupIntervalMilliseconds);
-        this.fullBackupInterval(full[0]);
+        this.fullBackupInterval(full[0] ? full[0].toString() : full[0]);
         this.fullBackupIntervalUnit(full[1]);
 
-        this.activated(true);
+        this.disabled(dto.Disabled);
     }
 
     toDto(): periodicBackupSetupDto {
         return {
+            Disabled: this.disabled(),
             GlacierVaultName: this.prepareMainValue(this.GLACIER_VAULT),
             S3BucketName: this.prepareMainValue(this.S3_BUCKET),
             AwsRegionEndpoint: this.awsRegionEndpoint(),
@@ -118,6 +118,14 @@ class periodicBackupSetup {
         this.dbSettingsDto['Settings']['Raven/AzureStorageAccount'] = this.azureStorageAccount();
         this.dbSettingsDto['SecuredSettings']['Raven/AzureStorageKey'] = this.azureStorageKey();
         return this.dbSettingsDto;
+    }
+
+    getEtag() {
+        return this.toDatabaseSettingsDto()['@metadata']['@etag'];
+    }
+
+    setEtag(newEtag) {
+        this.toDatabaseSettingsDto()['@metadata']['@etag'] = newEtag;
     }
 
     private setupTypeAndMainValue(dto: periodicBackupSetupDto) {

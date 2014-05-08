@@ -202,7 +202,7 @@ namespace Raven.Database.Config
 
 			if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
 			{
-				Port = PortUtil.GetPort(ravenSettings.Port.Value);
+				Port = PortUtil.GetPort(ravenSettings.Port.Value, RunInMemory);
 				UseSsl = ravenSettings.UseSsl.Value;
 			}
 
@@ -210,7 +210,10 @@ namespace Raven.Database.Config
 
 			HttpCompression = ravenSettings.HttpCompression.Value;
 
-			AccessControlAllowOrigin = ravenSettings.AccessControlAllowOrigin.Value;
+			if (ravenSettings.AccessControlAllowOrigin.Value == null)
+				AccessControlAllowOrigin = new HashSet<string>();
+			else
+				AccessControlAllowOrigin = new HashSet<string>(ravenSettings.AccessControlAllowOrigin.Value.Split());
 			AccessControlMaxAge = ravenSettings.AccessControlMaxAge.Value;
 			AccessControlAllowMethods = ravenSettings.AccessControlAllowMethods.Value;
 			AccessControlRequestHeaders = ravenSettings.AccessControlRequestHeaders.Value;
@@ -240,6 +243,7 @@ namespace Raven.Database.Config
 			AllowLocalAccessWithoutAuthorization = ravenSettings.AllowLocalAccessWithoutAuthorization.Value;
 
 		    VoronMaxBufferPoolSize = Math.Max(2, ravenSettings.VoronMaxBufferPoolSize.Value);
+			VoronInitialFileSize = ravenSettings.VoronInitialFileSize.Value;
 
 			PostInit();
 		}
@@ -545,7 +549,7 @@ namespace Raven.Database.Config
 		/// Indicates the URL of a site trusted to make cross-domain requests to this server.
 		/// Allowed values: null (don't send the header), *, http://example.org (space separated if multiple sites)
 		/// </summary>
-		public string AccessControlAllowOrigin { get; set; }
+		public HashSet<string> AccessControlAllowOrigin { get; set; }
 
 		/// <summary>
 		/// Determine the value of the Access-Control-Max-Age header sent by the server.
@@ -926,6 +930,11 @@ namespace Raven.Database.Config
         /// Minimum value is 2.
         /// </summary>
         public int VoronMaxBufferPoolSize { get; set; }
+
+		/// <summary>
+		/// You can use this setting to specify an initial file size for data file (in bytes).
+		/// </summary>
+		public int? VoronInitialFileSize { get; set; }
 
 	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]

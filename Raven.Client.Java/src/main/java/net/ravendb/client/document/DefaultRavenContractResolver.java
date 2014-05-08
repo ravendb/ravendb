@@ -13,7 +13,7 @@ import org.codehaus.jackson.map.JsonDeserializer;
 
 public class DefaultRavenContractResolver extends DeserializationProblemHandler  {
 
-  private ThreadLocal<Action3<Object, String, RavenJToken>> currentExtensionData = new ThreadLocal<>();
+  protected ThreadLocal<Action3<Object, String, RavenJToken>> currentExtensionData = new ThreadLocal<>();
 
   public AutoCloseable registerForExtensionData(Action3<Object, String, RavenJToken> action) {
     if (currentExtensionData.get() != null) {
@@ -23,7 +23,7 @@ public class DefaultRavenContractResolver extends DeserializationProblemHandler 
     return new ClearExtensionData();
   }
 
-  private class ClearExtensionData implements AutoCloseable {
+  public class ClearExtensionData implements AutoCloseable {
     @Override
     public void close() throws Exception {
       currentExtensionData.set(null);

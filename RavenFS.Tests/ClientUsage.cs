@@ -10,6 +10,7 @@ using Raven.Database.Server.RavenFS.Extensions;
 using RavenFS.Tests.Synchronization.IO;
 using Xunit;
 using Xunit.Extensions;
+using Raven.Json.Linq;
 
 namespace RavenFS.Tests
 {
@@ -25,15 +26,15 @@ namespace RavenFS.Tests
 			streamWriter.Flush();
 			ms.Position = 0;
 			var client = NewClient();
-		    await client.UploadAsync("abc.txt", new NameValueCollection
-		    {
-		        {"test", "1"}
-		    }, ms);
+            await client.UploadAsync("abc.txt", new RavenJObject
+		                                        {
+		                                            {"test", "1"}
+		                                        }, ms);
 
-			await client.UpdateMetadataAsync("abc.txt", new NameValueCollection
-				                                                               {
-					                                                               {"test", "2"}
-				                                                               });
+            await client.UpdateMetadataAsync("abc.txt", new RavenJObject
+				                                        {
+					                                        {"test", "2"}
+				                                        });
 
 
 			var metadata = await client.GetMetadataForAsync("abc.txt");
@@ -103,11 +104,11 @@ namespace RavenFS.Tests
 			streamWriter.Flush();
 			ms.Position = 0;
 			var client = NewClient();
-		    await client.UploadAsync("abc.txt", new NameValueCollection
-		    {
-		        {"test", "value"},
-		        {"hello", "there"}
-		    }, ms);
+            await client.UploadAsync("abc.txt", new RavenJObject
+		                                        {
+		                                            {"test", "value"},
+		                                            {"hello", "there"}
+		                                        }, ms);
 
 
 			var collection = await client.GetMetadataForAsync("abc.txt");
@@ -127,10 +128,10 @@ namespace RavenFS.Tests
 			streamWriter.Flush();
 			ms.Position = 0;
 			var client = NewClient();
-		    await client.UploadAsync("abc.txt", new NameValueCollection
-		    {
-		        {"Test", "value"},
-		    }, ms);
+            await client.UploadAsync("abc.txt", new RavenJObject
+		                                        {
+		                                            {"Test", "value"},
+		                                        }, ms);
 
 
 		    var collection = await client.SearchAsync("Test:value");
@@ -222,7 +223,7 @@ namespace RavenFS.Tests
 			var signatureManifest = await client.Synchronization.GetRdcManifestAsync("mb.bin");
 
 			var ms = new MemoryStream();
-			client.Synchronization.DownloadSignatureAsync(signatureManifest.Signatures[0].Name, ms, 5, 10).Wait();
+			await client.Synchronization.DownloadSignatureAsync(signatureManifest.Signatures[0].Name, ms, 5, 10);
 			Assert.Equal(5, ms.Length);
 		}
 
@@ -232,7 +233,7 @@ namespace RavenFS.Tests
 			var ms = PrepareTextSourceStream();
 			var client = NewClient();
 			client.UploadAsync("abc.txt",
-			                   new NameValueCollection
+                               new RavenJObject
 				                   {
 					                   {"test", "1"}
 				                   }, ms)
@@ -253,7 +254,7 @@ namespace RavenFS.Tests
 			var ms = PrepareTextSourceStream();
 			var client = NewClient();
 			client.UploadAsync("abc.txt",
-			                   new NameValueCollection
+                               new RavenJObject
 				                   {
 					                   {"test", "1"}
 				                   }, ms)
@@ -274,7 +275,7 @@ namespace RavenFS.Tests
 			var ms = PrepareTextSourceStream();
 			var client = NewClient();
 			client.UploadAsync("abc.txt",
-			                   new NameValueCollection
+                               new RavenJObject
 				                   {
 					                   {"test", "1"}
 				                   }, ms)
@@ -285,7 +286,7 @@ namespace RavenFS.Tests
 			downloadedStream.Position = 0;
 			var result = sr.ReadToEnd();
 			Assert.Equal("50000", result);
-			Assert.Equal("bytes 2999994-2999998/3000000", nameValues["Content-Range"]);
+			Assert.Equal("bytes 2999994-2999998/3000000", nameValues.Value<string>("Content-Range"));
 			//Assert.Equal("6", nameValues["Content-Length"]); - no idea why we aren't getting this, probably because we get a range
 		}
 
@@ -295,7 +296,7 @@ namespace RavenFS.Tests
 			var ms = PrepareTextSourceStream();
 			var client = NewClient();
 			client.UploadAsync("abc.bin",
-			                   new NameValueCollection
+                               new RavenJObject
 				                   {
 					                   {"test", "1"}
 				                   }, ms)
@@ -306,40 +307,39 @@ namespace RavenFS.Tests
 			downloadedStream.Position = 0;
 			var result = sr.ReadToEnd();
 			Assert.Equal("9500000", result);
-			Assert.Equal("bytes 2999993-2999999/3000000", nameValues["Content-Range"]);
+            Assert.Equal("bytes 2999993-2999999/3000000", nameValues.Value<string>("Content-Range"));
 			//Assert.Equal("7", nameValues["Content-Length"]); - no idea why we aren't getting this, probably because we get a range
 		}
 
 		[Fact]
-		public void Should_modify_etag_after_upload()
+		public async void Should_modify_etag_after_upload()
 		{
 			var content = new RandomStream(10);
 			var client = NewClient();
 
 			// note that file upload modifies ETag twice
-			client.UploadAsync("test.bin", new NameValueCollection(), content).Wait();
-			var resultFileMetadata = client.GetMetadataForAsync("test.bin").Result;
-			var etag0 = resultFileMetadata.Value<Guid>("ETag");
-			client.UploadAsync("test.bin", new NameValueCollection(), content).Wait();
-			resultFileMetadata = client.GetMetadataForAsync("test.bin").Result;
+            await client.UploadAsync("test.bin", new RavenJObject(), content);
+            var resultFileMetadata = await client.GetMetadataForAsync("test.bin");
+            var etag0 = resultFileMetadata.Value<Guid>("ETag");
+            await client.UploadAsync("test.bin", new RavenJObject(), content);
+            resultFileMetadata = await client.GetMetadataForAsync("test.bin");
 			var etag1 = resultFileMetadata.Value<Guid>("ETag");
-
-			Assert.True(Buffers.Compare(etag1.ToByteArray(), etag0.ToByteArray()) > 0,
-			            "ETag after second update should be greater");
+			
 			Assert.Equal(Buffers.Compare(new Guid("00000000-0000-0100-0000-000000000002").ToByteArray(), etag0.ToByteArray()), 0);
 			Assert.Equal(Buffers.Compare(new Guid("00000000-0000-0100-0000-000000000004").ToByteArray(), etag1.ToByteArray()), 0);
+            Assert.True(Buffers.Compare(etag1.ToByteArray(), etag0.ToByteArray()) > 0, "ETag after second update should be greater");
 		}
 
 		[Fact]
-		public void Should_not_see_already_deleted_files()
+		public async void Should_not_see_already_deleted_files()
 		{
 			var client = NewClient();
-			client.UploadAsync("visible.bin", new RandomStream(1)).Wait();
-			client.UploadAsync("toDelete.bin", new RandomStream(1)).Wait();
+            await client.UploadAsync("visible.bin", new RandomStream(1));
+            await client.UploadAsync("toDelete.bin", new RandomStream(1));
 
-			client.DeleteAsync("toDelete.bin").Wait();
+            await client.DeleteAsync("toDelete.bin");
 
-			var fileInfos = client.BrowseAsync().Result;
+            var fileInfos = await client.BrowseAsync();
 			Assert.Equal(1, fileInfos.Length);
 			Assert.Equal("visible.bin", fileInfos[0].Name);
 		}
@@ -379,41 +379,41 @@ namespace RavenFS.Tests
 		}
 
 		[Fact]
-		public void Can_back_to_previous_name()
+		public async void Can_back_to_previous_name()
 		{
 			var client = NewClient();
-			client.UploadAsync("file.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5})).Wait();
+            await client.UploadAsync("file.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }));
 
-			client.RenameAsync("file.bin", "renamed.bin").Wait();
-			client.RenameAsync("renamed.bin", "file.bin").Wait();
+            await client.RenameAsync("file.bin", "renamed.bin");
+            await client.RenameAsync("renamed.bin", "file.bin");
 
-			var files = client.BrowseAsync().Result;
+            var files = await client.BrowseAsync();
 			Assert.Equal("file.bin", files[0].Name);
 		}
 
 		[Fact]
-		public void Can_upload_file_with_the_same_name_as_previously_deleted()
+		public async void Can_upload_file_with_the_same_name_as_previously_deleted()
 		{
 			var client = NewClient();
-			client.UploadAsync("file.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5})).Wait();
+            await client.UploadAsync("file.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }));
 
-			client.DeleteAsync("file.bin").Wait();
-			client.UploadAsync("file.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5})).Wait();
+            await client.DeleteAsync("file.bin");
+            await client.UploadAsync("file.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }));
 
-			var files = client.BrowseAsync().Result;
+            var files = await client.BrowseAsync();
 			Assert.Equal("file.bin", files[0].Name);
 		}
 
 		[Fact]
-		public void Can_upload_file_with_the_same_name_as_previously_renamed()
+		public async void Can_upload_file_with_the_same_name_as_previously_renamed()
 		{
 			var client = NewClient();
-			client.UploadAsync("file.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5})).Wait();
+            await client.UploadAsync("file.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }));
 
-			client.RenameAsync("file.bin", "renamed.bin").Wait();
-			client.UploadAsync("file.bin", new MemoryStream(new byte[] {1, 2, 3, 4, 5})).Wait();
+            await client.RenameAsync("file.bin", "renamed.bin");
+            await client.UploadAsync("file.bin", new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }));
 
-			var files = client.BrowseAsync().Result;
+            var files = await client.BrowseAsync();
 			Assert.Equal(2, files.Length);
 			Assert.True("file.bin" == files[0].Name || "renamed.bin" == files[0].Name);
 			Assert.True("file.bin" == files[1].Name || "renamed.bin" == files[1].Name);
@@ -484,7 +484,7 @@ namespace RavenFS.Tests
 
 			try
 			{
-				await client.UpdateMetadataAsync("not_existing_file", new NameValueCollection());
+                await client.UpdateMetadataAsync("not_existing_file", new RavenJObject());
 				throwsCount++;
 			}
             catch (FileNotFoundException ex)

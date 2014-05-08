@@ -48,6 +48,8 @@ namespace Raven.Tests.Helpers
 		protected readonly List<IDocumentStore> stores = new List<IDocumentStore>();
 		private readonly HashSet<string> pathsToDelete = new HashSet<string>();
 
+		protected readonly HashSet<string> DatabaseNames = new HashSet<string> { Constants.SystemDatabase };
+
 		private static int pathCount;
 
 		protected RavenTestBase()
@@ -107,7 +109,7 @@ namespace Raven.Tests.Helpers
 				Configuration =
 				{
 					DefaultStorageTypeName = storageType,
-					DataDirectory = dataDirectory,
+					DataDirectory = Path.Combine(dataDirectory, "System"),
 					FileSystemDataDirectory = Path.Combine(dataDirectory, "FileSystem"),
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
@@ -240,7 +242,7 @@ namespace Raven.Tests.Helpers
 			var ravenConfiguration = new RavenConfiguration
 			{
 				Port = port,
-				DataDirectory = directory,
+				DataDirectory = Path.Combine(directory, "System"),
 				FileSystemDataDirectory = Path.Combine(directory, "FileSystem"),
 				RunInMemory = runInMemory,
 #if DEBUG
@@ -357,6 +359,23 @@ namespace Raven.Tests.Helpers
 		    if (spinUntil == false)
 		        WaitForUserToContinueTheTest(store);
 		    Assert.True(spinUntil, "Indexes took took long to become unstale");
+		}
+
+
+		public void WaitForPeriodicBackup(DocumentDatabase db, PeriodicBackupStatus previousStatus, Func<PeriodicBackupStatus, Etag> compareSelector)
+		{
+			PeriodicBackupStatus currentStatus = null;
+			var done = SpinWait.SpinUntil(() =>
+			{
+				currentStatus = GetPerodicBackupStatus(db);
+				return compareSelector(currentStatus) != compareSelector(previousStatus);
+			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
+			Assert.True(done);
+			previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
+			previousStatus.LastAttachmentsEtag = currentStatus.LastAttachmentsEtag;
+			previousStatus.LastDocsDeletionEtag = currentStatus.LastDocsDeletionEtag;
+			previousStatus.LastAttachmentDeletionEtag = currentStatus.LastAttachmentDeletionEtag;
+
 		}
 
 		public static void WaitForIndexing(DocumentDatabase db)
@@ -705,14 +724,21 @@ namespace Raven.Tests.Helpers
             if (string.IsNullOrEmpty(databaseName)) 
                 return null;
 
-            if (databaseName.Length < 50)
-                return databaseName;
+	        if (databaseName.Length < 50)
+	        {
+				DatabaseNames.Add(databaseName);
+		        return databaseName;
+	        }
 
-            var prefix = databaseName.Substring(0, 30);
+	        var prefix = databaseName.Substring(0, 30);
             var suffix = databaseName.Substring(databaseName.Length - 10, 10);
             var hash = new Guid(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(databaseName))).ToString("N").Substring(0, 8);
 
-            return string.Format("{0}_{1}_{2}", prefix, hash, suffix);
+            var name = string.Format("{0}_{1}_{2}", prefix, hash, suffix);
+
+	        DatabaseNames.Add(name);
+
+	        return name;
         }
 	}
 }

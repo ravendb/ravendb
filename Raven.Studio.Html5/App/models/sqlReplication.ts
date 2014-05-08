@@ -1,6 +1,7 @@
 import sqlReplicationTable = require("models/sqlReplicationTable");
 import document = require("models/document");
 import documentMetadata = require("models/documentMetadata");
+import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class sqlReplication extends document {
 
@@ -24,12 +25,14 @@ class sqlReplication extends document {
     ravenEntityName = ko.observable<string>("").extend({ required: true });
     sqlReplicationTables = ko.observableArray<sqlReplicationTable>().extend({ required: true });
     script = ko.observable<string>("").extend({ required: true });
-
     connectionString = ko.observable<string>(null);
     connectionStringName = ko.observable<string>(null);
     connectionStringSettingName = ko.observable<string>(null);
     connectionStringSourceFieldName: KnockoutComputed<string>;
     parameterizeDeletesDisabled = ko.observable<boolean>();
+
+    collections = ko.observableArray<string>();
+    searchResults = ko.observableArray<string>();
 
     constructor(dto: sqlReplicationDto) {
         super(dto);
@@ -55,18 +58,51 @@ class sqlReplication extends document {
                 return "Setting name in memory/remote configuration";
             }
         });
+
+        this.ravenEntityName.subscribe((newRavenEntityName) => {
+            this.searchResults(this.collections().filter((name) => {
+                return !!newRavenEntityName && name.toLowerCase().indexOf(newRavenEntityName.toLowerCase()) > -1;
+            }));
+
+        });
+
+        this.script.subscribe((newValue) => {
+            var message = "";
+            var currentEditor = aceEditorBindingHandler.currentEditor;
+            var textarea: any = $(currentEditor.container).find('textarea')[0];
+
+            if (newValue === "") {
+                message = "Please fill out this field.";
+            }
+            textarea.setCustomValidity(message);
+            setTimeout(() => {
+                var annotations = currentEditor.getSession().getAnnotations();
+                var isErrorExists = false;
+                for (var i = 0; i < annotations.length; i++) {
+                    var annotationType = annotations[i].type;
+                    if (annotationType === "error" || annotationType === "warning") {
+                        isErrorExists = true;
+                        break;
+                    }
+                }
+                if (isErrorExists) {
+                    message = "The script isn't a javascript legal expression!";
+                    textarea.setCustomValidity(message);
+                }
+            }, 700);
+        });
     }
 
     private setupConnectionString(dto: sqlReplicationDto) {
-        if (dto.ConnectionString) {
-            this.connectionStringType(this.CONNECTION_STRING);
-            this.connectionStringValue(dto.ConnectionString);
-        } else if (dto.ConnectionStringName) {
+        if (dto.ConnectionStringName) {
             this.connectionStringType(this.CONNECTION_STRING_NAME);
             this.connectionStringValue(dto.ConnectionStringName);
         } else if (dto.ConnectionStringSettingName) {
             this.connectionStringType(this.CONNECTION_STRING_SETTING_NAME);
             this.connectionStringValue(dto.ConnectionStringSettingName);
+        } else { //(dto.ConnectionString)
+            this.connectionStringType(this.CONNECTION_STRING);
+            this.connectionStringValue(dto.ConnectionString);
         }
     }
 
@@ -75,6 +111,9 @@ class sqlReplication extends document {
     }
 
     static empty(): sqlReplication {
+        var newTable: sqlReplicationTable = sqlReplicationTable.empty();
+        var sqlReplicationTables = [];
+        sqlReplicationTables.push(newTable);
         return new sqlReplication({
             Name: "",
             Disabled: true,
@@ -85,7 +124,7 @@ class sqlReplication extends document {
             ConnectionString: null,
             ConnectionStringName: null,
             ConnectionStringSettingName: null,
-            SqlReplicationTables: []
+            SqlReplicationTables: sqlReplicationTables
         });
     }
 
@@ -131,13 +170,8 @@ class sqlReplication extends document {
         this.__metadata.id = "Raven/SqlReplication/Configuration/" + this.name();
     }
 
-    isValid(): boolean {
-        var arr = new Array();
-
-        var requiredValues = [this.name(), this.factoryName(), this.connectionStringType(), this.connectionStringValue(), this.ravenEntityName(), this.script()];
-        var fieldsCheck = requiredValues.every(v=> v != null && v.length > 0);
-        var replicationTablesCheck = this.sqlReplicationTables().every(v=> v.isValid());
-        return fieldsCheck && replicationTablesCheck;
+    saveNewRavenEntityName(newRavenEntityName) {
+        this.ravenEntityName(newRavenEntityName);
     }
 }
 

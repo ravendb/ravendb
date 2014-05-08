@@ -19,7 +19,8 @@ import pagedList = require("common/pagedList");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
 
-import getBuildVersionCommand = require("commands/getBuildVersionCommand");
+import getServerBuildVersionCommand = require("commands/getServerBuildVersionCommand");
+import getClientBuildVersionCommand = require("commands/getClientBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
@@ -27,12 +28,10 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import changesApi = require("common/changesApi");
+import changeSubscription = require("models/changeSubscription");
 
 import getFilesystemsCommand = require("commands/filesystem/getFilesystemsCommand");
 import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
-
-import changeSubscription = require('models/changeSubscription');
-
 
 class shell extends viewModelBase {
     private router = router;
@@ -41,7 +40,8 @@ class shell extends viewModelBase {
     currentAlert = ko.observable<alertArgs>();
     queuedAlert: alertArgs;
     databasesLoadedTask: JQueryPromise<any>;
-    buildVersion = ko.observable<buildVersionDto>();
+    serverBuildVersion = ko.observable<serverBuildVersionDto>();
+    clientBuildVersion = ko.observable<clientBuildVersionDto>();
     licenseStatus = ko.observable<licenseStatusDto>();
     windowHeightObservable: KnockoutObservable<number>;
     appUrls: computedAppUrls;
@@ -57,29 +57,30 @@ class shell extends viewModelBase {
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     activeArea = ko.observable<string>("Databases");
     goToDocumentSearch = ko.observable<string>();
-    goToDocumentSearchResults = ko.observableArray<string>();    
-    countersUrl: string;
+    goToDocumentSearchResults = ko.observableArray<string>();
+    refreshTimeoutFlag: boolean = true;
 
     static globalChangesApi: changesApi;
     static currentDbChangesApi = ko.observable<changesApi>(null);
 
-    databasesChangeSubscription: changeSubscription;
+    globalDocPrefixChangesSubscription: changeSubscription;
 
+    modelPollingTimeoutFlag:boolean=true;
+    
     constructor() {
         super();
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("ActivateFilesystemWithName", (filesystemName: string) => this.activateFilesystemWithName(filesystemName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-        ko.postbox.subscribe("ActivateDatabase", (db: database) => this.updateChangesApi(db));
+        ko.postbox.subscribe("ActivateDatabase", (db: database) => { this.updateChangesApi(db); this.fetchDbStats(db); });
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         this.appUrls = appUrl.forCurrentDatabase();
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
-
-        this.countersUrl = appUrl.forCounters();
+        shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
     }
 
     activate(args: any) {
@@ -105,7 +106,6 @@ class shell extends viewModelBase {
             { route: 'filesystems/configuration', title: 'Configuration', moduleId: 'viewmodels/filesystem/configuration', nav: true, hash: this.appUrls.filesystemConfiguration },
             { route: 'filesystems/upload', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemUploadFile', nav: false },
             { route: 'filesystems/edit', title: 'Upload File', moduleId: 'viewmodels/filesystem/filesystemEditFile', nav: false },
-            { route: 'databases/counters', title: 'Counters', moduleId: 'viewmodels/counters', nav: true }
         ]).buildNavigationModel();
 
         // Show progress whenever we navigate.
@@ -136,7 +136,7 @@ class shell extends viewModelBase {
         shell.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
 
 
-        this.databasesChangeSubscription = shell.globalChangesApi.watchDocPrefix((e: documentChangeNotificationDto) => {
+        shell.globalChangesApi.watchDocPrefix((e: documentChangeNotificationDto) => {
             if (!!e.Id && e.Id.indexOf("Raven/Databases") == 0 && 
                 (e.Type == documentChangeType.Put || e.Type == documentChangeType.Delete)) {
 
@@ -149,10 +149,15 @@ class shell extends viewModelBase {
                     });
                     
                 }
-                this.modelPolling();
-    }
+
+                if (this.refreshTimeoutFlag) {
+                    setTimeout(() => this.modelPolling(), 5000);
+                }
+            }
         }, "Raven/Databases");
     }
+
+
 
     showNavigationProgress(isNavigating: boolean) {
         if (isNavigating) {
@@ -166,6 +171,12 @@ class shell extends viewModelBase {
             this.activeArea(appUrl.checkIsAreaActive("filesystems") ? "File Systems" : "Databases");
             $('.tooltip.fade').remove(); // Fix for tooltips that are shown right before navigation - they get stuck and remain in the UI.
         }
+    }
+
+    createNotifications(): Array<changeSubscription> {
+        return [
+            shell.globalChangesApi.watchDocsStartingWith("Raven/Databases/", (e) => this.reloadDatabases()),
+        ];
     }
 
     databasesLoaded(databases) {
@@ -199,19 +210,15 @@ class shell extends viewModelBase {
             .done(results => {
                 this.databasesLoaded(results);
                 this.fetchStudioConfig();
-                this.fetchBuildVersion();
+                this.fetchServerBuildVersion();
+                this.fetchClientBuildVersion();
                 this.fetchLicenseStatus();
                 router.activate();
             });
 
-	    this.filesystemsLoadedTask = new getFilesystemsCommand()
-	        .execute()
-	        .fail(result => this.handleRavenConnectionFailure(result))
-	        .done(results => {
-	            this.filesystemsLoaded(results);
-	            this.fetchBuildVersion();
-	            this.fetchLicenseStatus();
-	        });
+        this.filesystemsLoadedTask = new getFilesystemsCommand()
+            .execute()
+            .done(results => this.filesystemsLoaded(results));
     }
 
     fetchStudioConfig() {
@@ -308,9 +315,26 @@ class shell extends viewModelBase {
             shell.currentDbChangesApi().dispose();
         }
         shell.currentDbChangesApi(new changesApi(newDb));
+
+        shell.currentDbChangesApi().watchAllDocs((e: documentChangeNotificationDto) => {
+            if (this.modelPollingTimeoutFlag === true) {
+                this.modelPollingTimeoutFlag = false;
+                setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+                this.modelPolling();
+            } 
+        });
+
+        shell.currentDbChangesApi().watchAllIndexes((e: indexChangeNotificationDto) => {
+            if (this.modelPollingTimeoutFlag === true) {
+                this.modelPollingTimeoutFlag = false;
+                this.modelPolling();
+            } else {
+                setTimeout(() => this.modelPollingTimeoutFlag = true, 5000);
+            }
+        });
     }
 
-    modelPolling() {
+    reloadDatabases() {
         new getDatabasesCommand()
             .execute()
             .done(results => {
@@ -336,8 +360,9 @@ class shell extends viewModelBase {
                     }
                 });
         });
+    }
 
-        var db = this.activeDatabase();
+    fetchDbStats(db: database) {
         if (db) {
             new getDatabaseStatsCommand(db)
                 .execute()
@@ -377,10 +402,16 @@ class shell extends viewModelBase {
         return collection.getCollectionCssClass(doc['@metadata']['Raven-Entity-Name']);
     }
 
-    fetchBuildVersion() {
-        new getBuildVersionCommand()
+    fetchServerBuildVersion() {
+        new getServerBuildVersionCommand()
             .execute()
-            .done((result: buildVersionDto) => this.buildVersion(result));
+            .done((result: serverBuildVersionDto) => { this.serverBuildVersion(result); });
+    }
+
+    fetchClientBuildVersion() {
+        new getClientBuildVersionCommand()
+            .execute()
+            .done((result: clientBuildVersionDto) => { this.clientBuildVersion(result); });
     }
 
     fetchLicenseStatus() {
@@ -398,6 +429,8 @@ class shell extends viewModelBase {
                         this.goToDocumentSearchResults(results);
                     }
                 });
+        } else if (query.length == 0) {
+            this.goToDocumentSearchResults.removeAll();
         }
     }
 
@@ -412,6 +445,13 @@ class shell extends viewModelBase {
         var queue: uploadItem[] = this.parseUploadQueue(window.localStorage[this.localStorageUploadQueueKey + item.filesystem.name], item.filesystem);
         this.updateQueueStatus(item.id(), item.status(), queue);
         this.updateLocalStorage(queue, item.filesystem);
+    }
+
+    showLicenseStatusDialog() {
+        require(["viewmodels/licensingStatus"], licensingStatus => {
+            var dialog = new licensingStatus(this.licenseStatus());
+            app.showDialog(dialog);
+        });
     }
 }
 

@@ -8,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Util;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers;
 
 using Xunit;
 
