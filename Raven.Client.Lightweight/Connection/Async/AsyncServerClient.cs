@@ -380,15 +380,6 @@ namespace Raven.Client.Connection.Async
 				}
 
 				// Be compitable with the resopnse from v2.0 server
-				var serverBuild = request.ResponseHeaders.GetAsInt("Raven-Server-Build");
-				if (serverBuild < 2500)
-				{
-					if (serverBuild != 13 || (serverBuild == 13 && jsonResponse.Value<long>("OperationId") == default(long)))
-					{
-						return null;
-					}
-				}
-
 				var opId = ((RavenJObject)jsonResponse)["OperationId"];
 
 				if (opId == null || opId.Type != JTokenType.Integer)
