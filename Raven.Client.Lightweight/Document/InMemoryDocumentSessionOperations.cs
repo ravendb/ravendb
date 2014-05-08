@@ -701,7 +701,7 @@ more responsive application.
 			AssertNoNonUniqueInstance(entity, id);
 
 			var metadata = new RavenJObject();
-			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
+			var tag = documentStore.Conventions.GetDynamicTagName(entity);
 			if (tag != null)
 				metadata.Add(Constants.RavenEntityName, tag);
 			if (id != null)
@@ -765,7 +765,7 @@ more responsive application.
 			if (entity is IDynamicMetaObjectProvider)
 			{
 				string id;
-				if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out id) || id == null)
+				if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out id))
 					return CompletedTask.With(id);
 				
 				return GenerateKeyAsync(entity)

@@ -318,7 +318,7 @@ namespace Raven.Client.Shard
 #else
 					Conventions.AsyncDocumentKeyGenerator = entity =>
 					{
-						var typeTagName = Conventions.GetTypeTagName(entity.GetType());
+						var typeTagName = Conventions.GetDynamicTagName(entity);
 						if (typeTagName == null)
 							return CompletedTask.With(Guid.NewGuid().ToString());
 						return CompletedTask.With(typeTagName + "/" + Guid.NewGuid());

@@ -10,7 +10,9 @@ using Xunit;
 
 namespace Raven.Tests.Document
 {
-	public class ClientKeyGeneratorTests : RemoteClientTest
+   using System.Dynamic;
+
+   public class ClientKeyGeneratorTests : RemoteClientTest
 	{
 		[Fact]
 		public void IdIsSetFromGeneratorOnStore()
@@ -26,6 +28,24 @@ namespace Raven.Tests.Document
 				}
 			}
 		}
+
+      [Fact]
+      public void IdIsSetFromGeneratorOnStoreForDynamic()
+      {
+         using (var store = NewDocumentStore())
+         {
+            store.Conventions.FindDynamicTagName = (entity) => entity.EntityName;
+
+            using (var session = store.OpenSession())
+            {
+               dynamic client = new ExpandoObject();
+               client.EntityName = "clients";
+               session.Store(client);
+
+               Assert.Equal("clients/1", client.Id);
+            }
+         }
+      }
 
 		[Fact]
 		public void DifferentTypesWillHaveDifferentIdGenerators()
