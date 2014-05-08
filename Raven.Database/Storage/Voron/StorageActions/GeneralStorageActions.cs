@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.Impl;
 
+using Voron;
 using Voron.Impl;
 
 namespace Raven.Database.Storage.Voron.StorageActions
@@ -11,21 +14,46 @@ namespace Raven.Database.Storage.Voron.StorageActions
     public class GeneralStorageActions : StorageActionsBase, IGeneralStorageActions
     {
 	    private const int PulseTreshold = 16 * 1024;
-	    private readonly Table generalTable;
+
 	    private readonly TableStorage storage;
 		private readonly Reference<WriteBatch> writeBatch;
         private readonly Reference<SnapshotReader> snapshot;
 
         private int maybePulseCount;
 
-        public GeneralStorageActions(TableStorage storage, Table generalTable, Reference<WriteBatch> writeBatch, Reference<SnapshotReader> snapshot, IBufferPool bufferPool)
+        public GeneralStorageActions(TableStorage storage, Reference<WriteBatch> writeBatch, Reference<SnapshotReader> snapshot, IBufferPool bufferPool)
             : base(snapshot, bufferPool)
         {
             this.storage = storage;
-            this.generalTable = generalTable;
             this.writeBatch = writeBatch;
             this.snapshot = snapshot;
         }
+
+	    public IEnumerable<KeyValuePair<string, long>> GetIdentities(int start, int take, out long totalCount)
+	    {
+		    totalCount = storage.GetEntriesCount(storage.General);
+			if (totalCount <= 0)
+				return Enumerable.Empty<KeyValuePair<string, long>>();
+
+		    using (var iterator = storage.General.Iterate(Snapshot, writeBatch.Value))
+		    {
+			    if (iterator.Seek(Slice.BeforeAllKeys) == false || iterator.Skip(start) == false)
+					return Enumerable.Empty<KeyValuePair<string, long>>();
+
+			    var results = new List<KeyValuePair<string, long>>(); 
+
+			    do
+			    {
+				    var identityName = iterator.CurrentKey.ToString();
+				    var identityValue = iterator.CreateReaderForCurrent().ReadLittleEndianInt64();
+
+					results.Add(new KeyValuePair<string, long>(identityName, identityValue));
+			    }
+				while (iterator.MoveNext() && results.Count < take);
+
+			    return results;
+		    }
+	    }
 
         public long GetNextIdentityValue(string name)
         {
@@ -33,18 +61,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				throw new ArgumentNullException("name");
 
             var lowerKeyName = name.ToLowerInvariant();
-            if (!generalTable.Contains(Snapshot, lowerKeyName, writeBatch.Value))
+
+			var readResult = storage.General.Read(Snapshot, lowerKeyName, writeBatch.Value); 
+            if (readResult == null)
             {
-                generalTable.Add(writeBatch.Value, lowerKeyName, BitConverter.GetBytes((long) 1), expectedVersion: 0);
+				storage.General.Increment(writeBatch.Value, lowerKeyName, 1, expectedVersion: 0);
                 return 1;
             }
 
-            var readResult = generalTable.Read(Snapshot, lowerKeyName, writeBatch.Value);
             using (var stream = readResult.Reader.AsStream())
             {
                 var newValue = stream.ReadInt64() + 1;
 
-                generalTable.Add(writeBatch.Value, lowerKeyName, BitConverter.GetBytes(newValue), expectedVersion: readResult.Version);
+				storage.General.Increment(writeBatch.Value, lowerKeyName, 1, expectedVersion: readResult.Version);
                 return newValue;
             }
         }
@@ -54,7 +83,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             if (String.IsNullOrWhiteSpace(name)) throw new ArgumentNullException("name");
 
             var lowerKeyName = name.ToLowerInvariant();
-            generalTable.Add(writeBatch.Value, lowerKeyName, BitConverter.GetBytes(value));
+			storage.General.Add(writeBatch.Value, lowerKeyName, BitConverter.GetBytes(value));
         }
 
         public void PulseTransaction()
