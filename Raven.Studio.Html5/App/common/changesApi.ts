@@ -14,6 +14,7 @@ class changesApi {
 
     private allDocsHandlers = ko.observableArray<changesCallback<documentChangeNotificationDto>>();
     private allIndexesHandlers = ko.observableArray<changesCallback<indexChangeNotificationDto>>();
+    private allTransformersHandlers = ko.observableArray<changesCallback<transformerChangeNotificationDto>>();
     private watchedPrefixes = {};
     private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
     private commandBase = new commandBase();
@@ -73,9 +74,11 @@ class changesApi {
                 var callbacks = <KnockoutObservableArray<documentChangeNotificationDto>> this.watchedPrefixes[key];
                 this.fireEvents(callbacks(), json.Value, (e) => e.Id != null && e.Id.match("^" + key));
             }
-            
+
         } else if (type === "IndexChangeNotification") {
             this.fireEvents(this.allIndexesHandlers(), json.Value, (e) => true);
+        } else if (type === "TransformerChangeNotification") {
+            this.fireEvents(this.allTransformersHandlers(), json.Value, (e) => true);
         } else {
             console.log("Unhandled notification type: " + type);
         }
@@ -91,6 +94,20 @@ class changesApi {
             this.allIndexesHandlers.remove(callback);
             if (this.allIndexesHandlers().length == 0) {
                 this.send('unwatch-indexes');
+            }
+        });
+    }
+
+    watchAllTransformers(onChange: (e: transformerChangeNotificationDto) => void) {
+        var callback = new changesCallback<transformerChangeNotificationDto>(onChange);
+        if (this.allTransformersHandlers().length == 0) {
+            this.send('watch-transformers');
+        }
+        this.allTransformersHandlers.push(callback);
+        return new changeSubscription(() => {
+            this.allTransformersHandlers.remove(callback);
+            if (this.allTransformersHandlers().length == 0) {
+                this.send('unwatch-transformers');
             }
         });
     }
