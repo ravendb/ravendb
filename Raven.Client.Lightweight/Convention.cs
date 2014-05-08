@@ -26,13 +26,6 @@ namespace Raven.Client
 		}
 
 		/// <summary>
-		/// The maximum amount of time that we will wait before checking
-		/// that a failed node is still up or not.
-		/// Default: 5 minutes
-		/// </summary>
-		public TimeSpan MaxFailoverCheckPeriod { get; set; }
-
-		/// <summary>
 		/// Enable multipule async operations
 		/// </summary>
 		public bool AllowMultipuleAsyncOperations { get; set; }

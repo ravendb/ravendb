@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using System.Web;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -19,10 +20,10 @@ namespace Raven.Client.RavenFS.Connections
     /// </summary>
     public class RavenFileSystemReplicationInformer : ReplicationInformerBase<RavenFileSystemClient>, IFileSystemClientReplicationInformer
     {
-        public RavenFileSystemReplicationInformer(Convention conventions) : base(conventions)
+        public RavenFileSystemReplicationInformer(Convention conventions, HttpJsonRequestFactory requestFactory)
+            : base(conventions, requestFactory)
         {
         }
-
 
 
         /// <summary>
@@ -105,6 +106,11 @@ namespace Raven.Client.RavenFS.Connections
                 failureCounts[replicationDestination.Url] = new FailureCounter();
             }
 
+        }
+
+        protected override string GetServerCheckUrl(string baseUrl)
+        {
+            return baseUrl + "/config?name=" + StringUtils.UrlEncode(SynchronizationConstants.RavenSynchronizationDestinations) + "&check-server-reachable";
         }
 
         public override Task UpdateReplicationInformationIfNeeded(RavenFileSystemClient serverClient)
