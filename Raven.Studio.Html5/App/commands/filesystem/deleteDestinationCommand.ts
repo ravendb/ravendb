@@ -26,14 +26,18 @@ class deleteDestinationCommand extends commandBase {
                     if (!(value instanceof Array))
                         value = [value];
 
-                    var dtos = value.map(x => <synchronizationDestinationDto> x)
-                        .filter(x => x.ServerUrl != serverUrl && x.FileSystem != fileSystem);
+                    var dtos = value.map(x => <synchronizationDestinationDto> x);
+                     
+                    dtos = dtos.filter(x => x.ServerUrl != serverUrl || x.FileSystem != fileSystem);
 
                     data.destination = dtos;
 
                     var url = "/config?name=" + encodeURIComponent("Raven/Synchronization/Destinations");
                     this.put(url, JSON.stringify(data), this.fs)
-                        .done(() => result.resolve(data) );
+                        .done(() => result.resolve(data))
+                        .fail((xhr, statusText, error) => {
+                            this.reportError("Could not delete destination (server: " + serverUrl + ", filesystem: " + fileSystem + ")", error, statusText);
+                        });
                 }
             });
 

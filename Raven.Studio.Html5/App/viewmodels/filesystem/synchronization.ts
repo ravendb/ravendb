@@ -55,7 +55,7 @@ class synchronization extends viewModelBase {
     }
 
     canActivate(args: any) {
-        this.loadActivity();
+        this.loadSynchronizationActivity();
 
         return true;
     }
@@ -90,12 +90,11 @@ class synchronization extends viewModelBase {
         if (fs) {
             var self = this;
             new saveDestinationCommand(fs, url).execute()
-                .done(x => self.forceModelPolling());
+                .done(x => self.modelPolling());
         }
     }
 
-    loadActivity() {
-        var incomingGrid = this.getIncomingActivityTable();
+    loadSynchronizationActivity() {
         this.outgoingActivityPagedList(this.createOutgoingActivityPagedList());
         this.incomingActivityPagedList(this.createIncomingActivityPagedList());
     }
@@ -119,7 +118,11 @@ class synchronization extends viewModelBase {
         var self = this;
         if (fs) {
             new deleteDestinationCommand(fs, destination).execute()
-                .done(x => self.forceModelPolling());
+                .done(x => {
+                    self.modelPolling()
+                })
+
+                
         }
     }
 
@@ -142,6 +145,24 @@ class synchronization extends viewModelBase {
             if (outgoingGrid) {
                 outgoingGrid.loadRowData();
             }
+        }
+    }
+
+    loadConflictsAndDestinations() : JQueryPromise<any> {
+        var fs = this.activeFilesystem();
+        if (fs) {
+            var deferred = $.Deferred();
+            var destinationsTask = new getDestinationsCommand(fs).execute()
+                .done(data => this.destinations(data));
+
+            var conflictsTask = new getFilesConflictsCommand(fs).execute()
+                .done(x => this.conflicts(x));
+
+            var combined = $.when(destinationsTask, conflictsTask);
+
+            combined.done(() => deferred.resolve());
+
+            return deferred;
         }
     }
 
@@ -235,8 +256,10 @@ class synchronization extends viewModelBase {
     fileSystemChanged(fs: filesystem) {
         if (fs) {
             this.modelPollingStop();
-            this.loadActivity();
-            this.modelPollingStart();
+            this.loadConflictsAndDestinations().always(() => {
+                this.loadSynchronizationActivity();
+                this.modelPollingStart();
+            });
         }
     }
 }
