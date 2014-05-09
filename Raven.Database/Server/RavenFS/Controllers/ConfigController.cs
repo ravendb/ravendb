@@ -16,6 +16,8 @@ using Raven.Imports.Newtonsoft.Json;
 using NameValueCollectionJsonConverter = Raven.Client.RavenFS.NameValueCollectionJsonConverter;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
+using System.Web.Http.ModelBinding;
+using System.Text.RegularExpressions;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
@@ -47,6 +49,19 @@ namespace Raven.Database.Server.RavenFS.Controllers
                 return this.GetEmptyMessage(HttpStatusCode.NotFound);
 			}
 		}
+
+        [HttpGet]
+        [Route("ravenfs/{fileSystemName}/config/non-generated")]
+        public IEnumerable<string> NonGeneratedConfigNames()
+        {
+
+            IEnumerable<string> configs = null;
+            Storage.Batch(accessor => { configs = accessor.GetConfigNames(Paging.Start, Paging.PageSize).ToList(); });
+            var searchPattern = new Regex("^(sync|deleteOp|raven\\/synchronization\\/sources|conflicted|renameOp)", RegexOptions.IgnoreCase);
+            configs = configs.Where((c) => !searchPattern.IsMatch(c)).AsEnumerable();
+
+            return configs;
+        }
 
 		[HttpGet]
         [Route("ravenfs/{fileSystemName}/config/search")]

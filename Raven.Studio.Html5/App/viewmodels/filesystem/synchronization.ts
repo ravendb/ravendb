@@ -36,7 +36,7 @@ class synchronization extends viewModelBase {
     selectedConflicts = ko.observableArray<string>();
     isConflictsVisible = ko.computed(() => this.conflicts().length > 0);
 
-    outgoingActivityPagedList = ko.observable<pagedList>();
+    outgoingActivity = ko.observableArray<synchronizationDetail>();
     isOutgoingActivityVisible = ko.computed(() => true);
     
     incomingActivityPagedList = ko.observable<pagedList>();   
@@ -63,6 +63,10 @@ class synchronization extends viewModelBase {
     activate(args) {
         super.activate(args);
         this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
+
+        if (this.outgoingActivity().length == 0) {
+            $("#outgoingActivityCollapse").collapse();
+        }
     }
 
     deactivate() {
@@ -95,7 +99,6 @@ class synchronization extends viewModelBase {
     }
 
     loadSynchronizationActivity() {
-        this.outgoingActivityPagedList(this.createOutgoingActivityPagedList());
         this.incomingActivityPagedList(this.createIncomingActivityPagedList());
     }
 
@@ -141,10 +144,16 @@ class synchronization extends viewModelBase {
                 incomingGrid.loadRowData();
             }
 
-            var outgoingGrid = this.getOutgoingActivityTable();
-            if (outgoingGrid) {
-                outgoingGrid.loadRowData();
-            }
+            new getSyncOutgoingActivitiesCommand(this.activeFilesystem()).execute()
+                .done(x => {
+                    this.outgoingActivity(x)
+                    if (this.outgoingActivity().length > 0) {
+                        $("#outgoingActivityCollapse").collapse('show');
+                    }
+                    else {
+                        $("#outgoingActivityCollapse").collapse();
+                    }
+                });
         }
     }
 
@@ -174,17 +183,6 @@ class synchronization extends viewModelBase {
 
     incomingActivityFetchTask(skip: number, take: number): JQueryPromise<pagedResultSet> {
         var task = new getSyncIncomingActivitiesCommand(this.activeFilesystem(), skip, take).execute();
-        return task;
-    }
-
-    createOutgoingActivityPagedList(): pagedList {
-        var fetcher = (skip: number, take: number) => this.outgoingActivityFetchTask(skip, take);
-        var list = new pagedList(fetcher);
-        return list;
-    }
-
-    outgoingActivityFetchTask(skip: number, take: number): JQueryPromise<pagedResultSet> {
-        var task = new getSyncOutgoingActivitiesCommand(this.activeFilesystem(), skip, take).execute();
         return task;
     }
 
@@ -233,15 +231,6 @@ class synchronization extends viewModelBase {
             app.showDialog(resolveConflictViewModel);
         });
 
-    }
-
-    getOutgoingActivityTable(): virtualTable {
-        var gridContents = $(synchronization.outgoingGridSelector).children()[0];
-        if (gridContents) {
-            return ko.dataFor(gridContents);
-        }
-
-        return null;
     }
 
     getIncomingActivityTable(): virtualTable {
