@@ -1031,6 +1031,9 @@
     <Compile Include="Queries\SuggestionQueryRunner.cs" />
     <Compile Include="Storage\Voron\Backup\BackupOperation.cs" />
     <Compile Include="Storage\Voron\Backup\RestoreOperation.cs" />
+    <Compile Include="Storage\Voron\Schema\SchemaCreator.cs" />
+    <Compile Include="Storage\Voron\Schema\Updates\ISchemaUpdate.cs" />
+    <Compile Include="Storage\Voron\Schema\Updates\SchemaUpdateBase.cs" />
     <Compile Include="Storage\Voron\StorageActions\DocumentsStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActions\AttachmentsStorageActions.cs" />
     <Compile Include="Storage\Voron\Impl\Index.cs" />
@@ -1123,6 +1126,7 @@
       <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
   <Target Name="BeforeBuild">
