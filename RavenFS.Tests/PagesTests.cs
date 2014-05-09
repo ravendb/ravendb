@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Specialized;
+
+using Raven.Database.Config;
 using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
 
 using Xunit;
@@ -16,8 +17,17 @@ namespace RavenFS.Tests
         private readonly RavenJObject metadataWithEtag = new RavenJObject().WithETag(Guid.Empty);
 		public PagesTests()
 		{
+			var configuration = new InMemoryRavenConfiguration
+			{
+				FileSystemDataDirectory = "test",
+				Settings = new NameValueCollection
+				           {
+					           { "ETag", Guid.Empty.ToString() }
+				           }
+			};
+
 			IOExtensions.DeleteDirectory("test");
-			storage = new TransactionalStorage("test", metadataWithEtag);
+			storage = new TransactionalStorage(configuration);
 			storage.Initialize();
 		}
 

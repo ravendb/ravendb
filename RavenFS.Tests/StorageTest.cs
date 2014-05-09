@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Specialized;
+
+using Raven.Database.Config;
 using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
-using Raven.Json.Linq;
 
 namespace RavenFS.Tests
 {
@@ -13,8 +13,14 @@ namespace RavenFS.Tests
 
 		public StorageTest()
 		{
+			var configuration = new InMemoryRavenConfiguration
+			{
+				FileSystemDataDirectory = "test",
+				Settings = new NameValueCollection()
+			};
+
 			IOExtensions.DeleteDirectory("test");
-			transactionalStorage = new TransactionalStorage("test", new RavenJObject());
+			transactionalStorage = new TransactionalStorage(configuration);
 			transactionalStorage.Initialize();
 		}
 
