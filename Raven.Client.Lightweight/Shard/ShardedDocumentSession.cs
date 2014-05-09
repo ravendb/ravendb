@@ -161,11 +161,6 @@ namespace Raven.Client.Shard
 			return shardsContainThisDocument.FirstOrDefault();
 		}
 
-		public T[] Load<T>(params string[] ids)
-		{
-			return LoadInternal<T>(ids);
-		}
-
 		public T[] Load<T>(IEnumerable<string> ids)
 		{
 			return LoadInternal<T>(ids.ToArray());
@@ -189,16 +184,53 @@ namespace Raven.Client.Shard
 			return Load<T>(documentKeys);
 		}
 
-		public TResult[] Load<TTransformer, TResult>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new()
+		public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
 		{
-			return LoadInternal<TResult>(ids, null, new TTransformer().TransformerName);
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			return LoadInternal<TResult>(ids.ToArray(), null, new TTransformer().TransformerName, configuration.QueryInputs);
 		}
 
-		public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
+		public TResult Load<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null)
 		{
-			var ravenLoadConfiguration = new RavenLoadConfiguration();
-			configure(ravenLoadConfiguration);
-			return LoadInternal<TResult>(ids.ToArray(), null, new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs);
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			return LoadInternal<TResult>(new[] { id }, null, transformer, configuration.QueryInputs).FirstOrDefault();
+		}
+
+		public TResult[] Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
+		{
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			return LoadInternal<TResult>(ids.ToArray(), null, transformer, configuration.QueryInputs);
+		}
+
+		public TResult Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
+		{
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+
+			return LoadInternal<TResult>(new[] { id }, null, transformer, configuration.QueryInputs).FirstOrDefault();
+		}
+
+		public TResult[] Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
+		{
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+
+			return LoadInternal<TResult>(ids.ToArray(), null, transformer, configuration.QueryInputs);
 		}
 
 		private T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs = null)

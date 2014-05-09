@@ -258,17 +258,6 @@ namespace Raven.Client.Document
         /// <summary>
         /// Loads the specified entities with the specified ids.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="ids">The ids.</param>
-        /// <returns></returns>
-        public T[] Load<T>(params string[] ids)
-        {
-            return LoadInternal<T>(ids);
-        }
-
-        /// <summary>
-        /// Loads the specified entities with the specified ids.
-        /// </summary>
         /// <param name="ids">The ids.</param>
         public T[] Load<T>(IEnumerable<string> ids)
         {
@@ -508,36 +497,67 @@ namespace Raven.Client.Document
             return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);
         }
 
-        public TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new()
+        public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
         {
             var transformer = new TTransformer().TransformerName;
-            return LoadInternal<TResult>(new[] { id }, transformer).FirstOrDefault();
-        }
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
 
-        public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            var transformer = new TTransformer().TransformerName;
-            var configuration = new RavenLoadConfiguration();
-            configure(configuration);
             return LoadInternal<TResult>(new[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
         }
 
-        public TResult[] Load<TTransformer, TResult>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new()
+        public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
         {
             var transformer = new TTransformer().TransformerName;
-            return LoadInternal<TResult>(ids, transformer);
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
 
-        }
-
-        public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            var transformer = new TTransformer().TransformerName;
-            var configuration = new RavenLoadConfiguration();
-            configure(configuration);
             return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.QueryInputs);
         }
 
-        /// <summary>
+	    public TResult Load<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null)
+	    {
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+		    return LoadInternal<TResult>(new[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
+	    }
+
+	    public TResult[] Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
+	    {
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+		    return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.QueryInputs);
+	    }
+
+	    public TResult Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
+	    {
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+
+			return LoadInternal<TResult>(new[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
+	    }
+
+	    public TResult[] Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
+	    {
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+
+		    return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.QueryInputs);
+	    }
+
+	    /// <summary>
         /// Gets the document URL for the specified entity.
         /// </summary>
         /// <param name="entity">The entity.</param>
