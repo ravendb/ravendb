@@ -35,7 +35,6 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
             env = new StorageEnvironment(_options);
 
             Initialize();
-            CreateSchema();
         }
 
         internal Dictionary<string, object> GenerateReportOnStorage()
@@ -133,60 +132,6 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
                 env.Dispose();
         }
 
-        //create all relevant storage trees in one place
-        private void CreateSchema()
-        {
-            using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                CreateFilesSchema(tx);
-                CreatSignaturesSchema(tx);
-                CreateConfigSchema(tx);
-                CreateUsageSchema(tx);
-                CreatePagesSchema(tx);
-                CreateDetailsSchema(tx);
-
-                tx.Commit();
-            }
-        }
-
-        private void CreatePagesSchema(Transaction tx)
-        {
-            env.CreateTree(tx, Tables.Pages.TableName);
-            env.CreateTree(tx, Pages.GetIndexKey(Tables.Pages.Indices.Data));
-            env.CreateTree(tx, Pages.GetIndexKey(Tables.Pages.Indices.ByKey));
-        }
-
-        private void CreateUsageSchema(Transaction tx)
-        {
-            env.CreateTree(tx, Tables.Usage.TableName);
-            env.CreateTree(tx, Usage.GetIndexKey(Tables.Usage.Indices.ByFileName));
-            env.CreateTree(tx, Usage.GetIndexKey(Tables.Usage.Indices.ByFileNameAndPosition));
-        }
-
-        private void CreateConfigSchema(Transaction tx)
-        {
-            env.CreateTree(tx, Tables.Config.TableName);
-        }
-
-        private void CreatSignaturesSchema(Transaction tx)
-        {
-            env.CreateTree(tx, Tables.Signatures.TableName);
-            env.CreateTree(tx, Signatures.GetIndexKey(Tables.Signatures.Indices.Data));
-            env.CreateTree(tx, Signatures.GetIndexKey(Tables.Signatures.Indices.ByName));
-        }
-
-        private void CreateFilesSchema(Transaction tx)
-        {
-            env.CreateTree(tx, Tables.Files.TableName);
-            env.CreateTree(tx, Files.GetIndexKey(Tables.Files.Indices.Count));
-            env.CreateTree(tx, Files.GetIndexKey(Tables.Files.Indices.ByEtag));
-        }
-
-        private void CreateDetailsSchema(Transaction tx)
-        {
-            env.CreateTree(tx, Tables.Details.TableName);
-        }
-
         private void Initialize()
         {
             Files = new Table(Tables.Files.TableName, bufferPool);
@@ -196,6 +141,16 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
             Pages = new Table(Tables.Pages.TableName, bufferPool, Tables.Pages.Indices.Data, Tables.Pages.Indices.ByKey);
             Details = new Table(Tables.Details.TableName, bufferPool);
         }
+
+		public void SetDatabaseIdAndSchemaVersion(Guid id, string schemaVersion)
+		{
+			Id = id;
+			SchemaVersion = schemaVersion;
+		}
+
+		public string SchemaVersion { get; private set; }
+
+		public Guid Id { get; private set; }
 
     }
 }

@@ -14,15 +14,16 @@ using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 
 using Raven.Abstractions.Exceptions;
-using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Storage.Esent
 {
     public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage
     {
-		private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
+	    private readonly InMemoryRavenConfiguration configuration;
+
+	    private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
 		private readonly string database;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 		private readonly string path;
@@ -45,13 +46,14 @@ namespace Raven.Database.Server.RavenFS.Storage.Esent
 			}
 		}
 
-        public TransactionalStorage(string path, RavenJObject settings)
+        public TransactionalStorage(InMemoryRavenConfiguration configuration)
         {
-            this.settings = settings.ToNameValueCollection();
-            this.path = path.ToFullPath();
-            database = Path.Combine(this.path, "Data.ravenfs");
+	        this.configuration = configuration;
+	        settings = configuration.Settings;
+            path = configuration.FileSystemDataDirectory.ToFullPath();
+            database = Path.Combine(path, "Data.ravenfs");
 
-            new StorageConfigurator(this.settings).LimitSystemCache();
+            new StorageConfigurator(settings).LimitSystemCache();
 
             Api.JetCreateInstance(out instance, database + Guid.NewGuid());
         }
