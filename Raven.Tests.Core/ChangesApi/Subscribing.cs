@@ -1,5 +1,7 @@
 ﻿using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
+using Raven.Tests.Core.Utils.Indexes;
 using System;
 using System.Linq;
 using System.Text;
@@ -60,6 +62,92 @@ namespace Raven.Tests.Core.ChangesApi
                     session.SaveChanges();
                     Assert.Equal("passed_fordocumentdelete", output);
                 }
+            }
+        }
+
+        [Fact]
+        public void CanSubscribeToIndexChanges()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var output = "";
+                var output2 = "";
+
+                store.Changes()
+                    .ForAllIndexes()
+                    .Subscribe(change => 
+                    {
+                        if (change.Type == IndexChangeTypes.IndexAdded)
+                        {
+                            output = "passed_forallindexesadded";
+                        }
+                    });
+
+                new Companies_CompanyByType().Execute(store);
+                WaitForIndexing(store);
+                Assert.Equal("passed_forallindexesadded", output);
+
+                var usersByName = new Users_ByName();
+                usersByName.Execute(store);
+                WaitForIndexing(store);
+                store.Changes()
+                    .ForIndex(usersByName.IndexName)
+                    .Subscribe(change =>
+                    {
+                        if (change.Type == IndexChangeTypes.MapCompleted)
+                        {
+                            output = "passed_forindexmapcompleted";
+                        }
+                    });
+
+                var companiesSompanyByType = new Companies_CompanyByType();
+                companiesSompanyByType.Execute(store);
+                WaitForIndexing(store);
+                store.Changes()
+                    .ForIndex(companiesSompanyByType.IndexName)
+                    .Subscribe(change =>
+                    {
+                        if (change.Type == IndexChangeTypes.RemoveFromIndex)
+                        {
+                            output2 = "passed_forindexremovecompleted";
+                        }
+                        if (change.Type == IndexChangeTypes.ReduceCompleted)
+                        {
+                            output = "passed_forindexreducecompleted";
+                        }
+                    });
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "user", LastName = "user" });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    Assert.Equal("passed_forindexmapcompleted", output);
+
+                    session.Store(new Company { Id = "companies/1", Name = "company", Type = Company.CompanyType.Public });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    Assert.Equal("passed_forindexreducecompleted", output);
+
+                    session.Delete("companies/1");
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    Assert.Equal("passed_forindexremovecompleted", output2);
+                }
+
+
+                store.Changes()
+                    .ForAllIndexes()
+                    .Subscribe(change =>
+                    {
+                        if (change.Type == IndexChangeTypes.IndexRemoved)
+                        {
+                            output = "passed_forallindexesremoved";
+                        }
+                    });
+                store.DatabaseCommands.DeleteIndex("Companies/CompanyByType");
+                WaitForIndexing(store);
+                Assert.Equal("passed_forallindexesremoved", output);
             }
         }
     }
