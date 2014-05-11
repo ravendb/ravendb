@@ -17,7 +17,6 @@ import ace = require("ace/ace");
 class viewModelBase {
     public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
-    localStorageUploadQueueKey: string;
 
     private keyboardShortcutDomContainers: string[] = [];
     private modelPollingHandle: number;
@@ -65,8 +64,6 @@ class viewModelBase {
     * Called by Durandal when the view model is loaded and before the view is inserted into the DOM.
     */
     activate(args) {
-
-        this.localStorageUploadQueueKey = "ravenFs-uploadQueue.";
         var db = appUrl.getDatabase();
         var currentDb = this.activeDatabase();
         if (!!db && db !== null && (!currentDb || currentDb.name !== db.name)) {
@@ -155,14 +152,14 @@ class viewModelBase {
         this.modelPolling();
     }
 
-    private modelPollingStart() {
+    modelPollingStart() {
         this.modelPolling();
         this.modelPollingHandle = setInterval(() => this.modelPolling(), 5000);
         this.activeDatabase.subscribe(() => this.forceModelPolling());
         this.activeFilesystem.subscribe(() => this.forceModelPolling());
     }
 
-    private modelPollingStop() {
+    modelPollingStop() {
         clearInterval(this.modelPollingHandle);
     }
 
@@ -185,39 +182,7 @@ class viewModelBase {
         return canNavTask;
     }
 
-    private stringifyUploadQueue(queue: uploadItem[]): string {
-        return ko.toJSON(queue);
-    }
 
-    // TODO: move this. It doesn't belong in the viewModelBase; it is file 
-    // system-specific functionality. It is used only by file system code, and the shell.
-    // Maybe move into its own class, like UploadParser, or derive a new viewModel base class, e.g. fileSystemViewModelBase.
-    parseUploadQueue(queue: string, fs : filesystem): uploadItem[] {
-        var stringArray: any[] = JSON.parse(queue);
-        var uploadQueue: uploadItem[] = [];
-
-        for (var i = 0; i < stringArray.length; i++) {
-            uploadQueue.push(new uploadItem(stringArray[i]["id"], stringArray[i]["fileName"],
-                stringArray[i]["status"], fs));
-        }
-
-        return uploadQueue;
-    }
-
-    // TODO: move this. It doesn't belong in the viewModelBase. Only the shell and file system view models use it.
-    updateLocalStorage(x: uploadItem[], fs : filesystem) {
-        window.localStorage.setItem(this.localStorageUploadQueueKey + fs.name, this.stringifyUploadQueue(x));
-    }
-
-    // TODO: move this. It doesn't belong in the viewModelBase. Only the shell and file system view models use it.
-    updateQueueStatus(guid: string, status: string, queue: uploadItem[]) {
-        var items = ko.utils.arrayFilter(queue, (i: uploadItem) => {
-            return i.id() === guid
-        });
-        if (items) {
-            items[0].status(status);
-        }
-    }
 
     private beforeUnload(e: any) {
         var isDirty = viewModelBase.dirtyFlag().isDirty();

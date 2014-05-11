@@ -6,19 +6,19 @@ import pagedResultSet = require("common/pagedResultSet");
 
 class getSyncOutgoingActivitiesCommand extends commandBase {
 
-    constructor(private fs: filesystem, private skip: number, private take: number) {
+    constructor(private fs: filesystem) {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet> {
+    execute(): JQueryPromise<synchronizationDetail[]> {
 
         // Outgoing: All the pending and active activities. 
         var pendingTask = this.getPendingActivity(0, 1);
         var activeTask = this.getActiveActivity(0, 1);
 
         var doneTask = $.Deferred();
-        var start = this.skip;
-        var pageSize = this.take
+        var start = 0;
+        var pageSize = 50;
 
         var combinedTask = $.when(pendingTask, activeTask);
         combinedTask.done((
@@ -26,11 +26,11 @@ class getSyncOutgoingActivitiesCommand extends commandBase {
             activeList: filesystemListPageDto<filesystemSynchronizationDetailsDto>) => {
 
             if (start < pendingList.TotalCount - pageSize) {
-                this.getPendingActivity(start, pageSize).done(x => doneTask.resolve(new pagedResultSet(x.Items.map(x => new synchronizationDetail(x, "Pending")), x.TotalCount)));
+                this.getPendingActivity(start, pageSize).done(x => doneTask.resolve(x.Items.map(x => new synchronizationDetail(x, "Pending"))));
             }
             else if (start > pendingList.TotalCount) {
                 var activeListStart = start - pendingList.TotalCount;
-                this.getActiveActivity(activeListStart, pageSize).done(x => doneTask.resolve(new pagedResultSet(x.Items.map(x => new synchronizationDetail(x, "Active")), x.TotalCount)));
+                this.getActiveActivity(activeListStart, pageSize).done(x => doneTask.resolve(x.Items.map(x => new synchronizationDetail(x, "Active")), x.TotalCount));
             }
             else {
                 var pendingPageSize = pendingList.TotalCount - start;
@@ -45,7 +45,7 @@ class getSyncOutgoingActivitiesCommand extends commandBase {
                         var page = [];
                         page.pushAll(x.Items.map(item => new synchronizationDetail(item, "Pending")));
                         page.pushAll(y.Items.map(item => new synchronizationDetail(item, "Active")));
-                        doneTask.resolve(new pagedResultSet(page, x.TotalCount + y.TotalCount));
+                        doneTask.resolve(page);
                     });
             }
         });
@@ -59,12 +59,12 @@ class getSyncOutgoingActivitiesCommand extends commandBase {
 
     getPendingActivity(skip: number, take: number): JQueryPromise<filesystemListPageDto<filesystemSynchronizationDetailsDto>> {
         var pendingUrl = "/synchronization/pending";
-        return this.query<filesystemListPageDto<filesystemSynchronizationDetailsDto>>(pendingUrl, { start: 0, pageSize: 1 }, this.fs, x => <filesystemListPageDto<filesystemSynchronizationDetailsDto>>x);
+        return this.query<filesystemListPageDto<filesystemSynchronizationDetailsDto>>(pendingUrl, { start: skip, pageSize: take }, this.fs, x => <filesystemListPageDto<filesystemSynchronizationDetailsDto>>x);
     }
 
     getActiveActivity(skip: number, take: number): JQueryPromise<filesystemListPageDto<filesystemSynchronizationDetailsDto>> {
         var activeUrl = "/synchronization/active";
-        return this.query<filesystemListPageDto<filesystemSynchronizationDetailsDto>>(activeUrl, { start: 0, pageSize: 1 }, this.fs, x => <filesystemListPageDto<filesystemSynchronizationDetailsDto>>x);
+        return this.query<filesystemListPageDto<filesystemSynchronizationDetailsDto>>(activeUrl, { start: skip, pageSize: take }, this.fs, x => <filesystemListPageDto<filesystemSynchronizationDetailsDto>>x);
     }
 }
 

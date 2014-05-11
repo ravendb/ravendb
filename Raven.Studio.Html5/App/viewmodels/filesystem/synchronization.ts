@@ -21,40 +21,61 @@ import deleteDestinationCommand = require("commands/filesystem/deleteDestination
 import synchronizeNowCommand = require("commands/filesystem/synchronizeNowCommand");
 import synchronizeWithDestinationCommand = require("commands/filesystem/synchronizeWithDestinationCommand");
 import resolveConflictCommand = require("commands/filesystem/resolveConflictCommand");
+import virtualTable = require("widgets/virtualTable/viewModel");
 
 import filesystemAddDestination = require("viewmodels/filesystem/filesystemAddDestination");
 import resolveConflict = require("viewmodels/filesystem/resolveConflict");
+import filesystem = require("models/filesystem/filesystem");
 
-class filesystemSynchronization extends viewModelBase {
+class synchronization extends viewModelBase {
 
-    destinations = ko.observableArray<string>();
+    destinations = ko.observableArray<synchronizationDestinationDto>();
     isDestinationsVisible = ko.computed(() => this.destinations().length > 0);
 
     conflicts = ko.observableArray<string>();
     selectedConflicts = ko.observableArray<string>();
     isConflictsVisible = ko.computed(() => this.conflicts().length > 0);
 
-    outgoingActivityPagedList = ko.observable<pagedList>();
-    //isOutgoingActivityVisible = ko.computed(() => this.outgoingActivityPagedList() ? this.outgoingActivityPagedList().totalResultCount() > 0 : false);
+    outgoingActivity = ko.observableArray<synchronizationDetail>();
     isOutgoingActivityVisible = ko.computed(() => true);
     
     incomingActivityPagedList = ko.observable<pagedList>();   
-    //isIncomingActivityVisible = ko.computed(() => this.incomingActivityPagedList() ? this.incomingActivityPagedList().totalResultCount() > 0 : false);
     isIncomingActivityVisible = ko.computed(() => true);
           
     private router = router;
+    private pollingInterval: any;
+    private activeFilesystemSubscription: any;
     synchronizationUrl = appUrl.forCurrentDatabase().filesystemSynchronization;
+
+    static outgoingGridSelector = "#outgoingGrid";
+    static incomingGridSelector = "#incomingGrid";
 
     constructor() {
         super();
     }
 
     canActivate(args: any) {
+        this.loadSynchronizationActivity();
+
         return true;
     }
 
     activate(args) {
         super.activate(args);
+        this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
+
+        if (this.outgoingActivity().length == 0) {
+            $("#outgoingActivityCollapse").collapse();
+        }
+    }
+
+    deactivate() {
+
+        super.deactivate();
+        this.activeFilesystemSubscription.dispose();
+    }
+
+    forceModelPolling() {
     }
 
     addDestination() {
@@ -73,8 +94,12 @@ class filesystemSynchronization extends viewModelBase {
         if (fs) {
             var self = this;
             new saveDestinationCommand(fs, url).execute()
-                .done(x => self.forceModelPolling());
+                .done(x => self.modelPolling());
         }
+    }
+
+    loadSynchronizationActivity() {
+        this.incomingActivityPagedList(this.createIncomingActivityPagedList());
     }
 
     synchronizeNow() {
@@ -91,12 +116,16 @@ class filesystemSynchronization extends viewModelBase {
         }
     }
 
-    deleteDestination(destination: string) {
+    deleteDestination(destination: synchronizationDestinationDto) {
         var fs = this.activeFilesystem();
         var self = this;
         if (fs) {
             new deleteDestinationCommand(fs, destination).execute()
-                .done(x => self.forceModelPolling());
+                .done(x => {
+                    self.modelPolling()
+                })
+
+                
         }
     }
 
@@ -110,9 +139,39 @@ class filesystemSynchronization extends viewModelBase {
             new getFilesConflictsCommand(fs).execute()
                 .done(x => this.conflicts(x));
 
-            this.outgoingActivityPagedList(this.createOutgoingActivityPagedList());
+            var incomingGrid = this.getIncomingActivityTable();
+            if (incomingGrid) {
+                incomingGrid.loadRowData();
+            }
 
-            this.incomingActivityPagedList(this.createIncomingActivityPagedList());
+            new getSyncOutgoingActivitiesCommand(this.activeFilesystem()).execute()
+                .done(x => {
+                    this.outgoingActivity(x)
+                    if (this.outgoingActivity().length > 0) {
+                        $("#outgoingActivityCollapse").collapse('show');
+                    }
+                    else {
+                        $("#outgoingActivityCollapse").collapse();
+                    }
+                });
+        }
+    }
+
+    loadConflictsAndDestinations() : JQueryPromise<any> {
+        var fs = this.activeFilesystem();
+        if (fs) {
+            var deferred = $.Deferred();
+            var destinationsTask = new getDestinationsCommand(fs).execute()
+                .done(data => this.destinations(data));
+
+            var conflictsTask = new getFilesConflictsCommand(fs).execute()
+                .done(x => this.conflicts(x));
+
+            var combined = $.when(destinationsTask, conflictsTask);
+
+            combined.done(() => deferred.resolve());
+
+            return deferred;
         }
     }
 
@@ -123,18 +182,7 @@ class filesystemSynchronization extends viewModelBase {
     }
 
     incomingActivityFetchTask(skip: number, take: number): JQueryPromise<pagedResultSet> {
-        var task = new getSyncIncomingActivitiesCommand(appUrl.getFilesystem(), skip, take).execute();
-        return task;
-    }
-
-    createOutgoingActivityPagedList(): pagedList {
-        var fetcher = (skip: number, take: number) => this.outgoingActivityFetchTask(skip, take);
-        var list = new pagedList(fetcher);
-        return list;
-    }
-
-    outgoingActivityFetchTask(skip: number, take: number): JQueryPromise<pagedResultSet> {
-        var task = new getSyncOutgoingActivitiesCommand(appUrl.getFilesystem(), skip, take).execute();
+        var task = new getSyncIncomingActivitiesCommand(this.activeFilesystem(), skip, take).execute();
         return task;
     }
 
@@ -184,6 +232,25 @@ class filesystemSynchronization extends viewModelBase {
         });
 
     }
+
+    getIncomingActivityTable(): virtualTable {
+        var gridContents = $(synchronization.incomingGridSelector).children()[0];
+        if (gridContents) {
+            return ko.dataFor(gridContents);
+        }
+
+        return null;
+    }
+
+    fileSystemChanged(fs: filesystem) {
+        if (fs) {
+            this.modelPollingStop();
+            this.loadConflictsAndDestinations().always(() => {
+                this.loadSynchronizationActivity();
+                this.modelPollingStart();
+            });
+        }
+    }
 }
 
-export = filesystemSynchronization;
+export = synchronization;

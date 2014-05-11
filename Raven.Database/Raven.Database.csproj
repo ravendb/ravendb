@@ -444,6 +444,9 @@
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\TableBase.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\Tables.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\TableStorage.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Schema\SchemaCreator.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Schema\ISchemaUpdate.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Schema\Updates\SchemaUpdateBase.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\StorageActionsAccessor.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\StorageActionsBase.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\TransactionalStorage.cs" />
@@ -1031,6 +1034,9 @@
     <Compile Include="Queries\SuggestionQueryRunner.cs" />
     <Compile Include="Storage\Voron\Backup\BackupOperation.cs" />
     <Compile Include="Storage\Voron\Backup\RestoreOperation.cs" />
+    <Compile Include="Storage\Voron\Schema\SchemaCreator.cs" />
+    <Compile Include="Storage\Voron\Schema\ISchemaUpdate.cs" />
+    <Compile Include="Storage\Voron\Schema\Updates\SchemaUpdateBase.cs" />
     <Compile Include="Storage\Voron\StorageActions\DocumentsStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActions\AttachmentsStorageActions.cs" />
     <Compile Include="Storage\Voron\Impl\Index.cs" />
@@ -1123,6 +1129,7 @@
       <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
   <Target Name="BeforeBuild">

@@ -1,36 +1,40 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading;
+
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database;
-using Raven.Database.Data;
+using Raven.Database.Config;
+using Raven.Database.Impl;
+using Raven.Database.Impl.DTC;
+using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Voron;
 using Raven.Database.Storage.Voron.Backup;
-using Raven.Database.Util.Streams;
+using Raven.Database.Storage.Voron.Impl;
+using Raven.Database.Storage.Voron.Schema;
+using Raven.Json.Linq;
+
 using Voron;
+using Voron.Impl;
+
 using VoronExceptions = Voron.Exceptions;
 using Task = System.Threading.Tasks.Task;
 
 namespace Raven.Storage.Voron
 {
-    using global::Voron.Impl;
-    using Raven.Abstractions.Data;
-    using Raven.Abstractions.Extensions;
-    using Raven.Abstractions.MEF;
-    using Raven.Database.Config;
-    using Raven.Database.Impl;
-    using Raven.Database.Impl.DTC;
-    using Raven.Database.Plugins;
-    using Raven.Database.Storage.Voron.Impl;
-    using Raven.Json.Linq;
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.IO;
-    using System.Threading;
-
 	public class TransactionalStorage : ITransactionalStorage
 	{
+		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
 		private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
 		private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
 
@@ -225,34 +229,17 @@ namespace Raven.Storage.Voron
 		        CreateStorageOptionsFromConfiguration(configuration);
 
 		    tableStorage = new TableStorage(options, bufferPool);
+			var schemaCreator = new SchemaCreator(configuration, tableStorage, Output, Log);
+			schemaCreator.CreateSchema();
+			schemaCreator.SetupDatabaseIdAndSchemaVersion();
+			schemaCreator.UpdateSchemaIfNecessary();
+
 		    SetupDatabaseId();
 		}
 
 	    private void SetupDatabaseId()
 	    {
-	        using (var snapshot = tableStorage.CreateSnapshot())
-	        {
-	            var read = tableStorage.Details.Read(snapshot, "id", null);
-	            if (read == null) // new db
-	            {
-	                Id = Guid.NewGuid();
-	                using (var writeIdBatch = new WriteBatch())
-	                {
-	                    tableStorage.Details.Add(writeIdBatch, "id", Id.ToByteArray());
-	                    tableStorage.Write(writeIdBatch);
-	                }
-	            }
-	            else
-	            {
-                    if (read.Reader == null || read.Reader.Length != 16)//precaution - might prevent NRE in edge cases
-	                    throw new InvalidDataException("Failed to initialize Voron transactional storage. Possible data corruption.");
-	                using (var stream = read.Reader.AsStream())
-	                using (var reader = new BinaryReader(stream))
-	                {
-	                    Id = new Guid(reader.ReadBytes((int) stream.Length));
-	                }
-	            }
-	        }
+		    Id = tableStorage.Id;
 	    }
 
 		private static StorageEnvironmentOptions CreateMemoryStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
@@ -394,6 +381,13 @@ namespace Raven.Storage.Voron
 			if (batch == null)
 				throw new InvalidOperationException("Batch was not started, you are not supposed to call this method");
 			return batch;
+		}
+
+		private void Output(string message)
+		{
+			Log.Info(message);
+			Console.Write(message);
+			Console.WriteLine();
 		}
 	}
 }

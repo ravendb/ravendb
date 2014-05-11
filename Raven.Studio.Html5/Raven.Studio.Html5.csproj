@@ -109,6 +109,7 @@
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\fileUploadBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\uploadQueueHelper.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
     <TypeScriptCompile Include="App\models\counter.ts" />
@@ -153,7 +154,7 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchHasMetadataClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemStatistics.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemSynchronization.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\synchronization.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemUploadFile.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchFileSizeRangeClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchLastModifiedBetweenClause.ts" />
@@ -303,7 +304,7 @@
     <Content Include="App\views\filesystem\resolveConflict.html" />
     <Content Include="App\views\filesystem\searchFileSizeRangeClause.html" />
     <Content Include="App\views\filesystem\search.html" />
-    <Content Include="App\views\filesystem\filesystemSynchronization.html" />
+    <Content Include="App\views\filesystem\synchronization.html" />
     <Content Include="App\views\filesystem\filesystemEditFile.html" />
     <Content Include="App\views\filesystem\searchHasMetadataClause.html" />
     <Content Include="App\views\filesystem\searchLastModifiedBetweenClause.html" />

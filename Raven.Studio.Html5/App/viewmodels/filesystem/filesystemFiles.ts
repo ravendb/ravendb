@@ -16,6 +16,7 @@ class filesystemFiles extends viewModelBase {
     selectedFilesIndices = ko.observableArray<number>();
     isSelectAll = ko.observable(false);
     hasAnyFileSelected: KnockoutComputed<boolean>;
+    private activeFilesystemSubscription: any;
 
     static gridSelector = "#filesGrid";
 
@@ -25,10 +26,16 @@ class filesystemFiles extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-        this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
+        this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
         this.hasAnyFileSelected = ko.computed(() => this.selectedFilesIndices().length > 0);
 
         this.loadFiles(false);
+    }
+
+    deactivate() {
+        super.deactivate();
+
+        this.activeFilesystemSubscription.dispose();
     }
 
     loadFiles(force: boolean) {

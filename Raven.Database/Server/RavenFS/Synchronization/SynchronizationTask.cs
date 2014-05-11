@@ -601,7 +601,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 			storage.Batch(accessor => destinationsConfig = accessor.GetConfig(SynchronizationConstants.RavenSynchronizationDestinations));
 
-            var destinationsStrings = destinationsConfig.Value<RavenJArray>("Destinations");
+            var destinationsStrings = destinationsConfig.Value<RavenJArray>("destination");
             if (destinationsStrings == null)
             {
                 Log.Warn("Empty " + SynchronizationConstants.RavenSynchronizationDestinations + " configuration");
