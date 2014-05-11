@@ -67,19 +67,32 @@ namespace Raven.Database.Counters
 					metadata.Add(tx, "id", Id.ToByteArray());
 					metadata.Add(tx, "name", Encoding.UTF8.GetBytes(name));
 
-                    //HACK: setup replication peer
+				    var name2 = "";
+                    var name3 = "";
+                    //Triple HACK: setup replication peer
+                    // todo: remove this
 				    if (name.Contains(":8080"))
 				    {
-				        name = name.Replace(":8080", ":8081");
+				        name2 = name.Replace(":8080", ":8081");
+                        name3 = name.Replace(":8080", ":8082");
 				    }
-				    else
-				    {
-                        name = name.Replace(":8081", ":8080");
-				    }
+                    else if (name.Contains(":8081"))
+                    {
+                        name2 = name.Replace(":8081", ":8080");
+                        name3 = name.Replace(":8081", ":8082");
+                    }
+                    else
+                    {
+                        name2 = name.Replace(":8082", ":8080");
+                        name3 = name.Replace(":8082", ":8081");
+                    }
 
-				    servers.Add(tx, name, BitConverter.GetBytes(1));
-				    serverNamesToIds[name] = 1;
-				    serverIdstoName[1] = name;
+				    servers.Add(tx, name2, BitConverter.GetBytes(1));
+                    servers.Add(tx, name3, BitConverter.GetBytes(2));
+				    serverNamesToIds[name2] = 1;
+                    serverNamesToIds[name3] = 2;
+				    serverIdstoName[1] = name2;
+                    serverIdstoName[2] = name3;
 				    
 
                     tx.Commit();
@@ -379,7 +392,8 @@ namespace Raven.Database.Counters
 
 			private void Store(string server, string counter, Action<ReadResult> setStoreBuffer)
 			{
-				parent.LastEtag++;
+				
+                parent.LastEtag++;
 				var serverId = GetServerId(server);
 
 				var counterNameSize = Encoding.UTF8.GetByteCount(counter);

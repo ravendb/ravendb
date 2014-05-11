@@ -37,12 +37,12 @@ namespace Raven.Database.Counters.Controllers
 				                                     Positive = 0,
 			                                     };
 
-			            if (serverValue.Positive == currentServerValue.Positive &&
-			                serverValue.Negative == currentServerValue.Negative)
+			            if (serverValue.Positive <= currentServerValue.Positive &&
+			                serverValue.Negative <= currentServerValue.Negative)
 				            continue;
 
 		                wroteCounter = true;
-			            writer.Store(replicationMessage.SendingServerName,
+                        writer.Store(serverValue.ServerName,
 				            counter.CounterName,
 				            Math.Max(serverValue.Positive, currentServerValue.Positive),
 				            Math.Max(serverValue.Negative, currentServerValue.Negative)
