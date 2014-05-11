@@ -225,7 +225,6 @@ namespace Raven.Database.Indexing
 		protected abstract int MaxNumberOfItems { get; }
 		protected abstract int CurrentNumberOfItems { get; set; }
 		protected abstract int LastAmountOfItemsToRemember { get; set; }
-		public long AverageBatchSize { get; private set; }
 		
 		//total size of documents in the batch - for each entry
 		public ConcurrentDictionary<Guid, long> CurrentlyUsedBatchSizes { get { return currentlyUsedBatchSizes; } }

@@ -231,7 +231,7 @@ namespace Raven.Database.Prefetching
 				if (x.Task.IsCompleted)
 					return x.Task.Result.Sum(doc => doc.SerializedSizeOnDisk);
 
-				return autoTuner.AverageBatchSize;
+				return context.LastActualIndexingBatchInfo.AsQueryableFromSnapshot().Average(o => o.TotalDocumentCount);
 			});
 
 			if (alreadyLoadedSize > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
