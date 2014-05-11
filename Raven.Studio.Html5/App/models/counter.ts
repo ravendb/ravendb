@@ -4,7 +4,8 @@ class counter {
     overallTotal = ko.observable(0);
     servers = ko.observableArray<server>([]);
 
-    constructor(dto: counterDto) {
+    //constructor(dto: counterDto) {
+    constructor(dto: any) {
         this.name(dto.Name);
         this.overallTotal(dto.OverallTotal);
         this.servers(dto.Servers.map(s => new server(s)));

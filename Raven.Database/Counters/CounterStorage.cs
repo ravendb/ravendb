@@ -9,6 +9,7 @@ using Raven.Abstractions;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
 using Voron;
+using Voron.Debugging;
 using Voron.Impl;
 using Voron.Trees;
 using Voron.Util;
@@ -215,7 +216,7 @@ namespace Raven.Database.Counters
 				var etagResult = countersEtags.Read(transaction, slice);
 				if (etagResult == null)
 					return null;
-                var etag = etagResult.Reader.ReadLittleEndianInt64();
+                var etag = etagResult.Reader.ReadBigEndianInt64();
 				using (var it = counters.Iterate(transaction))
 				{
 					it.RequiredPrefix = slice;
@@ -239,7 +240,7 @@ namespace Raven.Database.Counters
 					return result;
 				}
 			}
-
+            
             public IEnumerable<ReplicationCounter> GetCountersSinceEtag(long etag)
 		    {
                 var buffer = new byte[sizeof(long)];
@@ -252,12 +253,16 @@ namespace Raven.Database.Counters
                         yield break;
                     do
                     {
-	                    if (buffer.Length < it.GetCurrentDataSize())
+                        var currentDataSize = it.GetCurrentDataSize();
+
+                        if (buffer.Length < currentDataSize)
 	                    {
-							buffer = new byte[Utils.NearestPowerOfTwo(it.GetCurrentDataSize())];
+                            buffer = new byte[Utils.NearestPowerOfTwo(currentDataSize)];
 	                    }
-	                    it.CreateReaderForCurrent().Read(buffer, 0, buffer.Length);
-                        var counterName = Encoding.UTF8.GetString(buffer);
+	                    
+                        it.CreateReaderForCurrent().Read(buffer, 0, currentDataSize);
+                        var counterName = Encoding.UTF8.GetString(buffer, 0, currentDataSize);
+
                         var counter = GetCounter(counterName);
                         yield return new ReplicationCounter
                         {
@@ -404,15 +409,19 @@ namespace Raven.Database.Counters
 
 				slice = new Slice(buffer, (ushort) counterNameSize);
 				result = countersEtagIx.Read(transaction, slice);
-				var etagSlice = new Slice(etagBuffer);
+				
+                
 				if (result != null) // remove old etag entry
 				{
 					result.Reader.Read(etagBuffer, 0, sizeof (long));
-					etagsCountersIx.Delete(transaction, etagSlice);
+                    var oldEtagSlice = new Slice(etagBuffer);
+                    etagsCountersIx.Delete(transaction, oldEtagSlice);
 				}
+                
 				EndianBitConverter.Big.CopyBytes(parent.LastEtag, etagBuffer, 0);
-				etagsCountersIx.Add(transaction, etagSlice, slice);
-				countersEtagIx.Add(transaction, slice, etagSlice);
+                var newEtagSlice = new Slice(etagBuffer);
+                etagsCountersIx.Add(transaction, newEtagSlice, slice);
+                countersEtagIx.Add(transaction, slice, newEtagSlice);
 			}
 
 			private void EnsureBufferSize(int requiredBufferSize)
