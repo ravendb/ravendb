@@ -381,7 +381,7 @@ namespace Raven.Database.Prefetching
 
 			if (prefetchingQueue.Count >= // don't use too much, this is an optimization and we need to be careful about using too much mem
 				context.Configuration.MaxNumberOfItemsToPreFetchForIndexing ||
-				prefetchingQueue.AsQueryableFromSnapshot().Sum(x => x.SerializedSizeOnDisk) > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+				prefetchingQueue.AsQueryableFromSnapshot().Sum(x => SelectSerializedSizeOnDiskIfNotNull(x)) > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
 				return;
 
 			foreach (var jsonDocument in docs)
@@ -389,6 +389,11 @@ namespace Raven.Database.Prefetching
 				DocumentRetriever.EnsureIdInMetadata(jsonDocument);
 				prefetchingQueue.Add(jsonDocument);
 			}
+		}
+
+		private int SelectSerializedSizeOnDiskIfNotNull(JsonDocument document)
+		{
+			return (document != null) ? document.SerializedSizeOnDisk : 0;
 		}
 
 		public void CleanupDocuments(Etag lastIndexedEtag)
