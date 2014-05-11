@@ -52,7 +52,6 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
                
-                WaitForUserToContinueTheTest(store);
                    
                 using (var session = store.OpenSession())
                 {
