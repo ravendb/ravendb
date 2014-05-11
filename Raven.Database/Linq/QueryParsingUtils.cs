@@ -353,12 +353,9 @@ namespace Raven.Database.Linq
 			//    previously created and deleted, affecting both production and test environments.
 			//
 			// For more info, see http://ayende.com/blog/161218/robs-sprint-idly-indexing?key=f37cf4dc-0e5c-43be-9b27-632f61ba044f#comments-form-location
-			var indexCacheDir = GetIndexCacheDir(configuration);
 
 			try
 			{
-				if (Directory.Exists(indexCacheDir) == false)
-					Directory.CreateDirectory(indexCacheDir);
 				type = TryGetIndexFromDisk(indexFilePath, name);
 			}
 			catch (UnauthorizedAccessException)
@@ -417,8 +414,8 @@ namespace Raven.Database.Linq
 				// we know we can write there
 				try
 				{
-					if (Directory.Exists(indexCacheDir) == false)
-						Directory.CreateDirectory(indexCacheDir);
+                    EnsureDirectoryExists(indexCacheDir);
+
 					var touchFile = Path.Combine(indexCacheDir, Guid.NewGuid() + ".temp");
 					File.WriteAllText(touchFile, "test that we can write to this path");
 					File.Delete(touchFile);
@@ -428,9 +425,10 @@ namespace Raven.Database.Linq
 				{
 				}
 
-				return Path.Combine(configuration.IndexStoragePath, "Raven", "CompiledIndexCache");
+				indexCacheDir = Path.Combine(configuration.IndexStoragePath, "Raven", "CompiledIndexCache");
 			}
 
+            EnsureDirectoryExists(indexCacheDir);
 			return indexCacheDir;
 		}
 
@@ -536,5 +534,11 @@ namespace Raven.Database.Linq
 
 			return null;
 		}
+
+        private static void EnsureDirectoryExists(string directoryPath)
+        {
+            if (Directory.Exists(directoryPath) == false)
+                Directory.CreateDirectory(directoryPath);
+        }
 	}
 }
