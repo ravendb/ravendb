@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Concurrent;
+using System.Runtime.Remoting.Contexts;
+using Lucene.Net.Util;
 using Raven.Abstractions;
 using Raven.Database.Config;
 using System.Linq;
@@ -11,13 +14,17 @@ namespace Raven.Database.Indexing
 		protected readonly WorkContext context;
 
 		private int currentNumber;
-		
+		private readonly ConcurrentDictionary<Guid, long> currentlyUsedBatchSizes;
+
 		private DateTime lastIncrease;
+		private readonly long memoryLimitForIndexingInKBytes;
 
 		protected BaseBatchSizeAutoTuner(WorkContext context)
 		{
 			this.context = context;
-			this.NumberOfItemsToIndexInSingleBatch = InitialNumberOfItems;
+			NumberOfItemsToIndexInSingleBatch = InitialNumberOfItems;
+			currentlyUsedBatchSizes = new ConcurrentDictionary<Guid, long>();
+			memoryLimitForIndexingInKBytes = context.Configuration.MemoryLimitForIndexing*1024;
 		}
 
 		public int NumberOfItemsToIndexInSingleBatch
@@ -31,7 +38,6 @@ namespace Raven.Database.Indexing
 
 		public void AutoThrottleBatchSize(int amountOfItemsToIndex, long size, TimeSpan indexingDuration)
 		{
-			AverageBatchSize = RunningAverage(size, AverageBatchSize, amountOfItemsToIndex);
 			try
 			{
 				if (ReduceBatchSizeIfCloseToMemoryCeiling())
@@ -47,17 +53,10 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		//adapted from http://invisibleblocks.com/2008/07/30/long-running-averages-without-the-sum-of-preceding-values/
-		private static long RunningAverage(long value, long existingAverage, long count)
-		{
-			existingAverage += (value - existingAverage) / ++count;
-			return existingAverage;
-		}
-
-
 		private bool ConsiderIncreasingBatchSize(int amountOfItemsToIndex, long size, TimeSpan indexingDuration)
 		{
-			if (amountOfItemsToIndex < NumberOfItemsToIndexInSingleBatch)
+			//if we are using too much memory for indexing, do not even consider to increase batch size
+			if (amountOfItemsToIndex < NumberOfItemsToIndexInSingleBatch || CurrentlyUsedBatchSizes.Values.Sum() > memoryLimitForIndexingInKBytes)
 			{
 				return false;
 			}
@@ -115,21 +114,12 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void ReportMemoryUsageIncrease(int amount)
-		{
-			
-		}
-		
-		public void ReportMemoryUsageDecrease(int amount)
-		{
-			
-		}
-
 		private bool ReduceBatchSizeIfCloseToMemoryCeiling()
 		{
-			if (context.LastActualIndexingBatchInfo.ToArray().Sum(x => x.TotalDocumentSize) > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+			var documentSizeInBatches = CurrentlyUsedBatchSizes.Values.Sum();
+			if (documentSizeInBatches < memoryLimitForIndexingInKBytes)
 			{
-				return true;
+				return false;
 			}
 
 			if (MemoryStatistics.AvailableMemory >= context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
@@ -150,7 +140,8 @@ namespace Raven.Database.Indexing
 
 			// let us check again after the GC call, do we still need to reduce the batch size?
 
-			if (MemoryStatistics.AvailableMemory > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+			if (MemoryStatistics.AvailableMemory > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit &&
+				documentSizeInBatches < context.Configuration.MemoryLimitForIndexing)
 			{
 				// we don't want to try increasing things, we just hit the ceiling, maybe on the next try
 				return true;
@@ -166,12 +157,14 @@ namespace Raven.Database.Indexing
 
 		private bool ConsiderDecreasingBatchSize(int amountOfItemsToIndex, TimeSpan indexingDuration)
 		{
-			if (
+			var isIndexingUsingTooMuchMemory = CurrentlyUsedBatchSizes.Values.Sum() < memoryLimitForIndexingInKBytes;
+			if ((
 				// we had as much work to do as we are currently capable of handling,
 				// we might need to increase, but certainly not decrease the batch size
 				amountOfItemsToIndex >= NumberOfItemsToIndexInSingleBatch ||
 				// we haven't gone over the max latency limit, no reason to decrease yet
-				indexingDuration < context.Configuration.MaxIndexingRunLatency)
+				indexingDuration < context.Configuration.MaxIndexingRunLatency) &&
+				isIndexingUsingTooMuchMemory)
 			{
 				return false;
 			}
@@ -182,7 +175,7 @@ namespace Raven.Database.Indexing
 			// we didn't have a lot of work to do, so let us see if we can reduce the batch size
 
 			// we are at the configured minimum, nothing to do
-			if (NumberOfItemsToIndexInSingleBatch == InitialNumberOfItems)
+			if (NumberOfItemsToIndexInSingleBatch == InitialNumberOfItems && isIndexingUsingTooMuchMemory == false)
 				return true;
 
 			// we were above the max/2 the last few times, we can't reduce the work load now
@@ -193,7 +186,8 @@ namespace Raven.Database.Indexing
 			// we have had a couple of times were we didn't get to the current max, so we can probably
 			// reduce the max again now, this will reduce the memory consumption eventually, and will cause 
 			// faster indexing times in case we get a big batch again
-			NumberOfItemsToIndexInSingleBatch = Math.Max(InitialNumberOfItems,
+			// * if indexing is using too much memory --> probably we have very large documents in the index, so let it reduce to 1 if needed
+			NumberOfItemsToIndexInSingleBatch = Math.Max(isIndexingUsingTooMuchMemory ? 1 : InitialNumberOfItems,
 														 NumberOfItemsToIndexInSingleBatch / 2);
 
 			// we just reduced the batch size because we have two concurrent runs where we had
@@ -232,6 +226,10 @@ namespace Raven.Database.Indexing
 		protected abstract int CurrentNumberOfItems { get; set; }
 		protected abstract int LastAmountOfItemsToRemember { get; set; }
 		public long AverageBatchSize { get; private set; }
+		
+		//total size of documents in the batch - for each entry
+		public ConcurrentDictionary<Guid, long> CurrentlyUsedBatchSizes { get { return currentlyUsedBatchSizes; } }
+
 		protected abstract void RecordAmountOfItems(int numberOfItems);
 		protected abstract IEnumerable<int> GetLastAmountOfItems();
 	}

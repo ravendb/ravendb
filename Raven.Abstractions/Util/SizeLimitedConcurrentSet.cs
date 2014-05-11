@@ -1,3 +1,4 @@
+using System.Linq;
 #if !SILVERLIGHT
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -15,6 +16,11 @@ namespace Raven.Database.Util
 			: this(size, EqualityComparer<T>.Default)
 		{
 
+		}
+
+		public IQueryable<T> AsQueryableFromSnapshot()
+		{
+			return queue.ToList().AsQueryable();
 		}
 
 		public SizeLimitedConcurrentSet(int size, IEqualityComparer<T> equalityComparer)

@@ -40,7 +40,7 @@ namespace Raven.Abstractions.Data
 			public string Name { get; set; }
 		}
 
-		public ActualIndexingBatchInfo[] ActualIndexingBatchInfo { get; set; }
+		public IndexingBatchInfo[] IndexingBatchInfo { get; set; }
 		public FutureBatchStats[] Prefetches { get; set; }
 
 		public Guid DatabaseId { get; set; }

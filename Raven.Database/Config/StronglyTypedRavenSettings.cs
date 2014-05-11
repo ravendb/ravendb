@@ -23,6 +23,9 @@ namespace Raven.Database.Config
 
 		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
+			MemoryLimitForIndexing = new IntegerSetting(settings[Constants.MemoryLimitForIndexing],
+				(int) (MemoryStatistics.AvailableMemory*0.75)); //don't take ALL the available memory for indexing - or else system will be resource starved
+
 		    EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting],
 		        Constants.DefaultKeySizeToUseInActualEncryptionInBits);
 			MaxPageSize =
@@ -167,6 +170,8 @@ namespace Raven.Database.Config
 
 			return val;
 		}
+
+		public IntegerSetting MemoryLimitForIndexing { get; private set; }
 
 		public IntegerSetting EncryptionKeyBitsPreference { get; private set; }
 

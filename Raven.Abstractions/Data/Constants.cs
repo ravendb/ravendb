@@ -45,6 +45,8 @@ namespace Raven.Abstractions.Data
 		public const string ActiveBundles = "Raven/ActiveBundles";
 		public const string RavenAlerts = "Raven/Alerts";
 
+		// Indexing
+		public const string MemoryLimitForIndexing = "Raven/MemoryLimitForIndexing";
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
 		public const string RavenLogsPath = "Raven/Esent/LogsPath";

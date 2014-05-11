@@ -587,7 +587,7 @@
     <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
     <Compile Include="Data\AccessTokenBody.cs" />
-    <Compile Include="Data\ActualIndexingBatchInfo.cs" />
+    <Compile Include="Data\IndexingBatchInfo.cs" />
     <Compile Include="Data\AdminStatistics.cs" />
     <Compile Include="Data\AggregationData.cs" />
     <Compile Include="Data\Alert.cs" />
