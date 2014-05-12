@@ -81,7 +81,7 @@ namespace Raven.Client.RavenFS
 
                 convention = new FileConvention();
                 notifications = new ServerNotifications(serverUrl, convention);
-                replicationInformer = new RavenFileSystemReplicationInformer(convention);
+                replicationInformer = new RavenFileSystemReplicationInformer(convention, jsonRequestFactory);
                 readStripingBase = replicationInformer.GetReadStripingBase();
 
                 InitializeSecurity();

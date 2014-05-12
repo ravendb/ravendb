@@ -18,7 +18,6 @@ import net.ravendb.client.document.FailoverBehaviorSet;
 import net.ravendb.tests.bugs.QUser;
 import net.ravendb.tests.bugs.User;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 
@@ -58,7 +57,6 @@ public class MultiGetCachingTest extends RemoteClientTest {
   }
 
   @Test
-  @Ignore("Waiting for RavenDB-2253 Aggressive cache is broken")
   public void canAggressivelyCachePartOfMultiGet_SimpleFirst() throws Exception {
 
     DocumentConvention conventions = new DocumentConvention();
@@ -133,7 +131,6 @@ public class MultiGetCachingTest extends RemoteClientTest {
   }
 
   @Test
-  @Ignore("waiting for RavenDB-2253 Aggressive cache is broken")
   public void canAggressivelyCachePartOfMultiGet_BatchFirst() throws Exception {
 
     DocumentConvention conventions = new DocumentConvention();

@@ -940,6 +940,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 				if (options.HasFlag(SearchOptions.Not))
 				{
+					documentQuery.OpenSubclause();
 					documentQuery.NegateNext();
 				}
 
@@ -949,6 +950,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 				var queryOptions = (EscapeQueryOptions)value;
 				documentQuery.Search(expressionInfo.Path, searchTerms, queryOptions);
+				if (options.HasFlag(SearchOptions.Not))
+				{
+					documentQuery.AndAlso();
+					documentQuery.Search(expressionInfo.Path, "*");
+					documentQuery.CloseSubclause();
+				}
+
 				documentQuery.Boost(boost);
 
 				if (options.HasFlag(SearchOptions.And))

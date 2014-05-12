@@ -71,7 +71,7 @@ public class RavenUrlExtensions {
   }
 
   public static String noCache(String url) {
-    return url + (url.contains("?") ? "&" : "?") + "noCache=" + UUID.randomUUID().hashCode();
+    return url;
   }
 
   public static HttpJsonRequest toJsonRequest(String url, ServerClient requestor, OperationCredentials credentials, DocumentConvention convention) {
