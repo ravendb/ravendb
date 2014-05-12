@@ -375,7 +375,7 @@ public class DocumentConvention extends Convention implements Serializable {
    * @return
    */
   public static String generateDocumentKeyUsingIdentity(DocumentConvention conventions, Object entity) {
-    return conventions.findTypeTagName.find(entity.getClass()) + "/";
+    return conventions.getDynamicTagName(entity) + "/";
   }
 
   /**
@@ -409,6 +409,16 @@ public class DocumentConvention extends Convention implements Serializable {
     return defaultTypeTagName(type);
   }
 
+  /*
+   *  If object is dynamic, try to load a tag name.
+   */
+  public String getDynamicTagName(Object entity) {
+    if (entity == null) {
+      return null;
+    }
+    return getTypeTagName(entity.getClass());
+  }
+
   /**
    * Generates the document key.
    * @param dbName
@@ -426,11 +436,6 @@ public class DocumentConvention extends Convention implements Serializable {
 
     return documentKeyGenerator.generate(dbName, databaseCommands, entity);
   }
-
-
-
-
-
 
   /**
    *  Gets the function to find the clr type of a document.

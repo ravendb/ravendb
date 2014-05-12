@@ -712,7 +712,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     assertNoNonUniqueInstance(entity, id);
 
     RavenJObject metadata = new RavenJObject();
-    String tag = documentStore.getConventions().getTypeTagName(entity.getClass());
+    String tag = documentStore.getConventions().getDynamicTagName(entity);
     if (tag != null) {
       metadata.add(Constants.RAVEN_ENTITY_NAME, new RavenJValue(tag));
     }
@@ -882,11 +882,18 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
   }
 
   private void getAllEntitiesChanges(Map<String, List<DocumentsChanges>> changes) {
-    for(Map.Entry<Object, DocumentMetadata> pair : entitiesAndMetadata.entrySet()) {
+    for (Map.Entry<Object, DocumentMetadata> pair : entitiesAndMetadata.entrySet()) {
+      if (pair.getValue().getOriginalValue().getCount() == 0) {
+        List<DocumentsChanges> docChanges = new ArrayList<>();
+        DocumentsChanges change = new DocumentsChanges();
+        change.setChange(ChangeType.DOCUMENT_ADDED);
+        docChanges.add(change);
+        changes.put(pair.getValue().getKey(), docChanges);
+        continue;
+      }
       entityChanged(pair.getKey(), pair.getValue(), changes);
     }
   }
-
 
   private void prepareForEntitiesDeletion(SaveChangesData result, Map<String, List<DocumentsChanges>> changes) {
     DocumentMetadata value = null;

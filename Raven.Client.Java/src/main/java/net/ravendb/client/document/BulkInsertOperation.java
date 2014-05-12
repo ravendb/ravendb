@@ -91,7 +91,7 @@ public class BulkInsertOperation implements AutoCloseable {
   public void store(Object entity, String id) {
     RavenJObject metadata = new RavenJObject();
 
-    String tag = documentStore.getConventions().getTypeTagName(entity.getClass());
+    String tag = documentStore.getConventions().getDynamicTagName(entity);
     if (tag != null) {
       metadata.add(Constants.RAVEN_ENTITY_NAME, tag);
     }

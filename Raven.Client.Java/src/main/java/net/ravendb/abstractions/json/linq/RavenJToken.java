@@ -258,6 +258,7 @@ public abstract class RavenJToken {
       return false;
     }
 
+    JTokenType curType = JTokenType.NONE;
     String fieldName ="";
 
     Stack<RavenJToken> otherStack = new Stack<>();
@@ -288,6 +289,7 @@ public abstract class RavenJToken {
           case ARRAY:
             RavenJArray selfArray = (RavenJArray) curThisReader;
             RavenJArray otherArray = (RavenJArray) curOtherReader;
+            curType = JTokenType.ARRAY;
             if (selfArray.size() != otherArray.size()) {
               if (docChanges == null) {
                 return false;
@@ -307,15 +309,24 @@ public abstract class RavenJToken {
             RavenJObject otherObj = (RavenJObject) curOtherReader;
 
             if (selfObj.getCount() != otherObj.getCount()) {
+              curType = JTokenType.OBJECT;
               if (docChanges == null) {
                 return false;
               } else {
                 isEqual = Extensions.compareDifferentLengthRavenJObjectData(docChanges, otherObj, selfObj, fieldName);
               }
             } else {
+              JTokenType prevType = curType;
+              curType = JTokenType.OBJECT;
+              String origFieldName = fieldName;
               for (String key : selfObj.getProperties().keySet()) {
                 fieldName = key;
                 RavenJToken token;
+                if (prevType == JTokenType.OBJECT) {
+                    fieldName = origFieldName + "." + key;
+                } else {
+                    fieldName = key;
+                }
                 if (!otherObj.containsKey(key)) {
                   if (docChanges == null) {
                     return false;
@@ -343,14 +354,15 @@ public abstract class RavenJToken {
                   case OBJECT:
                     otherStack.push(token);
                     thisStack.push(value);
-                    fieldNameStack.push(key);
+                    fieldNameStack.push(fieldName);
                     break;
                   default:
+                    curType = curThisReader.getType();
                     if (!value.deepEquals(token)) {
                       if (docChanges == null) {
                         return false;
                       }
-                      Extensions.addChanges(docChanges, key, value, token);
+                      Extensions.addChanges(docChanges, key, value, token, fieldName);
                       isEqual = false;
                     }
                     break;
@@ -359,6 +371,7 @@ public abstract class RavenJToken {
             }
             break;
           default:
+            curType = curThisReader.getType();
             if (!curOtherReader.deepEquals(curThisReader)) {
               if (docChanges == null) {
                 return false;

@@ -1642,6 +1642,33 @@ public class ServerClient implements IDatabaseCommands {
   private MultiLoadResult completeMultiGet(final OperationMetadata operationMetadata, final String[] keys, final String[] includes, RavenJToken result) {
     HttpOperationException responseException;
     try {
+
+      HashSet<String> uniqueKeys = new HashSet<>(Arrays.asList(keys));
+
+      List<RavenJObject> results = new ArrayList<>();
+      for (RavenJToken token: result.value(RavenJArray.class, "Results")) {
+        if (token instanceof RavenJObject) {
+          results.add((RavenJObject) token);
+        }
+      }
+
+      Map<String, RavenJObject> documents = new HashMap<>();
+      for (RavenJObject doc : results) {
+        if (doc.containsKey("@metadata") && doc.get("@metadata").value(String.class, "@id") != null) {
+          documents.put(doc.get("@metadata").value(String.class, "@id"), doc);
+        }
+      }
+
+      if (results.size() >= uniqueKeys.size()) {
+        for (int i = 0; i < uniqueKeys.size(); i++) {
+          String key = keys[i];
+          if (documents.containsKey(key)) {
+            continue;
+          }
+          documents.put(key, results.get(i));
+        }
+      }
+
       MultiLoadResult multiLoadResult = new MultiLoadResult();
 
       List<RavenJObject> includesList = new ArrayList<>();
@@ -1651,9 +1678,9 @@ public class ServerClient implements IDatabaseCommands {
       multiLoadResult.setIncludes(includesList);
 
       List<RavenJObject> resultsList = new ArrayList<>();
-      for (RavenJToken token: result.value(RavenJArray.class, "Results")) {
-        if (token instanceof RavenJObject) {
-          resultsList.add((RavenJObject) token);
+      for (String key: keys) {
+        if (documents.containsKey(key)) {
+          resultsList.add(documents.get(key));
         } else {
           resultsList.add(null);
         }

@@ -59,6 +59,10 @@ public class DynamicAggregationQuery<T> {
       propertyPath = tmp;
     }
 
+    if (displayName == null) {
+      displayName = propertyPath;
+    }
+
     if (facets.size() > 0) {
       for (AggregationQueryDsl facet: facets) {
         if (Objects.equals(facet.getDisplayName(), displayName)) {

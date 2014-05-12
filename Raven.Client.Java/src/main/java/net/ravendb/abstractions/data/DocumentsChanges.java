@@ -60,6 +60,7 @@ public class DocumentsChanges {
 
   public static enum ChangeType {
     DOCUMENT_DELETED,
+    DOCUMENT_ADDED,
     FIELD_CHANGED,
     NEW_FIELD,
     REMOVED_FIELD,

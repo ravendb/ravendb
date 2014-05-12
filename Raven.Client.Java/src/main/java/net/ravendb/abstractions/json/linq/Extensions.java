@@ -255,7 +255,7 @@ public class Extensions {
           token = selfObj.getProperties().get(kvp.getKey());
           changes.setFieldNewValue(token.toString());
           changes.setFieldNewType(token.getType().toString());
-          changes.setChange(ChangeType.ARRAY_VALUE_ADDED);
+          changes.setChange(ChangeType.NEW_FIELD);
 
           changes.setFieldName(kvp.getKey());
         }
@@ -277,10 +277,10 @@ public class Extensions {
       changes.setFieldName(key);
 
       if (selfObj.getCount() < otherObj.getCount()) {
-        changes.setChange(ChangeType.ARRAY_VALUE_REMOVED);
+        changes.setChange(ChangeType.REMOVED_FIELD);
         changes.setFieldOldValue(diffData.get(key));
       } else {
-        changes.setChange(ChangeType.ARRAY_VALUE_ADDED);
+        changes.setChange(ChangeType.NEW_FIELD);
         changes.setFieldNewValue(diffData.get(key));
       }
       docChanges.add(changes);
@@ -292,9 +292,6 @@ public class Extensions {
   private static void fillDifferentJsonData(DictionaryWithParentSnapshot selfObj, DictionaryWithParentSnapshot otherObj, Map<String, String> diffData) {
     List<String> diffNames;
     DictionaryWithParentSnapshot bigObj;
-    if (diffData == null) {
-      diffData = new HashMap<>();
-    }
     if (selfObj.size() < otherObj.size()) {
       diffNames = CollectionUtils.except(otherObj.keySet(), selfObj.keySet());
       bigObj = otherObj;
@@ -324,6 +321,18 @@ public class Extensions {
     docChange.setFieldOldValue(token.toString());
     docChange.setChange(ChangeType.FIELD_CHANGED);
     docChange.setFieldName(key);
+
+    docChanges.add(docChange);
+  }
+
+  public static void addChanges(List<DocumentsChanges> docChanges, String key, RavenJToken value, RavenJToken token, String fieldName) {
+    DocumentsChanges docChange = new DocumentsChanges();
+    docChange.setFieldNewType(value.getType().toString());
+    docChange.setFieldOldType(token.getType().toString());
+    docChange.setFieldNewValue(value.toString());
+    docChange.setFieldOldValue(token.toString());
+    docChange.setChange(ChangeType.FIELD_CHANGED);
+    docChange.setFieldName(fieldName);
 
     docChanges.add(docChange);
   }
