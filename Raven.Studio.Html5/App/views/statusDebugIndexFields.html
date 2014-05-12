@@ -1,0 +1,25 @@
+﻿<section>
+    <form class="form-horizontal" role="form">
+        <div class="form-group">
+            <div class="col-md-12">
+                <div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <pre class="form-control" data-bind="aceEditor: { code: indexStr }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 35 }" ></pre>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-default" data-bind="click: fetchIndexFields"><i class="fa fa-table"></i> Show index fields</button>
+                            
+                            <hr/>
+                            <!-- ko with: result -->
+                            <ol data-bind="foreach: FieldNames">
+                                <li data-bind="text: $data"></li>
+                            </ol>
+                            <!-- /ko -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</section>

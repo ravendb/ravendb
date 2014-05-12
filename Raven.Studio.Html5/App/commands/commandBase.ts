@@ -58,6 +58,10 @@ class commandBase {
         if (resultsSelector) {
             var task = $.Deferred();
             ajax.done((results, status, xhr) => {
+                //if we fetched a database document, save the etag from the header
+                if (results.hasOwnProperty('SecuredSettings')) {
+                    results['__metadata'] = { '@etag': xhr.getResponseHeader('Etag') };
+                }
                 var transformedResults = resultsSelector(results);
                 task.resolve(transformedResults);
             });

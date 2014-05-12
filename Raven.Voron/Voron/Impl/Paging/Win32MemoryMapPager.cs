@@ -38,6 +38,7 @@ namespace Voron.Impl.Paging
 		}
 
 		public Win32MemoryMapPager(string file,
+			long? initialFileSize = null,
 			NativeFileAttributes options = NativeFileAttributes.Normal,
 			NativeFileAccess access = NativeFileAccess.GenericRead | NativeFileAccess.GenericWrite)
 		{
@@ -74,14 +75,17 @@ namespace Voron.Impl.Paging
 				_access.HasFlag(NativeFileAccess.GenericAll) ||
 				_access.HasFlag(NativeFileAccess.FILE_GENERIC_WRITE))
 			{
-				long fileLengthAfterAdjustment = _fileStream.Length;
-				if (_fileStream.Length == 0 || (_fileStream.Length%AllocationGranularity != 0))
+				var fileLength = _fileStream.Length;
+				if (fileLength == 0 && initialFileSize.HasValue)
+					fileLength = initialFileSize.Value;
+
+				if (_fileStream.Length == 0 || (fileLength % AllocationGranularity != 0))
 				{
-					fileLengthAfterAdjustment = NearestSizeToAllocationGranularity(_fileInfo.Length);
-					_fileStream.SetLength(fileLengthAfterAdjustment);
+					fileLength = NearestSizeToAllocationGranularity(fileLength);
+					_fileStream.SetLength(fileLength);
 				}
 
-				_totalAllocationSize = fileLengthAfterAdjustment;
+				_totalAllocationSize = fileLength;
 			}
 
 			NumberOfAllocatedPages = _totalAllocationSize / PageSize;

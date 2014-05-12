@@ -8,6 +8,7 @@ import net.ravendb.abstractions.data.GetRequest;
 import net.ravendb.abstractions.data.GetResponse;
 import net.ravendb.abstractions.data.MultiLoadResult;
 import net.ravendb.abstractions.data.QueryResult;
+import net.ravendb.abstractions.json.linq.JTokenType;
 import net.ravendb.abstractions.json.linq.RavenJArray;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.abstractions.json.linq.RavenJToken;
@@ -94,7 +95,15 @@ public class LazyMultiLoadOperation<T> implements ILazyOperation {
     RavenJToken result = response.getResult();
     MultiLoadResult multiLoadResult = new MultiLoadResult();
     multiLoadResult.setIncludes(result.value(RavenJArray.class, "Includes").values(RavenJObject.class));
-    multiLoadResult.setResults(result.value(RavenJArray.class, "Results").values(RavenJObject.class));
+    List<RavenJObject> results = new ArrayList<>();
+    for (RavenJToken token: result.value(RavenJArray.class, "Results")) {
+      if (token instanceof RavenJObject) {
+        results.add((RavenJObject) token);
+      } else {
+        results.add(null);
+      }
+    }
+    multiLoadResult.setResults(results);
 
     handleResponse(multiLoadResult);
   }

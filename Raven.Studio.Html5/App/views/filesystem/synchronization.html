@@ -1,7 +1,7 @@
-﻿<div class="alert alert-danger">
+﻿<!--<div class="alert alert-danger">
     <p>Note: not implemented yet</p>
     <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2065">You can track progress here</a>
-</div>
+</div>-->
 
 <div class="filesystems-page">
 
@@ -54,10 +54,11 @@
                                         <h4 class="pull-left">
                                             <a class="use-bootstrap-tooltip">
                                                 <span data-bind="text: $data.ServerUrl"></span>
+                                                <span data-bind="text: $data.FileSystem"></span>
                                             </a>
                                         </h4>
                                         <div class="pull-right">
-                                            <button class="btn btn-danger use-bootstrap-tooltip" data-bind="click: $root.deleteDestination.bind($root, $data.ServerUrl)" title="Delete destination">
+                                            <button class="btn btn-danger use-bootstrap-tooltip" data-bind="click: $root.deleteDestination.bind($root, $data)" title="Delete destination">
                                                 <i class="fa fa-trash-o"></i>
                                             </button>
                                             <button class="btn btn-success use-bootstrap-tooltip" data-bind="click: $root.synchronizeWithDestination.bind($root, $data.ServerUrl)" title="Synchronize Now">
@@ -112,16 +113,34 @@
                     <h4 class="panel-title">
                         <a data-toggle="collapse" data-bind="attr: { href: '#outgoingActivityCollapse' }">
                             <span>Outgoing Activity</span>
-                            <span class="text-muted" data-bind="text: '(' + outgoingActivityPagedList().totalResultCount() + ')'"></span>
+                            <span class="text-muted" data-bind="text: '('+ outgoingActivity().length +')'"></span>
                         </a>
                     </h4>
                 </div>
                 <div class="synchronization-group-content panel-collapse in" data-bind="attr: { id: 'outgoingActivityCollapse' }" id="outgoingActivityCollapse">
-                    <div class="panel panel-default" style="overflow: visible;">
-                        <div class="panel-body">
-                            <div id="outgoingGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: outgoingActivityPagedList, gridSelector: '#outgoingGrid', contextMenuOptions: [], selectionEnabled: false }"></div>
+                        
+                        <div class="panel-body" style="padding-bottom:15px" >
+                            <div style="height:392px; overflow-y:auto">
+                                <table class="table table-striped table-hover">
+                                    <thead>
+                                        <tr class="database-header">
+                                            <td class="ko-grid-column-header"><b>File Name</b></td>
+                                            <td class="ko-grid-column-header"><b>Destination Url</b></td>
+                                            <td class="ko-grid-column-header"><b>Type</b></td>
+                                            <td class="ko-grid-column-header"><b>Status</b></td>
+                                        </tr>
+                                    </thead>
+                                    <tbody data-bind="foreach: $root.outgoingActivity">
+                                        <tr class="database-row">
+                                            <td data-bind="text: fileName"></td>
+                                            <td data-bind="text: DestinationUrl"></td>
+                                            <td data-bind="text: Type"></td>
+                                            <td data-bind="text: Status"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -132,16 +151,19 @@
                     <h4 class="panel-title">
                         <a data-toggle="collapse" data-bind="attr: { href: '#incomingActivityCollapse' }">
                             <span>Incoming Activity</span>
-                            <span class="text-muted" data-bind="text: '(' + incomingActivityPagedList().totalResultCount() + ')'"></span>
+                            <!--<!-- ko if: incomingActivityPagedList().totalResultCount() < 50 -->
+                                <span class="text-muted" data-bind="text: '(' + incomingActivityPagedList().totalResultCount() + ')'"></span>
+                            <!--<!-- /ko -->
+                            <!--<!-- ko if: incomingActivityPagedList().totalResultCount() >= 50 -->
+                                <!--<span class="text-muted" data-bind="text: '(last ' + incomingActivityPagedList().totalResultCount() + ')'"></span>-->
+                            <!-- /ko -->
                         </a>
                     </h4>
                 </div>
 
                 <div class="synchronization-group-content panel-collapse in" data-bind="attr: { id: 'incomingActivityCollapse' }" id="incomingActivityCollapse">
-                    <div class="panel panel-default" style="overflow: visible;">
-                        <div class="panel-body">
-                            <div id="incomingGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: incomingActivityPagedList, gridSelector: '#incomingGrid', contextMenuOptions: [], selectionEnabled: false }"></div>
-                        </div>
+                    <div class="panel-body" style="height:422px; padding-bottom:15px">
+                        <div id="incomingGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: incomingActivityPagedList, maxHeight: '350px', gridSelector: '#incomingGrid', contextMenuOptions: [], selectionEnabled: false }"></div>
                     </div>
                 </div>
             </div>

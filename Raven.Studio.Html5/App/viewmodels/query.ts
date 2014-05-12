@@ -101,7 +101,7 @@ class query extends viewModelBase {
 
     openQueryStats() {
         var viewModel = new queryStatsDialog(this.queryStats(), this.selectedIndexEditUrl(), this.didDynamicChangeIndex(), this.rawJsonUrl());
-        app.showDialog(viewModel)
+        app.showDialog(viewModel);
     }
 
     activate(indexNameOrRecentQueryHash?: string) {
@@ -129,7 +129,6 @@ class query extends viewModelBase {
         });
         ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexQueryRawData(this.activeDatabase(), this.selectedIndex()));
 
-        super.createResizableTextBoxes();
         this.focusOnQuery();
     }
 

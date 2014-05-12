@@ -164,7 +164,7 @@ namespace Raven.Database.Server.Security.OAuth
 				{
 					controller.AddHeader("OAuth-Source", new UriBuilder(systemConfiguration.OAuthTokenServer)
 					{
-                        Scheme = controller.Request.RequestUri.Scheme,
+                        Scheme = controller.InnerRequest.RequestUri.Scheme,
                         Host = controller.InnerRequest.RequestUri.Host,
 						Port = controller.InnerRequest.RequestUri.Port,
 					}.Uri.ToString(), msg);

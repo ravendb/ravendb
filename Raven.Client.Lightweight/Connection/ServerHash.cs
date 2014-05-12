@@ -4,6 +4,8 @@ using System.Text;
 using Raven.Abstractions.Util;
 #else
 using System.Security.Cryptography;
+using Raven.Abstractions.Util.Encryptors;
+
 #endif
 
 namespace Raven.Client.Connection
@@ -21,10 +23,7 @@ namespace Raven.Client.Connection
 #if NETFX_CORE
 			return MD5Core.GetHash(bytes);
 #else
-			using (var md5 = MD5.Create())
-			{
-				return md5.ComputeHash(bytes);
-			}
+		    return Encryptor.Current.Hash.Compute16(bytes);
 #endif
 		}
 	}

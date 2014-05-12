@@ -68,7 +68,7 @@ namespace Raven.SlowTests.Issues
 			}
 		}
 
-     [TimeBombedFact(2014, 4, 30, "Performance issue, Pawel investigating this")]
+        [Fact]
         public void CanHandleMultipleMissingDocumentsInMultipleIndexes()
         {
             using (var store = NewDocumentStore())

@@ -13,9 +13,9 @@ namespace Raven.Database.Json
 {
     public abstract class JintOperationScope : IDisposable
     {
-        private Dictionary<JsValue, KeyValuePair<RavenJValue, object>> propertiesByValue = new Dictionary<JsValue, KeyValuePair<RavenJValue, object>>();
+		private Dictionary<string, KeyValuePair<RavenJValue, JsValue>> propertiesByValue = new Dictionary<string, KeyValuePair<RavenJValue, JsValue>>();
 
-        public RavenJObject ToRavenJObject(JsValue jsObject)
+        public RavenJObject ToRavenJObject(JsValue jsObject, string propertyKey = null)
         {
             var rjo = new RavenJObject();
             foreach (var property in jsObject.AsObject().Properties)
@@ -30,12 +30,12 @@ namespace Raven.Database.Json
                 if (value.Value.IsRegExp())
                     continue;
 
-                rjo[property.Key] = ToRavenJToken(value.Value);
+				rjo[property.Key] = ToRavenJToken(value.Value, CreatePropertyKey(property.Key, propertyKey));
             }
             return rjo;
         }
 
-        private RavenJToken ToRavenJToken(JsValue v)
+        private RavenJToken ToRavenJToken(JsValue v, string propertyKey)
         {
             if (v.IsBoolean())
                 return new RavenJValue(v.AsBoolean());
@@ -55,8 +55,8 @@ namespace Raven.Database.Json
             {
                 var num = v.AsNumber();
 
-                KeyValuePair<RavenJValue, object> property;
-                if (propertiesByValue.TryGetValue(v, out property))
+				KeyValuePair<RavenJValue, JsValue> property;
+				if (propertiesByValue.TryGetValue(propertyKey, out property))
                 {
                     var originalValue = property.Key;
                     if (originalValue.Type == JTokenType.Float)
@@ -66,7 +66,7 @@ namespace Raven.Database.Json
                         // If the current value is exactly as the original value, we can return the original value before we made the JS conversion, 
                         // which will convert a Int64 to jsFloat.
                         var originalJsValue = property.Value;
-                        if (originalJsValue is double && Math.Abs(num - (double)originalJsValue) < double.Epsilon)
+                        if (originalJsValue.IsNumber() && Math.Abs(num - originalJsValue.AsNumber()) < double.Epsilon)
                             return originalValue;
 
                         return new RavenJValue((long)num);
@@ -97,7 +97,7 @@ namespace Raven.Database.Json
                     if (!jsInstance.HasValue)
                         continue;
 
-                    var ravenJToken = ToRavenJToken(jsInstance.Value);
+                    var ravenJToken = ToRavenJToken(jsInstance.Value, CreatePropertyKey(property.Key, propertyKey));
                     if (ravenJToken == null)
                         continue;
 
@@ -107,14 +107,14 @@ namespace Raven.Database.Json
                 return rja;
             }
             if (v.IsObject())
-                return ToRavenJObject(v);
+                return ToRavenJObject(v, propertyKey);
             if (v.IsRegExp())
                 return null;
 
             throw new NotSupportedException(v.Type.ToString());
         }
 
-        public JsValue ToJsObject(Engine engine, RavenJObject doc)
+		public JsValue ToJsObject(Engine engine, RavenJObject doc, string propertyName = null)
         {
             var jsObject = new ObjectInstance(engine)
                            {
@@ -123,25 +123,34 @@ namespace Raven.Database.Json
 
             foreach (var prop in doc)
             {
-                var jsValue = ToJsInstance(engine, prop.Value);
+	            var propertyKey = CreatePropertyKey(prop.Key, propertyName);
+				var jsValue = ToJsInstance(engine, prop.Value, propertyKey);
 
                 var value = prop.Value as RavenJValue;
                 if (value != null)
-                    propertiesByValue[jsValue] = new KeyValuePair<RavenJValue, object>(value, jsValue);
+					propertiesByValue[propertyKey] = new KeyValuePair<RavenJValue, JsValue>(value, jsValue);
 
                 jsObject.Put(prop.Key, jsValue, true);
             }
             return jsObject;
         }
 
-        public JsValue ToJsInstance(Engine engine, RavenJToken value)
+	    private static string CreatePropertyKey(string key, string property)
+	    {
+		    if (string.IsNullOrEmpty(property))
+				return key;
+
+		    return property + "." + key;
+	    }
+
+	    public JsValue ToJsInstance(Engine engine, RavenJToken value, string propertyKey = null)
         {
             switch (value.Type)
             {
                 case JTokenType.Array:
                     return ToJsArray(engine, (RavenJArray)value);
                 case JTokenType.Object:
-                    return ToJsObject(engine, (RavenJObject)value);
+                    return ToJsObject(engine, (RavenJObject)value, propertyKey);
                 case JTokenType.Null:
                     return JsValue.Null;
                 case JTokenType.Boolean:
@@ -179,10 +188,12 @@ namespace Raven.Database.Json
         private JsValue ToJsArray(Engine engine, RavenJArray array)
         {
             var elements = new JsValue[array.Length];
-            for (var i = 0; i < array.Length; i++)
-                elements[i] = ToJsInstance(engine, array[i]);
+	        for (var i = 0; i < array.Length; i++)
+	        {
+				elements[i] = ToJsInstance(engine, array[i]);
+	        }
 
-            return engine.Array.Construct(elements);
+	        return engine.Array.Construct(elements);
         }
 
         public virtual RavenJObject ConvertReturnValue(JsValue jsObject)

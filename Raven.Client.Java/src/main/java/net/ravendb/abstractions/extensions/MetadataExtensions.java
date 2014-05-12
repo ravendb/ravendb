@@ -24,6 +24,7 @@ import net.ravendb.client.utils.UrlUtils;
  */
 public class MetadataExtensions {
   public final static Set<String> HEADERS_TO_IGNORE_CLIENT = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+  public final static Set<String> PREFIXES_IN_HEADERS_TO_IGNORE_CLIENT = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
   static {
     // Raven internal headers
     HEADERS_TO_IGNORE_CLIENT.add("Raven-Server-Build");
@@ -112,6 +113,9 @@ public class MetadataExtensions {
     HEADERS_TO_IGNORE_CLIENT.add("X-ARR-SSL");
     HEADERS_TO_IGNORE_CLIENT.add("X-Forwarded-For");
     HEADERS_TO_IGNORE_CLIENT.add("X-Original-URL");
+
+    PREFIXES_IN_HEADERS_TO_IGNORE_CLIENT.add("Temp");
+    PREFIXES_IN_HEADERS_TO_IGNORE_CLIENT.add("X-NewRelic");
   }
 
   /**
@@ -119,20 +123,22 @@ public class MetadataExtensions {
    * @param self
    * @return
    */
-  public static RavenJObject filterHeaders(RavenJObject self) {
+  public static RavenJObject filterHeadersToObject(RavenJObject self, Set<String> headersToIgnore, Set<String> prefixesInHeadersToIgnore) {
     if (self == null) {
       return null;
     }
 
     RavenJObject metadata = new RavenJObject(String.CASE_INSENSITIVE_ORDER);
     for (Entry<String, RavenJToken> header : self) {
-      if (header.getKey().startsWith("Temp")) {
-        continue;
+      for (String prefix: prefixesInHeadersToIgnore) {
+        if (header.getKey().toLowerCase().startsWith(prefix.toLowerCase())) {
+          continue;
+        }
       }
       if (header.getKey().equals(Constants.DOCUMENT_ID_FIELD_NAME)) {
         continue;
       }
-      if (HEADERS_TO_IGNORE_CLIENT.contains(header.getKey())) {
+      if (headersToIgnore.contains(header.getKey())) {
         continue;
       }
       String headerName = captureHeaderName(header.getKey());
@@ -141,8 +147,13 @@ public class MetadataExtensions {
     return metadata;
   }
 
+  public static RavenJObject filterHeadersToObject(RavenJObject self) {
+    return filterHeadersToObject(self, HEADERS_TO_IGNORE_CLIENT, PREFIXES_IN_HEADERS_TO_IGNORE_CLIENT);
+  }
+
+
   public static RavenJObject filterHeadersAttachment(Map<String, String> self) {
-    RavenJObject filteredHeaders = filterHeaders(self);
+    RavenJObject filteredHeaders = filterHeadersToObject(self);
     if (self.get("Content-Type") != null) {
       filteredHeaders.add("Content-Type", RavenJValue.fromObject(self.get("Content-Type")));
     }
@@ -154,14 +165,13 @@ public class MetadataExtensions {
    * @param headers
    * @return
    */
-  public static RavenJObject filterHeaders(Map<String, String> headers) {
+  public static RavenJObject filterHeadersToObject(Map<String, String> headers) {
     RavenJObject metadata = new RavenJObject(String.CASE_INSENSITIVE_ORDER);
     for (Entry<String, String> header : headers.entrySet()) {
-      if (header.getKey().startsWith("Temp")) {
-        continue;
-      }
-      if (header.getKey().equals(Constants.DOCUMENT_ID_FIELD_NAME)) {
-        continue;
+      for (String prefix: PREFIXES_IN_HEADERS_TO_IGNORE_CLIENT) {
+        if (header.getKey().toLowerCase().startsWith(prefix.toLowerCase())) {
+          continue;
+        }
       }
       if (HEADERS_TO_IGNORE_CLIENT.contains(header.getKey())) {
         continue;

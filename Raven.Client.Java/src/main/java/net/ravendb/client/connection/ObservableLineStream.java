@@ -19,8 +19,8 @@ import org.apache.commons.io.IOUtils;
 public class ObservableLineStream implements IObservable<String>, Closeable {
 
   private final InputStream stream;
-  private final byte[] buffer = new byte[8192];
-  private int posInBuffer;
+  protected final byte[] buffer = new byte[8192];
+  protected int posInBuffer;
   private final Action0 onDispose;
   private Thread task;
 

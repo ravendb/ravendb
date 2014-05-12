@@ -264,9 +264,9 @@
 
             <ul class="nav navbar-nav navbar-right" style="margin-right: 10px;">
                 <!-- ko with: $root -->
-                <!--<li class="navbar-right"><a class="navbar-link pull-right">Client Build #30</a></li>-->
                 <li data-bind="with: licenseStatus"><a class="navbar-link" href="#" data-bind="text: 'License Status: ' + Status, click: $root.showLicenseStatusDialog.bind($root)"></a></li>
-                <li class="server-build-link" data-bind="with: buildVersion"><a class="navbar-link " data-bind="text: 'Server Build #' + BuildVersion"></a></li>
+                <li class="server-build-link" data-bind="with: serverBuildVersion"><a class="navbar-link" data-bind="text: 'Server Build #' + BuildVersion"></a></li>
+                <li class="client-build-link" data-bind="with: clientBuildVersion"><a class="navbar-link" data-bind="text: 'Client Build #' + BuildVersion"></a></li>
                 <!-- /ko -->
             </ul>
 

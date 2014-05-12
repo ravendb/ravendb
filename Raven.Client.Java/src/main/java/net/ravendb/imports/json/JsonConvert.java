@@ -49,7 +49,7 @@ public class JsonConvert {
    * @throws JsonMappingException
    * @throws JsonParseException
    */
-  public static <T> Collection<T> deserializeObject(RavenJArray array, Class<T> targetClass, String propertyName) throws JsonParseException, JsonMappingException, IOException {
+  public static <T> List<T> deserializeObject(RavenJArray array, Class<T> targetClass, String propertyName) throws JsonParseException, JsonMappingException, IOException {
     initObjectMapper();
     List<T> result = new ArrayList<>();
 

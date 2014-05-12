@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -561,7 +562,7 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(viewer => Assert.Empty(viewer.Documents.GetDocumentsAfter(Etag.Empty, 25)));
+				storage.Batch(viewer => Assert.Empty(viewer.Documents.GetDocumentsAfter(Etag.Empty, 25, CancellationToken.None)));
 			}
 		}
 
@@ -592,7 +593,7 @@ namespace Raven.Tests.Storage.Voron
 					viewer =>
 						fetchedDocuments =
 							viewer.Documents
-							.GetDocumentsAfter(documentEtagsAfterSkip.First(), documentEtagsAfterSkip.Length)
+							.GetDocumentsAfter(documentEtagsAfterSkip.First(), documentEtagsAfterSkip.Length, CancellationToken.None)
 							.ToList());
 
 				var fetchedEtagList = fetchedDocuments.OrderBy(row => row.Etag)
@@ -633,7 +634,7 @@ namespace Raven.Tests.Storage.Voron
 					viewer =>
 						fetchedDocuments =
 							viewer.Documents
-							.GetDocumentsAfter(documentEtagsAfterSkip.First(), documentEtagsAfterSkip.Length, null, documentEtagsAfterSkip.Last())
+							.GetDocumentsAfter(documentEtagsAfterSkip.First(), documentEtagsAfterSkip.Length, CancellationToken.None, null, documentEtagsAfterSkip.Last())
 							.ToList());
 
 				var fetchedEtagList = fetchedDocuments.OrderBy(row => row.Etag)
@@ -680,7 +681,7 @@ namespace Raven.Tests.Storage.Voron
 					viewer =>
 						fetchedDocuments =
 							viewer.Documents
-							.GetDocumentsAfter(documentEtagsAfterSkip.First(), DOCUMENT_TAKE_VALUE, null, documentEtagsAfterSkip.Last())
+							.GetDocumentsAfter(documentEtagsAfterSkip.First(), DOCUMENT_TAKE_VALUE, CancellationToken.None, null, documentEtagsAfterSkip.Last())
 							.ToList());
 
 				var fetchedEtagList = fetchedDocuments.OrderBy(row => row.Etag)
@@ -737,7 +738,7 @@ namespace Raven.Tests.Storage.Voron
 					viewer =>
 						fetchedDocuments =
 							viewer.Documents
-							.GetDocumentsAfter(documentAfterSkip.First().Etag, documentAfterSkip.Length, MAX_SIZE, documentAfterSkip.Last().Etag)
+							.GetDocumentsAfter(documentAfterSkip.First().Etag, documentAfterSkip.Length, CancellationToken.None, MAX_SIZE, documentAfterSkip.Last().Etag)
 							.ToList());
 
 				var fetchedEtagList = fetchedDocuments.OrderBy(row => row.Etag)

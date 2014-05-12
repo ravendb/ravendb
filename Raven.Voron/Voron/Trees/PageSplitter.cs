@@ -66,8 +66,23 @@ namespace Voron.Trees
             }
             else
             {
-                // we already popped the page, so the current one on the stack is what the parent of the page
-                _parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _cursor.CurrentPage);
+                // we already popped the page, so the current one on the stack is the parent of the page
+
+	            if (_tree.Name == Constants.FreeSpaceTreeName)
+	            {
+					// a special case for FreeSpaceTree because the allocation of a new page called above
+					// can cause a delete of a free space section resulting in a run of the tree rebalancer
+					// and here the parent page that exists in cursor can be outdated
+
+					_parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, null); // pass _null_ to make sure we'll get the most updated parent page
+					_parentPage.LastSearchPosition = _cursor.CurrentPage.LastSearchPosition;
+					_parentPage.LastMatch = _cursor.CurrentPage.LastMatch;
+	            }
+	            else
+	            {
+					_parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _cursor.CurrentPage);
+	            }
+
                 _cursor.Update(_cursor.Pages.First, _parentPage);
             }
 
@@ -76,7 +91,16 @@ namespace Voron.Trees
                 _tx.ClearRecentFoundPages(_tree);
             }
 
-            if (_page.LastSearchPosition >= _page.NumberOfEntries)
+	        if (_tree.Name == Constants.FreeSpaceTreeName)
+	        {
+				// we need to refresh the LastSearchPosition of the split page which is used by the free space handling
+				// because the allocation of a new page called above could remove some sections
+				// from the page that is being split
+
+		        _page.NodePositionFor(_newKey, _cmp);
+	        }
+
+	        if (_page.LastSearchPosition >= _page.NumberOfEntries)
             {
                 // when we get a split at the end of the page, we take that as a hint that the user is doing 
                 // sequential inserts, at that point, we are going to keep the current page as is and create a new 

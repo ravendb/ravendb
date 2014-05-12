@@ -14,7 +14,6 @@ import net.ravendb.client.document.DocumentConvention;
 public class AbstractMultiMapIndexCreationTask extends AbstractIndexCreationTask {
   private final Set<String> maps = new HashSet<>();
 
-
   protected void addMap(String expression) {
     maps.add(expression);
   }
@@ -54,6 +53,4 @@ public class AbstractMultiMapIndexCreationTask extends AbstractIndexCreationTask
     return indexDefinition;
 
   }
-
-
 }

@@ -6,7 +6,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import net.ravendb.abstractions.basic.Lazy;
@@ -95,7 +94,6 @@ public class MultiGetMultiTenantTest extends RemoteClientTest {
   }
 
   @Test
-  @Ignore("waiting for RavenDB-1665 Support for admin statistics is broken in 3.0")
   public void canAggressivelyCacheLoads() throws Exception {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb())) {
       store.getConventions().setShouldAggressiveCacheTrackChanges(false);

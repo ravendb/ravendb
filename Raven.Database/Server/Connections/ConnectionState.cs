@@ -33,6 +33,7 @@ namespace Raven.Database.Server.Connections
 
 		private int watchAllDocuments;
 		private int watchAllIndexes;
+	    private int watchAllTransformers;
 		private int watchAllReplicationConflicts;
 		private int watchCancellations;
 		private int watchConfig;
@@ -54,6 +55,7 @@ namespace Raven.Database.Server.Connections
 					eventsTransport.Connected,
 					WatchAllDocuments = watchAllDocuments > 0,
 					WatchAllIndexes = watchAllIndexes > 0,
+                    WatchAllTransformers = watchAllTransformers > 0,
 					WatchConfig = watchConfig > 0,
 					WatchConflicts = watchConflicts > 0,
 					WatchSync = watchSync > 0,
@@ -86,6 +88,16 @@ namespace Raven.Database.Server.Connections
 		{
 			matchingBulkInserts.TryRemove(operationId);
 		}
+
+        public void WatchTransformers()
+        {
+            Interlocked.Increment(ref watchAllTransformers);
+        }
+
+        public void UnwatchTransformers()
+        {
+            Interlocked.Decrement(ref watchAllTransformers);
+        }
 
 		public void WatchAllIndexes()
 		{
@@ -222,6 +234,16 @@ namespace Raven.Database.Server.Connections
 
 			Enqueue(value);
 		}
+
+        public void Send(TransformerChangeNotification transformerChangeNotification)
+        {
+            var value = new { Value = transformerChangeNotification, Type = "TransformerChangeNotification" };
+
+            if (watchAllTransformers > 0)
+            {
+                Enqueue(value);
+            }
+        }
 
 		public void Send(ReplicationConflictNotification replicationConflictNotification)
 		{

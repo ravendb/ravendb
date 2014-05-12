@@ -195,6 +195,7 @@
         <configuration>
           <descriptors>
             <descriptor>src/main/assembly/snapshot.xml</descriptor>
+            <descriptor>src/main/assembly/dist.xml</descriptor>
           </descriptors>
         </configuration>
         <executions>

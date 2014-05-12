@@ -39,7 +39,7 @@ public class BulkInsertClientTest extends RemoteClientTest {
   }
 
   @SuppressWarnings("unused")
-  private static class User {
+  public static class User {
     private String id;
     private String name;
 

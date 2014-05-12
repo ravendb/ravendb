@@ -14,7 +14,6 @@ public enum UuidType {
   QUEUE((byte)7),
   TASKS((byte)8),
   INDEXING((byte)9),
-  ETAGSYNCHRONIZATION((byte)10),
   DOCUMENT_REFERENCES((byte)11);
 
   private byte value;

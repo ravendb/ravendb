@@ -52,6 +52,25 @@ body {
 .replicationError {
   color: red;
 }
+.query-stats {
+  width: 600px;
+  margin: -250px 0 0 -450px;
+}
+.query-stats ul li {
+  padding: 0 10px 0 10px;
+  border-bottom: 0!important;
+  border-top: 0!important;
+  border-left: 0!important;
+  border-right: 0!important;
+}
+.query-stats ul li strong {
+  padding: 0 10px 0 10px;
+  display: inline-block;
+}
+.query-stats ul li span {
+  padding: 0 10px 0 10px;
+  display: inline-block;
+}
 .side-panel li {
   max-width: 20%;
   margin-top: 5%;
@@ -357,6 +376,12 @@ body {
 #editIndex .map {
   height: 120px;
 }
+@media (max-device-height: 1024px) {
+  .innerWindowsStyle .popover {
+    width: 45% !important;
+    max-width: 45% !important;
+  }
+}
 .popover {
   max-width: 30%;
 }
@@ -608,6 +633,9 @@ body {
   #shellFooter .server-build-link {
     display: none;
   }
+  #shellFooter .client-build-link {
+    display: none;
+  }
 }
 #editTransformerContainer .transformer {
   height: 600px;
@@ -615,32 +643,46 @@ body {
 .auto-complete {
   background-color: white;
 }
+@media (max-device-height: 1024px) {
+  #logsContainer button,
+  #alertsContainer button,
+  #indexErrorsContainer button,
+  #requestTracingContainer button {
+    max-height: 50% !important;
+  }
+}
 #logsContainer table,
 #alertsContainer table,
-#indexErrorsContainer table {
+#indexErrorsContainer table,
+#requestTracingContainer table {
   outline: none;
 }
 #logsContainer table .selected td,
 #alertsContainer table .selected td,
-#indexErrorsContainer table .selected td {
+#indexErrorsContainer table .selected td,
+#requestTracingContainer table .selected td {
   background-color: #ffffcc;
 }
 #logsContainer .log-details,
 #alertsContainer .log-details,
 #indexErrorsContainer .log-details,
+#requestTracingContainer .log-details,
 #logsContainer .alerts-details,
 #alertsContainer .alerts-details,
 #indexErrorsContainer .alerts-details,
+#requestTracingContainer .alerts-details,
 #logsContainer .index-errors-details,
 #alertsContainer .index-errors-details,
-#indexErrorsContainer .index-errors-details {
+#indexErrorsContainer .index-errors-details,
+#requestTracingContainer .index-errors-details {
   padding: 10px;
   overflow-y: auto;
   overflow-x: hidden;
 }
 #logsContainer .unread td,
 #alertsContainer .unread td,
-#indexErrorsContainer .unread td {
+#indexErrorsContainer .unread td,
+#requestTracingContainer .unread td {
   font-weight: bold;
 }
 #databaseSettingsContainer #dbDocEditor {
@@ -706,6 +748,9 @@ footer ul {
 .advanced-replication-settings {
   cursor: pointer;
 }
+#status-debug > ul.nav {
+  margin-bottom: 15px;
+}
 .popover-lg {
   max-width: 800px;
   width: 600px;
@@ -713,15 +758,21 @@ footer ul {
 .license-error {
   color: #d2322d;
 }
-.remove-icon{
+:invalid {
+  box-shadow: none;
+  /* FF */
+  outline: 0;
+  /* IE 10 */
+}
+.remove-icon {
   color: #d2322d;
   border-color: #ac2925;
   cursor: pointer;
 }
-.remove-icon:hover{
+.remove-icon:hover {
   color: #d2322d;
 }
-.fa-plus{
+.fa-plus {
   color: #58cc46;
 }
 .filesystem-page .btn-toolbar {

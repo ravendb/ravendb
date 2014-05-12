@@ -110,6 +110,17 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 
+        public T Include<T>(string key)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
+        public IEnumerable<T> Include<T>(IEnumerable<string> key)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+      
+
 		public object Include(IEnumerable<string> key)
 		{
 			throw new NotSupportedException("This can only be run on the server side");

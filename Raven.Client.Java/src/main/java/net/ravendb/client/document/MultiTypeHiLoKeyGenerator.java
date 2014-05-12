@@ -32,7 +32,7 @@ public class MultiTypeHiLoKeyGenerator {
    * @return
    */
   public String generateDocumentKey(IDatabaseCommands databaseCommands, DocumentConvention conventions, Object entity) {
-    String typeTagName = conventions.getTypeTagName(entity.getClass());
+    String typeTagName = conventions.getDynamicTagName(entity);
     if (StringUtils.isEmpty(typeTagName)) { //ignore empty tags
       return null;
     }

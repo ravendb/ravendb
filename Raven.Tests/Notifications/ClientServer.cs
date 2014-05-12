@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Reactive.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Changes;
 using Raven.Client.Document;
 using Raven.Tests.Common;
@@ -13,6 +14,8 @@ namespace Raven.Tests.Notifications
 {
 	public class ClientServer : RavenTest
 	{
+        const string Name = "users/selectName";
+
 		public class Item
 		{
 		}
@@ -124,5 +127,57 @@ namespace Raven.Tests.Notifications
 				Assert.Equal(indexChangeNotification.Type, IndexChangeTypes.MapCompleted);
 			}
 		}
+
+        [Fact]
+        public void CanGetNotificationAboutTransformers()
+        {
+            using (var server = GetNewServer())
+            using (var store = NewRemoteDocumentStore(ravenDbServer: server))
+            {
+                var list = new BlockingCollection<TransformerChangeNotification>();
+                var taskObservable = store.Changes();
+                taskObservable.Task.Wait();
+                var observableWithTask = taskObservable.ForAllTransformers();
+                observableWithTask.Task.Wait();
+                var subscription = observableWithTask
+                    .Subscribe(list.Add);
+
+                store.DatabaseCommands.PutTransformer(Name, new TransformerDefinition
+															{
+																Name = Name,
+																TransformResults = "from user in results select new { user.Age, user.Name }"
+															});
+
+                TransformerChangeNotification transformerChangeNotification;
+                Assert.True(list.TryTake(out transformerChangeNotification, TimeSpan.FromSeconds(5)));
+
+                Assert.Equal("users/selectName", transformerChangeNotification.Name);
+                Assert.Equal(transformerChangeNotification.Type, TransformerChangeTypes.TransformerAdded);
+                Assert.True(list.Count == 0);
+
+                store.DatabaseCommands.DeleteTransformer(Name);
+
+                Assert.True(list.TryTake(out transformerChangeNotification, TimeSpan.FromSeconds(5)));
+
+                Assert.Equal("users/selectName", transformerChangeNotification.Name);
+                Assert.Equal(transformerChangeNotification.Type, TransformerChangeTypes.TransformerRemoved);
+                Assert.True(list.Count == 0);
+
+                // now unsubscribe
+                subscription.Dispose();
+                store.DatabaseCommands.PutTransformer(Name, new TransformerDefinition
+                {
+                    Name = Name,
+                    TransformResults = "from user in results select new { user.Age, user.Name }"
+                });
+
+                Assert.False(list.TryTake(out transformerChangeNotification, TimeSpan.FromSeconds(3)));
+
+                store.DatabaseCommands.DeleteTransformer(Name);
+                Assert.False(list.TryTake(out transformerChangeNotification, TimeSpan.FromSeconds(3)));
+
+
+            }
+        }
 	}
 }

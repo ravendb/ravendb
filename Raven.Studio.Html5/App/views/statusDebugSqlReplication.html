@@ -1,0 +1,98 @@
+﻿<section>
+    <div class="panel-group" data-bind="foreach: data">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a data-toggle="collapse"  data-bind="text: Name, attr: { href: '#statsDebugSqlRepCollapse' + $index() }"></a>
+                </h4>
+            </div>
+            <div class="panel-collapse collapse in" data-bind="attr: { id: 'statsDebugSqlRepCollapse' + $index() }">
+                <div class="panel-body">
+                    <div class="form-horizontal" role="form">
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Last error time</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static" data-bind="text: LastErrorTime"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Script error count</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static" data-bind="text: ScriptErrorCount"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Script success count</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static" data-bind="text: ScriptSuccessCount"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Write error count</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static" data-bind="text: WriteErrorCount"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Success count</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static" data-bind="text: SuccessCount"></p>
+                            </div>
+                        </div>
+                        <!-- ko with: LastAlert -->
+                        <div class="panel panel-warning">
+                            <div class="panel-heading">
+                                <h3 class="panel-title">Last Alert</h3>
+                            </div>
+                            <div class="panel-body">
+                                <div class="form-group">
+                                    <label class="col-md-2 control-label">Title</label>
+                                    <div class="col-md-10">
+                                        <p class="form-control-static" data-bind="text: Title"></p>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-md-2 control-label">Created at</label>
+                                    <div class="col-md-10">
+                                        <p class="form-control-static" data-bind="text: CreatedAt"></p>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-md-2 control-label">Observed</label>
+                                    <div class="col-md-10">
+                                        <p class="form-control-static" data-bind="text: Observed"></p>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-md-2 control-label">Message</label>
+                                    <div class="col-md-10">
+                                        <p class="form-control-static" data-bind="text: Message"></p>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-md-2 control-label">Alert level</label>
+                                    <div class="col-md-10">
+                                        <p class="form-control-static" data-bind="text: AlertLevel"></p>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-md-2 control-label">Exception</label>
+                                    <div class="col-md-10">
+                                        <p class="form-control-static" data-bind="text: Exception"></p>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-md-2 control-label">Unique key</label>
+                                    <div class="col-md-10">
+                                        <p class="form-control-static" data-bind="text: UniqueKey"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- /ko -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
