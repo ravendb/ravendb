@@ -217,6 +217,7 @@
     <TypeScriptCompile Include="App\commands\getCustomColumnsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getPatchesCommand.ts" />
     <TypeScriptCompile Include="App\commands\savePatchCommand.ts" />
+    <TypeScriptCompile Include="App\commands\executePatchCommand.ts" />
     <Content Include="App\commands\getNewEncryptionKey.js" />
     <TypeScriptCompile Include="App\viewmodels\conflicts.ts" />
     <TypeScriptCompile Include="App\models\conflict.ts" />
@@ -234,8 +235,10 @@
     <TypeScriptCompile Include="App\models\patchParam.ts" />
     <TypeScriptCompile Include="App\viewmodels\savePatch.ts" />
     <TypeScriptCompile Include="App\viewmodels\loadPatch.ts" />
+    <TypeScriptCompile Include="App\viewmodels\executePatchConfirm.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\executePatchConfirm.html" />
     <Content Include="App\views\deleteDocuments.html" />
     <Content Include="App\views\filesystem\deleteFiles.html" />
     <Content Include="App\views\filesystem\searchFileSizeRangeClause.html" />
@@ -1412,7 +1415,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>56397</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost:8080/</IISUrl>
+          <IISUrl>http://localhost:8090/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>

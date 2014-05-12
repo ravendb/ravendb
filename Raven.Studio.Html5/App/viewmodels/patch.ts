@@ -13,8 +13,9 @@ import queryIndexCommand = require("commands/queryIndexCommand");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 import savePatch = require('viewmodels/savePatch');
 import loadPatch = require('viewmodels/loadPatch');
+import executePatchConfirm = require('viewmodels/executePatchConfirm');
 import savePatchCommand = require('commands/savePatchCommand');
-import executeBulkDocsCommand = require("commands/executeBulkDocsCommand");
+import executePatchCommand = require("commands/executePatchCommand");
 import virtualTable = require("widgets/virtualTable/viewModel");
 
 class patch extends viewModelBase {
@@ -69,7 +70,22 @@ class patch extends viewModelBase {
         });
     }
 
-    loadDocumentToPatch(selectedItem: string) {
+    attached() {
+        $("#indexQueryLabel").popover({
+            html: true,
+            trigger: 'hover',
+            container: '.form-horizontal',
+            content: 'Queries use Lucene syntax. Examples:<pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
+        });
+        $("#patchScriptsLabel").popover({
+            html: true,
+            trigger: 'hover',
+            container: '.form-horizontal',
+            content: 'Patch Scripts are written in JScript. Examples:<pre><span class="code-keyword">this</span>.NewProperty = <span class="code-keyword">this</span>.OldProperty + myParameter;<br/><span class="code-keyword">delete this</span>.UnwantedProperty;<br/><span class="code-keyword">this</span>.Comments.RemoveWhere(<span class="code-keyword">function</span>(comment){<br/>  <span class="code-keyword">return</span> comment.Spam;<br/>});</pre>',
+        });
+    }
+
+    loadDocumentToTest(selectedItem: string) {
         if (selectedItem) {
             var loadDocTask = new getDocumentWithMetadataCommand(selectedItem, this.activeDatabase()).execute();
             loadDocTask.done(document => {
@@ -95,6 +111,9 @@ class patch extends viewModelBase {
                 break;
             case "Index":
                 this.fetchAllIndexes();
+                break;
+            default:
+                this.currentCollectionPagedItems(null);
                 break;
         }
     }
@@ -147,6 +166,10 @@ class patch extends viewModelBase {
         return null;
     }
 
+    runQueryWithDelay() {
+        setTimeout(() => this.runQuery(), 1000);
+    }
+
     savePatch() {
         var savePatchViewModel: savePatch = new savePatch();
         app.showDialog(savePatchViewModel);
@@ -156,11 +179,27 @@ class patch extends viewModelBase {
     }
 
     loadPatch() {
+        this.clearDocumentPreview();
         var loadPatchViewModel: loadPatch = new loadPatch(this.activeDatabase());
         app.showDialog(loadPatchViewModel);
         loadPatchViewModel.onExit().done((patch) => {
+            var selectedItem = patch.selectedItem();
             this.patchDocument(patch.cloneWithoutMetadata());
-            this.loadDocumentToPatch(patch.selectedItem());
+            switch (this.patchDocument().patchOnOption()) {
+                case "Collection":
+                    this.fetchAllCollections().then(() => {
+                        this.setSelectedCollection(this.collections().filter(coll => (coll.name === selectedItem)).first());
+                    });
+                    break;
+                case "Index":
+                    this.fetchAllIndexes().then(() => {
+                        this.setSelectedIndex(selectedItem);
+                    });
+                    break;
+                case "Document":
+                    this.loadDocumentToTest(patch.selectedItem());
+                    break;
+            }
         });
     }
 
@@ -180,7 +219,7 @@ class patch extends viewModelBase {
                 Values: values
             }
         });
-        new executeBulkDocsCommand(bulkDocs, this.activeDatabase())
+        new executePatchCommand(bulkDocs, this.activeDatabase(), true)
             .execute()
             .done((result: bulkDocumentDto[]) => {
                 var testResult = new document(result[0].AdditionalData['Document']);
@@ -192,15 +231,21 @@ class patch extends viewModelBase {
     executePatchOnSingle() {
         var keys = [];
         keys.push(this.patchDocument().selectedItem());
-        this.executePatch(keys);
+        this.confirmAndExecutePatch(keys);
     }
 
     executePatchOnSelected() {
-        this.executePatch(this.getDocumentsGrid().getSelectedItems().map(doc => doc.__metadata.id));
+        this.confirmAndExecutePatch(this.getDocumentsGrid().getSelectedItems().map(doc => doc.__metadata.id));
     }
 
     executePatchOnAll() {
-        this.executePatch(this.currentCollectionPagedItems().getAllCachedItems().map(doc => doc.__metadata.id));
+        this.confirmAndExecutePatch(this.currentCollectionPagedItems().getAllCachedItems().map(doc => doc.__metadata.id));
+    }
+
+    private confirmAndExecutePatch(keys: string[]) {
+        var confirmExec = new executePatchConfirm();
+        confirmExec.viewTask.done(() => this.executePatch(keys));
+        app.showDialog(confirmExec);
     }
 
     private executePatch(keys: string[]) {
@@ -221,16 +266,32 @@ class patch extends viewModelBase {
                 }
             })
         );
-        new executeBulkDocsCommand(bulkDocs, this.activeDatabase())
+        new executePatchCommand(bulkDocs, this.activeDatabase(), false)
             .execute()
             .done((result: bulkDocumentDto[]) => {
                 this.afterPatch('');
-                this.loadDocumentToPatch(this.patchDocument().selectedItem());
+                if (this.patchDocument().patchOnOption() === 'Document') {
+                    this.loadDocumentToTest(this.patchDocument().selectedItem());
+                }
+                this.updateDocumentsList();
             })
             .fail((result: JQueryXHR) => console.log(result.responseText))
     }
 
-    getDocumentsGrid(): virtualTable {
+    private updateDocumentsList() {
+        switch (this.patchDocument().patchOnOption()) {
+            case "Collection":
+                this.fetchAllCollections().then(() => {
+                    this.setSelectedCollection(this.collections().filter(coll => (coll.name === this.patchDocument().selectedItem())).first());
+                });
+                break;
+            case "Index":
+                this.setSelectedIndex(this.patchDocument().selectedItem());
+                break;
+        }
+    }
+
+    private getDocumentsGrid(): virtualTable {
         var gridContents = $(patch.gridSelector).children()[0];
         if (gridContents) {
             return ko.dataFor(gridContents);
@@ -238,6 +299,7 @@ class patch extends viewModelBase {
 
         return null;
     }
+        
 }
 
 export = patch;

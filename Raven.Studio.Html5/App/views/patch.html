@@ -29,7 +29,7 @@
         </div>
         <div class="btn-group" data-bind="visible: patchDocument().isCollectionPatch() || patchDocument().isIndexPatch()">
             <button class="btn btn-default use-bootstrap-tooltip" title="Patch just the selected documents" data-bind="click: executePatchOnSelected, enable: isExecuteAllowed" ><i class="fa fa-play"></i> Patch Selected</button>
-            <button class="btn btn-default use-bootstrap-tooltip" title="Patch all matching documents" data-bind="click: executePatchOnAll"><i class="fa fa-forward"></i> Patch All</button>
+            <button class="btn btn-default use-bootstrap-tooltip" title="Patch all matching documents" data-bind="click: executePatchOnAll, enable: (patchDocument().script())"><i class="fa fa-forward"></i> Patch All</button>
         </div>
     </div>
     <br/>
@@ -40,7 +40,7 @@
                 <div class="col-md-10">
                     <div class="row">
                         <div class="col-md-6">
-                            <input id="documentToPatch" type="text" class="form-control" data-bind="value: selectedItem, valueUpdate: 'afterkeydown', event: { keyup: $root.loadDocumentToPatch.bind($root, $element.value) }" />
+                            <input id="documentToPatch" type="text" class="form-control" data-bind="value: selectedItem, valueUpdate: 'afterkeydown', event: { keyup: $root.loadDocumentToTest.bind($root, $element.value) }" />
                         </div>
                     </div>
                 </div>
@@ -93,12 +93,18 @@
         <div class="form-group" data-bind="visible: isIndexPatch()">
             <div class="col-md-12">
                 <div>
-                    <label>Query</label>
+                    <label id="indexQueryLabelContainer" data-placement="auto right" data-original-title="Index Query" data-trigger="hover">
+                        <span id="indexQueryLabel" class="help-cursor">
+                            Query
+                            <i class="fa fa-info-circle text-info"></i>
+                        </span>
+                        <a target="_blank" class="use-bootstrap-tooltip control-label-additional-link" data-trigger="hover" data-toggle="tooltip" data-placement="right" title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><!--<i class="fa fa-question-circle text-muted"></i>-->Lucene Docs</a>
+                    </label>
                 </div>
                 <div>
                     <div class="row">
                         <div class="col-md-12">
-                            <pre class="form-control" data-bind="aceEditor: { code: query }" style="height:160px;"></pre>
+                            <pre class="form-control" data-bind="aceEditor: { code: query }, event: { keyup: $root.runQueryWithDelay.bind($root) }" style="height:160px;"></pre>
                         </div>
                     </div>
                 </div>
@@ -107,7 +113,12 @@
         <div class="form-group">
             <div class="col-md-9">
                 <div>
-                    <label>Patch Scripts</label>
+                    <label id="patchScriptsLabelContainer" data-placement="auto right" data-original-title="Patch Scripts" data-trigger="hover">
+                        <span id="patchScriptsLabel" class="help-cursor">
+                            Patch Scripts
+                            <i class="fa fa-info-circle text-info"></i>
+                        </span>
+                    </label>
                 </div>
                 <div>
                     <div class="row">
