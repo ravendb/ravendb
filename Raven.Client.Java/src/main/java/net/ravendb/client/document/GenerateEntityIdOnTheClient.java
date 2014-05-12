@@ -36,24 +36,28 @@ public class GenerateEntityIdOnTheClient {
       Field identityProperty = getIdentityProperty(entity.getClass());
       if (identityProperty != null) {
         Object value = FieldUtils.readField(identityProperty, entity, true);
-        if (value instanceof String) {
-          idHolder.value = (String) value;
-        }
-        if (idHolder.value == null && value == null && identityProperty.getType().equals(UUID.class)) {
-          // fix for UUID as UUID is nullable type in Java
-          value = Constants.EMPTY_UUID;
-        }
-        if (idHolder.value == null && value != null) { //need convertion
-          idHolder.value = documentStore.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(value, entity.getClass(), true);
-          return true;
-        }
-        return idHolder.value != null;
+        return getIdAsString(entity, value, identityProperty, idHolder);
       }
       idHolder.value = null;
       return false;
     } catch (IllegalAccessException e) {
       throw new IllegalStateException(e);
     }
+  }
+
+  private boolean getIdAsString(Object entity, Object value, Field identityProperty, Reference<String> idHolder) {
+    if (value instanceof String) {
+      idHolder.value = (String) value;
+    }
+    if (idHolder.value == null && value == null && identityProperty.getType().equals(UUID.class)) {
+      // fix for UUID as UUID is nullable type in Java
+      value = Constants.EMPTY_UUID;
+    }
+    if (idHolder.value == null && value != null) { //need conversion
+      idHolder.value = documentStore.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(value, entity.getClass(), true);
+      return true;
+    }
+    return idHolder.value != null;
   }
 
   /**

@@ -168,19 +168,27 @@ namespace Raven.Database.Server.WebApi
 	    // Cross-Origin Resource Sharing (CORS) is documented here: http://www.w3.org/TR/cors/
         public void AddAccessControlHeaders(RavenBaseApiController controller, HttpResponseMessage msg)
 		{
-			if (string.IsNullOrEmpty(landlord.SystemConfiguration.AccessControlAllowOrigin))
+	        var accessControlAllowOrigin = landlord.SystemConfiguration.AccessControlAllowOrigin;
+	        if (accessControlAllowOrigin.Count == 0)
 				return;
 
-			controller.AddHeader("Access-Control-Allow-Credentials", "true", msg);
+	        var originHeader = controller.GetHeader("Origin");
+	        if (originHeader == null || originHeader.Contains(controller.InnerRequest.Headers.Host))
+		        return; // no need
 
-			bool originAllowed = landlord.SystemConfiguration.AccessControlAllowOrigin == "*" ||
-					landlord.SystemConfiguration.AccessControlAllowOrigin.Split(' ')
-						.Any(o => o == controller.GetHeader("Origin"));
+
+	        bool originAllowed = accessControlAllowOrigin.Contains("*") ||
+	                             accessControlAllowOrigin.Contains(originHeader);
 			if (originAllowed)
 			{
-				controller.AddHeader("Access-Control-Allow-Origin", controller.GetHeader("Origin"), msg);
+				controller.AddHeader("Access-Control-Allow-Origin", originHeader, msg);
 			}
 
+            
+	        if (controller.InnerRequest.Method.Method != "OPTIONS")
+		        return;
+
+			controller.AddHeader("Access-Control-Allow-Credentials", "true", msg);
 			controller.AddHeader("Access-Control-Max-Age", landlord.SystemConfiguration.AccessControlMaxAge, msg);
 			controller.AddHeader("Access-Control-Allow-Methods", landlord.SystemConfiguration.AccessControlAllowMethods, msg);
 			if (string.IsNullOrEmpty(landlord.SystemConfiguration.AccessControlRequestHeaders))
@@ -398,7 +406,7 @@ namespace Raven.Database.Server.WebApi
 			{
 				// intentionally inside the loop, so we get better concurrency overall
 				// since shutting down a database can take a while
-				landlord.Cleanup(db, skipIfActive: true);
+				landlord.Cleanup(db, skipIfActive: true, shouldSkip: database => database.Configuration.RunInMemory);
 			}
 		}
 	}

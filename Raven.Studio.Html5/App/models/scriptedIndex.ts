@@ -1,24 +1,30 @@
 import document = require("models/document");
 import documentMetadata = require("models/documentMetadata");
+import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class scriptedIndex extends document {
 
-    deleteLater = ko.observable<boolean>();
-
+    static PREFIX = 'Raven/ScriptedIndexResults/';
+    indexName = ko.observable<string>();
     indexScript = ko.observable<string>();
     deleteScript = ko.observable<string>();
+    deleteLater = ko.observable<boolean>();
 
     constructor(dto: scriptedIndexDto) {
-
         super(dto);
 
+        var scriptedIndexName = dto['@metadata']['@id'].slice(scriptedIndex.PREFIX.length);
+        this.indexName(scriptedIndexName);
         this.indexScript(dto.IndexScript);
         this.deleteScript(dto.DeleteScript);
+
+        this.subscribeToObservable(this.indexScript);
+        this.subscribeToObservable(this.deleteScript);
     }
 
     static emptyForIndex(indexName: string): scriptedIndex {
-        var meta = {};
-        meta['@id'] = "Raven/ScriptedIndexResults/" + indexName;
+        var meta = [];
+        meta['@id'] = this.PREFIX + indexName;
         meta['Raven-Entity-Name'] = 'ScriptedIndexResults';
         return new scriptedIndex({
             '@metadata': meta,
@@ -48,6 +54,36 @@ class scriptedIndex extends document {
 
     isMarkedToDelete(): boolean {
         return this.deleteLater();
+    }
+
+    private subscribeToObservable(observable) {
+        observable.subscribe((newValue) => {
+            var message = "";
+            var currentEditor = aceEditorBindingHandler.currentEditor;
+            if (currentEditor != undefined) {
+                var textarea: any = $(currentEditor.container).find('textarea')[0];
+
+                if (newValue === "") {
+                    message = "Please fill out this field.";
+                }
+                textarea.setCustomValidity(message);
+                setTimeout(()=> {
+                    var annotations = currentEditor.getSession().getAnnotations();
+                    var isErrorExists = false;
+                    for (var i = 0; i < annotations.length; i++) {
+                        var annotationType = annotations[i].type;
+                        if (annotationType === "error" || annotationType === "warning") {
+                            isErrorExists = true;
+                            break;
+                        }
+                    }
+                    if (isErrorExists) {
+                        message = "The script isn't a javascript legal expression!";
+                        textarea.setCustomValidity(message);
+                    }
+                }, 700);
+            }
+        });
     }
 }
 

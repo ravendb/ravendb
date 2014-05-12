@@ -95,17 +95,17 @@ namespace Raven.Client.Shard
 	        throw new NotImplementedException();
 	    }
 
-	    Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id)
-	    {
-	        throw new NotImplementedException();
-	    }
+		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id, Action<TResult> onEval)
+		{
+			throw new NotImplementedException();
+		}
 
-	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(params string[] ids)
-	    {
-	        throw new NotImplementedException();
-	    }
+		Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(string id, Type transformerType, Action<TResult> onEval)
+		{
+			throw new NotImplementedException();
+		}
 
-	    public IAsyncLazySessionOperations Lazily { get; private set; }
+		public IAsyncLazySessionOperations Lazily { get; private set; }
 	    public IAsyncEagerSessionOperations Eagerly { get; private set; }
 
 	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation)
@@ -179,20 +179,10 @@ namespace Raven.Client.Shard
 	        throw new NotImplementedException();
 	    }
 
-	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(params string[] ids)
-	    {
-	        throw new NotImplementedException();
-	    }
-
 	    Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<string> ids)
 	    {
 	        throw new NotImplementedException();
 	    }
-
-	    public Task<T[]> LoadAsync<T>(params string[] ids)
-		{
-			return LoadAsyncInternal<T>(ids);
-		}
 
 		public Task<T[]> LoadAsync<T>(IEnumerable<string> ids)
 		{
@@ -222,30 +212,67 @@ namespace Raven.Client.Shard
 			return LoadAsyncInternal<T>(ids, null);
 		}
 
-		public async Task<T> LoadAsync<TTransformer, T>(string id) where TTransformer : AbstractTransformerCreationTask, new()
+		public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
 		{
-            var result = await LoadAsyncInternal<T>(new[] { id }, null, new TTransformer().TransformerName).ConfigureAwait(false);
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+            var result = await LoadAsyncInternal<T>(new[] { id }, null, new TTransformer().TransformerName, configuration.QueryInputs).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
-		public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
+		public async Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
 		{
-			var ravenLoadConfiguration = new RavenLoadConfiguration();
-			configure(ravenLoadConfiguration);
-            var result = await LoadAsyncInternal<T>(new[] { id }, null, new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs).ConfigureAwait(false);
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var result = await LoadAsyncInternal<TResult>(ids.ToArray(), null, new TTransformer().TransformerName, configuration.QueryInputs).ConfigureAwait(false);
+			return result;
+		}
+
+		public async Task<TResult> LoadAsync<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null)
+		{
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var result = await LoadAsyncInternal<TResult>(new[] { id }, null, transformer, configuration.QueryInputs).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
-		public Task<T[]> LoadAsync<TTransformer, T>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new()
+		public async Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
 		{
-			return LoadAsyncInternal<T>(ids, null, new TTransformer().TransformerName);
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			return await LoadAsyncInternal<TResult>(ids.ToArray(), null, transformer, configuration.QueryInputs).ConfigureAwait(false);
 		}
 
-		public Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
+		public async Task<TResult> LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
 		{
-			var ravenLoadConfiguration = new RavenLoadConfiguration();
-			configure(ravenLoadConfiguration);
-			return LoadAsyncInternal<TResult>(ids.ToArray(), null, new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs);
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+
+			var result = await LoadAsyncInternal<TResult>(new[] { id }, null, transformer, configuration.QueryInputs).ConfigureAwait(false);
+			return result.FirstOrDefault();
+		}
+
+		public async Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
+		{
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+
+			var result = await LoadAsyncInternal<TResult>(ids.ToArray(), null, transformer, configuration.QueryInputs).ConfigureAwait(false);
+			return result;
 		}
 
 		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)

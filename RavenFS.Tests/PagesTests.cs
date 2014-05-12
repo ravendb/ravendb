@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Specialized;
+
+using Raven.Database.Config;
 using Raven.Database.Server.RavenFS.Extensions;
-using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Storage.Esent;
 
 using Xunit;
+using Raven.Json.Linq;
 
 namespace RavenFS.Tests
 {
@@ -12,15 +14,20 @@ namespace RavenFS.Tests
 	{
 		readonly TransactionalStorage storage;
 
-		private readonly NameValueCollection metadataWithEtag = new NameValueCollection()
-		                                               	{
-		                                               		{"ETag", "\"" + Guid.Empty +"\""}
-		                                               	};
-
+        private readonly RavenJObject metadataWithEtag = new RavenJObject().WithETag(Guid.Empty);
 		public PagesTests()
 		{
+			var configuration = new InMemoryRavenConfiguration
+			{
+				FileSystemDataDirectory = "test",
+				Settings = new NameValueCollection
+				           {
+					           { "ETag", Guid.Empty.ToString() }
+				           }
+			};
+
 			IOExtensions.DeleteDirectory("test");
-			storage = new TransactionalStorage("test", metadataWithEtag);
+			storage = new TransactionalStorage(configuration);
 			storage.Initialize();
 		}
 

@@ -623,10 +623,11 @@ namespace Raven.Tests.Document
                 session.Advanced.DocumentQuery<Company>().WaitForNonStaleResults().ToArray();// wait for the index to settle down
 			}
 
-			documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
-			{
-				Query = "Tag:[[Companies]]"
-			}, allowStale: false).WaitForCompletion();
+		    var deleteByIndex = documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
+		    {
+		        Query = "Tag:[[Companies]]"
+		    }, allowStale: false);
+		    deleteByIndex.WaitForCompletion();
 
 			using (var session = documentStore.OpenSession())
 			{

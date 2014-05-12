@@ -260,30 +260,24 @@ namespace Raven.Bundles.Replication.Responders
 
 		private static string HashReplicationIdentifier(RavenJObject metadata)
 		{
-			using (var md5 = MD5.Create())
-			{
-				var bytes =
-					Encoding.UTF8.GetBytes(metadata.Value<string>(Constants.RavenReplicationSource) + "/" +
-					                       metadata.Value<string>("@etag"));
+			var bytes =
+				Encoding.UTF8.GetBytes(metadata.Value<string>(Constants.RavenReplicationSource) + "/" +
+					                    metadata.Value<string>("@etag"));
 
-				var hash = Encryptor.Current.Hash.Compute16(bytes);
-				Array.Resize(ref hash, 16);
+			var hash = Encryptor.Current.Hash.Compute16(bytes);
+			Array.Resize(ref hash, 16);
 
-				return new Guid(hash).ToString();
-			}
+			return new Guid(hash).ToString();
 		}
 
 		private string HashReplicationIdentifier(Etag existingEtag)
 		{
-			using (var md5 = MD5.Create())
-			{
-				var bytes = Encoding.UTF8.GetBytes(Database.TransactionalStorage.Id + "/" + existingEtag);
+			var bytes = Encoding.UTF8.GetBytes(Database.TransactionalStorage.Id + "/" + existingEtag);
 
-				var hash = Encryptor.Current.Hash.Compute16(bytes);
-				Array.Resize(ref hash, 16);
+			var hash = Encryptor.Current.Hash.Compute16(bytes);
+			Array.Resize(ref hash, 16);
 
-				return new Guid(hash).ToString();
-			}
+			return new Guid(hash).ToString();
 		}
 	}
 }

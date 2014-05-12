@@ -1,90 +1,99 @@
+﻿import database = require("models/database");
+import collection = require("models/collection");
 import sqlReplication = require("models/sqlReplication");
 import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
 import getSqlReplicationsCommand = require("commands/getSqlReplicationsCommand");
 import saveSqlReplicationsCommand = require("commands/saveSqlReplicationsCommand");
 import deleteDocumentsCommand = require("commands/deleteDocumentsCommand");
+import getCollectionsCommand = require("commands/getCollectionsCommand");
 import appUrl = require("common/appUrl");
 import ace = require("ace/ace");
+
 
 class sqlReplications extends viewModelBase {
 
     replications = ko.observableArray<sqlReplication>();
-    isFirstload = ko.observable(true);
-    lastIndex = ko.computed(function () {
-        return this.isFirstload() ? -1 : this.replications().length - 1;
-    }, this);
+    collections = ko.observableArray<string>();
+    isFirstLoad = ko.observable(true);
+    firstIndex: KnockoutComputed<number>;
     areAllSqlReplicationsValid: KnockoutComputed<boolean>;
     isSaveEnabled: KnockoutComputed<boolean>;
     loadedSqlReplications = [];
 
     constructor() {
         super();
-
         aceEditorBindingHandler.install();
+        autoCompleteBindingHandler.install();
+        this.firstIndex = ko.computed(function () {
+            return !this.isFirstLoad() ? 0 : -1;
+        }, this);
     }
 
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
+
         var db = this.activeDatabase();
         if (db) {
-            new getSqlReplicationsCommand(db)
-                .execute()
-                .done(results => {
-                    for (var i = 0; i < results.length; i++) {
-                        this.loadedSqlReplications.push(results[i].getId());
-                    }
-                    this.replications(results);
-
+            $.when(this.fetchSqlReplications(db), this.fetchCollections(db))
+                .done(() => {
+                    this.replications().forEach((replication: sqlReplication) => {
+                        replication.collections = this.collections;
+                    });
                     deferred.resolve({ can: true });
                 })
-                .fail(() => deferred.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) }));
+                .fail(() => deferred.resolve({ redirect: appUrl.forSettings(this.activeDatabase()) }));
         }
         return deferred;
     }
 
     activate(args) {
         super.activate(args);
-
-        this.areAllSqlReplicationsValid = ko.computed(() => this.replications().every(k => k.isValid()));
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.replications]);
         this.isSaveEnabled = ko.computed(()=> {
             return viewModelBase.dirtyFlag().isDirty();
         });
     }
 
-    attached() {
-        super.attached();
-        var popOverSettings = {
-            html: true,
-            trigger: 'hover',
-            content: 'Replication scripts use JScript.',
-            selector: '.script-label',
-        }
-        $('body').popover(popOverSettings);
+    compositionComplete() {
+        super.compositionComplete();
 
+        this.addScriptLabelPopover();
+        this.initializeCollapsedInvalidElements();
 
-
-
-        var self = this;
-        $(document).on("keyup", '.ace_text-input', function () {
-            var editor: AceAjax.Editor = ko.utils.domData.get($(this).parent().get(0), "aceEditor");
-            var isErrorExists: boolean = false;
-            var annotations: Array<any> = editor.getSession().getAnnotations();
-
-            for (var i = 0; i < annotations.length; i++) {
-                if (annotations[i].type === "error") {
-                    isErrorExists = true;
-                    break;
-                }
-            }
-
-            var editorText = editor.getSession().getValue();
-
+        this.replications().forEach((replication: sqlReplication) => {
+            this.subscribeToSqlReplicationName(replication);
         });
-        //$(".ace_editor").on('keyup', ".ace_text-input", function() => {
 
-        //});
+        $('pre').each((index, currentPreElement) => {
+            this.initializeAceValidity(currentPreElement);
+        });
+
+
+    }
+
+    addNewSqlReplication() {
+        if (this.isFirstLoad()) {
+            this.isFirstLoad(false);
+        }
+        var newSqlReplication: sqlReplication = sqlReplication.empty();
+        newSqlReplication.collections = this.collections;
+        this.replications.unshift(newSqlReplication);
+        this.subscribeToSqlReplicationName(newSqlReplication);
+        $('.in').find('input[name="name"]').focus();
+
+        var lastPreElement = $('pre').last().get(0);
+        this.initializeAceValidity(lastPreElement);
+        this.initializeCollapsedInvalidElements();
+    }
+
+    removeSqlReplication(repl: sqlReplication) {
+        this.replications.remove(repl);
+
+        this.replications().forEach((replication: sqlReplication) => {
+            replication.name.valueHasMutated();
+        });
     }
 
     saveChanges() {
@@ -109,12 +118,102 @@ class sqlReplications extends viewModelBase {
             var deleteDeferred = this.deleteSqlReplications(deletedReplications, db);
             deleteDeferred.done(() => {
                 var saveDeferred = this.saveSqlReplications(onScreenReplications, db);
-                saveDeferred.done(()=> {
+                saveDeferred.done(() => {
                     this.updateLoadedSqlReplications();
-                    // Resync Changes
-                    viewModelBase.dirtyFlag().reset();
+                    viewModelBase.dirtyFlag().reset(); //Resync Changes
                 });
             });
+        }
+    }
+
+    itemNumber = function (index) {
+        return index + 1;
+    }
+
+    private fetchSqlReplications(db: database): JQueryPromise<any> {
+        return new getSqlReplicationsCommand(db)
+            .execute()
+            .done(results=> {
+                for (var i = 0; i < results.length; i++) {
+                    this.loadedSqlReplications.push(results[i].getId());
+                }
+                this.replications(results);
+            });
+    }
+
+    private fetchCollections(db: database): JQueryPromise<any> {
+        return new getCollectionsCommand(db)
+            .execute()
+            .done((collections: Array<collection>) => {
+                this.collections(collections.map((collection: collection) => { return collection.name; }));
+            });
+    }
+
+    private addScriptLabelPopover() {
+        var popOverSettings = {
+            html: true,
+            trigger: 'hover',
+            content: 'Replication scripts use JScript.<br/><br/>The script will be called once for each document in the source document collection, with <span class="code-keyword">this</span> representing the document, and the document id available as <i>documentId</i>.<br/><br/>Call <i>replicateToTableName</i> for each row you want to write to the database.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> orderData = {<br/>   Id: documentId,<br/>   OrderLinesCount: <span class="code-keyword">this</span>.OrderLines.length,<br/>   TotalCost: 0<br/>};<br/><br/>replicateToOrders(\'Id\', orderData);<br/><br/>for (<span class="code-keyword">var</span> i = 0; i &lt; <span class="code-keyword">this</span>.OrderLines.length; i++) {<br/>   <span class="code-keyword">var</span> line = <span class="code-keyword">this</span>.OrderLines[i];<br/>   orderData.TotalCost += line.Cost;<br/>   replicateToOrderLines(\'OrderId\', {"<br/>      OrderId: documentId,<br/>      Qty: line.Quantity,<br/>      Product: line.Product,<br/>      Cost: line.Cost<br/>   });<br/>}</pre>',
+            selector: '.script-label',
+        };
+        $('body').popover(popOverSettings);
+        $('form :input[name="ravenEntityName"]').on("keypress", (e) => {
+            return e.which != 13;
+        });
+    }
+
+    //when pressing the save button, show all elements which are collapsed and at least one of its' fields isn't valid.
+    private initializeCollapsedInvalidElements() {
+        $('input, textarea').bind('invalid', function (e) {
+            var element: any = e.target;
+            if (!element.validity.valid) {
+                var parentElement = $(this).parents('.panel-default');
+                parentElement.children('.collapse').collapse('show');
+            }
+        });
+    }
+
+    private subscribeToSqlReplicationName(sqlReplicationElement: sqlReplication) {
+        sqlReplicationElement.name.subscribe((previousName) => {
+            //Get the previous value of 'name' here before it's set to newValue
+            var nameInputArray = $('input[name="name"]').filter(function() { return this.value === previousName; });
+            if (nameInputArray.length === 1) {
+                var inputField: any = nameInputArray[0];
+                inputField.setCustomValidity("");
+            }       
+        }, this, "beforeChange");
+        sqlReplicationElement.name.subscribe((newName) => {
+            var message = "";
+            if (newName === "") {
+                message = "Please fill out this field.";
+            }
+            else if (this.isSqlReplicationNameExists(newName)) {
+                message = "SQL Replication name already exists.";
+            }
+            $('input[name="name"]')
+                .filter(function () { return this.value === newName; })
+                .each((index, element: any) => {
+                    element.setCustomValidity(message);
+                });
+        });
+    }
+
+    private isSqlReplicationNameExists(name): boolean {
+        var count = 0;
+        this.replications().forEach((replication: sqlReplication) => {
+            if (replication.name() === name) {
+                count++;
+            }
+        });
+        return (count > 1) ? true : false;
+    }
+
+    private initializeAceValidity(element: Element) {
+        var editor: AceAjax.Editor = ko.utils.domData.get(element, "aceEditor");
+        var editorValue = editor.getSession().getValue();
+        if (editorValue === "") {
+            var textarea: any = $(element).find('textarea')[0];
+            textarea.setCustomValidity("Please fill out this field.");
         }
     }
 
@@ -165,24 +264,6 @@ class sqlReplications extends viewModelBase {
                 key.__metadata.lastModified = serverKey.Metadata['Last-Modified'];
             }
         });
-    }
-
-    addNewSqlReplication() {
-        this.isFirstload(false);
-        var newSqlReplication: sqlReplication = sqlReplication.empty();
-        this.replications.push(newSqlReplication);
-        newSqlReplication.isFocused(true);
-
-        var lastElement = $('pre').last().get(0);
-        super.createResizableTextBox(lastElement);
-    }
-
-    removeSqlReplication(repl: sqlReplication) {
-        this.replications.remove(repl);
-    }
-
-    itemNumber = function(index) {
-        return index + 1;
     }
 }
 

@@ -18,6 +18,7 @@ import net.ravendb.client.extensions.MultiDatabase;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateUtils;
 
+//TODO: sync with .net
 public class ReplicationInformer extends ReplicationInformerBase<ServerClient> implements IDocumentStoreReplicationInformer {
 
   private static String RAVEN_REPLICATION_DESTINATIONS = "Raven/Replication/Destinations";

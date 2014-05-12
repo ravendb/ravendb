@@ -48,6 +48,8 @@ namespace Raven.Tests.Helpers
 		protected readonly List<IDocumentStore> stores = new List<IDocumentStore>();
 		private readonly HashSet<string> pathsToDelete = new HashSet<string>();
 
+		protected readonly HashSet<string> DatabaseNames = new HashSet<string> { Constants.SystemDatabase };
+
 		private static int pathCount;
 
 		protected RavenTestBase()
@@ -473,22 +475,35 @@ namespace Raven.Tests.Helpers
 
 		protected void WaitForRestore(IDatabaseCommands databaseCommands)
 		{
+			var systemDatabaseCommands = databaseCommands.ForSystemDatabase(); // need to be sure that we are checking system database
+
+			var failureMessages = new[]
+			                      {
+				                      "Esent Restore: Failure! Could not restore database!", 
+									  "Error: Restore Canceled", 
+									  "Restore Operation: Failure! Could not restore database!"
+			                      };
+
+			var restoreFinishMessages = new[]
+			                            {
+				                            "The new database was created", 
+											"Esent Restore: Restore Complete", 
+											"Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name",
+			                            };
+
 			var done = SpinWait.SpinUntil(() =>
 			{
 				// We expect to get the doc from the <system> database
-				var doc = databaseCommands.Get(RestoreStatus.RavenRestoreStatusDocumentKey);
+				var doc = systemDatabaseCommands.Get(RestoreStatus.RavenRestoreStatusDocumentKey);
 
 				if (doc == null)
 					return false;
 
 				var status = doc.DataAsJson.Deserialize<RestoreStatus>(new DocumentConvention());
 
-				var restoreFinishMessages = new[]
-				{
-					"The new database was created",
-					"Esent Restore: Restore Complete", 
-					"Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name",
-				};
+				if (failureMessages.Any(status.Messages.Contains))
+					throw new InvalidOperationException("Restore failure: " + status.Messages.Aggregate(string.Empty, (output, message) => output + (message + Environment.NewLine)));
+				
 				return restoreFinishMessages.Any(status.Messages.Contains);
 			}, TimeSpan.FromMinutes(5));
 
@@ -722,14 +737,21 @@ namespace Raven.Tests.Helpers
             if (string.IsNullOrEmpty(databaseName)) 
                 return null;
 
-            if (databaseName.Length < 50)
-                return databaseName;
+	        if (databaseName.Length < 50)
+	        {
+				DatabaseNames.Add(databaseName);
+		        return databaseName;
+	        }
 
-            var prefix = databaseName.Substring(0, 30);
+	        var prefix = databaseName.Substring(0, 30);
             var suffix = databaseName.Substring(databaseName.Length - 10, 10);
             var hash = new Guid(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(databaseName))).ToString("N").Substring(0, 8);
 
-            return string.Format("{0}_{1}_{2}", prefix, hash, suffix);
+            var name = string.Format("{0}_{1}_{2}", prefix, hash, suffix);
+
+	        DatabaseNames.Add(name);
+
+	        return name;
         }
 	}
 }

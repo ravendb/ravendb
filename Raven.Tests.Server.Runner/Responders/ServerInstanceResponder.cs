@@ -146,18 +146,24 @@ namespace Raven.Tests.Server.Runner.Responders
 
         private RavenDbServer CreateNewServer(RavenConfiguration configuration, IHttpContext context)
         {
-            configuration.DataDirectory = Path.Combine(DataDir, configuration.Port.ToString());
+            configuration.DataDirectory = Path.Combine(DataDir, configuration.Port.ToString(), "System");
             configuration.FileSystemDataDirectory = Path.Combine(DataDir, configuration.Port.ToString() + "\\",
                                                                  "FileSystem");
+            configuration.AccessControlAllowOrigin = new HashSet<string>{"*"};
 
             bool deleteData;
             bool.TryParse(context.Request.QueryString["deleteData"], out deleteData);
 
             if (configuration.RunInMemory == false && deleteData)
-                IOExtensions.DeleteDirectory(configuration.DataDirectory);
+            {
+                var pathToDelete = Path.Combine(DataDir, configuration.Port.ToString());
+                IOExtensions.DeleteDirectory(pathToDelete);
+            }
 
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(configuration.Port);
-            var server = new RavenDbServer(configuration);
+            var server = new RavenDbServer(configuration) { UseEmbeddedHttpServer = true };
+
+            server.Initialize();
 
             servers.Add(configuration.Port, server);
 

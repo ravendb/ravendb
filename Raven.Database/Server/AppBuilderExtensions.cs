@@ -71,23 +71,19 @@ namespace Owin
 			app.UseInterceptor();
 #endif
 
-		    app.UseWebApi(CreateHttpCfg(options.DatabaseLandlord, options.FileSystemLandlord,
-		        options.MixedModeRequestAuthorizer, options.RequestManager));
+		    app.UseWebApi(CreateHttpCfg(options));
 			
 			return app;
 		}
 
-		private static HttpConfiguration CreateHttpCfg(
-            DatabasesLandlord databasesLandlord, 
-            FileSystemsLandlord fileSystemsLandlord,
-            MixedModeRequestAuthorizer mixedModeRequestAuthorizer, 
-            RequestManager requestManager)
+		private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
 		{
 			var cfg = new HttpConfiguration();
-			cfg.Properties[typeof(DatabasesLandlord)] = databasesLandlord;
-            cfg.Properties[typeof(FileSystemsLandlord)] = fileSystemsLandlord;
-			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = mixedModeRequestAuthorizer;
-			cfg.Properties[typeof(RequestManager)] = requestManager;
+			cfg.Properties[typeof(DatabasesLandlord)] = options.DatabaseLandlord;
+            cfg.Properties[typeof(FileSystemsLandlord)] = options.FileSystemLandlord;
+			cfg.Properties[typeof(CountersLandlord)] = options.CountersLandlord;
+			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
+			cfg.Properties[typeof(RequestManager)] = options.RequestManager;
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
 			cfg.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new NaveValueCollectionJsonConverterOnlyForConfigFormatters());
 

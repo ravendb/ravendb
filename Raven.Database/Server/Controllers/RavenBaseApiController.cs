@@ -211,12 +211,6 @@ namespace Raven.Database.Server.Controllers
 		{
 			if (string.IsNullOrWhiteSpace(etag))
 				return;
-			//string clientVersion = GetHeader("Raven-Client-Version");
-			//if (string.IsNullOrEmpty(clientVersion))
-			//{
-			//	msg.Headers.ETag = new EntityTagHeaderValue(etag);
-			//	return;
-			//}
 
 			msg.Headers.ETag = new EntityTagHeaderValue("\"" + etag + "\"");
 		}
@@ -483,7 +477,7 @@ namespace Raven.Database.Server.Controllers
 
 		public HttpResponseMessage WriteFile(string filePath)
 		{
-			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-None-Match");
+			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
 			var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
 			if (etagValue == fileEtag)
 				return GetEmptyMessage(HttpStatusCode.NotModified);

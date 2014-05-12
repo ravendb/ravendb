@@ -12,6 +12,8 @@ using Raven.Imports.Newtonsoft.Json;
 
 using Xunit;
 using Xunit.Extensions;
+using Raven.Json.Linq;
+using Raven.Database.Server.RavenFS.Extensions;
 
 namespace RavenFS.Tests.Storage
 {
@@ -25,7 +27,7 @@ namespace RavenFS.Tests.Storage
             {
                 storage.Batch(accessor =>
                 {
-                    var e = Assert.Throws<InvalidOperationException>(() => accessor.PutFile("file1", null, new NameValueCollection { { "key1", "value1" } }));
+                    var e = Assert.Throws<InvalidOperationException>(() => accessor.PutFile("file1", null, new RavenJObject { { "key1", "value1" } }));
                     Assert.Equal("Metadata of file file1 does not contain 'ETag' key", e.Message);
                 });
             }
@@ -35,21 +37,13 @@ namespace RavenFS.Tests.Storage
         [PropertyData("Storages")]
         public void PutFile(string requestedStorage)
         {
-            var etag1 = JsonConvert.SerializeObject(Guid.NewGuid());
-            var etag2 = JsonConvert.SerializeObject(Guid.NewGuid());
+            var etag1 = Guid.NewGuid();
+            var etag2 = Guid.NewGuid();
 
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
-                storage.Batch(accessor => accessor.PutFile("file1", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", etag1 }
-                                                                          }));
-
-                storage.Batch(accessor => accessor.PutFile("file2", 10, new NameValueCollection
-                                                                        {
-                                                                            { "ETag", etag2 }
-                                                                        }));
-
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
+                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject().WithETag(etag2)));
 
                 storage.Batch(accessor =>
                 {
@@ -66,7 +60,7 @@ namespace RavenFS.Tests.Storage
 
                     Assert.NotNull(file1Metadata);
                     Assert.Equal(1, file1Metadata.Count);
-                    Assert.Equal(etag1, file1Metadata["ETag"]);
+                    Assert.Equal(etag1, file1Metadata.Value<Guid>("ETag"));
 
                     var file2 = accessor.GetFile("file2", 5, 10);
 
@@ -81,7 +75,7 @@ namespace RavenFS.Tests.Storage
 
                     Assert.NotNull(file2Metadata);
                     Assert.Equal(1, file2Metadata.Count);
-                    Assert.Equal(etag2, file2Metadata["ETag"]);
+                    Assert.Equal(etag2, file2Metadata.Value<Guid>("ETag"));
                 });
             }
         }
@@ -90,23 +84,16 @@ namespace RavenFS.Tests.Storage
         [PropertyData("Storages")]
         public void ReadFile(string requestedStorage)
         {
-            var etag1 = JsonConvert.SerializeObject(Guid.NewGuid());
-            var etag2 = JsonConvert.SerializeObject(Guid.NewGuid());
+            var etag1 = Guid.NewGuid();
+            var etag2 = Guid.NewGuid();
 
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
                 storage.Batch(accessor => Assert.Null(accessor.ReadFile("file1")));
 
 
-                storage.Batch(accessor => accessor.PutFile("file1", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", etag1 }
-                                                                          }));
-
-                storage.Batch(accessor => accessor.PutFile("file2", 10, new NameValueCollection
-                                                                        {
-                                                                            { "ETag", etag2 }
-                                                                        }));
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
+                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject().WithETag(etag2)));
 
 
                 storage.Batch(accessor =>
@@ -122,7 +109,7 @@ namespace RavenFS.Tests.Storage
 
                     Assert.NotNull(file1Metadata);
                     Assert.Equal(1, file1Metadata.Count);
-                    Assert.Equal(etag1, file1Metadata["ETag"]);
+                    Assert.Equal(etag1, file1Metadata.Value<Guid>("ETag"));
 
                     var file2 = accessor.ReadFile("file2");
 
@@ -135,7 +122,7 @@ namespace RavenFS.Tests.Storage
 
                     Assert.NotNull(file2Metadata);
                     Assert.Equal(1, file2Metadata.Count);
-                    Assert.Equal(etag2, file2Metadata["ETag"]);
+                    Assert.Equal(etag2, file2Metadata.Value<Guid>("ETag"));
                 });
             }
         }
@@ -144,24 +131,15 @@ namespace RavenFS.Tests.Storage
         [PropertyData("Storages")]
         public void DeleteFile(string requestedStorage)
         {
-            var etag1 = JsonConvert.SerializeObject(Guid.NewGuid());
-            var etag2 = JsonConvert.SerializeObject(Guid.NewGuid());
+            var etag1 = Guid.NewGuid();
+            var etag2 = Guid.NewGuid();
 
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
                 storage.Batch(accessor => accessor.Delete("file1"));
 
-
-                storage.Batch(accessor => accessor.PutFile("file1", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", etag1 }
-                                                                          }));
-
-                storage.Batch(accessor => accessor.PutFile("file2", 10, new NameValueCollection
-                                                                        {
-                                                                            { "ETag", etag2 }
-                                                                        }));
-
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
+                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject().WithETag(etag2)));
 
                 storage.Batch(accessor => accessor.Delete("file2"));
 
@@ -185,32 +163,21 @@ namespace RavenFS.Tests.Storage
         [PropertyData("Storages")]
         public void GetFileCount(string requestedStorage)
         {
-            var etag1 = JsonConvert.SerializeObject(Guid.NewGuid());
-            var etag2 = JsonConvert.SerializeObject(Guid.NewGuid());
-            var etag3 = JsonConvert.SerializeObject(Guid.NewGuid());
+            var etag1 = Guid.NewGuid();
+            var etag2 = Guid.NewGuid();
+            var etag3 = Guid.NewGuid();
 
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
                 storage.Batch(accessor => Assert.Equal(0, accessor.GetFileCount()));
 
 
-                storage.Batch(accessor => accessor.PutFile("file1", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", etag1 }
-                                                                          }));
-
-                storage.Batch(accessor => accessor.PutFile("file2", 10, new NameValueCollection
-                                                                        {
-                                                                            { "ETag", etag2 }
-                                                                        }));
-
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
+                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject().WithETag(etag2)));
 
                 storage.Batch(accessor => Assert.Equal(2, accessor.GetFileCount()));
 
-                storage.Batch(accessor => accessor.PutFile("file3", 10, new NameValueCollection
-                                                                        {
-                                                                            { "ETag", etag3 }
-                                                                        }, tombstone: true));
+                storage.Batch(accessor => accessor.PutFile("file3", 10, new RavenJObject().WithETag(etag3), tombstone: true));
 
                 storage.Batch(accessor => Assert.Equal(2, accessor.GetFileCount()));
 
@@ -243,24 +210,15 @@ namespace RavenFS.Tests.Storage
         [PropertyData("Storages")]
         public void CompleteFileUpload(string requestedStorage)
         {
-            var etag1 = JsonConvert.SerializeObject(Guid.NewGuid());
-            var etag2 = JsonConvert.SerializeObject(Guid.NewGuid());
+            var etag1 = Guid.NewGuid();
+            var etag2 = Guid.NewGuid();
 
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
                 storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.CompleteFileUpload("file1")));
 
-
-                storage.Batch(accessor => accessor.PutFile("file1", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", etag1 }
-                                                                          }));
-
-                storage.Batch(accessor => accessor.PutFile("file2", 10, new NameValueCollection
-                                                                        {
-                                                                            { "ETag", etag2 }
-                                                                        }));
-
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
+                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject().WithETag(etag2)));
 
                 storage.Batch(accessor => accessor.CompleteFileUpload("file1"));
                 storage.Batch(accessor => accessor.CompleteFileUpload("file2"));
@@ -292,46 +250,14 @@ namespace RavenFS.Tests.Storage
             {
                 storage.Batch(accessor => Assert.Empty(accessor.ReadFiles(0, 10)));
 
-
-                storage.Batch(accessor => accessor.PutFile("file1", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", JsonConvert.SerializeObject(Guid.NewGuid()) }
-                                                                          }));
-
-                storage.Batch(accessor => accessor.PutFile("file2", 10, new NameValueCollection
-                                                                        {
-                                                                            { "ETag", JsonConvert.SerializeObject(Guid.NewGuid()) }
-                                                                        }));
-
-                storage.Batch(accessor => accessor.PutFile("file3", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", JsonConvert.SerializeObject(Guid.NewGuid()) }
-                                                                          }));
-
-                storage.Batch(accessor => accessor.PutFile("file4", 10, new NameValueCollection
-                                                                        {
-                                                                            { "ETag", JsonConvert.SerializeObject(Guid.NewGuid()) }
-                                                                        }));
-
-                storage.Batch(accessor => accessor.PutFile("file5", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", JsonConvert.SerializeObject(Guid.NewGuid()) }
-                                                                          }));
-
-                storage.Batch(accessor => accessor.PutFile("file6", 10, new NameValueCollection
-                                                                        {
-                                                                            { "ETag", JsonConvert.SerializeObject(Guid.NewGuid()) }
-                                                                        }));
-
-                storage.Batch(accessor => accessor.PutFile("file7", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", JsonConvert.SerializeObject(Guid.NewGuid()) }
-                                                                          }));
-
-                storage.Batch(accessor => accessor.PutFile("file8", 10, new NameValueCollection
-                                                                        {
-                                                                            { "ETag", JsonConvert.SerializeObject(Guid.NewGuid()) }
-                                                                        }));
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("file3", null, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("file4", 10, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("file5", null, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("file6", 10, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("file7", null, new RavenJObject().WithETag(Guid.NewGuid())));
+                storage.Batch(accessor => accessor.PutFile("file8", 10, new RavenJObject().WithETag(Guid.NewGuid())));
 
                 storage.Batch(accessor =>
                 {
@@ -403,46 +329,14 @@ namespace RavenFS.Tests.Storage
             {
                 storage.Batch(accessor => Assert.Empty(accessor.GetFilesAfter(Guid.NewGuid(), 10)));
 
-
-                storage.Batch(accessor => accessor.PutFile("file1", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", JsonConvert.SerializeObject(etag1) }
-                                                                          }));
-
-                storage.Batch(accessor => accessor.PutFile("file2", 10, new NameValueCollection
-                                                                        {
-                                                                            { "ETag", JsonConvert.SerializeObject(etag2) }
-                                                                        }));
-
-                storage.Batch(accessor => accessor.PutFile("file3", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", JsonConvert.SerializeObject(etag3) }
-                                                                          }));
-
-                storage.Batch(accessor => accessor.PutFile("file4", 10, new NameValueCollection
-                                                                        {
-                                                                            { "ETag", JsonConvert.SerializeObject(etag4) }
-                                                                        }));
-
-                storage.Batch(accessor => accessor.PutFile("file5", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", JsonConvert.SerializeObject(etag5) }
-                                                                          }));
-
-                storage.Batch(accessor => accessor.PutFile("file6", 10, new NameValueCollection
-                                                                        {
-                                                                            { "ETag", JsonConvert.SerializeObject(etag6) }
-                                                                        }));
-
-                storage.Batch(accessor => accessor.PutFile("file7", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", JsonConvert.SerializeObject(etag7) }
-                                                                          }));
-
-                storage.Batch(accessor => accessor.PutFile("file8", 10, new NameValueCollection
-                                                                        {
-                                                                            { "ETag", JsonConvert.SerializeObject(etag8) }
-                                                                        }));
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
+                storage.Batch(accessor => accessor.PutFile("file2", 10, new RavenJObject().WithETag(etag2)));
+                storage.Batch(accessor => accessor.PutFile("file3", null, new RavenJObject().WithETag(etag3)));
+                storage.Batch(accessor => accessor.PutFile("file4", 10, new RavenJObject().WithETag(etag4)));
+                storage.Batch(accessor => accessor.PutFile("file5", null, new RavenJObject().WithETag(etag5)));
+                storage.Batch(accessor => accessor.PutFile("file6", 10, new RavenJObject().WithETag(etag6)));
+                storage.Batch(accessor => accessor.PutFile("file7", null, new RavenJObject().WithETag(etag7)));
+                storage.Batch(accessor => accessor.PutFile("file8", 10, new RavenJObject().WithETag(etag8)));
 
                 storage.Batch(accessor =>
                 {
@@ -502,25 +396,18 @@ namespace RavenFS.Tests.Storage
         [PropertyData("Storages")]
         public void UpdateFileMetadata(string requestedStorage)
         {
-            var etag1 = JsonConvert.SerializeObject(Guid.NewGuid());
-            var etag2 = JsonConvert.SerializeObject(Guid.NewGuid());
+            var etag1 = Guid.NewGuid();
+            var etag2 = Guid.NewGuid();
 
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
-                storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.UpdateFileMetadata("file1", new NameValueCollection())));
+                storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.UpdateFileMetadata("file1", new RavenJObject())));
 
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
 
-                storage.Batch(accessor => accessor.PutFile("file1", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", etag1 }
-                                                                          }));
+                storage.Batch(accessor => Assert.Throws<InvalidOperationException>(() => accessor.UpdateFileMetadata("file1", new RavenJObject())));
 
-                storage.Batch(accessor => Assert.Throws<InvalidOperationException>(() => accessor.UpdateFileMetadata("file1", new NameValueCollection())));
-
-                storage.Batch(accessor => accessor.UpdateFileMetadata("file1", new NameValueCollection
-                                                                               {
-                                                                                   { "ETag", etag2 }
-                                                                               }));
+                storage.Batch(accessor => accessor.UpdateFileMetadata("file1", new RavenJObject().WithETag(etag2)));
 
                 storage.Batch(accessor =>
                 {
@@ -537,7 +424,7 @@ namespace RavenFS.Tests.Storage
 
                     Assert.NotNull(file1Metadata);
                     Assert.Equal(1, file1Metadata.Count);
-                    Assert.Equal(etag2, file1Metadata["ETag"]);
+                    Assert.Equal(etag2, file1Metadata.Value<Guid>("ETag"));
                 });
             }
         }
@@ -546,16 +433,13 @@ namespace RavenFS.Tests.Storage
         [PropertyData("Storages")]
         public void RenameFile1(string requestedStorage)
         {
-            var etag1 = JsonConvert.SerializeObject(Guid.NewGuid());
+            var etag1 = Guid.NewGuid();
 
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
                 storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.RenameFile("file1", "file2")));
 
-                storage.Batch(accessor => accessor.PutFile("file1", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", etag1 }
-                                                                          }));
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
 
                 storage.Batch(accessor => accessor.RenameFile("file1", "file2"));
 
@@ -576,7 +460,7 @@ namespace RavenFS.Tests.Storage
 
                     Assert.NotNull(fileMetadata);
                     Assert.Equal(1, fileMetadata.Count);
-                    Assert.Equal(etag1, fileMetadata["ETag"]);
+                    Assert.Equal(etag1, fileMetadata.Value<Guid>("ETag"));
                 });
             }
         }
@@ -585,14 +469,11 @@ namespace RavenFS.Tests.Storage
         [PropertyData("Storages")]
         public void RenameFile2(string requestedStorage)
         {
-            var etag1 = JsonConvert.SerializeObject(Guid.NewGuid());
+            var etag1 = Guid.NewGuid();
 
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
-                storage.Batch(accessor => accessor.PutFile("file1", null, new NameValueCollection
-                                                                          {
-                                                                              { "ETag", etag1 }
-                                                                          }));
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject().WithETag(etag1)));
 
                 storage.Batch(accessor => accessor.AssociatePage("file1", 1, 0, 10));
 
@@ -618,7 +499,7 @@ namespace RavenFS.Tests.Storage
 
                     Assert.NotNull(fileMetadata);
                     Assert.Equal(1, fileMetadata.Count);
-                    Assert.Equal(etag1, fileMetadata["ETag"]);
+                    Assert.Equal(etag1, fileMetadata.Value<Guid>("ETag"));
                 });
             }
         }

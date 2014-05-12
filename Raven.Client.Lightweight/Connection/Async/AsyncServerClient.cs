@@ -380,15 +380,6 @@ namespace Raven.Client.Connection.Async
 				}
 
 				// Be compitable with the resopnse from v2.0 server
-				var serverBuild = request.ResponseHeaders.GetAsInt("Raven-Server-Build");
-				if (serverBuild < 2500)
-				{
-					if (serverBuild != 13 || (serverBuild == 13 && jsonResponse.Value<long>("OperationId") == default(long)))
-					{
-						return null;
-					}
-				}
-
 				var opId = ((RavenJObject)jsonResponse)["OperationId"];
 
 				if (opId == null || opId.Type != JTokenType.Integer)
@@ -846,10 +837,33 @@ namespace Raven.Client.Connection.Async
 			ErrorResponseException responseException;
 			try
 			{
+				var uniqueKeys = new HashSet<string>(keys);
+
+				var results =  result
+					.Value<RavenJArray>("Results")
+					.OfType<RavenJObject>()
+					.ToList();
+
+				var documents = results
+					.Where(x => x.ContainsKey("@metadata") && x["@metadata"].Value<string>("@id") != null)
+					.ToDictionary(x => x["@metadata"].Value<string>("@id"), x => x, StringComparer.OrdinalIgnoreCase);
+
+				if (results.Count >= uniqueKeys.Count)
+				{
+					for (var i = 0; i < uniqueKeys.Count; i++)
+					{
+						var key = keys[i];
+						if (documents.ContainsKey(key)) 
+							continue;
+
+						documents.Add(key, results[i]);
+					}
+				}
+
 				var multiLoadResult = new MultiLoadResult
 				{
 					Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-					Results = result.Value<RavenJArray>("Results").Select(x => x as RavenJObject).ToList()
+					Results = documents.Count == 0 ? results : keys.Select(key => documents.ContainsKey(key) ? documents[key] : null).ToList()
 				};
 
 				var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);

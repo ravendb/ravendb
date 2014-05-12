@@ -18,19 +18,25 @@ class getFilesystemDestinationsCommand extends commandBase {
 
         var task = $.Deferred();
         this.query<any>(url, args, this.fs)
-            .done(data => {                
+            .done(data => {
                 if (data.hasOwnProperty('destination')) {
 
                     var value = data['destination'];
                     if (!(value instanceof Array))
                         value = [value];
 
-                    var result = value.map(x => <synchronizationDestinationDto> JSON.parse(x));
-                    task.resolve(result);                        
+                    var result = value.map(x => <synchronizationDestinationDto> x);
+                    task.resolve(result);
                 }
                 else {
                     task.resolve([]);
-                }                
+                }
+            })
+            .fail((qXHR, textStatus, errorThrown) => {
+                if (qXHR.status != "404") {
+                    this.reportError("Could not get synchronization destinations.", errorThrown, textStatus);
+                }
+                task.resolve([]);
             });
 
         return task;

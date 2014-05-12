@@ -6,6 +6,7 @@ using System.Text;
 using System.Linq;
 using System.Security.Cryptography;
 using Raven.Abstractions.Util;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Data
@@ -266,10 +267,7 @@ namespace Raven.Abstractions.Data
 #if NETFX_CORE
 			return Parse(MD5Core.GetHash(etagBytes));
 #else
-			using (var md5 = MD5.Create())
-			{
-				return Parse(md5.ComputeHash(etagBytes));
-			}
+			return Parse(Encryptor.Current.Hash.Compute16(etagBytes));
 #endif
 		}
 

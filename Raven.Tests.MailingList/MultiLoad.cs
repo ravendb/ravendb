@@ -35,7 +35,7 @@ namespace Raven.Tests.MailingList
 
 				using (var s = store.OpenSession())
 				{
-					var items = s.Load<Item>("items/1", "items/2", "items/1");
+					var items = s.Load<Item>(new[] { "items/1", "items/2", "items/1" });
 					Assert.Equal(3, items.Length);
 				}
 			}
@@ -61,7 +61,7 @@ namespace Raven.Tests.MailingList
 
 				using (var s = store.OpenSession())
 				{
-					var items = s.Load<Item>("items/1", "items/2", "items/1");
+					var items = s.Load<Item>(new [] { "items/1", "items/2", "items/1" });
 					Assert.Equal(3, items.Length);
 				}
 			}

@@ -1,6 +1,7 @@
 import sqlReplicationTable = require("models/sqlReplicationTable");
 import document = require("models/document");
 import documentMetadata = require("models/documentMetadata");
+import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 
 class sqlReplication extends document {
 
@@ -24,14 +25,14 @@ class sqlReplication extends document {
     ravenEntityName = ko.observable<string>("").extend({ required: true });
     sqlReplicationTables = ko.observableArray<sqlReplicationTable>().extend({ required: true });
     script = ko.observable<string>("").extend({ required: true });
-
     connectionString = ko.observable<string>(null);
     connectionStringName = ko.observable<string>(null);
     connectionStringSettingName = ko.observable<string>(null);
     connectionStringSourceFieldName: KnockoutComputed<string>;
     parameterizeDeletesDisabled = ko.observable<boolean>();
 
-    isFocused = ko.observable(false);
+    collections = ko.observableArray<string>();
+    searchResults = ko.observableArray<string>();
 
     constructor(dto: sqlReplicationDto) {
         super(dto);
@@ -56,6 +57,39 @@ class sqlReplication extends document {
             } else {
                 return "Setting name in memory/remote configuration";
             }
+        });
+
+        this.ravenEntityName.subscribe((newRavenEntityName) => {
+            this.searchResults(this.collections().filter((name) => {
+                return !!newRavenEntityName && name.toLowerCase().indexOf(newRavenEntityName.toLowerCase()) > -1;
+            }));
+
+        });
+
+        this.script.subscribe((newValue) => {
+            var message = "";
+            var currentEditor = aceEditorBindingHandler.currentEditor;
+            var textarea: any = $(currentEditor.container).find('textarea')[0];
+
+            if (newValue === "") {
+                message = "Please fill out this field.";
+            }
+            textarea.setCustomValidity(message);
+            setTimeout(() => {
+                var annotations = currentEditor.getSession().getAnnotations();
+                var isErrorExists = false;
+                for (var i = 0; i < annotations.length; i++) {
+                    var annotationType = annotations[i].type;
+                    if (annotationType === "error" || annotationType === "warning") {
+                        isErrorExists = true;
+                        break;
+                    }
+                }
+                if (isErrorExists) {
+                    message = "The script isn't a javascript legal expression!";
+                    textarea.setCustomValidity(message);
+                }
+            }, 700);
         });
     }
 
@@ -136,13 +170,8 @@ class sqlReplication extends document {
         this.__metadata.id = "Raven/SqlReplication/Configuration/" + this.name();
     }
 
-    isValid(): boolean {
-        var arr = new Array();
-
-        var requiredValues = [this.name(), this.factoryName(), this.connectionStringType(), this.connectionStringValue(), this.ravenEntityName(), this.script()];
-        var fieldsCheck = requiredValues.every(v=> v != null && v.length > 0);
-        var replicationTablesCheck = this.sqlReplicationTables().every(v=> v.isValid());
-        return fieldsCheck && replicationTablesCheck;
+    saveNewRavenEntityName(newRavenEntityName) {
+        this.ravenEntityName(newRavenEntityName);
     }
 }
 

@@ -123,7 +123,7 @@ class filesystemEditFile extends viewModelBase {
         this.loadFile(this.fileName());
     }
 
-    saveInObservable() {
+    saveInObservable() { //TODO: remove this and use ace binding handler
         this.storeFileEditorTextIntoObservable();
     }
 

@@ -310,6 +310,7 @@ namespace Raven.Json.Linq
             if (Type != other.Type)
                 return false;
 
+            var curType = JTokenType.None;
             var fieldName = string.Empty;
             var otherStack = new Stack<RavenJToken>();
             var thisStack = new Stack<RavenJToken>();
@@ -342,6 +343,7 @@ namespace Raven.Json.Linq
                         case JTokenType.Array:
                             var selfArray = (RavenJArray) curThisReader;
                             var otherArray = (RavenJArray) curOtherReader;
+                            curType = JTokenType.Array;
                             if (selfArray.Length != otherArray.Length)
                             {
                                 if (docChanges == null)
@@ -364,6 +366,8 @@ namespace Raven.Json.Linq
                             var otherObj = (RavenJObject) curOtherReader;
                             if (selfObj.Count != otherObj.Count)
                             {
+                                curType = JTokenType.Object;
+
                                 if (docChanges == null)
                                     return false;
                                isEqual= docChanges.CompareDifferentLengthRavenJObjectData( otherObj, selfObj, fieldName);
@@ -371,17 +375,29 @@ namespace Raven.Json.Linq
                             }
                             else
                             {
+                                var prevType = curType;
+                                curType = JTokenType.Object;
+                                var origFieldName = fieldName;
                                 foreach (var kvp in selfObj.Properties)
                                 {
-                                    fieldName = kvp.Key;
+                                    if (prevType == JTokenType.Object)
+                                    {
+                                        fieldName = origFieldName + "." + kvp.Key;  
+                                    }
+                                    else
+                                    {
+                                        fieldName = kvp.Key;
+                                    }
+                                   
                                     RavenJToken token;
                                     if (otherObj.TryGetValue(kvp.Key, out token) == false)
                                     {
                                         if (docChanges == null)
                                             return false;
 
-                                        isEqual = docChanges.AddChanges(DocumentsChanges.ChangeType.RemovedField);
-                                       
+                                        docChanges.AddChanges(DocumentsChanges.ChangeType.RemovedField);
+                                        isEqual = false;
+
                                     }
 
                                     if (kvp.Value == null)
@@ -391,8 +407,8 @@ namespace Raven.Json.Linq
                                             if (docChanges == null)
                                                 return false;
 
-                                            isEqual = docChanges.AddChanges(DocumentsChanges.ChangeType.NewField);
-
+                                            docChanges.AddChanges(DocumentsChanges.ChangeType.NewField);
+                                            isEqual = false;
                                            
                                         }
 
@@ -404,7 +420,7 @@ namespace Raven.Json.Linq
                                         case JTokenType.Object:
                                             otherStack.Push(token);
                                             thisStack.Push(kvp.Value);
-                                            fieldNameStack.Push(kvp.Key);
+                                            fieldNameStack.Push(fieldName);
                                             break;
                                         case JTokenType.Bytes:
                                             var bytes = kvp.Value.Value<byte[]>();
@@ -427,8 +443,8 @@ namespace Raven.Json.Linq
                                             {
                                                 if (docChanges == null)
                                                     return false;
-                                                isEqual = docChanges.AddChanges( kvp, token);
-                                               
+                                                docChanges.AddChanges(kvp, token,fieldName);
+                                                isEqual = false;
                                             }
 
                                             break;
@@ -437,12 +453,13 @@ namespace Raven.Json.Linq
                             }
                             break;
                             default:
+                            curType = curThisReader.Type;
                                 if (!curOtherReader.DeepEquals(curThisReader))
                                 {
                                     if (docChanges == null)
                                         return false;
-                                    isEqual = docChanges.AddChanges( curThisReader, curOtherReader, fieldName);
-                                   
+                                    docChanges.AddChanges( curThisReader, curOtherReader, fieldName);
+                                    isEqual = false;
                                 }
 
                                 break;
@@ -451,6 +468,7 @@ namespace Raven.Json.Linq
                     }
                 else
                     {
+                        curType = curThisReader.Type;
                         switch (curThisReader.Type)
                         {
                             case JTokenType.Guid:

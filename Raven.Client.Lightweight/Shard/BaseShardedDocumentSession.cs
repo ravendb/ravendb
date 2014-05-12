@@ -92,11 +92,8 @@ namespace Raven.Client.Shard
 
 		protected string GetDynamicIndexName<T>()
 		{
-			string indexName = "dynamic";
-			if (typeof(T).IsEntityType())
-			{
-				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-			}
+            string indexName = CreateDynamicIndexName<T>();
+			
 			return indexName;
 		}
 
@@ -255,11 +252,8 @@ namespace Raven.Client.Shard
 		/// <typeparam name="T">The result of the query</typeparam>
 		public IRavenQueryable<T> Query<T>()
 		{
-			var indexName = "dynamic";
-			if (typeof(T).IsEntityType())
-			{
-				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-			}
+            var indexName = CreateDynamicIndexName<T>();
+			
 			return Query<T>(indexName)
 #pragma warning disable 612,618
 				.Customize(x => x.TransformResults((query, results) => results.Take(query.PageSize)));

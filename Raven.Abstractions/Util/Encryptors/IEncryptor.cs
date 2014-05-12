@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Security.Cryptography;
 
 namespace Raven.Abstractions.Util.Encryptors
@@ -20,17 +21,25 @@ namespace Raven.Abstractions.Util.Encryptors
 		IAsymmetricalEncryptor CreateAsymmetrical(int keySize);
 	}
 
-	public interface IHashEncryptor
+	public interface IHashEncryptor : IDisposable
 	{
 		int StorageHashSize { get; }
-
-		byte[] ComputeForStorage(byte[] bytes);
 
 		byte[] ComputeForOAuth(byte[] bytes);
 
 		byte[] Compute16(byte[] bytes);
 
+	    byte[] Compute16(Stream stream);
+
+	    byte[] Compute16(byte[] bytes, int offset, int size);
+
 		byte[] Compute20(byte[] bytes);
+
+	    byte[] Compute20(byte[] bytes, int offset, int size);
+
+	    byte[] TransformFinalBlock();
+
+	    void TransformBlock(byte[] bytes, int offset, int length);
 	}
 
 	public interface ISymmetricalEncryptor : IDisposable

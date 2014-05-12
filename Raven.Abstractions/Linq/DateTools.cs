@@ -234,7 +234,7 @@ namespace Raven.Abstractions.Linq
 		/// </returns>
 		public static System.DateTime Round(System.DateTime date, Resolution resolution)
 		{
-			return new System.DateTime(Round(date.Ticks / TimeSpan.TicksPerMillisecond, resolution));
+			return new System.DateTime(Round(date.Ticks / TimeSpan.TicksPerMillisecond, resolution), date.Kind);
 		}
 		
 		/// <summary> Limit a date's resolution. For example, the date <code>1095767411000</code>

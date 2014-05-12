@@ -408,7 +408,6 @@ public class HttpJsonRequest {
       responseStatusCode = httpResponse.getStatusLine().getStatusCode();
 
       handleReplicationStatusChanges.apply(extractHeaders(httpResponse.getAllHeaders()), primaryUrl, operationUrl);
-
       RavenJToken data = RavenJToken.tryLoad(responseStream);
 
       if (HttpMethods.GET == method && shouldCacheRequest) {

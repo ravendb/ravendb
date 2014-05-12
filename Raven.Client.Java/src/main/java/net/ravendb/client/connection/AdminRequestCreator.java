@@ -64,29 +64,15 @@ public class AdminRequestCreator {
     return createRequestForSystemDatabase.apply("/admin/stats", HttpMethods.GET);
   }
 
-  public HttpJsonRequest startBackup(String backupLocation, DatabaseDocument databaseDocument, String databaseName, Reference<RavenJObject> backupSettingsRef) {
-    RavenJObject backupSettings = new RavenJObject();
-    backupSettingsRef.value = backupSettings;
-
-    backupSettings.add("BackupLocation", backupLocation);
-    backupSettings.add("DatabaseDocument", RavenJObject.fromObject(databaseDocument));
-
-    if (Constants.SYSTEM_DATABASE.equals(databaseName)) {
+  public HttpJsonRequest startBackup(String backupLocation, DatabaseDocument databaseDocument, String databaseName, boolean incremental) {
+    if (databaseName == Constants.SYSTEM_DATABASE) {
         return createRequestForSystemDatabase.apply("/admin/backup", HttpMethods.POST);
     }
-    return createRequestForSystemDatabase.apply("/databases/" + databaseName + "/admin/backup", HttpMethods.POST);
-
+    return createRequestForSystemDatabase.apply("/databases/" + databaseName + "/admin/backup?incremental=" + incremental, HttpMethods.POST);
   }
 
-  public HttpJsonRequest startRestore(String restoreLocation, String databaseLocation, String databaseName, boolean defrag, Reference<RavenJObject> restoreSettingsRef) {
-    RavenJObject restoreSettings = new RavenJObject();
-    restoreSettingsRef.value = restoreSettings;
-    restoreSettings.add("RestoreLocation", restoreLocation);
-    restoreSettings.add("DatabaseLocation", databaseLocation);
-    restoreSettings.add("DatabaseName", databaseName);
-
-    return createRequest.apply("/admin/restore?defrag=" + defrag, HttpMethods.POST);
-
+  public HttpJsonRequest createRestoreRequest() {
+      return createRequestForSystemDatabase.apply("/admin/restore", HttpMethods.POST);
   }
 
   public HttpJsonRequest indexingStatus(String serverUrl) {

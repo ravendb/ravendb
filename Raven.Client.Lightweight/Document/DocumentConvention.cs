@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
@@ -15,6 +16,7 @@ using System.Runtime.Serialization.Formatters;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.CSharp.RuntimeBinder;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Async;
 using Raven.Client.Indexes;
@@ -208,11 +210,10 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public static string GenerateDocumentKeyUsingIdentity(DocumentConvention conventions, object entity)
 		{
-			return conventions.FindTypeTagName(entity.GetType()) + "/";
+			return conventions.GetDynamicTagName(entity) + "/";
 		}
 
 		private static IDictionary<Type, string> cachedDefaultTypeTagNames = new Dictionary<Type, string>();
-		private int requestCount;
 
 		/// <summary>
 		/// Get the default tag name for the specified type.
@@ -259,6 +260,32 @@ namespace Raven.Client.Document
 		{
 			return FindTypeTagName(type) ?? DefaultTypeTagName(type);
 		}
+
+	   /// <summary>
+	   /// If object is dynamic, try to load a tag name.
+	   /// </summary>
+	   /// <param name="entity">Current entity.</param>
+	   /// <returns>Dynamic tag name if available.</returns>
+	   public string GetDynamicTagName(object entity)
+	   {
+	      if (entity == null)
+	      {
+	         return null;
+	      }
+
+	      if (FindDynamicTagName != null && entity is IDynamicMetaObjectProvider)
+	      {
+	         try
+	         {
+	            return FindDynamicTagName(entity);
+	         }
+	         catch (RuntimeBinderException)
+	         {
+	         }
+	      }
+
+	      return this.GetTypeTagName(entity.GetType());
+	   }
 
 #if !NETFX_CORE
 		/// <summary>
@@ -330,6 +357,12 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <value>The name of the find type tag.</value>
 		public Func<Type, string> FindTypeTagName { get; set; }
+
+      /// <summary>
+      /// Gets or sets the function to find the tag name if the object is dynamic.
+      /// </summary>
+      /// <value>The tag name.</value>
+      public Func<dynamic, string> FindDynamicTagName { get; set; }
 
 		/// <summary>
 		/// Gets or sets the function to find the indexed property name
@@ -544,11 +577,6 @@ namespace Raven.Client.Document
 		/// this to inject your own replication / failover logic.
 		/// </summary>
 		public Func<string, IDocumentStoreReplicationInformer> ReplicationInformerFactory { get; set; }
-
-		public int IncrementRequestCount()
-		{
-			return Interlocked.Increment(ref requestCount);
-		}
 
 		public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 

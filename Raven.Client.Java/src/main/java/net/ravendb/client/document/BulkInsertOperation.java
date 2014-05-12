@@ -25,7 +25,7 @@ public class BulkInsertOperation implements AutoCloseable {
 
   private final IDocumentStore documentStore;
   private final GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
-  private final ILowLevelBulkInsertOperation operation;
+  protected ILowLevelBulkInsertOperation operation;
   private IDatabaseCommands databaseCommands;
 
   private final EntityToJson entityToJson;
@@ -69,8 +69,12 @@ public class BulkInsertOperation implements AutoCloseable {
         return documentStore.getConventions().generateDocumentKey(finalDatabase, getDatabaseCommands(), entity);
       }
     });
-    operation = databaseCommands.getBulkInsertOperation(options, changes);
+    operation = getBulkInsertOperation(options, databaseCommands, changes);
     entityToJson = new EntityToJson(documentStore, listeners);
+  }
+
+  protected ILowLevelBulkInsertOperation getBulkInsertOperation(BulkInsertOptions options, IDatabaseCommands commands, IDatabaseChanges changes) {
+      return commands.getBulkInsertOperation(options, changes);
   }
 
   @Override
@@ -87,7 +91,7 @@ public class BulkInsertOperation implements AutoCloseable {
   public void store(Object entity, String id) {
     RavenJObject metadata = new RavenJObject();
 
-    String tag = documentStore.getConventions().getTypeTagName(entity.getClass());
+    String tag = documentStore.getConventions().getDynamicTagName(entity);
     if (tag != null) {
       metadata.add(Constants.RAVEN_ENTITY_NAME, tag);
     }

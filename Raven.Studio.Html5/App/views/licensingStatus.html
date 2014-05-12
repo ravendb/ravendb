@@ -1,18 +1,23 @@
 ﻿<div class="messageBox" tabindex="-1">
     <div class="modal-header">
-        <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">&times;</button>
+        <button type="button" class="close" data-bind="click: cancel" aria-hidden="true"><span class="glyphicon glyphicon-remove remove-icon"></span></button>
         <h4 class="modal-title">Licensing Status</h4>
     </div>
     <div class="modal-body">
-        <div class="row">
-            <div class="col-md-7">
-                <div class="form-group">
-                    <label>This is your encryption key. Save it in a safe place.</label>
-                    <label>If you will lose this key you could lose access to your data!</label>
-                    <input readonly type="text" class="form-control" id="key" placeholder="Key" autofocus data-bind="value: key, click: clickKey">
-                </div>
-            </div>
-        </div>
+        <label data-bind="text: licenseStatus.Message, css: { 'license-error': licenseStatus.Error }"></label>
+        <!-- ko if: licenseStatus.IsCommercial -->
+        <div data-bind="text: 'Version: ' + licenseStatus.Attributes.version"></div>
+        <div data-bind="text: 'Bundles: ' + bundleString + '.'"></div>
+        <div data-bind="text: 'FIPS compatible: ' + licenseStatus.Attributes.fips"></div>
+        <div data-bind="text: 'Authorization: ' + licenseStatus.Attributes.authorization"></div>
+        <div data-bind="text: 'Max Ram Utilization: ' + licenseStatus.Attributes.maxRamUtilization"></div>
+        <div data-bind="text: 'Max Parallelism: ' + licenseStatus.Attributes.maxParallelism"></div>
+        <div data-bind="text: 'Max Size in MB: ' + licenseStatus.Attributes.maxSizeInMb"></div>
+        <div data-bind="text: 'Windows Clustering Allowed: ' + licenseStatus.Attributes.allowWindowsClustering"></div>
+        <div data-bind="text: 'OEM: ' + licenseStatus.Attributes.OEM"></div>
+        <div data-bind="text: 'Number of Databases: ' + licenseStatus.Attributes.numberOfDatabases"></div>
+        <div data-bind="text: 'Updates Expiration: ' + licenseStatus.Attributes.updatesExpiration"></div>
+        <!-- /ko -->
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-primary" data-bind="click: ok">OK</button>

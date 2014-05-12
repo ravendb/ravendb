@@ -25,6 +25,20 @@ interface computedAppUrls {
     replications: KnockoutComputed<string>;
     sqlReplications: KnockoutComputed<string>;
     scriptedIndexes: KnockoutComputed<string>;
+    statusDebug: KnockoutComputed<string>;
+    statusDebugChanges: KnockoutComputed<string>;
+    statusDebugMetrics: KnockoutComputed<string>;
+    statusDebugConfig: KnockoutComputed<string>;
+    statusDebugDocrefs: KnockoutComputed<string>;
+    statusDebugCurrentlyIndexing: KnockoutComputed<string>;
+    statusDebugQueries: KnockoutComputed<string>;
+    statusDebugTasks: KnockoutComputed<string>;
+    statusDebugRoutes: KnockoutComputed<string>;
+    statusDebugRequestTracing: KnockoutComputed<string>;
+    statusDebugSqlReplication: KnockoutComputed<string>;
+    statusDebugIndexFields: KnockoutComputed<string>;
+    statusDebugSlowDocCounts: KnockoutComputed<string>;
+
 
     isAreaActive: (routeRoot: string) => KnockoutComputed<boolean>;
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;

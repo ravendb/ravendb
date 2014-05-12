@@ -9,6 +9,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import net.ravendb.abstractions.basic.Reference;
+import net.ravendb.abstractions.data.DocumentsChanges;
 import net.ravendb.abstractions.exceptions.JsonReaderException;
 import net.ravendb.abstractions.exceptions.JsonWriterException;
 import net.ravendb.abstractions.extensions.JsonExtensions;
@@ -147,6 +148,16 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
   public RavenJObject(DictionaryWithParentSnapshot snapshot) {
     properties = snapshot;
     this.comparer = null;
+  }
+
+
+
+  @Override
+  public boolean deepEquals(RavenJToken other, List<DocumentsChanges> changes) {
+    if (other instanceof RavenJObject == false) {
+      return false;
+    }
+    return super.deepEquals(other, changes);
   }
 
   public RavenJObject(RavenJObject other) {

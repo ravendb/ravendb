@@ -24,10 +24,19 @@ interface documentChangeNotificationDto {
     Message: string;
 }
 
+interface bulkInsertChangeNotificationDto extends documentChangeNotificationDto{
+    OperationId: string;
+}
+
 interface indexChangeNotificationDto {
-    Type: string;
+    Type: indexChangeType;
     Name: string;
     Etag: string;
+}
+
+interface transformerChangeNotificationDto {
+    Type: transformerChangeType;
+    Name: string;
 }
 
 interface documentMetadataDto {
@@ -101,8 +110,12 @@ interface apiKeyDto extends documentDto {
     Databases: Array<databaseAccessDto>;
 }
 
-interface buildVersionDto {
+interface serverBuildVersionDto {
     ProductVersion: string;
+    BuildVersion: string;
+}
+
+interface clientBuildVersionDto {
     BuildVersion: string;
 }
 
@@ -518,13 +531,167 @@ interface patchDto extends documentDto {
     Values: Array<patchValueDto>;
 }
 
+interface statusDebugChangesDto {
+    Id: string;
+    Connected: boolean;
+    WatchAllDocuments: boolean;
+    WatchAllIndexes: boolean;
+    WatchConfig: boolean;
+    WatchConflicts: boolean;
+    WatchSync: boolean;
+    WatchCancellations: boolean;
+    WatchDocumentPrefixes: Array<string>;
+    WatchDocumentsInCollection: Array<string>;
+    WatchIndexes: Array<string>;
+    WatchDocuments: Array<string>;
+    WatchedFolders: Array<string>;
+}
+
+interface statusDebugMetricsDto {
+    DocsWritesPerSecond: number;
+    IndexedPerSecond: number;
+    ReducedPerSecond: number;
+    RequestsPerSecond: number;
+    Requests: statusDebugMetricsRequestsDto;
+    RequestsDuration: statusDebugMetricsRequestsDurationDto;
+}
+
+interface statusDebugMetricsRequestsDto {
+    Count: number;
+    MeanRate: number;
+    OneMinuteRate: number;
+    FiveMinuteRate: number;
+    FifteenMinuteRate: number;
+}
+
+interface statusDebugMetricsRequestsDurationDto {
+    Counter: number;
+    Max: number;
+    Min: number;
+    Mean: number;
+    Stdev: number;
+    Percentiles: any;
+}
+
+interface statusDebugDocrefsDto {
+    TotalCount: number;
+    Results: Array<string>;
+}
+
+interface statusDebugCurrentlyIndexingDto {
+    NumberOfCurrentlyWorkingIndexes: number;
+    Indexes: Array<statusDebugIndexDto>;
+}
+
+interface statusDebugIndexDto {
+    IndexName: string;
+    IsMapReduce: boolean;
+    CurrentOperations: Array<statusDebugIndexOperationDto>;
+    Priority: string;
+    OverallIndexingRate: Array<statusDebugIndexRateDto>;
+}
+
+interface statusDebugIndexOperationDto {
+    Operation: string;
+    NumberOfProcessingItems: number;
+}
+
+interface statusDebugIndexRateDto {
+    Operation: string;
+    Rate: string;
+}
+
+interface statusDebugQueriesGroupDto {
+    IndexName: string;
+    Queries: Array<statusDebugQueriesQueryDto>;
+}
+
+interface statusDebugQueriesQueryDto {
+    StartTime: string;
+    QueryInfo: KnockoutObservable<any>;
+}
+
+interface taskMetadataDto {
+    Id: any;
+    IndexId: number;
+    IndexName: string;
+    AddedTime: string;
+    Type: string;
+}
+
+interface requestTracingDto {
+    Uri: string;
+    Method: string;
+    StatusCode: number;
+    RequestHeaders: requestHeaderDto[];
+    ExecutionTime: string;
+    AdditionalInfo: string;
+}
+
+interface requestHeaderDto {
+    Name: string;
+    Values: string[];
+}
+
+interface sqlReplicationStatisticsDto {
+    Name: string;
+    LastErrorTime: string;
+    ScriptErrorCount: number;
+    ScriptSuccessCount: number;
+    WriteErrorCount: number;
+    SuccessCount: number;
+    LastAlert: alertDto;
+}
+
+interface statusDebugIndexFieldsDto {
+    FieldNames: string[];
+}
+
+interface debugDocumentStatsDto {
+    Total: number;
+    Tombstones: number;
+    System: number;
+    NoCollection: number;
+    Collections: dictionary<number>;
+    TimeToGenerate: string;
+}
+
 enum documentChangeType {
     None = 0,
-
     Put = 1,
     Delete = 2,
     Common= 3,
     BulkInsertStarted = 4,
     BulkInsertEnded = 8,
     BulkInsertError = 16
+}
+
+enum indexChangeType {
+    None = 0,
+
+    MapCompleted = 1,
+    ReduceCompleted = 2,
+    RemoveFromIndex = 4,
+
+    IndexAdded = 8,
+    IndexRemoved = 16,
+
+    IndexDemotedToIdle = 32,
+    IndexPromotedFromIdle = 64,
+
+    IndexDemotedToAbandoned = 128,
+    IndexDemotedToDisabled = 256,
+    IndexMarkedAsErrored =  512
+}
+
+enum transformerChangeType {
+    None = 0,
+    TransformerAdded = 1,
+    TransformerRemoved = 2
+}
+
+interface filterSettingDto {
+    Path: string;
+    Values: string[];
+    ShouldMatch: boolean;
 }

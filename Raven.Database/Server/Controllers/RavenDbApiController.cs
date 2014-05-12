@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
+using Lucene.Net.Store;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -89,6 +90,8 @@ namespace Raven.Database.Server.Controllers
 		{
 			base.InnerInitialization(controllerContext);
 			landlord = (DatabasesLandlord)controllerContext.Configuration.Properties[typeof(DatabasesLandlord)];
+			fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
+			countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
 			requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
 
 			var values = controllerContext.Request.GetRouteData().Values;
@@ -114,7 +117,7 @@ namespace Raven.Database.Server.Controllers
 		public override HttpResponseMessage GetEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
 		{
 			var result = base.GetEmptyMessage(code, etag);
-			AddAccessControlHeaders(result);
+			RequestManager.AddAccessControlHeaders(this, result);
 			HandleReplication(result);
 			return result;
 		}
@@ -123,7 +126,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var result = base.GetMessageWithObject(item, code, etag);
 
-			AddAccessControlHeaders(result);
+			RequestManager.AddAccessControlHeaders(this, result);
 			HandleReplication(result);
 			return result;
 		}
@@ -131,39 +134,9 @@ namespace Raven.Database.Server.Controllers
 		public override HttpResponseMessage GetMessageWithString(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
 		{
 			var result =base.GetMessageWithString(msg, code, etag);
-			AddAccessControlHeaders(result);
+			RequestManager.AddAccessControlHeaders(this, result);
 			HandleReplication(result);
 			return result;
-		}
-
-		private void AddAccessControlHeaders(HttpResponseMessage msg)
-		{
-			if (string.IsNullOrEmpty(DatabasesLandlord.SystemConfiguration.AccessControlAllowOrigin))
-				return;
-
-			AddHeader("Access-Control-Allow-Credentials", "true", msg);
-
-			var originAllowed = DatabasesLandlord.SystemConfiguration.AccessControlAllowOrigin == "*" ||
-					DatabasesLandlord.SystemConfiguration.AccessControlAllowOrigin.Split(' ')
-						.Any(o => o == GetHeader("Origin"));
-			if (originAllowed)
-			{
-				AddHeader("Access-Control-Allow-Origin", GetHeader("Origin"), msg);
-			}
-
-			AddHeader("Access-Control-Max-Age", DatabasesLandlord.SystemConfiguration.AccessControlMaxAge, msg);
-			AddHeader("Access-Control-Allow-Methods", DatabasesLandlord.SystemConfiguration.AccessControlAllowMethods, msg);
-
-			if (string.IsNullOrEmpty(DatabasesLandlord.SystemConfiguration.AccessControlRequestHeaders))
-			{
-				// allow whatever headers are being requested
-				var hdr = GetHeader("Access-Control-Request-Headers"); // typically: "x-requested-with"
-				if (hdr != null) AddHeader("Access-Control-Allow-Headers", hdr, msg);
-			}
-			else
-			{
-				AddHeader("Access-Control-Request-Headers", DatabasesLandlord.SystemConfiguration.AccessControlRequestHeaders, msg);
-			}
 		}
 
 		private DatabasesLandlord landlord;
@@ -174,6 +147,17 @@ namespace Raven.Database.Server.Controllers
 				if (Configuration == null)
 					return landlord;
 				return (DatabasesLandlord)Configuration.Properties[typeof(DatabasesLandlord)];
+			}
+		}
+
+		private CountersLandlord countersLandlord;
+		public CountersLandlord CountersLandlord
+		{
+			get
+			{
+				if (Configuration == null)
+					return countersLandlord;
+				return (CountersLandlord)Configuration.Properties[typeof(CountersLandlord)];
 			}
 		}
 

@@ -6,7 +6,7 @@ import synchronizationDestination = require("models/filesystem/synchronizationDe
 
 class deleteDestinationCommand extends commandBase {
 
-    constructor(private fs: filesystem, private destination: string) {
+    constructor(private fs: filesystem, private destination: synchronizationDestinationDto) {
         super();
     }
 
@@ -14,26 +14,30 @@ class deleteDestinationCommand extends commandBase {
 
         var result = $.Deferred();
 
-        var dtos = [];
+        var serverUrl = this.destination.ServerUrl;
+        var fileSystem = this.destination.FileSystem;
 
         this.query<any>("/config", { name: "Raven/Synchronization/Destinations" }, this.fs)
             .done(data => {
 
                 if (data && data.hasOwnProperty('destination')) {
 
-                    // TODO: Review if the serialization method on the server is serializing this properly.
                     var value = data['destination'];
                     if (!(value instanceof Array))
                         value = [value];
 
-                    var dtos = value.map(x => <synchronizationDestinationDto> JSON.parse(x))
-                                    .filter(x => x.ServerUrl != this.destination);
+                    var dtos = value.map(x => <synchronizationDestinationDto> x);
+                     
+                    dtos = dtos.filter(x => x.ServerUrl != serverUrl || x.FileSystem != fileSystem);
 
-                    data.destination = dtos.map(x => JSON.stringify(x));
+                    data.destination = dtos;
 
                     var url = "/config?name=" + encodeURIComponent("Raven/Synchronization/Destinations");
                     this.put(url, JSON.stringify(data), this.fs)
-                        .done(() => result.resolve(data) );
+                        .done(() => result.resolve(data))
+                        .fail((xhr, statusText, error) => {
+                            this.reportError("Could not delete destination (server: " + serverUrl + ", filesystem: " + fileSystem + ")", error, statusText);
+                        });
                 }
             });
 

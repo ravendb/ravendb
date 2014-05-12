@@ -210,6 +210,23 @@ namespace Voron
 			Buffer.BlockCopy(_array, 0, dest, 0, _size);
 		}
 
+		public void CopyTo(int from, byte[] dest, int offset, int count)
+		{
+			if (from + count > Size)
+				throw new ArgumentOutOfRangeException("from", "Cannot copy data after the end of the slice");
+			if(offset + count > dest.Length)
+				throw new ArgumentOutOfRangeException("from", "Cannot copy data after the end of the buffer" +
+				                                              "");
+			if (_array == null)
+			{
+				fixed (byte* p = dest)
+					NativeMethods.memcpy(p, _pointer + from, count);
+				return;
+			}
+			Buffer.BlockCopy(_array, from, dest, offset, count);
+		}
+
+
 		public void Set(NodeHeader* node)
 		{
 			Set((byte*)node + Constants.NodeHeaderSize, node->KeySize);

@@ -102,8 +102,9 @@
     <Reference Include="ICSharpCode.SharpZipLib">
       <HintPath>..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
-    <Reference Include="Jint.Raven">
-      <HintPath>..\SharedLibs\Jint.Raven.dll</HintPath>
+    <Reference Include="Jint, Version=2.1.0.0, Culture=neutral, PublicKeyToken=2e92ba9c8d81157f, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Jint.dll</HintPath>
     </Reference>
     <Reference Include="Lucene.Net, Version=2.3.2.1, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -256,6 +257,13 @@
     <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualDeleteTrigger.cs" />
     <Compile Include="Client\EmbeddableDocumentStore.cs" />
     <Compile Include="Client\EmbeddedDocumentStore.cs" />
+    <Compile Include="Counters\Controllers\CounterReplicationController.cs" />
+    <Compile Include="Counters\Controllers\RavenCounterReplication.cs" />
+    <Compile Include="Counters\Controllers\RavenCountersApiController.cs" />
+    <Compile Include="Counters\ReplicationMessage.cs" />
+    <Compile Include="Counters\Counter.cs" />
+    <Compile Include="Counters\CounterStorage.cs" />
+    <Compile Include="Config\Settings\NullableIntegerSetting.cs" />
     <Compile Include="Embedded\ResponseStream.cs" />
     <Compile Include="Impl\DTC\DtcNotSupportedTransactionalState.cs" />
     <Compile Include="Indexing\IndexMerging\ChangeRootReferenceVisitor.cs" />
@@ -266,9 +274,14 @@
     <Compile Include="Indexing\PrecomputedIndexing.cs" />
     <Compile Include="Embedded\OwinEmbeddedHost.cs" />
     <Compile Include="Embedded\OwinClientHandler.cs" />
+    <Compile Include="Bundles\ScriptedIndexResults\ScriptedIndexResultsJsonPatcherScope.cs" />
+    <Compile Include="Json\JintOperationScope.cs" />
+    <Compile Include="Json\ScriptedJsonPatcherOperationScope.cs" />
+    <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcherOperationScope.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyDeleteTrigger.cs" />
     <Compile Include="Plugins\Builtins\ReadOnlyPutTrigger.cs" />
     <Compile Include="Linq\Ast\TransformDynamicInvocationExpressions.cs" />
+    <Compile Include="Counters\Controllers\CountersController.cs" />
     <Compile Include="Server\RavenDbServer.cs" />
     <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
@@ -431,6 +444,9 @@
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\TableBase.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\Tables.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\Impl\TableStorage.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Schema\SchemaCreator.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Schema\ISchemaUpdate.cs" />
+    <Compile Include="Server\RavenFS\Storage\Voron\Schema\Updates\SchemaUpdateBase.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\StorageActionsAccessor.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\StorageActionsBase.cs" />
     <Compile Include="Server\RavenFS\Storage\Voron\TransactionalStorage.cs" />
@@ -948,6 +964,7 @@
     <Compile Include="Server\Connections\TimeSensitiveStore.cs" />
     <Compile Include="Server\Startup.cs" />
     <Compile Include="Server\Tenancy\AbstractLandlord.cs" />
+    <Compile Include="Server\Tenancy\CountersLandlord.cs" />
     <Compile Include="Server\Tenancy\DatabaseLandlord.cs" />
     <Compile Include="Server\Tenancy\FileSystemsLandlord.cs" />
     <Compile Include="Server\WebApi\Attributes\HttpEvalAttribute.cs" />
@@ -1017,6 +1034,9 @@
     <Compile Include="Queries\SuggestionQueryRunner.cs" />
     <Compile Include="Storage\Voron\Backup\BackupOperation.cs" />
     <Compile Include="Storage\Voron\Backup\RestoreOperation.cs" />
+    <Compile Include="Storage\Voron\Schema\SchemaCreator.cs" />
+    <Compile Include="Storage\Voron\Schema\ISchemaUpdate.cs" />
+    <Compile Include="Storage\Voron\Schema\Updates\SchemaUpdateBase.cs" />
     <Compile Include="Storage\Voron\StorageActions\DocumentsStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActions\AttachmentsStorageActions.cs" />
     <Compile Include="Storage\Voron\Impl\Index.cs" />
@@ -1084,7 +1104,6 @@
     <EmbeddedResource Include="Json\ToJson.js" />
     <EmbeddedResource Include="Json\RavenDB.js" />
     <EmbeddedResource Include="Json\lodash.js" />
-    <EmbeddedResource Include="Json\ECMAScript5.js" />
     <Content Include="FodyWeavers.xml" />
   </ItemGroup>
   <ItemGroup>
@@ -1110,6 +1129,7 @@
       <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
   <Target Name="BeforeBuild">

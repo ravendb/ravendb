@@ -47,6 +47,8 @@ namespace Raven.Client.Changes
 
 		public event Action<IndexChangeNotification> OnIndexChangeNotification;
 
+	    public event Action<TransformerChangeNotification> OnTransformerChangeNotification;
+
 		public event Action<ReplicationConflictNotification> OnReplicationConflictNotification;
 
 		public event Action<Exception> OnError;
@@ -64,6 +66,15 @@ namespace Raven.Client.Changes
 			if (onOnIndexChangeNotification != null)
 				onOnIndexChangeNotification(indexChangeNotification);
 		}
+
+        public void Send(TransformerChangeNotification transformerChangeNotification)
+        {
+            var onOnTransformerChangeNotification = OnTransformerChangeNotification;
+            if (onOnTransformerChangeNotification != null)
+            {
+                onOnTransformerChangeNotification(transformerChangeNotification);
+            }
+        }
 
 		public void Send(ReplicationConflictNotification replicationConflictNotification)
 		{

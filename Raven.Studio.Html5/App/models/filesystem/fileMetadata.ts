@@ -1,9 +1,7 @@
 ﻿class fileMetadata {
 
-    standardProps = ["Origin", "RavenFs-Size",
-        "Raven-Synchronization-History", "Raven-Synchronization-Version", "Raven-Synchronization-Source", "Last-Modified", "ETag"];
+    standardProps = ["RavenFs-Size","Raven-Synchronization-History", "Raven-Synchronization-Version", "Raven-Synchronization-Source", "Last-Modified", "ETag"];
 
-    origin: string;
     ravenFSSize: string;
     ravenSynchronizationHistory: string;
     ravenSynchronizationVersion: string;
@@ -14,7 +12,6 @@
 
     constructor(dto?: any) {
         if (dto) {
-            this.origin = dto['Origin'];
             this.ravenFSSize = dto['RavenFS-Size'];
             this.ravenSynchronizationHistory = dto['Raven-Synchronization-History'];
             this.ravenSynchronizationVersion = dto['Raven-Synchronization-Version'];
@@ -40,7 +37,6 @@
             'Raven-Synchronization-Version': this.ravenSynchronizationVersion,
             'Raven-Synchronization-Source': this.ravenSynchronizationSource,
             'RavenFS-Size': this.ravenFSSize,
-            'Origin': this.origin
         };
 
         if (this.nonStandardProps) {

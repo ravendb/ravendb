@@ -1,5 +1,6 @@
 //Copyright (c) Microsoft Corporation.  All rights reserved.
 using System;
+using System.IO;
 using System.Text;
 
 namespace Raven.Abstractions.Util
@@ -72,17 +73,24 @@ namespace Raven.Abstractions.Util
 			return GetHashString(input, new UTF8Encoding());
 		}
 
+        internal static ABCDStruct GetInitialStruct()
+        {
+            //Initial values defined in RFC 1321
+            var abcd = new ABCDStruct();
+            abcd.A = 0x67452301;
+            abcd.B = 0xefcdab89;
+            abcd.C = 0x98badcfe;
+            abcd.D = 0x10325476;
+            return abcd;
+        }
+
 		public static byte[] GetHash(byte[] input)
 		{
 			if (null == input)
 				throw new System.ArgumentNullException("input", "Unable to calculate hash over null input data");
 
 			//Initial values defined in RFC 1321
-			ABCDStruct abcd = new ABCDStruct();
-			abcd.A = 0x67452301;
-			abcd.B = 0xefcdab89;
-			abcd.C = 0x98badcfe;
-			abcd.D = 0x10325476;
+		    var abcd = GetInitialStruct();
 
 			//We pass in the input array by block, the final block of data must be handled specially for padding & length embedding
 			int startIndex = 0;
@@ -94,6 +102,29 @@ namespace Raven.Abstractions.Util
 			// The final data block. 
 			return MD5Core.GetHashFinalBlock(input, startIndex, input.Length - startIndex, abcd, (Int64)input.Length * 8);
 		}
+
+        public static byte[] GetHash(byte[] input, int offset, int length)
+        {
+            if (null == input)
+                throw new System.ArgumentNullException("input", "Unable to calculate hash over null input data");
+
+            //Initial values defined in RFC 1321
+            ABCDStruct abcd = new ABCDStruct();
+            abcd.A = 0x67452301;
+            abcd.B = 0xefcdab89;
+            abcd.C = 0x98badcfe;
+            abcd.D = 0x10325476;
+
+            //We pass in the input array by block, the final block of data must be handled specially for padding & length embedding
+            int startIndex = offset;
+            while (startIndex <= length - 64)
+            {
+                MD5Core.GetHashBlock(input, ref abcd, startIndex);
+                startIndex += 64;
+            }
+            // The final data block. 
+            return MD5Core.GetHashFinalBlock(input, startIndex, length - startIndex, abcd, (Int64)length * 8);
+        }
 
 		internal static byte[] GetHashFinalBlock(byte[] input, int ibStart, int cbSize, ABCDStruct ABCD, Int64 len)
 		{
