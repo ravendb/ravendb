@@ -59,7 +59,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 			this.beforeClosingObject = beforeClosingObject;
 		}
 
-		public void Serialize(JsonWriter jsonWriter, object value, Type objectType)
+		public void Serialize(JsonWriter jsonWriter, object value, Type objectType, out bool  isTypeNameHandlingAll)
 		{
 			if (jsonWriter == null)
 				throw new ArgumentNullException("jsonWriter");
@@ -67,9 +67,30 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 			if (objectType != null)
 				_rootContract = Serializer._contractResolver.ResolveContract(objectType);
 
-			SerializeValue(jsonWriter, value, GetContractSafe(value), null, null, null);
+            var contract = GetContractSafe(value);
+           SerializeValue(jsonWriter, value, contract, null, null, null);
+            var objectContract = contract as JsonObjectContract;
+            if (objectContract != null)
+                 isTypeNameHandlingAll =  objectContract.Properties.Any(property => property.TypeNameHandling == TypeNameHandling.All);
+            else
+            {
+                isTypeNameHandlingAll = false;
+            }
+            
 		}
+        public void Serialize(JsonWriter jsonWriter, object value, Type objectType)
+        {
+            if (jsonWriter == null)
+                throw new ArgumentNullException("jsonWriter");
 
+            if (objectType != null)
+                _rootContract = Serializer._contractResolver.ResolveContract(objectType);
+
+            var contract = GetContractSafe(value);
+            SerializeValue(jsonWriter, value, contract, null, null, null);
+            
+
+        }
 		private JsonSerializerProxy GetInternalSerializer()
 		{
 			if (_internalSerializer == null)
