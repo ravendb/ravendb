@@ -78,14 +78,14 @@ class synchronization extends viewModelBase {
     }
 
     addDestination() {
-        var fs = this.activeFilesystem();
-        require(["viewmodels/filesystem/filesystemAddDestination"], filesystemAddDestination => {
-            var addDestinationViewModel: filesystemAddDestination = new filesystemAddDestination(this.destinations);
-            addDestinationViewModel
-                .creationTask
-                .done((destinationUrl: string) => this.addDestinationUrl(new synchronizationDestination(fs, destinationUrl)));
-            app.showDialog(addDestinationViewModel);
-        });
+        //var fs = this.activeFilesystem();
+        //require(["viewmodels/filesystem/filesystemAddDestination"], filesystemAddDestination => {
+        //    var addDestinationViewModel: filesystemAddDestination = new filesystemAddDestination(this.destinations);
+        //    addDestinationViewModel
+        //        .creationTask
+        //        .done((destinationUrl: string) => this.addDestinationUrl(new synchronizationDestination(fs, destinationUrl)));
+        //    app.showDialog(addDestinationViewModel);
+        //});
     }
 
     private addDestinationUrl(url: synchronizationDestination) {

@@ -3,40 +3,35 @@ import system = require("durandal/system");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 
-//models
 import replicationsSetup = require("models/replicationsSetup");
-import replicationDestination = require("models/replicationDestination");
+import synchronizationDestination = require("models/filesystem/synchronizationDestination");
+import filesystem = require("models/filesystem/filesystem");
 
-//viewmodels
 import viewModelBase = require("viewmodels/viewModelBase");
 
-//commands
-
+import getDestinationsCommand = require("commands/filesystem/getDestinationsCommand");
 
 
 class synchronizationDestinations extends viewModelBase {
 
-    destinations = ko.observableArray<synchronizationDestinationDto>();
-    isSetupSaveEnabled: KnockoutComputed<boolean>;
-    replicationsSetupDirtyFlag = new ko.DirtyFlag([]);
-
-    canActivate(args: any): JQueryPromise<any> {
-        var deferred = $.Deferred();
-        var fs = this.activeFilesystem();
-        if (fs) {
-            this.fetchDestinations(fs)
-                .done(() => deferred.resolve({ can: true }))
-                .fail(() => deferred.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) }));
-        }
-        return deferred;
-    }
+    destinations = ko.observableArray<synchronizationDestination>();
+    isSaveEnabled: KnockoutComputed<boolean>;
+    private activeFilesystemSubscription: any;
 
     activate(args) {
         super.activate(args);
 
-        this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations()]);
-        this.isSetupSaveEnabled = ko.computed(()=> this.replicationsSetupDirtyFlag().isDirty());
-        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.replicationsSetupDirtyFlag]);
+        this.isSaveEnabled = ko.computed(() => true);
+        this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
+    }
+
+    deactivate() {
+        super.deactivate();
+        this.activeFilesystemSubscription.dispose();
+    }
+
+    modelPolling() {
+        this.loadDestinations();
     }
 
     saveChanges() {
@@ -44,18 +39,29 @@ class synchronizationDestinations extends viewModelBase {
     }
 
     createNewDestination() {
-        this.destinations.unshift(replicationDestination.empty());
+        this.destinations.unshift(synchronizationDestination.empty());
     }
 
-    fetchDestinations(fs): JQueryPromise<any> {
-        var deferred = $.Deferred();
-        new getReplicationsCommand(fs)
-            .execute()
-            .done(repSetup => this.replicationsSetup(new replicationsSetup(repSetup)))
-            .always(() => deferred.resolve({ can: true }));
-        return deferred;
+    removeDestination(repl: synchronizationDestination) {
+        this.destinations.remove(repl);
     }
 
+    loadDestinations(): JQueryPromise<any> {
+        var fs = this.activeFilesystem();
+        if (fs) {
+            return new getDestinationsCommand(fs).execute()
+                       .done(data => this.destinations(data));
+        }
+    }
+
+    fileSystemChanged(fs: filesystem) {
+        if (fs) {
+            this.modelPollingStop();
+            this.loadDestinations().always(() => {
+                this.modelPollingStart();
+            });
+        }
+    }
 }
 
 export = synchronizationDestinations;

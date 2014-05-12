@@ -14,8 +14,8 @@ class deleteDestinationCommand extends commandBase {
 
         var result = $.Deferred();
 
-        var serverUrl = this.destination.ServerUrl;
-        var fileSystem = this.destination.FileSystem;
+        var serverUrl = this.destination.Url;
+        var fileSystem = this.destination.Filesystem;
 
         this.query<any>("/config", { name: "Raven/Synchronization/Destinations" }, this.fs)
             .done(data => {
