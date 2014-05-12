@@ -341,20 +341,6 @@ namespace Raven.Json.Linq
             });
             
         }
-        public static void AddChanges(this ICollection<DocumentsChanges> docChanges, KeyValuePair<string, RavenJToken> kvp, RavenJToken token)
-        {
-            var changes = new DocumentsChanges
-            {
-                FieldNewType = kvp.Value.Type.ToString(),
-                FieldOldType = token.Type.ToString(),
-                FieldNewValue = kvp.Value.ToString(),
-                FieldOldValue = token.ToString(),
-                Change = DocumentsChanges.ChangeType.FieldChanged,
-                FieldName = kvp.Key
-            };
-            docChanges.Add(changes);
-          
-        }
         public static void AddChanges(this ICollection<DocumentsChanges> docChanges, KeyValuePair<string, RavenJToken> kvp, RavenJToken token,string fieldName)
         {
             var changes = new DocumentsChanges
