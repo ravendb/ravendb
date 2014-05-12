@@ -40,8 +40,9 @@ namespace Raven.Database.Counters.Controllers
 		                                             Positive = 0,
 		                                         };
 
-		                    if (serverValue.Positive == currentServerValue.Positive &&
-		                        serverValue.Negative == currentServerValue.Negative)
+                            // old update, have updates after it already
+		                    if (serverValue.Positive <= currentServerValue.Positive &&
+		                        serverValue.Negative <= currentServerValue.Negative)
 		                        continue;
 		                }
 		                else
