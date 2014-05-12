@@ -1959,7 +1959,7 @@ namespace Raven.Database
 											  return null;
 
 										  var jsonDoc = new RavenJObject();
-										  jsonDoc[Constants.Metadata] = defaultMetadata ?? new RavenJObject();
+										  jsonDoc[Constants.Metadata] = defaultMetadata.CloneToken() ?? new RavenJObject();
 										  return new JsonPatcher(jsonDoc).Apply(patchDefaultDoc);
 									  },
 									  () => null, debugMode);
