@@ -6,11 +6,14 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Config
 {
 	internal static class MemoryStatistics
 	{
+	    private static ILog log = LogManager.GetCurrentClassLogger();
+
 		private const int LowMemoryResourceNotification = 0;
 
 		[DllImport("kernel32.dll", SetLastError = true)]
@@ -34,10 +37,8 @@ namespace Raven.Database.Config
 			if (lowMemoryNotificationHandle == null)
 				throw new Win32Exception();
 
-			Task.Factory.StartNew(() =>
+			new Thread(() =>
 			{
-				Thread.CurrentThread.Name = "Low memory detection thread";
-
 				const UInt32 INFINITE = 0xFFFFFFFF;
 				const UInt32 WAIT_OBJECT_0 = 0x00000000;
 				const UInt32 WAIT_FAILED = 0xFFFFFFFF;
@@ -48,16 +49,28 @@ namespace Raven.Database.Config
 
 					if (waitForResult == WAIT_OBJECT_0)
 					{
-						LowMemory();
-
-						Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
+					    try
+					    {
+                            log.Warn("Low memory detected, will try to reduce memory usage...");
+					        LowMemory();
+					    }
+					    catch (Exception e)
+					    {
+					        log.Error("Failure to process low memory notification", e);
+                            continue;
+					    }
 					}
 					else if (waitForResult == WAIT_FAILED)
 					{
+                        log.Warn("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
 						break;
 					}
+                    Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
 				}
-			});
+			})
+			{
+                Name = "Low memory notification thread"
+			}.Start();
 		}
 
 		public static bool IsLowMemory
