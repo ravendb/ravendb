@@ -11,6 +11,7 @@ import net.ravendb.abstractions.data.BulkInsertChangeNotification;
 import net.ravendb.abstractions.data.DocumentChangeNotification;
 import net.ravendb.abstractions.data.IndexChangeNotification;
 import net.ravendb.abstractions.data.ReplicationConflictNotification;
+import net.ravendb.abstractions.data.TransformerChangeNotification;
 
 
 
@@ -21,6 +22,7 @@ public class LocalConnectionState {
   private List<Action1<DocumentChangeNotification>> onDocumentChangeNotification = new ArrayList<>();
   private List<Action1<BulkInsertChangeNotification>> onBulkInsertChangeNotification = new ArrayList<>();
   private List<Action1<IndexChangeNotification>> onIndexChangeNotification = new ArrayList<>();
+  private List<Action1<TransformerChangeNotification>> onTransformerChangeNotification = new ArrayList<>();
   private List<Action1<ReplicationConflictNotification>> onReplicationConflictNotification = new ArrayList<>();
 
   private List<Action1<ExceptionEventArgs>> onError = new ArrayList<>();
@@ -38,6 +40,10 @@ public class LocalConnectionState {
     return onIndexChangeNotification;
   }
 
+  public List<Action1<TransformerChangeNotification>> getOnTransformerChangeNotification() {
+    return onTransformerChangeNotification;
+  }
+
   public List<Action1<ReplicationConflictNotification>> getOnReplicationConflictNotification() {
     return onReplicationConflictNotification;
   }
@@ -52,6 +58,10 @@ public class LocalConnectionState {
 
   public void send(IndexChangeNotification indexChangeNotification) {
     EventHelper.invoke(onIndexChangeNotification, indexChangeNotification);
+  }
+
+  public void send(TransformerChangeNotification transformerChangeNotification) {
+    EventHelper.invoke(onTransformerChangeNotification, transformerChangeNotification);
   }
 
   public void send(ReplicationConflictNotification replicationConflictNotification) {

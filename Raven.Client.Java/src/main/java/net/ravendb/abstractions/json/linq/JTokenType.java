@@ -6,6 +6,8 @@ package net.ravendb.abstractions.json.linq;
  */
 public enum JTokenType {
 
+  NONE,
+
   /**
    * A JSON object
    */

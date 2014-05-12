@@ -5,7 +5,7 @@ import org.apache.commons.lang.StringUtils;
 public class FacetValue {
   private String range;
   private int hits;
-  private Double count;
+  private Integer count;
   private Double sum;
   private Double max;
   private Double min;
@@ -16,7 +16,7 @@ public class FacetValue {
     case NONE:
       return null;
     case COUNT:
-      return count;
+      return count.doubleValue();
     case MAX:
       return max;
     case MIN:
@@ -57,7 +57,7 @@ public class FacetValue {
   public Double getAverage() {
     return average;
   }
-  public Double getCount() {
+  public Integer getCount() {
     return count;
   }
   public int getHits() {
@@ -78,7 +78,7 @@ public class FacetValue {
   public void setAverage(Double average) {
     this.average = average;
   }
-  public void setCount(Double count) {
+  public void setCount(Integer count) {
     this.count = count;
   }
   public void setHits(int hits) {

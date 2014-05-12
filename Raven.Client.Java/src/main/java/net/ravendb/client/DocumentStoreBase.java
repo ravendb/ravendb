@@ -48,12 +48,22 @@ public abstract class DocumentStoreBase implements IDocumentStore {
   protected DocumentConvention conventions;
   protected String url;
   protected boolean initialized;
-  protected final DocumentSessionListeners listeners = new DocumentSessionListeners();
+  private DocumentSessionListeners listeners = new DocumentSessionListeners();
   protected ProfilingContext profilingContext = new ProfilingContext();
   private ILastEtagHolder lastEtagHolder;
   private ITransactionRecoveryStorage transactionRecoveryStorage;
   private List<Action1<InMemoryDocumentSessionOperations>> sessionCreatedInternal = new ArrayList<>();
   protected FailoverServers failoverServers;
+
+  @Override
+  public DocumentSessionListeners getListeners() {
+    return listeners;
+  }
+
+  @Override
+  public void setListeners(DocumentSessionListeners listeneres) {
+    this.listeners = listeneres;
+  }
 
   public FailoverServers getFailoverServers() {
     return failoverServers;

@@ -36,7 +36,7 @@ namespace Raven.Tests.MailingList
 
 					using (var session = store.OpenSession())
 					{
-						var actualList = session.Load<Bar>(expected.Id, "i do not exist");
+						var actualList = session.Load<Bar>(new [] { expected.Id, "i do not exist" });
 						Assert.Equal(2, actualList.Length);
 						Assert.NotNull(actualList[0]);
 						Assert.Null(actualList[1]);

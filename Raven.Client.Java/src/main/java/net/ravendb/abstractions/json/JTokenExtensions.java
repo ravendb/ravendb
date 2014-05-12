@@ -15,6 +15,10 @@ import org.apache.commons.lang.StringUtils;
 public class JTokenExtensions {
 
   public static Iterable<Tuple<RavenJToken, RavenJToken>> selectTokenWithRavenSyntaxReturningFlatStructure(RavenJToken self, String path) {
+    return selectTokenWithRavenSyntaxReturningFlatStructure(self, path, false);
+  }
+
+  public static Iterable<Tuple<RavenJToken, RavenJToken>> selectTokenWithRavenSyntaxReturningFlatStructure(RavenJToken self, String path, boolean createSnapshots) {
     List<Tuple<RavenJToken, RavenJToken>> resultList = new ArrayList<>();
 
     String[] pathParts = path.split(",");
@@ -25,7 +29,7 @@ public class JTokenExtensions {
       }
     }
     pathParts = notEmptyParts.toArray(new String[0]);
-    RavenJToken result = self.selectToken(pathParts[0]);
+    RavenJToken result = self.selectToken(pathParts[0], false, createSnapshots);
     if (pathParts.length == 1) {
       resultList.add(new Tuple<>(result, self));
       return resultList;

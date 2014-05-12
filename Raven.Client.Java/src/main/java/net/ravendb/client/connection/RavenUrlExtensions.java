@@ -1,9 +1,14 @@
 package net.ravendb.client.connection;
 
+import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.lang.StringUtils;
 
+import net.ravendb.abstractions.connection.OperationCredentials;
+import net.ravendb.abstractions.data.HttpMethods;
+import net.ravendb.client.connection.implementation.HttpJsonRequest;
+import net.ravendb.client.document.DocumentConvention;
 import net.ravendb.client.utils.UrlUtils;
 
 
@@ -68,5 +73,15 @@ public class RavenUrlExtensions {
   public static String noCache(String url) {
     return url + (url.contains("?") ? "&" : "?") + "noCache=" + UUID.randomUUID().hashCode();
   }
+
+  public static HttpJsonRequest toJsonRequest(String url, ServerClient requestor, OperationCredentials credentials, DocumentConvention convention) {
+    return requestor.getJsonRequestFactory().createHttpJsonRequest(new CreateHttpJsonRequestParams(requestor, url, HttpMethods.GET, null, credentials, convention));
+  }
+
+  public static HttpJsonRequest toJsonRequest(String url, ServerClient requestor, OperationCredentials credentials, DocumentConvention convention, Map<String, String> operationsHeaders, HttpMethods method) {
+    return requestor.getJsonRequestFactory().createHttpJsonRequest(new CreateHttpJsonRequestParams(requestor, url, method, null, credentials, convention)).addOperationHeaders(operationsHeaders);
+  }
+
+
 
 }

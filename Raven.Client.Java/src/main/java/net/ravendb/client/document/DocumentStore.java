@@ -267,7 +267,7 @@ public class DocumentStore extends DocumentStoreBase {
     UUID sessionId = UUID.randomUUID();
     currentSessionId.set(sessionId);
     try {
-      DocumentSession session = new DocumentSession(options.getDatabase(), this, listeners, sessionId,
+      DocumentSession session = new DocumentSession(options.getDatabase(), this, getListeners(), sessionId,
         setupCommands(getDatabaseCommands(), options.getDatabase(), options));
       session.setDatabaseName(options.getDatabase() != null ? options.getDatabase() : defaultDatabase);
 
@@ -423,7 +423,7 @@ public class DocumentStore extends DocumentStoreBase {
 
         return new ServerClient(databaseUrl, conventions, new OperationCredentials(apiKey),
           new ReplicationInformerGetter()
-        , null, jsonRequestFactory, currentSessionId.get(), listeners.getConflictListeners().toArray(new IDocumentConflictListener[0]));
+        , null, jsonRequestFactory, currentSessionId.get(), getListeners().getConflictListeners().toArray(new IDocumentConflictListener[0]));
       }
     };
 
@@ -608,7 +608,7 @@ public class DocumentStore extends DocumentStoreBase {
 
   @Override
   public BulkInsertOperation bulkInsert(String database, BulkInsertOptions options) {
-    return new BulkInsertOperation(database != null ? database : getDefaultDatabase(), this, listeners, options != null ? options : new BulkInsertOptions(),
+    return new BulkInsertOperation(database != null ? database : getDefaultDatabase(), this, getListeners(), options != null ? options : new BulkInsertOptions(),
       changes(database != null ? database : getDefaultDatabase()));
   }
 

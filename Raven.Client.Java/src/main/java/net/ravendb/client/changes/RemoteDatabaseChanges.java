@@ -32,6 +32,7 @@ import net.ravendb.abstractions.data.HttpMethods;
 import net.ravendb.abstractions.data.IndexChangeNotification;
 import net.ravendb.abstractions.data.ReplicationConflictNotification;
 import net.ravendb.abstractions.data.ReplicationConflictTypes;
+import net.ravendb.abstractions.data.TransformerChangeNotification;
 import net.ravendb.abstractions.extensions.JsonExtensions;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.abstractions.logging.ILog;
@@ -66,6 +67,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
   protected final ConcurrentSkipListSet<String> watchedBulkInserts = new ConcurrentSkipListSet<>();
   protected boolean watchAllDocs;
   protected boolean watchAllIndexes;
+  protected boolean watchAllTransformers;
 
   private Timer clientSideHeartbeatTimer;
 
@@ -204,6 +206,9 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
     }
     if (watchAllIndexes) {
       send("watch-indexes", null);
+    }
+    if (watchAllTransformers) {
+      send("watch-transformers", null);
     }
     for (String watchedDoc : watchedDocs) {
       send("watch-doc", watchedDoc);
@@ -460,6 +465,43 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
   }
 
   @Override
+  public IObservable<TransformerChangeNotification> forAllTransformers() {
+    LocalConnectionState counter = counters.getOrAdd("all-transformers", new Function1<String, LocalConnectionState>() {
+
+      @Override
+      public LocalConnectionState apply(String s) {
+        watchAllTransformers = true;
+        send("watch-transformers", null);
+
+        return new LocalConnectionState(new Action0() {
+          @Override
+          public void apply() {
+            watchAllTransformers = false;
+            send("unwatch-transformers", null);
+            counters.remove("all-transformers");
+          }
+        });
+      }
+    });
+    counter.inc();
+    final TaskedObservable<TransformerChangeNotification> taskedObservable = new TaskedObservable<>(counter, Predicates.<TransformerChangeNotification> alwaysTrue());
+
+    counter.getOnTransformerChangeNotification().add(new Action1<TransformerChangeNotification>() {
+      @Override
+      public void apply(TransformerChangeNotification msg) {
+        taskedObservable.send(msg);
+      }
+    });
+    counter.getOnError().add(new Action1<ExceptionEventArgs>() {
+      @Override
+      public void apply(ExceptionEventArgs ex) {
+        taskedObservable.error(ex.getException());
+      }
+    });
+    return taskedObservable;
+  }
+
+  @Override
   public IObservable<DocumentChangeNotification> forDocumentsStartingWith(final String docIdPrefix) {
     LocalConnectionState counter = counters.getOrAdd("prefixes" + docIdPrefix, new Function1<String, LocalConnectionState>() {
       @Override
@@ -699,6 +741,12 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
           IndexChangeNotification indexChangeNotification = mapper.readValue(value.toString(), IndexChangeNotification.class);
           for (LocalConnectionState counter : counters.values()) {
             counter.send(indexChangeNotification);
+          }
+          break;
+        case "TransformerChangeNotification":
+          TransformerChangeNotification transformerChangeNotification = mapper.readValue(value.toString(), TransformerChangeNotification.class);
+          for (LocalConnectionState counter : counters.values()) {
+            counter.send(transformerChangeNotification);
           }
           break;
         case "ReplicationConflictNotification":

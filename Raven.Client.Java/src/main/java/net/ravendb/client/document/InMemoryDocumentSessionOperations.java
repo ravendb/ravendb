@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
 import net.ravendb.abstractions.basic.Reference;
+import net.ravendb.abstractions.closure.Action0;
 import net.ravendb.abstractions.closure.Action1;
 import net.ravendb.abstractions.closure.Action3;
 import net.ravendb.abstractions.closure.Function1;
@@ -23,6 +24,8 @@ import net.ravendb.abstractions.commands.ICommandData;
 import net.ravendb.abstractions.commands.PutCommandData;
 import net.ravendb.abstractions.data.BatchResult;
 import net.ravendb.abstractions.data.Constants;
+import net.ravendb.abstractions.data.DocumentsChanges;
+import net.ravendb.abstractions.data.DocumentsChanges.ChangeType;
 import net.ravendb.abstractions.data.Etag;
 import net.ravendb.abstractions.data.HttpMethods;
 import net.ravendb.abstractions.data.JsonDocument;
@@ -37,6 +40,7 @@ import net.ravendb.abstractions.util.IncludesUtil;
 import net.ravendb.client.DocumentStoreBase;
 import net.ravendb.client.IDocumentStore;
 import net.ravendb.client.connection.HttpExtensions;
+import net.ravendb.client.document.batches.ILazyOperation;
 import net.ravendb.client.exceptions.NonAuthoritativeInformationException;
 import net.ravendb.client.exceptions.NonUniqueObjectException;
 import net.ravendb.client.listeners.IDocumentConversionListener;
@@ -44,6 +48,7 @@ import net.ravendb.client.listeners.IDocumentDeleteListener;
 import net.ravendb.client.listeners.IDocumentStoreListener;
 import net.ravendb.client.listeners.IExtendedDocumentConversionListener;
 import net.ravendb.client.util.IdentityHashSet;
+import net.ravendb.client.util.Types;
 import net.ravendb.client.utils.Closer;
 
 import org.apache.commons.lang.NotImplementedException;
@@ -56,6 +61,9 @@ import com.google.common.base.Defaults;
  * Abstract implementation for in memory session operations
  */
 public abstract class InMemoryDocumentSessionOperations implements AutoCloseable {
+
+  protected final List<ILazyOperation> pendingLazyOperations = new ArrayList<ILazyOperation>();
+  protected final Map<ILazyOperation, Action1<Object>> onEvaluateLazy = new HashMap<>();
 
   private static AtomicInteger counter = new AtomicInteger();
 
@@ -351,7 +359,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
       return true;
     }
     for (Map.Entry<Object, DocumentMetadata> pair : entitiesAndMetadata.entrySet()) {
-      if (entityChanged(pair.getKey(), pair.getValue())) {
+      if (entityChanged(pair.getKey(), pair.getValue(), null)) {
         return true;
       }
     }
@@ -368,7 +376,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     DocumentMetadata value;
     if (entitiesAndMetadata.containsKey(entity)) {
       value = entitiesAndMetadata.get(entity);
-      return entityChanged(entity, value);
+      return entityChanged(entity, value, null);
     } else {
       return false;
     }
@@ -604,7 +612,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
       if (entitiesByKey.containsKey(id)) {
         entity = entitiesByKey.get(id);
           // find if entity was changed on session or just inserted
-          if (entityChanged(entity, entitiesAndMetadata.get(entity))) {
+          if (entityChanged(entity, entitiesAndMetadata.get(entity), null)) {
               throw new IllegalStateException("Can't delete changed entity using identifier. Use delete(T entity) instead.");
           }
           entitiesByKey.remove(id);
@@ -704,7 +712,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     assertNoNonUniqueInstance(entity, id);
 
     RavenJObject metadata = new RavenJObject();
-    String tag = documentStore.getConventions().getTypeTagName(entity.getClass());
+    String tag = documentStore.getConventions().getDynamicTagName(entity);
     if (tag != null) {
       metadata.add(Constants.RAVEN_ENTITY_NAME, new RavenJValue(tag));
     }
@@ -840,11 +848,19 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
 
     deferedCommands.clear();
 
-    prepareForEntitiesDeletion(result);
+    prepareForEntitiesDeletion(result, null);
     prepareForEntitiesPuts(result);
 
     return result;
   }
+
+  public Map<String, List<DocumentsChanges>> whatChanged() {
+    Map<String, List<DocumentsChanges>> changes = new HashMap<>();
+    prepareForEntitiesDeletion(null, changes);
+    getAllEntitiesChanges(changes);
+    return changes;
+  }
+
 
   private void prepareForEntitiesPuts(SaveChangesData result) {
     for (Map.Entry<Object, DocumentMetadata> pair: entitiesAndMetadata.entrySet()) {
@@ -865,7 +881,21 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     }
   }
 
-  private void prepareForEntitiesDeletion(SaveChangesData result) {
+  private void getAllEntitiesChanges(Map<String, List<DocumentsChanges>> changes) {
+    for (Map.Entry<Object, DocumentMetadata> pair : entitiesAndMetadata.entrySet()) {
+      if (pair.getValue().getOriginalValue().getCount() == 0) {
+        List<DocumentsChanges> docChanges = new ArrayList<>();
+        DocumentsChanges change = new DocumentsChanges();
+        change.setChange(ChangeType.DOCUMENT_ADDED);
+        docChanges.add(change);
+        changes.put(pair.getValue().getKey(), docChanges);
+        continue;
+      }
+      entityChanged(pair.getKey(), pair.getValue(), changes);
+    }
+  }
+
+  private void prepareForEntitiesDeletion(SaveChangesData result, Map<String, List<DocumentsChanges>> changes) {
     DocumentMetadata value = null;
 
     List<String> keysToDelete = new ArrayList<>();
@@ -880,31 +910,47 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
       }
     }
     for(String key: keysToDelete) {
-      Etag etag = null;
-      Object existingEntity = null;
-      DocumentMetadata metadata = null;
-      if (entitiesByKey.containsKey(key)) {
-        existingEntity = entitiesByKey.get(key);
-        if (entitiesAndMetadata.containsKey(existingEntity)) {
-          metadata = entitiesAndMetadata.get(existingEntity);
-          etag = metadata.getEtag();
-        }
-        entitiesAndMetadata.remove(existingEntity);
-        entitiesByKey.remove(key);
-      }
+      if (changes != null)
+      {
+        List<DocumentsChanges> docChanges = new ArrayList<>();
+        DocumentsChanges change = new DocumentsChanges();
+        change.setFieldNewValue("");
+        change.setFieldOldValue("");
+        change.setChange(ChangeType.DOCUMENT_DELETED);
 
-      etag = isUseOptimisticConcurrency() ? etag : null;
-      result.getEntities().add(existingEntity);
-      for (IDocumentDeleteListener deleteListener: theListeners.getDeleteListeners()) {
-        deleteListener.beforeDelete(key, existingEntity, metadata != null ? metadata.getMetadata(): null);
+        docChanges.add(change);
+        changes.put(key, docChanges);
       }
-      DeleteCommandData delCmd = new DeleteCommandData();
-      delCmd.setEtag(etag);
-      delCmd.setKey(key);
+      else
+      {
+          Etag etag = null;
+          Object existingEntity = null;
+          DocumentMetadata metadata = null;
+          if (entitiesByKey.containsKey(key)) {
+            existingEntity = entitiesByKey.get(key);
+            if (entitiesAndMetadata.containsKey(existingEntity)) {
+              metadata = entitiesAndMetadata.get(existingEntity);
+              etag = metadata.getEtag();
+            }
+            entitiesAndMetadata.remove(existingEntity);
+            entitiesByKey.remove(key);
+          }
 
-      result.getCommands().add(delCmd);
+          etag = isUseOptimisticConcurrency() ? etag : null;
+          result.getEntities().add(existingEntity);
+          for (IDocumentDeleteListener deleteListener: theListeners.getDeleteListeners()) {
+            deleteListener.beforeDelete(key, existingEntity, metadata != null ? metadata.getMetadata(): null);
+          }
+          DeleteCommandData delCmd = new DeleteCommandData();
+          delCmd.setEtag(etag);
+          delCmd.setKey(key);
+
+          result.getCommands().add(delCmd);
+      }
     }
-    deletedEntities.clear();
+    if (changes == null) {
+      deletedEntities.clear();
+    }
   }
 
   /**
@@ -917,13 +963,18 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     getMetadataFor(entity).add(Constants.RAVEN_READ_ONLY, new RavenJValue(true));
   }
 
+
+  protected boolean entityChanged(Object entity, DocumentMetadata documentMetadata) {
+    return entityChanged(entity, documentMetadata, null);
+  }
+
   /**
    * Determines if the entity have changed.
    * @param entity
    * @param documentMetadata
    * @return
    */
-  protected boolean entityChanged(Object entity, DocumentMetadata documentMetadata) {
+  protected boolean entityChanged(Object entity, DocumentMetadata documentMetadata, Map<String, List<DocumentsChanges>> changes) {
     if (documentMetadata == null) {
       return true;
     }
@@ -943,8 +994,17 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     }
 
     RavenJObject newObj = entityToJson.convertEntityToJson(documentMetadata.getKey(), entity, documentMetadata.getMetadata());
+    if (changes != null) {
+      List<DocumentsChanges> changedData = new ArrayList<>();
+      if ((RavenJToken.deepEquals(newObj, documentMetadata.getOriginalValue(), changedData) == false) ||
+        (RavenJToken.deepEquals(documentMetadata.getMetadata(), documentMetadata.getOriginalMetadata(), changedData) == false)) {
+        changes.put(documentMetadata.getKey(), changedData);
+        return false;
+      }
+      return true;
+    }
     return RavenJToken.deepEquals(newObj, documentMetadata.getOriginalValue()) == false ||
-        RavenJToken.deepEquals(documentMetadata.getMetadata(), documentMetadata.getOriginalMetadata()) == false;
+      RavenJToken.deepEquals(documentMetadata.getMetadata(), documentMetadata.getOriginalMetadata(), null) == false;
   }
 
   /**
@@ -1042,7 +1102,6 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     }
   }
 
-
   //TODO: ProjectionToInstance is missing
 
   @Override
@@ -1050,9 +1109,16 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     return hash;
   }
 
-  public void trackIncludedDocumnet(JsonDocument include) {
+  public void trackIncludedDocument(JsonDocument include) {
       includedDocumentsByKey.put(include.getKey(), include);
   }
 
+  public String createDynamicIndexName(Class clazz) {
+    String indexName = "dynamic";
+    if (Types.isEntityType(clazz)) {
+      indexName += "/" + getConventions().getTypeTagName(clazz);
+    }
+    return indexName;
+  }
 
 }
