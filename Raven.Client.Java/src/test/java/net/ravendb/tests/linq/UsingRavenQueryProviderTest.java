@@ -340,6 +340,8 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
 
   @Test // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
   public void can_Use_Static_Fields_In_Where_Clauses() throws Exception {
+    
+    
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
 
       IndexDefinition indexDefinition = new IndexDefinition();

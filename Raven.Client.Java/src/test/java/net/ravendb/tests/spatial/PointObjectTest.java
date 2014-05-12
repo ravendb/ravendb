@@ -55,7 +55,6 @@ public class PointObjectTest extends RemoteClientTest {
   }
 
   @Test
-  @Ignore("Waiting for RavenDB-1877")
   public void pointTest() throws Exception {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
       store.executeIndex(new PointIndex());

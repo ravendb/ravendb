@@ -79,9 +79,6 @@ import com.mysema.query.types.Path;
  */
 public class DocumentSession extends InMemoryDocumentSessionOperations implements IDocumentSessionImpl, ISyncAdvancedSessionOperation, IDocumentQueryGenerator {
 
-  protected final List<ILazyOperation> pendingLazyOperations = new ArrayList<>();
-  protected final Map<ILazyOperation, Action1<Object>> onEvaluateLazy = new HashMap<>();
-
   private IDatabaseCommands databaseCommands;
 
   /**
@@ -540,6 +537,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
       throw new IllegalArgumentException(
           "Since stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
     }
+    incrementRequestCount();
 
     CloseableIterator<RavenJObject> iterator = databaseCommands.streamQuery(ravenQueryInspector.getIndexQueried(), indexQuery, queryHeaderInformation);
     return new StreamIterator<>(query, iterator);
@@ -632,12 +630,14 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
 
   @Override
   public <T> CloseableIterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize, RavenPagingInformation pagingInformation) {
+    incrementRequestCount();
     CloseableIterator<RavenJObject> iterator = databaseCommands.streamDocs(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation);
     return new SimpleSteamIterator<>(iterator, entityClass);
   }
 
   @Override
   public FacetResults[] multiFacetedSearch(FacetQuery...facetQueries) {
+    incrementRequestCount();
     return databaseCommands.getMultiFacets(facetQueries);
   }
 
@@ -749,10 +749,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    */
   @Override
   public <T> IRavenQueryable<T> query(Class<T> clazz) {
-    String indexName = "dynamic";
-    if (Types.isEntityType(clazz)) {
-      indexName += "/" + getConventions().getTypeTagName(clazz);
-    }
+    String indexName = createDynamicIndexName(clazz);
     return query(clazz, indexName);
   }
 
@@ -762,10 +759,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    */
   @Override
   public <T> IDocumentQuery<T> documentQuery(Class<T> clazz) {
-    String indexName = "dynamic";
-    if (Types.isEntityType(clazz)) {
-      indexName += "/" + getConventions().getTypeTagName(clazz);
-    }
+    String indexName = createDynamicIndexName(clazz);
     return advanced().documentQuery(clazz, indexName);
   }
 
@@ -921,6 +915,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
 
   @Override
   public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize, String exclude, RavenPagingInformation pagingInformation) {
+    incrementRequestCount();
     List<JsonDocument> results = getDatabaseCommands().startsWith(keyPrefix, matches, start, pageSize, false, exclude, pagingInformation);
     for (JsonDocument doc: results) {
       trackEntity(clazz, doc);
@@ -932,6 +927,8 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult[] loadStartingWith(Class<TResult> clazz, Class<TTransformer> transformerClass,
     String keyPrefix, String matches, int start, int pageSize, String exclude,
     RavenPagingInformation pagingInformation, Action1<ILoadConfiguration> configure) {
+
+    incrementRequestCount();
 
     try {
       String transformer = transformerClass.newInstance().getTransformerName();
@@ -952,5 +949,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     }
 
   }
+
+  //TODO : more like this
 
 }

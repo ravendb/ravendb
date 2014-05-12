@@ -7,8 +7,10 @@ import net.ravendb.abstractions.closure.Function1;
 import net.ravendb.abstractions.closure.Function2;
 import net.ravendb.abstractions.closure.Function3;
 import net.ravendb.abstractions.data.AdminStatistics;
+import net.ravendb.abstractions.data.BackupRequest;
 import net.ravendb.abstractions.data.DatabaseDocument;
 import net.ravendb.abstractions.data.HttpMethods;
+import net.ravendb.abstractions.data.RestoreRequest;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.abstractions.json.linq.RavenJToken;
 import net.ravendb.client.connection.implementation.HttpJsonRequest;
@@ -99,33 +101,22 @@ public class AdminServerClient implements IAdminDatabaseCommands, IGlobalAdminDa
     });
   }
 
-
   @Override
-  public void startBackup(String backupLocation, DatabaseDocument databaseDocument, String databaseName) {
-    Reference<RavenJObject> backupSettingsRef = new Reference<>();
-    HttpJsonRequest request = adminRequest.startBackup(backupLocation, databaseDocument, databaseName, backupSettingsRef);
+  public void startBackup(String backupLocation, DatabaseDocument databaseDocument, boolean incremental, String databaseName) {
+    HttpJsonRequest request = adminRequest.startBackup(backupLocation, databaseDocument, databaseName, incremental);
 
-    request.write(backupSettingsRef.value.toString());
+    BackupRequest backupRequest = new BackupRequest();
+    backupRequest.setBackupLocation(backupLocation);
+    backupRequest.setDatabaseDocument(databaseDocument);
+
+    request.write(RavenJObject.fromObject(backupRequest).toString());
     request.executeRequest();
   }
 
   @Override
-  public void startRestore(String restoreLocation, String databaseLocation) {
-    startRestore(restoreLocation, databaseLocation, null, false);
-  }
-
-  @Override
-  public void startRestore(String restoreLocation, String databaseLocation, String databaseName) {
-    startRestore(restoreLocation, databaseLocation, databaseName, false);
-  }
-
-  @Override
-  public void startRestore(String restoreLocation, String databaseLocation, String databaseName, boolean defrag) {
-    Reference<RavenJObject> restoreSettingsRef = new Reference<>();
-
-    HttpJsonRequest request = adminRequest.startRestore(restoreLocation, databaseLocation, databaseName, defrag, restoreSettingsRef);
-
-    request.write(restoreSettingsRef.value.toString());
+  public void startRestore(RestoreRequest restoreRequest) {
+    HttpJsonRequest request = adminRequest.createRestoreRequest();
+    request.write(RavenJObject.fromObject(restoreRequest).toString());
     request.executeRequest();
   }
 

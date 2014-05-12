@@ -22,7 +22,6 @@ import com.mysema.query.annotations.QueryEntity;
 public class SpatialUnitTest extends RemoteClientTest {
 
   @Test
-  @Ignore("Waiting for RavenDB-1877")
   public void test() throws Exception {
     DummyGeoDoc myHouse = new DummyGeoDoc(44.757767, -93.355322);
     // The gym is about 7.32 miles (11.79 kilometers) from my house.

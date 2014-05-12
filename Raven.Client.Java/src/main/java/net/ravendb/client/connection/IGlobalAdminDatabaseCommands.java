@@ -2,6 +2,7 @@ package net.ravendb.client.connection;
 
 import net.ravendb.abstractions.data.AdminStatistics;
 import net.ravendb.abstractions.data.DatabaseDocument;
+import net.ravendb.abstractions.data.RestoreRequest;
 
 
 public interface IGlobalAdminDatabaseCommands {
@@ -42,26 +43,13 @@ public interface IGlobalAdminDatabaseCommands {
    */
   public IDatabaseCommands getCommands();
 
-  /**
-   * Begins a restore operation
-   * @param restoreLocation
-   * @param databaseLocation
-   */
-  public void startRestore(String restoreLocation, String databaseLocation);
 
   /**
    * Begins a restore operation
    * @param restoreLocation
    * @param databaseLocation
    */
-  public void startRestore(String restoreLocation, String databaseLocation, String databaseName);
-
-  /**
-   * Begins a restore operation
-   * @param restoreLocation
-   * @param databaseLocation
-   */
-  public void startRestore(String restoreLocation, String databaseLocation, String databaseName, boolean defrag);
+  public void startRestore(RestoreRequest restoreRequest);
 
 
   /**
@@ -69,7 +57,7 @@ public interface IGlobalAdminDatabaseCommands {
    * @param backupLocation
    * @param databaseDocument
    */
-  public void startBackup(String backupLocation, DatabaseDocument databaseDocument, String databaseName);
+  public void startBackup(String backupLocation, DatabaseDocument databaseDocument, boolean incremental, String databaseName);
 
   /**
    * Ensures that the database exists, creating it if needed

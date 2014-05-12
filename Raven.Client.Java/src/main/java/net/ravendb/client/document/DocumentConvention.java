@@ -66,7 +66,6 @@ public class DocumentConvention extends Convention implements Serializable {
   public ConsistencyOptions defaultQueryingConsistency;
 
   private static Map<Class<?>, String> CACHED_DEFAULT_TYPE_TAG_NAMES = new HashMap<>();
-  private AtomicInteger requestCount = new AtomicInteger(0);
 
   private ClrTypeFinder findClrType;
 
@@ -376,7 +375,7 @@ public class DocumentConvention extends Convention implements Serializable {
    * @return
    */
   public static String generateDocumentKeyUsingIdentity(DocumentConvention conventions, Object entity) {
-    return conventions.findTypeTagName.find(entity.getClass()) + "/";
+    return conventions.getDynamicTagName(entity) + "/";
   }
 
   /**
@@ -410,6 +409,16 @@ public class DocumentConvention extends Convention implements Serializable {
     return defaultTypeTagName(type);
   }
 
+  /*
+   *  If object is dynamic, try to load a tag name.
+   */
+  public String getDynamicTagName(Object entity) {
+    if (entity == null) {
+      return null;
+    }
+    return getTypeTagName(entity.getClass());
+  }
+
   /**
    * Generates the document key.
    * @param dbName
@@ -427,11 +436,6 @@ public class DocumentConvention extends Convention implements Serializable {
 
     return documentKeyGenerator.generate(dbName, databaseCommands, entity);
   }
-
-
-
-
-
 
   /**
    *  Gets the function to find the clr type of a document.
@@ -729,10 +733,6 @@ public class DocumentConvention extends Convention implements Serializable {
   @Override
   public DocumentConvention clone() {
     return (DocumentConvention) SerializationUtils.clone(this);
-  }
-
-  public int incrementRequestCount() {
-    return requestCount.incrementAndGet();
   }
 
   /**

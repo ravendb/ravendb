@@ -20,13 +20,16 @@ public class LoadedDatabaseStatistics {
   private long countOfDocuments;
   private long countOfAttachments;
   private double databaseTransactionVersionSizeInMB;
-  private List<DatabaseMetrics> metrics;
+  private DatabaseMetrics metrics;
 
-  public List<DatabaseMetrics> getMetrics() {
+
+
+  public DatabaseMetrics getMetrics() {
     return metrics;
   }
 
-  public void setMetrics(List<DatabaseMetrics> metrics) {
+
+  public void setMetrics(DatabaseMetrics metrics) {
     this.metrics = metrics;
   }
 

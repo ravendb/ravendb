@@ -1,8 +1,10 @@
 package net.ravendb.client;
 
+import java.util.List;
 import java.util.Map;
 
 import net.ravendb.abstractions.commands.ICommandData;
+import net.ravendb.abstractions.data.DocumentsChanges;
 import net.ravendb.abstractions.data.Etag;
 import net.ravendb.abstractions.exceptions.ConcurrencyException;
 import net.ravendb.abstractions.json.linq.RavenJObject;
@@ -183,5 +185,7 @@ public interface IAdvancedDocumentSessionOperations {
    * @param entity
    */
   public void explicitlyVersion(Object entity);
+
+  public Map<String, List<DocumentsChanges>> whatChanged();
 
 }

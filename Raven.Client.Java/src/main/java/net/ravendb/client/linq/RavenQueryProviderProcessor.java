@@ -5,6 +5,7 @@ import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1024,6 +1025,16 @@ public class RavenQueryProviderProcessor<T> {
   private String getFieldNameForRangeQuery(ExpressionInfo expression, Object value) {
     Field identityProperty = documentQuery.getDocumentConvention().getIdentityProperty(clazz);
     if (identityProperty != null && identityProperty.getName().equals(expression.getPath())) {
+      Class<?> identityPropertyType = identityProperty.getType();
+
+      List<Class<?>> types = Arrays.<Class<?>>asList(Integer.class, Integer.TYPE, Long.class, Long.TYPE, Float.class, Float.TYPE, Double.class, Double.TYPE);
+      if (types.contains(identityPropertyType)) {
+        throw new IllegalArgumentException("You cannot issue range queries on a identity property that is of a numeric type.\n" +
+          "RavenDB numeric ids are purely client side, on the server, they are always strings, " +
+          "and aren't going to sort according to your expectations.\n" +
+          "You can create a stand-in property to hold the numeric value, and do a range query on that.");
+      }
+
       return Constants.DOCUMENT_ID_FIELD_NAME;
     }
     if (documentQuery.getDocumentConvention().usesRangeType(value) && !expression.getPath().endsWith("_Range")) {
@@ -1073,7 +1084,9 @@ public class RavenQueryProviderProcessor<T> {
       }
 
     IDocumentQuery<TProjection> finalQuery = ((IDocumentQuery<T>)documentQuery).selectFields(projectionClass, fieldsToFetch.toArray(new String[0]), renamedFields.toArray(new String[0]));
-    finalQuery.setResultTransformer(this.resultsTransformer);
+    if (org.apache.commons.lang.StringUtils.isNotEmpty(resultsTransformer)) {
+      finalQuery.setResultTransformer(this.resultsTransformer);
+    }
     finalQuery.setQueryInputs(this.queryInputs);
 
 

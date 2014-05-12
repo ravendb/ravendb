@@ -69,4 +69,28 @@ public class DocumentSessionListeners {
     this.conflictListeners = conflictListeners;
   }
 
+  public void registerListener(IDocumentConversionListener conversionListener) {
+    this.conversionListeners.add(conversionListener);
+  }
+
+  public void registerListener(IExtendedDocumentConversionListener conversionListener) {
+    this.extendedConversionListeners.add(conversionListener);
+  }
+
+  public void registerListener(IDocumentQueryListener conversionListener) {
+    this.queryListeners.add(conversionListener);
+  }
+
+  public void registerListener(IDocumentStoreListener conversionListener) {
+    this.storeListeners.add(conversionListener);
+  }
+
+  public void registerListener(IDocumentDeleteListener conversionListener) {
+    this.deleteListeners.add(conversionListener);
+  }
+
+  public void registerListener(IDocumentConflictListener conversionListener) {
+    this.conflictListeners.add(conversionListener);
+  }
+
 }
