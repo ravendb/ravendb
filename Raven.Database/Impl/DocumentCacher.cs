@@ -37,8 +37,7 @@ namespace Raven.Database.Impl
 			log.Info(@"MemoryCache Settings:
   PhysicalMemoryLimit = {0}
   CacheMemoryLimit    = {1}
-  PollingInterval     = {2}", cachedSerializedDocuments.PhysicalMemoryLimit, cachedSerializedDocuments.CacheMemoryLimit,
-			  cachedSerializedDocuments.PollingInterval);
+  PollingInterval     = {2}", result.PhysicalMemoryLimit, result.CacheMemoryLimit, result.PollingInterval);
 
 			return result;
 		}
