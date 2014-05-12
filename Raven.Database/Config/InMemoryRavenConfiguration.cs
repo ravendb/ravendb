@@ -74,7 +74,7 @@ namespace Raven.Database.Config
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
 			ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
 
-			MemoryLimitForIndexing = ravenSettings.MemoryLimitForIndexing.Value;
+			MemoryLimitForIndexingInMB = ravenSettings.MemoryLimitForIndexing.Value;
 
 			EncryptionKeyBitsPreference = ravenSettings.EncryptionKeyBitsPreference.Value;
 			// Core settings
@@ -785,7 +785,7 @@ namespace Raven.Database.Config
 			set { indexStoragePath = value.ToFullPath(); }
 		}
 
-		public int MemoryLimitForIndexing { get; set; }
+		public int MemoryLimitForIndexingInMB { get; set; }
 
 		public int AvailableMemoryForRaisingIndexBatchSizeLimit { get; set; }
 

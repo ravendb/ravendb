@@ -24,7 +24,8 @@ namespace Raven.Database.Config
 		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
 			MemoryLimitForIndexing = new IntegerSetting(settings[Constants.MemoryLimitForIndexing],
-				(int) (MemoryStatistics.AvailableMemory*0.75)); //don't take ALL the available memory for indexing - or else system will be resource starved
+                // we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
+                Math.Min(1024, (int)(MemoryStatistics.AvailableMemory * 0.75))); 
 
 		    EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting],
 		        Constants.DefaultKeySizeToUseInActualEncryptionInBits);

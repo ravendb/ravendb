@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 #if !SILVERLIGHT
 using System.Collections.Concurrent;
@@ -18,18 +19,15 @@ namespace Raven.Database.Util
 
 		}
 
-		public IQueryable<T> AsQueryableFromSnapshot()
-		{
-			return queue.ToList().AsQueryable();
-		}
-
 		public SizeLimitedConcurrentSet(int size, IEqualityComparer<T> equalityComparer)
 		{
 			this.size = size;
 			dic = new ConcurrentDictionary<T, object>(equalityComparer);
 		}
 
-		public bool Add(T item)
+	    public int Count { get { return queue.Count; }}
+
+	    public bool Add(T item)
 		{
 			if (dic.TryAdd(item, null) == false)
 				return false;
@@ -62,6 +60,11 @@ namespace Raven.Database.Util
 		{
 			return queue.ToArray();
 		}
+
+	    public TAccumolate Aggregate<TAccumolate>(TAccumolate seed, Func<TAccumolate, T, TAccumolate> aggregate)
+	    {
+	        return queue.Aggregate(seed, aggregate);
+	    }
 	}
 }
 #endif

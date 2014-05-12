@@ -226,12 +226,18 @@ namespace Raven.Database.Prefetching
 			if (past.Count == 0)
 				return;
 
+		    var size = 1024;
+		    var count = context.LastActualIndexingBatchInfo.Count;
+		    if (count > 0)
+		    {
+		        size = context.LastActualIndexingBatchInfo.Aggregate(0, (o, c) => o + c.TotalDocumentCount)/count;
+		    }
 			var alreadyLoadedSize = futureIndexBatches.Values.Sum(x =>
 			{
 				if (x.Task.IsCompleted)
 					return x.Task.Result.Sum(doc => doc.SerializedSizeOnDisk);
 
-				return context.LastActualIndexingBatchInfo.AsQueryableFromSnapshot().Average(o => o.TotalDocumentCount);
+			    return size;
 			});
 
 			if (alreadyLoadedSize > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
@@ -381,7 +387,7 @@ namespace Raven.Database.Prefetching
 
 			if (prefetchingQueue.Count >= // don't use too much, this is an optimization and we need to be careful about using too much mem
 				context.Configuration.MaxNumberOfItemsToPreFetchForIndexing ||
-				prefetchingQueue.AsQueryableFromSnapshot().Sum(x => SelectSerializedSizeOnDiskIfNotNull(x)) > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+				prefetchingQueue.Aggregate(0, (x,c) => x + SelectSerializedSizeOnDiskIfNotNull(c)) > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
 				return;
 
 			foreach (var jsonDocument in docs)
@@ -514,12 +520,11 @@ namespace Raven.Database.Prefetching
 		{
 			var batchId = Guid.NewGuid();
 
-			autoTuner.CurrentlyUsedBatchSizes.GetOrAdd(batchId, jsonDocuments.Sum(x => x.SerializedSizeOnDisk));
+			autoTuner.CurrentlyUsedBatchSizes.TryAdd(batchId, jsonDocuments.Sum(x => x.SerializedSizeOnDisk));
 			return new DisposableAction(() =>
 			{
 				long _;
-				var id = batchId;
-				autoTuner.CurrentlyUsedBatchSizes.TryRemove(id, out _);
+                autoTuner.CurrentlyUsedBatchSizes.TryRemove(batchId, out _);
 			});
 		}
 
