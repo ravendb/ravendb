@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,7 +29,7 @@ namespace Raven.Database.Indexing
 
 		private readonly SizeLimitedConcurrentSet<string> recentlyDeleted = new SizeLimitedConcurrentSet<string>(100, StringComparer.OrdinalIgnoreCase);
 
-		private readonly SizeLimitedConcurrentSet<ActualIndexingBatchSize> lastActualIndexingBatchSize = new SizeLimitedConcurrentSet<ActualIndexingBatchSize>(25);
+		private readonly SizeLimitedConcurrentSet<IndexingBatchInfo> lastActualIndexingBatchInfo = new SizeLimitedConcurrentSet<IndexingBatchInfo>(25);
 		private readonly ConcurrentQueue<ServerError> serverErrors = new ConcurrentQueue<ServerError>();
 		private readonly object waitForWork = new object();
 		private volatile bool doWork = true;
@@ -250,13 +251,16 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void ReportIndexingActualBatchSize(int size)
+		public void ReportIndexingBatchStarted(int documentsCount, long documentsSize)
 		{
-			lastActualIndexingBatchSize.Add(new ActualIndexingBatchSize
+			var indexingBatchInfo = new IndexingBatchInfo
 			{
-				Size = size,
+				TotalDocumentCount = documentsCount,
+				TotalDocumentSize = documentsSize,
 				Timestamp = SystemTime.UtcNow
-			});
+			};
+
+			lastActualIndexingBatchInfo.Add(indexingBatchInfo);
 		}
 
 		public ConcurrentSet<FutureBatchStats> FutureBatchStats
@@ -264,9 +268,9 @@ namespace Raven.Database.Indexing
 			get { return futureBatchStats; }
 		}
 
-		public SizeLimitedConcurrentSet<ActualIndexingBatchSize> LastActualIndexingBatchSize
+		public SizeLimitedConcurrentSet<IndexingBatchInfo> LastActualIndexingBatchInfo
 		{
-			get { return lastActualIndexingBatchSize; }
+			get { return lastActualIndexingBatchInfo; }
 		}
 
 		public DocumentDatabase Database { get; set; }

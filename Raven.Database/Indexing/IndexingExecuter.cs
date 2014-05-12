@@ -100,47 +100,48 @@ namespace Raven.Database.Indexing
 
 			var operationCancelled = false;
 			TimeSpan indexingDuration = TimeSpan.Zero;
-			List<JsonDocument> jsonDocs = null;
 			var lastEtag = Etag.Empty;
 
 			indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = true);
+			
+			List<JsonDocument> jsonDocs;
+	        using (prefetchingBehavior.DocumentBatchFrom(lastIndexedEtagForAllIndexes, out jsonDocs))
+	        {
+		        try
+		        {
+			        if (Log.IsDebugEnabled)
+			        {
+				        Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
+					        jsonDocs.Count, lastIndexedEtagForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
+			        }
 
-			try
-			{
-                jsonDocs = prefetchingBehavior.GetDocumentsBatchFrom(lastIndexedEtagForAllIndexes);
+			        context.ReportIndexingBatchStarted(jsonDocs.Count, jsonDocs.Sum(x => x.SerializedSizeOnDisk));
 
-				if (Log.IsDebugEnabled)
-				{
-					Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-                              jsonDocs.Count, lastIndexedEtagForAllIndexes, string.Join(", ", jsonDocs.Select(x => x.Key)));
-				}
+			        context.CancellationToken.ThrowIfCancellationRequested();
 
-				context.ReportIndexingActualBatchSize(jsonDocs.Count);
-				context.CancellationToken.ThrowIfCancellationRequested();
+			        if (jsonDocs.Count <= 0)
+				        return;
 
-				if (jsonDocs.Count <= 0)
-					return;
+			        var sw = Stopwatch.StartNew();
+			        lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
+			        indexingDuration = sw.Elapsed;
+		        }
+		        catch (OperationCanceledException)
+		        {
+			        operationCancelled = true;
+		        }
+		        finally
+		        {
+			        if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
+			        {
+				        prefetchingBehavior.CleanupDocuments(lastEtag);
+				        prefetchingBehavior.UpdateAutoThrottler(jsonDocs, indexingDuration);
+			        }
 
-				var sw = Stopwatch.StartNew();
-				lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs);
-				indexingDuration = sw.Elapsed;
-			}
-			catch (OperationCanceledException)
-			{
-				operationCancelled = true;
-			}
-			finally
-			{
-				if (operationCancelled == false && jsonDocs != null && jsonDocs.Count > 0)
-				{
-					prefetchingBehavior.CleanupDocuments(lastEtag);
-					prefetchingBehavior.UpdateAutoThrottler(jsonDocs, indexingDuration);
-				}
-
-				prefetchingBehavior.BatchProcessingComplete();
-
-				indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = false);
-			}
+			        prefetchingBehavior.BatchProcessingComplete();
+			        indexesToWorkOn.ForEach(x => x.Index.IsMapIndexingInProgress = false);
+		        }
+	        }
 		}
 
 		private Etag DoActualIndexing(IList<IndexToWorkOn> indexesToWorkOn, List<JsonDocument> jsonDocs)

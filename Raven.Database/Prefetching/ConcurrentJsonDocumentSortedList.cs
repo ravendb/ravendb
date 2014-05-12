@@ -38,6 +38,11 @@ namespace Raven.Database.Prefetching
 			}
 		}
 
+		public IQueryable<JsonDocument> AsQueryableFromSnapshot()
+		{
+			return innerList.ToList().AsQueryable();
+		}
+
 		public void Add(JsonDocument value)
 		{
 			try
