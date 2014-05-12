@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -168,10 +169,14 @@ namespace Raven.Storage.Esent.StorageActions
 			RavenJObject dataAsJson;
 			using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 			{
-				using (var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
+				using (var aggregateStream = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
 				{
-					dataAsJson = aggregate.ToJObject();
-					docSize = (int)stream.Position;
+					var streamInUse = aggregateStream;
+					if (streamInUse != stream)
+						streamInUse = new CountingStream(aggregateStream);
+
+					dataAsJson = streamInUse.ToJObject();
+					docSize = (int)Math.Max(streamInUse.Position,stream.Position);
 				}
 			}
 
