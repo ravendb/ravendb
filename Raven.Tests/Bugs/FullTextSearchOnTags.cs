@@ -247,7 +247,7 @@ namespace Raven.Tests.Bugs
 						.Where(x => x.Name == "User");
 
 
-					Assert.Equal("-Tags:(i love cats) AND (Name:User)", ravenQueryable.ToString());
+					Assert.Equal("( -Tags:(i love cats) AND Tags:(*)) AND (Name:User)", ravenQueryable.ToString());
 
 					Assert.Equal(1, ravenQueryable.Count());
 				}
@@ -267,7 +267,7 @@ namespace Raven.Tests.Bugs
 						.Where(x => x.Name == "User");
 
 
-					Assert.Equal("-Tags:(i love cats) Name:User", ravenQueryable.ToString());
+					Assert.Equal("( -Tags:(i love cats) AND Tags:(*)) Name:User", ravenQueryable.ToString());
 				}
 			}
 		}
@@ -285,7 +285,7 @@ namespace Raven.Tests.Bugs
 						.Where(x => x.Name == "User");
 
 
-					Assert.Equal("-Tags:(i love cats) AND (Name:User)", ravenQueryable.ToString());
+					Assert.Equal("( -Tags:(i love cats) AND Tags:(*)) AND (Name:User)", ravenQueryable.ToString());
 				}
 			}
 		}
