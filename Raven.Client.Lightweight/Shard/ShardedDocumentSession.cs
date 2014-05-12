@@ -430,15 +430,6 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
-		/// Loads the specified ids.
-		/// </summary>
-		/// <param name="ids">The ids.</param>
-		Lazy<T[]> ILazySessionOperations.Load<T>(params string[] ids)
-		{
-			return Lazily.Load<T>(ids, null);
-		}
-
-		/// <summary>
 		/// Loads the specified id.
 		/// </summary>
 		Lazy<T> ILazySessionOperations.Load<T>(string id)
@@ -538,12 +529,17 @@ namespace Raven.Client.Shard
 			return Lazily.Load(documentKeys, onEval);
 		}
 
-		Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id)
+		Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id, Action<TResult> onEval)
+		{
+			return Lazily.Load(id, typeof(TTransformer), onEval);
+		}
+
+		Lazy<TResult> ILazySessionOperations.Load<TResult>(string id, Type transformerType, Action<TResult> onEval)
 		{
 			var cmds = GetCommandsToOperateOn(new ShardRequestData
 			{
 				Keys = { id },
-				EntityType = typeof(TTransformer)
+				EntityType = transformerType
 			});
 
 			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, () =>
@@ -551,12 +547,17 @@ namespace Raven.Client.Shard
 				var list = cmds.Select(databaseCommands => databaseCommands.DisableAllCaching()).ToList();
 				return new DisposableAction(() => list.ForEach(x => x.Dispose()));
 			}, id), HandleInternalMetadata);
-			return AddLazyOperation<TResult>(lazyLoadOperation, null, cmds);
+			return AddLazyOperation(lazyLoadOperation, onEval, cmds);
 		}
 
-		Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(params string[] ids)
+		Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(IEnumerable<string> ids, Action<TResult> onEval)
 		{
-			return LazyLoadInternal<TResult>(ids.ToArray(), new KeyValuePair<string, Type>[0], null);
+			throw new NotImplementedException();
+		}
+
+		Lazy<TResult[]> ILazySessionOperations.Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<TResult> onEval)
+		{
+			throw new NotImplementedException();
 		}
 
 		Lazy<T[]> ILazySessionOperations.Load<T>(params ValueType[] ids)
@@ -776,7 +777,6 @@ namespace Raven.Client.Shard
 					var results = databaseCommands.Batch(shardAndObjects.Value.Commands);
 					UpdateBatchResults(results, shardAndObjects.Value);
 				}
-			    return ;
 			}
 		}
 
@@ -913,7 +913,7 @@ namespace Raven.Client.Shard
 		public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query)
 		{
 			QueryHeaderInformation _;
-			return Stream<T>(query, out _);
+			return Stream(query, out _);
 		}
 
 		public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation)
@@ -924,7 +924,7 @@ namespace Raven.Client.Shard
 		public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
 		{
 			QueryHeaderInformation _;
-			return Stream<T>(query, out _);
+			return Stream(query, out _);
 		}
 
 		public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation)
