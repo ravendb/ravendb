@@ -545,6 +545,7 @@ namespace Raven.Database.Server
 			    {
 			        logger.Info(
 			            "Will not be shutting down database {0} because is is doing work, last work at {1}, indexing: {2}",
+						database.Name,
 			            lastWorkTime,
 			            isCurrentlyIndexing);
 					// this document might not be actively working with user, but it is actively doing indexes, we will 
