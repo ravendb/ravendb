@@ -843,14 +843,8 @@ namespace Raven.Imports.Newtonsoft.Json
 												: null;
 
 			JsonSerializerInternalWriter serializerWriter = new JsonSerializerInternalWriter(this, BeforeClosingObject);
-		    bool isTypeNameHandlingAll;
-		    serializerWriter.Serialize(traceJsonWriter ?? jsonWriter, value, objectType, out isTypeNameHandlingAll);
-            if (isTypeNameHandlingAll)
-            {
-                if (TypeNameHandling == TypeNameHandling.Auto)
-                    TypeNameHandling = TypeNameHandling.All;
-            }
-		        
+            serializerWriter.Serialize(traceJsonWriter ?? jsonWriter, value, objectType);
+	        
 			if (traceJsonWriter != null)
 				TraceWriter.Trace(TraceLevel.Verbose, "Serialized JSON: " + Environment.NewLine + traceJsonWriter.GetJson(), null);
 
