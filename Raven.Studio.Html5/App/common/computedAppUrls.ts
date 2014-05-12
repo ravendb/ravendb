@@ -38,6 +38,7 @@ interface computedAppUrls {
     statusDebugSqlReplication: KnockoutComputed<string>;
     statusDebugIndexFields: KnockoutComputed<string>;
     statusDebugSlowDocCounts: KnockoutComputed<string>;
+    statusDebugIdentities: KnockoutComputed<string>;
 
 
     isAreaActive: (routeRoot: string) => KnockoutComputed<boolean>;
