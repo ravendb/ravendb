@@ -96,8 +96,12 @@ public class RavenJPath {
     this.parts.add(Integer.parseInt(indexer));
   }
 
-  @SuppressWarnings("null")
   public RavenJToken evaluate(RavenJToken root, boolean errorWhenNoMatch) {
+    return evaluate(root, errorWhenNoMatch, false);
+  }
+
+  @SuppressWarnings("null")
+  public RavenJToken evaluate(RavenJToken root, boolean errorWhenNoMatch, boolean createSnapshots) {
     RavenJToken current = root;
 
     for (Object part : parts) {
@@ -105,7 +109,19 @@ public class RavenJPath {
       if (propertyName != null) {
         RavenJObject o = (RavenJObject) current;
         if (o != null) {
-          current = o.get(propertyName);
+          if (createSnapshots) {
+            RavenJToken newProp = o.get(propertyName);
+            if (newProp != null) {
+              newProp.ensureCannotBeChangeAndEnableShapshotting();
+              newProp = newProp.createSnapshot();
+              o.add(propertyName, newProp);
+              current = newProp;
+            } else {
+              current = null;
+            }
+          } else {
+           current = o.get(propertyName);
+          }
 
           if (current == null && errorWhenNoMatch)
             throw new RavenJPathEvaluationException("Property '" + propertyName + "' does not exist on RavenJObject.");

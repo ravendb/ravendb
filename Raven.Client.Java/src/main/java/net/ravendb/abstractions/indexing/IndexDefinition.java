@@ -420,6 +420,11 @@ public class IndexDefinition {
         return false;
     } else if (!suggestions.equals(other.suggestions))
       return false;
+    if (maxIndexOutputsPerDocument == null) {
+      if (other.maxIndexOutputsPerDocument != null)
+        return false;
+    } else if (!maxIndexOutputsPerDocument.equals(other.maxIndexOutputsPerDocument))
+      return false;
     if (termVectors == null) {
       if (other.termVectors != null)
         return false;

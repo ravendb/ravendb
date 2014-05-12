@@ -6,20 +6,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.ravendb.abstractions.data.Constants;
+import net.ravendb.abstractions.data.JsonDocument;
 import net.ravendb.abstractions.data.MultiLoadResult;
 import net.ravendb.abstractions.json.linq.RavenJArray;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.abstractions.json.linq.RavenJToken;
+import net.ravendb.client.connection.SerializationHelper;
 import net.ravendb.client.document.DocumentSession;
+import net.ravendb.client.document.InMemoryDocumentSessionOperations;
 
 
 
 public class LoadTransformerOperation {
-  private DocumentSession documentSession;
+  private InMemoryDocumentSessionOperations documentSession;
   private final String transformer;
   private String[] ids;
 
-  public LoadTransformerOperation(DocumentSession documentSession, String transformer, String[] ids) {
+  public LoadTransformerOperation(InMemoryDocumentSessionOperations documentSession, String transformer, String[] ids) {
     this.documentSession = documentSession;
     this.transformer = transformer;
     this.ids = ids;
@@ -27,6 +30,11 @@ public class LoadTransformerOperation {
 
   @SuppressWarnings("unchecked")
   public <T> T[] complete(Class<T> clazz, MultiLoadResult multiLoadResult) {
+
+    for (JsonDocument include : SerializationHelper.ravenJObjectsToJsonDocuments(multiLoadResult.getIncludes())) {
+      documentSession.trackIncludedDocument(include);
+    }
+
     if (clazz.isArray()) {
 
       // Returns array of arrays, public APIs don't surface that yet though as we only support Transform

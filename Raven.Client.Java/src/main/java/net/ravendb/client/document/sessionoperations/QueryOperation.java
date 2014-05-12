@@ -15,6 +15,7 @@ import net.ravendb.abstractions.basic.Tuple;
 import net.ravendb.abstractions.closure.Action2;
 import net.ravendb.abstractions.data.Constants;
 import net.ravendb.abstractions.data.IndexQuery;
+import net.ravendb.abstractions.data.JsonDocument;
 import net.ravendb.abstractions.data.QueryResult;
 import net.ravendb.abstractions.extensions.JsonExtensions;
 import net.ravendb.abstractions.json.linq.JTokenType;
@@ -24,6 +25,7 @@ import net.ravendb.abstractions.json.linq.RavenJToken;
 import net.ravendb.abstractions.json.linq.RavenJValue;
 import net.ravendb.abstractions.logging.ILog;
 import net.ravendb.abstractions.logging.LogManager;
+import net.ravendb.client.connection.SerializationHelper;
 import net.ravendb.client.document.InMemoryDocumentSessionOperations;
 import net.ravendb.client.exceptions.NonAuthoritativeInformationException;
 import net.ravendb.client.utils.UrlUtils;
@@ -135,10 +137,8 @@ public class QueryOperation {
   public <T> List<T> complete(Class<T> clazz)
   {
     QueryResult queryResult = currentQueryResults.createSnapshot();
-    for (RavenJObject include : queryResult.getIncludes()) {
-      RavenJObject metadata = include.value(RavenJObject.class, "@metadata");
-
-      sessionOperations.trackEntity(Object.class, metadata.value(String.class, "@id"), include, metadata, disableEntitiesTracking);
+    for (JsonDocument include : SerializationHelper.ravenJObjectsToJsonDocuments(queryResult.getIncludes())) {
+      sessionOperations.trackIncludedDocument(include);
     }
 
     List<T> list = new ArrayList<>();

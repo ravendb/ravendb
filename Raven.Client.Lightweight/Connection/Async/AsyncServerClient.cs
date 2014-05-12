@@ -863,7 +863,7 @@ namespace Raven.Client.Connection.Async
 				var multiLoadResult = new MultiLoadResult
 				{
 					Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-					Results = keys.Select(key => documents.ContainsKey(key) ? documents[key] : null).ToList()
+					Results = documents.Count == 0 ? results : keys.Select(key => documents.ContainsKey(key) ? documents[key] : null).ToList()
 				};
 
 				var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);

@@ -184,7 +184,8 @@ namespace Raven.Database.Server.WebApi
 				controller.AddHeader("Access-Control-Allow-Origin", originHeader, msg);
 			}
 
-	        if (controller.Request.Method.Method != "OPTIONS")
+            
+	        if (controller.InnerRequest.Method.Method != "OPTIONS")
 		        return;
 
 			controller.AddHeader("Access-Control-Allow-Credentials", "true", msg);
