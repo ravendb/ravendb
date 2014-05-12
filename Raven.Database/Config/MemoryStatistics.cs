@@ -49,6 +49,8 @@ namespace Raven.Database.Config
 					if (waitForResult == WAIT_OBJECT_0)
 					{
 						LowMemory();
+
+						Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
 					}
 					else if (waitForResult == WAIT_FAILED)
 					{
