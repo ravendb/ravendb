@@ -89,12 +89,12 @@ class synchronization extends viewModelBase {
     }
 
     private addDestinationUrl(url: synchronizationDestination) {
-        var fs = this.activeFilesystem();
-        if (fs) {
-            var self = this;
-            new saveDestinationCommand(fs, url).execute()
-                .done(x => self.modelPolling());
-        }
+        //var fs = this.activeFilesystem();
+        //if (fs) {
+        //    var self = this;
+        //    new saveDestinationCommand(fs, url).execute()
+        //        .done(x => self.modelPolling());
+        //}
     }
 
     synchronizeWithDestination(destination: string) {

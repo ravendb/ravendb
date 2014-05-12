@@ -126,6 +126,7 @@
     <TypeScriptCompile Include="App\models\filesystem\synchronizationDestination.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationDetail.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationDetails.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\synchronizationReplicationSetup.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationReport.ts" />
     <TypeScriptCompile Include="App\models\index.ts" />
     <TypeScriptCompile Include="App\models\indexDefinition.ts" />

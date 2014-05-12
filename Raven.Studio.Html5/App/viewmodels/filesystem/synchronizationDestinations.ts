@@ -3,65 +3,112 @@ import system = require("durandal/system");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 
-import replicationsSetup = require("models/replicationsSetup");
+import synchronizationReplicationSetup = require("models/filesystem/synchronizationReplicationSetup");
 import synchronizationDestination = require("models/filesystem/synchronizationDestination");
 import filesystem = require("models/filesystem/filesystem");
 
 import viewModelBase = require("viewmodels/viewModelBase");
 
 import getDestinationsCommand = require("commands/filesystem/getDestinationsCommand");
+import getFilesystemStatsCommand = require("commands/filesystem/getFilesystemStatsCommand");
+import saveDestinationCommand = require("commands/filesystem/saveDestinationCommand");
 
 
 class synchronizationDestinations extends viewModelBase {
 
-    destinations = ko.observableArray<synchronizationDestination>();
+    //destinations = ko.observableArray<synchronizationDestination>();
     isSaveEnabled: KnockoutComputed<boolean>;
-    private activeFilesystemSubscription: any;
+    dirtyFlag = new ko.DirtyFlag([]);
+    replicationsSetup = ko.observable<synchronizationReplicationSetup>(new synchronizationReplicationSetup({ Destinations: [], Source: null }));
+
+    canActivate(args: any): JQueryPromise<any> {
+        var deferred = $.Deferred();
+        var fs = this.activeFilesystem();
+        if (fs) {
+            this.fetchDestinations()
+                .done(() => deferred.resolve({ can: true }))
+                .fail(() => deferred.resolve({ redirect: appUrl.forFilesystem(this.activeFilesystem()) }));
+        }
+        return deferred;
+    }
 
     activate(args) {
         super.activate(args);
 
-        this.isSaveEnabled = ko.computed(() => true);
-        this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
+        var self = this;
+        this.dirtyFlag = new ko.DirtyFlag([this.replicationsSetup]);
+        this.isSaveEnabled = ko.computed(() => { return self.dirtyFlag().isDirty(); });
+        viewModelBase.dirtyFlag = new ko.DirtyFlag([this.dirtyFlag]);
+        //this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
     }
 
     deactivate() {
         super.deactivate();
-        this.activeFilesystemSubscription.dispose();
+        //this.activeFilesystemSubscription.dispose();
     }
 
     modelPolling() {
-        this.loadDestinations();
+        //this.loadDestinations();
     }
 
     saveChanges() {
-        
+        if (this.replicationsSetup().source()) {
+            this.saveReplicationSetup();
+        } else {
+            var fs = this.activeFilesystem();
+            if (fs) {
+                new getFilesystemStatsCommand(fs)
+                    .execute()
+                    .done(result=> {
+                        this.prepareAndSaveReplicationSetup(result.DatabaseId);
+                    });
+            }
+        }
+    }
+
+    private prepareAndSaveReplicationSetup(source: string) {
+        this.replicationsSetup().source(source);
+        this.saveReplicationSetup();
+    }
+
+    private saveReplicationSetup() {
+        var fs = this.activeFilesystem();
+        if (fs) {
+            var self = this;
+            new saveDestinationCommand(this.replicationsSetup().toDto(), fs)
+                .execute()
+                .done(() => this.dirtyFlag().reset());
+        }
     }
 
     createNewDestination() {
-        this.destinations.unshift(synchronizationDestination.empty());
+        this.replicationsSetup().destinations.unshift(synchronizationDestination.empty());
     }
 
     removeDestination(repl: synchronizationDestination) {
-        this.destinations.remove(repl);
+        this.replicationsSetup().destinations.remove(repl);
     }
 
-    loadDestinations(): JQueryPromise<any> {
+    fetchDestinations(): JQueryPromise<any> {
+        var deferred = $.Deferred();
         var fs = this.activeFilesystem();
         if (fs) {
-            return new getDestinationsCommand(fs).execute()
-                       .done(data => this.destinations(data));
+            new getDestinationsCommand(fs)
+                .execute()
+                .done(data => this.replicationsSetup(new synchronizationReplicationSetup(data)))
+                .always(() => deferred.resolve({ can: true }));
         }
+        return deferred;
     }
 
-    fileSystemChanged(fs: filesystem) {
-        if (fs) {
-            this.modelPollingStop();
-            this.loadDestinations().always(() => {
-                this.modelPollingStart();
-            });
-        }
-    }
+    //fileSystemChanged(fs: filesystem) {
+    //    if (fs) {
+    //        this.modelPollingStop();
+    //        this.loadDestinations().always(() => {
+    //            this.modelPollingStart();
+    //        });
+    //    }
+    //}
 }
 
 export = synchronizationDestinations;
