@@ -5,7 +5,7 @@ import java.util.List;
 public class AdminStatistics {
   private String serverName;
   private int totalNumberOfRequests;
-  private long uptime;
+  private String uptime;
   private AdminMemoryStatistics memory;
   private List<LoadedDatabaseStatistics> loadedDatabases;
   private List<FileSystemStats> loadedFileSystems;
@@ -34,11 +34,11 @@ public class AdminStatistics {
     this.totalNumberOfRequests = totalNumberOfRequests;
   }
 
-  public long getUptime() {
+  public String getUptime() {
     return uptime;
   }
 
-  public void setUptime(long uptime) {
+  public void setUptime(String uptime) {
     this.uptime = uptime;
   }
 
