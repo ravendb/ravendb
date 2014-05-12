@@ -29,17 +29,29 @@ namespace Raven.Database.Counters.Controllers
 		            var currentCounter = writer.GetCounter(counter.CounterName);
 		            foreach (var serverValue in counter.ServerValues)
 		            {
-			            var currentServerValue = currentCounter.ServerValues
-				            .FirstOrDefault(x => x.SourceId == Storage.SourceIdFor(serverValue.ServerName)) ??
-			                                     new Counter.PerServerValue
-			                                     {
-				                                     Negative = 0,
-				                                     Positive = 0,
-			                                     };
+                        Counter.PerServerValue currentServerValue;
+		                if (currentCounter != null)
+		                {
+		                    currentServerValue = currentCounter.ServerValues
+		                        .FirstOrDefault(x => x.SourceId == Storage.SourceIdFor(serverValue.ServerName)) ??
+		                                         new Counter.PerServerValue
+		                                         {
+		                                             Negative = 0,
+		                                             Positive = 0,
+		                                         };
 
-			            if (serverValue.Positive == currentServerValue.Positive &&
-			                serverValue.Negative == currentServerValue.Negative)
-				            continue;
+		                    if (serverValue.Positive == currentServerValue.Positive &&
+		                        serverValue.Negative == currentServerValue.Negative)
+		                        continue;
+		                }
+		                else
+		                {
+		                    currentServerValue = new Counter.PerServerValue
+		                    {
+		                        Negative = 0,
+                                Positive = 0
+		                    };
+		                }
 
 		                wroteCounter = true;
 			            writer.Store(replicationMessage.SendingServerName,
