@@ -121,7 +121,7 @@ namespace Raven.Tests.Core.Session
 
 					await session.SaveChangesAsync();
 
-					var users = await session.LoadAsync<User>("users/1", "users/2", "users/3");
+					var users = await session.LoadAsync<User>(new [] { "users/1", "users/2", "users/3" });
 
 					users.ForEach(Assert.Null);
 				}
