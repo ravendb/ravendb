@@ -30,15 +30,11 @@ class statusDebugDocrefs extends viewModelBase {
 
     fetchDocRefs() {
         this.currentDocRefs(this.createPagedList(this.activeDatabase()));
-       // this.currentDocRefs.notifySubscribers();
     }
 
     private createPagedList(db: database) : pagedList {
         var fetcher = (skip: number, take: number) => {
-            return new getDocRefsCommand(db, this.docId(), skip, take).execute()
-                .done(() => {
-                   // this.currentDocRefs.notifySubscribers();
-                });
+            return new getDocRefsCommand(db, this.docId(), skip, take).execute();
         }
         return new pagedList(fetcher);
     }
