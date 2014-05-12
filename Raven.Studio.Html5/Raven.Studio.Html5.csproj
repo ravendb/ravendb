@@ -159,6 +159,9 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchFileSizeRangeClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchLastModifiedBetweenClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchSingleInputClause.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationDestinations.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationConflicts.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationActivity.ts" />
     <TypeScriptCompile Include="App\viewmodels\licensingStatus.ts" />
     <TypeScriptCompile Include="App\viewmodels\queryStatsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
@@ -264,6 +267,9 @@
     <TypeScriptCompile Include="App\viewmodels\statusDebugSlowDocCounts.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\filesystem\synchronizationActivity.html" />
+    <Content Include="App\views\filesystem\synchronizationConflicts.html" />
+    <Content Include="App\views\filesystem\synchronizationDestinations.html" />
     <Content Include="App\views\statusDebugSlowDocCounts.html" />
     <Content Include="App\views\statusDebugIndexFields.html" />
     <Content Include="App\views\statusDebugSqlReplication.html" />

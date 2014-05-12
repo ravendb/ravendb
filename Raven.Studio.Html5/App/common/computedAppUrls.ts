@@ -49,5 +49,7 @@ interface computedAppUrls {
     filesystemFiles: KnockoutComputed<string>;
     filesystemSearch: KnockoutComputed<string>;
     filesystemSynchronization: KnockoutComputed<string>;
+    filesystemSynchronizationConflicts: KnockoutComputed<string>;
+    filesystemSynchronizationDestinations: KnockoutComputed<string>;
     filesystemConfiguration: KnockoutComputed<string>;
 }
