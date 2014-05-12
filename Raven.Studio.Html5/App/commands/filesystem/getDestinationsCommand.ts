@@ -3,7 +3,7 @@ import filesystem = require("models/filesystem/filesystem");
 import synchronizationDestination = require("models/filesystem/synchronizationDestination");
 import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
 
-class getFilesystemDestinationsCommand extends commandBase {
+class getDestinationsCommand extends commandBase {
 
     constructor(private fs: filesystem) {
         super();
@@ -43,4 +43,4 @@ class getFilesystemDestinationsCommand extends commandBase {
     }
 }
 
-export = getFilesystemDestinationsCommand;
+export = getDestinationsCommand;
