@@ -176,7 +176,7 @@ namespace Raven.Tests.Helpers
 				Action<DocumentStore> configureStore = null)
 		{
 		    databaseName = NormalizeDatabaseName(databaseName);
-
+            
 		    checkPorts = true;
 			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication, databaseName: databaseName);
 			ModifyServer(ravenDbServer);
@@ -185,6 +185,7 @@ namespace Raven.Tests.Helpers
 				Url = GetServerUrl(fiddler, ravenDbServer.SystemDatabase.ServerUrl),
 				DefaultDatabase = databaseName				
 			};
+		    pathsToDelete.Add(Path.Combine(ravenDbServer.SystemDatabase.Configuration.DataDirectory, @"..\Databases"));
 			stores.Add(store);
 			store.AfterDispose += (sender, args) => ravenDbServer.Dispose();
 
