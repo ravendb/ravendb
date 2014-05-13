@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Net;
+
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 #if NETFX_CORE
@@ -62,11 +61,6 @@ namespace Raven.Client.Connection
 			return destinationUrl + "/replication/lastEtag?from=" + Uri.EscapeDataString(sourceUrl);
 		}
 
-		//public static string Static(this string url, string key)
-		//{
-		//    return url + "/static/" + HttpUtility.UrlEncode(key);
-		//}
-
 		public static string Databases(this string url, int pageSize, int start)
 		{
 			var databases = url + "/databases?pageSize=" + pageSize;
@@ -88,19 +82,9 @@ namespace Raven.Client.Connection
 			return url + "/docs/?start=" + start + "&pageSize=" + pageSize;
 		}
 
-		//public static string DocsStartingWith(this string url, string prefix, int start, int pageSize)
-		//{
-		//    return Docs(url, start, pageSize) + "&startsWith=" + HttpUtility.UrlEncode(prefix);
-		//}
-
 		public static string Queries(this string url)
 		{
 			return url + "/queries/";
-		}
-
-		public static string NoCache(this string url)
-		{
-			return url;
 		}
 
 		public static Uri ToUri(this string url)
@@ -108,7 +92,7 @@ namespace Raven.Client.Connection
 			return new Uri(url);
 		}
 
-		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, OperationCredentials credentials, Document.DocumentConvention convention)
+		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, OperationCredentials credentials, DocumentConvention convention)
 		{
 			return requestor.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(requestor, url, "GET", credentials, convention));
 		}
