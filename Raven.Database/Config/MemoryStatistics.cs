@@ -35,7 +35,7 @@ namespace Raven.Database.Config
 		private static bool failedToGetTotalPhysicalMemory;
 		private static int memoryLimit;
 		private static readonly IntPtr lowMemoryNotificationHandle;
-		private static ConcurrentSet<WeakReference<ILowMemoryHandler>> lowMemoryHandlers;
+		private static readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> LowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
 
 		static MemoryStatistics()
 		{
@@ -60,7 +60,7 @@ namespace Raven.Database.Config
 
 						var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
 
-						foreach (var lowMemoryHandler in lowMemoryHandlers)
+						foreach (var lowMemoryHandler in LowMemoryHandlers)
 						{
 							ILowMemoryHandler handler;
 							if (lowMemoryHandler.TryGetTarget(out handler))
@@ -78,7 +78,7 @@ namespace Raven.Database.Config
 								inactiveHandlers.Add(lowMemoryHandler);
 						}
 
-						inactiveHandlers.ForEach(x => lowMemoryHandlers.TryRemove(x));
+						inactiveHandlers.ForEach(x => LowMemoryHandlers.TryRemove(x));
 
 					}
 					else if (waitForResult == WAIT_FAILED)
@@ -112,7 +112,7 @@ namespace Raven.Database.Config
 
 		public static void RegisterLowMemoryHandler(ILowMemoryHandler handler)
 		{
-			lowMemoryHandlers.Add(new WeakReference<ILowMemoryHandler>(handler));
+			LowMemoryHandlers.Add(new WeakReference<ILowMemoryHandler>(handler));
 		}
 
 		/// <summary>
