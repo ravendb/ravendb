@@ -6,6 +6,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Microsoft.Win32.SafeHandles;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
 
@@ -28,8 +29,14 @@ namespace Raven.Database.Config
 		[DllImport("kernel32.dll", SetLastError = true)]
 		private static extern bool QueryMemoryResourceNotification(IntPtr hResNotification, out bool isResourceStateMet);
 
-		[DllImport("kernel32.dll", SetLastError = true)]
-		private static extern UInt32 WaitForSingleObject(IntPtr hHandle, UInt32 dwMilliseconds);
+	    [DllImport("kernel32.dll")]
+	    private static extern uint WaitForMultipleObjects(uint nCount, IntPtr[] lpHandles, bool bWaitAll, uint dwMilliseconds);
+
+        [DllImport("Kernel32.dll", SetLastError = true, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Auto)]
+	    private static extern IntPtr CreateEvent(IntPtr lpEventAttributes, bool bManualReset, bool bIntialState, string lpName);
+
+        [DllImport("Kernel32.dll", SetLastError = true)]
+        public static extern bool SetEvent(IntPtr hEvent);
 
 		private static bool failedToGetAvailablePhysicalMemory;
 		private static bool failedToGetTotalPhysicalMemory;
@@ -41,7 +48,11 @@ namespace Raven.Database.Config
 		{
 			lowMemoryNotificationHandle = CreateMemoryResourceNotification(LowMemoryResourceNotification); // the handle will be closed by the system if the process terminates
 
-			if (lowMemoryNotificationHandle == null)
+		    var appDomainUnloadEvent = CreateEvent(IntPtr.Zero, true,false, null);
+
+		    AppDomain.CurrentDomain.DomainUnload += (sender, args) => SetEvent(appDomainUnloadEvent);
+
+		    if (lowMemoryNotificationHandle == null)
 				throw new Win32Exception();
 
 			new Thread(() =>
@@ -52,7 +63,7 @@ namespace Raven.Database.Config
 
 				while (true)
 				{
-					var waitForResult = WaitForSingleObject(lowMemoryNotificationHandle, INFINITE);
+                    var waitForResult = WaitForMultipleObjects(2, new[]{appDomainUnloadEvent, lowMemoryNotificationHandle}, false, INFINITE);
 
 					if (waitForResult == WAIT_OBJECT_0)
 					{
@@ -79,7 +90,6 @@ namespace Raven.Database.Config
 						}
 
 						inactiveHandlers.ForEach(x => LowMemoryHandlers.TryRemove(x));
-
 					}
 					else if (waitForResult == WAIT_FAILED)
 					{
