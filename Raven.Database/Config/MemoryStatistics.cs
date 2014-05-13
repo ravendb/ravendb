@@ -90,6 +90,7 @@ namespace Raven.Database.Config
 				}
 			})
 			{
+                IsBackground = true,
 				Name = "Low memory notification thread"
 			}.Start();
 		}
