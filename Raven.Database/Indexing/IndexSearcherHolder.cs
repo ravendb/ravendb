@@ -127,7 +127,7 @@ namespace Raven.Database.Indexing
         }
 
 
-        public class IndexSearcherHoldingState : IDisposable
+        public class IndexSearcherHoldingState : IDisposable, ILowMemoryHandler
         {
             public readonly IndexSearcher IndexSearcher;
 
@@ -193,10 +193,10 @@ namespace Raven.Database.Indexing
             {
                 IndexSearcher = indexSearcher;
 
-				MemoryStatistics.LowMemory += HandleLowMemory;
+				MemoryStatistics.RegisterLowMemoryHandler(this);
             }
 
-	        private void HandleLowMemory()
+	        public void HandleLowMemory()
 	        {
 				rwls.EnterWriteLock();
 		        try
@@ -233,9 +233,7 @@ namespace Raven.Database.Indexing
 
             private void DisposeRudely()
             {
-				MemoryStatistics.LowMemory += HandleLowMemory;
-
-                if (IndexSearcher != null)
+				if (IndexSearcher != null)
                 {
                     using (IndexSearcher)
                     using (IndexSearcher.IndexReader) { }
