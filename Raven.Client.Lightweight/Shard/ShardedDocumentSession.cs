@@ -117,7 +117,8 @@ namespace Raven.Client.Shard
 		{
 			var transformer = new TTransformer().TransformerName;
 			var configuration = new RavenLoadConfiguration();
-			configure(configuration);
+		    if (configure != null)
+		        configure(configuration);
 			return LoadInternal<TResult>(new[] { id }, null, transformer, configuration.QueryInputs).FirstOrDefault();
 		}
 
