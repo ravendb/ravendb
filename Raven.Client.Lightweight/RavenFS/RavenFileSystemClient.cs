@@ -629,21 +629,7 @@ namespace Raven.Client.RavenFS
         {
             foreach( var item in metadata )
             {
-                request.AddHeader(item.Key, item.Value.ToString());
-            }
-        }
-
-        private static void AddHeaders(NameValueCollection metadata, HttpJsonRequest request)
-        {
-            foreach (var key in metadata.AllKeys)
-            {
-                var values = metadata.GetValues(key);
-                if (values == null)
-                    continue;
-                foreach (var value in values)
-                {
-                    request.AddHeader(key, value);
-                }
+                request.AddHeader(item.Key, item.Value.ToString(Formatting.None)); 
             }
         }
 
