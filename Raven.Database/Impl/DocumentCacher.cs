@@ -9,7 +9,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Impl
 {
-	public class DocumentCacher : IDocumentCacher
+	public class DocumentCacher : IDocumentCacher, ILowMemoryHandler
 	{
 		private readonly InMemoryRavenConfiguration configuration;
 		private MemoryCache cachedSerializedDocuments;
@@ -23,7 +23,7 @@ namespace Raven.Database.Impl
 			this.configuration = configuration;
 			cachedSerializedDocuments = CreateCache();
 
-			MemoryStatistics.LowMemory += LowMemoryHandler;
+			MemoryStatistics.RegisterLowMemoryHandler(this);
 		}
 
 		private MemoryCache CreateCache()
@@ -42,7 +42,7 @@ namespace Raven.Database.Impl
 			return result;
 		}
 
-		private void LowMemoryHandler()
+		public void HandleLowMemory()
 		{
 			var oldCache = cachedSerializedDocuments;
 
@@ -129,7 +129,6 @@ namespace Raven.Database.Impl
 
 		public void Dispose()
 		{
-			MemoryStatistics.LowMemory -= LowMemoryHandler;
 			cachedSerializedDocuments.Dispose();
 		}
 	}

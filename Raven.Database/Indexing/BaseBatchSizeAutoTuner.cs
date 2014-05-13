@@ -8,7 +8,7 @@ namespace Raven.Database.Indexing
 {
 	using Raven.Abstractions.Util;
 
-	public abstract class BaseBatchSizeAutoTuner
+	public abstract class BaseBatchSizeAutoTuner : ILowMemoryHandler
 	{
 		protected readonly WorkContext context;
 
@@ -20,10 +20,10 @@ namespace Raven.Database.Indexing
 		{
 			this.context = context;
 			this.NumberOfItemsToIndexInSingleBatch = InitialNumberOfItems;
-			MemoryStatistics.LowMemory += HandleLowMemory;
+			MemoryStatistics.RegisterLowMemoryHandler(this);
 		}
 
-		private void HandleLowMemory()
+		public void HandleLowMemory()
 		{
 			ReduceBatchSizeIfCloseToMemoryCeiling(true);
 		}

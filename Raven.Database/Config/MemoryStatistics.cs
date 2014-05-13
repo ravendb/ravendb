@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -6,12 +7,18 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Raven.Abstractions.Logging;
+using Raven.Database.Util;
 
 namespace Raven.Database.Config
 {
+	internal interface ILowMemoryHandler
+	{
+		void HandleLowMemory();
+	}
+
 	internal static class MemoryStatistics
 	{
-	    private static ILog log = LogManager.GetCurrentClassLogger();
+		private static ILog log = LogManager.GetCurrentClassLogger();
 
 		private const int LowMemoryResourceNotification = 0;
 
@@ -28,6 +35,7 @@ namespace Raven.Database.Config
 		private static bool failedToGetTotalPhysicalMemory;
 		private static int memoryLimit;
 		private static readonly IntPtr lowMemoryNotificationHandle;
+		private static ConcurrentSet<WeakReference<ILowMemoryHandler>> lowMemoryHandlers;
 
 		static MemoryStatistics()
 		{
@@ -48,30 +56,41 @@ namespace Raven.Database.Config
 
 					if (waitForResult == WAIT_OBJECT_0)
 					{
-					    try
-					    {
-                            log.Warn("Low memory detected, will try to reduce memory usage...");
+						log.Warn("Low memory detected, will try to reduce memory usage...");
 
-						    var handler = LowMemory;
-						    if (handler != null)
-							    handler();
-					    }
-					    catch (Exception e)
-					    {
-					        log.Error("Failure to process low memory notification", e);
-                            continue;
-					    }
+						var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
+
+						foreach (var lowMemoryHandler in lowMemoryHandlers)
+						{
+							ILowMemoryHandler handler;
+							if (lowMemoryHandler.TryGetTarget(out handler))
+							{
+								try
+								{
+									handler.HandleLowMemory();
+								}
+								catch (Exception e)
+								{
+									log.Error("Failure to process low memory notification (low memory handler - " + handler + ")", e);
+								}
+							}
+							else
+								inactiveHandlers.Add(lowMemoryHandler);
+						}
+
+						inactiveHandlers.ForEach(x => lowMemoryHandlers.TryRemove(x));
+
 					}
 					else if (waitForResult == WAIT_FAILED)
 					{
-                        log.Warn("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
+						log.Warn("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
 						break;
 					}
-                    Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
+					Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
 				}
 			})
 			{
-                Name = "Low memory notification thread"
+				Name = "Low memory notification thread"
 			}.Start();
 		}
 
@@ -91,7 +110,10 @@ namespace Raven.Database.Config
 			}
 		}
 
-		public static event Action LowMemory;
+		public static void RegisterLowMemoryHandler(ILowMemoryHandler handler)
+		{
+			lowMemoryHandlers.Add(new WeakReference<ILowMemoryHandler>(handler));
+		}
 
 		/// <summary>
 		///  This value is in MB
