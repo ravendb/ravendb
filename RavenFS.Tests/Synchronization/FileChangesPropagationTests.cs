@@ -151,25 +151,31 @@ namespace RavenFS.Tests.Synchronization
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
-			Assert.Null(server1.Synchronization.SynchronizeDestinationsAsync().Result[0].Exception);
+            var syncResult = await server1.Synchronization.SynchronizeDestinationsAsync();
+            Assert.True(syncResult.Count() != 0);
+            Assert.Null(syncResult.First().Exception);
 
 			SyncTestUtils.TurnOnSynchronization(server2, server3);
 
-			Assert.Null(server2.Synchronization.SynchronizeDestinationsAsync().Result[0].Exception);
+            syncResult = await server2.Synchronization.SynchronizeDestinationsAsync();
+            Assert.True(syncResult.Count() != 0);
+            Assert.Null(syncResult.First().Exception);
 
 			SyncTestUtils.TurnOffSynchronization(server1);
 
-			server1.DeleteAsync("test.bin").Wait();
+			await server1.DeleteAsync("test.bin");
 
 			SyncTestUtils.TurnOnSynchronization(server1, server2);
 
 			var secondServer1Synchronization = await server1.Synchronization.SynchronizeDestinationsAsync();
-			Assert.Null(secondServer1Synchronization[0].Exception);
-			Assert.Equal(SynchronizationType.Delete, secondServer1Synchronization[0].Reports.ToArray()[0].Type);
+            Assert.True(secondServer1Synchronization.Count() == 1);
+            Assert.Null(secondServer1Synchronization.First().Exception);
+            Assert.Equal(SynchronizationType.Delete, secondServer1Synchronization.First().Reports.First().Type);
 
-			var secondServer2Synchronization = await server2.Synchronization.SynchronizeDestinationsAsync();
+            var secondServer2Synchronization = await server2.Synchronization.SynchronizeDestinationsAsync();
+            Assert.True(secondServer2Synchronization.Count() == 1);
 			Assert.Null(secondServer2Synchronization[0].Exception);
-			Assert.Equal(SynchronizationType.Delete, secondServer2Synchronization[0].Reports.ToArray()[0].Type);
+            Assert.Equal(SynchronizationType.Delete, secondServer2Synchronization.First().Reports.First().Type);
 
 			// On all servers should not have any file
 			Assert.Equal(0, server1.BrowseAsync().Result.Count());

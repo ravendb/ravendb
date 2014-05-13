@@ -20,9 +20,9 @@ class deleteDestinationCommand extends commandBase {
         this.query<any>("/config", { name: "Raven/Synchronization/Destinations" }, this.fs)
             .done(data => {
 
-                if (data && data.hasOwnProperty('destination')) {
+                if (data && data.hasOwnProperty('Destinations')) {
 
-                    var value = data['destination'];
+                    var value = data['Destinations'];
                     if (!(value instanceof Array))
                         value = [value];
 
@@ -30,7 +30,7 @@ class deleteDestinationCommand extends commandBase {
                      
                     dtos = dtos.filter(x => x.ServerUrl != serverUrl || x.FileSystem != fileSystem);
 
-                    data.destination = dtos;
+                    data.Destinations = dtos;
 
                     var url = "/config?name=" + encodeURIComponent("Raven/Synchronization/Destinations");
                     this.put(url, JSON.stringify(data), this.fs)
