@@ -248,6 +248,7 @@
     <Compile Include="Backup\ProgressNotifier.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\AttachmentAncestryPutTrigger.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualAttachmentDeleteTrigger.cs" />
+    <Compile Include="Bundles\Replication\Plugins\LatestDocumentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\LocalAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\RemoteAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\RemoteDocumentReplicationConflictResolver.cs" />

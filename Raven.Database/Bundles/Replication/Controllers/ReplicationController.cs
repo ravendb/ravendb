@@ -55,6 +55,9 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					case StraightforwardConflictResolution.ResolveToRemote:
 						withConfiguredResolvers.Add(RemoteDocumentReplicationConflictResolver.Instance);
 						break;
+					case StraightforwardConflictResolution.ResolveToLatest:
+						withConfiguredResolvers.Add(LatestDocumentReplicationConflictResolver.Instance);
+						break;
 					default:
 						throw new ArgumentOutOfRangeException("config.DocumentConflictResolution");
 				}
@@ -83,6 +86,9 @@ namespace Raven.Database.Bundles.Replication.Controllers
 						break;
 					case StraightforwardConflictResolution.ResolveToRemote:
 						withConfiguredResolvers.Add(RemoteAttachmentReplicationConflictResolver.Instance);
+						break;
+					case StraightforwardConflictResolution.ResolveToLatest:
+						// ignore this resolver for attachments
 						break;
 					default:
 						throw new ArgumentOutOfRangeException("config.AttachmentConflictResolution");
