@@ -8,6 +8,7 @@ using System.Threading;
 using Lucene.Net.Index;
 using Raven.Abstractions;
 using Lucene.Net.Search;
+using Raven.Database.Config;
 using Task = System.Threading.Tasks.Task;
 using Raven.Abstractions.Logging;
 using Raven.Json.Linq;
@@ -191,9 +192,25 @@ namespace Raven.Database.Indexing
             public IndexSearcherHoldingState(IndexSearcher indexSearcher)
             {
                 IndexSearcher = indexSearcher;
+
+				MemoryStatistics.LowMemory += HandleLowMemory;
             }
 
-            public void MarkForDisposal()
+	        private void HandleLowMemory()
+	        {
+				rwls.EnterWriteLock();
+		        try
+		        {
+					lastFacetQuery.Clear();
+					cache.Clear();
+		        }
+		        finally
+		        {
+					rwls.ExitWriteLock();
+		        }
+	        }
+
+	        public void MarkForDisposal()
             {
                 ShouldDispose = true;
             }
@@ -216,6 +233,8 @@ namespace Raven.Database.Indexing
 
             private void DisposeRudely()
             {
+				MemoryStatistics.LowMemory += HandleLowMemory;
+
                 if (IndexSearcher != null)
                 {
                     using (IndexSearcher)

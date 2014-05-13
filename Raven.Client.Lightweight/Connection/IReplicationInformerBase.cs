@@ -17,6 +17,7 @@ namespace Raven.Client.Connection
         /// Notify when the failover status changed
         /// </summary>
         event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged;
+        int DelayTimeInMiliSec { get; set; }
 
         List<OperationMetadata> ReplicationDestinations { get; }
         /// <summary>

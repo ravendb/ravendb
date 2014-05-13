@@ -18,9 +18,9 @@ class saveDestinationCommand extends commandBase {
         this.query<synchronizationDestinationDto[]>("/config", { name: "Raven/Synchronization/Destinations" }, this.fs)
             .done(data => {
                 
-                if (data && data.hasOwnProperty('destination')) {      
+                if (data && data.hasOwnProperty('Destinations')) {      
 
-                    var value = data['destination'];
+                    var value = data['Destinations'];
                     if (!(value instanceof Array))
                         value = [value];
                                                                                          
@@ -31,7 +31,7 @@ class saveDestinationCommand extends commandBase {
                 var url = "/config?name=" + encodeURIComponent("Raven/Synchronization/Destinations");       
 
                 var doc = {
-                    destination: dtos
+                    Destinations: dtos
                 };
 
                 var docAsString = JSON.stringify(doc);

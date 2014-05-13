@@ -114,6 +114,9 @@ class filesystemFiles extends viewModelBase {
     uploadFile() {
         router.navigate(appUrl.forFilesystemUploadFile(this.activeFilesystem()));
     }
+
+    modelPolling() {
+    }
 }
 
 export = filesystemFiles;

@@ -578,6 +578,11 @@ interface statusDebugDocrefsDto {
     Results: Array<string>;
 }
 
+interface statusDebugIdentitiesDto {
+    TotalCount: number;
+    Identities: Array<{ Key: string; Value: string}>;
+}
+
 interface statusDebugCurrentlyIndexingDto {
     NumberOfCurrentlyWorkingIndexes: number;
     Indexes: Array<statusDebugIndexDto>;

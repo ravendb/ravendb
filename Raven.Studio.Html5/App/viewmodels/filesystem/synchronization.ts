@@ -26,13 +26,14 @@ import virtualTable = require("widgets/virtualTable/viewModel");
 import filesystemAddDestination = require("viewmodels/filesystem/filesystemAddDestination");
 import resolveConflict = require("viewmodels/filesystem/resolveConflict");
 import filesystem = require("models/filesystem/filesystem");
+import conflictItem = require("models/filesystem/conflictItem");
 
 class synchronization extends viewModelBase {
 
     destinations = ko.observableArray<synchronizationDestinationDto>();
     isDestinationsVisible = ko.computed(() => this.destinations().length > 0);
 
-    conflicts = ko.observableArray<string>();
+    conflicts = ko.observableArray<conflictItem>();
     selectedConflicts = ko.observableArray<string>();
     isConflictsVisible = ko.computed(() => this.conflicts().length > 0);
 
@@ -43,9 +44,10 @@ class synchronization extends viewModelBase {
     isIncomingActivityVisible = ko.computed(() => true);
           
     private router = router;
-    private pollingInterval: any;
-    private activeFilesystemSubscription: any;
     synchronizationUrl = appUrl.forCurrentDatabase().filesystemSynchronization;
+
+    private isSelectAllValue = ko.observable<boolean>(false); 
+    private activeFilesystemSubscription : any;
 
     static outgoingGridSelector = "#outgoingGrid";
     static incomingGridSelector = "#incomingGrid";
@@ -210,7 +212,7 @@ class synchronization extends viewModelBase {
                     for (var i = 0; i < this.selectedConflicts().length;  i++) {
                         var conflict = this.selectedConflicts()[i];
                         new resolveConflictCommand(conflict, 1, fs).execute()
-                        .done(alert("Conflicts resolved!"));
+                            .done(this.modelPolling());
                     }
                 });
             app.showDialog(resolveConflictViewModel);
@@ -227,7 +229,15 @@ class synchronization extends viewModelBase {
             var resolveConflictViewModel: resolveConflict = new resolveConflict(message, "Resolve conflict with remote");
             resolveConflictViewModel
                 .resolveTask
-                .done(x => alert("Conflict resolved remotely"));
+                .done(x => {
+                    var fs = this.activeFilesystem();
+
+                    for (var i = 0; i < this.selectedConflicts().length; i++) {
+                        var conflict = this.selectedConflicts()[i];
+                        new resolveConflictCommand(conflict, 0, fs).execute()
+                            .done(this.modelPolling());
+                    }
+                });
             app.showDialog(resolveConflictViewModel);
         });
 
@@ -249,6 +259,20 @@ class synchronization extends viewModelBase {
                 this.loadSynchronizationActivity();
                 this.modelPollingStart();
             });
+        }
+    }
+
+    isSelectAll(): boolean {
+        return this.isSelectAllValue();
+    }
+
+    toggleSelectAll() {
+        this.isSelectAllValue(this.isSelectAllValue() ? false : true);
+        if (this.isSelectAllValue()) {
+            this.selectedConflicts.pushAll(this.conflicts().map( x => x.fileName));
+        }
+        else {
+            this.selectedConflicts.removeAll();
         }
     }
 }
