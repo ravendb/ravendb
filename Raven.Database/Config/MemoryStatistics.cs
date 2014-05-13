@@ -5,7 +5,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Config
@@ -52,7 +51,10 @@ namespace Raven.Database.Config
 					    try
 					    {
                             log.Warn("Low memory detected, will try to reduce memory usage...");
-					        LowMemory();
+
+						    var handler = LowMemory;
+						    if (handler != null)
+							    handler();
 					    }
 					    catch (Exception e)
 					    {
