@@ -370,5 +370,14 @@ namespace Raven.Json.Linq
 		}
 		
 		#endregion
+
+	    public void AssociateCurrentOBjectWith(object o)
+	    {
+	        var ravenJObject = CurrentToken as RavenJObject;
+	        if (ravenJObject == null)
+	            return;
+	        ravenJObject.Tag = o;
+
+	    }
 	}
 }

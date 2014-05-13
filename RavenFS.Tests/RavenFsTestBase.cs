@@ -41,6 +41,7 @@ namespace RavenFS.Tests
                                                     bool enableAuthentication = false,
                                                     string fileSystemName = null)
         {
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
             var storageType = GetDefaultStorageType(requestedStorage);
             var directory = dataDirectory ?? NewDataPath(fileSystemName + "_" + port);
 

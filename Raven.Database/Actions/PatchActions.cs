@@ -51,7 +51,7 @@ namespace Raven.Database.Actions
                                               return null;
 
                                           var jsonDoc = new RavenJObject();
-                                          jsonDoc[Constants.Metadata] = defaultMetadata ?? new RavenJObject();
+                                          jsonDoc[Constants.Metadata] = defaultMetadata.CloneToken() ?? new RavenJObject();
                                           return new JsonPatcher(jsonDoc).Apply(patchDefaultDoc);
                                       },
                                       () => null, debugMode);
@@ -203,7 +203,7 @@ namespace Raven.Database.Actions
 
 						scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
 						var jsonDoc = new RavenJObject();
-						jsonDoc[Constants.Metadata] = defaultMetadata ?? new RavenJObject();
+						jsonDoc[Constants.Metadata] = defaultMetadata.CloneToken() ?? new RavenJObject();
 						return scriptedJsonPatcher.Apply(scope, new RavenJObject(), patchDefault, 0, docId);
 					},
 					() =>

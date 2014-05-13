@@ -71,7 +71,6 @@ namespace Raven.Client.Document
 				new Int32Converter(),
 				new Int64Converter(),
 			};
-			MaxFailoverCheckPeriod = TimeSpan.FromMinutes(5);
 			DisableProfiling = true;
 			EnlistInDistributedTransactions = true;
 			UseParallelMultiGet = true;
@@ -97,7 +96,7 @@ namespace Raven.Client.Document
 			};
 			MaxNumberOfRequestsPerSession = 30;
 			ApplyReduceFunction = DefaultApplyReduceFunction;
-			ReplicationInformerFactory = url => new ReplicationInformer(this);
+			ReplicationInformerFactory = (url, jsonRequestFactory) => new ReplicationInformer(this, jsonRequestFactory);
 			CustomizeJsonSerializer = serializer => { };
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
 			ShouldAggressiveCacheTrackChanges = true;
@@ -576,7 +575,7 @@ namespace Raven.Client.Document
 		/// This is called to provide replication behavior for the client. You can customize 
 		/// this to inject your own replication / failover logic.
 		/// </summary>
-		public Func<string, IDocumentStoreReplicationInformer> ReplicationInformerFactory { get; set; }
+		public Func<string, HttpJsonRequestFactory, IDocumentStoreReplicationInformer> ReplicationInformerFactory { get; set; }
 
 		public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 

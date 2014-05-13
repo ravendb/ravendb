@@ -82,18 +82,18 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Schema
 				}
 				else
 				{
-					if (read.Reader == null || read.Reader.Length != 16) //precaution - might prevent NRE in edge cases
-						throw new InvalidDataException("Failed to initialize Voron transactional storage. Possible data corruption.");
+                    if (read.Reader == null || read.Reader.Length != 16) //precaution - might prevent NRE in edge cases
+                        throw new InvalidDataException("Failed to initialize Voron transactional storage. Possible data corruption. (no db id)");
 
-					using (var stream = read.Reader.AsStream())
-					using (var reader = new BinaryReader(stream))
-					{
-						id = new Guid(reader.ReadBytes((int)stream.Length));
-					}
+                    using (var stream = read.Reader.AsStream())
+                    using (var reader = new BinaryReader(stream))
+                    {
+                        id = new Guid(reader.ReadBytes((int)stream.Length));
+                    }
 
-					var schemaRead = storage.Details.Read(snapshot, "schema_version", null);
-					if (schemaRead == null)
-						throw new InvalidDataException("Failed to initialize Voron transactional storage. Possible data corruption.");
+                    var schemaRead = storage.Details.Read(snapshot, "schema_version", null);
+                    if (schemaRead == null)
+                        throw new InvalidDataException("Failed to initialize Voron transactional storage. Possible data corruption. (no schema version)");
 
 					schemaVersion = schemaRead.Reader.ToStringValue();
 				}

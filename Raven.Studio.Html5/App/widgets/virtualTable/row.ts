@@ -6,7 +6,7 @@ class row {
     top = ko.observable(0);
     rowIndex = ko.observable(0);
     isInUse = ko.observable(false);
-    cellMap = {};
+    cellMap: { Id: any} = { Id: null };
     collectionClass = ko.observable("");
     editUrl = ko.observable("");
     isChecked = ko.observable(false);
@@ -77,7 +77,9 @@ class row {
         // Bug fix: http://issues.hibernatingrhinos.com/issue/RavenDB-2002
         // Calling .data() registers it as a Knockout dependency; updating this 
         // observable later will cause the cell to redraw, thus fixing the bug.
-        this.cellMap["Id"].data();
+        if (this.cellMap && this.cellMap.Id) {
+            this.cellMap["Id"].data();
+        }
         return null;
     }
 

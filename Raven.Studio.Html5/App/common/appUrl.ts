@@ -53,6 +53,7 @@ class appUrl {
         statusDebugSqlReplication: ko.computed(() => appUrl.forStatusDebugSqlReplication(appUrl.currentDatabase())),
         statusDebugIndexFields: ko.computed(() => appUrl.forStatusDebugIndexFields(appUrl.currentDatabase())),
         statusDebugSlowDocCounts: ko.computed(() => appUrl.forStatusDebugSlowDocCounts(appUrl.currentDatabase())),
+        statusDebugIdentities: ko.computed(() => appUrl.forStatusDebugIdentities(appUrl.currentDatabase())),
 
         isAreaActive: (routeRoot: string) => ko.computed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.computed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
@@ -174,6 +175,10 @@ class appUrl {
 
     static forStatusDebugSlowDocCounts(db: database): string {
         return "#databases/status/debug/slowDocCounts?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusDebugIdentities(db: database): string {
+        return "#databases/status/debug/identities?" + appUrl.getEncodedDbPart(db);
     }
 
     static forSettings(db: database): string {
