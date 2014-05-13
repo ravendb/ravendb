@@ -52,24 +52,24 @@ class synchronizationActivity extends viewModelBase {
 
     modelPolling() {
 
-        var fs = this.activeFilesystem();
-        if (fs) {
-            var incomingGrid = this.getIncomingActivityTable();
-            if (incomingGrid) {
-                incomingGrid.loadRowData();
-            }
+        //var fs = this.activeFilesystem();
+        //if (fs) {
+        //    var incomingGrid = this.getIncomingActivityTable();
+        //    if (incomingGrid) {
+        //        incomingGrid.loadRowData();
+        //    }
 
-            new getSyncOutgoingActivitiesCommand(this.activeFilesystem()).execute()
-                .done(x => {
-                this.outgoingActivity(x);
-                    if (this.outgoingActivity().length > 0) {
-                        $("#outgoingActivityCollapse").collapse('show');
-                    }
-                    else {
-                        $("#outgoingActivityCollapse").collapse();
-                    }
-                });
-        }
+        //    new getSyncOutgoingActivitiesCommand(this.activeFilesystem()).execute()
+        //        .done(x => {
+        //        this.outgoingActivity(x);
+        //            if (this.outgoingActivity().length > 0) {
+        //                $("#outgoingActivityCollapse").collapse('show');
+        //            }
+        //            else {
+        //                $("#outgoingActivityCollapse").collapse();
+        //            }
+        //        });
+        //}
     }
 
     synchronizeNow() {

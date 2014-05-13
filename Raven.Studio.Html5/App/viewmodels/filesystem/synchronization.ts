@@ -117,14 +117,12 @@ class synchronization extends viewModelBase {
 
     modelPolling() {
 
-        var fs = this.activeFilesystem();
-        if (fs) {
-            new getDestinationsCommand(fs).execute()
-                .done(data => this.destinations(data));
+        //var fs = this.activeFilesystem();
+        //if (fs) {
 
-            new getFilesConflictsCommand(fs).execute()
-                .done(x => this.conflicts(x));
-        }
+        //    new getFilesConflictsCommand(fs).execute()
+        //        .done(x => this.conflicts(x));
+        //}
     }
 
     loadConflictsAndDestinations() : JQueryPromise<any> {

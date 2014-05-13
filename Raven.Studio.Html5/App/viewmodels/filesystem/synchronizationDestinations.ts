@@ -16,7 +16,6 @@ import saveDestinationCommand = require("commands/filesystem/saveDestinationComm
 
 class synchronizationDestinations extends viewModelBase {
 
-    //destinations = ko.observableArray<synchronizationDestination>();
     isSaveEnabled: KnockoutComputed<boolean>;
     dirtyFlag = new ko.DirtyFlag([]);
     replicationsSetup = ko.observable<synchronizationReplicationSetup>(new synchronizationReplicationSetup({ Destinations: [], Source: null }));
@@ -35,20 +34,16 @@ class synchronizationDestinations extends viewModelBase {
     activate(args) {
         super.activate(args);
 
+        //this.fetchDestinations();
+
         var self = this;
         this.dirtyFlag = new ko.DirtyFlag([this.replicationsSetup]);
         this.isSaveEnabled = ko.computed(() => { return self.dirtyFlag().isDirty(); });
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.dirtyFlag]);
-        //this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
     }
 
     deactivate() {
         super.deactivate();
-        //this.activeFilesystemSubscription.dispose();
-    }
-
-    modelPolling() {
-        //this.loadDestinations();
     }
 
     saveChanges() {
@@ -96,19 +91,11 @@ class synchronizationDestinations extends viewModelBase {
             new getDestinationsCommand(fs)
                 .execute()
                 .done(data => this.replicationsSetup(new synchronizationReplicationSetup(data)))
+                //.fail(() => alert("Failed"))
                 .always(() => deferred.resolve({ can: true }));
         }
         return deferred;
     }
-
-    //fileSystemChanged(fs: filesystem) {
-    //    if (fs) {
-    //        this.modelPollingStop();
-    //        this.loadDestinations().always(() => {
-    //            this.modelPollingStart();
-    //        });
-    //    }
-    //}
 }
 
 export = synchronizationDestinations;

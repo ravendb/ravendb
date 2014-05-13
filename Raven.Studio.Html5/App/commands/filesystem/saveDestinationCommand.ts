@@ -14,39 +14,6 @@ class saveDestinationCommand extends commandBase {
         return this.saveSetup()
             .done(() => this.reportSuccess("Saved Replication destinations."))
             .fail((response: JQueryXHR) => this.reportError("Failed to save Replication destinations.", response.responseText, response.statusText));
-
-        //var result = $.Deferred();
-
-        //var dtos = [].concat(this.destination);
-
-        //this.query<synchronizationDestinationDto[]>("/config", { name: "Raven/Synchronization/Destinations" }, this.fs)
-        //    .done(data => {
-                
-        //        if (data && data.hasOwnProperty('destination')) {      
-
-        //            var value = data['destination'];
-        //            if (!(value instanceof Array))
-        //                value = [value];
-                                                                                         
-        //            dtos = dtos.concat(value.map(x => <synchronizationDestinationDto> x));                    
-        //        }
-        //    })
-        //    .always(x => {
-        //        var url = "/config?name=" + encodeURIComponent("Raven/Synchronization/Destinations");       
-
-        //        var doc = {
-        //            destination: dtos
-        //        };
-
-        //        var docAsString = JSON.stringify(doc);
-
-        //        this.put(url, docAsString, this.fs)
-        //            .done(y => {
-        //                result.resolve(dtos);
-        //            });
-        //    });
-
-        //return result;
     }
 
     private saveSetup(): JQueryPromise<any> {

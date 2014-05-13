@@ -17,66 +17,21 @@ class getDestinationsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<synchronizationReplicationsDto> {
-
+        
         var url = "/config";
         var args = {
-            name: "Raven/Synchronization/Destinations",
+            name: "Raven/Synchronization/Destinations"
         };
 
-        var documentResult = $.Deferred();
-        var result = this.query<any>(url, args, this.fs);
-        result.fail(xhr => documentResult.fail(xhr));
-        result.done((queryResult: queryResultDto) => {
-            if (queryResult.Results.length === 0) {
-                if (this.shouldResolveNotFoundAsNull) {
-                    documentResult.resolve(null);
-                } else {
-                    documentResult.reject("Unable to find document with ID " + args.name);
-                }
-            } else {
-                documentResult.resolve(new document(queryResult.Results[0]));
-            }
-        });
+        var task = $.Deferred();
+        this.query<synchronizationReplicationsDto>(url, args, this.fs)
+            .done(data => {
+                task.resolve(data);
+            });
+            //.fail(response => this.reportError("Failed to retrieve filesystem configuration key. Does exist in this filesystem?", response.responseText, response.statusText));
 
-        return documentResult;
+        return task;
     }
-
-    //constructor(private fs: filesystem) {
-    //    super();
-    //}
-
-    //execute(): JQueryPromise<synchronizationDestinationDto[]> {
-
-    //    var url = "/config";
-    //    var args = {
-    //        name: "Raven/Synchronization/Destinations",
-    //    };
-
-    //    var task = $.Deferred();
-    //    this.query<any>(url, args, this.fs)
-    //        .done(data => {
-    //            if (data.hasOwnProperty('destination')) {
-
-    //                var value = data['destination'];
-    //                if (!(value instanceof Array))
-    //                    value = [value];
-
-    //                var result = value.map(x => <synchronizationDestinationDto> x);
-    //                task.resolve(result);
-    //            }
-    //            else {
-    //                task.resolve([]);
-    //            }
-    //        })
-    //        .fail((qXHR, textStatus, errorThrown) => {
-    //            if (qXHR.status != "404") {
-    //                this.reportError("Could not get synchronization destinations.", errorThrown, textStatus);
-    //            }
-    //            task.resolve([]);
-    //        });
-
-    //    return task;
-    //}
 }
 
 export = getDestinationsCommand;
