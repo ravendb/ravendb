@@ -229,6 +229,9 @@
     <TypeScriptCompile Include="App\commands\getConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getReplicationSourcesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getCustomColumnsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getPatchesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\savePatchCommand.ts" />
+    <TypeScriptCompile Include="App\commands\executePatchCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugChangesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugMetricsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugConfigCommand.ts" />
@@ -255,8 +258,14 @@
     <TypeScriptCompile Include="App\common\changesApi.ts" />
     <TypeScriptCompile Include="App\models\changeSubscription.ts" />
     <TypeScriptCompile Include="App\common\changesCallback.ts" />
-    <TypeScriptCompile Include="App\models\patchDocuments.ts" />
+    <TypeScriptCompile Include="App\models\patchDocument.ts" />
     <TypeScriptCompile Include="App\models\patchParam.ts" />
+    <TypeScriptCompile Include="App\viewmodels\savePatch.ts" />
+    <TypeScriptCompile Include="App\viewmodels\loadPatch.ts" />
+    <TypeScriptCompile Include="App\viewmodels\executePatchConfirm.ts" />
+    <Content Include="App\views\alerts.html" />
+    <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\executePatchConfirm.html" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugRoutes.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugRequestTracing.ts" />
     <TypeScriptCompile Include="App\viewmodels\statusDebugSqlReplication.ts" />
@@ -313,6 +322,8 @@
     <Content Include="App\views\filesystem\searchLastModifiedBetweenClause.html" />
     <Content Include="App\views\filesystem\searchSingleInputClause.html" />
     <Content Include="App\views\licensingStatus.html" />
+    <Content Include="App\views\loadPatch.html" />
+    <Content Include="App\views\savePatch.html" />
     <Content Include="App\views\queryStatsDialog.html" />
     <Content Include="App\views\selectColumns.html" />
     <TypeScriptCompile Include="App\viewmodels\patch.ts" />

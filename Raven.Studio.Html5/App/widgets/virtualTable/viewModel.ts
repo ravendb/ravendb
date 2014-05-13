@@ -148,6 +148,8 @@ class ctor {
             rows.push(newRow);
         }
 
+        app.trigger(this.settings.gridSelector + 'RowsCreated', true);
+
         return rows;
     }
 
