@@ -62,11 +62,11 @@
                                     <li data-bind="click: $root.setSelectedCollection.bind($root, $data)"><a href="#" data-bind="text: $data.name"></a></li>
                                     <!-- /ko -->
                                 </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
         </div>
         <div class="form-group" data-bind="visible: isIndexPatch()">
             <div class="row">
@@ -165,8 +165,7 @@
                 </div>
             </div>
         </div>
-        <!--div class="form-group" data-bind="visible: isCollectionPatch() || isIndexPatch()"-->
-        <div class="form-group">
+        <div id="matchingDocumentsContainer" class="form-group">
             <div class="col-md-12">
                 <div>
                     <label>Matching Documents</label>
