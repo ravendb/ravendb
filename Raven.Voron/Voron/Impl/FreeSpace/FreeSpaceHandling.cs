@@ -43,7 +43,7 @@ namespace Voron.Impl.FreeSpace
 				var stream = it.CreateReaderForCurrent();
 				{
 					var current = new StreamBitArray(stream);
-					var currentSectionId = it.CurrentKey.ToInt64();
+				    var currentSectionId = it.CurrentKey.CreateReader().ReadBigEndianInt64();
 
 					//need to find full free pages
 					if (current.SetCount < NumberOfPagesInSection)
@@ -142,7 +142,7 @@ namespace Voron.Impl.FreeSpace
 			    var stream = it.CreateReaderForCurrent();
 				{
 					var current = new StreamBitArray(stream);
-					var currentSectionId = it.CurrentKey.ToInt64();
+				    var currentSectionId = it.CurrentKey.CreateReader().ReadBigEndianInt64();
 
 					long? page;
 					if (current.SetCount < num)
