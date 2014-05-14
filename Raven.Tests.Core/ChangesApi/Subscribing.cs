@@ -1,15 +1,15 @@
 ﻿using Raven.Abstractions.Data;
 using Raven.Json.Linq;
+using Raven.Tests.Core.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Indexes;
 using System;
-using System.Linq;
-using System.Text;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Raven.Tests.Core.ChangesApi
 {
-    public class Subscribing : RavenCoreTestBase
+    public class Subscribing : RavenReplicationCoreTest
     {
         [Fact]
         public void CanSubscribeToDocumentChanges()
@@ -148,6 +148,33 @@ namespace Raven.Tests.Core.ChangesApi
                 store.DatabaseCommands.DeleteIndex("Companies/CompanyByType");
                 WaitForIndexing(store);
                 Assert.Equal("passed_forallindexesremoved", output);
+            }
+        }
+
+        [Fact]
+        public async Task CanSubscribeToReplicationConflicts()
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = GetDocumentStore())
+            {
+                var output = "";
+
+                source.DatabaseCommands.Put("docs/1", null, new RavenJObject() { { "Key", "Value" } }, new RavenJObject());
+                destination.DatabaseCommands.Put("docs/1", null, new RavenJObject() { { "Key", "Value" } }, new RavenJObject());
+
+                var eTag = source.DatabaseCommands.Get("docs/1").Etag;
+
+                destination.Changes()
+                    .ForAllReplicationConflicts()
+                    .Subscribe(conflict =>
+                    {
+                        output = "conflict";
+                    });
+
+                SetupReplication(source, destinations: destination);
+                await source.Replication.WaitAsync(eTag, replicas: 1);
+
+                Assert.Equal("conflict", output);
             }
         }
     }
