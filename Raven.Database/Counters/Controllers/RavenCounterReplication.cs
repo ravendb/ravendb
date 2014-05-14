@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data.Services.Client;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -12,6 +14,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
 {
@@ -132,9 +135,33 @@ namespace Raven.Database.Counters.Controllers
 				stats.LastError = lastError;
 			*/
 		}
-		 
-		
-		
+
+
+	    private void NotifySiblings() //TODO: implement
+	    {
+            /*try
+        {
+            collection.TryTake(out connectionStringOptions, 15 * 1000, docDb.WorkContext.CancellationToken);
+            if (connectionStringOptions == null)
+                return;
+        }
+        catch (Exception e)
+        {
+            log.ErrorException("Could not get connection string options to notify sibling servers about restart", e);
+            return;
+        }
+        try
+        {
+            var url = connectionStringOptions.Url + "/replication/heartbeat?from=" + UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
+            var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
+            request.WebRequest.ContentLength = 0;
+            request.ExecuteRequest();
+        }
+        catch (Exception e)
+        {
+            log.WarnException("Could not notify " + connectionStringOptions.Url + " about sibling server being up & running", e);
+        }*/
+	    }
 		
 
 		private bool IsNotFailing(string destServerName, int currentReplicationAttempts)
@@ -165,55 +192,35 @@ namespace Raven.Database.Counters.Controllers
 
 	    private async Task<bool> ReplicateTo(string destinationUrl)
 	    {
-            /*
-             					try
-					{
-						collection.TryTake(out connectionStringOptions, 15 * 1000, docDb.WorkContext.CancellationToken);
-						if (connectionStringOptions == null)
-							return;
-					}
-					catch (Exception e)
-					{
-						log.ErrorException("Could not get connection string options to notify sibling servers about restart", e);
-						return;
-					}
-					try
-					{
-						var url = connectionStringOptions.Url + "/replication/heartbeat?from=" + UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
-						var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
-						request.WebRequest.ContentLength = 0;
-						request.ExecuteRequest();
-					}
-					catch (Exception e)
-					{
-						log.WarnException("Could not notify " + connectionStringOptions.Url + " about sibling server being up & running", e);
-					}
-             */
-
-            var connectionStringOptions = new RavenConnectionStringOptions();
-	        var url = string.Format("{0}/lastEtag/{1}", destinationUrl, GetServerNameForWire(storage.Name));
-            var request = httpRavenRequestFactory.Create(url, "Get", connectionStringOptions);
-
-
-
-
-            var http = new HttpClient();
-	        var etagResult = await http.GetStringAsync(string.Format("{0}/lastEtag/{1}", destinationUrl, GetServerNameForWire(storage.Name)));
-	        var etag = int.Parse(etagResult);
-	        var message = new ReplicationMessage {SendingServerName = storage.Name};
-	        using (var reader = storage.CreateReader())
+	        try
 	        {
-	            message.Counters = reader.GetCountersSinceEtag(etag).Take(1024).ToList(); //TODO: Capped this...how to get remaining values?
-	        }
-	        url = string.Format("{0}/replication", destinationUrl);
+	            var connectionStringOptions = new RavenConnectionStringOptions(); //todo: get connection string from counter storage for the server
+	            var url = string.Format("{0}/lastEtag/{1}", destinationUrl, GetServerNameForWire(storage.Name));
+	            var request = httpRavenRequestFactory.Create(url, "Get", connectionStringOptions);
+	            long etag = 0;
+	            request.ExecuteRequest((TextReader etagString) => etag = long.Parse(etagString.ReadToEnd()));
 
-	        if (message.Counters.Count > 0)
+	            var message = new ReplicationMessage {SendingServerName = storage.Name};
+	            using (var reader = storage.CreateReader())
+	            {
+	                message.Counters = reader.GetCountersSinceEtag(etag).Take(10240).ToList(); //TODO: Capped this...how to get remaining values?
+	            }
+	            url = string.Format("{0}/replication", destinationUrl);
+
+	            if (message.Counters.Count > 0)
+	            {
+	                request = httpRavenRequestFactory.Create(url, "Post", connectionStringOptions);
+	                request.Write(message.GetRavenJObject());
+	                request.ExecuteRequest();
+	                return true;
+	            }
+	            return false;
+	        }
+	        catch (Exception ex)
 	        {
-	            return await new HttpClient().PostAsync(url, message, new JsonMediaTypeFormatter())
-                    .ContinueWith(task => task.Result.StatusCode == HttpStatusCode.OK);
+                log.ErrorException("Error occure replicating to: " + destinationUrl, ex);
+	            return false;
 	        }
-
-	        return await new Task<bool>(() => false);
 	    }
 
 	   
@@ -262,7 +269,7 @@ namespace Raven.Database.Counters.Controllers
 				                });
 
 				            startedTasks.Add(replicationTask);
-                            // todo:uncomment this
+                            
 //				            activeTasks.Enqueue(replicationTask);
 //				            replicationTask.ContinueWith(
 //				                _ =>
@@ -276,8 +283,8 @@ namespace Raven.Database.Counters.Controllers
 //				                    }
 //				                });
 				        }
-                        // todo:uncomment this
-//
+  
+                        
 //				        Task.WhenAll(startedTasks.ToArray()).ContinueWith(
 //				            t =>
 //				            {
