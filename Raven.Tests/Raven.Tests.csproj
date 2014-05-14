@@ -222,7 +222,6 @@
     <Compile Include="Bugs\DyanmicId.cs" />
     <Compile Include="Bugs\DynamicId.cs" />
     <Compile Include="Bugs\EtagIssue.cs" />
-    <Compile Include="Bugs\IndexStringTest.cs" />
     <Compile Include="Bugs\RavenDB_1532.cs" />
     <Compile Include="Bugs\ConcurrencyTests.cs" />
     <Compile Include="Bugs\NullableDateTimeOffsetFromDateTimeParse.cs" />
@@ -942,6 +941,7 @@
     <Compile Include="Notifications\ReplicationConflicts_Embedded.cs" />
     <Compile Include="Patching\BigDoc.cs" />
     <Compile Include="PreFetching.cs" />
+    <Compile Include="Queries\RavenDb_2239.cs" />
     <Compile Include="RavenDB_1033.cs" />
     <Compile Include="ResultsTransformer\AsyncTransformWith.cs" />
     <Compile Include="ResultsTransformer\QueryInputsToResultTransformer.cs" />
