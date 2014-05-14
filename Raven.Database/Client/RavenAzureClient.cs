@@ -22,7 +22,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Database.Client
 {
-	public class RavenAzureClient : IDisposable
+	public class RavenAzureClient : RavenStorageClient
 	{
 		private readonly string accountName;
 
@@ -30,21 +30,11 @@ namespace Raven.Database.Client
 
 		private readonly bool useDevelopmentStorage;
 
-		private readonly HttpClient client;
-
 		public RavenAzureClient(string accountName, string accountKey, bool useDevelopmentStorage)
 		{
 			this.accountName = accountName;
 			this.accountKey = Convert.FromBase64String(accountKey);
 			this.useDevelopmentStorage = useDevelopmentStorage;
-
-			client = new HttpClient();
-		}
-
-		public void Dispose()
-		{
-			if (client != null)
-				client.Dispose();
 		}
 
 		public void PutContainer(string containerName)
@@ -61,7 +51,8 @@ namespace Raven.Database.Client
 					              }
 						  };
 
-			CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
+			var client = GetClient();
+			client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
 
 			var response = client.PutAsync(url, content).ResultUnwrap();
 			if (response.IsSuccessStatusCode)
@@ -92,7 +83,8 @@ namespace Raven.Database.Client
 			foreach (var metadataKey in metadata.Keys)
 				content.Headers.Add("x-ms-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
 
-			CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
+			var client = GetClient(TimeSpan.FromHours(1));
+			client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
 
 			var response = client.PutAsync(url, content).ResultUnwrap();
 
@@ -117,7 +109,8 @@ namespace Raven.Database.Client
 				                     }
 			                     };
 
-			CalculateAuthorizationHeaderValue("GET", url, requestMessage.Headers);
+			var client = GetClient();
+			client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("GET", url, requestMessage.Headers);
 
 			var response = client.SendAsync(requestMessage).ResultUnwrap();
 			if (response.StatusCode == HttpStatusCode.NotFound) 
@@ -140,7 +133,7 @@ namespace Raven.Database.Client
 			return string.Format("https://{0}.blob.core.windows.net/{1}", accountName, containerName.ToLower());
 		}
 
-		private void CalculateAuthorizationHeaderValue(string httpMethod, string url, HttpHeaders httpHeaders)
+		private AuthenticationHeaderValue CalculateAuthorizationHeaderValue(string httpMethod, string url, HttpHeaders httpHeaders)
 		{
 			var stringToHash = ComputeCanonicalizedHeaders(httpMethod, httpHeaders);
 			stringToHash += ComputeCanonicalizedResource(url);
@@ -153,7 +146,7 @@ namespace Raven.Database.Client
 				var hashedString = hash.ComputeHash(Encoding.UTF8.GetBytes(stringToHash));
 				var base64String = Convert.ToBase64String(hashedString);
 
-				client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("SharedKey", string.Format("{0}:{1}", accountName, base64String));
+				return new AuthenticationHeaderValue("SharedKey", string.Format("{0}:{1}", accountName, base64String));
 			}
 		}
 
@@ -190,19 +183,6 @@ namespace Raven.Database.Client
 			return queryString
 				.OrderBy(x => x.Key)
 				.Aggregate(stringToHash, (current, parameter) => current + string.Format("{0}:{1}\n", parameter.Key.ToLower(), parameter.Value));
-		}
-
-		public class Blob
-		{
-			public Blob(Stream data, Dictionary<string, string> metadata)
-			{
-				Data = data;
-				Metadata = metadata;
-			}
-
-			public Stream Data { get; private set; }
-
-			public Dictionary<string, string> Metadata { get; private set; } 
 		}
 
 		private class EmptyContent : HttpContent

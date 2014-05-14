@@ -230,7 +230,9 @@
     <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualDeleteTrigger.cs" />
     <Compile Include="Client\EmbeddableDocumentStore.cs" />
     <Compile Include="Client\EmbeddedDocumentStore.cs" />
+    <Compile Include="Client\RavenAwsS3Client.cs" />
     <Compile Include="Client\RavenAzureClient.cs" />
+    <Compile Include="Client\RavenStorageClient.cs" />
     <Compile Include="Counters\Controllers\CounterReplicationController.cs" />
     <Compile Include="Counters\Controllers\RavenCounterReplication.cs" />
     <Compile Include="Counters\Controllers\RavenCountersApiController.cs" />
@@ -1078,6 +1080,7 @@
     <EmbeddedResource Include="Json\ToJson.js" />
     <EmbeddedResource Include="Json\RavenDB.js" />
     <EmbeddedResource Include="Json\lodash.js" />
+    <EmbeddedResource Include="Client\Amazon.AWS.endpoints.xml" />
     <Content Include="FodyWeavers.xml" />
   </ItemGroup>
   <ItemGroup>
