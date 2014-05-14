@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Amazon.EC2.Model;
 using Raven.Abstractions;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
@@ -33,6 +34,8 @@ namespace Raven.Database.Counters
 
         public event Action CounterUpdated = () => { };
 
+        public int ReplicationTimeoutInMs { get; private set; }
+
 		public CounterStorage(string name, InMemoryRavenConfiguration configuration)
 		{
 		    Name = name;
@@ -41,6 +44,9 @@ namespace Raven.Database.Counters
 
 			storageEnvironment = new StorageEnvironment(options);
             replication = new RavenCounterReplication(this);
+		   
+		    ReplicationTimeoutInMs = configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 60*1000;
+            
 			Initialize(name);
 		}
 
@@ -55,6 +61,7 @@ namespace Raven.Database.Counters
 				var servers = storageEnvironment.CreateTree(tx, "servers");
 				var etags = storageEnvironment.CreateTree(tx, "etags->counters");
 				storageEnvironment.CreateTree(tx, "counters->etags");
+                storageEnvironment.CreateTree(tx, "servers->connectionStringOptions");
 				var metadata = tx.State.GetTree(tx, "$metadata");
 				var id = metadata.Read(tx, "id");
 				if (id == null) // new db
@@ -180,7 +187,7 @@ namespace Raven.Database.Counters
 		{
 		    private readonly CounterStorage parent;
 		    private readonly Transaction transaction;
-            private readonly Tree counters, countersEtags, countersGroups, etagsCounters;
+            private readonly Tree counters, countersEtags, countersGroups, etagsCounters, serversConnectionStringOptions;
 			private readonly byte[] serverIdBytes = new byte[sizeof(int)];
 
             public Reader(CounterStorage parent, StorageEnvironment storageEnvironment)
@@ -194,6 +201,7 @@ namespace Raven.Database.Counters
                 countersGroups = transaction.State.GetTree(transaction, "countersGroups");
                 countersEtags = transaction.State.GetTree(transaction, "counters->etags");
                 etagsCounters = transaction.State.GetTree(transaction, "etags->counters");
+                serversConnectionStringOptions = transaction.State.GetTree(transaction, "servers->connectionStringOptions");
             }
 
 			public IEnumerable<string> GetCounterNames(string prefix)
@@ -331,7 +339,7 @@ namespace Raven.Database.Counters
 		{
 			private readonly CounterStorage parent;
 			private readonly Transaction transaction;
-			private readonly Tree counters, etagsCountersIx, countersEtagIx, countersGroups;
+            private readonly Tree counters, etagsCountersIx, countersEtagIx, countersGroups, serversConnectionStringOptions;
             private readonly byte[] storeBuffer;
 			private byte[] buffer = new byte[0];
 			private readonly byte[] etagBuffer = new byte[sizeof(long)];
@@ -346,6 +354,7 @@ namespace Raven.Database.Counters
 				countersGroups = transaction.State.GetTree(transaction, "countersGroups");
 				etagsCountersIx = transaction.State.GetTree(transaction, "etags->counters");
 				countersEtagIx = transaction.State.GetTree(transaction, "counters->etags");
+                serversConnectionStringOptions = transaction.State.GetTree(transaction, "servers->connectionStringOptions");
 
 				storeBuffer = new byte[sizeof(long) + //positive
 									   sizeof(long)]; // negative

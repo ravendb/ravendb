@@ -8,14 +8,10 @@ using System.Net.Http.Formatting;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
-using Raven.Abstractions.Util;
-using Raven.Bundles.Replication.Data;
-using Raven.Bundles.Replication.Tasks;
-using Raven.Database.Server;
 
 namespace Raven.Database.Counters.Controllers
 {
@@ -31,6 +27,8 @@ namespace Raven.Database.Counters.Controllers
 		private readonly ConcurrentDictionary<string, DestinationStats> destinationsFailureCount = 
 			new ConcurrentDictionary<string, DestinationStats>(StringComparer.OrdinalIgnoreCase);
         private int replicationAttempts;
+        private readonly ConcurrentDictionary<string, SemaphoreSlim> activeReplicationTasks = new ConcurrentDictionary<string, SemaphoreSlim>();
+        private HttpRavenRequestFactory httpRavenRequestFactory;
 
 		public static string GetServerNameForWire(string server)
 		{
@@ -50,8 +48,8 @@ namespace Raven.Database.Counters.Controllers
 
 		void workContext_CounterUpdated()
 		{
-			if (!cancellation.IsCancellationRequested)
-				Replicate();
+			//if (!cancellation.IsCancellationRequested)
+                //Replicate();
 		}
 
 		public void ShutDown()
@@ -62,6 +60,8 @@ namespace Raven.Database.Counters.Controllers
 	    public void StartReplication()
 	    {
             var replicationTask = new Task(ReplicationAction, TaskCreationOptions.LongRunning);
+
+            httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = storage.ReplicationTimeoutInMs };
             replicationTask.Start();
 	    }
 
@@ -163,14 +163,72 @@ namespace Raven.Database.Counters.Controllers
 			return true;
         }
 
+	    private async Task<bool> ReplicateTo(string destinationUrl)
+	    {
+            /*
+             					try
+					{
+						collection.TryTake(out connectionStringOptions, 15 * 1000, docDb.WorkContext.CancellationToken);
+						if (connectionStringOptions == null)
+							return;
+					}
+					catch (Exception e)
+					{
+						log.ErrorException("Could not get connection string options to notify sibling servers about restart", e);
+						return;
+					}
+					try
+					{
+						var url = connectionStringOptions.Url + "/replication/heartbeat?from=" + UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
+						var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
+						request.WebRequest.ContentLength = 0;
+						request.ExecuteRequest();
+					}
+					catch (Exception e)
+					{
+						log.WarnException("Could not notify " + connectionStringOptions.Url + " about sibling server being up & running", e);
+					}
+             */
+
+            var connectionStringOptions = new RavenConnectionStringOptions();
+	        var url = string.Format("{0}/lastEtag/{1}", destinationUrl, GetServerNameForWire(storage.Name));
+            var request = httpRavenRequestFactory.Create(url, "Get", connectionStringOptions);
+
+
+
+
+            var http = new HttpClient();
+	        var etagResult = await http.GetStringAsync(string.Format("{0}/lastEtag/{1}", destinationUrl, GetServerNameForWire(storage.Name)));
+	        var etag = int.Parse(etagResult);
+	        var message = new ReplicationMessage {SendingServerName = storage.Name};
+	        using (var reader = storage.CreateReader())
+	        {
+	            message.Counters = reader.GetCountersSinceEtag(etag).Take(1024).ToList(); //TODO: Capped this...how to get remaining values?
+	        }
+	        url = string.Format("{0}/replication", destinationUrl);
+
+	        if (message.Counters.Count > 0)
+	        {
+	            return await new HttpClient().PostAsync(url, message, new JsonMediaTypeFormatter())
+                    .ContinueWith(task => task.Result.StatusCode == HttpStatusCode.OK);
+	        }
+
+	        return await new Task<bool>(() => false);
+	    }
+
+	   
+
+	    
+	        
+	    
 		public void Replicate(bool runningBecauseOfDataModifications)
 		{
-			/*IsRunning = !shouldPause;
+			IsRunning = !shouldPause;
 			if (IsRunning)
 			{
 				try
 				{
-				    var destinations = storage.Servers.Where(serverName => {serverName != storage.Name}).ToList();
+				    var destinations = storage.Servers.Where(serverName => serverName != storage.Name).ToList();
 
 				    if (destinations.Count > 0)
 				    {
@@ -184,61 +242,62 @@ namespace Raven.Database.Counters.Controllers
 				        foreach (var destinationUrl in destinationForReplication)
 				        {
 				            var dest = destinationUrl;
-				            var holder = activeReplicationTasks.GetOrAdd(dest, new IntHolder());
-				            if (Thread.VolatileRead(ref holder.Value) == 1) continue;
-				            Thread.VolatileWrite(ref holder.Value, 1);
+				            var holder = activeReplicationTasks.GetOrAdd(dest, s => new SemaphoreSlim(1));
+				            if (holder.Wait(0) == false)
+                                continue;
 				            var replicationTask = Task.Factory.StartNew(
-				                () =>
+				                async () =>
 				                {
-				                    using (LogContext.WithDatabase(docDb.Name))
-				                    {
+				                    //using (LogContext.WithDatabase(storage.Name)) //TODO: log with counter storage contexe
+				                    //{
 				                        try
 				                        {
-				                            if (ReplicateTo(dest)) docDb.WorkContext.NotifyAboutWork();
+                                            if (await ReplicateTo(dest)) SignalCounterUpdate();
 				                        }
 				                        catch (Exception e)
 				                        {
 				                            log.ErrorException("Could not replicate to " + dest, e);
 				                        }
-				                    }
+				                    //}
 				                });
 
 				            startedTasks.Add(replicationTask);
-
-				            activeTasks.Enqueue(replicationTask);
-				            replicationTask.ContinueWith(
-				                _ =>
-				                {
-				                    // here we purge all the completed tasks at the head of the queue
-				                    Task task;
-				                    while (activeTasks.TryPeek(out task))
-				                    {
-				                        if (!task.IsCompleted && !task.IsCanceled && !task.IsFaulted) break;
-				                        activeTasks.TryDequeue(out task); // remove it from end
-				                    }
-				                });
+                            // todo:uncomment this
+//				            activeTasks.Enqueue(replicationTask);
+//				            replicationTask.ContinueWith(
+//				                _ =>
+//				                {
+//				                    // here we purge all the completed tasks at the head of the queue
+//				                    Task task;
+//				                    while (activeTasks.TryPeek(out task))
+//				                    {
+//				                        if (!task.IsCompleted && !task.IsCanceled && !task.IsFaulted) break;
+//				                        activeTasks.TryDequeue(out task); // remove it from end
+//				                    }
+//				                });
 				        }
-
-				        Task.WhenAll(startedTasks.ToArray()).ContinueWith(
-				            t =>
-				            {
-				                if (destinationStats.Count != 0)
-				                {
-				                    var minLastReplicatedEtag =
-				                        destinationStats.Where(x => x.Value.LastReplicatedEtag != null)
-				                                        .Select(x => x.Value.LastReplicatedEtag)
-				                                        .Min(x => new ComparableByteArray(x.ToByteArray()));
-
-				                    if (minLastReplicatedEtag != null) prefetchingBehavior.CleanupDocuments(minLastReplicatedEtag.ToEtag());
-				                }
-				            }).AssertNotFailed();
+                        // todo:uncomment this
+//
+//				        Task.WhenAll(startedTasks.ToArray()).ContinueWith(
+//				            t =>
+//				            {
+//				                if (destinationStats.Count != 0)
+//				                {
+//				                    var minLastReplicatedEtag =
+//				                        destinationStats.Where(x => x.Value.LastReplicatedEtag != null)
+//				                                        .Select(x => x.Value.LastReplicatedEtag)
+//				                                        .Min(x => new ComparableByteArray(x.ToByteArray()));
+//
+//				                    if (minLastReplicatedEtag != null) prefetchingBehavior.CleanupDocuments(minLastReplicatedEtag.ToEtag());
+//				                }
+//				            }).AssertNotFailed();
 				    }
 				}
 				catch (Exception e)
 				{
 				    log.ErrorException("Failed to perform replication", e);
 				}
-			}*/
+			}
 
 
 
