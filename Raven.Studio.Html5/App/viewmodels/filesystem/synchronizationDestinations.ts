@@ -33,9 +33,6 @@ class synchronizationDestinations extends viewModelBase {
 
     activate(args) {
         super.activate(args);
-
-        //this.fetchDestinations();
-
         var self = this;
         this.dirtyFlag = new ko.DirtyFlag([this.replicationsSetup]);
         this.isSaveEnabled = ko.computed(() => { return self.dirtyFlag().isDirty(); });
@@ -90,8 +87,7 @@ class synchronizationDestinations extends viewModelBase {
         if (fs) {
             new getDestinationsCommand(fs)
                 .execute()
-                .done(data => this.replicationsSetup(new synchronizationReplicationSetup(data)))
-                //.fail(() => alert("Failed"))
+                .done(data => this.replicationsSetup(new synchronizationReplicationSetup({ Destinations: data.Destinations, Source: null })))
                 .always(() => deferred.resolve({ can: true }));
         }
         return deferred;

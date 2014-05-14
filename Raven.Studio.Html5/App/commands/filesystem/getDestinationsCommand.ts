@@ -16,21 +16,14 @@ class getDestinationsCommand extends commandBase {
         this.shouldResolveNotFoundAsNull = shouldResolveNotFoundAsNull || false;
     }
 
-    execute(): JQueryPromise<synchronizationReplicationsDto> {
+    execute(): JQueryPromise<any> {
         
         var url = "/config";
         var args = {
             name: "Raven/Synchronization/Destinations"
         };
 
-        var task = $.Deferred();
-        this.query<synchronizationReplicationsDto>(url, args, this.fs)
-            .done(data => {
-                task.resolve(data);
-            });
-            //.fail(response => this.reportError("Failed to retrieve filesystem configuration key. Does exist in this filesystem?", response.responseText, response.statusText));
-
-        return task;
+        return this.query<any>(url, args, this.fs);
     }
 }
 

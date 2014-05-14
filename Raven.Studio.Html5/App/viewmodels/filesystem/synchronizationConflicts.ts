@@ -33,11 +33,11 @@ class synchronizationConflicts extends viewModelBase {
 
     modelPolling() {
 
-        var fs = this.activeFilesystem();
-        if (fs) {
-            new getFilesConflictsCommand(fs).execute()
-                .done(x => this.conflicts(x));
-        }
+        //var fs = this.activeFilesystem();
+        //if (fs) {
+        //    new getFilesConflictsCommand(fs).execute()
+        //        .done(x => this.conflicts(x));
+        //}
     }
 
     loadConflicts(): JQueryPromise<any> {
