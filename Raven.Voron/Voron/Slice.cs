@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Voron.Impl;
 using Voron.Trees;
-using Voron.Util.Conversion;
 
 namespace Voron
 {
