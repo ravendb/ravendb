@@ -111,8 +111,8 @@ class synchronization extends viewModelBase {
         }
     }
 
-    synchronizeWithDestination(destination: string) {
-        var fs = this.activeFilesystem();
+    synchronizeWithDestination(destination: string, fileSystemName: string) {
+        var fs = new filesystem(fileSystemName);
         if (fs) {
             new synchronizeWithDestinationCommand(fs, destination).execute();
         }
