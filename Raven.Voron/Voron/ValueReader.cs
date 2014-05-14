@@ -32,6 +32,9 @@ namespace Voron
 				pos += read;
 			}
 			stream.Position = position;
+
+		    _pos = 0;
+		    _val = null;
 		}
 
 	    public ValueReader(byte[] array, int len)
@@ -40,6 +43,7 @@ namespace Voron
 	        _buffer = array;
 	        _len = len;
 	        _pos = 0;
+	        _val = null;
 	    }
 
 		public ValueReader(byte* val, int len)
@@ -47,6 +51,7 @@ namespace Voron
 			_val = val;
 			_len = len;
 			_pos = 0;
+		    _buffer = null;
 		}
 
 		public int Length

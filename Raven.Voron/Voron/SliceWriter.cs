@@ -10,6 +10,7 @@ namespace Voron
 
         public SliceWriter(int size)
         {
+            _pos = 0;
             _buffer = new byte[size];
         }
 
