@@ -14,6 +14,15 @@ class statusDebugIndexFields extends viewModelBase {
         aceEditorBindingHandler.install();
     }
 
+    attached() {
+        $("#indexDefLabel").popover({
+            html: true,
+            trigger: 'hover',
+            container: '.form-horizontal',
+            content: 'Enter index definition and click <kbd>Show index fields</kbd>.<br /> Example:<pre><span class="code-keyword">from</span> doc <span class="code-keyword">in</span> docs <span class="code-keyword">select new</span> { Id = doc.Id }</pre>',
+        });
+    }
+
     fetchIndexFields(): JQueryPromise<statusDebugIndexFieldsDto> {
         this.result(null);
         var db = this.activeDatabase();

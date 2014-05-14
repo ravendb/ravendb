@@ -153,7 +153,13 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron
             finally
             {
                 disposerLock.ExitReadLock();
-                current.Value = null;
+                try
+                {
+                    current.Value = null;
+                }
+                catch (ObjectDisposedException)
+                {
+                }
             }
         }
 

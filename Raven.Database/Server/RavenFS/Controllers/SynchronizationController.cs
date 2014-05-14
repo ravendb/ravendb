@@ -565,7 +565,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				StrategyAsGetRemote(fileName);
 			}
 
-            return GetEmptyMessage(HttpStatusCode.OK);
+            return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpPatch]

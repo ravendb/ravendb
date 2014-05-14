@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Globalization;
 using System.IO;
@@ -7,14 +8,12 @@ using System.Threading.Tasks;
 using Amazon;
 using Amazon.Glacier.Transfer;
 using Amazon.S3.Model;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Auth;
-using Microsoft.WindowsAzure.Storage.Blob;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler;
+using Raven.Database.Client;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
@@ -344,28 +343,27 @@ namespace Raven.Database.Bundles.PeriodicBackups
 									  archiveId));
 		}
 
-        private void UploadToAzure(string backupPath, PeriodicBackupSetup localBackupConfigs, bool isFullBackup)
-	    {
-            var storageCredentials = new StorageCredentials(azureStorageAccount, azureStorageKey);
-            var storageAccount = new CloudStorageAccount(storageCredentials, true);
-            var blobClient = new CloudBlobClient(storageAccount.BlobEndpoint, storageCredentials);
-            var backupContainer = blobClient.GetContainerReference(localBackupConfigs.AzureStorageContainer);
-	        backupContainer.CreateIfNotExists();
-	        using (var fileStream = File.OpenRead(backupPath))
-	        {
-	            var key = Path.GetFileName(backupPath);
-                var backupBlob = backupContainer.GetBlockBlobReference(key);
-                backupBlob.Metadata.Add("Description", GetArchiveDescription(isFullBackup));
-	            backupBlob.UploadFromStream(fileStream);
-	            backupBlob.SetMetadata();
+		private void UploadToAzure(string backupPath, PeriodicBackupSetup localBackupConfigs, bool isFullBackup)
+		{
+			using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey, false))
+			{
+				client.PutContainer(localBackupConfigs.AzureStorageContainer);
+				using (var fileStream = File.OpenRead(backupPath))
+				{
+					var key = Path.GetFileName(backupPath);
+					client.PutBlob(localBackupConfigs.AzureStorageContainer, key, fileStream, new Dictionary<string, string>
+																							  {
+																								  { "Description", GetArchiveDescription(isFullBackup) }
+																							  });
 
-                logger.Info(string.Format(
-	                "Successfully uploaded backup {0} to Azure container {1}, with key {2}",
-	                Path.GetFileName(backupPath),
-	                localBackupConfigs.AzureStorageContainer,
-	                key));
-	        }
-	    }
+					logger.Info(string.Format(
+						"Successfully uploaded backup {0} to Azure container {1}, with key {2}",
+						Path.GetFileName(backupPath),
+						localBackupConfigs.AzureStorageContainer,
+						key));
+				}
+			}
+		}
 
         private string GetArchiveDescription(bool isFullBackup)
 		{

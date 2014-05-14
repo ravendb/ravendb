@@ -166,7 +166,7 @@ namespace Raven.Client
 		/// <param name="transformer">The transformer to use in this load operation</param>
 		/// <param name="configure"></param>
 		/// <returns></returns>
-		TResult Load<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null);
+		TResult Load<TResult>(string id, string transformer, Action<ILoadConfiguration> configure);
 
 		/// <summary>
 		/// Performs a load that will use the specified results transformer against the specified ids
