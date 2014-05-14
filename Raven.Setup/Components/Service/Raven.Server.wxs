@@ -14,7 +14,7 @@
 																Protocol="tcp" Scope="any" IgnoreFailure="yes" Program="System" />
 			</Component>
 			<Component Id="PersistServiceValues" Guid="{54DE475A-D1B2-4536-9598-A77AA3BC0264}" >
-				<RegistryKey Root="HKLM" Key="Software\[Manufacturer]\[ProductName]" >
+				<RegistryKey Root="HKLM" Key="Software\[Manufacturer]\[ProductName]\v3.0" >
 					<RegistryValue Type="string" Name="SERVICE_NAME" Value="[SERVICE_NAME]"  />
 					<RegistryValue Type="string" Name="SERVICE_PORT" Value="[SERVICE_PORT]" />
 				</RegistryKey>
