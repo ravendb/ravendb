@@ -64,7 +64,7 @@ class appUrl {
         filesystemFiles: ko.computed(() => appUrl.forFilesystemFiles(appUrl.currentFilesystem())),
         filesystemSearch: ko.computed(() => appUrl.forFilesystemSearch(appUrl.currentFilesystem())),
         filesystemSynchronization: ko.computed(() => appUrl.forFilesystemSynchronization(appUrl.currentFilesystem())),
-        filesystemSynchronizationConflicts: ko.computed(() => appUrl.forFilesystemSynchronizationConflicts(appUrl.currentFilesystem())),
+        filesystemStatus: ko.computed(() => appUrl.forFilesystemStatus(appUrl.currentFilesystem())),
         filesystemSynchronizationDestinations: ko.computed(() => appUrl.forFilesystemSynchronizationDestinations(appUrl.currentFilesystem())),
         filesystemConfiguration: ko.computed(() => appUrl.forFilesystemConfiguration(appUrl.currentFilesystem())),
     };
@@ -395,14 +395,14 @@ class appUrl {
         return "#filesystems/synchronization?" + filesystemPart;
     }
 
-    static forFilesystemSynchronizationConflicts(fs: filesystem): string {
-        var filesystemPart = appUrl.getEncodedFsPart(fs);
-        return "#filesystems/synchronization/conflicts?" + filesystemPart;
-    }
-
     static forFilesystemSynchronizationDestinations(fs: filesystem): string {
         var filesystemPart = appUrl.getEncodedFsPart(fs);
         return "#filesystems/synchronization/destinations?" + filesystemPart;
+    }
+
+    static forFilesystemStatus(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/status?" + filesystemPart;
     }
 
     static forFilesystemConfiguration(fs: filesystem): string {

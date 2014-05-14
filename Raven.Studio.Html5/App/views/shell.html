@@ -36,7 +36,7 @@
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Indexes') }">
                             <a data-bind="attr: { href: appUrls.indexes }">Indexes</a>
                         </li>
-                        <li class= dropdown" data-bind="css: { active: appUrls.isActive('Indexes') }">
+                        <li class="dropdown" data-bind="css: { active: appUrls.isActive('Indexes') }">
                             <a class="dropdown-toggle caret-after" data-toggle="dropdown">
                                 <b class="caret"></b>
                             </a>
@@ -139,6 +139,10 @@
 
                         <li data-bind="css: { active: appUrls.isActive('Synchronization') }">
                             <a data-bind="attr: { href: appUrls.filesystemSynchronization }">Synchronization</a>
+                        </li>
+                        
+                        <li data-bind="css: { active: appUrls.isActive('Status') }">
+                            <a data-bind="attr: { href: appUrls.filesystemStatus }">Status</a>
                         </li>
 
                         <li data-bind="css: { active: appUrls.isActive('Configuration') }">
