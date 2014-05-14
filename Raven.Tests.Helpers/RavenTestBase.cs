@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.Composition.Primitives;
 using System.Diagnostics;
 using System.IO;
@@ -359,7 +360,15 @@ namespace Raven.Tests.Helpers
 			using (var server = new HttpServer(documentStore.Configuration, documentStore.DocumentDatabase))
 			{
 				server.StartListening();
-				Process.Start(documentStore.Configuration.ServerUrl); // start the server
+
+				try
+				{
+					Process.Start(documentStore.Configuration.ServerUrl); // start the server
+				}
+				catch (Win32Exception e)
+				{
+					Console.WriteLine("Failed to open the browser. Please open it manually at {0}. {1}", documentStore.Configuration.ServerUrl, e);
+				}
 
 				do
 				{
