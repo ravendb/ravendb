@@ -1,7 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using NLog;
+using Raven.Client;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Client.Indexes;
 
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Raven.Database.Client;
+using Raven.Tests.Issues;
+using Xunit;
 namespace Raven.Tryouts
 {
 	class Program
@@ -10,6 +23,18 @@ namespace Raven.Tryouts
 
 		private static void Main(string[] args)
 		{
+		    using (var test = new RavenDb_2239())
+		    {
+                using (var store = new DocumentStore { Url = "http://localhost:8080",DefaultDatabase = "TestDB"}) //requestedStorage: "esent"))
+                {
+                    store.Initialize();
+                    store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("TestDB");
+
+                    Console.WriteLine("Press any key to begin test");
+                    Console.ReadLine();
+                    test.SetupData(store);
+                }
+		    }
 		}
 	}
 
