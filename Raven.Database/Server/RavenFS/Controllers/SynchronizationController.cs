@@ -437,6 +437,12 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
                 AssertConflictDetection(fileName, localMetadata, sourceMetadata, sourceServerInfo, out isConflictResolved);
 
+				if (isConflictResolved)
+				{
+					ConflictArtifactManager.Delete(fileName);
+					Publisher.Publish(new ConflictResolved { FileName = fileName });
+				}
+
                 StorageOperationsTask.RenameFile(new RenameFileOperation
                 {
                     Name = fileName,
