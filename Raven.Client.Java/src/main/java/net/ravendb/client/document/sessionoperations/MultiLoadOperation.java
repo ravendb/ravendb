@@ -60,7 +60,7 @@ public class MultiLoadOperation {
     includeResults = SerializationHelper.ravenJObjectsToJsonDocuments(multiLoadResult.getIncludes()).toArray(new JsonDocument[0]);
     results = SerializationHelper.ravenJObjectsToJsonDocuments(multiLoadResult.getResults()).toArray(new JsonDocument[0]);
 
-    if (!sessionOperations.isAllowNonAuthoritativeInformation()) {
+    if (sessionOperations.isAllowNonAuthoritativeInformation()) {
       return false;
     }
     for (JsonDocument doc : results) {
@@ -76,7 +76,7 @@ public class MultiLoadOperation {
 
   public <T> T[] complete(Class<T> clazz) {
     for (int i = 0; i < includeResults.length; i++) {
-      sessionOperations.trackIncludedDocumnet(includeResults[i]);
+      sessionOperations.trackIncludedDocument(includeResults[i]);
     }
 
     JsonDocument[] selectedResults = selectResults();

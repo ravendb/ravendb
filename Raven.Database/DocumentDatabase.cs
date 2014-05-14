@@ -131,7 +131,8 @@ namespace Raven.Database
                 }
                 catch (Exception)
                 {
-                    TransactionalStorage.Dispose();
+                    if (TransactionalStorage != null)
+                        TransactionalStorage.Dispose();
                     throw;
                 }
 

@@ -5,7 +5,7 @@ import java.util.Date;
 
 public class QueryHeaderInformation {
   private String index;
-  private boolean isStable;
+  private boolean isStale;
   private Date indexTimestamp;
   private int totalResults;
   private Etag resultEtag;
@@ -18,11 +18,11 @@ public class QueryHeaderInformation {
   public void setIndex(String index) {
     this.index = index;
   }
-  public boolean isStable() {
-    return isStable;
+  public boolean isStale() {
+    return isStale;
   }
-  public void setStable(boolean isStable) {
-    this.isStable = isStable;
+  public void setStale(boolean isStale) {
+    this.isStale = isStale;
   }
   public Date getIndexTimestamp() {
     return indexTimestamp;

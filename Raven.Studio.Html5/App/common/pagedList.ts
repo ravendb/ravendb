@@ -79,6 +79,10 @@ class pagedList {
             .map(validIndex => this.items[validIndex]);
     }
 
+    getAllCachedItems(): any[] {
+        return this.items;
+    }
+
     runQueuedFetch() {
         if (this.queuedFetch) {
             var queuedSkip = this.queuedFetch.skip;

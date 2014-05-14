@@ -57,13 +57,12 @@ namespace Raven.Tests.Core.Querying
 
 					Assert.Equal(3, aboutRavenDBDatabase.Count);
 
-					//TODO arek
-					//var exceptRavenDB =
-					//	session.Query<Post>("Posts/ByTitle")
-					//		.Search(x => x.Title, "RavenDB", options: SearchOptions.Not)
-					//		.ToList();
+					var exceptRavenDB =
+						session.Query<Post>("Posts/ByTitle")
+							.Search(x => x.Title, "RavenDB", options: SearchOptions.Not)
+							.ToList();
 
-					//Assert.Equal(3, exceptRavenDB.Count);
+					Assert.Equal(3, exceptRavenDB.Count);
 				}
 			}
 		}
@@ -112,19 +111,15 @@ namespace Raven.Tests.Core.Querying
 					Assert.NotNull(nosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/1"));
 					Assert.NotNull(nosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/2"));
 
+					var notNosqlOrQuerying =
+						session.Query<Post>("Posts/ByTitleAndDescription")
+							.Search(x => x.Title, "nosql", options: SearchOptions.Not)
+							.Search(x => x.Desc, "querying")
+							.ToList();
 
-					//TODO arek
-					//var notNosqlOrQuerying =
-					//	session.Query<Post>("Posts/ByTitleAndDescription")
-					//		.Search(x => x.Title, "nosql", options: SearchOptions.Not)
-					//		.Search(x => x.Desc, "querying")
-					//		.ToList();
-
-
-					//Assert.Equal(2, notNosqlOrQuerying.Count);
-					//Assert.NotNull(notNosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/1"));
-					//Assert.NotNull(notNosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/3"));
-
+					Assert.Equal(2, notNosqlOrQuerying.Count);
+					Assert.NotNull(notNosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/1"));
+					Assert.NotNull(notNosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/3"));
 
 					var nosqlAndModeling =
 						session.Query<Post>("Posts/ByTitleAndDescription")

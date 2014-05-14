@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.List;
 
 import net.ravendb.abstractions.data.Etag;
+import net.ravendb.abstractions.json.linq.RavenJArray;
 
 
 public class ReplicationStatistics {
@@ -60,6 +61,20 @@ public class ReplicationStatistics {
     private Date lastReplicatedLastModified;
     private Date lastSuccessTimestamp;
     private Date lastFailureTimestamp;
+    private RavenJArray lastStats;
+
+    public DestinationStats() {
+      super();
+      lastStats = new RavenJArray();
+    }
+
+    public RavenJArray getLastStats() {
+      return lastStats;
+    }
+
+    public void setLastStats(RavenJArray lastStats) {
+      this.lastStats = lastStats;
+    }
 
     public int getFailureCountInternal() {
       return failureCountInternal;

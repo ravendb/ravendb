@@ -523,7 +523,7 @@ interface patchValueDto {
     Value: string;
 }
 
-interface patchDto {
+interface patchDto extends documentDto {
     PatchOnOption: string;
     Query: string;
     Script: string;
@@ -576,6 +576,11 @@ interface statusDebugMetricsRequestsDurationDto {
 interface statusDebugDocrefsDto {
     TotalCount: number;
     Results: Array<string>;
+}
+
+interface statusDebugIdentitiesDto {
+    TotalCount: number;
+    Identities: Array<{ Key: string; Value: string}>;
 }
 
 interface statusDebugCurrentlyIndexingDto {

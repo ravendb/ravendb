@@ -94,7 +94,7 @@
 	  </Component>
       <Component Id="PersistWebSiteValues" Guid="{BA5C1D27-7DD0-4521-BE13-4BC0A57D9D1D}">
         <RegistryKey Action="create" Root="HKLM"
-                     Key="SOFTWARE\[Manufacturer]\[ProductName]">
+                     Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.0">
           <RegistryValue Name="WEBSITE_DESCRIPTION" Type="string" Value="[WEBSITE_DESCRIPTION]"/>
           <RegistryValue Name="WEBSITE_ID" Type="string" Value="[WEBSITE_ID]"/>
           <RegistryValue Name="WEBSITE_VD" Type="string" Value="[WEBSITE_VD]"/>

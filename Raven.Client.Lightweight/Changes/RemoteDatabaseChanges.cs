@@ -273,8 +273,6 @@ namespace Raven.Client.Changes
 					if (string.IsNullOrEmpty(value) == false)
 						sendUrl += "&value=" + Uri.EscapeUriString(value);
 
-					sendUrl = sendUrl.NoCache();
-
 					var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions)
 					{
 						AvoidCachingRequest = true

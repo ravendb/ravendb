@@ -221,6 +221,8 @@ namespace Raven.Database.Prefetching
 				return;
 			if (past.Count == 0)
 				return;
+			if(MemoryStatistics.IsLowMemory)
+				return;
 			if (futureIndexBatches.Count > 5) // we limit the number of future calls we do
 			{
 				int alreadyLoaded = futureIndexBatches.Values.Sum(x =>

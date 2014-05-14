@@ -24,7 +24,8 @@ namespace Raven.Client.Connection
 	{
         private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
 
-        public ReplicationInformer(Convention conventions) : base(conventions)
+        public ReplicationInformer(Convention conventions, HttpJsonRequestFactory jsonRequestFactory)
+            : base(conventions, jsonRequestFactory)
         {
         }
 
@@ -116,7 +117,12 @@ namespace Raven.Client.Connection
             }
         }
 
-		public void RefreshReplicationInformation(AsyncServerClient serverClient)
+	    protected override string GetServerCheckUrl(string baseUrl)
+	    {
+	        return baseUrl.Doc(RavenReplicationDestinations) + "?check-server-reachable";
+	    }
+
+	    public void RefreshReplicationInformation(AsyncServerClient serverClient)
 		{
 			RefreshReplicationInformationInternal(serverClient.Url, key => serverClient.DirectGetAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials), key).ResultUnwrap());
 		}

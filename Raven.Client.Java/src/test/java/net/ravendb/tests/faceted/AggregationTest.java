@@ -283,7 +283,7 @@ public class AggregationTest extends RemoteClientTest {
         assertNotNull(r.getResults().get("ProductMin"));
 
         assertEquals(Double.valueOf(3333), r.getResults().get("ProductMax").getValues().get(0).getMax());
-        assertEquals(Double.valueOf(2), r.getResults().get("ProductMin").getValues().get(1).getCount());
+        assertEquals(Integer.valueOf(2), r.getResults().get("ProductMin").getValues().get(1).getCount());
 
 
       }

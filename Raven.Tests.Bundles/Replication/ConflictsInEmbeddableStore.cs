@@ -188,7 +188,7 @@ namespace Raven.Tests.Bundles.Replication
 				{
 					using (var session = store2.OpenSession())
 					{
-						session.Load<Company>("companies/1", "companies/2");
+                        session.Load<Company>(new[] { "companies/1", "companies/2" });
 					}
 				});
 

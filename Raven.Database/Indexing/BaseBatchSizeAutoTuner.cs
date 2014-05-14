@@ -1,5 +1,4 @@
 using System;
-using System.Runtime;
 using Raven.Abstractions;
 using Raven.Database.Config;
 using System.Linq;
@@ -9,7 +8,7 @@ namespace Raven.Database.Indexing
 {
 	using Raven.Abstractions.Util;
 
-	public abstract class BaseBatchSizeAutoTuner
+	public abstract class BaseBatchSizeAutoTuner : ILowMemoryHandler
 	{
 		protected readonly WorkContext context;
 
@@ -21,6 +20,12 @@ namespace Raven.Database.Indexing
 		{
 			this.context = context;
 			this.NumberOfItemsToIndexInSingleBatch = InitialNumberOfItems;
+			MemoryStatistics.RegisterLowMemoryHandler(this);
+		}
+
+		public void HandleLowMemory()
+		{
+			ReduceBatchSizeIfCloseToMemoryCeiling(true);
 		}
 
 		public int NumberOfItemsToIndexInSingleBatch
@@ -109,9 +114,9 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private bool ReduceBatchSizeIfCloseToMemoryCeiling()
+		private bool ReduceBatchSizeIfCloseToMemoryCeiling(bool forceReducing = false)
 		{
-			if (MemoryStatistics.AvailableMemory >= context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+			if (MemoryStatistics.AvailableMemory >= context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit && forceReducing == false)
 			{
 				// there is enough memory available for the next indexing run
 				return false;
@@ -129,7 +134,7 @@ namespace Raven.Database.Indexing
 
 			// let us check again after the GC call, do we still need to reduce the batch size?
 
-			if (MemoryStatistics.AvailableMemory > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+			if (MemoryStatistics.AvailableMemory > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit && forceReducing == false)
 			{
 				// we don't want to try increasing things, we just hit the ceiling, maybe on the next try
 				return true;

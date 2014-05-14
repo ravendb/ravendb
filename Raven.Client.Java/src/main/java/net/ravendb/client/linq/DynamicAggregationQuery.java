@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+
+import org.apache.commons.lang.StringUtils;
 
 import net.ravendb.abstractions.basic.Lazy;
 import net.ravendb.abstractions.closure.Function0;
@@ -56,6 +59,18 @@ public class DynamicAggregationQuery<T> {
       propertyPath = tmp;
     }
 
+    if (displayName == null) {
+      displayName = propertyPath;
+    }
+
+    if (facets.size() > 0) {
+      for (AggregationQueryDsl facet: facets) {
+        if (Objects.equals(facet.getDisplayName(), displayName)) {
+          throw new IllegalArgumentException("Cannot use the more than one aggregation function with the same name/without name");
+        }
+      }
+    }
+
     AggregationQueryDsl aggregationQuery = new AggregationQueryDsl();
     aggregationQuery.setName(propertyPath);
     aggregationQuery.setDisplayName(displayName);
@@ -97,9 +112,15 @@ public class DynamicAggregationQuery<T> {
 
   private void setFacet(Path<?> path, FacetAggregation facetAggregation) {
     AggregationQueryDsl last = facets.get(facets.size() - 1);
+    last.getAggregation().add(facetAggregation);
+    if (facetAggregation == FacetAggregation.COUNT && StringUtils.isNotEmpty(last.getAggregrationField())) {
+      return;
+    }
+    if (StringUtils.isNotEmpty(last.getAggregrationField()) && !last.getAggregrationField().equals(ExpressionExtensions.toPropertyPath(path))) {
+      throw new IllegalArgumentException("Cannot call different aggregation function with differentt parameters at the same aggregation. Use AndAggregateOn");
+    }
     last.setAggregrationField(ExpressionExtensions.toPropertyPath(path));
     last.setAggregationType(mapJavaToDotNetNumberClass(path.getType()));
-    last.getAggregation().add(facetAggregation);
   }
 
   private String mapJavaToDotNetNumberClass(Class<?> clazz) {

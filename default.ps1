@@ -51,7 +51,7 @@ task Compile -depends Init, CompileHtml5 {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
 	Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573 /maxcpucount" }
 }
 
 task CompileHtml5 {
@@ -79,13 +79,6 @@ task CompileHtml5 {
 	Set-Location $build_dir\Html5
 	exec { & $tools_dir\zip.exe -9 -A -r $build_dir\Raven.Studio.Html5.zip *.* }
 	Set-Location $base_dir
-}
-
-task Java {
-
-$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "RavenDB.sln" /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
-
 }
 
 task FullStorageTest {

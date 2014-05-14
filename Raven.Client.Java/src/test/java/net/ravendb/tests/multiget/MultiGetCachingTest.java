@@ -13,17 +13,17 @@ import net.ravendb.client.RemoteClientTest;
 import net.ravendb.client.document.DocumentConvention;
 import net.ravendb.client.document.DocumentQueryCustomizationFactory;
 import net.ravendb.client.document.DocumentStore;
+import net.ravendb.client.document.FailoverBehavior;
+import net.ravendb.client.document.FailoverBehaviorSet;
 import net.ravendb.tests.bugs.QUser;
 import net.ravendb.tests.bugs.User;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 
 public class MultiGetCachingTest extends RemoteClientTest {
 
   @Test
-  @Ignore("waiting for RavenDB-1665 Support for admin statistics is broken in 3.0")
   public void canAggressivelyCacheLoads() throws Exception {
 
     DocumentConvention conventions = new DocumentConvention();
@@ -57,7 +57,6 @@ public class MultiGetCachingTest extends RemoteClientTest {
   }
 
   @Test
-  @Ignore("waiting for RavenDB-1665 Support for admin statistics is broken in 3.0")
   public void canAggressivelyCachePartOfMultiGet_SimpleFirst() throws Exception {
 
     DocumentConvention conventions = new DocumentConvention();
@@ -95,7 +94,6 @@ public class MultiGetCachingTest extends RemoteClientTest {
   }
 
   @Test
-  @Ignore("waiting for RavenDB-1665 Support for admin statistics is broken in 3.0")
   public void canAggressivelyCachePartOfMultiGet_DirectLoad() throws Exception {
 
     DocumentConvention conventions = new DocumentConvention();
@@ -133,11 +131,11 @@ public class MultiGetCachingTest extends RemoteClientTest {
   }
 
   @Test
-  @Ignore("waiting for RavenDB-1665 Support for admin statistics is broken in 3.0")
   public void canAggressivelyCachePartOfMultiGet_BatchFirst() throws Exception {
 
     DocumentConvention conventions = new DocumentConvention();
     conventions.setShouldAggressiveCacheTrackChanges(false);
+    conventions.setFailoverBehavior(new FailoverBehaviorSet(FailoverBehavior.FAIL_IMMEDIATELY));
 
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).withConventions(conventions).initialize()) {
       try (IDocumentSession session = store.openSession()) {

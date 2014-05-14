@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 
+using Raven.Database.Config;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
-using Raven.Json.Linq;
 
 namespace RavenFS.Tests.Storage
 {
@@ -48,20 +48,24 @@ namespace RavenFS.Tests.Storage
         {
             path = path ?? NewDataPath();
 
-            var settings = new RavenJObject
-                           {
-                               {"Raven/RunInMemory", runInMemory.ToString()}
-                           };
+			var configuration = new InMemoryRavenConfiguration
+			{
+				FileSystemDataDirectory = path,
+				Settings = new NameValueCollection
+				           {
+					           {"Raven/RunInMemory", runInMemory.ToString() }
+				           }
+			};
 
             ITransactionalStorage storage;
 
             switch (requestedStorage)
             {
                 case "esent":
-                    storage = new Raven.Database.Server.RavenFS.Storage.Esent.TransactionalStorage(path, settings);
+					storage = new Raven.Database.Server.RavenFS.Storage.Esent.TransactionalStorage(configuration);
                     break;
                 case "voron":
-                    storage = new Raven.Database.Server.RavenFS.Storage.Voron.TransactionalStorage(path, settings);
+					storage = new Raven.Database.Server.RavenFS.Storage.Voron.TransactionalStorage(configuration);
                     break;
                 default:
                     throw new NotSupportedException(string.Format("Given storage type ({0}) is not supported.", requestedStorage));

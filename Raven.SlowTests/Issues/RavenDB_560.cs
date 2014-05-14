@@ -85,6 +85,7 @@ namespace Raven.SlowTests.Issues
 
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind");
+			    replicationInformerForDatabase.DelayTimeInMiliSec = 0;
 				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands);
 
 				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
@@ -161,7 +162,8 @@ namespace Raven.SlowTests.Issues
 				store.Initialize();
 
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("Northwind");
-				await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands);
+                replicationInformerForDatabase.DelayTimeInMiliSec = 0;
+                await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient)store.DatabaseCommands);
 
 				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
 

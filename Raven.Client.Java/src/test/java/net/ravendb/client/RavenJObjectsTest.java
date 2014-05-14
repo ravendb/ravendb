@@ -255,8 +255,8 @@ public class RavenJObjectsTest {
     assertEquals(array1, array2);
     assertEquals(array1.hashCode(), array2.hashCode());
 
-    assertTrue(RavenJToken.deepEquals(null, null));
-    assertFalse(RavenJToken.deepEquals(array1, null));
+    assertTrue(RavenJToken.deepEquals((RavenJToken)null,(RavenJToken) null));
+    assertFalse(RavenJToken.deepEquals(array1, (RavenJToken) null));
     assertFalse(RavenJToken.deepEquals(null, array2));
 
     assertEquals(0, RavenJToken.deepHashCode(null));

@@ -107,7 +107,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage SteamQueryGet(string id)
 		{
 			using (var cts = new CancellationTokenSource())
-			using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+			using (var timeout  = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
 			{
 				var msg = GetEmptyMessage();
 
@@ -123,7 +123,7 @@ namespace Raven.Database.Server.Controllers
 				{
 					var queryOp = new QueryActions.DatabaseQueryOperation(Database, index, query, accessor, cts.Token);
 					queryOp.Init();
-					msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor,
+					msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout,
 						mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" });
 
 					msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
@@ -167,14 +167,16 @@ namespace Raven.Database.Server.Controllers
 			private readonly HttpRequestMessage req;
 			private readonly QueryActions.DatabaseQueryOperation queryOp;
 			private readonly IStorageActionsAccessor accessor;
-			private readonly Action<string> outputContentTypeSetter;
+		    private readonly CancellationTokenSourceExtensions.CancellationTimeout _timeout;
+		    private readonly Action<string> outputContentTypeSetter;
 
-			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, Action<string> contentTypeSetter)
+			public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, CancellationTokenSourceExtensions.CancellationTimeout timeout, Action<string> contentTypeSetter)
 			{
 				this.req = req;
 				this.queryOp = queryOp;
 				this.accessor = accessor;
-				outputContentTypeSetter = contentTypeSetter;
+			    _timeout = timeout;
+			    outputContentTypeSetter = contentTypeSetter;
 			}
 
 			protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
@@ -184,7 +186,11 @@ namespace Raven.Database.Server.Controllers
 				using (var writer = GetOutputWriter(req, stream))
 				{
 					writer.WriteHeader();
-					queryOp.Execute(writer.Write);
+					queryOp.Execute(o =>
+					{
+					    _timeout.Delay();
+					    writer.Write(o);
+					});
 					outputContentTypeSetter(writer.ContentType);
 				}
 

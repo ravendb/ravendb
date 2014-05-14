@@ -549,7 +549,6 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     if (queryOperation != null) {
       return;
     }
-    theSession.incrementRequestCount();
     clearSortHints(getDatabaseCommands());
     executeBeforeQueryListeners();
     queryOperation = initializeQueryOperation(new Action2<String, String>() {
@@ -575,6 +574,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   }
 
   protected void executeActualQuery() {
+    theSession.incrementRequestCount();
     while (true) {
       try (AutoCloseable context = queryOperation.enterQueryContext()) {
         queryOperation.logQuery();

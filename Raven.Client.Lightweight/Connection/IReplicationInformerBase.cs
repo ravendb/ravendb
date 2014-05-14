@@ -17,6 +17,11 @@ namespace Raven.Client.Connection
         /// Notify when the failover status changed
         /// </summary>
         event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged;
+        /// <summary>
+        /// Set how long we will wait between pinging failed servers
+        /// Is set to 0, will not ping failed servers
+        /// </summary>
+        int DelayTimeInMiliSec { get; set; }
 
         List<OperationMetadata> ReplicationDestinations { get; }
         /// <summary>
