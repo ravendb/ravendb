@@ -4,21 +4,27 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
 {
     public class CounterReplicationController : RavenCountersApiController
     {
         [Route("counters/{counterName}/replication")]
-        public HttpResponseMessage Post(ReplicationMessage replicationMessage)
+        public async Task<HttpResponseMessage> Post(ReplicationMessage replicationMessage)
         {
             /*Read Current Counter Value for CounterName - Need ReaderWriter Lock
              *If values are ABS larger
              *      Write delta
              *Store last ETag for servers we've successfully rpelicated to
              */
+            RavenJObject replicationMessageJson = await ReadJsonAsync();
+            //ReplicationCounter 
+
 	        long lastEtag = 0;
             bool wroteCounter = false;
             using (var writer = Storage.CreateWriter())

@@ -138,6 +138,8 @@ namespace Raven.Database.Counters
 						}
 					}
 				}
+
+                replication.StartReplication();
 			}
 		}
 
@@ -179,8 +181,8 @@ namespace Raven.Database.Counters
 		{
 			if (storageEnvironment != null)
 				storageEnvironment.Dispose();
-
-            replication.ShutDown(); //TODO: make this IDisposable instead?
+            
+		    replication.Dispose();
 		}
 
 		public class Reader : IDisposable
@@ -405,7 +407,7 @@ namespace Raven.Database.Counters
                 parent.LastEtag++;
 				var serverId = GetServerId(server);
 
-				var counterNameSize = Encoding.UTF8.GetByteCount(counter);
+/**/				var counterNameSize = Encoding.UTF8.GetByteCount(counter);
 				var requiredBufferSize = counterNameSize + sizeof (int);
 				EnsureBufferSize(requiredBufferSize);
 
@@ -481,7 +483,7 @@ namespace Raven.Database.Counters
 			public void Dispose()
 			{
 				parent.LastWrite = SystemTime.UtcNow;
-				if (transaction != null)
+                if (transaction != null)
 					transaction.Dispose();
 			}
 

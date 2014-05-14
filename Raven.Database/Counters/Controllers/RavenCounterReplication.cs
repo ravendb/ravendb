@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Data.Services.Client;
 using System.IO;
 using System.Linq;
@@ -12,13 +13,15 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
 {
-	public class RavenCounterReplication
+	public class RavenCounterReplication:IDisposable
 	{
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -31,6 +34,7 @@ namespace Raven.Database.Counters.Controllers
 			new ConcurrentDictionary<string, DestinationStats>(StringComparer.OrdinalIgnoreCase);
         private int replicationAttempts;
         private readonly ConcurrentDictionary<string, SemaphoreSlim> activeReplicationTasks = new ConcurrentDictionary<string, SemaphoreSlim>();
+        public readonly ConcurrentQueue<Task> activeTasks = new ConcurrentQueue<Task>();
         private HttpRavenRequestFactory httpRavenRequestFactory;
 
 		public static string GetServerNameForWire(string server)
@@ -45,21 +49,10 @@ namespace Raven.Database.Counters.Controllers
 		public RavenCounterReplication(CounterStorage storage)
 		{
 			this.storage = storage;
-			this.storage.CounterUpdated += workContext_CounterUpdated;
+			this.storage.CounterUpdated += SignalCounterUpdate;
 			cancellation = new CancellationTokenSource();
 		}
-
-		void workContext_CounterUpdated()
-		{
-			//if (!cancellation.IsCancellationRequested)
-                //Replicate();
-		}
-
-		public void ShutDown()
-		{
-			cancellation.Cancel();
-		}
-
+        
 	    public void StartReplication()
 	    {
             var replicationTask = new Task(ReplicationAction, TaskCreationOptions.LongRunning);
@@ -72,11 +65,12 @@ namespace Raven.Database.Counters.Controllers
 	    {
 	        var runningBecauseOfDataModification = false;
             var timeToWaitInMinutes = TimeSpan.FromMinutes(5);
-            
+
+            NotifySiblings();
+
             while (!cancellation.IsCancellationRequested)
             {
                 Replicate(runningBecauseOfDataModification);
-                //NotifySiblings(); TODO: implement
                 runningBecauseOfDataModification = WaitForCountersUpdate(timeToWaitInMinutes);
                 timeToWaitInMinutes = runningBecauseOfDataModification ? TimeSpan.FromSeconds(30) : TimeSpan.FromMinutes(5);
             }
@@ -136,7 +130,7 @@ namespace Raven.Database.Counters.Controllers
 			*/
 		}
 
-
+        //Notifies servers which send us counters that we are back online
 	    private void NotifySiblings() //TODO: implement
 	    {
             /*try
@@ -163,7 +157,6 @@ namespace Raven.Database.Counters.Controllers
         }*/
 	    }
 		
-
 		private bool IsNotFailing(string destServerName, int currentReplicationAttempts)
         {
 	        DestinationStats destinationStats;
@@ -190,13 +183,13 @@ namespace Raven.Database.Counters.Controllers
 			return true;
         }
 
-	    private async Task<bool> ReplicateTo(string destinationUrl)
+	    private bool ReplicateTo(string destinationUrl)
 	    {
 	        try
 	        {
-	            var connectionStringOptions = new RavenConnectionStringOptions(); //todo: get connection string from counter storage for the server
+                var connectionStringOptions = new RavenConnectionStringOptions(); //todo: get connection string from counter storage for the server 'destinationUrl'
 	            var url = string.Format("{0}/lastEtag/{1}", destinationUrl, GetServerNameForWire(storage.Name));
-	            var request = httpRavenRequestFactory.Create(url, "Get", connectionStringOptions);
+	            var request = httpRavenRequestFactory.Create(url, "GET", connectionStringOptions);
 	            long etag = 0;
 	            request.ExecuteRequest((TextReader etagString) => etag = long.Parse(etagString.ReadToEnd()));
 
@@ -209,8 +202,8 @@ namespace Raven.Database.Counters.Controllers
 
 	            if (message.Counters.Count > 0)
 	            {
-	                request = httpRavenRequestFactory.Create(url, "Post", connectionStringOptions);
-	                request.Write(message.GetRavenJObject());
+	                request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
+                    request.Write(message.GetRavenJObject());
 	                request.ExecuteRequest();
 	                return true;
 	            }
@@ -218,17 +211,17 @@ namespace Raven.Database.Counters.Controllers
 	        }
 	        catch (Exception ex)
 	        {
-                log.ErrorException("Error occure replicating to: " + destinationUrl, ex);
+	            log.ErrorException("Error occured replicating to: " + destinationUrl, ex);
 	            return false;
+	        }
+	        finally
+	        {
+                var holder = activeReplicationTasks.GetOrAdd(destinationUrl, s => new SemaphoreSlim(0, 1));
+                holder.Release();
 	        }
 	    }
 
-	   
-
-	    
-	        
-	    
-		public void Replicate(bool runningBecauseOfDataModifications)
+		private void Replicate(bool runningBecauseOfDataModifications)
 		{
 			IsRunning = !shouldPause;
 			if (IsRunning)
@@ -259,7 +252,7 @@ namespace Raven.Database.Counters.Controllers
 				                    //{
 				                        try
 				                        {
-                                            if (await ReplicateTo(dest)) SignalCounterUpdate();
+                                            if (ReplicateTo(dest)) SignalCounterUpdate();
 				                        }
 				                        catch (Exception e)
 				                        {
@@ -270,34 +263,19 @@ namespace Raven.Database.Counters.Controllers
 
 				            startedTasks.Add(replicationTask);
                             
-//				            activeTasks.Enqueue(replicationTask);
-//				            replicationTask.ContinueWith(
-//				                _ =>
-//				                {
-//				                    // here we purge all the completed tasks at the head of the queue
-//				                    Task task;
-//				                    while (activeTasks.TryPeek(out task))
-//				                    {
-//				                        if (!task.IsCompleted && !task.IsCanceled && !task.IsFaulted) break;
-//				                        activeTasks.TryDequeue(out task); // remove it from end
-//				                    }
-//				                });
+				            activeTasks.Enqueue(replicationTask);
+				            replicationTask.ContinueWith(
+				                _ =>
+				                {
+				                    // here we purge all the completed tasks at the head of the queue
+				                    Task task;
+				                    while (activeTasks.TryPeek(out task))
+				                    {
+				                        if (!task.IsCompleted && !task.IsCanceled && !task.IsFaulted) break;
+				                        activeTasks.TryDequeue(out task); // remove it from end
+				                    }
+				                });
 				        }
-  
-                        
-//				        Task.WhenAll(startedTasks.ToArray()).ContinueWith(
-//				            t =>
-//				            {
-//				                if (destinationStats.Count != 0)
-//				                {
-//				                    var minLastReplicatedEtag =
-//				                        destinationStats.Where(x => x.Value.LastReplicatedEtag != null)
-//				                                        .Select(x => x.Value.LastReplicatedEtag)
-//				                                        .Min(x => new ComparableByteArray(x.ToByteArray()));
-//
-//				                    if (minLastReplicatedEtag != null) prefetchingBehavior.CleanupDocuments(minLastReplicatedEtag.ToEtag());
-//				                }
-//				            }).AssertNotFailed();
 				    }
 				}
 				catch (Exception e)
@@ -305,38 +283,18 @@ namespace Raven.Database.Counters.Controllers
 				    log.ErrorException("Failed to perform replication", e);
 				}
 			}
-
-
-
-
-			    /*var tasks =
-				    storage.Servers
-					    .Where(x => x != storage.Name) //skip "this" server
-					    .Select(async server =>
-					    {
-						    var http = new HttpClient();
-						    var etagResult = await http.GetStringAsync(string.Format("{0}/lastEtag/{1}", server, GetServerNameForWire(storage.Name)));
-						    var etag = int.Parse(etagResult);
-						    var message = new ReplicationMessage {SendingServerName = storage.Name};
-						    using (var reader = storage.CreateReader())
-						    {
-							    message.Counters = reader.GetCountersSinceEtag(etag).Take(1024).ToList(); //TODO: Capped this...how to get remaining values?
-						    }
-						    var url = string.Format("{0}/replication", server);
-						    return message.Counters.Count > 0 ?
-							    new HttpClient().PostAsync(url, message, new JsonMediaTypeFormatter()) :
-							    Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotModified)); //HACK: could do something else here
-					    });
-
-			    try
-			    {
-				    await Task.WhenAll(tasks);
-			    }
-			    catch (Exception)
-			    {
-                
-				    //TODO: log
-			    }*/
 		}
-	}
+
+        public void Dispose()
+        {
+            Task task;
+            cancellation.Cancel();
+            SignalCounterUpdate();
+
+            while (activeTasks.TryDequeue(out task))
+            {
+                task.Wait();
+            }
+        }
+    }
 }
