@@ -157,16 +157,23 @@ namespace Raven.Client.Connection
 	            {
 	                for (int i = 0; i < 3; i++)
 	                {
-	                    var r = await TryOperationAsync<object>(async metadata =>
+	                    try
 	                    {
-	                        var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), "GET", metadata.Credentials, conventions);
-	                        await requestFactory.CreateHttpJsonRequest(requestParams).ReadResponseJsonAsync().ConfigureAwait(false);
-	                        return null;
-	                    }, operationMetadata, primaryOperation, avoidThrowing: true).ConfigureAwait(false);
-	                    if (r.Success)
+	                        var r = await TryOperationAsync<object>(async metadata =>
+	                        {
+	                            var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), "GET", metadata.Credentials, conventions);
+	                            await requestFactory.CreateHttpJsonRequest(requestParams).ReadResponseJsonAsync().ConfigureAwait(false);
+	                            return null;
+	                        }, operationMetadata, primaryOperation, avoidThrowing: true).ConfigureAwait(false);
+	                        if (r.Success)
+	                        {
+	                            ResetFailureCount(operationMetadata.Url);
+	                            return;
+	                        }
+	                    }
+	                    catch (ObjectDisposedException)
 	                    {
-	                        ResetFailureCount(operationMetadata.Url);
-	                        return;
+	                        return; // disposed, nothing to do here
 	                    }
                         await Task.Delay(DelayTimeInMiliSec).ConfigureAwait(false);
 	                }
