@@ -7,9 +7,11 @@ using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Tasks;
@@ -26,7 +28,8 @@ namespace Raven.Database.Counters.Controllers
         private int replicatedWorkCounter = 0; // represents the last actualWorkCounter value that was checked in the last replication iteration
         private bool shouldPause = false;
         public bool IsRunning { get; private set; }
-        private ConcurrentDictionary<string,int> destinationsFailureCount = new ConcurrentDictionary<string, int>();
+		private readonly ConcurrentDictionary<string, DestinationStats> destinationsFailureCount = 
+			new ConcurrentDictionary<string, DestinationStats>(StringComparer.OrdinalIgnoreCase);
         private int replicationAttempts;
 
 		public static string GetServerNameForWire(string server)
@@ -117,35 +120,46 @@ namespace Raven.Database.Counters.Controllers
         }
 
 
+		private void RecordFailure(string url, string lastError)
+		{
+			var stats = destinationsFailureCount.GetOrAdd(url, new DestinationStats { Url = url });
+			Interlocked.Increment(ref stats.FailureCountInternal);
+			stats.LastFailureTimestamp = SystemTime.UtcNow;
+			/*var stats = destinationStats.GetOrAdd(url, new DestinationStats { Url = url });
+			Interlocked.Increment(ref stats.FailureCountInternal);
+			stats.LastFailureTimestamp = SystemTime.UtcNow;
+			if (string.IsNullOrWhiteSpace(lastError) == false)
+				stats.LastError = lastError;
+			*/
+		}
+		 
+		
+		
+		
 
-
-        private bool IsNotFailing(string destServerName, int currentReplicationAttempts)
+		private bool IsNotFailing(string destServerName, int currentReplicationAttempts)
         {
-            /*var jsonDocument = docDb.Documents.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(dest.ConnectionStringOptions.Url), null);
-			if (jsonDocument == null)
-				return true;
-			var failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
-			if (failureInformation.FailureCount > 1000)
+	        DestinationStats destinationStats;
+			if (destinationsFailureCount.TryGetValue(destServerName, out destinationStats))
 			{
-				var shouldReplicateTo = currentReplicationAttempts % 10 == 0;
+				bool shouldReplicateTo = false;
+				var failureCount = destinationStats.FailureCount;
+				if (failureCount > 1000)
+				{
+					shouldReplicateTo = currentReplicationAttempts % 10 == 0;
+				}
+				if (failureCount > 100)
+				{
+					shouldReplicateTo = currentReplicationAttempts % 5 == 0;
+				}
+				if (failureCount > 10)
+				{
+					shouldReplicateTo = currentReplicationAttempts % 2 == 0;
+				}
 				log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
-					dest, failureInformation.FailureCount, shouldReplicateTo == false);
+							destServerName, failureCount, shouldReplicateTo == false);
 				return shouldReplicateTo;
-			}
-			if (failureInformation.FailureCount > 100)
-			{
-				var shouldReplicateTo = currentReplicationAttempts % 5 == 0;
-				log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
-					dest, failureInformation.FailureCount, shouldReplicateTo == false);
-				return shouldReplicateTo;
-			}
-			if (failureInformation.FailureCount > 10)
-			{
-				var shouldReplicateTo = currentReplicationAttempts % 2 == 0;
-				log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
-					dest, failureInformation.FailureCount, shouldReplicateTo == false);
-				return shouldReplicateTo;
-			}*/
+	        }
 			return true;
         }
 
