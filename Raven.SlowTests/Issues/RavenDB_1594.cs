@@ -27,6 +27,7 @@ namespace Raven.SlowTests.Issues
 		public RavenDB_1594()
 		{
 		    path = NewDataPath();
+		    pathsToDelete.Add("~/Databases");
 			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
 			var config = new Raven.Database.Config.RavenConfiguration
 			             	{

@@ -46,7 +46,7 @@ namespace Raven.Tests.Helpers
 	{
 		protected readonly List<RavenDbServer> servers = new List<RavenDbServer>();
 		protected readonly List<IDocumentStore> stores = new List<IDocumentStore>();
-		private readonly HashSet<string> pathsToDelete = new HashSet<string>();
+	    protected readonly HashSet<string> pathsToDelete = new HashSet<string>();
 
 		protected readonly HashSet<string> DatabaseNames = new HashSet<string> { Constants.SystemDatabase };
 
