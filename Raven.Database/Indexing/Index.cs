@@ -1363,10 +1363,18 @@ namespace Raven.Database.Indexing
 			return currentlyIndexing.Values.Concat(indexingPerformanceStats).ToArray();
 		}
 
+
 		public void Backup(string backupDirectory, string path, string incrementalTag)
 		{
 			if (directory is RAMDirectory)
-				return; // nothing to backup in memory based index, will be reset on restore, anyway
+			{
+				//if the index is memory-only, force writing index data to disk
+				Write((writer, analyzer, stats) =>
+				{
+					ForceWriteToDisk();
+					return new IndexedItemsInfo { ChangedDocs = 1 };
+				});
+			}
 
 			bool hasSnapshot = false;
 			bool throwOnFinallyException = true;
