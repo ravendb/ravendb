@@ -205,10 +205,6 @@ namespace Raven.Database.Counters.Controllers
 	                request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
                     request.Write(message.GetRavenJObject());
 	                request.ExecuteRequest();
-		            using (var writer = storage.CreateWriter())
-		            {
-						writer.RecordLastEtagFor(storage.Name, etag + 1);
-		            }
 		            return true;
 	            }
 	            return false;
