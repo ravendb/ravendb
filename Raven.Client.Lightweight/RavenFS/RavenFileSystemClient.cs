@@ -629,7 +629,8 @@ namespace Raven.Client.RavenFS
         {
             foreach( var item in metadata )
             {
-                request.AddHeader(item.Key, item.Value.ToString(Formatting.None)); 
+	            var value = item.Value is RavenJValue ? item.Value.ToString() : item.Value.ToString(Formatting.None);
+				request.AddHeader(item.Key, value); 
             }
         }
 
