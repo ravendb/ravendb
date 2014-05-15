@@ -25,6 +25,10 @@ namespace Raven.Abstractions.Replication
 		/// <summary>
 		/// Always resolve in favor of a remote version
 		/// </summary>
-		ResolveToRemote
+		ResolveToRemote,
+		/// <summary>
+		/// Always resolve in favor of the latest version based on the last modified time
+		/// </summary>
+		ResolveToLatest
 	}
 }

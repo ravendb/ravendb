@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -56,13 +55,21 @@ namespace RavenFS.Tests.Synchronization
 
 			destinationSyncResults = sourceClient.Synchronization.SynchronizeDestinationsAsync().Result;
 
+			var conflictItem = destination1Client.Config.GetConfig<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
+			Assert.Null(conflictItem);
+
+			conflictItem = destination2Client.Config.GetConfig<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
+			Assert.Null(conflictItem);
+
 			// check if reports match
 			Assert.Equal(2, destinationSyncResults.Length);
 			var result1 = destinationSyncResults[0].Reports.ToArray()[0];
 			Assert.Equal(sourceContent.Length, result1.BytesCopied + result1.BytesTransfered);
+			Assert.Equal(SynchronizationType.ContentUpdate, result1.Type);
 
 			var result2 = destinationSyncResults[1].Reports.ToArray()[0];
 			Assert.Equal(sourceContent.Length, result2.BytesCopied + result2.BytesTransfered);
+			Assert.Equal(SynchronizationType.ContentUpdate, result2.Type);
 
 			// check content of files
 			string destination1Md5;

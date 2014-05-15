@@ -1,18 +1,25 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
+using Microsoft.Win32.SafeHandles;
 using Raven.Abstractions.Logging;
+using Raven.Database.Util;
 
 namespace Raven.Database.Config
 {
+	internal interface ILowMemoryHandler
+	{
+		void HandleLowMemory();
+	}
+
 	internal static class MemoryStatistics
 	{
-	    private static ILog log = LogManager.GetCurrentClassLogger();
+		private static ILog log = LogManager.GetCurrentClassLogger();
 
 		private const int LowMemoryResourceNotification = 0;
 
@@ -22,19 +29,30 @@ namespace Raven.Database.Config
 		[DllImport("kernel32.dll", SetLastError = true)]
 		private static extern bool QueryMemoryResourceNotification(IntPtr hResNotification, out bool isResourceStateMet);
 
-		[DllImport("kernel32.dll", SetLastError = true)]
-		private static extern UInt32 WaitForSingleObject(IntPtr hHandle, UInt32 dwMilliseconds);
+	    [DllImport("kernel32.dll")]
+	    private static extern uint WaitForMultipleObjects(uint nCount, IntPtr[] lpHandles, bool bWaitAll, uint dwMilliseconds);
+
+        [DllImport("Kernel32.dll", SetLastError = true, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Auto)]
+	    private static extern IntPtr CreateEvent(IntPtr lpEventAttributes, bool bManualReset, bool bIntialState, string lpName);
+
+        [DllImport("Kernel32.dll", SetLastError = true)]
+        public static extern bool SetEvent(IntPtr hEvent);
 
 		private static bool failedToGetAvailablePhysicalMemory;
 		private static bool failedToGetTotalPhysicalMemory;
 		private static int memoryLimit;
 		private static readonly IntPtr lowMemoryNotificationHandle;
+		private static readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> LowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
 
 		static MemoryStatistics()
 		{
 			lowMemoryNotificationHandle = CreateMemoryResourceNotification(LowMemoryResourceNotification); // the handle will be closed by the system if the process terminates
 
-			if (lowMemoryNotificationHandle == null)
+		    var appDomainUnloadEvent = CreateEvent(IntPtr.Zero, true,false, null);
+
+		    AppDomain.CurrentDomain.DomainUnload += (sender, args) => SetEvent(appDomainUnloadEvent);
+
+		    if (lowMemoryNotificationHandle == null)
 				throw new Win32Exception();
 
 			new Thread(() =>
@@ -45,31 +63,45 @@ namespace Raven.Database.Config
 
 				while (true)
 				{
-					var waitForResult = WaitForSingleObject(lowMemoryNotificationHandle, INFINITE);
+                    var waitForResult = WaitForMultipleObjects(2, new[]{appDomainUnloadEvent, lowMemoryNotificationHandle}, false, INFINITE);
 
 					if (waitForResult == WAIT_OBJECT_0)
 					{
-					    try
-					    {
-                            log.Warn("Low memory detected, will try to reduce memory usage...");
-					        LowMemory();
-					    }
-					    catch (Exception e)
-					    {
-					        log.Error("Failure to process low memory notification", e);
-                            continue;
-					    }
+						log.Warn("Low memory detected, will try to reduce memory usage...");
+
+						var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
+
+						foreach (var lowMemoryHandler in LowMemoryHandlers)
+						{
+							ILowMemoryHandler handler;
+							if (lowMemoryHandler.TryGetTarget(out handler))
+							{
+								try
+								{
+									handler.HandleLowMemory();
+								}
+								catch (Exception e)
+								{
+									log.Error("Failure to process low memory notification (low memory handler - " + handler + ")", e);
+								}
+							}
+							else
+								inactiveHandlers.Add(lowMemoryHandler);
+						}
+
+						inactiveHandlers.ForEach(x => LowMemoryHandlers.TryRemove(x));
 					}
 					else if (waitForResult == WAIT_FAILED)
 					{
-                        log.Warn("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
+						log.Warn("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
 						break;
 					}
-                    Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
+					Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
 				}
 			})
 			{
-                Name = "Low memory notification thread"
+                IsBackground = true,
+				Name = "Low memory notification thread"
 			}.Start();
 		}
 
@@ -89,7 +121,10 @@ namespace Raven.Database.Config
 			}
 		}
 
-		public static event Action LowMemory;
+		public static void RegisterLowMemoryHandler(ILowMemoryHandler handler)
+		{
+			LowMemoryHandlers.Add(new WeakReference<ILowMemoryHandler>(handler));
+		}
 
 		/// <summary>
 		///  This value is in MB

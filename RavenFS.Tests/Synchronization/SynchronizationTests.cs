@@ -520,6 +520,10 @@ namespace RavenFS.Tests.Synchronization
 
 			var report = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
 
+			var conflictItem = destinationClient.Config.GetConfig<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
+
+			Assert.Null(conflictItem);
+
 			Assert.Equal(SynchronizationType.MetadataUpdate, report.Type);
 
 			var destinationMetadata = destinationClient.GetMetadataForAsync("test.bin").Result;
@@ -545,6 +549,10 @@ namespace RavenFS.Tests.Synchronization
 			var report = SyncTestUtils.ResolveConflictAndSynchronize(sourceClient, destinationClient, "test.bin");
 
 			Assert.Equal(SynchronizationType.Rename, report.Type);
+
+			var conflictItem = destinationClient.Config.GetConfig<ConflictItem>(RavenFileNameHelper.ConflictConfigNameForFile("test.bin")).Result;
+
+			Assert.Null(conflictItem);
 
 			var testMetadata = await destinationClient.GetMetadataForAsync("test.bin");
 			var renamedMetadata = await destinationClient.GetMetadataForAsync("renamed.bin");

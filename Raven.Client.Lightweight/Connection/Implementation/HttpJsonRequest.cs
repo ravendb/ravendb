@@ -213,7 +213,7 @@ namespace Raven.Client.Connection
 				}
 
 				// throw the conflict exception
-                return await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString).ConfigureAwait(false); ;
+                return await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString).ConfigureAwait(false);
             }).ConfigureAwait(false);
 		}
 
