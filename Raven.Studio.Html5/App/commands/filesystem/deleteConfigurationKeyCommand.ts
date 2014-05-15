@@ -1,7 +1,7 @@
 ﻿import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
 
-class deleteFilesystemConfigurationKeyCommand extends commandBase {
+class deleteConfigurationKeyCommand extends commandBase {
 
     constructor(private fs: filesystem, private name: string) {
         super();
@@ -18,4 +18,4 @@ class deleteFilesystemConfigurationKeyCommand extends commandBase {
     }
 }
 
-export = deleteFilesystemConfigurationKeyCommand; 
+export = deleteConfigurationKeyCommand; 
