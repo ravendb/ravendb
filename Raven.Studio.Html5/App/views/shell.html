@@ -11,6 +11,7 @@
             </div>
 
             <div class="collapse navbar-collapse" id="topNavBarCollapse">
+                
                 <div data-bind="visible: appUrls.isAreaActive('databases')">
                     <ul class="nav navbar-nav">
                         <li class="navbar-splitbutton" data-bind="css: { active: appUrls.isActive('Documents') }">
@@ -115,7 +116,7 @@
 
                 <div id="filesystemsNavbar" data-bind="visible: canShowFilesystemNavbar()">
                     <ul class=" nav navbar-nav">
-                        <li class="dropdown">
+                        <!--<li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                                 <span data-bind="text: activeArea"></span>
                                 <b class="caret"></b>
@@ -128,7 +129,7 @@
                                     <a data-bind="attr: { href: appUrls.filesystems }">File Systems</a>
                                 </li>
                             </ul>
-                        </li>
+                        </li>-->
                         <li data-bind="css: { active: appUrls.isActive('Files') }">
                             <a data-bind="attr: { href: appUrls.filesystemFiles }">Files</a>
                         </li>
@@ -150,7 +151,8 @@
                         </li>
                     </ul>
                 </div>
-
+                
+                <!--Databases-->
                 <div data-bind="visible: appUrls.isAreaActive('databases')">
                     <ul class="nav navbar-nav navbar-right hidden-xs hidden-sm databases col-md-3">
                         <li class="navbar-right" style="padding-left: 5px;">
@@ -181,34 +183,29 @@
                                         </a>
                                         <ul class="dropdown-menu">
                                             <li>
-                                                <a data-bind="attr: { href: appUrls.databases }">Databases</a>
-                                            </li>
-                                            <li>
                                                 <a data-bind="attr: { href: appUrls.filesystems }">File Systems</a>
                                             </li>
                                         </ul>
                                     </li>
                                 </ul>
                             </div>
-
                         </li>
                         <li class="navbar-right" data-bind="visible: recordedErrors().length > 0, click: $root.showErrorsDialog.bind($root)" title="Show errors" style="padding-left: 0;">
                             <a href="#"><i class="fa fa-warning text-danger"></i></a>
                         </li>
                     </ul>
                 </div>
+                
+                <!--Filesystems-->
                 <div id="filesystemSelectNavbar" data-bind="visible: appUrls.isAreaActive('filesystems')">
                     <ul class="nav navbar-nav pull-right hidden-xs hidden-sm databases col-md-3">
-                        <li class="hidden-xs hidden-sm pull-right">
+                        <li class="navbar-right" style="padding-left: 5px;">
                             <a class="navbar-brand" href="http://ravendb.net" target="_blank">
                                 <img style="height: 24px" src="content/images/raven.png" />
                             </a>
                         </li>
-                        <li class="hidden-xs hidden-sm" data-bind="visible: recordedErrors().length > 0, click: $root.showErrorsDialog.bind($root)">
-                            <a href="#"><i class="fa fa-warning text-danger"></i></a>
-                        </li>
-                        <li class="dropdown pull-right">
-                            <a class="dropdown-toggle" data-bind="with: activeFilesystem" data-toggle="dropdown" href="#" style="padding-left: 5px; overflow-x: hidden;max-width: 130px; text-overflow: ellipsis;white-space: nowrap;">
+                        <li class="dropdown navbar-right">
+                            <a class="dropdown-toggle" data-bind="with: activeFilesystem" data-toggle="dropdown" href="#" style="padding-left: 5px; overflow-x: hidden; max-width: 110px; text-overflow: ellipsis; white-space: nowrap;">
                                 <span data-bind="text: name"></span>
                                 <b class="caret"></b>
                             </a>
@@ -218,8 +215,28 @@
                                 </li>
                             </ul>
                         </li>
-                        <li class="pull-right">
-                            <a style="padding-right: 0; display: inline-block;" data-bind="attr:{href:appUrls.filesystemManagement}">File Systems &nbsp;<i class=" fa fa-caret-right"></i>&nbsp;</a>
+                        <li class="navbar-right">
+                            <div>
+                                <ul class="nav navbar-nav">
+                                    <li class="vertical-navbar-menu-item">
+                                        <a style="padding-right: 0; padding-left: 0; padding-bottom: 0; display: inline-block;" data-bind="attr: { href: appUrls.filesystemManagement }">Filesystems &nbsp;<i class=" fa fa-caret-right"></i>&nbsp;</a>
+                                    </li>
+                                    <li class="dropdown vertical-navbar-menu-item">
+                                        <a class="dropdown-toggle vertical-bottom-container" data-toggle="dropdown">
+                                            <b class="caret"></b>
+                                        </a>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a data-bind="attr: { href: appUrls.databases }">Databases</a>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+
+                        </li>
+                        <li class="hidden-xs hidden-sm" data-bind="visible: recordedErrors().length > 0, click: $root.showErrorsDialog.bind($root)">
+                            <a href="#"><i class="fa fa-warning text-danger"></i></a>
                         </li>
                     </ul>
                 </div>
