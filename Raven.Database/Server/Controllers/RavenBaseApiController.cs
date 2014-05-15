@@ -87,7 +87,7 @@ namespace Raven.Database.Server.Controllers
 		public async Task<T> ReadJsonObjectAsync<T>()
 		{
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
-			//using(var gzipStream = new GZipStream(stream, CompressionMode.Decompress))
+			using(var gzipStream = new GZipStream(stream, CompressionMode.Decompress))
 			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
 			{
 				using (var jsonReader = new JsonTextReader(streamReader))

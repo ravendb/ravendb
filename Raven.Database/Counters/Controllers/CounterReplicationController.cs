@@ -4,21 +4,27 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
 {
     public class CounterReplicationController : RavenCountersApiController
     {
         [Route("counters/{counterName}/replication")]
-        public HttpResponseMessage Post(ReplicationMessage replicationMessage)
+        public async Task<HttpResponseMessage> Post()
         {
             /*Read Current Counter Value for CounterName - Need ReaderWriter Lock
              *If values are ABS larger
              *      Write delta
              *Store last ETag for servers we've successfully rpelicated to
              */
+            RavenJObject replicationMessageJObject = await ReadJsonAsync();
+	        ReplicationMessage replicationMessage = ReplicationMessage.GetReplicationMessage(replicationMessageJObject); 
+
 	        long lastEtag = 0;
             bool wroteCounter = false;
             using (var writer = Storage.CreateWriter())
@@ -55,7 +61,7 @@ namespace Raven.Database.Counters.Controllers
 		                }
 
 		                wroteCounter = true;
-			            writer.Store(replicationMessage.SendingServerName,
+			            writer.Store(serverValue.ServerName,
 				            counter.CounterName,
 				            Math.Max(serverValue.Positive, currentServerValue.Positive),
 				            Math.Max(serverValue.Negative, currentServerValue.Negative)
@@ -63,11 +69,13 @@ namespace Raven.Database.Counters.Controllers
 		            }
 	            }
 
-                if (wroteCounter)
+				var sendingServerName = replicationMessage.SendingServerName;
+				if (wroteCounter || Storage.CreateReader().GetLastEtagFor(sendingServerName) < lastEtag)
                 {
-                    writer.RecordLastEtagFor(replicationMessage.SendingServerName, lastEtag);
+					writer.RecordLastEtagFor(sendingServerName, lastEtag);
                     writer.Commit(); 
                 }
+
 	            return new HttpResponseMessage(HttpStatusCode.OK);
             }
         }
