@@ -179,10 +179,9 @@ namespace Raven.Database.Counters
 
 		public void Dispose()
 		{
+            replication.Dispose();
 			if (storageEnvironment != null)
 				storageEnvironment.Dispose();
-            
-		    replication.Dispose();
 		}
 
 		public class Reader : IDisposable
