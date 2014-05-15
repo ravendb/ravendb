@@ -341,15 +341,10 @@ namespace Raven.Database.Counters
 
 				var key = EndianBitConverter.Big.GetBytes(serverId);
 				var serversLastEtag = transaction.State.GetTree(transaction, "serversLastEtag");
-
-				using (var it = serversLastEtag.Iterate(transaction))
+				var result = serversLastEtag.Read(transaction, new Slice(key));
+				if (result != null && result.Version != 0)
 				{
-					it.RequiredPrefix = new Slice(key);
-					if (it.Seek(it.RequiredPrefix))
-					{
-						var reader = it.CreateReaderForCurrent();
-						serverEtag = reader.ReadBigEndianInt64();
-					}
+					serverEtag = result.Reader.ReadBigEndianInt64();
 				}
 
 				return serverEtag;
