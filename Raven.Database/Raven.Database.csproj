@@ -1083,7 +1083,7 @@
     <EmbeddedResource Include="Json\ToJson.js" />
     <EmbeddedResource Include="Json\RavenDB.js" />
     <EmbeddedResource Include="Json\lodash.js" />
-    <EmbeddedResource Include="Client\Amazon.AWS.endpoints.xml" />
+    <EmbeddedResource Include="Client\Aws\Amazon.AWS.endpoints.xml" />
     <Content Include="FodyWeavers.xml" />
   </ItemGroup>
   <ItemGroup>

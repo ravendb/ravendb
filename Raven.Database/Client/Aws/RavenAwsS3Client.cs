@@ -13,6 +13,7 @@ using System.Net.Http;
 using System.Web.Http;
 
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Client.Extensions;
 
 namespace Raven.Database.Client.Aws
@@ -54,7 +55,7 @@ namespace Raven.Database.Client.Aws
 			if (response.IsSuccessStatusCode)
 				return;
 
-			throw new HttpResponseException(response);
+			throw ErrorResponseException.FromResponseMessage(response);
 		}
 
 		public Blob GetObject(string bucketName, string key)
@@ -84,7 +85,7 @@ namespace Raven.Database.Client.Aws
 				return null;
 
 			if (response.IsSuccessStatusCode == false)
-				throw new HttpResponseException(response);
+				throw ErrorResponseException.FromResponseMessage(response);
 
 			var data = response.Content.ReadAsStreamAsync().ResultUnwrap();
 			var metadataHeaders = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());

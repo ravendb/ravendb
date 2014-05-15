@@ -15,9 +15,9 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.Http;
 
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 
@@ -62,7 +62,7 @@ namespace Raven.Database.Client.Azure
 			if (response.StatusCode == HttpStatusCode.Conflict)
 				return;
 
-			throw new HttpResponseException(response);
+			throw ErrorResponseException.FromResponseMessage(response);
 		}
 
 		public void PutBlob(string containerName, string key, Stream stream, Dictionary<string, string> metadata)
@@ -92,7 +92,7 @@ namespace Raven.Database.Client.Azure
 			if (response.IsSuccessStatusCode)
 				return;
 
-			throw new HttpResponseException(response);
+			throw ErrorResponseException.FromResponseMessage(response);
 		}
 
 		public Blob GetBlob(string containerName, string key)
@@ -118,7 +118,7 @@ namespace Raven.Database.Client.Azure
 				return null;
 
 			if (response.IsSuccessStatusCode == false)
-				throw new HttpResponseException(response);
+				throw ErrorResponseException.FromResponseMessage(response);
 
 			var data = response.Content.ReadAsStreamAsync().ResultUnwrap();
 			var headers = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());

@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Web.Http;
 
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Client.Extensions;
 
 namespace Raven.Database.Client.Aws
@@ -52,7 +53,7 @@ namespace Raven.Database.Client.Aws
 			if (response.IsSuccessStatusCode)
 				return ReadArchiveId(response);
 
-			throw new HttpResponseException(response);
+			throw ErrorResponseException.FromResponseMessage(response);
 		}
 
 		public override string ServiceName

@@ -168,7 +168,7 @@ namespace Raven.Database.Client.Aws
 				return;
 			}
 
-			using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Raven.Database.Client.Amazon.AWS.endpoints.xml"))
+			using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Raven.Database.Client.Aws.Amazon.AWS.endpoints.xml"))
 			using (var reader = new StreamReader(stream))
 				LoadEndpointsFromReader(reader);
 		}
