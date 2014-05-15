@@ -25,7 +25,7 @@ class deleteConfigurationKeys extends dialogViewModelBase {
         var deleteItemsIds = this.keys().map(i => i.key);
         var deletionTasks = [];
         for (var i = 0; i < deleteItemsIds.length; i++) {
-            deletionTasks.push(new deleteConfigurationKeyCommand(this.fs, deleteItemsIds[i]));
+            deletionTasks.push(new deleteConfigurationKeyCommand(this.fs, deleteItemsIds[i]).execute());
         }
 
         var combinedTask = $.when(deletionTasks)

@@ -167,7 +167,7 @@ class configuration extends viewModelBase {
                     }
 
                     this.keys.remove(this.currentKey());
-                    this.selectKey(this.keys[currentIndex]);
+                    this.selectKey(this.keys[newIndex]);
                 });
             app.showDialog(deleteConfigurationKeyViewModel);
         });
