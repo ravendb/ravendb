@@ -117,10 +117,10 @@ interface synchronizationReplicationsDto {
 }
 
 interface synchronizationDestinationDto {
-    Url: string;
+    ServerUrl: string;
     Username: string;
     Password: string;
     Domain: string;
     ApiKey: string;
-    Filesystem: string;
+    FileSystem: string;
 }

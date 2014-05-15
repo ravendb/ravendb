@@ -36,12 +36,12 @@
     });
 
     constructor(dto: synchronizationDestinationDto) {
-        this.url(dto.Url);
+        this.url(dto.ServerUrl);
         this.username(dto.Username);
         this.password(dto.Password);
         this.domain(dto.Domain);
         this.apiKey(dto.ApiKey);
-        this.filesystem(dto.Filesystem);
+        this.filesystem(dto.FileSystem);
 
         if (this.username()) {
             this.isUserCredentials(true);
@@ -66,12 +66,12 @@
 
     static empty(): synchronizationDestination {
         return new synchronizationDestination({
-            Url: null,
+            ServerUrl: null,
             Username: null,
             Password: null,
             Domain: null,
             ApiKey: null,
-            Filesystem: null
+            FileSystem: null
         });
     }
 
@@ -85,12 +85,12 @@
 
     toDto(): synchronizationDestinationDto {
         return {
-            Url: this.prepareUrl(),
+            ServerUrl: this.prepareUrl(),
             Username: this.username(),
             Password: this.password(),
             Domain: this.domain(),
             ApiKey: this.apiKey(),
-            Filesystem: this.filesystem(),
+            FileSystem: this.filesystem(),
         };
     }
 
