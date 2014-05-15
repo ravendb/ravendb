@@ -73,13 +73,6 @@
     <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AWS.Extensions">
-      <HintPath>..\SharedLibs\AWS.Extensions.dll</HintPath>
-    </Reference>
-    <Reference Include="AWSSDK, Version=1.5.1.0, Culture=neutral, PublicKeyToken=cd2d24cd2bace800, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\AWSSDK.dll</HintPath>
-    </Reference>
     <Reference Include="Esent.Interop">
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
     </Reference>
@@ -234,9 +227,14 @@
     <Compile Include="Bundles\PeriodicBackups\Controllers\AdminPeriodicBackupController.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\AncestryPutTrigger.cs" />
     <Compile Include="Bundles\PeriodicBackups\Triggers\VirtualDeleteTrigger.cs" />
+    <Compile Include="Client\Aws\RavenAwsClient.cs" />
+    <Compile Include="Client\Aws\RavenAwsHelper.cs" />
     <Compile Include="Client\EmbeddableDocumentStore.cs" />
     <Compile Include="Client\EmbeddedDocumentStore.cs" />
-    <Compile Include="Client\RavenAzureClient.cs" />
+    <Compile Include="Client\Aws\RavenAwsGlacierClient.cs" />
+    <Compile Include="Client\Aws\RavenAwsS3Client.cs" />
+    <Compile Include="Client\Azure\RavenAzureClient.cs" />
+    <Compile Include="Client\RavenStorageClient.cs" />
     <Compile Include="Counters\Controllers\CounterReplicationController.cs" />
     <Compile Include="Counters\Controllers\RavenCounterReplication.cs" />
     <Compile Include="Counters\Controllers\RavenCountersApiController.cs" />
@@ -1084,6 +1082,7 @@
     <EmbeddedResource Include="Json\ToJson.js" />
     <EmbeddedResource Include="Json\RavenDB.js" />
     <EmbeddedResource Include="Json\lodash.js" />
+    <EmbeddedResource Include="Client\Aws\Amazon.AWS.endpoints.xml" />
     <Content Include="FodyWeavers.xml" />
   </ItemGroup>
   <ItemGroup>
