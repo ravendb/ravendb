@@ -38,10 +38,9 @@
                             <button type="button" class="btn btn-primary use-bootstrap-tooltip" accesskey="n" data-bind="click: newConfigurationKey" title="Create new key (Alt+N)"><i class="fa fa-plus"></i></button>
                             <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: save, enable: isSaveEnabled" title="Save (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
                             <button type="button" class="btn btn-default use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: refreshConfig" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></button>
-                            <button type="button" class="btn btn-danger use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: deleteConfiguration" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
+                            <button type="button" class="btn btn-danger use-bootstrap-tooltip" data-trigger="hover" data-toggle="tooltip" data-placement="bottom" data-bind="click: deleteConfiguration, visible: loadedConfiguration" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
                         </div>
                     </div>
-                    <!--<button type="submit" class="btn btn-primary">Save</button>-->
                 </div>
                 <div class="row"> &nbsp; </div>
                 <div class="row">
@@ -50,9 +49,4 @@
             </form>
         </div>
         </div>
-    <!--<div id="keys-context-menu">
-        <ul class="dropdown-menu" role="menu">
-            <li data-bind="click: $root.deleteKey"><a tabindex="-1" href="#">Delete</a></li>
-        </ul>
-    </div>-->
 </div>

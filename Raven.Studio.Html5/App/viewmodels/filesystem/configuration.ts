@@ -56,7 +56,9 @@ class configuration extends viewModelBase {
 
     activate(navigationArgs) {
         super.activate(navigationArgs);
-        //this.loadedConfiguration(this.selectedKey().key);
+        if (this.currentKey()) {
+            this.loadedConfiguration(this.currentKey().key);
+        }
 
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.configurationKeyText]);
 
@@ -85,19 +87,7 @@ class configuration extends viewModelBase {
         this.configurationEditor.setTheme("ace/theme/github");
         this.configurationEditor.setFontSize("16px");
         this.configurationEditor.getSession().setMode("ace/mode/json");
-        //$("#configurationEditor").on('keyup', ".ace_text-input", () => this.storeEditorTextIntoObservable());
-        //this.updateConfigurationText();
     }
-
-    //storeEditorTextIntoObservable() {
-    //    if (this.configurationEditor) {
-    //        var text = this.configurationEditor.getSession().getValue();
-
-    //        this.subscription.dispose();
-    //        this.configurationKeyText(text);
-    //        this.subscription = this.configurationKeyText.subscribe(() => this.updateConfigurationText());
-    //    }
-    //}
 
     updateConfigurationText() {
         if (this.configurationEditor) {
@@ -111,7 +101,7 @@ class configuration extends viewModelBase {
             .done( (x: configurationKey[]) => {
                 this.keys(x);
                 if (x.length > 0) {
-                    this.selectedKey(x[0]);
+                    this.selectKey(x[0]);
                 }
             });
     }
@@ -126,7 +116,7 @@ class configuration extends viewModelBase {
             this.isBusy(true);
             selected.getValues().done(data => {
                 this.configurationKeyText(data);
-                //this.loadedConfiguration(this.selectedKey().key);
+                this.loadedConfiguration(this.selectedKey().key);
             }).always(() => {
                 viewModelBase.dirtyFlag().reset();
                 this.isBusy(false);
@@ -167,7 +157,9 @@ class configuration extends viewModelBase {
                     }
 
                     this.keys.remove(this.currentKey());
-                    this.selectKey(this.keys[newIndex]);
+                    if (this.keys()[newIndex]) {
+                        this.selectKey(this.keys()[newIndex]);
+                    }
                 });
             app.showDialog(deleteConfigurationKeyViewModel);
         });
@@ -191,6 +183,9 @@ class configuration extends viewModelBase {
                 });
             app.showDialog(createConfigurationKeyViewModel);
         });
+    }
+
+    modelPolling() {
     }
 } 
 
