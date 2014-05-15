@@ -330,6 +330,31 @@ namespace Raven.Database.Counters
                 }
 		    }
 
+			public long GetLastEtagFor(string server)
+			{
+				int serverId;
+				long serverEtag = 0;
+				if (!parent.serverNamesToIds.TryGetValue(server, out serverId))
+				{
+					return serverEtag;
+				}
+
+				var key = EndianBitConverter.Big.GetBytes(serverId);
+				var serversLastEtag = transaction.State.GetTree(transaction, "serversLastEtag");
+
+				using (var it = serversLastEtag.Iterate(transaction))
+				{
+					it.RequiredPrefix = new Slice(key);
+					if (it.Seek(it.RequiredPrefix))
+					{
+						var reader = it.CreateReaderForCurrent();
+						serverEtag = reader.ReadBigEndianInt64();
+					}
+				}
+
+				return serverEtag;
+			}	
+
             public void Dispose()
 			{
 				if (transaction != null)
@@ -407,7 +432,7 @@ namespace Raven.Database.Counters
                 parent.LastEtag++;
 				var serverId = GetServerId(server);
 
-/**/				var counterNameSize = Encoding.UTF8.GetByteCount(counter);
+				var counterNameSize = Encoding.UTF8.GetByteCount(counter);
 				var requiredBufferSize = counterNameSize + sizeof (int);
 				EnsureBufferSize(requiredBufferSize);
 

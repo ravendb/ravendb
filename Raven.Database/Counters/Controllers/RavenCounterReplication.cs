@@ -70,7 +70,7 @@ namespace Raven.Database.Counters.Controllers
 
             while (!cancellation.IsCancellationRequested)
             {
-                Replicate(runningBecauseOfDataModification);
+                SendReplicationToAllServers(runningBecauseOfDataModification);
                 runningBecauseOfDataModification = WaitForCountersUpdate(timeToWaitInMinutes);
                 timeToWaitInMinutes = runningBecauseOfDataModification ? TimeSpan.FromSeconds(30) : TimeSpan.FromMinutes(5);
             }
@@ -196,7 +196,7 @@ namespace Raven.Database.Counters.Controllers
 	            var message = new ReplicationMessage {SendingServerName = storage.Name};
 	            using (var reader = storage.CreateReader())
 	            {
-	                message.Counters = reader.GetCountersSinceEtag(etag).Take(10240).ToList(); //TODO: Capped this...how to get remaining values?
+	                message.Counters = reader.GetCountersSinceEtag(etag + 1).Take(10240).ToList(); //TODO: Capped this...how to get remaining values?
 	            }
 	            url = string.Format("{0}/replication", destinationUrl);
 
@@ -205,7 +205,11 @@ namespace Raven.Database.Counters.Controllers
 	                request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
                     request.Write(message.GetRavenJObject());
 	                request.ExecuteRequest();
-	                return true;
+		            using (var writer = storage.CreateWriter())
+		            {
+						writer.RecordLastEtagFor(storage.Name, etag + 1);
+		            }
+		            return true;
 	            }
 	            return false;
 	        }
@@ -221,7 +225,7 @@ namespace Raven.Database.Counters.Controllers
 	        }
 	    }
 
-		private void Replicate(bool runningBecauseOfDataModifications)
+		private void SendReplicationToAllServers(bool runningBecauseOfDataModifications)
 		{
 			IsRunning = !shouldPause;
 			if (IsRunning)
@@ -236,45 +240,10 @@ namespace Raven.Database.Counters.Controllers
 
 				        var destinationForReplication = destinations.Where(
 				            serverName => !runningBecauseOfDataModifications || IsNotFailing(serverName, currentReplicationAttempts));
-
-				        var startedTasks = new List<Task>();
-
+						
 				        foreach (var destinationUrl in destinationForReplication)
 				        {
-				            var dest = destinationUrl;
-				            var holder = activeReplicationTasks.GetOrAdd(dest, s => new SemaphoreSlim(1));
-				            if (holder.Wait(0) == false)
-                                continue;
-				            var replicationTask = Task.Factory.StartNew(
-				                async () =>
-				                {
-				                    //using (LogContext.WithDatabase(storage.Name)) //TODO: log with counter storage contexe
-				                    //{
-				                        try
-				                        {
-                                            if (ReplicateTo(dest)) SignalCounterUpdate();
-				                        }
-				                        catch (Exception e)
-				                        {
-				                            log.ErrorException("Could not replicate to " + dest, e);
-				                        }
-				                    //}
-				                });
-
-				            startedTasks.Add(replicationTask);
-                            
-				            activeTasks.Enqueue(replicationTask);
-				            replicationTask.ContinueWith(
-				                _ =>
-				                {
-				                    // here we purge all the completed tasks at the head of the queue
-				                    Task task;
-				                    while (activeTasks.TryPeek(out task))
-				                    {
-				                        if (!task.IsCompleted && !task.IsCanceled && !task.IsFaulted) break;
-				                        activeTasks.TryDequeue(out task); // remove it from end
-				                    }
-				                });
+				            ReplicateToDestination(destinationUrl);
 				        }
 				    }
 				}
@@ -285,7 +254,43 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-        public void Dispose()
+		private void ReplicateToDestination(string destinationUrl)
+		{
+			var dest = destinationUrl;
+			var holder = activeReplicationTasks.GetOrAdd(dest, s => new SemaphoreSlim(1));
+			if (holder.Wait(0) == false)
+				return;
+			var replicationTask = Task.Factory.StartNew(
+				() =>
+				{
+					//using (LogContext.WithDatabase(storage.Name)) //TODO: log with counter storage contexe
+					//{
+					try
+					{
+						if (ReplicateTo(dest)) SignalCounterUpdate();
+					}
+					catch (Exception e)
+					{
+						log.ErrorException("Could not replicate to " + dest, e);
+					}
+					//}
+				});
+
+			activeTasks.Enqueue(replicationTask);
+			replicationTask.ContinueWith(
+				_ =>
+				{
+					// here we purge all the completed tasks at the head of the queue
+					Task task;
+					while (activeTasks.TryPeek(out task))
+					{
+						if (!task.IsCompleted && !task.IsCanceled && !task.IsFaulted) break;
+						activeTasks.TryDequeue(out task); // remove it from end
+					}
+				});
+		}
+
+		public void Dispose()
         {
             Task task;
             cancellation.Cancel();

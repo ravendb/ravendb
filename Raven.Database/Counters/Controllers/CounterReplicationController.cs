@@ -15,15 +15,15 @@ namespace Raven.Database.Counters.Controllers
     public class CounterReplicationController : RavenCountersApiController
     {
         [Route("counters/{counterName}/replication")]
-        public async Task<HttpResponseMessage> Post(ReplicationMessage replicationMessage)
+        public async Task<HttpResponseMessage> Post()
         {
             /*Read Current Counter Value for CounterName - Need ReaderWriter Lock
              *If values are ABS larger
              *      Write delta
              *Store last ETag for servers we've successfully rpelicated to
              */
-            RavenJObject replicationMessageJson = await ReadJsonAsync();
-            //ReplicationCounter 
+            RavenJObject replicationMessageJObject = await ReadJsonAsync();
+	        ReplicationMessage replicationMessage = ReplicationMessage.GetReplicationMessage(replicationMessageJObject); 
 
 	        long lastEtag = 0;
             bool wroteCounter = false;
@@ -69,11 +69,13 @@ namespace Raven.Database.Counters.Controllers
 		            }
 	            }
 
-                if (wroteCounter)
+				var sendingServerName = replicationMessage.SendingServerName;
+				if (wroteCounter || Storage.CreateReader().GetLastEtagFor(sendingServerName) < lastEtag)
                 {
-                    writer.RecordLastEtagFor(replicationMessage.SendingServerName, lastEtag);
+					writer.RecordLastEtagFor(sendingServerName, lastEtag);
                     writer.Commit(); 
                 }
+
 	            return new HttpResponseMessage(HttpStatusCode.OK);
             }
         }
