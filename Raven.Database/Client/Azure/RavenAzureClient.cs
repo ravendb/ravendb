@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -20,7 +21,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Util;
 using Raven.Client.Extensions;
 
-namespace Raven.Database.Client
+namespace Raven.Database.Client.Azure
 {
 	public class RavenAzureClient : RavenStorageClient
 	{

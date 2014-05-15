@@ -9,7 +9,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-using Raven.Database.Client;
+using Raven.Database.Client.Aws;
+using Raven.Database.Client.Azure;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -73,6 +74,19 @@ namespace Raven.Tests.Issues
 			}
 		}
 
+		[Fact(Skip = "Requires Amazon AWS Credentials")]
+		public void UploadArchive()
+		{
+			var glacierVaultName = "ravendb";
+
+			using (var client = new RavenAwsGlacierClient("<aws_access_key>", "<aws_secret_key>", "<aws_region_for_bucket>"))
+			{
+				var archiveId = client.UploadArchive(glacierVaultName, new MemoryStream(Encoding.UTF8.GetBytes("321")), "sample description", 60 * 60);
+
+				Assert.NotNull(archiveId);
+			}
+		}
+
 		[Fact]
 		public void AuthorizationHeaderValueForAwsS3ShouldBeCalculatedCorrectly1()
 		{
@@ -81,14 +95,14 @@ namespace Raven.Tests.Issues
 				var date = new DateTime(2013, 5, 24);
 
 				var stream = new MemoryStream(Encoding.UTF8.GetBytes("Welcome to Amazon S3."));
-				var payloadHash = client.CalculatePayloadHash(stream);
+				var payloadHash = RavenAwsHelper.CalculatePayloadHash(stream);
 
 				Assert.Equal("44ce7dd67c959e0d3524ffac1771dfbba87d2b6b4b4e99e42034a8b803f8b072", payloadHash);
 
-				var url = RavenAwsS3Client.GetUrl("examplebucket", "us-east-1") + "/" + "test%24file.text";
+				var url = client.GetUrl("examplebucket") + "/" + "test%24file.text";
 				var headers = new Dictionary<string, string>
 				              {
-					              { "x-amz-date", RavenAwsS3Client.ConvertToString(date) }, 
+					              { "x-amz-date", RavenAwsHelper.ConvertToString(date) }, 
 								  { "x-amz-content-sha256", payloadHash }, 
 								  { "x-amz-storage-class", "REDUCED_REDUNDANCY" },
 								  { "Date", date.ToString("R") },
@@ -108,14 +122,14 @@ namespace Raven.Tests.Issues
 			using (var client = new RavenAwsS3Client("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", "us-east-1"))
 			{
 				var date = new DateTime(2013, 5, 24);
-				var payloadHash = client.CalculatePayloadHash(null);
+				var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
 
 				Assert.Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", payloadHash);
 
-				var url = RavenAwsS3Client.GetUrl("examplebucket", "us-east-1") + "/" + "test.txt";
+				var url = client.GetUrl("examplebucket") + "/" + "test.txt";
 				var headers = new Dictionary<string, string>
 				              {
-					              { "x-amz-date", RavenAwsS3Client.ConvertToString(date) }, 
+					              { "x-amz-date", RavenAwsHelper.ConvertToString(date) }, 
 								  { "x-amz-content-sha256", payloadHash }, 
 								  { "Date", date.ToString("R") },
 								  { "Host", "examplebucket.s3.amazonaws.com" },

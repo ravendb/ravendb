@@ -11,7 +11,8 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler;
-using Raven.Database.Client;
+using Raven.Database.Client.Aws;
+using Raven.Database.Client.Azure;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
@@ -310,7 +311,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
         private void UploadToS3(string backupPath, PeriodicBackupSetup localBackupConfigs, bool isFullBackup)
 		{
-	        using (var client = new RavenAwsS3Client(awsAccessKey, awsSecretKey, localBackupConfigs.AwsRegionEndpoint ?? RavenAwsS3Client.DefaultRegion))
+	        using (var client = new RavenAwsS3Client(awsAccessKey, awsSecretKey, localBackupConfigs.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
 		    using (var fileStream = File.OpenRead(backupPath))
 		    {
 			    var key = Path.GetFileName(backupPath);
@@ -326,18 +327,17 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
         private void UploadToGlacier(string backupPath, PeriodicBackupSetup localBackupConfigs, bool isFullBackup)
 		{
-			throw new NotImplementedException();
-
-			//var awsRegion = RegionEndpoint.GetBySystemName(localBackupConfigs.AwsRegionEndpoint) ?? RegionEndpoint.USEast1;
-			//var manager = new ArchiveTransferManager(awsAccessKey, awsSecretKey, awsRegion);
-			//var archiveId = manager.Upload(localBackupConfigs.GlacierVaultName, GetArchiveDescription(isFullBackup), backupPath).ArchiveId;
-			//logger.Info(string.Format("Successfully uploaded backup {0} to Glacier, archive ID: {1}", Path.GetFileName(backupPath),
-			//						  archiveId));
+	        using (var client = new RavenAwsGlacierClient(awsAccessKey, awsSecretKey, localBackupConfigs.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
+			using (var fileStream = File.OpenRead(backupPath))
+			{
+				var archiveId = client.UploadArchive(localBackupConfigs.GlacierVaultName, fileStream, GetArchiveDescription(isFullBackup), 60 * 60);
+				logger.Info(string.Format("Successfully uploaded backup {0} to Glacier, archive ID: {1}", Path.GetFileName(backupPath), archiveId));
+			}
 		}
 
 		private void UploadToAzure(string backupPath, PeriodicBackupSetup localBackupConfigs, bool isFullBackup)
 		{
-			using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey, false))
+			using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey, true))
 			{
 				client.PutContainer(localBackupConfigs.AzureStorageContainer);
 				using (var fileStream = File.OpenRead(backupPath))
