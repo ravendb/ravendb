@@ -2,11 +2,11 @@
     <p>Note: not implemented yet</p>
     <a href="http://issues.hibernatingrhinos.com/issue/RavenDB-2057">You can track progress here</a>
 </div>
-<div id="patchContainer" class="not-implemented-yet">
+<div id="patchContainer">
     <div class="btn-toolbar" role="toolbar">
         <div class="btn-group">
             <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-placement="right" data-toggle="dropdown">
-                <!-- ko with: patchDocuments -->
+                <!-- ko with: patchDocument -->
                 <span data-bind="text: patchOnOption"></span>
                 <!-- /ko -->
                 <span class="caret"></span>
@@ -18,27 +18,29 @@
             </ul>
         </div>
         <div class="btn-group">
-            <a class="btn btn-default use-bootstrap-tooltip" title="Test the patch script on the selected document"><i class="fa fa-question-circle"></i> Test</a>
+            <button class="btn btn-default use-bootstrap-tooltip" title="Test the patch script on the selected document" data-bind="click: testPatch, enable: isExecuteAllowed"><i class="fa fa-question-circle"></i> Test</button>
         </div>
         <div class="btn-group">
-            <a class="btn btn-default use-bootstrap-tooltip" title="Save the current Patch"><i class="fa fa-save"></i> Save</a>
-            <a class="btn btn-default use-bootstrap-tooltip" title="Load a saved Patch"><i class="fa fa-arrow-up"></i> Load</a>
+            <button class="btn btn-default use-bootstrap-tooltip" title="Save the current Patch" data-bind="click: savePatch"><i class="fa fa-save"></i> Save</button>
+            <button class="btn btn-default use-bootstrap-tooltip" title="Load a saved Patch" data-bind="click: loadPatch"><i class="fa fa-arrow-up"></i> Load</button>
         </div>
-        <div class="btn-group">
-            <a class="btn btn-default use-bootstrap-tooltip" title="Execute Patch"><i class="fa fa-play"></i> Patch</a>
-            <a class="btn btn-default use-bootstrap-tooltip" title="Patch just the selected documents"><i class="fa fa-play"></i> Patch Selected</a>
-            <a class="btn btn-default use-bootstrap-tooltip" title="Patch all matching documents"><i class="fa fa-forward"></i> Patch All</a>
+        <div class="btn-group" data-bind="visible: patchDocument().isDocumentPatch()">
+            <button class="btn btn-default use-bootstrap-tooltip" title="Execute Patch" data-bind="click: executePatchOnSingle, enable: isExecuteAllowed"><i class="fa fa-play"></i> Patch</button>
+        </div>
+        <div class="btn-group" data-bind="visible: patchDocument().isCollectionPatch() || patchDocument().isIndexPatch()">
+            <button class="btn btn-default use-bootstrap-tooltip" title="Patch just the selected documents" data-bind="click: executePatchOnSelected, enable: isExecuteAllowed" ><i class="fa fa-play"></i> Patch Selected</button>
+            <button class="btn btn-default use-bootstrap-tooltip" title="Patch all matching documents" data-bind="click: executePatchOnAll, enable: (patchDocument().script())"><i class="fa fa-forward"></i> Patch All</button>
         </div>
     </div>
     <br/>
-    <div class="form-horizontal" data-bind="with: patchDocuments">
+    <div class="form-horizontal" data-bind="with: patchDocument">
         <div class="form-group" data-bind="visible: isDocumentPatch()">
             <div class="row">
                 <label for="documentToPatch" class="col-md-2 control-label">Document to patch:</label>
                 <div class="col-md-10">
                     <div class="row">
                         <div class="col-md-6">
-                            <input id="documentToPatch" type="text" class="form-control" data-bind="value: selectedItem, event: { keyup: $root.loadDocumentToPatch.bind($root, $element.value) }" />
+                            <input id="documentToPatch" type="text" class="form-control" data-bind="value: selectedItem, valueUpdate: 'afterkeydown', event: { keyup: $root.loadDocumentToTest.bind($root, $element.value) }" />
                         </div>
                     </div>
                 </div>
@@ -60,11 +62,11 @@
                                     <li data-bind="click: $root.setSelectedCollection.bind($root, $data)"><a href="#" data-bind="text: $data.name"></a></li>
                                     <!-- /ko -->
                                 </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
         </div>
         <div class="form-group" data-bind="visible: isIndexPatch()">
             <div class="row">
@@ -91,12 +93,18 @@
         <div class="form-group" data-bind="visible: isIndexPatch()">
             <div class="col-md-12">
                 <div>
-                    <label>Query</label>
+                    <label id="indexQueryLabelContainer" data-placement="auto right" data-original-title="Index Query" data-trigger="hover">
+                        <span id="indexQueryLabel" class="help-cursor">
+                            Query
+                            <i class="fa fa-info-circle text-info"></i>
+                        </span>
+                        <a target="_blank" class="use-bootstrap-tooltip control-label-additional-link" data-trigger="hover" data-toggle="tooltip" data-placement="right" title="External link: Lucene query syntax documentation" href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"><!--<i class="fa fa-question-circle text-muted"></i>-->Lucene Docs</a>
+                    </label>
                 </div>
                 <div>
                     <div class="row">
                         <div class="col-md-12">
-                            <pre class="form-control" data-bind="aceEditor: { code: query }" style="height:160px;"></pre>
+                            <pre class="form-control" data-bind="aceEditor: { code: query }, event: { keyup: $root.runQueryWithDelay.bind($root) }" style="height:160px;"></pre>
                         </div>
                     </div>
                 </div>
@@ -105,7 +113,12 @@
         <div class="form-group">
             <div class="col-md-9">
                 <div>
-                    <label>Patch Scripts</label>
+                    <label id="patchScriptsLabelContainer" data-placement="auto right" data-original-title="Patch Scripts" data-trigger="hover">
+                        <span id="patchScriptsLabel" class="help-cursor">
+                            Patch Scripts
+                            <i class="fa fa-info-circle text-info"></i>
+                        </span>
+                    </label>
                 </div>
                 <div>
                     <div class="row">
@@ -152,13 +165,13 @@
                 </div>
             </div>
         </div>
-        <div class="form-group" data-bind="visible: isCollectionPatch() || isIndexPatch()">
+        <div id="matchingDocumentsContainer" class="form-group">
             <div class="col-md-12">
                 <div>
                     <label>Matching Documents</label>
                 </div>
                 <div data-bind="with: $root">
-                    <div id="matchingDocumentsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#matchingDocumentsGrid' }"></div>
+                    <div id="matchingDocumentsGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#matchingDocumentsGrid' }"></div>
                 </div>
             </div>
         </div>

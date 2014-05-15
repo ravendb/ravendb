@@ -14,7 +14,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
-using ICSharpCode.SharpZipLib.Zip;
 using Mono.CSharp;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -453,18 +452,18 @@ namespace Raven.Database.Server.Controllers
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 
 			var fileStream = new FileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-			var zipFile = new ZipFile(fileStream);
-			var zipEntry = zipFile.GetEntry(docPath);
-
-			if (zipEntry == null || zipEntry.IsFile == false)
+			var zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Read, false);
+			
+			var zipEntry = zipArchive.Entries.FirstOrDefault(a => a.FullName.Equals(docPath, StringComparison.OrdinalIgnoreCase));
+			if (zipEntry == null)
 				return EmbeddedFileNotFound(docPath);
 
-			var entry = zipFile.GetInputStream(zipEntry);
+			var entry = zipEntry.Open();
 			var msg = new HttpResponseMessage
 			{
 				Content = new CompressedStreamContent(entry, false)
 				{
-					Disposables = {fileStream}
+					Disposables = { zipArchive }
 				},
 			};
 

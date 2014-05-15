@@ -44,6 +44,7 @@ namespace Raven.Client.Connection
 		/// Notify when the failover status changed
 		/// </summary>
 		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged = delegate { };
+
         public int DelayTimeInMiliSec { get;  set; }
 
         public List<OperationMetadata> ReplicationDestinations { get; protected set; }
@@ -101,15 +102,19 @@ namespace Raven.Client.Connection
 
 	        public Task CheckDestination = new CompletedTask();
 
-			public FailureCounter()
-			{
-				LastCheck = SystemTime.UtcNow;
-			}
-
 	        public long Increment()
 	        {
                 ForceCheck = false;
+	            LastCheck = SystemTime.UtcNow;
                 return Interlocked.Increment(ref Value);
+	        }
+
+	        public long Reset()
+	        {
+                var oldVal = Interlocked.Exchange(ref Value, 0);
+                LastCheck = SystemTime.UtcNow;
+                ForceCheck = false;
+	            return oldVal;
 	        }
 		}
 
@@ -146,22 +151,29 @@ namespace Raven.Client.Connection
 	            return true;
 
 	        var currentTask = failureCounter.CheckDestination;
-	        if(currentTask.Status != TaskStatus.Running)
+            if (currentTask.Status != TaskStatus.Running && DelayTimeInMiliSec > 0)
 	        {
 	            var checkDestination = new Task(async delegate
 	            {
 	                for (int i = 0; i < 3; i++)
 	                {
-	                    var r = await TryOperationAsync<object>(async metadata =>
+	                    try
 	                    {
-	                        var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), "GET", metadata.Credentials, conventions);
-	                        await requestFactory.CreateHttpJsonRequest(requestParams).ReadResponseJsonAsync().ConfigureAwait(false);
-	                        return null;
-	                    }, operationMetadata, primaryOperation, avoidThrowing: true).ConfigureAwait(false);
-	                    if (r.Success)
+	                        var r = await TryOperationAsync<object>(async metadata =>
+	                        {
+	                            var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), "GET", metadata.Credentials, conventions);
+	                            await requestFactory.CreateHttpJsonRequest(requestParams).ReadResponseJsonAsync().ConfigureAwait(false);
+	                            return null;
+	                        }, operationMetadata, primaryOperation, avoidThrowing: true).ConfigureAwait(false);
+	                        if (r.Success)
+	                        {
+	                            ResetFailureCount(operationMetadata.Url);
+	                            return;
+	                        }
+	                    }
+	                    catch (ObjectDisposedException)
 	                    {
-	                        ResetFailureCount(operationMetadata.Url);
-	                        return;
+	                        return; // disposed, nothing to do here
 	                    }
                         await Task.Delay(DelayTimeInMiliSec).ConfigureAwait(false);
 	                }
@@ -248,10 +260,7 @@ namespace Raven.Client.Connection
 		public virtual void ResetFailureCount(string operationUrl)
 		{
 			var value = GetHolder(operationUrl);
-			var oldVal = Interlocked.Exchange(ref value.Value, 0);
-			value.LastCheck = SystemTime.UtcNow;
-			value.ForceCheck = false;
-			if (oldVal != 0)
+			if (value.Reset() != 0)
 			{
 				FailoverStatusChanged(this,
 					new FailoverStatusChangedEventArgs
@@ -292,21 +301,22 @@ namespace Raven.Client.Connection
                 }
             }
 
-            operationResult = await TryOperationAsync(operation, primaryOperation, null, !operationResult.WasTimeout && localReplicationDestinations.Count > 0).ConfigureAwait(false);
-
-            if (operationResult.Success)
-                return operationResult.Result;
-
             if (ShouldExecuteUsing(primaryOperation,primaryOperation, currentRequest, method, true))
             {
+                operationResult = await TryOperationAsync(operation, primaryOperation, null, !operationResult.WasTimeout && localReplicationDestinations.Count > 0).ConfigureAwait(false);
+
+                if (operationResult.Success)
+                    return operationResult.Result;
+
+                IncrementFailureCount(primaryOperation.Url);
                 if (!operationResult.WasTimeout && IsFirstFailure(primaryOperation.Url))
                 {
                     operationResult = await TryOperationAsync(operation, primaryOperation, null, localReplicationDestinations.Count > 0).ConfigureAwait(false);
 
                     if (operationResult.Success)
                         return operationResult.Result;
+                    IncrementFailureCount(primaryOperation.Url);
                 }
-                IncrementFailureCount(primaryOperation.Url);
             }
 
             for (var i = 0; i < localReplicationDestinations.Count; i++)
@@ -321,6 +331,7 @@ namespace Raven.Client.Connection
                 if (operationResult.Success)
                     return operationResult.Result;
 
+                IncrementFailureCount(replicationDestination.Url);
                 if (!operationResult.WasTimeout && IsFirstFailure(replicationDestination.Url))
                 {
                     operationResult = await TryOperationAsync(operation, replicationDestination, primaryOperation, hasMoreReplicationDestinations).ConfigureAwait(false);
@@ -328,8 +339,8 @@ namespace Raven.Client.Connection
                     // tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, localReplicationDestinations.Count > i + 1).ConfigureAwait(false);
                     if (operationResult.Success)
                         return operationResult.Result;
+                    IncrementFailureCount(replicationDestination.Url);
                 }
-                IncrementFailureCount(replicationDestination.Url);
             }
 
             // this should not be thrown, but since I know the value of should...

@@ -47,6 +47,8 @@ namespace Raven.Database.Data
 				fromClause = "from doc in docs";
 			}
 
+			bool containsNestedItems = false;
+
 			foreach (var map in Items)
 			{
 				var currentDoc = "doc";
@@ -60,6 +62,7 @@ namespace Raven.Database.Data
 					switch (currentChar)
 					{
 						case ',':
+							containsNestedItems = true;
 
 							// doc.NewDoc.Items
 							String newDocumentSource = string.Format("{0}.{1}", currentDoc, currentExpression);
@@ -106,9 +109,16 @@ namespace Raven.Database.Data
 					));
 			}
 
+			string mapDefinition;
+
+			if (realMappings.Count == 1 && containsNestedItems == false)
+				mapDefinition = string.Format("{0}\r\nselect new {{ {1} }}", fromClause, realMappings.First());
+			else
+				mapDefinition = string.Format("{0}\r\nselect new\r\n{{\r\n\t{1}\r\n}}", fromClause, string.Join(",\r\n\t", realMappings));
+
 			var index = new IndexDefinition
 			{
-				Map = string.Format("{0}\r\nselect new {{ {1} }}", fromClause,string.Join(", ", realMappings)),
+				Map = mapDefinition,
 				InternalFieldsMapping = new Dictionary<string, string>()
 			};
 

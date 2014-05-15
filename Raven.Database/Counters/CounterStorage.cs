@@ -134,7 +134,7 @@ namespace Raven.Database.Counters
 					{
 						if (it.Seek(Slice.AfterAllKeys))
 						{
-							LastEtag = it.CurrentKey.ToInt64();
+							LastEtag = it.CurrentKey.CreateReader().ReadBigEndianInt64();
 						}
 					}
 				}

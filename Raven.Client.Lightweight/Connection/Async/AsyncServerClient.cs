@@ -837,11 +837,11 @@ namespace Raven.Client.Connection.Async
 
 				var results =  result
 					.Value<RavenJArray>("Results")
-					.OfType<RavenJObject>()
+					.Select(x=> x as RavenJObject)
 					.ToList();
 
 				var documents = results
-					.Where(x => x.ContainsKey("@metadata") && x["@metadata"].Value<string>("@id") != null)
+                    .Where(x => x != null && x.ContainsKey("@metadata") && x["@metadata"].Value<string>("@id") != null)
 					.ToDictionary(x => x["@metadata"].Value<string>("@id"), x => x, StringComparer.OrdinalIgnoreCase);
 
 				if (results.Count >= uniqueKeys.Count)
