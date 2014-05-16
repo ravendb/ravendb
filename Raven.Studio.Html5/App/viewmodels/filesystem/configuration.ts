@@ -17,6 +17,7 @@ import alertType = require("common/alertType");
 
 class configuration extends viewModelBase {
 
+    static configSelector = "#settingsContainer";
     private router = router;
 
     keys = ko.observableArray<configurationKey>();
@@ -79,6 +80,18 @@ class configuration extends viewModelBase {
         this.loadKeys(this.activeFilesystem());
         this.initializeDocEditor();
         this.configurationEditor.focus();
+        this.setupKeyboardShortcuts();
+    }
+
+    setupKeyboardShortcuts() {
+        //this.createKeyboardShortcut("alt+shift+d", () => this.currentKey(), editDocument.editDocSelector);
+        //this.createKeyboardShortcut("alt+shift+m", () => this.focusOnMetadata(), editDocument.editDocSelector);
+        //this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editDocument.editDocSelector);
+        //this.createKeyboardShortcut("alt+home", () => this.firstDocument(), editDocument.editDocSelector);
+        //this.createKeyboardShortcut("alt+end", () => this.lastDocument(), editDocument.editDocSelector);
+        //this.createKeyboardShortcut("alt+page-up", () => this.previousDocumentOrLast(), editDocument.editDocSelector);
+        //this.createKeyboardShortcut("alt+page-down", () => this.nextDocumentOrFirst(), editDocument.editDocSelector);
+        this.createKeyboardShortcut("alt+shift+del", () => this.deleteConfiguration(), configuration.configSelector);
     }
 
     initializeDocEditor() {
