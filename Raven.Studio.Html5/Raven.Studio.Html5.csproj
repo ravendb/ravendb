@@ -148,7 +148,6 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\createFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\deleteConfigurationKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemEditFile.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemAddDestination.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\configuration.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemFiles.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystems.ts" />
@@ -341,7 +340,6 @@
     <Content Include="App\views\patch.html" />
     <Content Include="App\views\createEncryption.html" />
     <Content Include="App\views\conflicts.html" />
-    <Content Include="App\views\filesystem\filesystemAddDestination.html" />
     <Content Include="App\views\filesystem\configuration.html" />
     <Content Include="App\views\filesystem\filesystemFiles.html" />
     <Content Include="App\views\filesystem\createFilesystem.html" />
