@@ -132,10 +132,5 @@ namespace Raven.Tests.Core.Commands
                 Assert.Equal(1, documents.Length);
             }
         }
-
-        [Fact]
-        public async Task CanGetMultipleDocumentsWithIncludes()
-        {
-        }
     }
 }

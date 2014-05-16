@@ -103,6 +103,7 @@
     <Compile Include="ChangesApi\Subscribing.cs" />
     <Compile Include="Querying\Intersection.cs" />
     <Compile Include="Querying\Searching.cs" />
+    <Compile Include="Shard\Sharding.cs" />
     <Compile Include="Utils\Entities\Camera.cs" />
     <Compile Include="Utils\Entities\Event.cs" />
     <Compile Include="Utils\Entities\TShirt.cs" />
@@ -152,9 +153,7 @@
   <ItemGroup>
     <Folder Include="Auth\" />
     <Folder Include="BackupRestore\" />
-    <Folder Include="Facets\" />
     <Folder Include="Patching\" />
-    <Folder Include="Shard\" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs">

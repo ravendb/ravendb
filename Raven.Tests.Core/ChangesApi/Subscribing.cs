@@ -152,7 +152,7 @@ namespace Raven.Tests.Core.ChangesApi
         }
 
         [Fact]
-        public async Task CanSubscribeToReplicationConflicts()
+        public void CanSubscribeToReplicationConflicts()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
@@ -172,7 +172,7 @@ namespace Raven.Tests.Core.ChangesApi
                     });
 
                 SetupReplication(source, destinations: destination);
-                await source.Replication.WaitAsync(eTag, replicas: 1);
+                source.Replication.WaitAsync(eTag, replicas: 1).Wait();
 
                 Assert.Equal("conflict", output);
             }
