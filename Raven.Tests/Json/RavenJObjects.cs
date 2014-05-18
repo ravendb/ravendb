@@ -1,19 +1,21 @@
 ﻿using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Json
 {
-	public class RavenJObjects
+	public class RavenJObjects : NoDisposalNeeded
 	{
 		[Fact]
 		public void CanIgnoreUnassignedProperties()
 		{
 			var blogOne = new Blog
-							{
-								Title = "one",
-								Category = "Ravens"
-							};
+			{
+				Title = "one",
+				Category = "Ravens"
+			};
 
 			var o = RavenJObject.FromObject(blogOne);
 
@@ -34,8 +36,9 @@ namespace Raven.Tests.Json
 			{
 				Title = "one",
 				Category = "Ravens",
-				Tags = new Tag[]{
-					 new Tag(){ Name = "birds" }
+				Tags = new Tag[]
+				{
+					new Tag() {Name = "birds"}
 				},
 			};
 			var o = RavenJObject.FromObject(blogOne);
@@ -58,47 +61,23 @@ namespace Raven.Tests.Json
 
 		public class Blog
 		{
-			public User User
-			{
-				get;
-				set;
-			}
+			public User User { get; set; }
 
-			public string Title
-			{
-				get;
-				set;
-			}
+			public string Title { get; set; }
 
-			public Tag[] Tags
-			{
-				get;
-				set;
-			}
+			public Tag[] Tags { get; set; }
 
-			public string Category
-			{
-				get;
-				set;
-			}
+			public string Category { get; set; }
 		}
 
 		public class Tag
 		{
-			public string Name
-			{
-				get;
-				set;
-			}
+			public string Name { get; set; }
 		}
 
 		public class User
 		{
-			public string Name
-			{
-				get;
-				set;
-			}
+			public string Name { get; set; }
 		}
 	}
 }

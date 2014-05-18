@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+
+using Raven.Tests.Common;
+
 using Rhino.Licensing;
 using Xunit;
 
 namespace Raven.Tests
 {
-    public class LicenseValidatorTest
+    public class LicenseValidatorTest : NoDisposalNeeded
     {
         [Fact]
         public void An_expired_OEM_license_is_still_valid()
@@ -50,7 +53,7 @@ namespace Raven.Tests
             var licenseGenerator = new LicenseGenerator(rsa.ToXmlString(true));
             var licenseValues = new Dictionary<string, string>();
 
-            var license = licenseGenerator.Generate("Foo", Guid.NewGuid(), DateTime.Today.AddDays(1), licenseValues, LicenseType.Subscription);
+            var license = licenseGenerator.Generate("Foo", Guid.NewGuid(), DateTime.Today.AddMonths(1), licenseValues, LicenseType.Subscription);
             var licenseValidator = new StringLicenseValidator(rsa.ToXmlString(false), license)
             {
                 DisableFloatingLicenses = true,

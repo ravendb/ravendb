@@ -11,6 +11,9 @@ using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Attributes;
+using Raven.Tests.Common.Util;
 using Raven.Tests.Spatial;
 using Rhino.Mocks;
 using Xunit;
@@ -18,7 +21,7 @@ using Xunit.Extensions;
 
 namespace Raven.Tests
 {
-	class IndexQueryUrl
+	class IndexQueryUrl : NoDisposalNeeded
 	{
 		[Fact]
 		public void can_encode_and_decode_IndexQuery() 

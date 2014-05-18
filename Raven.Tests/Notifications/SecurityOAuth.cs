@@ -8,11 +8,14 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using Lucene.Net.Util;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Notifications
@@ -36,7 +39,7 @@ namespace Raven.Tests.Notifications
 		{
 			using (var server = GetNewServer(enableAuthentication:true))
 			{
-				server.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+				server.SystemDatabase.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
 					Name = "test",
 					Secret = "test",
@@ -82,7 +85,7 @@ namespace Raven.Tests.Notifications
 		{
 			using (var server = GetNewServer(enableAuthentication:true))
 			{
-				server.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+				server.SystemDatabase.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
 					Name = "test",
 					Secret = "test",
@@ -100,7 +103,7 @@ namespace Raven.Tests.Notifications
 					Conventions = { FailoverBehavior = FailoverBehavior.FailImmediately }
 				}.Initialize())
 				{
-					Assert.Throws<InvalidOperationException>(() =>
+					var exception = Assert.Throws<InvalidOperationException>(() =>
 					{
 						using (var session = store.OpenSession())
 						{
@@ -108,6 +111,7 @@ namespace Raven.Tests.Notifications
 							session.SaveChanges();
 						}
 					});
+					Assert.Equal("Invalid API key", exception.Message);
 				}
 			}
 		}
@@ -117,7 +121,7 @@ namespace Raven.Tests.Notifications
 		{
 			using (var server = GetNewServer(enableAuthentication:true))
 			{
-				server.Database.Put("Raven/Databases/OAuthTest", null, RavenJObject.FromObject(new DatabaseDocument
+				server.SystemDatabase.Documents.Put("Raven/Databases/OAuthTest", null, RavenJObject.FromObject(new DatabaseDocument
 				{
 					Disabled = false,
 					Id = "Raven/Databases/OAuthTest",
@@ -127,7 +131,7 @@ namespace Raven.Tests.Notifications
 					}
 				}), new RavenJObject(), null);
 
-				server.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+				server.SystemDatabase.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
 					Name = "test",
 					Secret = "test",
@@ -174,7 +178,7 @@ namespace Raven.Tests.Notifications
 		{
 			using (var server = GetNewServer(enableAuthentication:true))
 			{
-				server.Database.Put("Raven/Databases/OAuthTest1", null, RavenJObject.FromObject(new DatabaseDocument
+				server.SystemDatabase.Documents.Put("Raven/Databases/OAuthTest1", null, RavenJObject.FromObject(new DatabaseDocument
 				{
 					Disabled = false,
 					Id = "Raven/Databases/OAuthTest1",
@@ -184,7 +188,7 @@ namespace Raven.Tests.Notifications
 					}
 				}), new RavenJObject(), null);
 
-				server.Database.Put("Raven/Databases/OAuthTest2", null, RavenJObject.FromObject(new DatabaseDocument
+				server.SystemDatabase.Documents.Put("Raven/Databases/OAuthTest2", null, RavenJObject.FromObject(new DatabaseDocument
 				{
 					Disabled = false,
 					Id = "Raven/Databases/OAuthTest2",
@@ -194,7 +198,7 @@ namespace Raven.Tests.Notifications
 					}
 				}), new RavenJObject(), null);
 
-				server.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+				server.SystemDatabase.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
 					Name = "test",
 					Secret = "test",
@@ -213,7 +217,7 @@ namespace Raven.Tests.Notifications
 					Conventions = { FailoverBehavior = FailoverBehavior.FailImmediately }
 				}.Initialize())
 				{
-					Assert.Throws<WebException>(() =>
+					Assert.Throws<ErrorResponseException>(() =>
 					{
 						using (var session = store.OpenSession())
 						{
@@ -230,7 +234,7 @@ namespace Raven.Tests.Notifications
 		{
 			using (var server = GetNewServer(enableAuthentication:true))
 			{
-				server.Database.Put("Raven/Databases/OAuthTest", null, RavenJObject.FromObject(new DatabaseDocument
+				server.SystemDatabase.Documents.Put("Raven/Databases/OAuthTest", null, RavenJObject.FromObject(new DatabaseDocument
 				{
 					Disabled = false,
 					Id = "Raven/Databases/OAuthTest",
@@ -240,7 +244,7 @@ namespace Raven.Tests.Notifications
 					}
 				}), new RavenJObject(), null);
 
-				server.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+				server.SystemDatabase.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
 					Name = "test",
 					Secret = "test",
@@ -287,7 +291,7 @@ namespace Raven.Tests.Notifications
 					Conventions = { FailoverBehavior = FailoverBehavior.FailImmediately }
 				}.Initialize())
 				{
-					Assert.Throws<WebException>(() =>
+					Assert.Throws<ErrorResponseException>(() =>
 					{
 						using (var session = store.OpenSession())
 						{

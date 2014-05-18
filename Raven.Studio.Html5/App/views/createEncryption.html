@@ -1,0 +1,38 @@
+﻿<div class="messageBox" tabindex="-1">
+    <form data-bind="submit: save">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">&times;</button>
+            <h4 class="modal-title">Create Encryption</h4>
+        </div>
+        <div class="modal-body">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label for="keyName">Select Key: (Base64 Encoding)</label>
+                        <div class="row">
+                            <div class="col-md-11">
+                                <input required pattern="^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})([=]{1,2})?$" type="text" class="form-control" id="key" placeholder="Key" data-bind="value: key, hasFocus: keyFocus">
+                            </div>
+                            <a class="btn" title="Refresh" data-bind="click: refresh_encryption">
+                                <span class="glyphicon glyphicon-refresh"></span>
+                            </a>
+                        </div>
+                        <div>You can use the auto generated key or enter one of your own</div>
+                        <div>Save this key in a safe place: if you lose this key you could lose access to your data!</div><br />
+
+                        <label for="encryptionAlgorithm">Encryption Algorithm:</label>
+                        <select required data-bind="options: ['DESC', 'R2C2', 'Rijndael', 'Triple DESC'], value: encryptionAlgorithm, valueAllowUnset: false, hasFocus: algorithmFocus"></select><br />
+                        <label for="encryptionBits">Encryption Key Bits:</label>
+                        <select required data-bind="options: ['128', '192', '256'], value: encryptionBits, valueAllowUnset: false, hasFocus: bitsFocus"></select><br />
+                        <label for="encryptedIndexes">Encrypted Indexes:</label>
+                        <input data-bind="checked: isEncryptedIndexes" type="checkbox" id="isEncryptedIndexes">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+    </form>
+</div>

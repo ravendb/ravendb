@@ -11,6 +11,7 @@ using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Database.Extensions;
@@ -111,7 +112,11 @@ namespace Raven.Bundles.Replication.Responders
 			using (var md5 = MD5.Create())
 			{
 				var bytes = Encoding.UTF8.GetBytes(metadata.Value<string>(Constants.RavenReplicationSource) + "/" + lastEtag);
-				return new Guid(md5.ComputeHash(bytes)).ToString();
+
+				var hash = Encryptor.Current.Hash.Compute16(bytes);
+				Array.Resize(ref hash, 16);
+
+				return new Guid(hash).ToString();
 			}
 		}
 
@@ -120,7 +125,11 @@ namespace Raven.Bundles.Replication.Responders
 			using (var md5 = MD5.Create())
 			{
 				var bytes = Encoding.UTF8.GetBytes(Database.TransactionalStorage.Id + "/" + existingEtag);
-				return new Guid(md5.ComputeHash(bytes)).ToString();
+
+				var hash = Encryptor.Current.Hash.Compute16(bytes);
+				Array.Resize(ref hash, 16);
+
+				return new Guid(hash).ToString();
 			}
 		}
 

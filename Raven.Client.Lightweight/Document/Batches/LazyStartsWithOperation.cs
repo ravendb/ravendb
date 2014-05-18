@@ -29,7 +29,9 @@ namespace Raven.Client.Document.Batches
 
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
 
-		public LazyStartsWithOperation(string keyPrefix, string matches, string exclude, int start, int pageSize, InMemoryDocumentSessionOperations sessionOperations)
+	    private readonly RavenPagingInformation pagingInformation;
+
+	    public LazyStartsWithOperation(string keyPrefix, string matches, string exclude, int start, int pageSize, InMemoryDocumentSessionOperations sessionOperations, RavenPagingInformation pagingInformation)
 		{
 			this.keyPrefix = keyPrefix;
 			this.matches = matches;
@@ -37,25 +39,35 @@ namespace Raven.Client.Document.Batches
 			this.start = start;
 			this.pageSize = pageSize;
 			this.sessionOperations = sessionOperations;
+		    this.pagingInformation = pagingInformation;
 		}
 
 		public GetRequest CreateRequest()
 		{
+            var actualStart = start;
+
+            var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
+            if (nextPage)
+                actualStart = pagingInformation.NextPageStart;
+
 			return new GetRequest
 			{
 				Url = "/docs",
 				Query =
 					string.Format(
-						"startsWith={0}&matches={3}&exclude={4}&start={1}&pageSize={2}",
+						"startsWith={0}&matches={3}&exclude={4}&start={1}&pageSize={2}&next-page={5}",
 						Uri.EscapeDataString(keyPrefix),
-						start.ToInvariantString(),
+                        actualStart.ToInvariantString(),
 						pageSize.ToInvariantString(),
 						Uri.EscapeDataString(matches ?? ""),
-                        Uri.EscapeDataString(exclude ?? ""))
+                        Uri.EscapeDataString(exclude ?? ""),
+                        nextPage ? "true" : "false")
 			};
 		}
 
 		public object Result { get; set; }
+
+		public QueryResult QueryResult { get; set; }
 
 		public bool RequiresRetry { get; set; }
 
@@ -70,12 +82,16 @@ namespace Raven.Client.Document.Batches
 
 			var jsonDocuments = SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)response.Result).OfType<RavenJObject>());
 
+            int nextPageStart;
+            if (pagingInformation != null && int.TryParse(response.Headers[Constants.NextPageStart], out nextPageStart))
+                pagingInformation.Fill(start, pageSize, nextPageStart);
+
 			Result = jsonDocuments
 				.Select(sessionOperations.TrackEntity<T>)
 				.ToArray();
 		}
-#if !SILVERLIGHT
-		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
+
+        public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
 			if (responses.Any(x => x.RequestHasErrors()))
 			{
@@ -101,20 +117,18 @@ namespace Raven.Client.Document.Batches
 				.Select(sessionOperations.TrackEntity<T>)
 				.ToArray();
 		}
-#endif
-		public IDisposable EnterContext()
+
+        public IDisposable EnterContext()
 		{
 			return null;
 		}
 
-#if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
-			return commands.StartsWith(keyPrefix, matches, start, pageSize)
+			return commands.StartsWith(keyPrefix, matches, start, pageSize, pagingInformation, exclude: exclude)
 				.Select(sessionOperations.TrackEntity<T>)
 				.ToArray();
 		}
-#endif
 
 		public void HandleEmbeddedResponse(object result)
 		{

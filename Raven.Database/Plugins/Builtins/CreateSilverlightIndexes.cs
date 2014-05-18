@@ -1,6 +1,5 @@
-using System;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Database.Indexing;
 
 namespace Raven.Database.Plugins.Builtins
 {
@@ -8,9 +7,9 @@ namespace Raven.Database.Plugins.Builtins
 	{
 		public void SilverlightWasRequested(DocumentDatabase database)
 		{
-			if (database.GetIndexDefinition("Raven/DocumentsByEntityName") == null)
+			if (database.Indexes.GetIndexDefinition(Constants.DocumentsByEntityNameIndex) == null)
 			{
-				database.PutIndex("Raven/DocumentsByEntityName", new IndexDefinition
+                database.Indexes.PutIndex(Constants.DocumentsByEntityNameIndex, new IndexDefinition
 				{
 					Map =
 						@"from doc in docs 

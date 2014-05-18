@@ -14,6 +14,8 @@ namespace Raven.Database.Storage
 
 		ListItem Read(string name, string key);
 
+        ListItem ReadLast(string name);
+
 		void RemoveAllBefore(string name, Etag etag);
 	}
 

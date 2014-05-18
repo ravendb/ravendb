@@ -1,14 +1,13 @@
-using System.IO;
-using ICSharpCode.NRefactory;
 using ICSharpCode.NRefactory.CSharp;
-using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.Bugs.QueryOptimizer
 {
-	public class LinqToQueryParameters
+	public class LinqToQueryParameters : NoDisposalNeeded
 	{
 		[Fact]
 		public void SimpleProperties()

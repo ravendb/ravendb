@@ -3,64 +3,35 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using Raven.Client.Document;
 using Raven.Database.Server;
+using Raven.Tests.Common;
 using Raven.Tests.Indexes;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs
 {
 	public class DocumentUrl : RavenTest
 	{
 		[Fact]
-		public void CanGetFullUrl()
+		public void CanGetFullUrl_WithSlashOnTheEnd()
 		{
-			using (var store = NewDocumentStore())
+			using (var documentStore = NewRemoteDocumentStore(fiddler: true))
 			{
-				store.Configuration.Port = 8079;
-				using (var server = new HttpServer(store.Configuration, store.DocumentDatabase))
+				using (var session = documentStore.OpenSession())
 				{
-					server.StartListening();
-					using (var documentStore = new DocumentStore
-					{
-						Url = "http://localhost:8079"
-					}.Initialize())
-					{
-						var session = documentStore.OpenSession();
 
-						var entity = new LinqIndexesFromClient.User();
-						session.Store(entity);
+					var entity = new LinqIndexesFromClient.User();
+					session.Store(entity);
 
-						Assert.Equal("http://localhost:8079/docs/users/1",
-						             session.Advanced.GetDocumentUrl(entity));
-					}
-				}
-			}
-		}
+					var storedUrl = session.Advanced.GetDocumentUrl(entity);
 
-		[Fact]
-		public void CanGetFullUrlWithSlashOnTheEnd()
-		{
-			using (var store = NewDocumentStore())
-			{
-				store.Configuration.Port = 8079;
-				using (var server = new HttpServer(store.Configuration, store.DocumentDatabase))
-				{
-					server.StartListening();
-					using (var documentStore = new DocumentStore
-					{
-						Url = "http://localhost:8079/"
-					}.Initialize())
-					{
+					//replace machine name with localhost
+					var correctedStoredUrl = storedUrl.Replace(Environment.MachineName.ToLower(),"localhost");
 
-						var session = documentStore.OpenSession();
-
-						var entity = new LinqIndexesFromClient.User();
-						session.Store(entity);
-
-						Assert.Equal("http://localhost:8079/docs/users/1",
-						             session.Advanced.GetDocumentUrl(entity));
-					}
+                    Assert.Equal("http://localhost:8079/databases/CanGetFullUrl_WithSlashOnTheEnd/docs/users/1", correctedStoredUrl);
 				}
 			}
 		}

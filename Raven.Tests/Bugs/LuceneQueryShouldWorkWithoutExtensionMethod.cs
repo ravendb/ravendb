@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -30,7 +32,7 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					var keywords = session.Advanced.LuceneQuery<Keyword>().WaitForNonStaleResults().ToList();
+                    var keywords = session.Advanced.DocumentQuery<Keyword>().WaitForNonStaleResults().ToList();
 					Assert.Equal(1, keywords.Count);
 				}
 			}

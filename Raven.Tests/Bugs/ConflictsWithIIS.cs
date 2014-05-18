@@ -1,12 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Tests.Bugs.Identifiers;
+using Raven.Tests.Common.Attributes;
+using Raven.Tests.Common.Util;
+
+using Xunit;
 
 namespace Raven.Tests.Bugs
 {
+	//related to issue http://issues.hibernatingrhinos.com/issue/RavenDB-1450
 	public class ConflictsWithIIS : IisExpressTestClient
 	{
 		public class DeviceStatusRecord
@@ -17,6 +23,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[IISExpressInstalledFact]
+		//[TimeBombedFact(2014, 1, 31)]
 		public void MultiThreadedInsert()
 		{
 			const int threadCount = 4;

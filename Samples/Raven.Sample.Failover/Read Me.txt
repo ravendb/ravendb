@@ -1,9 +1,0 @@
-This sample contains a simple example of Raven's automatic failover facilities.
-
-Start the servers using "Start Raven.ps1", this will start two instance of Raven, one on port 8080 (the master instance) and one on port 8081 (the slaved instance).
-Run the "Setup Master To Slave Replication.ps1" script to setup replication from the master to the slave.
-  * Note this scripts require curl (http://curl.haxx.se/latest.cgi?curl=win32-nossl) to be on your path.
-
-Run the sample, you should get a message saying that the application has wrote a docuemnt to the master instance and is ready for a server failure.
-Stop the master instance (the one from shard1, listening to port 8080), and the hit enter on the sample application.
-The application will proceed to try to read the previously saved document from the database, realize that the database is down and automatically switch the the waiting slave instance.

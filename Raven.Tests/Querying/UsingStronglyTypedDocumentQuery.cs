@@ -1,12 +1,13 @@
 using System;
-using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Querying
 {
-	public class UsingStronglyTypedDocumentQuery
+	public class UsingStronglyTypedDocumentQuery : NoDisposalNeeded
 	{
 		private IDocumentQuery<IndexedUser> CreateUserQuery()
 		{
@@ -113,7 +114,6 @@ namespace Raven.Tests.Querying
 		[Fact]
 		public void CanUseStronglyTypedGroupBy()
 		{
-			CreateUserQuery().GroupBy(AggregationOperation.None, x => x.Birthday);
 		}
 	}
 }

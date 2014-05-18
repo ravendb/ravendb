@@ -1,0 +1,24 @@
+﻿<ul class="breadcrumb">
+    <li>
+        <h3>
+            <a href="#databases">
+                Databases
+            </a>
+        </h3>
+    </li>
+    <li data-bind="with: activeDatabase">
+        <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
+    </li>
+    <li>
+        <a data-bind="attr: { href: appUrls.indexes }">Indexes</a>
+    </li>
+    <li class="active" data-bind="visible: isIndexNameVisible">
+        <span data-bind="text: indexName"></span>
+    </li>
+    <li class="active">
+        <span data-bind="text: currentBreadcrumbTitle"></span>
+    </li>
+</ul>
+<section data-bind="router: { cacheViews: false } ">
+    
+</section>

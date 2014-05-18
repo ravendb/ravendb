@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
-    <ProductVersion>3.7</ProductVersion>
+    <ProductVersion>3.8</ProductVersion>
     <ProjectGuid>2ff37223-8f38-4584-821a-9beb6d76f7a1</ProjectGuid>
     <SchemaVersion>2.0</SchemaVersion>
     <OutputName>RavenDB.Setup</OutputName>
@@ -18,7 +18,7 @@
     <SuppressIces>ICE20</SuppressIces>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
-    <OutputPath>..\build\</OutputPath>
+    <OutputPath>bin\$(Configuration)\</OutputPath>
     <IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
   </PropertyGroup>
   <ItemGroup>

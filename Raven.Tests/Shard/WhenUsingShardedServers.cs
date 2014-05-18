@@ -9,13 +9,14 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
 using Raven.Server;
+using Raven.Tests.Common;
 using Raven.Tests.Document;
 using Rhino.Mocks;
 using Xunit;
 
 namespace Raven.Tests.Shard
 {
-	public class WhenUsingShardedServers : RemoteClientTest
+	public class WhenUsingShardedServers : RavenTest
 	{
 		readonly RavenDbServer server1;
 		readonly RavenDbServer server2;
@@ -165,7 +166,7 @@ namespace Raven.Tests.Shard
 
 
 				//get all, should automagically retrieve from each shard
-				var allCompanies = session.Advanced.LuceneQuery<Company>()
+				var allCompanies = session.Advanced.DocumentQuery<Company>()
 					.WaitForNonStaleResults()
 					.ToArray();
 

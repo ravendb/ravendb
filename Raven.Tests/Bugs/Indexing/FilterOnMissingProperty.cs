@@ -1,5 +1,7 @@
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -29,7 +31,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var session = store.OpenSession())
 				{
-					session.Advanced.LuceneQuery<dynamic>("test").WaitForNonStaleResults().ToArray();
+                    session.Advanced.DocumentQuery<dynamic>("test").WaitForNonStaleResults().ToArray();
 				}
 
 				Assert.Empty(store.DocumentDatabase.Statistics.Errors);

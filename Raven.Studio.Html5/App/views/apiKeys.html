@@ -1,0 +1,131 @@
+﻿<div>
+    <div class="btn-toolbar" role="toolbar">
+        <div class="btn-group">
+            <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveChanges, enable: areAllApiKeysValid" title="Save changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+        </div>
+        <div class="btn-group">
+            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: createNewApiKey" title="Create a new API Key (Alt+N)" accesskey="N"><i class="fa fa-plus"></i></button>
+        </div>
+        <div class="input-group" style="max-width: 300px;">
+            <span class="input-group-addon"><i class="fa fa-search"></i></span>
+            <input type="text" class="form-control" placeholder="Search for API keys" data-bind="value: searchText, valueUpdate: 'afterkeydown'" />
+        </div>
+    </div>
+    <br />
+    <div class="alert alert-info" data-bind="visible: hasFetchedApiKeys() && apiKeys().length === 0">
+        <span>You don't have any API keys.</span>
+        <a href="#" class="alert-link" data-bind="click: createNewApiKey">Create one now</a>
+    </div>
+    <div data-bind="foreach: apiKeys">
+        <div class="panel api-key-card" data-bind="visible: visible, css: { 'panel-info': enabled() && isValid(), 'panel-warning': !enabled() && isValid(), 'panel-danger': !isValid() }">
+            <div class="panel-heading">
+                <h3 class="panel-title">
+                    <span data-bind="text: name() ? name() : '[new api key]'"></span>
+                    <button type="button" style="display:inline-block;" class="close use-bootstrap-tooltip" data-bind="click: $root.removeApiKey.bind($root)" title="Remove this API key">×</button>
+                </h3>
+
+            </div>
+            <div class="panel-body">
+                <form class="form-horizontal" role="form">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Name</label>
+                        <div class="col-sm-7">
+                            <input type="email" class="form-control" placeholder="MyApiKey" data-bind="value: name, valueUpdate: 'afterkeydown'" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Secret</label>
+                        <div class="col-sm-7">
+                            <input type="text" class="form-control" readonly data-bind="value: secret" onmouseup="this.select(); return false;" />
+                            <a href="javascript:void(0)" data-bind="click: generateSecret">Generate</a>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Full API Key</label>
+                        <div class="col-sm-7">
+                            <input type="text" class="form-control" readonly data-bind="value: fullApiKey" onmouseup="this.select(); return false;">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Connection String</label>
+                        <div class="col-sm-7">
+                            <input type="text" class="form-control" readonly data-bind="value: connectionString" onmouseup="this.select(); return false;" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Direct Link</label>
+                        <div class="col-sm-7">
+                            <input type="text" class="form-control" readonly data-bind="value: directLink" onmouseup="this.select(); return false;" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Enabled</label>
+                        <div class="col-sm-7">
+                            <div class="btn-group" data-toggle="buttons">
+                                <label class="btn btn-primary" data-bind="click: enable, css: { active: enabled }">
+                                    <input type="radio" name="options"> Enabled
+                                </label>
+                                <label class="btn btn-primary" data-bind="click: disable, css: { active: !enabled() }">
+                                    <input type="radio" name="options"> Disabled
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Databases</label>
+                        <div class="col-sm-9">
+                            <table class="table table-striped table-hover" data-bind="visible: databases().length > 0">
+                                <thead>
+                                    <tr>
+                                        <td width="50%">Name</td>
+                                        <td>Type</td>
+                                        <td></td>
+                                    </tr>
+                                </thead>
+                                <tbody data-bind="foreach: databases">
+                                    <tr>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                    <span data-bind="text: tenantIdOrDefault"></span> <span class="caret"></span>
+                                                </button>
+                                                <ul class="dropdown-menu" role="menu">
+                                                    <!-- ko foreach: $root.allDatabases -->
+                                                    <li><a href="#" data-bind="text: $data, click: $parent.tenantId.bind($data)"></a></li>
+                                                    <!-- /ko -->
+                                                    <li class="divider"></li>
+                                                    <li><a href="#" data-bind="click: tenantId.bind($data, '&lt;system&gt;')">&lt;system&gt;</a></li>
+                                                    <li><a href="#" data-bind="click: tenantId.bind($data, '*')">* (All)</a></li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                    <span data-bind="text: currentAccessType"></span> <span class="caret"></span>
+                                                </button>
+                                                <ul class="dropdown-menu" role="menu">
+                                                    <!-- ko foreach:getTypes() -->
+                                                    <li><a href="#" data-bind="text: $data, click:  $parent.currentAccessType.bind($parent)"></a></li>
+                                                    <!-- /ko -->
+                                                </ul>
+                                            </div>
+                                    </td>
+                                        <td>
+                                            <button type="button" class="close use-bootstrap-tooltip" style="display:inline-block; font-size: 14px;" data-bind="click: $parent.removeApiKeyDatabase.bind($parent, $data)" title="Remove this database">
+                                                <span class="glyphicon glyphicon-remove remove"></span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: addEmptyApiKeyDatabase" title="Add a database">
+                                <i class="fa fa-plus"></i> Add database
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

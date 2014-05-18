@@ -8,10 +8,13 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Document;
 using Raven.Database.Indexing;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Tests.Common;
+
 using Spatial4n.Core.Context.Nts;
 using Spatial4n.Core.Shapes;
 using Xunit;
@@ -22,20 +25,16 @@ namespace Raven.Tests.Spatial
 {
 	public class SpatialIndexTest : RavenTest
 	{
-		private readonly DocumentDatabase db;
+		private readonly DocumentStore store;
 
 		public SpatialIndexTest()
 		{
-			db = new DocumentDatabase(new RavenConfiguration
-			{
-				RunInMemory = true
-			});
-			db.SpinBackgroundWorkers();
+            store = NewRemoteDocumentStore(databaseName: "SpatialIndexTest");
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 
@@ -51,15 +50,15 @@ namespace Raven.Tests.Spatial
 				}
 			};
 
-			db.PutIndex("eventsByLatLng", indexDefinition);
+			store.DatabaseCommands.PutIndex("eventsByLatLng", indexDefinition);
 
 			var events = SpatialIndexTestHelper.GetEvents();
 
 			for (int i = 0; i < events.Length; i++)
 			{
-				db.Put("Events/" + (i + 1), null,
+				store.DatabaseCommands.Put("Events/" + (i + 1), null,
 					RavenJObject.FromObject(events[i]),
-					RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
+					RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"));
 			}
 
 			const double lat = 38.96939, lng = -77.386398;
@@ -67,14 +66,14 @@ namespace Raven.Tests.Spatial
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("eventsByLatLng", new SpatialIndexQuery()
+				queryResult = store.DatabaseCommands.Query("eventsByLatLng", new SpatialIndexQuery()
 				{
 					Query = "Tag:[[Event]]",
 					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radiusInKm),
 					SpatialRelation = SpatialRelation.Within,
 					SpatialFieldName = Constants.DefaultSpatialFieldName,
 					SortedFields = new[] { new SortedField("__distance"), }
-				}, CancellationToken.None);
+				}, null);
 				if (queryResult.IsStale)
 					Thread.Sleep(100);
 			} while (queryResult.IsStale);
@@ -109,25 +108,33 @@ namespace Raven.Tests.Spatial
 				}
 			};
 
-			db.PutIndex("eventsByLatLng", indexDefinition);
+			store.DatabaseCommands.PutIndex("eventsByLatLng", indexDefinition);
 
-			db.Put("Events/1", null,
+            store.DatabaseCommands.Put("Events/1", null,
+                RavenJObject.Parse(@"{""Venue"": ""Jimmy's Old Town Tavern"", ""Latitude"": null, ""Longitude"": 35 }"),
+                RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"));
+
+            store.DatabaseCommands.Put("Events/2", null,
+                RavenJObject.Parse(@"{""Venue"": ""Jimmy's Old Town Tavern"", ""Latitude"": 30, ""Longitude"": null }"),
+                RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"));
+
+			store.DatabaseCommands.Put("Events/3", null,
 				RavenJObject.Parse(@"{""Venue"": ""Jimmy's Old Town Tavern"", ""Latitude"": null, ""Longitude"": null }"),
-				RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
+				RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"));
 
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("eventsByLatLng", new IndexQuery()
+				queryResult = store.DatabaseCommands.Query("eventsByLatLng", new IndexQuery()
 				{
 					Query = "Tag:[[Event]]",
 					SortedFields = new[] { new SortedField("__distance"), }
-				}, CancellationToken.None);
+				}, null);
 				if (queryResult.IsStale)
 					Thread.Sleep(100);
 			} while (queryResult.IsStale);
 
-			Assert.Equal(1, queryResult.Results.Count);
+			Assert.Equal(3, queryResult.Results.Count);
 		}
 
 		[Fact]
@@ -141,7 +148,7 @@ namespace Raven.Tests.Spatial
 				}
 			};
 
-			db.PutIndex("eventsByLatLng", indexDefinition);
+			store.DatabaseCommands.PutIndex("eventsByLatLng", indexDefinition);
 
 			var events = new[]
 			{
@@ -158,9 +165,9 @@ namespace Raven.Tests.Spatial
 
 			for (int i = 0; i < events.Length; i++)
 			{
-				db.Put("Events/" + (i + 1), null,
+				store.DatabaseCommands.Put("Events/" + (i + 1), null,
 					RavenJObject.FromObject(events[i]),
-					RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
+					RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"));
 			}
 
 			const double lat = 38.96939, lng = -77.386398;
@@ -168,7 +175,7 @@ namespace Raven.Tests.Spatial
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("eventsByLatLng", new SpatialIndexQuery()
+				queryResult = store.DatabaseCommands.Query("eventsByLatLng", new SpatialIndexQuery()
 				{
 					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radius),
 					SpatialRelation = SpatialRelation.Within,
@@ -178,7 +185,7 @@ namespace Raven.Tests.Spatial
 						new SortedField("__distance"), 
 						new SortedField("Venue"),
 					}
-				}, CancellationToken.None);
+				}, null);
 				if (queryResult.IsStale)
 					Thread.Sleep(100);
 			} while (queryResult.IsStale);
@@ -205,7 +212,7 @@ namespace Raven.Tests.Spatial
 				}
 			};
 
-			db.PutIndex("eventsByLatLng", indexDefinition);
+			store.DatabaseCommands.PutIndex("eventsByLatLng", indexDefinition);
 
 			var events = new[]
 			{
@@ -221,9 +228,9 @@ namespace Raven.Tests.Spatial
 
 			for (int i = 0; i < events.Length; i++)
 			{
-				db.Put("Events/" + (i + 1), null,
+				store.DatabaseCommands.Put("Events/" + (i + 1), null,
 					RavenJObject.FromObject(events[i]),
-					RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
+					RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"));
 			}
 
 			const double lat = 38.96939, lng = -77.386398;
@@ -231,7 +238,7 @@ namespace Raven.Tests.Spatial
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("eventsByLatLng", new SpatialIndexQuery()
+				queryResult = store.DatabaseCommands.Query("eventsByLatLng", new SpatialIndexQuery()
 				{
 					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radius),
 					SpatialRelation = SpatialRelation.Within,
@@ -241,7 +248,7 @@ namespace Raven.Tests.Spatial
 						new SortedField("Venue"),
 						new SortedField("__distance"), 
 					}
-				}, CancellationToken.None);
+				}, null);
 				if (queryResult.IsStale)
 					Thread.Sleep(100);
 			} while (queryResult.IsStale);

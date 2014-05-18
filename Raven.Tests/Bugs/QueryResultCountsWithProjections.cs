@@ -3,40 +3,27 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Embedded;
-using Xunit;
-using Raven.Database;
-using Raven.Database.Indexing;
 using Raven.Client.Indexes;
-using Raven.Json.Linq;
 using Raven.Client.Linq;
-using System.Threading;
+using Raven.Tests.Common;
+
+using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryResultCountsWithProjections : IDisposable
+	public class QueryResultCountsWithProjections : RavenTest
 	{
-		EmbeddableDocumentStore store = null;
+		private readonly EmbeddableDocumentStore store;
 
 		public QueryResultCountsWithProjections()
 		{
-			store = new EmbeddableDocumentStore()
-			{
-				RunInMemory = true
-			};
-			store.Initialize();
+			store = NewDocumentStore();
 			PopulateDatastore();
-		}
-
-		public void Dispose()
-		{
-			store.Dispose();
 		}
 
 		[Fact]
@@ -177,7 +164,5 @@ namespace Raven.Tests.Bugs
 		{ 
 			public string Name { get; set; }
 		}
-
-
 	}
 }

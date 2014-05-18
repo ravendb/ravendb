@@ -4,12 +4,14 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Server;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Linq;
 
 namespace Raven.Tests.Bugs.TransformResults
 {
-	public class SortHintTester : RemoteClientTest
+	public class SortHintTester : RavenTest
 	{
 		[Fact]
 		public void will_fail_with_request_headers_too_long()

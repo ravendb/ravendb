@@ -1,10 +1,11 @@
 using Raven.Abstractions.Data;
-using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class ConnectionStringParsing
+	public class ConnectionStringParsing : NoDisposalNeeded
 	{
 		[Fact]
 		public void EnsureWellFormedConnectionStrings_ParsingWithEndingSemicolons_Successful()

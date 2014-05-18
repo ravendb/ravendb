@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Faceted
@@ -16,7 +18,7 @@ namespace Raven.Tests.Faceted
 		public Double Price { get; set; }
 	}
 
-	public class FacetAdvancedAPI
+	public class FacetAdvancedAPI : NoDisposalNeeded
 	{
 		[Fact]
 		public void CanUseNewAPIToDoMultipleQueries()

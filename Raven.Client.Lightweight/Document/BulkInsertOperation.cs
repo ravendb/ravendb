@@ -1,13 +1,10 @@
-﻿#if !SILVERLIGHT && !NETFX_CORE
+﻿using Raven.Client.Connection.Async;
+#if !NETFX_CORE
 using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-#if !SILVERLIGHT
 using Raven.Client.Changes;
 using Raven.Client.Connection;
-#else
-using Raven.Client.Connection.Async;
-#endif
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
@@ -19,18 +16,14 @@ namespace Raven.Client.Document
 		{
 			get
 			{
-				return operation.OperationId;
+				return Operation.OperationId;
 			}
 		}
 
 		private readonly IDocumentStore documentStore;
 		private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
-		private readonly ILowLevelBulkInsertOperation operation;
-#if !SILVERLIGHT
-		public IDatabaseCommands DatabaseCommands { get; private set; }
-#else
+		protected ILowLevelBulkInsertOperation Operation { get; set; }
 		public IAsyncDatabaseCommands DatabaseCommands { get; private set; }
-#endif
 		private readonly EntityToJson entityToJson;
 
 		public delegate void BeforeEntityInsert(string id, RavenJObject data, RavenJObject metadata);
@@ -39,8 +32,8 @@ namespace Raven.Client.Document
 
 		public event Action<string> Report
 		{
-			add { operation.Report += value; }
-			remove { operation.Report -= value; }
+			add { Operation.Report += value; }
+			remove { Operation.Report -= value; }
 		}
 
 		public BulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners, BulkInsertOptions options, IDatabaseChanges changes)
@@ -49,32 +42,29 @@ namespace Raven.Client.Document
 
 			database = database ?? MultiDatabase.GetDatabaseName(documentStore.Url);
 
-#if !SILVERLIGHT
 			// Fitzchak: Should not be ever null because of the above code, please refactor this.
 			DatabaseCommands = database == null
-								   ? documentStore.DatabaseCommands.ForSystemDatabase()
-								   : documentStore.DatabaseCommands.ForDatabase(database);
+				? documentStore.AsyncDatabaseCommands.ForSystemDatabase()
+				: documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
-			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKey(database, DatabaseCommands, entity));
-#else
-			DatabaseCommands = database == null
-								   ? documentStore.AsyncDatabaseCommands.ForSystemDatabase()
-								   : documentStore.AsyncDatabaseCommands.ForDatabase(database);
-
-			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity).Result);
-#endif
-			operation = DatabaseCommands.GetBulkInsertOperation(options, changes);
+			generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore, entity => documentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity).ResultUnwrap());
+			Operation = GetBulkInsertOperation(options, DatabaseCommands, changes);
 			entityToJson = new EntityToJson(documentStore, listeners);
+		}
+
+		protected virtual ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes)
+		{
+			return commands.GetBulkInsertOperation(options, changes);
 		}
 
 		public Task DisposeAsync()
 		{
-			return operation.DisposeAsync();
+			return Operation.DisposeAsync();
 		}
 
 		public void Dispose()
 		{
-			operation.Dispose();
+			Operation.Dispose();
 		}
 
 		public string Store(object entity)
@@ -88,7 +78,7 @@ namespace Raven.Client.Document
 		{
 			var metadata = new RavenJObject();
 
-			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
+			var tag = documentStore.Conventions.GetDynamicTagName(entity);
 			if (tag != null)
 				metadata.Add(Constants.RavenEntityName, tag);
 
@@ -96,14 +86,14 @@ namespace Raven.Client.Document
 
 			OnBeforeEntityInsert(id, data, metadata);
 
-			operation.Write(id, metadata, data);
+			Operation.Write(id, metadata, data);
 		}
 
 		public void Store(RavenJObject document, RavenJObject metadata, string id)
 		{
 			OnBeforeEntityInsert(id, document, metadata);
 
-			operation.Write(id, metadata, document);
+			Operation.Write(id, metadata, document);
 		}
 
 		private string GetId(object entity)

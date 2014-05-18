@@ -1,0 +1,155 @@
+﻿<nav class="navbar navbar-default" role="navigation">
+    <div class="collapse navbar-collapse">
+        <form class="navbar-form navbar-left">
+            <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: saveChanges" title="Save changes(Alt+S)" accesskey="S"><i class="fa fa-save"></i> Save Changes</button>
+        </form>
+    </div>
+</nav>
+
+<!-- Nav tabs -->
+<ul class="nav nav-tabs">
+  <li class="active"><a href="#windowsAuthUsers" data-toggle="tab">Users</a></li>
+  <li><a href="#windowsAuthGroups" data-toggle="tab">Groups</a></li>
+</ul>
+
+<!-- Tab panes -->
+<div class="tab-content win-auth-tabs">
+    <div class="tab-pane fade in active" id="windowsAuthUsers">
+        <div class="btn-group">
+            <button type="button" class="btn btn-primary use-bootstrap-tooltip" data-bind="click: addUserSettings" title="Add user settings(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add User Settings</button>
+        </div>
+        <div data-bind="foreach: setup().requiredUsers" class="win-auth-panels-container">
+            <div class="panel win-auth-card" data-bind="css: { 'panel-info': enabled, 'panel-warning': !enabled() }">
+                <div class="panel-heading">
+                    <h3 class="panel-title">
+                        <span><span data-bind="text: name() ? name() : 'untitled'"></span></span>
+                        <button type="button" style="display:inline-block;" class="close" title="Remove" data-bind="click: $parent.removeUserSettings.bind($parent)">×</button>
+                    </h3>
+                </div>
+                <div class="panel-body">
+                    <form class="form-horizontal" role="form">
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Name</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" data-bind="value: name, valueUpdate: 'afterkeydown'" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Enabled</label>
+                            <div class="col-sm-9">
+                                <div class="btn-group" data-toggle="buttons">
+                                    <label class="btn btn-primary" data-bind="click: enable, css: { active: enabled }">
+                                        <input type="radio" name="options"> Enabled
+                                    </label>
+                                    <label class="btn btn-primary" data-bind="click: disable, css: { active: !enabled() }">
+                                        <input type="radio" name="options"> Disabled
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Databases</label>
+                            <div class="col-sm-9">
+                                <table class="table table-striped table-hover database-table">
+                                    <thead>
+                                        <tr class="database-header">
+                                            <td>Name</td>
+                                            <td class="narrow-column">Admin</td>
+                                            <td class="narrow-column">Read Only</td>
+                                            <td class="narrowest-column">
+                                                <button type="button" style="display:inline-block; font-size: 14px;" class="close" title="Add new database" data-bind="click: addDatabase">
+                                                    <span class="glyphicon glyphicon-plus"></span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </thead>
+                                    <tbody data-bind="foreach: databases">
+                                        <tr class="database-row">
+                                            <td>
+                                                <div>
+                                                    <input type="text" class="form-control" data-bind="value: tenantId" />
+                                                </div>
+                                            </td>
+                                            <td class="text-center"><input type="checkbox" data-bind="checked: admin"/></td>
+                                            <td class="text-center"><input type="checkbox" data-bind="checked: readOnly"/></td>
+                                            <td>
+                                                <button type="button" style="display:inline-block; font-size: 14px;" class="close" title="Remove this database" data-bind="click: $parent.removeDatabase.bind($parent)">
+                                                    <span class="glyphicon glyphicon-remove"></span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="windowsAuthGroups">
+        <div class="btn-group">
+            <button type="button" class="btn btn-primary" data-bind="click: addGroupSettings"><i class="fa fa-plus"></i> Add Group Settings</button>
+        </div>
+        <div data-bind="foreach: setup().requiredGroups" class="win-auth-panels-container">
+            <div class="panel win-auth-card" data-bind="css: { 'panel-info': enabled, 'panel-warning': !enabled() }">
+                <div class="panel-heading">
+                    <h3 class="panel-title">
+                        <span><span data-bind="text: name() ? name() : 'untitled'"></span></span>
+                        <button type="button" style="display:inline-block;" class="close" title="Remove" data-bind="click: $parent.removeGroupSettings.bind($parent)">×</button>
+                    </h3>
+                </div>
+                <div class="panel-body">
+                    <form class="form-horizontal" role="form">
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Name</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" data-bind="value: name, valueUpdate: 'afterkeydown'" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Enabled</label>
+                            <div class="col-sm-9">
+                                <div class="btn-group" data-toggle="buttons">
+                                    <label class="btn btn-primary" data-bind="click: enable, css: { active: enabled }">
+                                        <input type="radio" name="options"> Enabled
+                                    </label>
+                                    <label class="btn btn-primary" data-bind="click: disable, css: { active: !enabled() }">
+                                        <input type="radio" name="options"> Disabled
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Databases</label>
+                            <div class="col-sm-9">
+                                <table class="table table-striped table-hover">
+                                    <thead>
+                                        <tr class="database-header">
+                                            <td>Name</td>
+                                            <td class="narrow-column">Admin</td>
+                                            <td class="narrow-column">Read Only</td>
+                                            <td class="narrowest-column"><button type="button" style="display:inline-block;" class="close" title="Add" data-bind="click: addDatabase">+</button></td>
+                                        </tr>
+                                    </thead>
+                                    <tbody data-bind="foreach: databases">
+                                        <tr class="database-row">
+                                            <td>
+                                                <div>
+                                                    <input type="text" class="form-control" data-bind="value: tenantId" />
+                                                </div>
+                                            </td>
+                                            <td class="text-center"><input type="checkbox" data-bind="checked: admin"/></td>
+                                            <td class="text-center"><input type="checkbox" data-bind="checked: readOnly"/></td>
+                                            <td><button type="button" style="display:inline-block;" class="close" title="Remove" data-bind="click: $parent.removeDatabase.bind($parent)">×</button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

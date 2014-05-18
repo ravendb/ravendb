@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class ConflictsWithRemote: RemoteClientTest
+	public class ConflictsWithRemote: RavenTest
 	{
 		public class DeviceStatusRecord
 		{
@@ -22,14 +25,16 @@ namespace Raven.Tests.Bugs
             configuration.RunInMemory = false;
         }
 
+
 		[Fact]
+		//[TimeBombedFact(2013, 12, 31)]
 		public void MultiThreadedInsert()
 		{
 			const int threadCount = 4;
 			var tasks = new List<Task>();
 
 			using(var server = GetNewServer())
-			using (var store = new DocumentStore{Url = server.Database.Configuration.ServerUrl}.Initialize())
+			using (var store = new DocumentStore{Url = server.SystemDatabase.Configuration.ServerUrl}.Initialize())
 			{
 				for (int i = 1; i <= threadCount; i++)
 				{
@@ -53,7 +58,7 @@ namespace Raven.Tests.Bugs
 				for (int i = 1; i <= threadCount; i++)
 				{
 					var copy = i;
-					var taskHandle = Task.Factory.StartNew(() => DoInefficientInsert(server.Database.Configuration.ServerUrl, copy));
+					var taskHandle = Task.Factory.StartNew(() => DoInefficientInsert(server.SystemDatabase.Configuration.ServerUrl, copy));
 					tasks.Add(taskHandle);
 				}
 

@@ -1,0 +1,154 @@
+﻿
+<ul class="breadcrumb">
+    <li>
+        <h3>
+            <a href="#databases">
+                Databases
+            </a>
+        </h3>
+    </li>
+    <li data-bind="with: activeDatabase">
+        <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
+    </li>
+    <li>
+        <a data-bind="attr: { href: appUrls.reporting }">Reporting</a>
+    </li>
+    <li>
+        <div class="btn-group">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                <span data-bind="text: selectedIndexLabel"></span>
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" role="menu" data-bind="foreach: indexNames">
+                <li data-bind="click: $root.setSelectedIndex.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
+            </ul>
+        </div>
+    </li>
+</ul>
+
+<div class="btn-toolbar" role="toolbar">
+    <div class="btn-group">
+        <button class="btn btn-primary use-bootstrap-tooltip" title="Run the report (Alt+R)" accesskey="R" data-bind="enable: hasSelectedIndex, click: runReport">
+            <i class="fa fa-play"></i>
+        </button>
+    </div>
+    <div class="btn-group">
+        <a class="btn btn-default use-bootstrap-tooltip" title="Edit the index (F2)" data-bind="attr: { href: editSelectedIndexUrl }">
+            <i class=" fa fa-pencil"></i>
+        </a>
+    </div>
+</div>
+<br />
+
+<form class="form-horizontal" role="form">
+    <div class="form-group">
+        <label class="col-sm-1 control-label">Group By</label>
+        <div class="col-md-5">
+            <div class="btn-group">
+                <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-toggle="dropdown" accesskey="G" title="Group By (Alt+G)">
+                    <span data-bind="text: selectedFieldLabel"></span> <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" role="menu" data-bind="foreach: availableFields">
+                    <li data-bind="click: $root.setSelectedField.bind($root, $data)">
+                        <a href="#" data-bind="text: $data"></a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-1 control-label">
+            Values
+        </label>
+        <div class="col-md-6">
+            <div class="btn-group">
+                <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-toggle="dropdown" title="Add a value (Alt+V)" accesskey="V">
+                    <i class="fa fa-plus"></i> Add a value <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" role="menu" data-bind="foreach: availableFields">
+                    <li data-bind="click: $root.addValue.bind($root, $data)">
+                        <a href="#" data-bind="text: $data"></a>
+                    </li>
+                </ul>
+            </div>
+            <br />
+            <br />
+            <ul class="list-group col-md-6" data-bind="foreach: addedValues, visible: addedValues().length > 0">
+                <li class="list-group-item">
+                    <strong data-bind="text: aggregationField"></strong>
+                    <span class="text-muted"> summarized by </span>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                            <span data-bind="text: aggregationLabel"></span> <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" role="menu">
+                            <li data-bind="click: setAggregationToCount"><a href="#">Count</a></li>
+                            <li data-bind="click: setAggregationToMin"><a href="#">Min</a></li>
+                            <li data-bind="click: setAggregationToMax"><a href="#">Max</a></li>
+                            <li data-bind="click: setAggregationToSum"><a href="#">Sum</a></li>
+                            <li data-bind="click: setAggregationToAverage"><a href="#">Average</a></li>
+                        </ul>
+                    </div>
+                    <button type="button" class="close" data-bind="click: $root.removeValue.bind($root, $data)" aria-hidden="true" title="Remove this value">&times;</button>
+                </li>
+            </ul>
+        </div>
+        <div>
+
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-1 control-label">
+            <span id="filterQueryLabel" class="help-cursor">
+                Filter
+                <i class="fa fa-info-circle text-info"></i>
+            </span>
+        </label>
+        <div class="col-md-5">
+            <button class="btn btn-default use-bootstrap-tooltip" title="Add a filter (Alt+F)" data-bind="visible: !hasFilter(), click: hasFilter.bind(true)">
+                <i class="fa fa-plus"></i>
+            </button>
+            <div data-bind="visible: hasFilter">
+                <div class="row">
+                    <div class="col-md-11">
+                        <pre class="form-control" style="height: 100px;" data-bind="aceEditor: { code: filter }"></pre>
+                    </div>
+                    <div class="col-md-1">
+                        <button type="button" class="close pull-left" aria-hidden="true" title="Remove the filter" data-bind="click: hasFilter.bind(hasFilter, false)">&times;</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="reportGridGroup" class="form-group">
+        <label id="indexQueryLabelContainer" class="col-sm-1 control-label">
+            Results
+        </label>
+        <div class="col-md-11">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <table class="table table-condensed" style="margin-bottom: 0;">
+                        <thead>
+                            <tr>
+                                <th>Total</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr data-bind="visible: reportResults">
+                                <td data-bind="text: totalQueryResults"></td>
+                                <td data-bind="text: queryDuration"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="panel-body">
+                    <div id="reportResultsGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: reportResults, gridSelector: '#reportResultsGrid', useContextMenu: false, showIds: false, showCheckboxes: false, maxHeight: '300px' }"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

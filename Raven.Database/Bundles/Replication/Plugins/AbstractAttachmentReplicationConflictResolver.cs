@@ -8,6 +8,8 @@ namespace Raven.Bundles.Replication.Plugins
 	[InheritedExport]
 	public abstract class AbstractAttachmentReplicationConflictResolver
 	{
-		public abstract bool TryResolve(string id, RavenJObject metadata, byte [] data, Attachment existingAttachment, Func<string, Attachment> getAttachment);
+		public abstract bool TryResolve(string id, RavenJObject metadata, byte[] data, Attachment existingAttachment,
+		                                Func<string, Attachment> getAttachment, out RavenJObject metadataToSave,
+		                                out byte[] dataToSave);
 	}
 }

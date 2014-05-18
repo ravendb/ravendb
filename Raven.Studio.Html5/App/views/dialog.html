@@ -1,0 +1,14 @@
+﻿<!-- We're using custom HTML here because Durandal 2.0 doesn't work properly with Bootstrap 3. !-->
+
+<div class="messageBox" tabindex="-1">
+    <div class="modal-header">
+		<button type="button" class="close" data-bind="click: function () { $data.selectOption(null); }" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h3 data-bind="text: title"></h3>
+    </div>
+    <div class="modal-body">
+        <p class="message" data-bind="text: message"></p>
+    </div>
+    <div class="modal-footer" data-bind="foreach: options">
+        <button class="btn" data-bind="click: function () { $parent.selectOption($data); }, text: $data, css: { 'btn-primary': $index() == 0, autofocus: $index() == 0 }"></button>
+    </div>
+</div>

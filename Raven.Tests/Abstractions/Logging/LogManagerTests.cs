@@ -1,10 +1,12 @@
 ﻿using Raven.Abstractions.Logging;
 using Raven.Abstractions.Logging.LogProviders;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Abstractions.Logging
 {
-	public class LogManagerTests
+    public class LogManagerTests : NoDisposalNeeded
 	{
 		public LogManagerTests()
 		{

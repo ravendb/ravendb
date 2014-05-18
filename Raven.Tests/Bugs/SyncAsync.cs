@@ -4,11 +4,14 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+
+using Raven.Tests.Helpers;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-    public class SyncAsync : Raven.Tests.Helpers.RavenTestBase
+    public class SyncAsync : RavenTestBase
     {
         [Fact]
         public void Async()
@@ -19,8 +22,8 @@ namespace Raven.Tests.Bugs
                 using (var session = store.OpenSession())
                 using (var asyncSession = store.OpenAsyncSession())
                 {
-                    var query = session.Advanced.LuceneQuery<Foo>().WhereLessThanOrEqual(x => x.Expiry, now);
-                    var asyncQuery = asyncSession.Advanced.AsyncLuceneQuery<Foo>().WhereLessThanOrEqual(x => x.Expiry, now);
+                    var query = session.Advanced.DocumentQuery<Foo>().WhereLessThanOrEqual(x => x.Expiry, now);
+                    var asyncQuery = asyncSession.Advanced.AsyncDocumentQuery<Foo>().WhereLessThanOrEqual(x => x.Expiry, now);
 
                     Assert.Equal(query.GetIndexQuery(false).ToString(), asyncQuery.GetIndexQuery(false).ToString());
                 }

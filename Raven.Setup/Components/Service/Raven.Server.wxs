@@ -3,66 +3,70 @@
      xmlns:util="http://schemas.microsoft.com/wix/UtilExtension"
 		 xmlns:fire="http://schemas.microsoft.com/wix/FirewallExtension">
 	<Fragment>
-    <?include ServiceSettings.wxi ?>
-    
-    <DirectoryRef Id='INSTALLFOLDER'>
-      <Component Id="Raven.Server" Guid="70BBCA5D-5EC0-4D96-80FD-823AD8759B2E">
-        <File Id='Nlog.dll_Service' Name='Nlog.dll' DiskId='1' Source='$(var.Raven.Server.TargetDir)\Nlog.dll' />
-        <File Id='Raven.Server.exe.config' Name='Raven.Server.exe.config' DiskId='1' Source='$(var.SolutionDir)\DefaultConfigs\RavenDb.exe.config' />
-        <File Id="Raven.Server" Name='$(var.Raven.Server.ProjectName).exe' DiskId='1' Source='$(var.Raven.Server.TargetPath)' KeyPath='yes' />
-				<fire:FirewallException Id="Firewall.Raven.Server" Name="RavenDB - Service - [SERVICE_PORT]" Port="[SERVICE_PORT]" 
+		<?include ServiceSettings.wxi ?>
+
+		<DirectoryRef Id='INSTALLFOLDER'>
+			<Component Id="Raven.Server" Guid="70BBCA5D-5EC0-4D96-80FD-823AD8759B2E">
+				<File Id="Raven.Server" Name='$(var.Raven.Server.ProjectName).exe' DiskId='1' Source='$(var.Raven.Server.TargetPath)' KeyPath='yes' />
+				<File Id="Html.Studio.Server" Name="Raven.Studio.Html5.zip" DiskId="1" Source="..\build\Raven.Studio.Html5.zip" />
+
+				<fire:FirewallException Id="Firewall.Raven.Server" Name="RavenDB - Service - [SERVICE_PORT]" Port="[SERVICE_PORT]"
 																Protocol="tcp" Scope="any" IgnoreFailure="yes" Program="System" />
-       
-        <util:XmlFile Id="ModifyPort"
-                 Action="setValue"
-                 Permanent="yes"
-                 ElementPath="/configuration/appSettings/add[\[]@key='Raven/Port'[\]]"
-                 Name="value"
-                 File="[#Raven.Server.exe.config]"
-                 Value="[SERVICE_PORT]"
-                 SelectionLanguage="XSLPattern"
-                 Sequence="1" />
-		  <util:XmlFile Id="SetDataDir"
-				   Action="setValue"
-				   Permanent="yes"
-				   ElementPath="/configuration/appSettings/add[\[]@key='Raven/DataDir'[\]]"
-				   Name="value"
-				   File="[#Raven.Server.exe.config]"
-				   Value="[RAVEN_DATA_DIR]"
-				   SelectionLanguage="XSLPattern"
-				   Sequence="5" />
-		  <util:XmlFile Id="AddEmptyIndexStoragePathSetting"
-				   Action="createElement"
-				   Permanent="yes"
-				   ElementPath="/configuration/appSettings"
-				   Name="add"
-				   File="[#Raven.Server.exe.config]"
-				   SelectionLanguage="XSLPattern"
-				   Sequence="6" />
-		  <util:XmlFile Id="AddIndexStoragePath"
-				   Action="setValue"
-				   Permanent="yes"
-				   ElementPath="/configuration/appSettings/add[\[]not(@key)[\]] "
-				   Name="key"
-				   Value="Raven/IndexStoragePath"
-				   File="[#Raven.Server.exe.config]"
-				   SelectionLanguage="XSLPattern"
-				   Sequence="7" />
-		  <util:XmlFile Id="SetIndexStoragePath"
-				   Action="setValue"
-				   Permanent="yes"
-				   ElementPath="/configuration/appSettings/add[\[]@key='Raven/IndexStoragePath'[\]]"
-				   Name="value"
-			       File="[#Raven.Server.exe.config]"
-				   Value="[RAVEN_INDEX_DIR]"
-				   SelectionLanguage="XSLPattern"
-				   Sequence="8" />
-	  </Component>
-      <Component Id="PersistServiceValues" Guid="{54DE475A-D1B2-4536-9598-A77AA3BC0264}" >
-        <RegistryKey Root="HKLM" Key="Software\[Manufacturer]\[ProductName]" >
-          <RegistryValue Type="string" Name="SERVICE_NAME" Value="[SERVICE_NAME]"  />
-        </RegistryKey>
-      </Component>
-    </DirectoryRef>
+			</Component>
+			<Component Id="PersistServiceValues" Guid="{54DE475A-D1B2-4536-9598-A77AA3BC0264}" >
+				<RegistryKey Root="HKLM" Key="Software\[Manufacturer]\[ProductName]\v3.0" >
+					<RegistryValue Type="string" Name="SERVICE_NAME" Value="[SERVICE_NAME]"  />
+					<RegistryValue Type="string" Name="SERVICE_PORT" Value="[SERVICE_PORT]" />
+				</RegistryKey>
+			</Component>
+
+			<Component Id="Raven.Server.Config.File" Guid="2DBA3C81-E507-4811-90A0-D3807AC40C9C" Permanent="yes" NeverOverwrite="yes">
+				<File Id='Raven.Server.exe.config' Name='Raven.Server.exe.config' DiskId='1' Source='$(var.SolutionDir)\DefaultConfigs\RavenDb.exe.config' KeyPath='yes' />
+				<util:XmlFile Id="ModifyPort"
+												 Action="setValue"
+												 Permanent="yes"
+												 ElementPath="/configuration/appSettings/add[\[]@key='Raven/Port'[\]]"
+												 Name="value"
+												 File="[#Raven.Server.exe.config]"
+												 Value="[SERVICE_PORT]"
+												 SelectionLanguage="XSLPattern"
+												 Sequence="1" />
+				<util:XmlFile Id="SetDataDir"
+											Action="setValue"
+											Permanent="yes"
+											ElementPath="/configuration/appSettings/add[\[]@key='Raven/DataDir'[\]]"
+											Name="value"
+											File="[#Raven.Server.exe.config]"
+											Value="[RAVEN_DATA_DIR]"
+											SelectionLanguage="XSLPattern"
+											Sequence="5" />
+				<util:XmlFile Id="AddEmptyIndexStoragePathSetting"
+											Action="createElement"
+											Permanent="yes"
+											ElementPath="/configuration/appSettings"
+											Name="add"
+											File="[#Raven.Server.exe.config]"
+											SelectionLanguage="XSLPattern"
+											Sequence="6" />
+				<util:XmlFile Id="AddIndexStoragePath"
+											Action="setValue"
+											Permanent="yes"
+											ElementPath="/configuration/appSettings/add[\[]not(@key)[\]] "
+											Name="key"
+											Value="Raven/IndexStoragePath"
+											File="[#Raven.Server.exe.config]"
+											SelectionLanguage="XSLPattern"
+											Sequence="7" />
+				<util:XmlFile Id="SetIndexStoragePath"
+											Action="setValue"
+											Permanent="yes"
+											ElementPath="/configuration/appSettings/add[\[]@key='Raven/IndexStoragePath'[\]]"
+											Name="value"
+											File="[#Raven.Server.exe.config]"
+											Value="[RAVEN_INDEX_DIR]"
+											SelectionLanguage="XSLPattern"
+											Sequence="8" />
+			</Component>
+		</DirectoryRef>
 	</Fragment>
 </Wix>

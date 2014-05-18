@@ -23,7 +23,7 @@
     <OldToolsVersion>3.5</OldToolsVersion>
     <UpgradeBackupLocation>
     </UpgradeBackupLocation>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <SignAssembly>false</SignAssembly>
     <AssemblyOriginatorKeyFile>
     </AssemblyOriginatorKeyFile>
@@ -54,6 +54,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -63,6 +64,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
@@ -85,6 +87,7 @@
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Serialization">
       <RequiredTargetFramework>3.0</RequiredTargetFramework>
     </Reference>
@@ -99,6 +102,7 @@
     <Reference Include="System.Web.Extensions">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Windows" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -145,6 +149,9 @@
     <Compile Include="TestObjects\Container.cs" />
     <Compile Include="TestObjects\ContentBaseClass.cs" />
     <Compile Include="TestObjects\ContentSubClass.cs" />
+    <Compile Include="TestObjects\CustomerDataSet.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="TestObjects\Foo.cs" />
     <Compile Include="TestObjects\HolderClass.cs" />
     <Compile Include="TestObjects\IPrivateImplementationA.cs" />
@@ -273,6 +280,8 @@
     <Compile Include="TestObjects\TypeClass.cs" />
     <Compile Include="TestObjects\TypedSubHashtable.cs" />
     <Compile Include="TestObjects\UserNullable.cs" />
+    <Compile Include="Utilities\ExpressionReflectionDelegateFactoryTests.cs" />
+    <Compile Include="Utilities\DateTimeUtilsTests.cs" />
     <Compile Include="Utilities\DynamicReflectionDelegateFactoryTests.cs" />
     <Compile Include="Utilities\ReflectionUtilsTests.cs" />
     <Compile Include="Utilities\StringUtilsTests.cs" />

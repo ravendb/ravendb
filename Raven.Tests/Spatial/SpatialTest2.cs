@@ -1,6 +1,8 @@
 ﻿using System.Linq;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Spatial
@@ -47,7 +49,7 @@ namespace Raven.Tests.Spatial
 						.ToList();
 
 					// Let's search within a 150km radius
-					var results = session.Advanced.LuceneQuery<Entity, EntitiesByLocation>()
+                    var results = session.Advanced.DocumentQuery<Entity, EntitiesByLocation>()
 						.WithinRadiusOf(radius: 150000 * 0.000621, latitude: 45.831909, longitude: -73.810322)
 						// This is less than 1km from the entity
 						.SortByDistance()
@@ -57,7 +59,7 @@ namespace Raven.Tests.Spatial
 					Assert.Equal(results.Count, 1);
 
 					// Let's search within a 15km radius
-					results = session.Advanced.LuceneQuery<Entity, EntitiesByLocation>()
+                    results = session.Advanced.DocumentQuery<Entity, EntitiesByLocation>()
 						.WithinRadiusOf(radius: 15000 * 0.000621, latitude: 45.831909, longitude: -73.810322)
 						.SortByDistance()
 						.ToList();
@@ -66,7 +68,7 @@ namespace Raven.Tests.Spatial
 					Assert.Equal(results.Count, 1);
 
 					// Let's search within a 1.5km radius
-					results = session.Advanced.LuceneQuery<Entity, EntitiesByLocation>()
+                    results = session.Advanced.DocumentQuery<Entity, EntitiesByLocation>()
 						.WithinRadiusOf(radius: 1500 * 0.000621, latitude: 45.831909, longitude: -73.810322)
 						.SortByDistance()
 						.ToList();

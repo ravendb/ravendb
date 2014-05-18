@@ -6,6 +6,8 @@
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests
@@ -84,7 +86,7 @@ namespace Raven.Tests
 
                     results1 = session
                        .Advanced
-                      .LuceneQuery<SimpleMapReduceIndex.Result, SimpleMapReduceIndex>()
+                      .DocumentQuery<SimpleMapReduceIndex.Result, SimpleMapReduceIndex>()
                       .ToList();
 
                     Assert.Equal(1, results1.Count);
@@ -106,7 +108,7 @@ namespace Raven.Tests
 
                     var results3 = session
                         .Advanced
-                       .LuceneQuery<SimpleMapReduceIndex.Result, SimpleMapReduceIndex>()
+                       .DocumentQuery<SimpleMapReduceIndex.Result, SimpleMapReduceIndex>()
                        .Select(x => new EmployeeCount
                        {
                            Count = x.Count,

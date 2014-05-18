@@ -3,21 +3,22 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Abstractions.MEF;
-using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
+
 using Xunit;
 
 namespace Raven.Tests.Linq
 {
-    public class PerformingQueries
+    public class PerformingQueries : IDisposable
     {
         private const string query =
             @"
@@ -116,5 +117,9 @@ select new { GeoHash = PerformingQueries.SampleGeoLocation.GeoHash(doc.loc, doc.
                 return lon + "#" + lang;
             }
         }
+
+	    public void Dispose()
+	    {
+	    }
     }
 }

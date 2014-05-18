@@ -9,6 +9,8 @@ using System.Linq;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
@@ -25,7 +27,7 @@ namespace Raven.Tests.Bugs.Indexing
 		{
 			public string Name { get; set; }
 			public string Value { get; set; }
-			public double NumericValue { get; set; }
+			public decimal NumericValue { get; set; }
 			public int IntValue { get; set; }
 		}
 
@@ -50,7 +52,7 @@ namespace Raven.Tests.Bugs.Indexing
 					from p in products
 					select new
 					{
-						_ = p.Attributes.Select(attribute => new NumericField(attribute.Name+"_Range", Field.Store.NO, true).SetDoubleValue(attribute.NumericValue))
+						_ = p.Attributes.Select(attribute => new NumericField(attribute.Name+"_Range", Field.Store.NO, true).SetDoubleValue((double)attribute.NumericValue))
 					};
 			}
 		}
@@ -63,7 +65,7 @@ namespace Raven.Tests.Bugs.Indexing
 					from p in products
 					select new
 					{
-						_ = p.Attributes.Select(attribute => new Field(attribute.Name, attribute.NumericValue.ToString(), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS))
+						_ = p.Attributes.Select(attribute => new Field(attribute.Name, attribute.NumericValue.ToString("#.#"), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS))
 					};
 			}
 		}
@@ -104,7 +106,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var session = store.OpenSession())
 				{
-					var products = session.Advanced.LuceneQuery<Product>("Product/ByAttribute")
+                    var products = session.Advanced.DocumentQuery<Product>("Product/ByAttribute")
 						.WhereEquals("Color", "Red")
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(3))
 						.ToList();
@@ -136,7 +138,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var session = store.OpenSession())
 				{
-					var products = session.Advanced.LuceneQuery<Product, Product_ByNumericAttribute>()
+                    var products = session.Advanced.DocumentQuery<Product, Product_ByNumericAttribute>()
 						.WhereGreaterThan("Color", 20d)
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(3))
 						.ToList();
@@ -168,9 +170,9 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var session = store.OpenSession())
 				{
-					var products = session.Advanced.LuceneQuery<Product, Product_ByNumericAttributeUsingField>()
-						.WhereEquals("Color", 30d)
-						.WaitForNonStaleResults(TimeSpan.FromMinutes(3))
+				    var products = session.Advanced.DocumentQuery<Product, Product_ByNumericAttributeUsingField>()
+				        .WhereEquals("Color", 30d)
+				        .WaitForNonStaleResults(TimeSpan.FromMinutes(3))
 						.ToList();
 
 					Assert.NotEmpty(products);
@@ -200,7 +202,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var session = store.OpenSession())
 				{
-					var products = session.Advanced.LuceneQuery<Product, Product_ByIntAttribute>()
+                    var products = session.Advanced.DocumentQuery<Product, Product_ByIntAttribute>()
 						.WhereGreaterThan("Color", -1)
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(3))
 						.ToList();
@@ -232,7 +234,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var session = store.OpenSession())
 				{
-					var products = session.Advanced.LuceneQuery<Product, Product_ByNumericAttribute>()
+                    var products = session.Advanced.DocumentQuery<Product, Product_ByNumericAttribute>()
 						.WhereGreaterThan("Color", -1d)
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(3))
 						.ToList();

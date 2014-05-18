@@ -1,4 +1,6 @@
 using System.Linq;
+
+using Raven.Tests.Common;
 using Raven.Tests.Queries;
 using Xunit;
 
@@ -19,7 +21,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-					s.Advanced.LuceneQuery<User>()
+                    s.Advanced.DocumentQuery<User>()
 						.WhereEquals("Tags,Id", "1")
 						.ToArray();
 				}

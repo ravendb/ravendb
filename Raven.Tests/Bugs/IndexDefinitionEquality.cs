@@ -3,23 +3,21 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Raven.Abstractions.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
-using Raven.Database.Indexing;
 using Raven.Client.Indexes;
 
 namespace Raven.Tests.Bugs
 {
-	public class IndexDefinitionEquality
+	public class IndexDefinitionEquality : NoDisposalNeeded
 	{
 		[Fact]
 		public void TransformResultsFactoredIntoEqualityCheck()
 		{
-			IndexDefinition definitionOne = new IndexDefinitionBuilder<Blog, Blog>()
+			IndexDefinition definitionOne = new IndexDefinitionBuilder<Blog, Blog>
 			{
 				Map = docs => from doc in docs
 							  select new { doc.Property },
@@ -30,7 +28,7 @@ namespace Raven.Tests.Bugs
 														  }
 			}.ToIndexDefinition(new Client.Document.DocumentConvention());
 
-			IndexDefinition definitionTwo = new IndexDefinitionBuilder<Blog, Blog>()
+			IndexDefinition definitionTwo = new IndexDefinitionBuilder<Blog, Blog>
 			{
 				Map = docs => from doc in docs
 							  select new { doc.Property }

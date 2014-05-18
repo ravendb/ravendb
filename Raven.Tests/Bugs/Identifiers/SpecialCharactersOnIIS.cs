@@ -4,14 +4,12 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using System.Security.Principal;
-using Raven.Client.Document;
+
+using Raven.Tests.Common.Attributes;
+using Raven.Tests.Common.Util;
+
 using Xunit;
 using Xunit.Extensions;
-using Xunit.Sdk;
 
 namespace Raven.Tests.Bugs.Identifiers
 {
@@ -53,83 +51,5 @@ namespace Raven.Tests.Bugs.Identifiers
 		}
 
 		#endregion
-	}
-
-	[CLSCompliant(false)]
-	public class IISExpressInstalledTheoryAttribute : TheoryAttribute
-	{
-		protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)
-		{
-			var displayName = method.TypeName + "." + method.Name;
-
-			if (File.Exists(@"c:\Program Files (x86)\IIS Express\iisexpress.exe") == false && File.Exists(@"c:\Program Files\IIS Express\iisexpress.exe") == false)
-			{
-				yield return
-						new SkipCommand(method, displayName,
-										"Could not execute " + displayName + " because it requires IIS Express and could not find it at c:\\Program Files (x86)\\. or at c:\\Program Files\\.   Considering installing the MSI from http://www.microsoft.com/download/en/details.aspx?id=1038");
-				yield break;
-			}
-
-			foreach (var command in base.EnumerateTestCommands(method))
-			{
-				yield return command;
-			}
-		}
-	}
-
-	[CLSCompliant(false)]
-	public class IISExpressInstalledFactAttribute : FactAttribute
-	{
-		protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)
-		{
-			var displayName = method.TypeName + "." + method.Name;
-
-			if (File.Exists(@"c:\Program Files (x86)\IIS Express\iisexpress.exe") == false && File.Exists(@"c:\Program Files\IIS Express\iisexpress.exe") == false)
-			{
-				yield return
-						new SkipCommand(method, displayName,
-										"Could not execute " + displayName + " because it requires IIS Express and could not find it at c:\\Program Files (x86)\\. or at c:\\Program Files\\.   Considering installing the MSI from http://www.microsoft.com/download/en/details.aspx?id=1038");
-				yield break;
-			}
-
-			foreach (var command in base.EnumerateTestCommands(method))
-			{
-				yield return command;
-			}
-		}
-	}
-
-	[CLSCompliant(false)]
-	public class AdminOnlyWithIIS7Installed : TheoryAttribute
-	{
-		protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)
-		{
-			var displayName = method.TypeName + "." + method.Name;
-
-			if (File.Exists(@"C:\Windows\System32\InetSrv\Microsoft.Web.Administration.dll") == false)
-			{
-				yield return
-						new SkipCommand(method, displayName,
-										"Could not execute " + displayName + " because it requires IIS7 and could not find Microsoft.Web.Administration");
-				yield break;
-			}
-
-			var windowsIdentity = WindowsIdentity.GetCurrent();
-			if (windowsIdentity != null)
-			{
-				if (new WindowsPrincipal(windowsIdentity).IsInRole(WindowsBuiltInRole.Administrator) == false)
-				{
-					yield return
-						new SkipCommand(method, displayName,
-										"Could not execute " + displayName + " because it requires Admin privileges");
-					yield break;
-				}
-			}
-
-			foreach (var command in base.EnumerateTestCommands(method))
-			{
-				yield return command;
-			}
-		}
 	}
 }

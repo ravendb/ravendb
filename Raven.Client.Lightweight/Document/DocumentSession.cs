@@ -3,24 +3,21 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Document.Batches;
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Client.Util;
 using Raven.Client.WinRT.MissingFromWinRT;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
@@ -31,9 +28,7 @@ namespace Raven.Client.Document
     public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
                                    ISyncAdvancedSessionOperation, IDocumentQueryGenerator
     {
-        private readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
-        private readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
-
+ 
         /// <summary>
         /// Gets the database commands.
         /// </summary>
@@ -92,15 +87,6 @@ namespace Raven.Client.Document
         /// <summary>
         /// Loads the specified ids.
         /// </summary>
-        /// <param name="ids">The ids.</param>
-        Lazy<T[]> ILazySessionOperations.Load<T>(params string[] ids)
-        {
-            return Lazily.Load<T>(ids, null);
-        }
-
-        /// <summary>
-        /// Loads the specified ids.
-        /// </summary>
         Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<string> ids)
         {
             return Lazily.Load<T>(ids, null);
@@ -120,7 +106,7 @@ namespace Raven.Client.Document
         /// <summary>
         /// Loads the specified ids and a function to call when it is evaluated
         /// </summary>
-        public Lazy<T[]> Load<T>(IEnumerable<string> ids, Action<T[]> onEval)
+		Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<string> ids, Action<T[]> onEval)
         {
             return LazyLoadInternal(ids.ToArray(), new KeyValuePair<string, Type>[0], onEval);
         }
@@ -128,11 +114,11 @@ namespace Raven.Client.Document
         /// <summary>
         /// Loads the specified id and a function to call when it is evaluated
         /// </summary>
-        public Lazy<T> Load<T>(string id, Action<T> onEval)
+		Lazy<T> ILazySessionOperations.Load<T>(string id, Action<T> onEval)
         {
             if (IsLoaded(id))
                 return new Lazy<T>(() => Load<T>(id));
-            var lazyLoadOperation = new LazyLoadOperation<T>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id), handleInternalMetadata: HandleInternalMetadata);
+            var lazyLoadOperation = new LazyLoadOperation<T>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id), HandleInternalMetadata);
             return AddLazyOperation(lazyLoadOperation, onEval);
         }
 
@@ -157,13 +143,13 @@ namespace Raven.Client.Document
         Lazy<T[]> ILazySessionOperations.Load<T>(params ValueType[] ids)
         {
             var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Lazily.Load<T>(documentKeys, null);
+            return Lazily.Load<T>(documentKeys);
         }
 
         Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids)
         {
             var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Lazily.Load<T>(documentKeys, null);
+            return Lazily.Load<T>(documentKeys);
         }
 
         Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids, Action<T[]> onEval)
@@ -172,26 +158,47 @@ namespace Raven.Client.Document
             return LazyLoadInternal(documentKeys.ToArray(), new KeyValuePair<string, Type>[0], onEval);
         }
 
-        Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id)
-        {
-            var transformer = new TTransformer().TransformerName;
-            var ids = new[] { id };
-            var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(ids, transformer,
-                                                                          new LoadTransformerOperation(this, transformer, ids),
-                                                                          singleResult: true);
-            return AddLazyOperation<TResult>(lazyLoadOperation, null);
-        }
+		Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id, Action<TResult> onEval)
+	    {
+			var transformer = new TTransformer().TransformerName;
+			var ids = new[] { id };
+			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(ids, transformer,
+																		  new LoadTransformerOperation(this, transformer, ids),
+																		  singleResult: true);
+			return AddLazyOperation(lazyLoadOperation, onEval);
+	    }
 
-        Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(string[] ids)
-        {
-            var transformer = new TTransformer().TransformerName;
-            var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(ids, transformer,
-                                                                          new LoadTransformerOperation(this, transformer, ids),
-                                                                          singleResult: false);
-            return AddLazyOperation<TResult[]>(lazyLoadOperation, null);
-        }
+		Lazy<TResult> ILazySessionOperations.Load<TResult>(string id, Type transformerType, Action<TResult> onEval)
+	    {
+			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+		    var idsArray = new[] { id };
+			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(idsArray, transformer,
+																		  new LoadTransformerOperation(this, transformer, idsArray),
+																		  singleResult: true);
+			return AddLazyOperation(lazyLoadOperation, onEval);
+	    }
 
-        /// <summary>
+	    Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(IEnumerable<string> ids, Action<TResult> onEval)
+	    {
+		    var idsArray = ids.ToArray();
+			var transformer = new TTransformer().TransformerName;
+			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(idsArray, transformer,
+																		  new LoadTransformerOperation(this, transformer, idsArray),
+																		  singleResult: false);
+			return AddLazyOperation<TResult[]>(lazyLoadOperation, null);
+	    }
+
+	    Lazy<TResult[]> ILazySessionOperations.Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<TResult> onEval)
+	    {
+			var idsArray = ids.ToArray();
+			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(idsArray, transformer,
+																		  new LoadTransformerOperation(this, transformer, idsArray),
+																		  singleResult: false);
+			return AddLazyOperation<TResult[]>(lazyLoadOperation, null);
+	    }
+
+	    /// <summary>
         /// Begin a load while including the specified path 
         /// </summary>
         /// <param name="path">The path.</param>
@@ -230,9 +237,16 @@ namespace Raven.Client.Document
             if (IsDeleted(id))
                 return default(T);
             object existingEntity;
+
             if (entitiesByKey.TryGetValue(id, out existingEntity))
             {
                 return (T)existingEntity;
+            }
+            JsonDocument value;
+            if (includedDocumentsByKey.TryGetValue(id, out value))
+            {
+                includedDocumentsByKey.Remove(id);
+                return TrackEntity<T>(value);
             }
 
             IncrementRequestCount();
@@ -247,17 +261,6 @@ namespace Raven.Client.Document
                 }
             } while (retry);
             return loadOperation.Complete<T>();
-        }
-
-        /// <summary>
-        /// Loads the specified entities with the specified ids.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="ids">The ids.</param>
-        /// <returns></returns>
-        public T[] Load<T>(params string[] ids)
-        {
-            return LoadInternal<T>(ids);
         }
 
         /// <summary>
@@ -335,26 +338,7 @@ namespace Raven.Client.Document
             return new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
         }
 
-        internal object ProjectionToInstance(RavenJObject y, Type type)
-        {
-            HandleInternalMetadata(y);
-            foreach (var conversionListener in listeners.ExtendedConversionListeners)
-            {
-                conversionListener.BeforeConversionToEntity(null, y, null);
-            }
-            var instance = y.Deserialize(type, Conventions);
-            foreach (var conversionListener in listeners.ConversionListeners)
-            {
-                conversionListener.DocumentToEntity(null, instance, y, null);
-            }
-            foreach (var conversionListener in listeners.ExtendedConversionListeners)
-            {
-                conversionListener.AfterConversionToEntity(null, y, null, instance);
-            }
-            return instance;
-        }
-
-
+      
 
         public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
         {
@@ -405,12 +389,7 @@ namespace Raven.Client.Document
                 multiLoadOperation.Complete<T>();
             }
 
-            return ids.Select(id =>
-            {
-                object val;
-                entitiesByKey.TryGetValue(id, out val);
-                return (T)val;
-            }).ToArray();
+            return ids.Select(Load<T>).ToArray();
         }
 
         /// <summary>
@@ -458,7 +437,7 @@ namespace Raven.Client.Document
             value.OriginalMetadata = (RavenJObject)jsonDocument.Metadata.CloneToken();
             value.ETag = jsonDocument.Etag;
             value.OriginalValue = jsonDocument.DataAsJson;
-            var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
+            var newEntity = ConvertToEntity(typeof(T),value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
             var type = entity.GetType();
             foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
@@ -526,36 +505,67 @@ namespace Raven.Client.Document
             return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);
         }
 
-        public TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new()
+        public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
         {
             var transformer = new TTransformer().TransformerName;
-            return LoadInternal<TResult>(new[] { id }, transformer).FirstOrDefault();
-        }
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
 
-        public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            var transformer = new TTransformer().TransformerName;
-            var configuration = new RavenLoadConfiguration();
-            configure(configuration);
             return LoadInternal<TResult>(new[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
         }
 
-        public TResult[] Load<TTransformer, TResult>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new()
+        public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
         {
             var transformer = new TTransformer().TransformerName;
-            return LoadInternal<TResult>(ids, transformer);
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
 
-        }
-
-        public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            var transformer = new TTransformer().TransformerName;
-            var configuration = new RavenLoadConfiguration();
-            configure(configuration);
             return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.QueryInputs);
         }
 
-        /// <summary>
+	    public TResult Load<TResult>(string id, string transformer, Action<ILoadConfiguration> configure = null)
+	    {
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+		    return LoadInternal<TResult>(new[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
+	    }
+
+	    public TResult[] Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
+	    {
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+		    return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.QueryInputs);
+	    }
+
+	    public TResult Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
+	    {
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+
+			return LoadInternal<TResult>(new[] { id }, transformer, configuration.QueryInputs).FirstOrDefault();
+	    }
+
+	    public TResult[] Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
+	    {
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+				configure(configuration);
+
+			var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+
+		    return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.QueryInputs);
+	    }
+
+	    /// <summary>
         /// Gets the document URL for the specified entity.
         /// </summary>
         /// <param name="entity">The entity.</param>
@@ -578,21 +588,27 @@ namespace Raven.Client.Document
         public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation)
         {
             var queryProvider = (IRavenQueryProvider)query.Provider;
-            var docQuery = queryProvider.ToLuceneQuery<T>(query.Expression);
+            var docQuery = queryProvider.ToDocumentQuery<T>(query.Expression);
             return Stream(docQuery, out queryHeaderInformation);
         }
 
         public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
         {
             QueryHeaderInformation _;
-            return Stream<T>(query, out _);
+            return Stream(query, out _);
         }
 
         public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation)
         {
             var ravenQueryInspector = ((IRavenQueryInspector)query);
             var indexQuery = ravenQueryInspector.GetIndexQuery(false);
-            var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
+
+            if (indexQuery.WaitForNonStaleResults || indexQuery.WaitForNonStaleResultsAsOfNow)
+                throw new NotSupportedException(
+                    "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
+
+			IncrementRequestCount(); 
+			var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
             return YieldQuery(query, enumerator);
         }
 
@@ -629,19 +645,26 @@ namespace Raven.Client.Document
             }
         }
 
-        public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue)
+        public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
         {
-            return Stream<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize);
+            return Stream<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation);
         }
 
-        public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue)
+        public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
         {
-            return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize);
+            return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation);
         }
 
-        private IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize)
+        public FacetResults[] MultiFacetedSearch(params FacetQuery[] facetQueries)
         {
-            using (var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize))
+			IncrementRequestCount(); 
+			return DatabaseCommands.GetMultiFacets(facetQueries);
+        }
+
+        private IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation)
+        {
+			IncrementRequestCount();
+			using (var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation))
             {
                 while (enumerator.MoveNext())
                 {
@@ -649,7 +672,7 @@ namespace Raven.Client.Document
 
                     yield return new StreamResult<T>
                     {
-                        Document = (T)ConvertToEntity<T>(document.Key, document.DataAsJson, document.Metadata),
+                        Document = (T)ConvertToEntity(typeof(T),document.Key, document.DataAsJson, document.Metadata),
                         Etag = document.Etag,
                         Key = document.Key,
                         Metadata = document.Metadata
@@ -661,6 +684,8 @@ namespace Raven.Client.Document
         /// <summary>
         /// Saves all the changes to the Raven server.
         /// </summary>
+       
+
         public void SaveChanges()
         {
             using (EntityToJson.EntitiesToJsonCachingScope())
@@ -668,7 +693,7 @@ namespace Raven.Client.Document
                 var data = PrepareForSaveChanges();
 
                 if (data.Commands.Count == 0)
-                    return; // nothing to do here
+                    return;
                 IncrementRequestCount();
                 LogBatch(data);
 
@@ -683,10 +708,22 @@ namespace Raven.Client.Document
         /// <typeparam name="T">The result of the query</typeparam>
         /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
         /// <returns></returns>
+        [Obsolete("Use DocumentQuery instead.")]
         public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
         {
+            return DocumentQuery<T, TIndexCreator>();
+        }
+
+        /// <summary>
+        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+        /// <returns></returns>
+        public IDocumentQuery<T> DocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
+        {
             var index = new TIndexCreator();
-            return LuceneQuery<T>(index.IndexName, index.IsMapReduce);
+            return DocumentQuery<T>(index.IndexName, index.IsMapReduce);
         }
 
         /// <summary>
@@ -695,9 +732,21 @@ namespace Raven.Client.Document
         /// <typeparam name="T"></typeparam>
         /// <param name="indexName">Name of the index.</param>
         /// <returns></returns>
+        [Obsolete("Use DocumentQuery instead.")]
         public IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false)
         {
-            return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, listeners.QueryListeners, isMapReduce);
+            return DocumentQuery<T>(indexName, isMapReduce);
+        }
+
+        /// <summary>
+        /// Query the specified index using Lucene syntax
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="indexName">Name of the index.</param>
+        /// <returns></returns>
+        public IDocumentQuery<T> DocumentQuery<T>(string indexName, bool isMapReduce = false)
+        {
+            return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, null, theListeners.QueryListeners, isMapReduce);
         }
 
         /// <summary>
@@ -735,33 +784,37 @@ namespace Raven.Client.Document
         /// <typeparam name="T">The result of the query</typeparam>
         public IRavenQueryable<T> Query<T>()
         {
-            var indexName = "dynamic";
-            if (typeof(T).IsEntityType())
-            {
-                indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-            }
+            var indexName =   CreateDynamicIndexName<T>();
+           
             return Query<T>(indexName);
         }
 
         /// <summary>
         /// Dynamically query RavenDB using Lucene syntax
         /// </summary>
+        [Obsolete("Use DocumentQuery instead.")]
         public IDocumentQuery<T> LuceneQuery<T>()
         {
-            string indexName = "dynamic";
-            if (typeof(T).IsEntityType())
-            {
-                indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-            }
-            return Advanced.LuceneQuery<T>(indexName);
+            return DocumentQuery<T>();
         }
+
+        /// <summary>
+        /// Dynamically query RavenDB using Lucene syntax
+        /// </summary>
+        public IDocumentQuery<T> DocumentQuery<T>()
+        {
+            var indexName = CreateDynamicIndexName<T>();
+            return Advanced.DocumentQuery<T>(indexName);
+        }
+
+       
 
         /// <summary>
         /// Create a new query for <typeparam name="T"/>
         /// </summary>
         IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
         {
-            return Advanced.LuceneQuery<T>(indexName, isMapReduce);
+            return Advanced.DocumentQuery<T>(indexName, isMapReduce);
         }
 
         /// <summary>
@@ -787,6 +840,18 @@ namespace Raven.Client.Document
             return lazyValue;
         }
 
+        internal Lazy<int> AddLazyCountOperation(ILazyOperation operation)
+        {
+            pendingLazyOperations.Add(operation);
+            var lazyValue = new Lazy<int>(() =>
+            {
+                ExecuteAllPendingLazyOperations();
+                return operation.QueryResult.TotalResults;
+            });
+
+            return lazyValue;
+        }
+
         /// <summary>
         /// Register to lazily load documents and include
         /// </summary>
@@ -797,18 +862,26 @@ namespace Raven.Client.Document
             return AddLazyOperation(lazyOp, onEval);
         }
 
-        public void ExecuteAllPendingLazyOperations()
+        public ResponseTimeInformation ExecuteAllPendingLazyOperations()
         {
             if (pendingLazyOperations.Count == 0)
-                return;
+                return new ResponseTimeInformation();
 
             try
             {
+                var sw = Stopwatch.StartNew();
+
                 IncrementRequestCount();
-                while (ExecuteLazyOperationsSingleStep())
+
+                var responseTimeDuration = new ResponseTimeInformation();
+
+                while (ExecuteLazyOperationsSingleStep(responseTimeDuration))
                 {
                     ThreadSleep.Sleep(100);
                 }
+
+                responseTimeDuration.ComputeServerTotal();
+                
 
                 foreach (var pendingLazyOperation in pendingLazyOperations)
                 {
@@ -816,6 +889,8 @@ namespace Raven.Client.Document
                     if (onEvaluateLazy.TryGetValue(pendingLazyOperation, out value))
                         value(pendingLazyOperation.Result);
                 }
+                responseTimeDuration.TotalClientDuration = sw.Elapsed;
+                return responseTimeDuration;
             }
             finally
             {
@@ -823,17 +898,26 @@ namespace Raven.Client.Document
             }
         }
 
-        private bool ExecuteLazyOperationsSingleStep()
+        private bool ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation)
         {
-            var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
+			var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
             try
             {
                 if (DatabaseCommands is ServerClient) // server mode
                 {
                     var requests = pendingLazyOperations.Select(x => x.CreateRequest()).ToArray();
                     var responses = DatabaseCommands.MultiGet(requests);
+
                     for (int i = 0; i < pendingLazyOperations.Count; i++)
                     {
+                        long totalTime;
+                        long.TryParse(responses[i].Headers["Temp-Request-Time"], out totalTime);
+                        
+                        responseTimeInformation.DurationBreakdown.Add(new ResponseTimeItem
+                        {
+                            Url = requests[i].UrlAndQuery,
+                            Duration = TimeSpan.FromMilliseconds(totalTime)
+                        });
                         if (responses[i].RequestHasErrors())
                         {
                             throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
@@ -849,7 +933,19 @@ namespace Raven.Client.Document
                 }
                 else // embedded mode
                 {
-                    var responses = pendingLazyOperations.Select(x => x.ExecuteEmbedded(DatabaseCommands)).ToArray();
+                    var responses = new List<object>();
+                    foreach (var lazyOp in pendingLazyOperations)
+                    {
+                        var sw = Stopwatch.StartNew();
+                        var result = lazyOp.ExecuteEmbedded(DatabaseCommands);
+                        responses.Add(result);
+                        responseTimeInformation.DurationBreakdown.Add(new ResponseTimeItem
+                        {
+                            Url = lazyOp.ToString(),
+                            Duration = sw.Elapsed
+                        });
+                    }
+                    
                     for (int i = 0; i < pendingLazyOperations.Count; i++)
                     {
                         pendingLazyOperations[i].HandleEmbeddedResponse(responses[i]);
@@ -870,16 +966,46 @@ namespace Raven.Client.Document
             }
         }
 
-        public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null)
+        public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null)
         {
-            return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude)
+			IncrementRequestCount();
+            return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude, pagingInformation: pagingInformation)
                                    .Select(TrackEntity<T>)
                                    .ToArray();
         }
 
-        Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude)
+	    public TResult[] LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0,
+	                                                             int pageSize = 25, string exclude = null,
+	                                                             RavenPagingInformation pagingInformation = null,
+	                                                             Action<ILoadConfiguration> configure = null)
+		    where TTransformer : AbstractTransformerCreationTask, new()
+	    {
+			IncrementRequestCount();
+		    var transformer = new TTransformer().TransformerName;
+
+			var configuration = new RavenLoadConfiguration();
+			if (configure != null)
+			{
+				configure(configuration);
+			}
+
+		    return
+			    DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude,
+			                                pagingInformation: pagingInformation, transformer: transformer, queryInputs: configuration.QueryInputs)
+			                    .Select(TrackEntity<TResult>)
+			                    .ToArray();
+	    }
+
+	    public Lazy<TResult[]> MoreLikeThis<TResult>(MoreLikeThisQuery query)
         {
-            var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this);
+            var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, null, null);
+            var lazyOp = new LazyMoreLikeThisOperation<TResult>(multiLoadOperation, query);
+            return AddLazyOperation<TResult[]>(lazyOp, null);
+        }
+
+        Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation)
+        {
+            var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation);
 
             return AddLazyOperation<T[]>(operation, null);
         }

@@ -52,10 +52,8 @@ namespace Raven.Database.Config
 				                    TimeSpanArgumentType.FromParse);
 			MaxIndexWritesBeforeRecreate =
 				new IntegerSetting(settings["Raven/MaxIndexWritesBeforeRecreate"], 256 * 1024);
-			PreventAutomaticSuggestionCreation =
-				new BooleanSetting(settings["Raven/PreventAutomaticSuggestionCreation"], false);
-			DisablePerformanceCounters =
-				new BooleanSetting(settings["Raven/DisablePerformanceCounters"], false);
+			MaxIndexOutputsPerDocument = 
+				new IntegerSetting(settings["Raven/MaxIndexOutputsPerDocument"], 15);
 
 			MaxNumberOfItemsToIndexInSingleBatch =
 				new IntegerSettingWithMin(settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"],
@@ -84,11 +82,18 @@ namespace Raven.Database.Config
 			DataDir =
 				new StringSetting(settings["Raven/DataDir"], @"~\Data");
 			IndexStoragePath =
-				new StringSetting(settings["Raven/IndexStoragePath"], (string) null);
+				new StringSetting(settings["Raven/IndexStoragePath"], (string)null);
+			FileSystemDataDir =
+				new StringSetting(settings["Raven/FileSystem/DataDir"], @"~\Data\FileSystem");
+			CountersDataDir =
+				new StringSetting(settings["Raven/Counters/DataDir"], @"~\Data\Counters");
+			FileSystemIndexStoragePath =
+				new StringSetting(settings["Raven/FileSystem/IndexStoragePath"], (string)null);
+			
 			HostName =
 				new StringSetting(settings["Raven/HostName"], (string) null);
 			Port =
-				new StringSetting(settings["Raven/Port"], (string) null);
+				new StringSetting(settings["Raven/Port"], "*");
 			UseSsl = 
 				new BooleanSetting(settings["Raven/UseSsl"], false);
 			HttpCompression =
@@ -139,13 +144,14 @@ namespace Raven.Database.Config
 
 			DisableClusterDiscovery = new BooleanSetting(settings["Raven/DisableClusterDiscovery"], false);
 
-			ClusterName = new StringSetting(settings["Raven/ClusterName"], (string)null);
 			ServerName = new StringSetting(settings["Raven/ServerName"], (string)null);
 
 			MaxStepsForScript = new IntegerSetting(settings["Raven/MaxStepsForScript"], 10*1000);
 			AdditionalStepsForScriptBasedOnDocumentSize = new IntegerSetting(settings["Raven/AdditionalStepsForScriptBasedOnDocumentSize"], 5);
 
 			MaxRecentTouchesToRemember = new IntegerSetting(settings["Raven/MaxRecentTouchesToRemember"], 1024);
+            VoronMaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
+			VoronInitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
 		}
 
 		private string GetDefaultWebDir()
@@ -210,6 +216,12 @@ namespace Raven.Database.Config
 
 		public StringSetting IndexStoragePath { get; private set; }
 
+		public StringSetting FileSystemDataDir { get; private set; }
+
+		public StringSetting CountersDataDir { get; private set; }
+		
+		public StringSetting FileSystemIndexStoragePath { get; private set; }
+
 		public StringSetting HostName { get; private set; }
 
 		public StringSetting Port { get; private set; }
@@ -240,8 +252,6 @@ namespace Raven.Database.Config
 
 		public BooleanSetting DisableClusterDiscovery { get; private set; }
 
-		public StringSetting ClusterName { get; private set; }
-
 		public StringSetting ServerName { get; private set; }
 
 		public StringSetting PluginsDirectory { get; private set; }
@@ -271,11 +281,12 @@ namespace Raven.Database.Config
 
 		public IntegerSetting MaxIndexWritesBeforeRecreate { get; private set; }
 
-		public BooleanSetting PreventAutomaticSuggestionCreation { get; set; }
+		public IntegerSetting MaxIndexOutputsPerDocument { get; private set; }
     
-        public BooleanSetting DisablePerformanceCounters { get; set; }
 		public TimeSpanSetting DatbaseOperationTimeout { get; private set; }
 
 		public IntegerSetting MaxRecentTouchesToRemember { get; set; }
+        public IntegerSetting VoronMaxBufferPoolSize { get; private set; }
+		public NullableIntegerSetting VoronInitialFileSize { get; private set; }
 	}
 }

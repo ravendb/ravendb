@@ -8,7 +8,6 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Batches
 {
-#if !SILVERLIGHT
 	public class LazyTransformerLoadOperation<T> : ILazyOperation
 	{
 		private readonly string[] ids;
@@ -38,15 +37,15 @@ namespace Raven.Client.Document.Batches
 
 		public object Result { get; set; }
 
+		public QueryResult QueryResult { get; set; }
+
 		public bool RequiresRetry { get; set; }
 
-#if !SILVERLIGHT
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
 			var response = responses.OrderBy(x => x.Status).First(); // this way, 200 response is higher than 404
 			HandleResponse(response);
 		}
-#endif
 
 		public void HandleResponse(GetResponse response)
 		{
@@ -58,7 +57,7 @@ namespace Raven.Client.Document.Batches
 			HandleRespose(new MultiLoadResult
 			{
 				Includes = response.Result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-				Results = response.Result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
+                Results = response.Result.Value<RavenJArray>("Results").Select(x => x as RavenJObject).ToList()
 			});
 		}
 
@@ -84,5 +83,4 @@ namespace Raven.Client.Document.Batches
 			Result = singleResult ? (object) complete[0] : complete;
 		}
 	}
-#endif
 }

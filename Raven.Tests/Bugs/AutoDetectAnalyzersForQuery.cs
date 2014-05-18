@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -33,7 +35,7 @@ namespace Raven.Tests.Bugs
 
 				using(var session = store.OpenSession())
 				{
-					var foos = session.Advanced.LuceneQuery<Foo>("test")
+					var foos = session.Advanced.DocumentQuery<Foo>("test")
 						.Where("Name:Ayende")
 						.WaitForNonStaleResults()
 						.ToList();

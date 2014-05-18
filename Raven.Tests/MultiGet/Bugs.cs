@@ -2,12 +2,14 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Tests.Bugs;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.MultiGet
 {
-	public class Bugs : RemoteClientTest
+	public class Bugs : RavenTest
 	{
 		[Fact]
 		public void CanUseStats()

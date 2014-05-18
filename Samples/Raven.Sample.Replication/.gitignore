@@ -1,8 +1,0 @@
-Servers/*/*.exe
-Servers/*/*.dll
-Servers/*/*.log
-Servers/*/*.log.*
-Servers/*/*.exe
-Servers/*/Plugins/
-Servers/*/Data/*Servers/Shard1/
-Servers/Shard2/

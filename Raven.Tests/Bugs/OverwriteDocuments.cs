@@ -3,31 +3,23 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Linq;
 using Raven.Abstractions.Exceptions;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Database.Extensions;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class OverwriteDocuments : IDisposable
+	public class OverwriteDocuments : RavenTest
 	{
 		private readonly IDocumentStore documentStore;
 
 		public OverwriteDocuments()
 		{
-			documentStore = new EmbeddableDocumentStore
-			                	{
-			                		Configuration =
-			                			{
-			                				DataDirectory = "HiLoData"
-			                			}
-			                	}.Initialize();
-
+			documentStore = NewDocumentStore();
 			documentStore.DatabaseCommands.PutIndex("Foo/Something", new IndexDefinitionBuilder<Foo>
 			{
 				Map = docs => from doc in docs select new {doc.Something}
@@ -37,8 +29,9 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void WillThrowWhenOptimisticConcurrencyIsOn()
 		{
-			using (var session = documentStore.OpenSession()) {
-				var foo = new Foo { Id = "foos/1", Something = "something1" };
+			using (var session = documentStore.OpenSession())
+			{
+				var foo = new Foo {Id = "foos/1", Something = "something1"};
 				session.Store(foo);
 				session.SaveChanges();
 			}
@@ -74,12 +67,6 @@ namespace Raven.Tests.Bugs
 		{
 			public string Id { get; set; }
 			public string Something { get; set; }
-		}
-
-		public void Dispose()
-		{
-			documentStore.Dispose();
-			IOExtensions.DeleteDirectory("HiLoData");
 		}
 	}
 }

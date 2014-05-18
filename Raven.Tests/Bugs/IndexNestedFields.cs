@@ -9,6 +9,8 @@ using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -37,7 +39,7 @@ namespace Raven.Tests.Bugs
 		{
 			UsingPrepopulatedDatabase(delegate(IDocumentSession session3)
 			{
-				var results1 = session3.Advanced.LuceneQuery<Outer>("matryoshka").Where("middle_inner_ID:" + ExpectedId).ToArray();
+                var results1 = session3.Advanced.DocumentQuery<Outer>("matryoshka").Where("middle_inner_ID:" + ExpectedId).ToArray();
 
 				Assert.Equal(ExpectedId, results1.Single().middle.inner.ID);
 			});

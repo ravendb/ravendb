@@ -194,6 +194,7 @@ namespace Raven.Database.Prefetching
 					.GetDocumentsAfter(
 						etag,
 						autoTuner.NumberOfItemsToIndexInSingleBatch,
+						context.CancellationToken,
 						autoTuner.MaximumSizeAllowedToFetchFromStorage,
 						untilEtag: untilEtag)
 					.Where(x => x != null)
@@ -219,6 +220,8 @@ namespace Raven.Database.Prefetching
 			if (context.Configuration.MaxNumberOfParallelIndexTasks == 1)
 				return;
 			if (past.Count == 0)
+				return;
+			if(MemoryStatistics.IsLowMemory)
 				return;
 			if (futureIndexBatches.Count > 5) // we limit the number of future calls we do
 			{
@@ -362,8 +365,8 @@ namespace Raven.Database.Prefetching
 			if (context.Configuration.DisableDocumentPreFetchingForIndexing || docs.Length == 0)
 				return;
 
-			if (prefetchingQueue.Count >= // don't use too much, this is an optimization and we need to be careful about using too much mem
-				context.Configuration.MaxNumberOfItemsToPreFetchForIndexing)
+			// don't use too much, this is an optimization and we need to be careful about using too much mem
+			if (prefetchingQueue.Count >=  context.Configuration.MaxNumberOfItemsToPreFetchForIndexing)
 				return;
 
 			foreach (var jsonDocument in docs)

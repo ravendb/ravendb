@@ -6,11 +6,13 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Database.Prefetching;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Synchronization
 {
-	public class ConcurrentJsonDocumentSortedListTests
+	public class ConcurrentJsonDocumentSortedListTests : NoDisposalNeeded
 	{
 		[Fact]
 		public void ConcurrentJsonDocumentSortedListShouldSortByEtag()

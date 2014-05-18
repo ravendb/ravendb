@@ -7,11 +7,13 @@ using System;
 using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Caching
 {
-	public class CachingOfDocumentInclude : RemoteClientTest
+	public class CachingOfDocumentInclude : RavenTest
 	{
 		[Fact]
 		public void Can_cache_document_with_includes()

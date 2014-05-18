@@ -1,8 +1,12 @@
 #if !NETFX_CORE
 using System;
+using System.Collections.Generic;
 using System.Configuration;
+using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
+using Raven.Abstractions.Replication;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Data
 {
@@ -22,6 +26,7 @@ namespace Raven.Abstractions.Data
 		public string DefaultDatabase { get; set; }
 		public Guid ResourceManagerId { get; set; }
 		private string url;
+
 		public string Url
 		{
 			get { return url; }
@@ -30,6 +35,8 @@ namespace Raven.Abstractions.Data
 				url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
 			}
 		}
+
+		public FailoverServers FailoverServers { get; set; }
 
 		public string ApiKey { get; set; }
 
@@ -55,7 +62,7 @@ namespace Raven.Abstractions.Data
 	{
 		public static ConnectionStringParser<TConnectionString> FromConnectionStringName(string connectionStringName)
 		{
-#if !MONODROID && !SILVERLIGHT
+#if !MONODROID
 			var connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionStringName];
 			if (connectionStringSettings == null)
 				throw new ArgumentException(string.Format("Could not find connection string name: '{0}'", connectionStringName));
@@ -73,15 +80,11 @@ namespace Raven.Abstractions.Data
 		}
 
 		private static readonly Regex connectionStringRegex = new Regex(@"(\w+) \s* = \s* (.*)",
-#if !SILVERLIGHT
 		                                                                RegexOptions.Compiled |
-#endif
 		                                                                RegexOptions.IgnorePatternWhitespace);
 
 		private static readonly Regex connectionStringArgumentsSplitterRegex = new Regex(@"; (?=\s* \w+ \s* =)",
-#if !SILVERLIGHT
 		                                                                                 RegexOptions.Compiled |
-#endif
 		                                                                                 RegexOptions.IgnorePatternWhitespace);
 
 		private readonly string connectionString;
@@ -116,7 +119,7 @@ namespace Raven.Abstractions.Data
 					bool result;
 					if (bool.TryParse(value, out result) == false)
 					{
-#if !MONODROID && !SILVERLIGHT
+#if !MONODROID
 						throw new ConfigurationErrorsException(string.Format("Could not understand memory setting: '{0}'", value));
 #else
 						throw new Exception(string.Format("Could not understand memory setting: '{0}'", value));
@@ -137,7 +140,26 @@ namespace Raven.Abstractions.Data
 					ConnectionStringOptions.ResourceManagerId = new Guid(value);
 					break;
 				case "url":
-					ConnectionStringOptions.Url = value;
+					if (string.IsNullOrEmpty(ConnectionStringOptions.Url))
+						ConnectionStringOptions.Url = value;
+					break;
+				case "failover":
+					if (ConnectionStringOptions.FailoverServers == null)
+						ConnectionStringOptions.FailoverServers = new FailoverServers();
+
+					var databaseNameAndFailoverDestination = value.Split('|');
+
+					ReplicationDestination destination;
+					if (databaseNameAndFailoverDestination.Length == 1)
+					{
+						destination = JsonConvert.DeserializeObject<ReplicationDestination>(databaseNameAndFailoverDestination[0]);
+						ConnectionStringOptions.FailoverServers.AddForDefaultDatabase(destination);
+					}
+					else
+					{
+						destination = JsonConvert.DeserializeObject<ReplicationDestination>(databaseNameAndFailoverDestination[1]);
+						ConnectionStringOptions.FailoverServers.AddForDatabase(databaseName: databaseNameAndFailoverDestination[0], destinations: destination);
+					}
 					break;
 				case "database":
 				case "defaultdatabase":

@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -31,7 +30,7 @@ namespace Raven.Client.Document
 		
 		public Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions, object entity)
 		{
-		    var typeTagName = conventions.GetTypeTagName(entity.GetType());
+		    var typeTagName = conventions.GetDynamicTagName(entity);
 			if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
 				return CompletedTask.With<string>(null);
 			var tag = conventions.TransformTypeTagNameToDocumentKeyPrefix(typeTagName);
@@ -52,4 +51,3 @@ namespace Raven.Client.Document
 		}
 	}
 }
-#endif

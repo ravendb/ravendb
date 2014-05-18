@@ -6,9 +6,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Security;
-using System.Threading;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.OAuth;
@@ -20,27 +22,18 @@ using Raven.Client.Extensions;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Document.Async;
-
-#if SILVERLIGHT
-using System.Net.Browser;
-using Raven.Client.Silverlight.Connection;
 using Raven.Client.Util;
 
-#elif NETFX_CORE
+#if NETFX_CORE
 using System.Collections.Concurrent;
-using Raven.Client.Util;
 using Raven.Client.WinRT.Connection;
 #else
 using Raven.Client.Document.DTC;
-using Raven.Client.Util;
-
 #endif
 
 
 namespace Raven.Client.Document
 {
-	using Raven.Abstractions.Connection;
-
 	/// <summary>
 	/// Manages access to RavenDB and open sessions to work with RavenDB.
 	/// </summary>
@@ -56,7 +49,7 @@ namespace Raven.Client.Document
 		private bool aggressiveCachingUsed;
 
 
-#if SILVERLIGHT || NETFX_CORE
+#if NETFX_CORE
 		private readonly Dictionary<string, ReplicationInformer> replicationInformers = new Dictionary<string, ReplicationInformer>(StringComparer.OrdinalIgnoreCase);
 		private readonly object replicationInformersLocker = new object();
 #else
@@ -65,21 +58,14 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected Func<IDatabaseCommands> databaseCommandsGenerator;
 
-		private readonly ConcurrentDictionary<string, ReplicationInformer> replicationInformers = new ConcurrentDictionary<string, ReplicationInformer>(StringComparer.OrdinalIgnoreCase);
+		private readonly ConcurrentDictionary<string, IDocumentStoreReplicationInformer> replicationInformers = new ConcurrentDictionary<string, IDocumentStoreReplicationInformer>(StringComparer.OrdinalIgnoreCase);
 #endif
 
 		private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
 
-		private HttpJsonRequestFactory jsonRequestFactory =
-#if !SILVERLIGHT && !NETFX_CORE
- new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
-#else
-			  new HttpJsonRequestFactory();
-#endif
+	    private HttpJsonRequestFactory jsonRequestFactory;
 
-#if !SILVERLIGHT
 		private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
-#endif
 
 		/// <summary>
 		/// Whatever this instance has json request factory available
@@ -102,7 +88,7 @@ namespace Raven.Client.Document
 			}
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		/// <summary>
 		/// Gets the database commands.
 		/// </summary>
@@ -150,26 +136,21 @@ namespace Raven.Client.Document
 		public DocumentStore()
 		{
 			Replication = new ReplicationBehavior(this);
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 			Credentials = CredentialCache.DefaultNetworkCredentials;
 #endif
-			ResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
+            ResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 			SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
 			Conventions = new DocumentConvention();
 #else
 			SharedOperationsHeaders = new System.Collections.Generic.Dictionary<string, string>();
 			Conventions = new DocumentConvention { AllowMultipuleAsyncOperations = true };
 #endif
-		}
+        }
 
 		private string identifier;
-
-#if !SILVERLIGHT
-#else
-		private ICredentials credentials = new NetworkCredential();
-#endif
 
 		/// <summary>
 		/// Gets or sets the credentials.
@@ -202,7 +183,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public string ApiKey { get; set; }
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		private string connectionStringName;
 
 		/// <summary>
@@ -244,6 +225,8 @@ namespace Raven.Client.Document
 				DefaultDatabase = options.DefaultDatabase;
 			if (string.IsNullOrEmpty(options.ApiKey) == false)
 				ApiKey = options.ApiKey;
+			if (options.FailoverServers != null)
+				FailoverServers = options.FailoverServers;
 
 			EnlistInDistributedTransactions = options.EnlistInDistributedTransactions;
 		}
@@ -274,12 +257,10 @@ namespace Raven.Client.Document
 			GC.SuppressFinalize(this);
 #endif
 
-#if !SILVERLIGHT
 			foreach (var observeChangesAndEvictItemsFromCacheForDatabase in observeChangesAndEvictItemsFromCacheForDatabases)
 			{
 				observeChangesAndEvictItemsFromCacheForDatabase.Value.Dispose();
 			}
-#endif
 
 			var tasks = new List<Task>();
 			foreach (var databaseChange in databaseChanges)
@@ -325,7 +306,7 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 
 		/// <summary>
 		/// Opens the session.
@@ -355,7 +336,7 @@ namespace Raven.Client.Document
 			currentSessionId = sessionId;
 			try
 			{
-				var session = new DocumentSession(options.Database, this, listeners, sessionId,
+                var session = new DocumentSession(options.Database, this, Listeners, sessionId,
 					SetupCommands(DatabaseCommands, options.Database, options.Credentials, options))
 					{
 						DatabaseName = options.Database ?? DefaultDatabase
@@ -392,19 +373,24 @@ namespace Raven.Client.Document
 			return databaseCommands;
 		}
 
+	    public override IDocumentStore Initialize()
+	    {
+	        return Initialize(true);
+	    }
+
 		/// <summary>
 		/// Initializes this instance.
 		/// </summary>
 		/// <returns></returns>
-		public override IDocumentStore Initialize()
+		public IDocumentStore Initialize(bool ensureDatabaseExists)
 		{
 			if (initialized)
 				return this;
 
 			AssertValidConfiguration();
 
-#if !SILVERLIGHT && !NETFX_CORE
-			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests);
+#if !NETFX_CORE
+			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandler);
 #else
 			jsonRequestFactory = new HttpJsonRequestFactory();
 #endif
@@ -414,38 +400,28 @@ namespace Raven.Client.Document
 
 				InitializeInternal();
 
-#if !SILVERLIGHT
 				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
 					var generator = new MultiDatabaseHiLoGenerator(32);
 					Conventions.DocumentKeyGenerator = (dbName, databaseCommands, entity) => generator.GenerateDocumentKey(dbName, databaseCommands, Conventions, entity);
 				}
-#endif
 
 				if (Conventions.AsyncDocumentKeyGenerator == null && asyncDatabaseCommandsGenerator != null)
 				{
-#if !SILVERLIGHT
 					var generator = new AsyncMultiDatabaseHiLoKeyGenerator(32);
 					Conventions.AsyncDocumentKeyGenerator = (dbName, commands, entity) => generator.GenerateDocumentKeyAsync(dbName, commands, Conventions, entity);
-#else
-					Conventions.AsyncDocumentKeyGenerator = (dbName, commands, entity) =>
-					{
-						var typeTagName = Conventions.GetTypeTagName(entity.GetType());
-						if (typeTagName == null)
-							return CompletedTask.With(Guid.NewGuid().ToString());
-						return CompletedTask.With(typeTagName + "/" + Guid.NewGuid());
-					};
-#endif
 				}
 
 				initialized = true;
 
-#if !SILVERLIGHT && !NETFX_CORE && !MONO
+#if !NETFX_CORE && !MONO
 				RecoverPendingTransactions();
 
-				if (string.IsNullOrEmpty(DefaultDatabase) == false)
+				if (ensureDatabaseExists && 
+                    string.IsNullOrEmpty(DefaultDatabase) == false && 
+					DefaultDatabase.Equals(Constants.SystemDatabase) == false) //system database exists anyway
 				{
-					DatabaseCommands.ForSystemDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
+					DatabaseCommands.ForSystemDatabase().GlobalAdmin.EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
 				}
 #endif
 
@@ -482,7 +458,7 @@ namespace Raven.Client.Document
 			};
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		private void RecoverPendingTransactions()
 		{
 			if (EnlistInDistributedTransactions == false)
@@ -495,10 +471,10 @@ namespace Raven.Client.Document
 
 		private void InitializeSecurity()
 		{
-			if (Conventions.HandleUnauthorizedResponse != null)
+			if (Conventions.HandleUnauthorizedResponseAsync != null)
 				return; // already setup by the user
 
-			if (String.IsNullOrEmpty(ApiKey) == false)
+			if (string.IsNullOrEmpty(ApiKey) == false)
 			{
 				Credentials = null;
 			}
@@ -508,31 +484,6 @@ namespace Raven.Client.Document
 
 			jsonRequestFactory.ConfigureRequest += basicAuthenticator.ConfigureRequest;
 			jsonRequestFactory.ConfigureRequest += securedAuthenticator.ConfigureRequest;
-
-#if !SILVERLIGHT && !NETFX_CORE
-
-			Conventions.HandleUnauthorizedResponse = (response, credentials) =>
-			{
-				var oauthSource = response.Headers["OAuth-Source"];
-
-				if (string.IsNullOrEmpty(oauthSource) == false &&
-					oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
-				{
-					return basicAuthenticator.DoOAuthRequest(oauthSource, credentials.ApiKey);
-				}
-
-				if (credentials.ApiKey == null)
-				{
-					AssertUnauthorizedCredentialSupportWindowsAuth(response, credentials.Credentials);
-
-					return null;
-				}
-				if (string.IsNullOrEmpty(oauthSource))
-					oauthSource = Url + "/OAuth/API-Key";
-
-				return securedAuthenticator.DoOAuthRequest(oauthSource, credentials.ApiKey);
-			};
-#endif
 
 			Conventions.HandleForbiddenResponseAsync = (forbiddenResponse, credentials) =>
 			{
@@ -547,13 +498,15 @@ namespace Raven.Client.Document
 
 			Conventions.HandleUnauthorizedResponseAsync = (unauthorizedResponse, credentials) =>
 			{
-				var oauthSource = unauthorizedResponse.Headers["OAuth-Source"];
+				var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
 
 #if DEBUG && FIDDLER
-				// Make sure to avoid a cross DNS security issue, when running with Fiddler
-				oauthSource = oauthSource.Replace("localhost:", "localhost.fiddler:");
+                // Make sure to avoid a cross DNS security issue, when running with Fiddler
+				if (string.IsNullOrEmpty(oauthSource) == false)
+					oauthSource = oauthSource.Replace("localhost:", "localhost.fiddler:");
 #endif
 
+				// Legacy support
 				if (string.IsNullOrEmpty(oauthSource) == false &&
 					oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
 				{
@@ -567,9 +520,9 @@ namespace Raven.Client.Document
 				}
 
 				if (string.IsNullOrEmpty(oauthSource))
-					oauthSource = this.Url + "/OAuth/API-Key";
+					oauthSource = Url + "/OAuth/API-Key";
 
-				return securedAuthenticator.DoOAuthRequestAsync(oauthSource, credentials.ApiKey);
+				return securedAuthenticator.DoOAuthRequestAsync(Url, oauthSource, credentials.ApiKey);
 			};
 
 		}
@@ -593,12 +546,50 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private void AssertForbiddenCredentialSupportWindowsAuth(HttpWebResponse response)
+		private void AssertUnauthorizedCredentialSupportWindowsAuth(HttpResponseMessage response, ICredentials credentials)
+		{
+			if (credentials == null)
+				return;
+
+			var authHeaders = response.Headers.WwwAuthenticate.FirstOrDefault();
+			if (authHeaders == null ||
+				(authHeaders.ToString().Contains("NTLM") == false && authHeaders.ToString().Contains("Negotiate") == false)
+				)
+			{
+				// we are trying to do windows auth, but we didn't get the windows auth headers
+				throw new SecurityException(
+					"Attempted to connect to a RavenDB Server that requires authentication using Windows credentials," + Environment.NewLine
+					+ " but either wrong credentials where entered or the specified server does not support Windows authentication." +
+					Environment.NewLine +
+					"If you are running inside IIS, make sure to enable Windows authentication.");
+			}
+		}
+
+		private void AssertUnauthorizedCredentialSupportWindowsAuth(HttpResponseMessage response)
 		{
 			if (Credentials == null)
 				return;
 
-			var requiredAuth = response.Headers["Raven-Required-Auth"];
+			var authHeaders = response.Headers.GetFirstValue("WWW-Authenticate");
+			if (authHeaders == null ||
+				(authHeaders.Contains("NTLM") == false && authHeaders.Contains("Negotiate") == false)
+				)
+			{
+				// we are trying to do windows auth, but we didn't get the windows auth headers
+				throw new SecurityException(
+					"Attempted to connect to a RavenDB Server that requires authentication using Windows credentials," + Environment.NewLine
+					+ " but either wrong credentials where entered or the specified server does not support Windows authentication." +
+					Environment.NewLine +
+					"If you are running inside IIS, make sure to enable Windows authentication.");
+			}
+		}
+
+		private void AssertForbiddenCredentialSupportWindowsAuth(HttpResponseMessage response)
+		{
+			if (Credentials == null)
+				return;
+
+			var requiredAuth = response.Headers.GetFirstValue("Raven-Required-Auth");
 			if (requiredAuth == "Windows")
 			{
 				// we are trying to do windows auth, but we didn't get the windows auth headers
@@ -623,7 +614,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected virtual void InitializeInternal()
 		{
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 
 			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
 			var rootServicePoint = ServicePointManager.FindServicePoint(new Uri(rootDatabaseUrl));
@@ -639,22 +630,15 @@ namespace Raven.Client.Document
 					databaseUrl = rootDatabaseUrl;
 					databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
 				}
-				return new ServerClient(databaseUrl, Conventions, ApiKey, Credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId, listeners.ConflictListeners);
+				return new ServerClient(new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
+					currentSessionId, GetReplicationInformerForDatabase, null,
+                    Listeners.ConflictListeners));
 			};
 #endif
 
-#if SILVERLIGHT
-			// required to ensure just a single auth dialog
-			var task = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, (Url + "/docs?pageSize=0").NoCache(), "GET", new OperationCredentials(ApiKey, Credentials), Conventions))
-				.ExecuteRequestAsync();
-			jsonRequestFactory.ConfigureRequest += (sender, args) =>
-			{
-				args.JsonRequest.WaitForTask = task;
-			};
-#endif
 			asyncDatabaseCommandsGenerator = () =>
 			{
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, ApiKey, Credentials, jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, listeners.ConflictListeners);
+                var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, Listeners.ConflictListeners);
 
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;
@@ -663,7 +647,7 @@ namespace Raven.Client.Document
 		}
 
 
-		public ReplicationInformer GetReplicationInformerForDatabase(string dbName = null)
+		public IDocumentStoreReplicationInformer GetReplicationInformerForDatabase(string dbName = null)
 		{
 			var key = Url;
 			dbName = dbName ?? DefaultDatabase;
@@ -671,20 +655,37 @@ namespace Raven.Client.Document
 			{
 				key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + dbName;
 			}
-#if SILVERLIGHT || NETFX_CORE
+			IDocumentStoreReplicationInformer result;
+
+#if NETFX_CORE
 			lock (replicationInformersLocker)
 			{
-				ReplicationInformer result;
 				if (!replicationInformers.TryGetValue(key, out result))
 				{
-					result = Conventions.ReplicationInformerFactory(key);
+					result = Conventions.ReplicationInformerFactory(key, jsonRequestFactory);
 					replicationInformers.Add(key, result);
 				}
-				return result;
 			}
 #else
-			return replicationInformers.GetOrAdd(key, Conventions.ReplicationInformerFactory);
+			result = replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory));
+
 #endif
+
+			if (FailoverServers == null)
+				return result;
+
+			if (dbName == DefaultDatabase)
+			{
+				if (FailoverServers.IsSetForDefaultDatabase && result.FailoverServers == null)
+					result.FailoverServers = FailoverServers.ForDefaultDatabase;
+		    }
+			else
+			{
+				if (FailoverServers.IsSetForDatabase(dbName) && result.FailoverServers == null)
+					result.FailoverServers = FailoverServers.GetForDatabase(dbName);
+			}
+
+			return result;
 		}
 
 		/// <summary>
@@ -698,12 +699,12 @@ namespace Raven.Client.Document
 		public override IDisposable DisableAggressiveCaching()
 		{
 			AssertInitialized();
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 			var old = jsonRequestFactory.AggressiveCacheDuration;
 			jsonRequestFactory.AggressiveCacheDuration = null;
 			return new DisposableAction(() => jsonRequestFactory.AggressiveCacheDuration = old);
 #else
-			// TODO: with silverlight, we don't currently support aggressive caching
+			// TODO: with netfx core, we don't currently support aggressive caching
 			return new DisposableAction(() => { });
 #endif
 		}
@@ -715,8 +716,7 @@ namespace Raven.Client.Document
 		{
 			AssertInitialized();
 
-			return databaseChanges.GetOrAdd(database ?? DefaultDatabase,
-				CreateDatabaseChanges);
+			return databaseChanges.GetOrAdd(database ?? DefaultDatabase, CreateDatabaseChanges);
 		}
 
 		protected virtual IDatabaseChanges CreateDatabaseChanges(string database)
@@ -732,13 +732,13 @@ namespace Raven.Client.Document
 
 			using(NoSynchronizationContext.Scope())
 			{
-				return new RemoteDatabaseChanges(dbUrl,
+			return new RemoteDatabaseChanges(dbUrl,
 					ApiKey,
-					Credentials,
-					jsonRequestFactory,
-					Conventions,
-					GetReplicationInformerForDatabase(database),
-					() => databaseChanges.Remove(database),
+				Credentials,
+				jsonRequestFactory,
+				Conventions,
+				GetReplicationInformerForDatabase(database),
+				() => databaseChanges.Remove(database),
 					((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
 			}
 		}
@@ -755,7 +755,7 @@ namespace Raven.Client.Document
 		public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration)
 		{
 			AssertInitialized();
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 			if (cacheDuration.TotalSeconds < 1)
 				throw new ArgumentException("cacheDuration must be longer than a single second");
 
@@ -769,7 +769,7 @@ namespace Raven.Client.Document
 				jsonRequestFactory.AggressiveCacheDuration = old;
 			});
 #else
-			// TODO: with silverlight, we don't currently support aggressive caching
+			// TODO: with netfx core, we don't currently support aggressive caching
 			return new DisposableAction(() => { });
 #endif
 		}
@@ -783,7 +783,7 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public override IDisposable SetRequestsTimeoutFor(TimeSpan timeout) {
 			AssertInitialized();
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 
 			var old = jsonRequestFactory.RequestTimeout;
 			jsonRequestFactory.RequestTimeout = timeout;
@@ -792,7 +792,7 @@ namespace Raven.Client.Document
 				jsonRequestFactory.RequestTimeout = old;
 			});
 #else
-			// TODO: with silverlight, we don't currently support session timeout
+			// TODO: with netfx core, we don't currently support session timeout
 			return new DisposableAction(() => { });
 #endif
 		}
@@ -809,9 +809,9 @@ namespace Raven.Client.Document
 				if (AsyncDatabaseCommands == null)
 					throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
-				var session = new AsyncDocumentSession(dbName, this, asyncDatabaseCommands, listeners, sessionId)
+                var session = new AsyncDocumentSession(dbName, this, asyncDatabaseCommands, Listeners, sessionId)
 				{
-					DatabaseName = dbName ?? DefaultDatabase
+				    DatabaseName = dbName ?? DefaultDatabase
 				};
 				AfterSessionCreated(session);
 				return session;
@@ -845,7 +845,7 @@ namespace Raven.Client.Document
 
 		public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)
 		{
-			return OpenAsyncSessionInternal(options.Database, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
+            return OpenAsyncSessionInternal(options.Database, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
 		}
 
 		/// <summary>
@@ -853,7 +853,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public override event EventHandler AfterDispose;
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		/// <summary>
 		/// Max number of cached requests (default: 2048)
 		/// </summary>
@@ -865,16 +865,17 @@ namespace Raven.Client.Document
 				maxNumberOfCachedRequests = value;
 				if (jsonRequestFactory != null)
 					jsonRequestFactory.Dispose();
-				jsonRequestFactory = new HttpJsonRequestFactory(maxNumberOfCachedRequests);
+                jsonRequestFactory = new HttpJsonRequestFactory(maxNumberOfCachedRequests, HttpMessageHandler);
 			}
 		}
+	    public HttpMessageHandler HttpMessageHandler { get; set; }
 #endif
 
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{
-			return new BulkInsertOperation(database ?? DefaultDatabase, this, listeners, options ?? new BulkInsertOptions(), Changes(database ?? DefaultDatabase));
+            return new BulkInsertOperation(database ?? DefaultDatabase, this, Listeners, options ?? new BulkInsertOptions(), Changes(database ?? DefaultDatabase));
 		}
 
 		protected override void AfterSessionCreated(InMemoryDocumentSessionOperations session)
@@ -884,7 +885,7 @@ namespace Raven.Client.Document
 				var databaseName = session.DatabaseName;
 				observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName ?? Constants.SystemDatabase,
 					_ => new EvictItemsFromCacheBasedOnChanges(databaseName ?? Constants.SystemDatabase,
-						CreateDatabaseChanges(databaseName),
+						Changes(databaseName),
 						jsonRequestFactory.ExpireItemsFromCache));
 			}
 

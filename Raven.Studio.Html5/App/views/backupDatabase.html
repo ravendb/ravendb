@@ -1,0 +1,29 @@
+﻿<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">Backup database</h3>
+    </div>
+    <div class="panel-body">
+        <div class="btn-toolbar">
+            <div class="btn-group">
+                <button class="btn btn-primary" data-bind="click: startBackup, disable: isBusy">
+                    <span class="glyphicon glyphicon-floppy-save"></span>
+                    <span>Start Backup</span>
+                </button>
+            </div>
+        </div>
+        <br />
+        <form>
+            <div class="form-group">
+                <label class="control-label">Location</label>
+                <input class="form-control" data-bind="value: backupLocation" placeholder="C:\path-to-your-backup-folder">
+            </div>
+        </form>
+
+        <div class="progress progress-striped active" data-bind="visible: isBusy">
+            <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+        </div>
+        <div data-bind="foreach: backupStatusMessages, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
+            <div data-bind="text: '[' + Timestamp+ ']\t' + Severity +':\t'+ Message"></div>
+        </div>
+    </div>
+</div>

@@ -6,14 +6,17 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.CSharp.RuntimeBinder;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Async;
 using Raven.Client.Indexes;
@@ -39,7 +42,7 @@ namespace Raven.Client.Document
 	/// The set of conventions used by the <see cref="DocumentStore"/> which allow the users to customize
 	/// the way the Raven client API behaves
 	/// </summary>
-	public class DocumentConvention
+	public class DocumentConvention : Convention
 	{
 		public delegate IEnumerable<object> ApplyReduceFunctionFunc(
 			Type indexType,
@@ -47,13 +50,13 @@ namespace Raven.Client.Document
 			IEnumerable<object> results,
 			Func<Func<IEnumerable<object>, IEnumerable>> generateTransformResults);
 
-		private Dictionary<Type, PropertyInfo> idPropertyCache = new Dictionary<Type, PropertyInfo>();
 		private Dictionary<Type, Func<IEnumerable<object>, IEnumerable>> compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>();
 
-#if !SILVERLIGHT
+#if !NETFX_CORE
 		private readonly IList<Tuple<Type, Func<string, IDatabaseCommands, object, string>>> listOfRegisteredIdConventions =
 			new List<Tuple<Type, Func<string, IDatabaseCommands, object, string>>>();
 #endif
+
 		private readonly IList<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>> listOfRegisteredIdConventionsAsync =
 			new List<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>>();
 
@@ -68,7 +71,6 @@ namespace Raven.Client.Document
 				new Int32Converter(),
 				new Int64Converter(),
 			};
-			MaxFailoverCheckPeriod = TimeSpan.FromMinutes(5);
 			DisableProfiling = true;
 			EnlistInDistributedTransactions = true;
 			UseParallelMultiGet = true;
@@ -78,11 +80,7 @@ namespace Raven.Client.Document
 			FindIdentityProperty = q => q.Name == "Id";
 			FindClrType = (id, doc, metadata) => metadata.Value<string>(Abstractions.Data.Constants.RavenClrType);
 
-#if !SILVERLIGHT
-			FindClrTypeName = entityType => ReflectionUtil.GetFullNameWithoutVersionInformation(entityType);
-#else
-			FindClrTypeName = entityType => entityType.AssemblyQualifiedName;
-#endif
+			FindClrTypeName = ReflectionUtil.GetFullNameWithoutVersionInformation;
 			TransformTypeTagNameToDocumentKeyPrefix = DefaultTransformTypeTagNameToDocumentKeyPrefix;
 			FindFullDocumentKeyFromNonStringIdentifier = DefaultFindFullDocumentKeyFromNonStringIdentifier;
 			FindIdentityPropertyNameFromEntityName = entityName => "Id";
@@ -98,7 +96,7 @@ namespace Raven.Client.Document
 			};
 			MaxNumberOfRequestsPerSession = 30;
 			ApplyReduceFunction = DefaultApplyReduceFunction;
-			ReplicationInformerFactory = url => new ReplicationInformer(this);
+			ReplicationInformerFactory = (url, jsonRequestFactory) => new ReplicationInformer(this, jsonRequestFactory);
 			CustomizeJsonSerializer = serializer => { };
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
 			ShouldAggressiveCacheTrackChanges = true;
@@ -167,13 +165,6 @@ namespace Raven.Client.Document
 			return tag + id;
 		}
 
-
-		/// <summary>
-		/// How should we behave in a replicated environment when we can't 
-		/// reach the primary node and need to failover to secondary node(s).
-		/// </summary>
-		public FailoverBehavior FailoverBehavior { get; set; }
-
 		/// <summary>
 		/// Register an action to customize the json serializer used by the <see cref="DocumentStore"/>
 		/// </summary>
@@ -184,22 +175,11 @@ namespace Raven.Client.Document
 		/// </summary>
 		public bool DisableProfiling { get; set; }
 
-		/// <summary>
-		/// Enable multipule async operations
-		/// </summary>
-		public bool AllowMultipuleAsyncOperations { get; set; }
-
 		///<summary>
 		/// A list of type converters that can be used to translate the document key (string)
 		/// to whatever type it is that is used on the entity, if the type isn't already a string
 		///</summary>
 		public List<ITypeConverter> IdentityTypeConvertors { get; set; }
-
-		/// <summary>
-		/// Gets or sets the identity parts separator used by the HiLo generators
-		/// </summary>
-		/// <value>The identity parts separator.</value>
-		public string IdentityPartsSeparator { get; set; }
 
 		/// <summary>
 		/// Gets or sets the default max number of requests per session.
@@ -229,11 +209,10 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public static string GenerateDocumentKeyUsingIdentity(DocumentConvention conventions, object entity)
 		{
-			return conventions.FindTypeTagName(entity.GetType()).ToLower() + "/";
+			return conventions.GetDynamicTagName(entity) + "/";
 		}
 
 		private static IDictionary<Type, string> cachedDefaultTypeTagNames = new Dictionary<Type, string>();
-		private int requestCount;
 
 		/// <summary>
 		/// Get the default tag name for the specified type.
@@ -281,7 +260,33 @@ namespace Raven.Client.Document
 			return FindTypeTagName(type) ?? DefaultTypeTagName(type);
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+	   /// <summary>
+	   /// If object is dynamic, try to load a tag name.
+	   /// </summary>
+	   /// <param name="entity">Current entity.</param>
+	   /// <returns>Dynamic tag name if available.</returns>
+	   public string GetDynamicTagName(object entity)
+	   {
+	      if (entity == null)
+	      {
+	         return null;
+	      }
+
+	      if (FindDynamicTagName != null && entity is IDynamicMetaObjectProvider)
+	      {
+	         try
+	         {
+	            return FindDynamicTagName(entity);
+	         }
+	         catch (RuntimeBinderException)
+	         {
+	         }
+	      }
+
+	      return this.GetTypeTagName(entity.GetType());
+	   }
+
+#if !NETFX_CORE
 		/// <summary>
 		/// Generates the document key.
 		/// </summary>
@@ -314,7 +319,7 @@ namespace Raven.Client.Document
 				return typeToRegisteredIdConvention.Item2(dbName, databaseCommands, entity);
 			}
 
-#if !SILVERLIGHT
+#if !NETFX_CORE
 			if (listOfRegisteredIdConventions.Any(x => x.Item1.IsAssignableFrom(type)))
 			{
 				throw new InvalidOperationException("Id convention for asynchronous operation was not found for entity " + type.FullName + ", but convention for synchronous operation exists.");
@@ -322,61 +327,6 @@ namespace Raven.Client.Document
 #endif
 
 			return AsyncDocumentKeyGenerator(dbName, databaseCommands, entity);
-		}
-
-		/// <summary>
-		/// Gets the identity property.
-		/// </summary>
-		/// <param name="type">The type.</param>
-		/// <returns></returns>
-		public PropertyInfo GetIdentityProperty(Type type)
-		{
-			PropertyInfo info;
-			var currentIdPropertyCache = idPropertyCache;
-			if (currentIdPropertyCache.TryGetValue(type, out info))
-				return info;
-
-			// we want to ignore nested entities from index creation tasks
-			if(type.IsNested && type.DeclaringType != null && 
-				typeof(AbstractIndexCreationTask).IsAssignableFrom(type.DeclaringType))
-			{
-				idPropertyCache = new Dictionary<Type, PropertyInfo>(currentIdPropertyCache)
-				{
-					{type, null}
-				};
-				return null;
-			}
-
-			var identityProperty = GetPropertiesForType(type).FirstOrDefault(FindIdentityProperty);
-
-			if (identityProperty != null && identityProperty.DeclaringType != type)
-			{
-				var propertyInfo = identityProperty.DeclaringType.GetProperty(identityProperty.Name);
-				identityProperty = propertyInfo ?? identityProperty;
-			}
-
-			idPropertyCache = new Dictionary<Type, PropertyInfo>(currentIdPropertyCache)
-			{
-				{type, identityProperty}
-			};
-
-			return identityProperty;
-		}
-
-		private static IEnumerable<PropertyInfo> GetPropertiesForType(Type type)
-		{
-			foreach (var propertyInfo in type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
-			{
-				yield return propertyInfo;
-			}
-
-			foreach (var @interface in type.GetInterfaces())
-			{
-				foreach (var propertyInfo in GetPropertiesForType(@interface))
-				{
-					yield return propertyInfo;
-				}
-			}
 		}
 
 		/// <summary>
@@ -407,6 +357,12 @@ namespace Raven.Client.Document
 		/// <value>The name of the find type tag.</value>
 		public Func<Type, string> FindTypeTagName { get; set; }
 
+      /// <summary>
+      /// Gets or sets the function to find the tag name if the object is dynamic.
+      /// </summary>
+      /// <value>The tag name.</value>
+      public Func<dynamic, string> FindDynamicTagName { get; set; }
+
 		/// <summary>
 		/// Gets or sets the function to find the indexed property name
 		/// given the indexed document type, the index name, the current path and the property path.
@@ -420,27 +376,15 @@ namespace Raven.Client.Document
 		public Func<Type, string, string, string, string> FindPropertyNameForDynamicIndex { get; set; }
 
 		/// <summary>
-		/// Whatever or not RavenDB should cache the request to the specified url.
-		/// </summary>
-		public Func<string, bool> ShouldCacheRequest { get; set; }
-
-		/// <summary>
-		/// Gets or sets the function to find the identity property.
-		/// </summary>
-		/// <value>The find identity property.</value>
-		public Func<PropertyInfo, bool> FindIdentityProperty { get; set; }
-
-		/// <summary>
 		/// Get or sets the function to get the identity property name from the entity name
 		/// </summary>
 		public Func<string, string> FindIdentityPropertyNameFromEntityName { get; set; }
-#if !SILVERLIGHT
-		/// <summary>
+
+        /// <summary>
 		/// Gets or sets the document key generator.
 		/// </summary>
 		/// <value>The document key generator.</value>
 		public Func<string, IDatabaseCommands, object, string> DocumentKeyGenerator { get; set; }
-#endif
 
 		/// <summary>
 		/// Gets or sets the document key generator.
@@ -463,7 +407,7 @@ namespace Raven.Client.Document
 		public bool ShouldAggressiveCacheTrackChanges { get; set; }
 
 		/// <summary>
-		/// Whatever or not RavenDB should in the aggressive cache mode should force the aggresive cache
+		/// Whatever or not RavenDB should in the aggressive cache mode should force the aggressive cache
 		/// to check with the server after we called SaveChanges() on a non empty data set.
 		/// This will make any outdated data revalidated, and will work nicely as long as you have just a 
 		/// single client. For multiple clients, <see cref="ShouldAggressiveCacheTrackChanges"/>.
@@ -471,7 +415,7 @@ namespace Raven.Client.Document
 		public bool ShouldSaveChangesForceAggressiveCacheCheck { get; set; }
 
 
-#if !SILVERLIGHT
+#if !NETFX_CORE
 		/// <summary>
 		/// Register an id convention for a single type (and all of its derived types.
 		/// Note that you can still fall back to the DocumentKeyGenerator if you want.
@@ -545,6 +489,7 @@ namespace Raven.Client.Document
 				TypeNameHandling = TypeNameHandling.Auto,
 				TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple,
 				ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+                FloatParseHandling = FloatParseHandling.Decimal,
 				Converters =
 					{
 						new JsonLuceneDateTimeConverter(),
@@ -554,9 +499,7 @@ namespace Raven.Client.Document
 						new JsonNumericConverter<double>(double.TryParse),
 						new JsonNumericConverter<short>(short.TryParse),
 						new JsonMultiDimensionalArrayConverter(),
-#if !SILVERLIGHT
 						new JsonDynamicConverter()
-#endif
 					}
 			};
 
@@ -591,28 +534,6 @@ namespace Raven.Client.Document
 		{
 			return FindClrTypeName(entityType);
 		}
-
-		/// <summary>
-		/// Handles unauthenticated responses, usually by authenticating against the oauth server
-		/// </summary>
-		public Func<HttpWebResponse, OperationCredentials, Action<HttpWebRequest>> HandleUnauthorizedResponse { get; set; }
-
-		/// <summary>
-		/// Handles forbidden responses
-		/// </summary>
-		public Func<HttpWebResponse, Action<HttpWebRequest>> HandleForbiddenResponse { get; set; }
-
-		/// <summary>
-		/// Begins handling of unauthenticated responses, usually by authenticating against the oauth server
-		/// in async manner
-		/// </summary>
-		public Func<HttpWebResponse, OperationCredentials, Task<Action<HttpWebRequest>>> HandleUnauthorizedResponseAsync { get; set; }
-
-		/// <summary>
-		/// Begins handling of forbidden responses
-		/// in async manner
-		/// </summary>
-		public Func<HttpWebResponse, OperationCredentials, Task<Action<HttpWebRequest>>> HandleForbiddenResponseAsync { get; set; }
 
 		/// <summary>
 		/// When RavenDB needs to convert between a string id to a value type like int or guid, it calls
@@ -654,25 +575,7 @@ namespace Raven.Client.Document
 		/// This is called to provide replication behavior for the client. You can customize 
 		/// this to inject your own replication / failover logic.
 		/// </summary>
-		public Func<string, ReplicationInformer> ReplicationInformerFactory { get; set; }
-
-
-		public FailoverBehavior FailoverBehaviorWithoutFlags
-		{
-			get { return FailoverBehavior & (~FailoverBehavior.ReadFromAllServers); }
-		}
-
-		/// <summary>
-		/// The maximum amount of time that we will wait before checking
-		/// that a failed node is still up or not.
-		/// Default: 5 minutes
-		/// </summary>
-		public TimeSpan MaxFailoverCheckPeriod { get; set; }
-
-		public int IncrementRequestCount()
-		{
-			return Interlocked.Increment(ref requestCount);
-		}
+		public Func<string, HttpJsonRequestFactory, IDocumentStoreReplicationInformer> ReplicationInformerFactory { get; set; }
 
 		public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 

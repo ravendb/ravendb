@@ -1,4 +1,4 @@
-﻿#if !SILVERLIGHT && !NETFX_CORE
+﻿#if !NETFX_CORE
 using System;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;

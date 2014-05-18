@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Raven.Client.Document;
@@ -11,6 +12,8 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Indexes.Recovery
@@ -41,9 +44,10 @@ namespace Raven.Tests.Indexes.Recovery
 		{
 			var index = new MapRecoveryTestIndex();
 
-			using (var server = GetNewServer(runInMemory: false))
+            string commitPointsDirectory;
+            using (var server = GetNewServer(runInMemory: false))
 			{
-				CommitPointAfterEachCommit(server.Database.Configuration);
+				CommitPointAfterEachCommit(server.SystemDatabase.Configuration);
 
 				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{
@@ -69,12 +73,14 @@ namespace Raven.Tests.Indexes.Recovery
 						session.SaveChanges();
 						WaitForIndexing(store);
 					}
+
+                    Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
+
+                    commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+                                                         indexInstance.IndexId + "\\CommitPoints");
 				}
 
-				var commitPointsDirectory = Path.Combine(server.Database.Configuration.IndexStoragePath,
-														 MonoHttpUtility.UrlEncode(index.IndexName) + "\\CommitPoints");
-
-				Assert.True(Directory.Exists(commitPointsDirectory));
+			    Assert.True(Directory.Exists(commitPointsDirectory));
 
 				var commitPoints = Directory.GetDirectories(commitPointsDirectory);
 
@@ -99,9 +105,9 @@ namespace Raven.Tests.Indexes.Recovery
 
 			using (var server = GetNewServer(runInMemory: false))
 			{
-				CommitPointAfterEachCommit(server.Database.Configuration);
+				CommitPointAfterEachCommit(server.SystemDatabase.Configuration);
 
-				var maxNumberOfStoredCommitPoints = server.Database.Configuration.MaxNumberOfStoredCommitPoints;
+				var maxNumberOfStoredCommitPoints = server.SystemDatabase.Configuration.MaxNumberOfStoredCommitPoints;
 
 				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{
@@ -121,8 +127,10 @@ namespace Raven.Tests.Indexes.Recovery
 							WaitForIndexing(store);
 						}
 
-						var commitPointsDirectory = Path.Combine(server.Database.Configuration.IndexStoragePath,
-														 MonoHttpUtility.UrlEncode(index.IndexName) + "\\CommitPoints");
+                        Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
+
+                       var  commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+                                                             indexInstance.IndexId + "\\CommitPoints");
 
 						var commitPoints = Directory.GetDirectories(commitPointsDirectory);
 
@@ -142,13 +150,7 @@ namespace Raven.Tests.Indexes.Recovery
 
 			using (var server = GetNewServer(runInMemory: false, dataDirectory: dataDir))
 			{
-				CommitPointAfterFirstCommitOnly(server.Database.Configuration);
-
-				indexFullPath = Path.Combine(server.Database.Configuration.IndexStoragePath,
-											 MonoHttpUtility.UrlEncode(index.IndexName));
-
-				commitPointsDirectory = Path.Combine(server.Database.Configuration.IndexStoragePath,
-													 MonoHttpUtility.UrlEncode(index.IndexName) + "\\CommitPoints");
+				CommitPointAfterFirstCommitOnly(server.SystemDatabase.Configuration);
 
 				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{
@@ -175,6 +177,14 @@ namespace Raven.Tests.Indexes.Recovery
 						WaitForIndexing(store);
 					}
 				}
+
+                Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
+
+                commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+                                                     indexInstance.IndexId + "\\CommitPoints");
+
+                indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+                                         indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
 			}
 
 			// make sure that there is only one commit point - which doesn't have the second entity indexed
@@ -208,13 +218,7 @@ namespace Raven.Tests.Indexes.Recovery
 
 			using (var server = GetNewServer(runInMemory: false, dataDirectory: dataDir))
 			{
-				CommitPointAfterFirstCommitOnly(server.Database.Configuration);
-
-				indexFullPath = Path.Combine(server.Database.Configuration.IndexStoragePath,
-											 MonoHttpUtility.UrlEncode(index.IndexName));
-
-				commitPointsDirectory = Path.Combine(server.Database.Configuration.IndexStoragePath,
-													 MonoHttpUtility.UrlEncode(index.IndexName) + "\\CommitPoints");
+				CommitPointAfterFirstCommitOnly(server.SystemDatabase.Configuration);
 
 				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{
@@ -250,6 +254,14 @@ namespace Raven.Tests.Indexes.Recovery
 						WaitForIndexing(store);
 					}
 				}
+
+                Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
+
+                commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+                                                     indexInstance.IndexId + "\\CommitPoints");
+
+                indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+                                         indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
 			}
 
 			// make sure that there is only one commit point - which doesn't have the second entity indexed
@@ -280,14 +292,8 @@ namespace Raven.Tests.Indexes.Recovery
 
 			using (var server = GetNewServer(runInMemory: false, dataDirectory: dataDir))
 			{
-				CommitPointAfterEachCommit(server.Database.Configuration);
-
-				indexFullPath = Path.Combine(server.Database.Configuration.IndexStoragePath,
-											 MonoHttpUtility.UrlEncode(index.IndexName));
-
-				commitPointsDirectory = Path.Combine(server.Database.Configuration.IndexStoragePath,
-													 MonoHttpUtility.UrlEncode(index.IndexName) + "\\CommitPoints");
-
+				CommitPointAfterEachCommit(server.SystemDatabase.Configuration);
+			  
 				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{
 					index.Execute(store);
@@ -322,7 +328,16 @@ namespace Raven.Tests.Indexes.Recovery
 						WaitForIndexing(store);
 					}
 				}
+                Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
+
+                commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+                                                     indexInstance.IndexId + "\\CommitPoints");
+
+                indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+                                         indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
+
 			}
+
 
 			// make sure that there are 3 commit points
 			var directories = Directory.GetDirectories(commitPointsDirectory);

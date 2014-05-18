@@ -25,6 +25,7 @@ using Lucene.Net.Documents;
 using Microsoft.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
+using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -133,6 +134,7 @@ namespace Raven.Database.Linq
 				variable.AcceptVisitor(new TransformNullCoalescingOperatorTransformer(), null);
 				variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
 				variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
+                variable.AcceptVisitor(new TransformDynamicInvocationExpressions(), null);
 				variable.AcceptVisitor(new TransformObsoleteMethods(), null);
 				return variable;
 			}
@@ -184,6 +186,7 @@ namespace Raven.Database.Linq
 				variable.AcceptVisitor(new TransformNullCoalescingOperatorTransformer(), null);
 				variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
 				variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
+                variable.AcceptVisitor(new TransformDynamicInvocationExpressions(), null);
 				variable.AcceptVisitor(new TransformObsoleteMethods(), null);
 
 				var expressionBody = GetAnonymousCreateExpression(lambdaExpression.Body);
@@ -353,9 +356,12 @@ namespace Raven.Database.Linq
 			//    previously created and deleted, affecting both production and test environments.
 			//
 			// For more info, see http://ayende.com/blog/161218/robs-sprint-idly-indexing?key=f37cf4dc-0e5c-43be-9b27-632f61ba044f#comments-form-location
+			var indexCacheDir = GetIndexCacheDir(configuration);
 
 			try
 			{
+				if (Directory.Exists(indexCacheDir) == false)
+					Directory.CreateDirectory(indexCacheDir);
 				type = TryGetIndexFromDisk(indexFilePath, name);
 			}
 			catch (UnauthorizedAccessException)
@@ -414,8 +420,8 @@ namespace Raven.Database.Linq
 				// we know we can write there
 				try
 				{
-                    EnsureDirectoryExists(indexCacheDir);
-
+					if (Directory.Exists(indexCacheDir) == false)
+						Directory.CreateDirectory(indexCacheDir);
 					var touchFile = Path.Combine(indexCacheDir, Guid.NewGuid() + ".temp");
 					File.WriteAllText(touchFile, "test that we can write to this path");
 					File.Delete(touchFile);
@@ -425,10 +431,11 @@ namespace Raven.Database.Linq
 				{
 				}
 
-				indexCacheDir = Path.Combine(configuration.IndexStoragePath, "Raven", "CompiledIndexCache");
+                indexCacheDir = Path.Combine(configuration.IndexStoragePath, "Raven", "CompiledIndexCache");
+                if (Directory.Exists(indexCacheDir) == false)
+                    Directory.CreateDirectory(indexCacheDir);
 			}
 
-            EnsureDirectoryExists(indexCacheDir);
 			return indexCacheDir;
 		}
 
@@ -436,6 +443,8 @@ namespace Raven.Database.Linq
 												string basePath, string indexFilePath)
 		{
 			var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
+			var currentAssembly = typeof(QueryParsingUtils).Assembly;
+
 			var assemblies = new HashSet<string>
 			{
 				typeof (SystemTime).Assembly.Location,
@@ -443,7 +452,7 @@ namespace Raven.Database.Linq
 				typeof (NameValueCollection).Assembly.Location,
 				typeof (Enumerable).Assembly.Location,
 				typeof (Binder).Assembly.Location,
-				typeof (Field).Assembly.Location,
+				AssemblyHelper.GetExtractedAssemblyLocationFor(typeof(Field), currentAssembly),
 			};
 			foreach (var extension in extensions)
 			{
@@ -534,11 +543,5 @@ namespace Raven.Database.Linq
 
 			return null;
 		}
-
-        private static void EnsureDirectoryExists(string directoryPath)
-        {
-            if (Directory.Exists(directoryPath) == false)
-                Directory.CreateDirectory(directoryPath);
-        }
 	}
 }

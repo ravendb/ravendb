@@ -1,5 +1,7 @@
 using System.Threading;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -82,7 +84,7 @@ namespace Raven.Tests.Bugs
 					session.SaveChanges();
 
 					// this is where we record the etag value
-					var usersQuery = session.Advanced.LuceneQuery<object,RavenDocumentsByEntityName>()
+                    var usersQuery = session.Advanced.DocumentQuery<object, RavenDocumentsByEntityName>()
 						.WaitForNonStaleResultsAsOfLastWrite();
 
 					// wait for indexing to complete

@@ -33,7 +33,7 @@ namespace Raven.Database.Server
 					grantCode = TryGrantingHttpPrivileges(port, useSsl);
 					break;
 				default:
-					throw new InvalidOperationException("Could not listen to port " + port, listenerException);
+					throw new InvalidOperationException(string.Format("Could not listen to port {0}. Error code: {1}", port, errorCode), listenerException);
 			}
 
 			if (CanStartHttpListener(port, useSsl, out errorCode, out listenerException) == false)

@@ -5,11 +5,13 @@ using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class TranslatingLinqQueriesToIndexes
+	public class TranslatingLinqQueriesToIndexes : NoDisposalNeeded
 	{
 		[Fact]
 		public void WillTranslateReferenceToIdTo__document_id()

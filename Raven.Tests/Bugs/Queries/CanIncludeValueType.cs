@@ -8,12 +8,14 @@ using System.Linq;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Server;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Linq;
 
 namespace Raven.Tests.Bugs.Queries
 {
-	public class CanIncludeValueType : RemoteClientTest, IDisposable
+	public class CanIncludeValueType : RavenTest, IDisposable
 	{
 		private readonly IDocumentStore store;
 		private readonly RavenDbServer ravenDbServer;

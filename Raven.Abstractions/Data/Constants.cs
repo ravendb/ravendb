@@ -17,7 +17,7 @@ namespace Raven.Abstractions.Data
 		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
 		public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
 		public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
-		
+
 		public const string RavenShardId = "Raven-Shard-Id";
 		public const string RavenAuthenticatedUser = "Raven-Authenticated-User";
 		public const string LastModified = "Last-Modified";
@@ -43,12 +43,20 @@ namespace Raven.Abstractions.Data
 		public const string NotForReplication = "Raven-Not-For-Replication";
 		public const string RavenDeleteMarker = "Raven-Delete-Marker";
 		public const string ActiveBundles = "Raven/ActiveBundles";
+		public const string AllowBundlesChange = "Raven-Temp-Allow-Bundles-Change";
 		public const string RavenAlerts = "Raven/Alerts";
 
 		//Paths
 		public const string RavenDataDir = "Raven/DataDir";
-		public const string RavenLogsPath = "Raven/Esent/LogsPath";
+        public const string RavenTxJournalPath = "Raven/TransactionJouranlsPath";
 		public const string RavenIndexPath = "Raven/IndexStoragePath";
+
+		//Files
+		public const int WindowsMaxPath = 260 - 30;
+		public const int LinuxMaxPath = 4096;
+		public const int LinuxMaxFileNameLength = WindowsMaxPath;
+		public static readonly string[] WindowsReservedFileNames = { "con", "prn", "aux", "nul", "com1", "com2","com3", "com4", "com5", "com6", "com7", "com8", "com9",
+																		"lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9", "clock$" };
 
 		//Encryption
 		public const string DontEncryptDocumentsStartingWith = "Raven/";
@@ -60,16 +68,16 @@ namespace Raven.Abstractions.Data
 		public const string InDatabaseKeyVerificationDocumentName = "Raven/Encryption/Verification";
 		public static readonly RavenJObject InDatabaseKeyVerificationDocumentContents;
 
-		public const int DefaultGeneratedEncryptionKeyLength = 256 / 8;
-		public const int MinimumAcceptableEncryptionKeyLength = 64 / 8;
+		public const int DefaultGeneratedEncryptionKeyLength = 256/8;
+		public const int MinimumAcceptableEncryptionKeyLength = 64/8;
 
 		public const int DefaultKeySizeToUseInActualEncryptionInBits = 128;
 		public const int Rfc2898Iterations = 1000;
 
-		public const int DefaultIndexFileBlockSize = 12 * 1024;
+		public const int DefaultIndexFileBlockSize = 12*1024;
 
 #if !NETFX_CORE
-		public static readonly Type DefaultCryptoServiceProvider = typeof(System.Security.Cryptography.AesManaged);
+		public static readonly Type DefaultCryptoServiceProvider = typeof(System.Security.Cryptography.AesCryptoServiceProvider);
 #endif
 
 		//Quotas
@@ -88,9 +96,14 @@ namespace Raven.Abstractions.Data
 		public const string RavenReplicationSourcesBasePath = "Raven/Replication/Sources";
 		public const string RavenReplicationDestinations = "Raven/Replication/Destinations";
 		public const string RavenReplicationDestinationsBasePath = "Raven/Replication/Destinations/";
-		
+		public const string RavenReplicationConfig = "Raven/Replication/Config";
+
 		public const string RavenReplicationDocsTombstones = "Raven/Replication/Docs/Tombstones";
 		public const string RavenReplicationAttachmentsTombstones = "Raven/Replication/Attachments/Tombstones";
+
+        //Periodic backup
+        public const string RavenPeriodicBackupsDocsTombstones = "Raven/PeriodicBackups/Docs/Tombstones";
+        public const string RavenPeriodicBackupsAttachmentsTombstones = "Raven/PeriodicBackups/Attachments/Tombstones";
 
 		public const int ChangeHistoryLength = 50;
 
@@ -111,7 +124,19 @@ namespace Raven.Abstractions.Data
 		public const string RavenCreateVersion = "Raven-Create-Version";
 
 		public const string RavenClientVersion = "Raven-Client-Version";
-
         public const string RavenDefaultQueryTimeout = "Raven_Default_Query_Timeout";
+		public const string NextPageStart = "Next-Page-Start";
+
+#if DEBUG
+		public const int EnterLockTimeout = 10000;
+#endif
+		/// <summary>
+		/// if no encoding information in headers of incoming request, this encoding is assumed
+		/// </summary>
+		public const string DefaultRequestEncoding = "UTF-8";
+
+	    public const string AssembliesDirectoryName = "Assemblies";
+
+		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
 	}
 }

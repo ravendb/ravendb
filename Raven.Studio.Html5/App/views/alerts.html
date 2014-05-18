@@ -1,0 +1,86 @@
+﻿<section id="alertsContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+    <div style="height: 65%; position: relative;">
+        <button type="button" class="btn btn-primary" data-bind="click: saveAlerts" title="Save changes"><i class="fa fa-save"></i></button>
+        <button type="button" class="btn btn-default" data-bind="click: fetchAlerts" title="Refresh alerts"><i class="fa fa-refresh"></i></button>
+        <div class="btn-group" data-toggle="buttons">
+            <label class="btn btn-default active" data-bind="click: setFilterAll">
+                <input type="radio" name="options" id="option1"> <span data-bind="text: 'All alerts (' + allAlerts().length + ')'"></span>
+            </label>
+            <label class="btn btn-default" data-bind="click: setFilterUnread">
+                <input type="radio" name="options" id="option1"> <span data-bind="text: 'Unread (' + unreadAlertCount() + ')'"></span>
+            </label>
+            <label class="btn btn-default" data-bind="click: setFilterRead">
+                <input type="radio" name="options" id="option2"> <span data-bind="text: 'Read (' + readAlertCount() + ')'"></span>
+            </label>
+        </div>
+        <div class="btn-group" data-bind="with: selectedAlert">
+            <button type="button" class="btn btn-default" data-bind="visible: observed() === false, click: $root.toggleSelectedReadState.bind($root)">Mark as read</button>
+            <button type="button" class="btn btn-default" data-bind="visible: observed, click: $root.toggleSelectedReadState.bind($root)">Mark as unread</button>
+            <div class="btn-group">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    <i class="fa fa-trash-o"></i>
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a href="#" data-bind="click: $root.deleteSelectedAlert.bind($root)">Delete selected alert</a></li>
+                    <li><a href="#" data-bind="click: $root.deleteReadAlerts.bind($root)">Delete read alerts</a></li>
+                    <li><a href="#" data-bind="click: $root.deleteAllAlerts.bind($root)">Delete all alerts</a></li>
+                </ul>
+            </div>
+        </div>
+        <div id="alertTableContainer" style="overflow-y: auto; position: absolute; bottom: 10px; top: 40px; width: 100%;">
+            <table class="table table-condensed single-line-row-table" data-bind="event: { keydown: tableKeyDown }" tabindex="1">
+                <thead>
+                    <tr>
+                        <th class="col-md-1">Level</th>
+                        <th class="col-md-2">Reported</th>
+                        <th class="col-md-4">Title</th>
+                        <th class="col-md-4" >Message</th>
+                        <th class="col-md-2">Exception</th>
+                    </tr>
+                </thead>
+                <tbody data-bind="foreach: allAlerts, delegatedHandler: 'click'">
+                    <tr data-click="selectAlert" data-bind="visible: isVisible, css: { 'unread': observed() === false, 'selected': $data === $parent.selectedAlert(), warning: alertLevel === 'Warn', danger: alertLevel === 'Error' || alertLevel === 'Fatal' }">
+                        <td data-bind="text: alertLevel"></td>
+                        <td data-bind="text: createdAtHumanized, attr: { title: createdAtHumanized }"></td>
+                        <td data-bind="text: title, attr: { title: title }"></td>
+                        <td data-bind="text: message, attr: { title: message }"></td>
+                        <td data-bind="text: exception, attr: { title: exception }"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="alerts-details panel panel-default" style="height: 30%;">
+        <div class="row">
+            <label class="col-md-1 text-right control-label">Title</label>
+            <div class="col-md-10" data-bind="with: selectedAlert">
+                <p class="form-control-static" data-bind="text: title"></p>
+            </div>
+        </div>
+        <div class="row">
+            <label class="col-md-1 text-right control-label">Message</label>
+            <div class="col-md-10" data-bind="with: selectedAlert">
+                <p class="form-control-static" data-bind="text: message"></p>
+            </div>
+        </div>
+        <div class="row">
+            <label class="col-md-1 text-right control-label">Exception</label>
+            <div class="col-md-10" data-bind="with: selectedAlert">
+                <p class="form-control-static" data-bind="text: exception"></p>
+            </div>
+        </div>
+        <div class="row">
+            <label class="col-md-1 text-right control-label">Reported</label>
+            <div class="col-md-10" data-bind="with: selectedAlert">
+                <p class="form-control-static" data-bind="text: createdAtHumanized"></p>
+            </div>
+        </div>
+        <div class="row">
+            <label class="col-md-1 text-right control-label">Level</label>
+            <div class="col-md-10" data-bind="with: selectedAlert">
+                <p class="form-control-static" data-bind="text: alertLevel, css: { 'text-warning': alertLevel === 'Warn', 'text-danger': alertLevel === 'Error' || alertLevel === 'Fatal' }"></p>
+            </div>
+        </div>
+    </div>
+</section>

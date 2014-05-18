@@ -24,24 +24,24 @@ namespace Raven.Database.Bundles.SqlReplication
 			this.docId = docId;
 		}
 
-		protected override void RemoveEngineCustomizations(JintEngine jintEngine)
+		protected override void RemoveEngineCustomizations(Engine jintEngine)
 		{
-			jintEngine.RemoveParameter("documentId");
-			jintEngine.RemoveParameter("replicateTo");
+			jintEngine.Global.Delete("documentId", true);
+			jintEngine.Global.Delete("replicateTo", true);
 			foreach (var sqlReplicationTable in config.SqlReplicationTables)
 			{
-				jintEngine.RemoveParameter("replicateTo" + sqlReplicationTable.TableName);
+				jintEngine.Global.Delete("replicateTo" + sqlReplicationTable.TableName, true);
 			}
 		}
 
-		protected override void CustomizeEngine(JintEngine jintEngine)
+		protected override void CustomizeEngine(Engine jintEngine, ScriptedJsonPatcherOperationScope scope)
 		{
-			jintEngine.SetParameter("documentId", docId);
-			jintEngine.SetFunction("replicateTo", new Action<string,JsObject>(ReplicateToFunction));
+			jintEngine.SetValue("documentId", docId);
+			jintEngine.SetValue("replicateTo", new Action<string,object>(ReplicateToFunction));
 			foreach (var sqlReplicationTable in config.SqlReplicationTables)
 			{
 				var current = sqlReplicationTable;
-				jintEngine.SetFunction("replicateTo" + sqlReplicationTable.TableName, (Action<JsObject>)(cols =>
+				jintEngine.SetValue("replicateTo" + sqlReplicationTable.TableName, (Action<object>)(cols =>
 				{
 					var tableName = current.TableName;
 					ReplicateToFunction(tableName, cols);
@@ -49,24 +49,19 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
-		private void ReplicateToFunction(string tableName, JsObject cols)
+		private void ReplicateToFunction(string tableName, object colsAsObject)
 		{
 			if (tableName == null)
 				throw new ArgumentException("tableName parameter is mandatory");
-			if (cols == null)
+			if (colsAsObject == null)
 				throw new ArgumentException("cols parameter is mandatory");
 
 			var itemToReplicates = scriptResult.Data.GetOrAdd(tableName);
 			itemToReplicates.Add(new ItemToReplicate
 			{
 				DocumentId = docId,
-				Columns = ToRavenJObject(cols)
+				Columns = RavenJObject.FromObject(colsAsObject)
 			});
-		}
-
-		protected override RavenJObject ConvertReturnValue(JsObject jsObject)
-		{
-			return null;// we don't use / need the return value
 		}
 	}
 }

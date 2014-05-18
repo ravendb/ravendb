@@ -8,27 +8,23 @@ namespace Raven.Database.Indexing
 {
 	public class FieldsToFetch
 	{
+		private readonly bool isDistinct;
 		private readonly string additionalField;
 		private readonly HashSet<string> fieldsToFetch;
-		private readonly AggregationOperation aggregationOperation;
 		private HashSet<string > ensuredFieldNames;
 		public bool FetchAllStoredFields { get; set; }
 
-		public FieldsToFetch(string[] fieldsToFetch, AggregationOperation aggregationOperation, string additionalField)
+		public FieldsToFetch(string[] fieldsToFetch, bool isDistinct, string additionalField)
 		{
+			this.isDistinct = isDistinct;
 			this.additionalField = additionalField;
 			if (fieldsToFetch != null)
 			{
 				this.fieldsToFetch = new HashSet<string>(fieldsToFetch);
 				FetchAllStoredFields = this.fieldsToFetch.Remove(Constants.AllFields);
 			}
-			this.aggregationOperation = aggregationOperation.RemoveOptionals();
 
-			if (this.aggregationOperation != AggregationOperation.None)
-				EnsureHasField(this.aggregationOperation.ToString());
-			
-			IsDistinctQuery = aggregationOperation.HasFlag(AggregationOperation.Distinct) &&
-							  fieldsToFetch != null && fieldsToFetch.Length > 0;
+			IsDistinctQuery = isDistinct && fieldsToFetch != null && fieldsToFetch.Length > 0;
 			
 			IsProjection = this.fieldsToFetch != null && this.fieldsToFetch.Count > 0;
 		
@@ -74,7 +70,7 @@ namespace Raven.Database.Indexing
 
 		public FieldsToFetch CloneWith(string[] newFieldsToFetch)
 		{
-			return new FieldsToFetch(newFieldsToFetch, aggregationOperation, additionalField);
+			return new FieldsToFetch(newFieldsToFetch, isDistinct, additionalField);
 		}
 
 		public void EnsureHasField(string ensuredFieldName)

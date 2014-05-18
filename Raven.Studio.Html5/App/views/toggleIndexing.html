@@ -1,0 +1,21 @@
+﻿<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">Toggle Indexing</h3>
+    </div>
+    <div class="panel-body">
+
+        <div class="btn-group" data-toggle="buttons">
+            <label class="btn btn-primary" data-bind="click: enableIndexing, css: { active: indexingStatus() !== 'Paused' }">
+                <input type="checkbox"> <i class="fa fa-play"></i> Enable indexing
+            </label>
+            <label class="btn btn-primary" data-bind="click: disableIndexing, css: { active: indexingStatus() !== 'Indexing' }">
+                <input type="checkbox"> <i class="fa fa-stop text-danger"></i> Disable indexing
+            </label>
+        </div>
+        <br />
+        <br />
+        <div>
+            <span class="text-muted">Current Status:</span>&nbsp;<span data-bind="text: indexingStatus"></span>
+        </div>
+    </div>
+</div>

@@ -45,6 +45,8 @@ namespace Raven.Database.Linq
 
 		public string SourceCode { get; set; }
 
+    public string Name { get { return indexDefinition.Name;  }}
+
 		public int CountOfSelectMany
 		{
 			get
@@ -230,6 +232,11 @@ namespace Raven.Database.Linq
 
 		private ConcurrentDictionary<string, SpatialField> SpatialFields { get; set; }
 
+        public IEnumerable<IFieldable> SpatialClustering(string fieldName, object lat, object lng, int minPrecision = 3, int maxPrecision = 8)
+        {
+            return SpatialClustering(fieldName, ConvertToDouble(lat), ConvertToDouble(lng), minPrecision, maxPrecision);
+        }
+
 		public IEnumerable<IFieldable> SpatialClustering(string fieldName, double? lat, double? lng,
 		                                                 int minPrecision = 3,
 		                                                 int maxPrecision = 8)
@@ -248,21 +255,31 @@ namespace Raven.Database.Linq
 			}
 		}
 
-		public IEnumerable<IFieldable> SpatialGenerate(double? lat, double? lng)
-		{
-			return SpatialGenerate(Constants.DefaultSpatialFieldName, lat, lng);
-		}
+        public IEnumerable<IFieldable> SpatialGenerate(object lat, object lng)
+        {
+            return SpatialGenerate(Constants.DefaultSpatialFieldName, lat, lng);
+        }
+
+        public IEnumerable<IFieldable> SpatialGenerate(double? lat, double? lng)
+        {
+            return SpatialGenerate(Constants.DefaultSpatialFieldName, lat, lng);
+        }
+
+        public IEnumerable<IFieldable> SpatialGenerate(string fieldName, object lat, object lng)
+        {
+            return SpatialGenerate(fieldName, ConvertToDouble(lat), ConvertToDouble(lng));
+        }
 
 		public IEnumerable<IFieldable> SpatialGenerate(string fieldName, double? lat, double? lng)
 		{
 			var spatialField = GetSpatialField(fieldName);
 
-			if (lng == null || double.IsNaN(lng.Value))
+            if (lng == null || double.IsNaN(lng.Value))
 				return Enumerable.Empty<IFieldable>();
-			if (lat == null || double.IsNaN(lat.Value))
+            if (lat == null || double.IsNaN(lat.Value))
 				return Enumerable.Empty<IFieldable>();
 
-			Shape shape = spatialField.GetContext().MakePoint(lng.Value, lat.Value);
+            Shape shape = spatialField.GetContext().MakePoint(lng.Value, lat.Value);
 			return spatialField.CreateIndexableFields(shape);
 		}
 
@@ -317,5 +334,13 @@ namespace Raven.Database.Linq
 		}
 
 		#endregion
+
+        private static double? ConvertToDouble(object value)
+        {
+            if (value == null || value is DynamicNullObject) 
+                return null;
+
+            return Convert.ToDouble(value);
+        }
 	}
 }

@@ -1,0 +1,17 @@
+﻿<div class="messageBox" tabindex="-1">
+    <div class="modal-header">
+        <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" data-bind="text: title"></h4>
+    </div>
+    <div class="modal-body">
+        <p data-bind="visible: indexNames.length === 1">You're deleting <strong data-bind="text: indexNames[0]"></strong></p>
+        <p data-bind="visible: indexNames.length > 1">You're deleting <strong data-bind="text: indexNames.length"></strong> indexes</p>
+        <ul data-bind="visible: indexNames.length > 1, foreach: indexNames" style="max-height: 200px; overflow-y: auto;">
+            <li data-bind="text: $data"></li>
+        </ul>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-bind="click: cancel">Nevermind</button>
+        <button type="button" class="btn btn-danger" data-bind="click: deleteIndexes">Yep, delete</button>
+    </div>
+</div>

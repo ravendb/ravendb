@@ -1,10 +1,12 @@
 using Raven.Client.Document;
 using Raven.Client.Extensions;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.MultiTenancy
 {
-	public class NoCaseSensitive : RemoteClientTest
+	public class NoCaseSensitive : RavenTest
 	{
 		[Fact]
 		public void CanAccessDbUsingDifferentNames()
@@ -17,7 +19,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				})
 				{
 					documentStore.Initialize();
-					documentStore.DatabaseCommands.EnsureDatabaseExists("repro");
+					documentStore.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("repro");
 					using (var session = documentStore.OpenSession("repro"))
 					{
 						session.Store(new Foo

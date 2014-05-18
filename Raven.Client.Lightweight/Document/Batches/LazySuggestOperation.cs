@@ -21,19 +21,27 @@ namespace Raven.Client.Document.Batches
 
 		public GetRequest CreateRequest()
 		{
+			var query = string.Format(
+				"term={0}&field={1}&max={2}",
+				suggestionQuery.Term,
+				suggestionQuery.Field,
+				suggestionQuery.MaxSuggestions);
+
+			if (suggestionQuery.Accuracy.HasValue)
+				query += "&accuracy=" + suggestionQuery.Accuracy.Value.ToString(CultureInfo.InvariantCulture);
+
+			if (suggestionQuery.Distance.HasValue)
+				query += "&distance=" + suggestionQuery.Distance;
+
 			return new GetRequest
 			{
 				Url = "/suggest/" + index,
-				Query = string.Format("term={0}&field={1}&max={2}&distance={3}&accuracy={4}",
-									  suggestionQuery.Term,
-									  suggestionQuery.Field,
-									  suggestionQuery.MaxSuggestions,
-									  suggestionQuery.Distance,
-									  suggestionQuery.Accuracy.ToString(CultureInfo.InvariantCulture))
+				Query = query
 			};
 		}
 
 		public object Result { get; private set; }
+		public QueryResult QueryResult { get; set; }
 		public bool RequiresRetry { get; private set; }
 		public void HandleResponse(GetResponse response)
 		{
@@ -49,7 +57,7 @@ namespace Raven.Client.Document.Batches
 				Suggestions = ((RavenJArray)result["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
 			};
 		}
-#if !SILVERLIGHT
+
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
 			var result = new SuggestionQueryResult
@@ -64,18 +72,16 @@ namespace Raven.Client.Document.Batches
 
 			Result = result;
 		}
-#endif
-		public IDisposable EnterContext()
+
+        public IDisposable EnterContext()
 		{
 			return null;
 		}
 
-#if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
 			return commands.Suggest(index, suggestionQuery);
 		}
-#endif
 
 		public void HandleEmbeddedResponse(object result)
 		{

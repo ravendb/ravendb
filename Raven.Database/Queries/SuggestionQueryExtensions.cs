@@ -6,6 +6,7 @@
 using System;
 using Raven.Abstractions.Data;
 using System.Linq;
+using Raven.Abstractions.Indexing;
 
 namespace Raven.Database.Queries
 {
@@ -15,28 +16,28 @@ namespace Raven.Database.Queries
 		{
 			if (index == "dynamic" || index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
 			{
-				var entitName = index == "dynamic" ? null : index.Remove(0, "dynamic/".Length);
-				index = self.FindDynamicIndexName(entitName, new IndexQuery
-				{
-					Query = suggestionQuery.Field + ":" + QuoteIfNeeded(suggestionQuery.Term)
-				});
-				if(string.IsNullOrEmpty(index))
-					throw new InvalidOperationException("Could find no index for the specified query, suggestions will not create a dynamic index, and cannot suggest without an index. Did you forget to query before calling Suggest?");
+				throw new InvalidOperationException("Cannot get suggestions for dynamic indexes, only static indexes with explicitly defined Suggestions are supported");
 			}
+		    
+            var indexDefinition = self.Indexes.GetIndexDefinition(index);
+		    if (indexDefinition == null)
+		        throw new InvalidOperationException(string.Format("Could not find specified index '{0}'.", index));
 
-			var indexDefinition = self.GetIndexDefinition(index);
-			if (indexDefinition == null)
-				throw new InvalidOperationException(string.Format("Could not find specified index '{0}'.", index));
-
-			if (indexDefinition.Suggestions.ContainsKey(suggestionQuery.Field) == false && self.Configuration.PreventAutomaticSuggestionCreation)
-			{
-				// if index does not have suggestions defined for this field and server configuration does not allow to create it on the fly
-				// then just return empty result
-				return new SuggestionQueryResult();
-			}
+		    SuggestionOptions suggestion;
+		    if (indexDefinition.Suggestions.TryGetValue(suggestionQuery.Field, out suggestion) == false)
+		    {
+		        throw new InvalidOperationException(string.Format("Index '{0}' does not have suggestions configured for field '{1}'.", index, suggestionQuery.Field));
+		    }
 
 
-			return new SuggestionQueryRunner(self).ExecuteSuggestionQuery(index, suggestionQuery);
+		    if (suggestionQuery.Accuracy.HasValue == false)
+		        suggestionQuery.Accuracy = suggestion.Accuracy;
+
+		    if (suggestionQuery.Distance.HasValue == false)
+		        suggestionQuery.Distance = suggestion.Distance;
+
+
+		    return new SuggestionQueryRunner(self).ExecuteSuggestionQuery(index, suggestionQuery);
 		}
 
 		private static string QuoteIfNeeded(string term)

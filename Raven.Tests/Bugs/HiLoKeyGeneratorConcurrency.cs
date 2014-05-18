@@ -6,12 +6,14 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 using Xunit.Sdk;
 
 namespace Raven.Tests.Bugs
 {
-	public class HiLoKeyGeneratorConcurrency : RemoteClientTest
+	public class HiLoKeyGeneratorConcurrency : RavenTest
 	{
 		private const int GeneratedIdCount = 2000;
 		private const int ThreadCount = 100;

@@ -1,0 +1,23 @@
+﻿<div class="messageBox" tabindex="-1">
+    <div class="modal-header">
+        <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">&times;</button>
+        <h4 class="modal-title">Delete Database?</h4>
+    </div>
+    <div class="modal-body">
+        <p>You can <a href="#" data-bind="click: navigateToExportDatabase">export the database</a> if needed.</p>
+        <br />
+        <p>Delete options:</p>
+        <div class="btn-group" data-toggle="buttons">
+            <label class="btn btn-primary active" title="Keep the physical database files on disk" data-bind="click: keepFiles">
+                <input type="radio" name="options" id="option1"> Keep files
+            </label>
+            <label class="btn btn-primary" title="Delete all files from disk which related to this database" data-bind="click: deleteEverything">
+                <input type="radio" name="options" id="option2"> Delete everything
+            </label>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-bind="click: cancel">Nevermind</button>
+        <button type="button" class="btn btn-danger" data-bind="click: deleteDatabase">Yep, delete</button>
+    </div>
+</div>

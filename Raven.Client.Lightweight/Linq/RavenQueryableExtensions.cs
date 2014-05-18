@@ -8,7 +8,6 @@ namespace Raven.Client.Linq
 {
 	public static class RavenQueryableExtensions
 	{
-	
 		/// <summary>
 		/// Filters a sequence of values based on a predicate.
 		/// </summary>
@@ -74,16 +73,15 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
-		///  implementation of In operator
+		/// Implementation of In operator
 		/// </summary>
 		public static bool In<T>(this T field, IEnumerable<T> values)
 		{
 			return values.Any(value => field.Equals(value));
 		}
 
-
 		/// <summary>
-		///  implementation of In operator
+		/// Implementation of In operator
 		/// </summary>
 		public static bool In<T>(this T field, params T[] values)
 		{
@@ -97,6 +95,24 @@ namespace Raven.Client.Linq
 		public static IRavenQueryable<TSource> Skip<TSource>(this IRavenQueryable<TSource> source, int count)
 		{
 			return (IRavenQueryable<TSource>)Queryable.Skip(source, count);
+		}
+
+		/// <summary>
+		/// Implementation of the Contains ANY operator
+		/// </summary>
+		public static bool ContainsAny<T>(this IEnumerable<T> list, IEnumerable<T> items)
+		{
+			throw new InvalidOperationException(
+				"This method isn't meant to be called directly, it just exists as a place holder, for the LINQ provider");
+		}
+
+		/// <summary>
+		/// Implementation of the Contains ALL operatior
+		/// </summary>
+		public static bool ContainsAll<T>(this IEnumerable<T> list, IEnumerable<T> items)
+		{
+			throw new InvalidOperationException(
+				"This method isn't meant to be called directly, it just exists as a place holder for the LINQ provider");
 		}
 	}
 }

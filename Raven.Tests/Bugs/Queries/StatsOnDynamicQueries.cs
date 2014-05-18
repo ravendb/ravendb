@@ -1,5 +1,7 @@
 using Raven.Client;
 using Raven.Client.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 
@@ -53,7 +55,7 @@ namespace Raven.Tests.Bugs.Queries
 				using (var session = store.OpenSession())
 				{
 					RavenQueryStatistics stats;
-					var query = session.Advanced.LuceneQuery<User>()
+                    var query = session.Advanced.DocumentQuery<User>()
 						.Statistics(out stats)
 						.Where("Email:ayende");
 

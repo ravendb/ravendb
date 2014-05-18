@@ -1,0 +1,81 @@
+﻿<div class="messageBox" tabindex="-1">
+    <form data-bind="submit: nextOrCreate">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">&times;</button>
+            <h4 class="modal-title">Create Database</h4>
+        </div>
+        <div class="modal-body">
+            <div class="row">
+                <div class="col-md-7">
+                    <div class="form-group">
+                        <label for="databaseName">Name</label>
+                        <input required type="text" class="form-control" id="databaseName" placeholder="Database Name" data-bind="value: databaseName, valueUpdate: 'keyup', hasfocus: databaseNameFocus">
+                    </div>
+                    <div class="panel-group" id="accordion">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <h4 class="panel-title">
+                                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#advancedOptions">
+                                        Advanced Settings
+                                    </a>
+                                </h4>
+                            </div>
+                            <div id="advancedOptions" class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <div class="form-group">
+                                        <label for="databasePath">Path</label>
+                                        <input data-bind="value: databasePath, valueUpdate: 'keyup', attr: { placeholder: '~/Databases/' + databaseName() }" type="text" class="form-control" id="databasePath">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="databaseLogs">Logs</label>
+                                        <input data-bind="value: databaseLogs, valueUpdate: 'keyup', attr: { placeholder: '~/Databases/' + databaseName() }" type="text" class="form-control" id="databaseLogs">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="databaseIndexes">Indexes</label>
+                                        <input data-bind="value: databaseIndexes, valueUpdate: 'keyup', attr: { placeholder: '~/Databases/Indexes/' + databaseName() }" type="text" class="form-control" id="databaseIndexes">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <label>Bundles: </label>
+                    <div class="btn-group-vertical" data-toggle="buttons">
+                        <label class="btn btn-primary" data-bind="click: toggleCompressionBundle">
+                            <input type="checkbox"> Compression
+                        </label>
+                        <label id="encryptionCheckbox" class="btn btn-primary" data-bind="click: toggleEncryptionBundle">
+                            <input type="checkbox"> Encryption
+                        </label>
+                        <label class="btn btn-primary" data-bind="click: toggleExpirationBundle">
+                            <input type="checkbox"> Expiration
+                        </label>
+                        <label class="btn btn-primary" data-bind="click: toggleQuotasBundle">
+                            <input type="checkbox"> Quotas
+                        </label>
+                        <label class="btn btn-primary" data-bind="click: toggleReplicationBundle">
+                            <input type="checkbox"> Replication
+                        </label>
+                        <label class="btn btn-primary" data-bind="click: toggleSqlReplicationBundle">
+                            <input type="checkbox"> Sql Replication
+                        </label>
+                        <label class="btn btn-primary" data-bind="click: toggleVersioningBundle">
+                            <input type="checkbox"> Versioning
+                        </label>
+                        <label class="btn btn-primary active" data-bind="click: togglePeriodicBackupBundle">
+                            <input type="checkbox"> Periodic Backup
+                        </label>
+                        <label class="btn btn-primary" data-bind="click: toggleScriptedIndexBundle">
+                            <input type="checkbox"> Scripted Index
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+    </form>
+</div>

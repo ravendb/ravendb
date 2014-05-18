@@ -14,16 +14,6 @@ namespace Raven.Client.Connection
 		private readonly RavenJToken state;
 		private readonly bool done;
 
-#if !SILVERLIGHT && !NETFX_CORE
-		private readonly ServerClient client;
-
-		public Operation(ServerClient serverClient, long id)
-		{
-			client = serverClient;
-			this.id = id;
-		}
-#endif
-
 		public Operation(long id, RavenJToken state)
 		{
 			this.id = id;
@@ -53,32 +43,14 @@ namespace Raven.Client.Connection
 				if (status.Value<bool>("Completed"))
 					return status.Value<RavenJToken>("State");
 
-#if NET45
 				await Task.Delay(500).ConfigureAwait(false);
-#else
-                await TaskEx.Delay(500).ConfigureAwait(false);
-#endif
-
 			}
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		public RavenJToken WaitForCompletion()
 		{
-			if (done)
-				return state;
-			if (client == null)
-				throw new InvalidOperationException("Cannot use WaitForCompletion() when the operation was executed asyncronously");
-
-			while (true)
-			{
-				var status = client.GetOperationStatus(id);
-				if (status == null)
-					return null;
-				if (status.Value<bool>("Completed"))
-					return status.Value<RavenJToken>("State");
-				Thread.Sleep(500);
-			}
+			return WaitForCompletionAsync().Result;
 		}
 #endif
 

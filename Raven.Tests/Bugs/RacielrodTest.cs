@@ -3,11 +3,13 @@ using System.Linq;
 using Raven.Abstractions;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class RacielrodTest : RemoteClientTest
+	public class RacielrodTest : RavenTest
 	{
 		[Fact]
 		public void WhenNoQuery_CanOrderByNestedProperty()
@@ -36,7 +38,7 @@ namespace Raven.Tests.Bugs
 				using (IDocumentSession s = store.OpenSession())
 				{
 					var objects =
-						s.Advanced.LuceneQuery<dynamic>()
+                        s.Advanced.DocumentQuery<dynamic>()
 							.OrderBy("-Content.Order")
 							.Take(2)
 							.WaitForNonStaleResults()
@@ -77,7 +79,7 @@ namespace Raven.Tests.Bugs
 				using (IDocumentSession s = store.OpenSession())
 				{
 					IDocumentQuery<dynamic> query =
-						s.Advanced.LuceneQuery<dynamic>()
+                        s.Advanced.DocumentQuery<dynamic>()
 							.WhereBetweenOrEqual("Body.Inserted",
 												 SystemTime.UtcNow.Date, SystemTime.UtcNow.AddDays(2))
 							.OrderBy("-Body.Order")

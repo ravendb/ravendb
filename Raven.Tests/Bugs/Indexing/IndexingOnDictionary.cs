@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
@@ -34,7 +36,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var s = store.OpenSession())
 				{
-					var users = s.Advanced.LuceneQuery<User>()
+                    var users = s.Advanced.DocumentQuery<User>()
 						.WhereEquals("Items.Color", "Red")
 						.ToArray();
 					Assert.NotEmpty(users);
@@ -62,7 +64,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var s = store.OpenSession())
 				{
-					var users = s.Advanced.LuceneQuery<User>()
+                    var users = s.Advanced.DocumentQuery<User>()
 						.WhereEquals("Items,Key", "Color")
 						.AndAlso()
 						.WhereEquals("Items,Value", "Red")
@@ -91,7 +93,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var s = store.OpenSession())
 				{
-					var users = s.Advanced.LuceneQuery<User>()
+                    var users = s.Advanced.DocumentQuery<User>()
 						.WhereEquals("NestedItems,Key", "Color")
 						.AndAlso()
 						.WhereEquals("NestedItems,Value.Name", "Red")
@@ -120,7 +122,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var s = store.OpenSession())
 				{
-					var users = s.Advanced.LuceneQuery<UserWithIDictionary>()
+                    var users = s.Advanced.DocumentQuery<UserWithIDictionary>()
 						.WhereEquals("Items,Key", "Color")
 						.AndAlso()
 						.WhereEquals("Items,Value", "Red")
@@ -149,7 +151,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var s = store.OpenSession())
 				{
-					var users = s.Advanced.LuceneQuery<UserWithIDictionary>()
+                    var users = s.Advanced.DocumentQuery<UserWithIDictionary>()
 						.WhereEquals("NestedItems,Key", "Color")
 						.AndAlso()
 						.WhereEquals("NestedItems,Value.Name", "Red")
@@ -179,7 +181,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var s = store.OpenSession())
 				{
-					var users = s.Advanced.LuceneQuery<User>()
+                    var users = s.Advanced.DocumentQuery<User>()
 						.WhereEquals("Items._3", "Red")
 						.ToArray();
 					Assert.NotEmpty(users);

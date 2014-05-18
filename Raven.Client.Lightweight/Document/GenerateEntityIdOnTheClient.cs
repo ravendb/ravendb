@@ -3,7 +3,6 @@ using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.CSharp.RuntimeBinder;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Document
 {
@@ -31,20 +30,27 @@ namespace Raven.Client.Document
 			var identityProperty = GetIdentityProperty(entity.GetType());
 			if (identityProperty != null)
 			{
-				var value = identityProperty.GetValue(entity, new object[0]);
-				id = value as string;
-				if (id == null && value != null) // need conversion
-				{
-					id = documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier(value, entity.GetType(), true);
-					return true;
-				}
-				return id != null;
+			    var value = identityProperty.GetValue(entity, new object[0]);
+			    return GetIdAsString(entity, value, out id);
 			}
-			id = null;
+		   
+         id = null;
 			return false;
 		}
 
-		/// <summary>
+	    private bool GetIdAsString(object entity, object value, out string id)
+	    {
+	        id = value as string;
+	        if (id == null && value != null) // need conversion
+	        {
+	            id = documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier(value, entity.GetType(), true);
+	            return true;
+	        }
+
+	        return id != null;
+	    }
+
+	    /// <summary>
 		/// Tries to get the identity.
 		/// </summary>
 		/// <param name="entity">The entity.</param>
@@ -85,12 +91,12 @@ namespace Raven.Client.Document
 			return id;
 		}
 
-		public static bool TryGetIdFromDynamic(dynamic entity, out string id)
+		public bool TryGetIdFromDynamic(dynamic entity, out string id)
 		{
 			try
 			{
-				id = entity.Id;
-				return true;
+				object value = entity.Id;
+			   return GetIdAsString(entity, value, out id);
 			}
 			catch (RuntimeBinderException)
 			{
@@ -136,7 +142,7 @@ namespace Raven.Client.Document
 			}
 		}
 
-		public static void TrySetIdOnDynamic(dynamic entity, string id)
+		public void TrySetIdOnDynamic(dynamic entity, string id)
 		{
 			try
 			{

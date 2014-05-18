@@ -7,12 +7,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Document;
 
 namespace Raven.Tests.Querying
 {
-	public class UsingDocumentQuery
+	public class UsingDocumentQuery : NoDisposalNeeded
 	{
 		[Fact]
 		public void CanUnderstandSimpleEquality()

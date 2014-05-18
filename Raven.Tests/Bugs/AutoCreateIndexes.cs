@@ -7,6 +7,8 @@ using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -32,7 +34,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-					var movies = s.Advanced.LuceneQuery<Movie>("Movies/ByActor")
+					var movies = s.Advanced.DocumentQuery<Movie>("Movies/ByActor")
 						.Where("Name:Dolly")
 						.WaitForNonStaleResults()
 						.ToList();

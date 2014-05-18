@@ -11,6 +11,8 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Json.Linq;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 using Raven.Client.Linq;
@@ -109,7 +111,7 @@ namespace Raven.Tests.Bugs
 
 					var expectedError = Assert.Throws<IndexOutOfRangeException>(() => string.Empty[1]);
 
-					Assert.Equal("The transform results function failed.\r\nDoc 'users/1', Error: " + expectedError.Message, exception.Message);
+					Assert.Contains("The transform results function failed.\r\nDoc 'users/1', Error: " + expectedError.Message, exception.InnerException.Message);
 				}
 			}
 		}
@@ -176,7 +178,7 @@ select new { Name = user.Name, Partner = partner.Name }"
 
 				using (var s = ds.OpenSession())
 				{
-					var first = s.Advanced.LuceneQuery<RavenJObject>("Users")
+                    var first = s.Advanced.DocumentQuery<RavenJObject>("Users")
 						.WaitForNonStaleResults()
 						.WhereEquals("Name", "Oren", true)
 						.First();

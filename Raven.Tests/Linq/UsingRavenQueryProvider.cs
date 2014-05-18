@@ -14,6 +14,8 @@ using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Database.Data;
 using Raven.Client;
@@ -470,7 +472,7 @@ namespace Raven.Tests.Linq
 					WaitForQueryToComplete(s, "ByLineCost");
 
 					//This is the lucene query we want to mimic
-					var luceneResult = s.Advanced.LuceneQuery<OrderItem>("ByLineCost")
+                    var luceneResult = s.Advanced.DocumentQuery<OrderItem>("ByLineCost")
 							.Where("Cost_Range:{Dx1 TO NULL}")
 							.SelectFields<SomeDataProjection>("Cost")
 							.ToArray();
@@ -569,7 +571,7 @@ namespace Raven.Tests.Linq
 			do
 			{
 				//doesn't matter what the query is here, just want to see if it's stale or not
-				results = session.Advanced.LuceneQuery<User>(indexName)
+                results = session.Advanced.DocumentQuery<User>(indexName)
 							  .Where("")
 							  .QueryResult;
 

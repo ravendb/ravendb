@@ -1,0 +1,19 @@
+﻿<ul class="breadcrumb">
+    <li>
+        <h3>
+            <a href="#databases">
+                Databases
+            </a>
+        </h3>
+    </li>
+    <li data-bind="with: activeDatabase">
+        <a data-bind="text: name, attr: { href: $parent.appUrls.documents }"></a>
+    </li>
+    <li>
+        <a data-bind="attr: { href: appUrls.transformers }">Transformers</a>
+    </li>
+    <li class="active">
+        <span data-bind="text: currentBreadcrumbTitle"></span>
+    </li>
+</ul>
+<section data-bind="router: { cacheViews: false }"></section>

@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using Raven.Abstractions.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Linq;
 using Raven.Client.Linq;
@@ -38,7 +40,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-					var nameAndId = s.Advanced.LuceneQuery<User>("test")
+                    var nameAndId = s.Advanced.DocumentQuery<User>("test")
 						.WaitForNonStaleResults()
 						.SelectFields<NameAndId>("Name", "__document_id")
 						.Single();

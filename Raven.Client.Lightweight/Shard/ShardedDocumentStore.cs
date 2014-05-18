@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -30,7 +29,7 @@ namespace Raven.Client.Shard
 	/// </summary>
 	public class ShardedDocumentStore : DocumentStoreBase
 	{
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		/// <summary>
 		/// Gets the shared operations headers.
 		/// </summary>
@@ -142,13 +141,14 @@ namespace Raven.Client.Shard
 			EnsureNotClosed();
 
 			var sessionId = Guid.NewGuid();
-			var session = new AsyncShardedDocumentSession(dbName, this, listeners, sessionId, ShardStrategy, shardDbCommands);
+			var session = new AsyncShardedDocumentSession(dbName, this, Listeners, sessionId, ShardStrategy, shardDbCommands);
 			AfterSessionCreated(session);
 			return session;
 		}
 
 		private readonly AtomicDictionary<IDatabaseChanges> changes =
 			new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
+
 		public override IDatabaseChanges Changes(string database = null)
 		{
 			return changes.GetOrAdd(database, 
@@ -217,7 +217,7 @@ namespace Raven.Client.Shard
 			});
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 
 		/// <summary>
 		/// Opens the session.
@@ -251,7 +251,7 @@ namespace Raven.Client.Shard
 			EnsureNotClosed();
 
 			var sessionId = Guid.NewGuid();
-			var session = new ShardedDocumentSession(database, this, listeners, sessionId, ShardStrategy, shardDbCommands)
+            var session = new ShardedDocumentSession(database, this, Listeners, sessionId, ShardStrategy, shardDbCommands)
 				{
 					DatabaseName = database
 				};
@@ -288,10 +288,10 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("This isn't a single last written etag when sharding");
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{
-			return new BulkInsertOperation(database, this, listeners, options ?? new BulkInsertOptions(), Changes(database));
+            return new BulkInsertOperation(database, this, Listeners, options ?? new BulkInsertOptions(), Changes(database));
 		}
 #endif
 
@@ -312,18 +312,8 @@ namespace Raven.Client.Shard
 
 				if (Conventions.AsyncDocumentKeyGenerator == null)
 				{
-#if !SILVERLIGHT
 					var generator = new AsyncShardedHiloKeyGenerator(this, 32);
 					Conventions.AsyncDocumentKeyGenerator = (dbName, commands, entity) => generator.GenerateDocumentKeyAsync(commands, Conventions, entity);
-#else
-					Conventions.AsyncDocumentKeyGenerator = entity =>
-					{
-						var typeTagName = Conventions.GetTypeTagName(entity.GetType());
-						if (typeTagName == null)
-							return CompletedTask.With(Guid.NewGuid().ToString());
-						return CompletedTask.With(typeTagName + "/" + Guid.NewGuid());
-					};
-#endif
 				}
 			}
 			catch (Exception)
@@ -388,4 +378,3 @@ namespace Raven.Client.Shard
 #endif
 	}
 }
-#endif

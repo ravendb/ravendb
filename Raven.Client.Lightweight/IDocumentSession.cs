@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
@@ -35,17 +34,26 @@ namespace Raven.Client
 		/// <param name="entity">The entity.</param>
 		void Delete<T>(T entity);
 
+        /// <summary>
+        /// Marks the specified entity for deletion. The entity will be deleted when <see cref="IDocumentSession.SaveChanges"/> is called.
+        /// WARNING: This method will not call beforeDelete listener!
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id">The entity.</param>
+	    void Delete<T>(ValueType id);
+
+        /// <summary>
+        /// Marks the specified entity for deletion. The entity will be deleted when <see cref="IDocumentSession.SaveChanges"/> is called.
+        /// WARNING: This method will not call beforeDelete listener!
+        /// </summary>
+        /// <param name="id"></param>
+	    void Delete(string id);
+
 		/// <summary>
 		/// Loads the specified entity with the specified id.
 		/// </summary>
 		/// <param name="id">The id.</param>
 		T Load<T>(string id);
-
-		/// <summary>
-		/// Loads the specified entities with the specified ids.
-		/// </summary>
-		/// <param name="ids">The ids.</param>
-		T[] Load<T>(params string[] ids);
 
 		/// <summary>
 		/// Loads the specified entities with the specified ids.
@@ -135,14 +143,6 @@ namespace Raven.Client
 		/// <param name="path">The path.</param>
 		ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path);
 
-	    /// <summary>
-	    /// Performs a load that will use the specified results transformer against the specified id
-	    /// </summary>
-	    /// <typeparam name="TTransformer">The transformer to use in this load operation</typeparam>
-	    /// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
-	    /// <returns></returns>
-	    TResult Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new();
-
         /// <summary>
         /// Performs a load that will use the specified results transformer against the specified id
         /// </summary>
@@ -151,20 +151,52 @@ namespace Raven.Client
         /// <param name="id"></param>
         /// <param name="configure"></param>
         /// <returns></returns>
-        TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new();
+        TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
 
 		/// <summary>
 		/// Performs a load that will use the specified results transformer against the specified id
 		/// </summary>
-		/// <typeparam name="TTransformer">The transformer to use in this load operation</typeparam>
+		TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
+
+		/// <summary>
+		/// Performs a load that will use the specified results transformer against the specified id
+		/// </summary>
 		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
+		/// <param name="id"></param>
+		/// <param name="transformer">The transformer to use in this load operation</param>
+		/// <param name="configure"></param>
 		/// <returns></returns>
-		TResult[] Load<TTransformer, TResult>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new();
+		TResult Load<TResult>(string id, string transformer, Action<ILoadConfiguration> configure);
+
+		/// <summary>
+		/// Performs a load that will use the specified results transformer against the specified ids
+		/// </summary>
+		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
+		/// <param name="ids"></param>
+		/// <param name="transformer">The transformer to use in this load operation</param>
+		/// <param name="configure"></param>
+		/// <returns></returns>
+		TResult[] Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null);
 
 		/// <summary>
 		/// Performs a load that will use the specified results transformer against the specified id
 		/// </summary>
-		TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new();
+		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
+		/// <param name="id"></param>
+		/// <param name="transformerType">The transformer to use in this load operation</param>
+		/// <param name="configure"></param>
+		/// <returns></returns>
+		TResult Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null);
+
+		/// <summary>
+		/// Performs a load that will use the specified results transformer against the specified ids
+		/// </summary>
+		/// <typeparam name="TResult">The results shape to return after the load operation</typeparam>
+		/// <param name="ids"></param>
+		/// <param name="transformerType">The transformer to use in this load operation</param>
+		/// <param name="configure"></param>
+		/// <returns></returns>
+		TResult[] Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null);
 
 		/// <summary>
 		/// Saves all the changes to the Raven server.
@@ -198,4 +230,3 @@ namespace Raven.Client
 	}
 }
 
-#endif

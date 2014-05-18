@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Indexes;
 using Raven.Abstractions.Indexing;

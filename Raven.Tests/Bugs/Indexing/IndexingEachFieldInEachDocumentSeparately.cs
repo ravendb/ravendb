@@ -4,6 +4,8 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Raven.Client.Document;
 using Raven.Database.Plugins;
+using Raven.Tests.Common;
+
 using Xunit;
 using Version = Lucene.Net.Util.Version;
 using System.Linq;
@@ -26,7 +28,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var s = store.OpenSession())
 				{
-					var objects = s.Advanced.LuceneQuery<object>()
+                    var objects = s.Advanced.DocumentQuery<object>()
 						.WhereEquals("Name", "Ayende")
 						.ToArray();
 

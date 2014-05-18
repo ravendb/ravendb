@@ -11,6 +11,8 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server.Security.OAuth
 {
+	using Raven.Abstractions.Util.Encryptors;
+
 	public class AccessToken
 	{
 		public string Body { get; set; }
@@ -19,19 +21,14 @@ namespace Raven.Database.Server.Security.OAuth
 		private bool MatchesSignature(byte[] key)
 		{
 			var signatureData = Convert.FromBase64String(Signature);
-			
-			using (var rsa = new RSACryptoServiceProvider())
+
+			using (var rsa = Encryptor.Current.CreateAsymmetrical())
 			{
 				rsa.ImportCspBlob(key);
-			
+
 				var bodyData = Encoding.Unicode.GetBytes(Body);
 
-				using (var hasher = new SHA1Managed())
-				{
-					var hash = hasher.ComputeHash(bodyData);
-
-					return rsa.VerifyHash(hash, CryptoConfig.MapNameToOID("SHA1"), signatureData);
-				}
+				return rsa.VerifyHash(Encryptor.Current.Hash.ComputeForOAuth(bodyData), CryptoConfig.MapNameToOID("SHA1"), signatureData);
 			}
 		}
 
@@ -76,14 +73,6 @@ namespace Raven.Database.Server.Security.OAuth
 			}
 		}
 
-		public static AccessToken Create(byte[] key, string userId, string[] databases)
-		{
-			var authorizedDatabases = (databases ?? new string[0]).Select(tenantId => new DatabaseAccess { TenantId = tenantId, ReadOnly = false }).ToList();
-
-			return Create(key, new AccessTokenBody { UserId = userId, AuthorizedDatabases = authorizedDatabases });
-		}
-
-
 		public static AccessToken Create(byte[] key, AccessTokenBody tokenBody)
 		{
 			tokenBody.Issued = (SystemTime.UtcNow - DateTime.MinValue).TotalMilliseconds;
@@ -99,10 +88,9 @@ namespace Raven.Database.Server.Security.OAuth
 		public static string Sign(string body, byte[] key)
 		{
 			var data = Encoding.Unicode.GetBytes(body);
-			using (var hasher = new SHA1Managed())
-			using(var rsa = new RSACryptoServiceProvider())
+			using (var rsa = Encryptor.Current.CreateAsymmetrical())
 			{
-				var hash = hasher.ComputeHash(data);
+				var hash = Encryptor.Current.Hash.ComputeForOAuth(data);
 
 				rsa.ImportCspBlob(key);
 

@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
@@ -70,7 +72,7 @@ namespace Raven.Tests.Queries
 			using (var s = store.OpenSession())
 			{
 				//This should be BarCodeNumber = -999, 10001
-				var resultPage1 = s.Advanced.LuceneQuery<TShirt>("TShirtNested")
+                var resultPage1 = s.Advanced.DocumentQuery<TShirt>("TShirtNested")
 					.Where("Name:Wolf INTERSECT Types_Color:Blue AND Types_Size:Small INTERSECT Types_Color:Gray AND Types_Size:Large")
 					.OrderBy("BarcodeNumber")
 					.Take(2)
@@ -85,7 +87,7 @@ namespace Raven.Tests.Queries
 				Assert.Equal(new[] { -999, 10001 }, resultPage1.Select(r => r.BarcodeNumber));
 
 				//This should be BarCodeNumber = 10001, 10002 (i.e. it spans pages 1 & 2)
-				var resultPage1a = s.Advanced.LuceneQuery<TShirt>("TShirtNested")
+                var resultPage1a = s.Advanced.DocumentQuery<TShirt>("TShirtNested")
 					.Where("Name:Wolf INTERSECT Types_Color:Blue AND Types_Size:Small INTERSECT Types_Color:Gray AND Types_Size:Large")
 					.OrderBy("BarcodeNumber")
 					.Skip(1)
@@ -101,7 +103,7 @@ namespace Raven.Tests.Queries
 				Assert.Equal(new[] { 10001, 10002 }, resultPage1a.Select(r => r.BarcodeNumber));
 
 				//This should be BarCodeNumber = 10002, 10003, 10004, 10006 (But NOT 10005
-				var resultPage2 = s.Advanced.LuceneQuery<TShirt>("TShirtNested")
+                var resultPage2 = s.Advanced.DocumentQuery<TShirt>("TShirtNested")
 					.Where("Name:Wolf INTERSECT Types_Color:Blue AND Types_Size:Small INTERSECT Types_Color:Gray AND Types_Size:Large")
 					.OrderBy("BarcodeNumber")
 					.Skip(2)

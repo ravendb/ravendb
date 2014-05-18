@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
@@ -35,6 +37,11 @@ namespace Raven.Abstractions.Data
 		public bool PageSizeSet { get; private set; }
 
 		/// <summary>
+		/// Whatever we should apply distinct operation to the query on the server side
+		/// </summary>
+		public bool IsDistinct { get; set; }
+
+		/// <summary>
 		/// Gets or sets the query.
 		/// </summary>
 		/// <value>The query.</value>
@@ -45,6 +52,8 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <value>The total size.</value>
 		public Reference<int> TotalSize { get; private set; }
+
+		public Dictionary<string, SortOptions> SortHints { get; set; } 
 
         /// <summary>
         /// Additional query inputs
@@ -72,16 +81,6 @@ namespace Raven.Abstractions.Data
 		}
 
 		/// <summary>
-		/// The aggregation operation for this query
-		/// </summary>
-		public AggregationOperation AggregationOperation { get; set; }
-
-		/// <summary>
-		/// The fields to group the query by
-		/// </summary>
-		public string[] GroupBy { get; set; }
-
-		/// <summary>
 		/// Gets or sets the fields to fetch.
 		/// </summary>
 		/// <value>The fields to fetch.</value>
@@ -98,6 +97,17 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <value>The cutoff.</value>
 		public DateTime? Cutoff { get; set; }
+
+		/// <summary>
+		/// Get or sets the WaitForNonStaleResultsAsOfNow
+		/// </summary>
+		public bool WaitForNonStaleResultsAsOfNow { get; set; }
+
+		
+		/// <summary>
+		/// Get or sets the WaitForNonStaleResults
+		/// </summary>
+		public bool WaitForNonStaleResults { get; set; }
 
 		/// <summary>
 		/// Gets or sets the cutoff etag
@@ -173,14 +183,20 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public bool DisableCaching { get; set; }
 
-	    /// <summary>
+		/// <summary>
+		/// Allow to skip duplicate checking during queries
+		/// </summary>
+		public bool SkipDuplicateChecking { get; set; }
+
+		/// <summary>
+		/// Whatever a query result should contains an explanation about how docs scored against query
+		/// </summary>
+		public bool ExplainScores { get; set; }
+
+		/// <summary>
 		/// Gets the index query URL.
 		/// </summary>
-		/// <param name="operationUrl">The operation URL.</param>
-		/// <param name="index">The index.</param>
-		/// <param name="operationName">Name of the operation.</param>
-		/// <returns></returns>
-		public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includePageSizeEvenIfNotExplicitlySet = true)
+		public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
 		{
 			if (operationUrl.EndsWith("/"))
 				operationUrl = operationUrl.Substring(0, operationUrl.Length - 1);
@@ -191,7 +207,7 @@ namespace Raven.Abstractions.Data
 				.Append("/")
 				.Append(index);
 
-			AppendQueryString(path, includePageSizeEvenIfNotExplicitlySet);
+			AppendQueryString(path, includePageSizeEvenIfNotExplicitlySet, includeQuery);
 
 			return path.ToString();
 		}
@@ -211,11 +227,11 @@ namespace Raven.Abstractions.Data
 			return sb.ToString();
 		}
 
-		public void AppendQueryString(StringBuilder path, bool includePageSizeEvenIfNotExplicitlySet = true)
+		public void AppendQueryString(StringBuilder path, bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
 		{
 			path.Append("?");
 
-			AppendMinimalQueryString(path);
+			AppendMinimalQueryString(path, includeQuery);
 
 			if (Start != 0)
 				path.Append("&start=").Append(Start);
@@ -224,11 +240,10 @@ namespace Raven.Abstractions.Data
 				path.Append("&pageSize=").Append(PageSize);
 			
 
-			if(AggregationOperation != AggregationOperation.None)
-				path.Append("&aggregation=").Append(AggregationOperation);
+			if(IsDistinct)
+				path.Append("&distinct=true");
 
 			FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
-			GroupBy.ApplyIfNotNull(field => path.Append("&groupBy=").Append(Uri.EscapeDataString(field)));
 			SortedFields.ApplyIfNotNull(
 				field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
 
@@ -261,23 +276,28 @@ namespace Raven.Abstractions.Data
 			{
 				path.Append("&cutOffEtag=").Append(CutoffEtag);
 			}
+            if (WaitForNonStaleResultsAsOfNow)
+            {
+                path.Append("&waitForNonStaleResultsAsOfNow=true");
+            }
 
-		    this.HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
-            this.HighlighterPreTags.ApplyIfNotNull(tag=>path.Append("&preTags=").Append(tag));
-            this.HighlighterPostTags.ApplyIfNotNull(tag=>path.Append("&postTags=").Append(tag));
-
-			
+		    HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
+            HighlighterPreTags.ApplyIfNotNull(tag=>path.Append("&preTags=").Append(tag));
+            HighlighterPostTags.ApplyIfNotNull(tag=>path.Append("&postTags=").Append(tag));
 
 			if(DebugOptionGetIndexEntries)
 				path.Append("&debug=entries");
+
+			if (ExplainScores)
+				path.Append("&explainScores=true");
 		}
 
-		private void AppendMinimalQueryString(StringBuilder path)
+		private void AppendMinimalQueryString(StringBuilder path, bool appendQuery = true)
 		{
-			if (string.IsNullOrEmpty(Query) == false)
+			if (string.IsNullOrEmpty(Query) == false && appendQuery)
 			{
-				path.Append("&query=")
-				    .Append(Uri.EscapeDataString(Query));
+				path.Append("&query=");
+				path.Append(EscapingHelper.EscapeLongDataString(Query));
 			}
 			
 			if (string.IsNullOrEmpty(DefaultField) == false)
@@ -321,12 +341,13 @@ namespace Raven.Abstractions.Data
                    Equals(TotalSize, other.TotalSize) && 
                    Equals(QueryInputs, other.QueryInputs) && 
                    Start == other.Start && 
-                   AggregationOperation == other.AggregationOperation && 
-                   Equals(GroupBy, other.GroupBy) && 
+                   Equals(IsDistinct, other.IsDistinct) && 
                    Equals(FieldsToFetch, other.FieldsToFetch) && 
                    Equals(SortedFields, other.SortedFields) && 
-                   Cutoff.Equals(other.Cutoff) && 
-                   Equals(CutoffEtag, other.CutoffEtag) && 
+                   Cutoff.Equals(other.Cutoff) &&
+				   WaitForNonStaleResultsAsOfNow.Equals(other.WaitForNonStaleResultsAsOfNow) &&
+				   WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
+				   Equals(CutoffEtag, other.CutoffEtag) && 
                    String.Equals(DefaultField, other.DefaultField) && 
                    DefaultOperator == other.DefaultOperator && 
                    SkipTransformResults.Equals(other.SkipTransformResults) && 
@@ -355,11 +376,11 @@ namespace Raven.Abstractions.Data
                 hashCode = (hashCode * 397) ^ (TotalSize != null ? TotalSize.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (QueryInputs != null ? QueryInputs.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ Start;
-                hashCode = (hashCode * 397) ^ (int)AggregationOperation;
-                hashCode = (hashCode * 397) ^ (GroupBy != null ? GroupBy.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (IsDistinct ? 1 : 0);
                 hashCode = (hashCode * 397) ^ (FieldsToFetch != null ? FieldsToFetch.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (SortedFields != null ? SortedFields.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ Cutoff.GetHashCode();
+                hashCode = (hashCode * 397) ^ WaitForNonStaleResultsAsOfNow.GetHashCode();
                 hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (DefaultField != null ? DefaultField.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (int)DefaultOperator;

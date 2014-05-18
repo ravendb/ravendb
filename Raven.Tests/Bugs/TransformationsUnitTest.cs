@@ -6,7 +6,8 @@
 using System.Linq;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
-using Raven.Tests.Issues;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -16,10 +17,8 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void TestTransformations()
         {
-            using (var documentStore = NewRemoteDocumentStore())
+            using (var documentStore = NewRemoteDocumentStore(databaseName: "Demo"))
             {
-                documentStore.Initialize();
-                documentStore.DatabaseCommands.EnsureDatabaseExists("Demo");
                 new MiniMemberTransformer().Execute(documentStore.DatabaseCommands.ForDatabase("Demo"),
                     documentStore.Conventions);
 

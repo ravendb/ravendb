@@ -73,22 +73,22 @@ namespace Raven.Bundles.Replication.Impl
 					using (newBatchToRecoverFromConcurrencyException)
 					{
 						var minNextMax = currentMax.Value;
-						var document = Database.Get(Constants.RavenReplicationVersionHiLo, null);
+						var document = Database.Documents.Get(Constants.RavenReplicationVersionHiLo, null);
 						if (document == null)
 						{
-							Database.Put(Constants.RavenReplicationVersionHiLo,
-								Etag.Empty,
+							Database.Documents.Put(Constants.RavenReplicationVersionHiLo,
+							Etag.Empty,
 								// sending empty etag means - ensure the that the document does NOT exists
-								RavenJObject.FromObject(RavenJObject.FromObject(new {Max = minNextMax + capacity})),
-								new RavenJObject(),
-								null);
+							RavenJObject.FromObject(RavenJObject.FromObject(new { Max = minNextMax + capacity })),
+							new RavenJObject(),
+							null);
 							return minNextMax + capacity;
 						}
 						var max = GetMaxFromDocument(document, minNextMax);
 						document.DataAsJson["Max"] = max + capacity;
-						Database.Put(Constants.RavenReplicationVersionHiLo, document.Etag,
-							document.DataAsJson,
-							document.Metadata, null);
+						Database.Documents.Put(Constants.RavenReplicationVersionHiLo, document.Etag,
+						document.DataAsJson,
+						document.Metadata, null);
 						current = max + 1;
 						return max + capacity;
 					}

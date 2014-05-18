@@ -3,13 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
-using System.Net.Mime;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Util;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
@@ -37,8 +35,6 @@ namespace Raven.Database.Queries
             var rangeFacets = new Dictionary<string, List<ParsedRange>>();
 
             var viewGenerator = database.IndexDefinitionStorage.GetViewGenerator(index);
-            if(viewGenerator == null)
-                throw new IndexDoesNotExistsException("Index " + index + " does not exists");
             Index.AssertQueryDoesNotContainFieldsThatAreNotIndexed(indexQuery, viewGenerator);
 
             foreach (var facet in facets)
@@ -53,7 +49,11 @@ namespace Raven.Database.Queries
                                                             facet.Aggregation + " without having a value in AggregationField");
 
                     if (facet.AggregationField.EndsWith("_Range") == false)
-                        facet.AggregationField = facet.AggregationField + "_Range";
+                    {
+                        if( QueryForFacets.IsAggregationTypeNumerical(facet.AggregationType))
+                             facet.AggregationField = facet.AggregationField + "_Range";
+                    }
+                       
                 }
 
 
@@ -250,6 +250,8 @@ namespace Raven.Database.Queries
 
             public void Execute()
             {
+                ValidateFacets();
+
                 //We only want to run the base query once, so we capture all of the facet-ing terms then run the query
                 //	once through the collector and pull out all of the terms in one shot
                 var allCollector = new GatherAllCollector();
@@ -260,104 +262,130 @@ namespace Raven.Database.Queries
                 {
                     var currentIndexSearcher = currentState.IndexSearcher;
 
-                    var baseQuery = Database.IndexStorage.GetLuceneQuery(Index, IndexQuery, Database.IndexQueryTriggers);
+                    var baseQuery = Database.IndexStorage.GetDocumentQuery(Index, IndexQuery, Database.IndexQueryTriggers);
                     currentIndexSearcher.Search(baseQuery, allCollector);
                     var fields = Facets.Values.Select(x => x.Name)
                             .Concat(Ranges.Select(x => x.Key));
                     var fieldsToRead = new HashSet<string>(fields);
+                    IndexedTerms.ReadEntriesForFields(currentState,
+                        fieldsToRead,
+                        allCollector.Documents,
+                        (term, doc) =>
+                        {
+                            var facets = Facets.Values.Where(facet => facet.Name == term.Field);
+                            foreach (var facet in facets)
+                            {
+                                switch (facet.Mode)
+                                {
+                                    case FacetMode.Default:
+                                        var facetValues = facetsByName.GetOrAdd(facet.DisplayName);
+                                        FacetValue existing;
+                                        if (facetValues.TryGetValue(term.Text, out existing) == false)
+                                        {
+                                            existing = new FacetValue
+                                            {
+                                                Range = GetRangeName(term)
+                                            };
+                                            facetValues[term.Text] = existing;
+                                        }
+                                        ApplyFacetValueHit(existing, facet, doc, null);
+                                        break;
+                                    case FacetMode.Ranges:
+                                        List<ParsedRange> list;
+                                        if (Ranges.TryGetValue(term.Field, out list))
+                                        {
+                                            for (int i = 0; i < list.Count; i++)
+                                            {
+                                                var parsedRange = list[i];
+                                                if (parsedRange.IsMatch(term.Text))
+                                                {
+                                                    var facetValue = Results.Results[term.Field].Values[i];
+                                                    ApplyFacetValueHit(facetValue, facet, doc, parsedRange);
+                                                }
+                                            }
+                                        }
+                                        break;
+                                    default:
+                                        throw new ArgumentOutOfRangeException();
+                                }
+                            }
 
-                    FieldTermVector fieldTermVector;
-                    var allVectoredTerms =
-                        fieldsToRead.All(s => indexDefinition.TermVectors.TryGetValue(s, out fieldTermVector) && fieldTermVector != FieldTermVector.No);
-
-                    if (allVectoredTerms)
-                    {
-                        IndexedTerms.ReadEntriesForFieldsFromTermVectors(currentState,
-                            fieldsToRead,
-                            allCollector.Documents,
-                            (field,value, doc) => HandleFacets(field,value, facetsByName, doc));
-                    }
-                    else
-                    {
-                        IndexedTerms.ReadEntriesForFields(currentState,
-                            fieldsToRead,
-                            allCollector.Documents,
-                            (field, value, doc) => HandleFacets(field,value, facetsByName, doc));
-                    }
+                        });
                     UpdateFacetResults(facetsByName);
 
-                    CompleteFacetCalculationsStage1(currentState, allVectoredTerms);
+                    CompleteFacetCalculationsStage1(currentState);
                     CompleteFacetCalculationsStage2();
                 }
             }
 
-            private void HandleFacets(string field, string value, Dictionary<string, Dictionary<string, FacetValue>> facetsByName, int doc)
+            private void ValidateFacets()
             {
-                var facets = Facets.Values.Where(facet => facet.Name == field);
-                foreach (var facet in facets)
+                foreach (var facet in Facets.Where(facet => IsAggregationNumerical(facet.Value.Aggregation) && IsAggregationTypeNumerical(facet.Value.AggregationType) && GetSortOptionsForFacet(facet.Value.AggregationField) == SortOptions.None))
                 {
-                    switch (facet.Mode)
-                    {
-                        case FacetMode.Default:
-                            var facetValues = facetsByName.GetOrAdd(facet.DisplayName);
-                            FacetValue existing;
-                            if (facetValues.TryGetValue(value, out existing) == false)
-                            {
-                                existing = new FacetValue
-                                {
-                                    Range = GetRangeName(field, value)
-                                };
-                                facetValues[value] = existing;
-                            }
-                            ApplyFacetValueHit(existing, facet, doc, null);
-                            break;
-                        case FacetMode.Ranges:
-                            List<ParsedRange> list;
-                            if (Ranges.TryGetValue(field, out list))
-                            {
-                                for (int i = 0; i < list.Count; i++)
-                                {
-                                    var parsedRange = list[i];
-                                    if (parsedRange.IsMatch(value))
-                                    {
-                                        var facetValue = Results.Results[field].Values[i];
-                                        ApplyFacetValueHit(facetValue, facet, doc, parsedRange);
-                                    }
-                                }
-                            }
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
+                    throw new InvalidOperationException(string.Format("Index '{0}' does not have sorting enabled for a numerical field '{1}'.", this.Index, facet.Value.AggregationField));
                 }
             }
 
-            private string GetRangeName(string field, string value)
+            private static bool IsAggregationNumerical(FacetAggregation aggregation)
             {
-                var sortOptions = GetSortOptionsForFacet(field);
+                switch (aggregation)
+                {
+                    case FacetAggregation.Average:
+                    case FacetAggregation.Count:
+                    case FacetAggregation.Max:
+                    case FacetAggregation.Min:
+                    case FacetAggregation.Sum:
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+
+            public static bool IsAggregationTypeNumerical(string aggregationType)
+            {
+                var type = Type.GetType(aggregationType, false, true);
+                if (type == null)
+                    return false;
+
+                var numericalTypes = new List<Type>
+				                     {
+					                     typeof(decimal),
+					                     typeof(int),
+					                     typeof(long),
+					                     typeof(short),
+					                     typeof(float),
+					                     typeof(double)
+				                     };
+
+                return numericalTypes.Any(numericalType => numericalType == type);
+            }
+
+            private string GetRangeName(Term term)
+            {
+                var sortOptions = GetSortOptionsForFacet(term.Field);
                 switch (sortOptions)
                 {
                     case SortOptions.String:
                     case SortOptions.None:
                     case SortOptions.Custom:
                     case SortOptions.StringVal:
-                        return value;
+                        return term.Text;
                     case SortOptions.Int:
-		                if (IsStringNumber(value))
-			                return value;
-                        return NumericUtils.PrefixCodedToInt(value).ToString(CultureInfo.InvariantCulture);
+                        if (IsStringNumber(term))
+                            return term.Text;
+                        return NumericUtils.PrefixCodedToInt(term.Text).ToString(CultureInfo.InvariantCulture);
                     case SortOptions.Long:
-                        if (IsStringNumber(value))
-							return value;
-                        return NumericUtils.PrefixCodedToLong(value).ToString(CultureInfo.InvariantCulture);
+                        if (IsStringNumber(term))
+                            return term.Text;
+                        return NumericUtils.PrefixCodedToLong(term.Text).ToString(CultureInfo.InvariantCulture);
                     case SortOptions.Double:
-                        if (IsStringNumber(value))
-							return value;
-                        return NumericUtils.PrefixCodedToDouble(value).ToString(CultureInfo.InvariantCulture);
+                        if (IsStringNumber(term))
+                            return term.Text;
+                        return NumericUtils.PrefixCodedToDouble(term.Text).ToString(CultureInfo.InvariantCulture);
                     case SortOptions.Float:
-                        if (IsStringNumber(value))
-							return value;
-                        return NumericUtils.PrefixCodedToFloat(value).ToString(CultureInfo.InvariantCulture);
+                        if (IsStringNumber(term))
+                            return term.Text;
+                        return NumericUtils.PrefixCodedToFloat(term.Text).ToString(CultureInfo.InvariantCulture);
                     case SortOptions.Byte:
                     case SortOptions.Short:
                     default:
@@ -365,14 +393,14 @@ namespace Raven.Database.Queries
                 }
             }
 
-	        private bool IsStringNumber(string value)
-	        {
-				if (string.IsNullOrEmpty(value))
-			        return false;
-		        return char.IsDigit(value[0]);
-	        }
+            private bool IsStringNumber(Term term)
+            {
+                if (term == null || string.IsNullOrEmpty(term.Text))
+                    return false;
+                return char.IsDigit(term.Text[0]);
+            }
 
-	        private void CompleteFacetCalculationsStage2()
+            private void CompleteFacetCalculationsStage2()
             {
                 foreach (var facetResult in Results.Results)
                 {
@@ -401,9 +429,9 @@ namespace Raven.Database.Queries
                 }
             }
 
-            private void CompleteFacetCalculationsStage1(IndexSearcherHolder.IndexSearcherHoldingState state, bool allVectoredTerms)
+            private void CompleteFacetCalculationsStage1(IndexSearcherHolder.IndexSearcherHoldingState state)
             {
-                var fieldsToRead = new HashSet<string>(Facets
+                 var fieldsToRead = new HashSet<string>(Facets
                         .Where(x => x.Value.Aggregation != FacetAggregation.None && x.Value.Aggregation != FacetAggregation.Count)
                         .Select(x => x.Value.AggregationField)
                         .Where(x => x != null));
@@ -413,43 +441,30 @@ namespace Raven.Database.Queries
 
                 var allDocs = new HashSet<int>(matches.Values.SelectMany(x => x.Docs));
 
-                if (allVectoredTerms)
+                IndexedTerms.ReadEntriesForFields(state, fieldsToRead, allDocs, GetValueFromIndex, (term, currentVal, docId) =>
                 {
-                    IndexedTerms.ReadEntriesForFieldsFromTermVectors(state, fieldsToRead, allDocs, GetValueFromIndex,
-                        (field, textVal, currentVal, docId) =>
-                            HandleFacetsCalculationStage1(docId, field, textVal, currentVal));
-                }
-                else
-                {
-                    IndexedTerms.ReadEntriesForFields(state, fieldsToRead, allDocs, GetValueFromIndex,
-                        (field, textVal, currentVal, docId) =>
-                            HandleFacetsCalculationStage1(docId, field, textVal, currentVal));
-                }
-            }
-
-            private void HandleFacetsCalculationStage1(int docId, string field, string textVal, double currentVal)
-            {
-                foreach (var match in matches)
-                {
-                    if (match.Value.Docs.Contains(docId) == false)
-                        continue;
-                    var facet = match.Value.Facet;
-                    if (field != facet.AggregationField)
-                        continue;
-                    switch (facet.Mode)
+                    foreach (var match in matches)
                     {
-                        case FacetMode.Default:
-                            ApplyAggregation(facet, match.Key, currentVal);
-                            break;
-                        case FacetMode.Ranges:
-                            if (!match.Value.Range.IsMatch(textVal))
-                                continue;
-                            ApplyAggregation(facet, match.Key, currentVal);
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
+                        if (match.Value.Docs.Contains(docId) == false)
+                            continue;
+                        var facet = match.Value.Facet;
+                        if (term.Field != facet.AggregationField)
+                            continue;
+                        switch (facet.Mode)
+                        {
+                            case FacetMode.Default:
+                                ApplyAggregation(facet, match.Key, currentVal);
+                                break;
+                            case FacetMode.Ranges:
+                                if (!match.Value.Range.IsMatch(term.Text))
+                                    continue;
+                                ApplyAggregation(facet, match.Key, currentVal);
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
                     }
-                }
+                });
             }
 
             private void ApplyAggregation(Facet facet, FacetValue value, double currentVal)
@@ -475,9 +490,9 @@ namespace Raven.Database.Queries
                 }
             }
 
-            private double GetValueFromIndex(string field, string value)
+            private double GetValueFromIndex(Term term)
             {
-                switch (GetSortOptionsForFacet(field))
+                switch (GetSortOptionsForFacet(term.Field))
                 {
                     case SortOptions.String:
                     case SortOptions.StringVal:
@@ -485,15 +500,15 @@ namespace Raven.Database.Queries
                     case SortOptions.Short:
                     case SortOptions.Custom:
                     case SortOptions.None:
-                        throw new InvalidOperationException(string.Format("Cannot perform numeric aggregation on index field '{0}'. You must set the Sort mode of the field to Int, Float, Long or Double.", TryTrimRangeSuffix(field)));
+                        throw new InvalidOperationException(string.Format("Cannot perform numeric aggregation on index field '{0}'. You must set the Sort mode of the field to Int, Float, Long or Double.", TryTrimRangeSuffix(term.Field)));
                     case SortOptions.Int:
-                        return NumericUtils.PrefixCodedToInt(value);
+                        return NumericUtils.PrefixCodedToInt(term.Text);
                     case SortOptions.Float:
-                        return NumericUtils.PrefixCodedToFloat(value);
+                        return NumericUtils.PrefixCodedToFloat(term.Text);
                     case SortOptions.Long:
-                        return NumericUtils.PrefixCodedToLong(value);
+                        return NumericUtils.PrefixCodedToLong(term.Text);
                     case SortOptions.Double:
-                        return NumericUtils.PrefixCodedToDouble(value);
+                        return NumericUtils.PrefixCodedToDouble(term.Text);
                     default:
                         throw new ArgumentOutOfRangeException();
                 }

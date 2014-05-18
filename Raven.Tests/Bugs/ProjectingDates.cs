@@ -8,6 +8,8 @@ using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Database.Indexing;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -39,7 +41,7 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					var registration = session.Advanced.LuceneQuery<Registration>("Regs")
+                    var registration = session.Advanced.DocumentQuery<Registration>("Regs")
 						.SelectFields<Registration>("RegisteredAt")
 						.WaitForNonStaleResults()
 						.First();

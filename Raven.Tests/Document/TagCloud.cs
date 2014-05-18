@@ -7,12 +7,15 @@ using System;
 using System.Collections.Generic;
 using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Dto.TagCloud;
+
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.Document
 {
-	public class TagCloud : RemoteClientTest
+	public class TagCloud : RavenTest
 	{
 		[Fact]
 		public void CanQueryMapReduceIndex()
@@ -50,7 +53,7 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }",
 					});
 					session.SaveChanges();
 
-					var tagAndCounts = session.Advanced.LuceneQuery<TagAndCount>("TagCloud").WaitForNonStaleResults()
+                    var tagAndCounts = session.Advanced.DocumentQuery<TagAndCount>("TagCloud").WaitForNonStaleResults()
 						.ToArray();
 
 					Assert.Equal(1, tagAndCounts.First(x=>x.Tag == "C#").Count);
@@ -138,7 +141,7 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }",
 					});
 					session.SaveChanges();
 
-					var tagAndCounts = session.Advanced.LuceneQuery<TagAndCount>("TagCloud").WaitForNonStaleResults()
+                    var tagAndCounts = session.Advanced.DocumentQuery<TagAndCount>("TagCloud").WaitForNonStaleResults()
 					.ToArray();
 
 					Assert.Equal(1, tagAndCounts.Single(x => x.Tag == "C#").Count);
@@ -158,7 +161,7 @@ select new { Tag = g.Key, Count = g.Sum(x => (long)x.Count) }",
 					});
 					session.SaveChanges();
 
-					tagAndCounts = session.Advanced.LuceneQuery<TagAndCount>("TagCloud").WaitForNonStaleResults()
+                    tagAndCounts = session.Advanced.DocumentQuery<TagAndCount>("TagCloud").WaitForNonStaleResults()
 						.ToArray();
 
 					Assert.Equal(2, tagAndCounts.Single(x => x.Tag == "C#").Count);
@@ -223,7 +226,7 @@ select new
 					});
 					session.SaveChanges();
 
-					var tagAndCounts = session.Advanced.LuceneQuery<ActivityAndCharacterCountAmount>("EventsByActivityAndCharacterCountAmount")
+                    var tagAndCounts = session.Advanced.DocumentQuery<ActivityAndCharacterCountAmount>("EventsByActivityAndCharacterCountAmount")
 						.WaitForNonStaleResults(TimeSpan.FromHours(1))
 						.ToArray();
 
@@ -234,42 +237,6 @@ select new
 			}
 		}
 		
-		public class ActivityAndCharacterCountAmount
-		{
-			public string Activity { get; set; }
-			public string Character { get; set; }
-			public long Amount { get; set; }
-		}
-
-		public class TagAndCount
-		{
-			public string Tag { get; set; }
-			public long Count { get; set; }
-
-			public override string ToString()
-			{
-				return string.Format("Tag: {0}, Count: {1}", Tag, Count);
-			}
-		}
-
-
-		public class Post
-		{
-			public string Id { get; set; }
-			public string Title { get; set; }
-			public DateTime PostedAt { get; set; }
-			public List<string> Tags { get; set; }
-
-			public string Content { get; set; }
-		}
-
-		public class Event
-		{
-			public string Id { get; set; }
-			public string Activity { get; set;}
-			public string Character{ get; set;}
-			public long Amount { get; set; }
-
-		}
+		
 	}
 }

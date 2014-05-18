@@ -7,16 +7,15 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Client.Document;
 using Raven.Client.Embedded;
-using Raven.Database.Config;
 using Raven.Database.Extensions;
-using Raven.Server;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class SerializingEntities
+	public class SerializingEntities : RavenTest
 	{
 		public class Foo : INotifyPropertyChanged
 		{
@@ -72,78 +71,48 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void Daniil_CanSaveProperly()
 		{
-			IOExtensions.DeleteDirectory("Data");
-			try
+			using (var documentStore = NewRemoteDocumentStore())
+			using (var session = documentStore.OpenSession())
 			{
-				using(new RavenDbServer(new RavenConfiguration
+				var product = new Product
 				{
-					DataDirectory = "Data",
-					Port = 8079
-				}))
-				using (var documentStore = new DocumentStore
-				{
-					Url = "http://localhost:8079"
-				}.Initialize())
-				{
-					
-					var session = documentStore.OpenSession();
+					Cost = 3.99m,
+					Name = "Milk",
+				};
+				session.Store(product);
+				session.SaveChanges();
 
-					var product = new Product
+				session.Store(new Order
+				{
+					Customer = "customers/ayende",
+					OrderLines =
 					{
-						Cost = 3.99m,
-						Name = "Milk",
-					};
-					session.Store(product);
-					session.SaveChanges();
+						new OrderLine
+						{
+							ProductId = product.Id,
+							Quantity = 3
+						},
+					}
+				});
+				session.SaveChanges();
 
-					session.Store(new Order
-					{
-						Customer = "customers/ayende",
-						OrderLines =
-								{
-									new OrderLine
-									{
-										ProductId = product.Id,
-										Quantity = 3
-									},
-								}
-					});
-					session.SaveChanges();
-
-				}
-			}
-			finally
-			{
-				IOExtensions.DeleteDirectory("Data");
 			}
 		}
 
 		[Fact]
 		public void WillNotSerializeEvents()
 		{
-			IOExtensions.DeleteDirectory("Data");
-			try
+			using (var documentStore = NewDocumentStore(runInMemory: false, configureStore: store => store.Conventions.CustomizeJsonSerializer = x => x.TypeNameHandling = TypeNameHandling.Auto))
 			{
-				using (var documentStore = new EmbeddableDocumentStore())
+				var bar = new Bar();
+				var foo = new Foo();
+				foo.PropertyChanged += bar.FooChanged;
+
+				using (var session = documentStore.OpenSession())
 				{
-					documentStore.Configuration.DataDirectory = "Data";
-					documentStore.Conventions.CustomizeJsonSerializer = x => x.TypeNameHandling = TypeNameHandling.Auto;
-					documentStore.Initialize();
-
-					var bar = new Bar();
-					var foo = new Foo();
-					foo.PropertyChanged += bar.FooChanged;
-
-					using (var session = documentStore.OpenSession())
-					{
-						session.Store(foo);
-						session.SaveChanges();
-					}
+					session.Store(foo);
+					session.SaveChanges();
 				}
-			}
-			finally
-			{
-				IOExtensions.DeleteDirectory("Data");
 			}
 		}
 	}

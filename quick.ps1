@@ -1,1 +1,1 @@
-.\build.cmd ReleaseNoTests 
+.\build.cmd DoRelease

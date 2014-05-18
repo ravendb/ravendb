@@ -13,7 +13,7 @@ namespace Raven.Tests.Shard.BlogModel
 		{
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
-				var users = session.Advanced.Lazily.Load<User>("users/1", "users/2");
+				var users = session.Advanced.Lazily.Load<User>(new [] { "users/1", "users/2" });
 				Assert.Equal(new User[2], users.Value);
 			}
 		}
@@ -32,7 +32,7 @@ namespace Raven.Tests.Shard.BlogModel
 				.ForEach(server =>
 				         	{
 				         		AssertNumberOfRequests(server.Value, 1);
-				         		Assert.Equal(2, server.Value.Database.Statistics.CountOfDocuments);
+				         		Assert.Equal(2, server.Value.SystemDatabase.Statistics.CountOfDocuments);
 				         	});
 			Servers.Where(server => server.Key != "Users")
 				.ForEach(server => AssertNumberOfRequests(server.Value, 0));
@@ -57,8 +57,8 @@ namespace Raven.Tests.Shard.BlogModel
 		{
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
-				var result1 = session.Advanced.Lazily.Load<User>("users/1", "users/2");
-				var result2 = session.Advanced.Lazily.Load<User>("users/3", "users/4");
+				var result1 = session.Advanced.Lazily.Load<User>(new[] { "users/1", "users/2" });
+				var result2 = session.Advanced.Lazily.Load<User>(new[] { "users/3", "users/4" });
 			}
 			Servers.ForEach(server => AssertNumberOfRequests(server.Value, 0));
 		}
@@ -68,8 +68,8 @@ namespace Raven.Tests.Shard.BlogModel
 		{
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
-				var result1 = session.Advanced.Lazily.Load<User>("users/1", "users/2");
-				var result2 = session.Advanced.Lazily.Load<User>("users/3", "users/4");
+				var result1 = session.Advanced.Lazily.Load<User>(new[] { "users/1", "users/2" });
+				var result2 = session.Advanced.Lazily.Load<User>(new[] { "users/3", "users/4" });
 
 				Assert.Equal(new User[2], result2.Value);
 				AssertNumberOfRequests(Servers["Users"], 1);
@@ -103,8 +103,8 @@ namespace Raven.Tests.Shard.BlogModel
 
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
-				var result1 = session.Advanced.Lazily.Load<User>(ids[0], ids[1]);
-				var result2 = session.Advanced.Lazily.Load<User>(ids[2], ids[3]);
+				var result1 = session.Advanced.Lazily.Load<User>(new[] { ids[0], ids[1] });
+				var result2 = session.Advanced.Lazily.Load<User>(new[] { ids[2], ids[3] });
 
 				var a = result1.Value;
 				Assert.Equal(2, a.Length);

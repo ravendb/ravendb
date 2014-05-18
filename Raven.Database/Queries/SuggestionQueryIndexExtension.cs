@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Documents;
@@ -27,16 +25,16 @@ namespace Raven.Database.Queries
 		public SuggestionQueryIndexExtension(
 			WorkContext workContext,
 			string key,
+			StringDistance distanceType,
 			bool isRunInMemory,
-			StringDistance distance, 
-			string field, 
+			string field,
 			float accuracy)
 		{
 			this.workContext = workContext;
 			this.key = key;
 			this.field = field;
-			
-			if(isRunInMemory)
+
+			if (isRunInMemory)
 			{
 				directory = new RAMDirectory();
 			}
@@ -45,8 +43,9 @@ namespace Raven.Database.Queries
 				directory = FSDirectory.Open(new DirectoryInfo(key));
 			}
 
-			this.spellChecker = new SpellChecker.Net.Search.Spell.SpellChecker(directory, distance);
+			this.spellChecker = new SpellChecker.Net.Search.Spell.SpellChecker(directory, null);
 			this.spellChecker.SetAccuracy(accuracy);
+			this.spellChecker.setStringDistance(distanceType);
 		}
 
 		public void Init(IndexReader reader)
@@ -56,9 +55,18 @@ namespace Raven.Database.Queries
 
 		public SuggestionQueryResult Query(SuggestionQuery suggestionQuery, IndexReader indexReader)
 		{
-			if(suggestionQuery.Term.StartsWith("<<") && suggestionQuery.Term.EndsWith(">>"))
+			if (suggestionQuery.Accuracy.HasValue == false)
+				throw new InvalidOperationException("SuggestionQuery.Accuracy must be specified.");
+
+			if (suggestionQuery.Distance.HasValue == false)
+				throw new InvalidOperationException("SuggestionQuery.Distance must be specified.");
+
+			spellChecker.setStringDistance(SuggestionQueryRunner.GetStringDistance(suggestionQuery.Distance.Value));
+			spellChecker.SetAccuracy(suggestionQuery.Accuracy.Value);
+
+			if (suggestionQuery.Term.StartsWith("<<") && suggestionQuery.Term.EndsWith(">>"))
 			{
-				return QueryOverMultipleWords(suggestionQuery, indexReader, 
+				return QueryOverMultipleWords(suggestionQuery, indexReader,
 					suggestionQuery.Term.Substring(2, suggestionQuery.Term.Length - 4));
 			}
 			if (suggestionQuery.Term.StartsWith("(") && suggestionQuery.Term.EndsWith(")"))
@@ -67,10 +75,10 @@ namespace Raven.Database.Queries
 					suggestionQuery.Term.Substring(1, suggestionQuery.Term.Length - 2));
 			}
 			string[] suggestions = spellChecker.SuggestSimilar(suggestionQuery.Term,
-			                                                   suggestionQuery.MaxSuggestions,
-			                                                   indexReader, 
-			                                                   suggestionQuery.Field,
-			                                                   true);
+															   suggestionQuery.MaxSuggestions,
+															   indexReader,
+															   suggestionQuery.Field,
+															   true);
 
 			return new SuggestionQueryResult
 			{
@@ -79,18 +87,18 @@ namespace Raven.Database.Queries
 		}
 
 		private SuggestionQueryResult QueryOverMultipleWords(SuggestionQuery suggestionQuery, IndexReader indexReader,
-		                                                     string queryText)
+															 string queryText)
 		{
-			var individualTerms = queryText.Split(new[] {' ', '\t', '\r', '\n'}, StringSplitOptions.RemoveEmptyEntries);
+			var individualTerms = queryText.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
 			var result = new List<string>();
 
 			foreach (var term in individualTerms)
 			{
 				result.AddRange(spellChecker.SuggestSimilar(term,
-				                                            suggestionQuery.MaxSuggestions,
-				                                            indexReader,
-				                                            suggestionQuery.Field,
-				                                            suggestionQuery.Popularity));
+															suggestionQuery.MaxSuggestions,
+															indexReader,
+															suggestionQuery.Field,
+															suggestionQuery.Popularity));
 			}
 
 			return new SuggestionQueryResult
@@ -131,7 +139,7 @@ namespace Raven.Database.Queries
 						if (fieldable == null)
 							continue;
 						var str = fieldable.StringValue;
-						if(string.IsNullOrEmpty(str))
+						if (string.IsNullOrEmpty(str))
 							continue;
 						var tokenStream = searchAnalyzer.ReusableTokenStream(field, new StringReader(str));
 						while (tokenStream.IncrementToken())

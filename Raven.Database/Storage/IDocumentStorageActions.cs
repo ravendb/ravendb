@@ -5,15 +5,17 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using Jint.Runtime.References;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Storage
 {
-	public interface IDocumentStorageActions 
+	public interface IDocumentStorageActions
 	{
 		IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take);
-		IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, long? maxSize = null, Etag untilEtag = null);
+		IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null);
 		IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take);
 
 		long GetDocumentsCount();
@@ -25,7 +27,7 @@ namespace Raven.Database.Storage
 		AddDocumentResult AddDocument(string key, Etag etag, RavenJObject data, RavenJObject metadata);
 
 		void IncrementDocumentCount(int value);
-		AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates);
+		AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool overwriteExisting);
 
 		void TouchDocument(string key, out Etag preTouchEtag, out Etag afterTouchEtag);
 		Etag GetBestNextDocumentEtag(Etag etag);

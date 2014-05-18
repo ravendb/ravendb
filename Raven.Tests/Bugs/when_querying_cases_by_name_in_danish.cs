@@ -2,23 +2,21 @@ using System;
 using System.Linq;
 using Raven.Client.Embedded;
 using Raven.Client.Linq;
+using Raven.Tests.Common;
+using Raven.Tests.Common.Util;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class when_querying_cases_by_name_in_danish : IDisposable
+	public class when_querying_cases_by_name_in_danish : RavenTest
 	{
 		private readonly EmbeddableDocumentStore store;
 		private readonly IDisposable cultureReset = new TemporaryCulture("da");
 
 		public when_querying_cases_by_name_in_danish()
 		{
-			store = new EmbeddableDocumentStore
-			{
-				RunInMemory = true
-			};
-			store.Initialize();
-
+			store = NewDocumentStore();
 			using (var session = store.OpenSession())
 			{
 				session.Store(new Case { Name = "bcda" });
@@ -98,17 +96,15 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
-			store.Dispose();
+			base.Dispose();
 			cultureReset.Dispose();
 		}
 
 		public class Case
 		{
 			public string Name { get; set; }
-
 		}
-
 	}
 }

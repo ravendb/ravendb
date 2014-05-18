@@ -45,7 +45,7 @@ namespace Raven.Database.Linq
 
 		    try
 		    {
-		        CSharpSafeName = "Transformer_" + Regex.Replace(Name, @"[^\w\d]", "_");
+                CSharpSafeName = "Transformer_" + Regex.Replace(Name, @"[^\w\d]", "_");  
 		        var type = new TypeDeclaration
 		        {
 		            Modifiers = Modifiers.Public,

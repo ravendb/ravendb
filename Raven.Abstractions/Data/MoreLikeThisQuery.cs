@@ -1,11 +1,6 @@
 ﻿using System;
 using System.Text;
-#if NETFX_CORE || SILVERLIGHT
-using Raven.Client.Silverlight.MissingFromSilverlight;
-#else
 using System.Collections.Specialized;
-
-#endif
 
 namespace Raven.Abstractions.Data
 {

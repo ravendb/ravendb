@@ -62,7 +62,14 @@ namespace Raven.Abstractions.Logging.LogProviders
 #if !SL_4 && !NETFX_CORE
 		private static Assembly GetNLogAssembly()
 		{
-			return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(assembly => assembly.FullName.StartsWith("NLog,"));
+		    try
+		    {
+                return Assembly.Load("NLog");
+		    }
+		    catch (Exception)
+		    {
+		        return null;
+		    }
 		}
 #endif
 

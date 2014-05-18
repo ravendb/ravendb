@@ -31,6 +31,7 @@ namespace Raven.Client.Linq
 					Name = aggregationQuery.Name,
 					DisplayName = aggregationQuery.DisplayName,
 					Aggregation = aggregationQuery.Aggregation,
+					AggregationType = aggregationQuery.AggregationType,
 					AggregationField = aggregationQuery.AggregationField,
 					Ranges = ranges,
 					Mode = mode
@@ -45,6 +46,7 @@ namespace Raven.Client.Linq
 		public string Name { get; set; }
 		public string DisplayName { get; set; }
 		public string AggregationField { get; set; }
+		public string AggregationType { get; set; }
 		public FacetAggregation Aggregation { get; set; }
 
 		public static List<Facet> GetFacets(List<AggregationQuery> aggregationQueries)
@@ -61,6 +63,7 @@ namespace Raven.Client.Linq
 					Name = aggregationQuery.Name,
 					DisplayName = aggregationQuery.DisplayName,
 					Aggregation = aggregationQuery.Aggregation,
+					AggregationType = aggregationQuery.AggregationType ?? aggregationQuery.Aggregation.ToString(),
 					AggregationField = aggregationQuery.AggregationField,
 					Mode = FacetMode.Default
 				});

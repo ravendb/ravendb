@@ -15,11 +15,13 @@ using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Json;
 using Raven.Database.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Indexes
 {
-	public class LinqIndexesFromClient
+	public class LinqIndexesFromClient : NoDisposalNeeded
 	{
 		[Fact]
 		public void Convert_select_many_will_keep_doc_id()

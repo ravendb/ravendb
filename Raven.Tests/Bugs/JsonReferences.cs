@@ -3,30 +3,27 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Client.Embedded;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class JsonReferences
+	public class JsonReferences : RavenTest
 	{
 		[Fact]
 		public void can_index_on_a_reference2()
 		{
-			using (var store = new EmbeddableDocumentStore
+			using (var store = NewDocumentStore())
 			{
-				RunInMemory = true
-			})
-			{
-
-				store.Initialize();
 				using (var session = store.OpenSession())
 				{
-					var category = new Category()
+					var category = new Category
 					{
 						Name = "Parent"
 					};
 
-					category.Add(new Category()
+					category.Add(new Category
 					{
 						Name = "Child"
 					});
@@ -79,5 +76,4 @@ namespace Raven.Tests.Bugs
 			}
 		}
 	}
-
 }

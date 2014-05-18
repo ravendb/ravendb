@@ -3,7 +3,6 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -14,7 +13,7 @@ namespace Raven.Database.Extensions
 {
 	public static class DocDbExtensions
 	{
-		public static void AddAlert(this DocumentDatabase self,Alert alert)
+		public static void AddAlert(this DocumentDatabase self, Alert alert)
 		{
 			while (true)
 			{
@@ -24,7 +23,7 @@ namespace Raven.Database.Extensions
                         continue;
 
                     AlertsDocument alertsDocument;
-                    var alertsDoc = self.Get(Constants.RavenAlerts, null);
+                    var alertsDoc = self.Documents.Get(Constants.RavenAlerts, null);
                     RavenJObject metadata;
                     Etag etag;
                     if (alertsDoc == null)
@@ -49,7 +48,7 @@ namespace Raven.Database.Extensions
                     document.Remove("Id");
                     try
                     {
-                        self.Put(Constants.RavenAlerts, etag, document, metadata, null);
+                        self.Documents.Put(Constants.RavenAlerts, etag, document, metadata, null);
                         return;
                     }
                     catch (ConcurrencyException)

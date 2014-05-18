@@ -1,0 +1,50 @@
+﻿<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">Restore Database</h3>
+    </div>
+    <div class="panel-body">
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                <div class="glyphicon glyphicon-info-sign"></div>
+                Restore a database.
+            </div>
+            <div class="panel-body">
+                <div>
+                    <label>
+                        <span>Backup Location</span>
+                        <input type="text" data-bind="value: backupLocation" placeholder="C:\path-to-your-backup-folder">
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <span>Database Location</span>
+                        <input type="text" data-bind="value: databaseLocation">
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <span>Database Name</span>
+                        <input type="text" data-bind="value: databaseName">
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <span>Defrag</span>
+                        <input type="checkbox" data-bind="value: defrag">
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" data-bind="click: startRestore, disable: isBusy">
+            <span class="glyphicon glyphicon-floppy-save"></span>
+            <span>Restore Database</span>
+        </button>
+        
+        <div class="panel-body">
+            <div data-bind="foreach: restoreStatusMessages">
+                <div data-bind="text: $data"></div>
+            </div>
+        </div>
+    </div>
+</div>

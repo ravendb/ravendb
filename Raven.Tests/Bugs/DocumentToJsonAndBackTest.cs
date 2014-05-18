@@ -11,11 +11,13 @@ using Raven.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class DocumentToJsonAndBackTest
+	public class DocumentToJsonAndBackTest : NoDisposalNeeded
 	{
 		private readonly Page page;
 

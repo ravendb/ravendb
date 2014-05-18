@@ -6,14 +6,14 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
-#if SILVERLIGHT
-using Raven.Client.Silverlight.Connection;
-#elif NETFX_CORE
+using Raven.Client.Listeners;
+#if NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #else
 using System.Collections.Specialized;
@@ -78,7 +78,7 @@ namespace Raven.Client
 		/// Gets the shared operations headers.
 		/// </summary>
 		/// <value>The shared operations headers.</value>
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		NameValueCollection SharedOperationsHeaders { get; }
 #else
 		IDictionary<string,string> SharedOperationsHeaders { get; }
@@ -119,7 +119,7 @@ namespace Raven.Client
 		/// <returns></returns>
 		IAsyncDocumentSession OpenAsyncSession(string database);
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		/// <summary>
 		/// Opens the session.
 		/// </summary>
@@ -147,10 +147,18 @@ namespace Raven.Client
 		/// </summary>
 		void ExecuteIndex(AbstractIndexCreationTask indexCreationTask);
 
+        /// <summary>
+        /// Executes the index creation.
+        /// </summary>
+        /// <param name="indexCreationTask"></param>
+        Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask);
+
 		/// <summary>
 		/// Executes the transformer creation
 		/// </summary>
 		void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask);
+
+        Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask);
 #endif
 
 		/// <summary>
@@ -170,8 +178,12 @@ namespace Raven.Client
 		///</summary>
 		Etag GetLastWrittenEtag();
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !NETFX_CORE
 		BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
 #endif
+
+        DocumentSessionListeners Listeners { get; }
+
+	    void SetListeners(DocumentSessionListeners listeners);
 	}
 }

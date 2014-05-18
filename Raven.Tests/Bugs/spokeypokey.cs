@@ -2,12 +2,14 @@ using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Tests.Common;
+
 using Xunit;
 using System.Collections.Generic;
 
 namespace Raven.Tests.Bugs
 {
-	public class spokeypokey : RemoteClientTest
+	public class spokeypokey : RavenTest
 	{
 		public class Shipment1
 		{
@@ -165,7 +167,7 @@ namespace Raven.Tests.Bugs
 					              	});
 					session.SaveChanges();
 
-					var item = session.Advanced.LuceneQuery<TestResultItem>("TestItemsIndex")
+                    var item = session.Advanced.DocumentQuery<TestResultItem>("TestItemsIndex")
 						.WaitForNonStaleResultsAsOfNow()
 						.ToList().First();
 

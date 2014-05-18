@@ -10,11 +10,13 @@ using Raven.Database.Server;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Security.OAuth
 {
-	public class AccessTokenAuthentication : RemoteClientTest
+	public class AccessTokenAuthentication : RavenTest
 	{
 		const string relativeUrl = "/docs";
 		const string baseUrl = "http://localhost";
@@ -45,7 +47,7 @@ namespace Raven.Tests.Security.OAuth
 			var authorizedDatabases = databases.Split(',').Select(tenantId=> new DatabaseAccess{TenantId = tenantId}).ToList();
 			var body = RavenJObject.FromObject(new AccessTokenBody { UserId = user, AuthorizedDatabases = authorizedDatabases, Issued = issued }).ToString(Formatting.None);
 
-			var signature = valid ? AccessToken.Sign(body, server.Database.Configuration.OAuthTokenKey) : "InvalidSignature";
+			var signature = valid ? AccessToken.Sign(body, server.SystemDatabase.Configuration.OAuthTokenKey) : "InvalidSignature";
 
 			var token = RavenJObject.FromObject(new { Body = body, Signature = signature }).ToString(Formatting.None);
 
@@ -140,8 +142,6 @@ namespace Raven.Tests.Security.OAuth
 
 				using (var response = request.MakeRequest())
 				{
-
-
 					Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 					var challenge = response.Headers["WWW-Authenticate"];
 					Assert.NotEmpty(challenge);

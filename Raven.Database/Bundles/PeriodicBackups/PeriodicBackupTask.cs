@@ -1,19 +1,18 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Globalization;
 using System.IO;
 using System.Threading;
-using Amazon;
-using Amazon.Glacier.Transfer;
-using Amazon.S3.Model;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Auth;
-using Microsoft.WindowsAzure.Storage.Blob;
+using System.Threading.Tasks;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler;
+using Raven.Database.Client.Aws;
+using Raven.Database.Client.Azure;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
@@ -28,7 +27,8 @@ namespace Raven.Database.Bundles.PeriodicBackups
 	public class PeriodicBackupTask : IStartupTask, IDisposable
 	{
 		public DocumentDatabase Database { get; set; }
-		private Timer timer;
+        private Timer incrementalBackupTimer;
+        private Timer fullBackupTimer;
 
 		private readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private volatile Task currentTask;
@@ -42,7 +42,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 		{
 			Database = database;
 
-			Database.OnDocumentChange += (sender, notification, metadata) =>
+            Database.Notifications.OnDocumentChange += (sender, notification, metadata) =>
 			{
 				if (notification.Id == null)
 					return;
@@ -50,8 +50,11 @@ namespace Raven.Database.Bundles.PeriodicBackups
 					PeriodicBackupStatus.RavenDocumentKey.Equals(notification.Id, StringComparison.InvariantCultureIgnoreCase) == false)
 					return;
 
-				if (timer != null)
-					timer.Dispose();
+                if (incrementalBackupTimer != null)
+                    incrementalBackupTimer.Dispose();
+
+                if (fullBackupTimer != null)
+                    fullBackupTimer.Dispose();
 
 				ReadSetupValuesFromDocument();
 			};
@@ -66,7 +69,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 				try
 				{
 					// Not having a setup doc means this DB isn't enabled for periodic backups
-					var document = Database.Get(PeriodicBackupSetup.RavenDocumentKey, null);
+                    var document = Database.Documents.Get(PeriodicBackupSetup.RavenDocumentKey, null);
 					if (document == null)
 					{
 						backupConfigs = null;
@@ -74,27 +77,46 @@ namespace Raven.Database.Bundles.PeriodicBackups
 						return;
 					}
 
-					var status = Database.Get(PeriodicBackupStatus.RavenDocumentKey, null);
+                    var status = Database.Documents.Get(PeriodicBackupStatus.RavenDocumentKey, null);
 
 					backupStatus = status == null ? new PeriodicBackupStatus() : status.DataAsJson.JsonDeserialization<PeriodicBackupStatus>();
 					backupConfigs = document.DataAsJson.JsonDeserialization<PeriodicBackupSetup>();
-					if (backupConfigs.IntervalMilliseconds <= 0)
-					{
-						logger.Warn("Periodic backup interval is set to zero or less, periodic backup is now disabled");
-						return;
-					}
+
 
 					awsAccessKey = Database.Configuration.Settings["Raven/AWSAccessKey"];
 					awsSecretKey = Database.Configuration.Settings["Raven/AWSSecretKey"];
                     azureStorageAccount = Database.Configuration.Settings["Raven/AzureStorageAccount"];
                     azureStorageKey = Database.Configuration.Settings["Raven/AzureStorageKey"];
 
+                    if (backupConfigs.IntervalMilliseconds > 0)
+                    {
 					var interval = TimeSpan.FromMilliseconds(backupConfigs.IntervalMilliseconds);
-					logger.Info("Periodic backups started, will backup every" + interval.TotalMinutes + "minutes");
+                        logger.Info("Incremental periodic backups started, will backup every" + interval.TotalMinutes + "minutes");
 
-					var timeSinceLastBackup = DateTime.UtcNow - backupStatus.LastBackup;
+                        var timeSinceLastBackup = SystemTime.UtcNow - backupStatus.LastBackup;
+                        var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
+                        incrementalBackupTimer = new Timer(state => TimerCallback(false), null, nextBackup, interval);
+                    }
+                    else
+                    {
+                        logger.Warn("Incremental periodic backup interval is set to zero or less, incremental periodic backup is now disabled");
+                    }
+
+                    if (backupConfigs.FullBackupIntervalMilliseconds > 0)
+                    {
+                        var interval = TimeSpan.FromMilliseconds(backupConfigs.FullBackupIntervalMilliseconds);
+                        logger.Info("Full periodic backups started, will backup every" + interval.TotalMinutes + "minutes");
+
+                        var timeSinceLastBackup = SystemTime.UtcNow - backupStatus.LastFullBackup;
 					var nextBackup = timeSinceLastBackup >= interval ? TimeSpan.Zero : interval - timeSinceLastBackup;
-					timer = new Timer(TimerCallback, null, nextBackup, interval);
+                        fullBackupTimer = new Timer(state => TimerCallback(true), null, nextBackup, interval);
+                    }
+                    else
+                    {
+                        logger.Warn("Full periodic backup interval is set to zero or less, full periodic backup is now disabled");
+                    }
+
+
 				}
 				catch (Exception ex)
 				{
@@ -112,11 +134,14 @@ namespace Raven.Database.Bundles.PeriodicBackups
 			}
 		}
 
-		private void TimerCallback(object state)
+
+
+        private void TimerCallback(bool fullBackup)
 		{
 			if (currentTask != null)
 				return;
 
+            // we have shared lock for both incremental and full backup.
 			lock (this)
 			{
 				if (currentTask != null)
@@ -130,76 +155,106 @@ namespace Raven.Database.Bundles.PeriodicBackups
 					{
 						try
 						{
+                            var dataDumper = new DataDumper(documentDatabase);
 							var localBackupConfigs = backupConfigs;
 							var localBackupStatus = backupStatus;
 							if (localBackupConfigs == null)
 								return;
 
-							var databaseStatistics = documentDatabase.Statistics;
+                            if (fullBackup == false)
+                            {
+                                var currentEtags = dataDumper.FetchCurrentMaxEtags();
 							// No-op if nothing has changed
-							if (databaseStatistics.LastDocEtag == localBackupStatus.LastDocsEtag &&
-							    databaseStatistics.LastAttachmentEtag == localBackupStatus.LastAttachmentsEtag)
+                                if (currentEtags.LastDocsEtag == localBackupStatus.LastDocsEtag &&
+                                    currentEtags.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
+                                    currentEtags.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
+                                    currentEtags.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
 							{
 								return;
 							}
+                            }
 
 							var backupPath = localBackupConfigs.LocalFolderName ??
 							                 Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicBackup-Temp");
-							var options = new SmugglerOptions
+                            if (fullBackup)
+                            {
+                                // create filename for full dump
+                                backupPath = Path.Combine(backupPath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-full-dump");
+                                if (File.Exists(backupPath))
 							{
-								BackupPath = backupPath,
-								LastDocsEtag = localBackupStatus.LastDocsEtag,
-								LastAttachmentEtag = localBackupStatus.LastAttachmentsEtag
-							};
-							var dd = new DataDumper(documentDatabase, options);
-						    string filePath;
-						    try
+                                    var counter = 1;
+                                    while (true)
 						    {
-						        filePath = await dd.ExportData(null, null, true, backupStatus);
-						    }
-						    catch (SmugglerExportException e)
-						    {
-						        filePath = e.File;
-                                logger.ErrorException("Recoverable error when performing periodic backup", e);
-                                Database.AddAlert(new Alert
-                                {
-                                    AlertLevel = AlertLevel.Error,
-                                    CreatedAt = SystemTime.UtcNow,
-                                    Message = e.Message,
-                                    Title = "Recoverable Error in Periodic Backup",
-                                    Exception = e.ToString(),
-                                    UniqueKey = "Periodic Backup Error",
-                                });
+                                        backupPath = Path.Combine(Path.GetDirectoryName(backupPath), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-full-dump");
+
+                                        if (File.Exists(backupPath) == false)
+                                            break;
+                                        counter++;
+                                    }
+                                }
 						    }
 
+                            var smugglerOptions = (fullBackup)
+                                                      ? new SmugglerOptions()
+                                                      : new SmugglerOptions
+						    {
+                                                          StartDocsEtag = localBackupStatus.LastDocsEtag,
+                                                          StartAttachmentsEtag = localBackupStatus.LastAttachmentsEtag,
+                                                          StartDocsDeletionEtag = localBackupStatus.LastDocsDeletionEtag,
+                                                          StartAttachmentsDeletionEtag = localBackupStatus.LastAttachmentDeletionEtag,
+                                                          Incremental = true,
+                                                          ExportDeletions = true
+                                                      };
+
+                            var exportResult = await dataDumper.ExportData(new SmugglerExportOptions { ToFile = backupPath }, smugglerOptions);
+
+                            if (fullBackup == false)
+                                {
 						    // No-op if nothing has changed
-							if (options.LastDocsEtag == localBackupStatus.LastDocsEtag &&
-							    options.LastAttachmentEtag == localBackupStatus.LastAttachmentsEtag)
+                                if (exportResult.LastDocsEtag == localBackupStatus.LastDocsEtag &&
+                                    exportResult.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag &&
+                                    exportResult.LastDocDeleteEtag == localBackupStatus.LastDocsDeletionEtag &&
+                                    exportResult.LastAttachmentsDeleteEtag == localBackupStatus.LastAttachmentDeletionEtag)
 							{
-								logger.Info("Periodic backup returned prematurely, nothing has changed since last backup");
+                                    logger.Info(
+                                        "Periodic backup returned prematurely, nothing has changed since last backup");
 								return;
 							}
+                            }
 
 							try
 							{
-								UploadToServer(filePath, localBackupConfigs);
+								if (!localBackupConfigs.Disabled)
+								{
+									UploadToServer(exportResult.FilePath, localBackupConfigs, fullBackup);
+								}
 							}
 							finally
 							{
-                                // we delete file only with some upload option was selected
-                                if (string.IsNullOrEmpty(localBackupConfigs.LocalFolderName))
+                                // if user did not specify local folder we delete temporary file.
+                                if (String.IsNullOrEmpty(localBackupConfigs.LocalFolderName))
                                 {
-                                    File.Delete(filePath);    
+                                    IOExtensions.DeleteFile(exportResult.FilePath);
                                 }
 							}
 
-							localBackupStatus.LastAttachmentsEtag = options.LastAttachmentEtag;
-							localBackupStatus.LastDocsEtag = options.LastDocsEtag;
+                            if (fullBackup)
+                            {
+                                localBackupStatus.LastFullBackup = SystemTime.UtcNow;
+                            }
+                            else
+                            {
+                                localBackupStatus.LastAttachmentsEtag = exportResult.LastAttachmentsEtag;
+                                localBackupStatus.LastDocsEtag = exportResult.LastDocsEtag;
+                                localBackupStatus.LastDocsDeletionEtag = exportResult.LastDocDeleteEtag;
+                                localBackupStatus.LastAttachmentDeletionEtag = exportResult.LastAttachmentsDeleteEtag;
 							localBackupStatus.LastBackup = SystemTime.UtcNow;
+                            }
+                            
 
 							var ravenJObject = JsonExtensions.ToJObject(localBackupStatus);
 							ravenJObject.Remove("Id");
-							var putResult = documentDatabase.Put(PeriodicBackupStatus.RavenDocumentKey, null, ravenJObject,
+                            var putResult = documentDatabase.Documents.Put(PeriodicBackupStatus.RavenDocumentKey, null, ravenJObject,
 								new RavenJObject(), null);
 
 							// this result in backupStatus being refreshed
@@ -229,94 +284,90 @@ namespace Raven.Database.Bundles.PeriodicBackups
 						}
 					}
 				})
-				.ContinueWith(_ =>
+				.Unwrap();
+
+				currentTask.ContinueWith(_ =>
 				{
 					currentTask = null;
 				});
 			}
 		}
 
-	    private void UploadToServer(string backupPath, PeriodicBackupSetup localBackupConfigs)
+        private void UploadToServer(string backupPath, PeriodicBackupSetup localBackupConfigs, bool isFullBackup)
 	    {
-	        if (!string.IsNullOrWhiteSpace(localBackupConfigs.GlacierVaultName))
-	        {
-	            UploadToGlacier(backupPath, localBackupConfigs);
-	        }
-	        else if (!string.IsNullOrWhiteSpace(localBackupConfigs.S3BucketName))
-	        {
-	            UploadToS3(backupPath, localBackupConfigs);
-	        }
-	        else if (!string.IsNullOrWhiteSpace(localBackupConfigs.AzureStorageContainer))
-	        {
-	            UploadToAzure(backupPath, localBackupConfigs);
-	        }
+			if (!string.IsNullOrWhiteSpace(localBackupConfigs.GlacierVaultName))
+			{
+				UploadToGlacier(backupPath, localBackupConfigs, isFullBackup);
+			}
+			else if (!string.IsNullOrWhiteSpace(localBackupConfigs.S3BucketName))
+			{
+				UploadToS3(backupPath, localBackupConfigs, isFullBackup);
+			}
+			else if (!string.IsNullOrWhiteSpace(localBackupConfigs.AzureStorageContainer))
+			{
+				UploadToAzure(backupPath, localBackupConfigs, isFullBackup);
+			}
 	    }
 
-	    private void UploadToS3(string backupPath, PeriodicBackupSetup localBackupConfigs)
+        private void UploadToS3(string backupPath, PeriodicBackupSetup localBackupConfigs, bool isFullBackup)
 		{
-			var awsRegion = RegionEndpoint.GetBySystemName(localBackupConfigs.AwsRegionEndpoint) ?? RegionEndpoint.USEast1;
+	        using (var client = new RavenAwsS3Client(awsAccessKey, awsSecretKey, localBackupConfigs.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
+		    using (var fileStream = File.OpenRead(backupPath))
+		    {
+			    var key = Path.GetFileName(backupPath);
+			    client.PutObject(localBackupConfigs.S3BucketName, key, fileStream, new Dictionary<string, string>
+			                                                                       {
+				                                                                       { "Description", GetArchiveDescription(isFullBackup) }
+			                                                                       }, 60 * 60);
 
-			using (var client = new Amazon.S3.AmazonS3Client(awsAccessKey, awsSecretKey, awsRegion))
+				logger.Info(string.Format("Successfully uploaded backup {0} to S3 bucket {1}, with key {2}",
+											  Path.GetFileName(backupPath), localBackupConfigs.S3BucketName, key));
+		    }
+		}
+
+        private void UploadToGlacier(string backupPath, PeriodicBackupSetup localBackupConfigs, bool isFullBackup)
+		{
+	        using (var client = new RavenAwsGlacierClient(awsAccessKey, awsSecretKey, localBackupConfigs.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
 			using (var fileStream = File.OpenRead(backupPath))
 			{
-				var key = Path.GetFileName(backupPath);
-				var request = new PutObjectRequest();
-				request.WithMetaData("Description", GetArchiveDescription());
-				request.WithInputStream(fileStream);
-				request.WithBucketName(localBackupConfigs.S3BucketName);
-				request.WithKey(key);
-				request.WithTimeout(60*60*1000); // 1 hour
-				request.WithReadWriteTimeout(60*60*1000); // 1 hour
+				var archiveId = client.UploadArchive(localBackupConfigs.GlacierVaultName, fileStream, GetArchiveDescription(isFullBackup), 60 * 60);
+				logger.Info(string.Format("Successfully uploaded backup {0} to Glacier, archive ID: {1}", Path.GetFileName(backupPath), archiveId));
+			}
+		}
 
-				using (client.PutObject(request))
+		private void UploadToAzure(string backupPath, PeriodicBackupSetup localBackupConfigs, bool isFullBackup)
+		{
+			using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey, true))
+			{
+				client.PutContainer(localBackupConfigs.AzureStorageContainer);
+				using (var fileStream = File.OpenRead(backupPath))
 				{
-					logger.Info(string.Format("Successfully uploaded backup {0} to S3 bucket {1}, with key {2}",
-											  Path.GetFileName(backupPath), localBackupConfigs.S3BucketName, key));
+					var key = Path.GetFileName(backupPath);
+					client.PutBlob(localBackupConfigs.AzureStorageContainer, key, fileStream, new Dictionary<string, string>
+																							  {
+																								  { "Description", GetArchiveDescription(isFullBackup) }
+																							  });
+
+					logger.Info(string.Format(
+						"Successfully uploaded backup {0} to Azure container {1}, with key {2}",
+						Path.GetFileName(backupPath),
+						localBackupConfigs.AzureStorageContainer,
+						key));
 				}
 			}
 		}
 
-		private void UploadToGlacier(string backupPath, PeriodicBackupSetup localBackupConfigs)
+        private string GetArchiveDescription(bool isFullBackup)
 		{
-			var awsRegion = RegionEndpoint.GetBySystemName(localBackupConfigs.AwsRegionEndpoint) ?? RegionEndpoint.USEast1;
-			var manager = new ArchiveTransferManager(awsAccessKey, awsSecretKey, awsRegion);
-			var archiveId = manager.Upload(localBackupConfigs.GlacierVaultName, GetArchiveDescription(), backupPath).ArchiveId;
-			logger.Info(string.Format("Successfully uploaded backup {0} to Glacier, archive ID: {1}", Path.GetFileName(backupPath),
-									  archiveId));
-		}
-
-	    private void UploadToAzure(string backupPath, PeriodicBackupSetup localBackupConfigs)
-	    {
-	        StorageCredentials storageCredentials = new StorageCredentials(azureStorageAccount, azureStorageKey);
-	        CloudStorageAccount storageAccount = new CloudStorageAccount(storageCredentials, true);
-	        CloudBlobClient blobClient = new CloudBlobClient(storageAccount.BlobEndpoint, storageCredentials);
-	        CloudBlobContainer backupContainer = blobClient.GetContainerReference(localBackupConfigs.AzureStorageContainer);
-	        backupContainer.CreateIfNotExists();
-	        using (var fileStream = File.OpenRead(backupPath))
-	        {
-	            var key = Path.GetFileName(backupPath);
-	            CloudBlockBlob backupBlob = backupContainer.GetBlockBlobReference(key);
-	            backupBlob.Metadata.Add("Description", this.GetArchiveDescription());
-	            backupBlob.UploadFromStream(fileStream);
-	            backupBlob.SetMetadata();
-
-	            this.logger.Info(string.Format(
-	                "Successfully uploaded backup {0} to Azure container {1}, with key {2}",
-	                Path.GetFileName(backupPath),
-	                localBackupConfigs.AzureStorageContainer,
-	                key));
-	        }
-	    }
-
-	    private string GetArchiveDescription()
-		{
-			return "Periodic backup for db " + (Database.Name ?? Constants.SystemDatabase) + " at " + DateTime.UtcNow;
+            return (isFullBackup ? "Full" : "Incremental") + "periodic backup for db " + (Database.Name ?? Constants.SystemDatabase) + " at " + SystemTime.UtcNow;
 		}
 
 		public void Dispose()
 		{
-			if (timer != null)
-				timer.Dispose();
+            if (incrementalBackupTimer != null)
+                incrementalBackupTimer.Dispose();
+            if (fullBackupTimer != null)
+                fullBackupTimer.Dispose();
 			var task = currentTask;
 			if (task != null)
 				task.Wait();

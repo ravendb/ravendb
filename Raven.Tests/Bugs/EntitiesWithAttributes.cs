@@ -4,6 +4,8 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Json.Linq;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -42,7 +44,7 @@ namespace Raven.Tests.Bugs
 				using (var session = store.OpenSession())
 				{
 					// items1 will contain one result
-					var items1 = session.Advanced.LuceneQuery<Item>()
+                    var items1 = session.Advanced.DocumentQuery<Item>()
 						.WaitForNonStaleResults()
 						.ToArray();
 					Assert.Equal(1, items1.Length);
@@ -54,7 +56,7 @@ namespace Raven.Tests.Bugs
 					Assert.Equal(1, items2.Length);
 
 					// items3 should be same as items1, but there are no results in items3
-					var items3 = session.Advanced.LuceneQuery<Item>()
+                    var items3 = session.Advanced.DocumentQuery<Item>()
 						.WaitForNonStaleResults()
 						.ToArray();
 					Assert.Equal(1, items3.Length);

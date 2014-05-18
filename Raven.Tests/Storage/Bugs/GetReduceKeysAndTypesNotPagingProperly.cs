@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Tests.Common;
+
 namespace Raven.Tests.Storage.Bugs
 {
 	using System.Linq;
@@ -18,21 +20,21 @@ namespace Raven.Tests.Storage.Bugs
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: "esent"))
 			{
-				storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType("view1", "reduceKey1", ReduceType.SingleStep));
-				storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType("view1", "reduceKey2", ReduceType.SingleStep));
-				storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType("view1", "reduceKey3", ReduceType.SingleStep));
+				storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(1, "reduceKey1", ReduceType.SingleStep));
+				storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(1, "reduceKey2", ReduceType.SingleStep));
+				storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(1, "reduceKey3", ReduceType.SingleStep));
 
 				storage.Batch(accessor =>
 				{
-					var reduceKeyAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view1", 0, 1).ToList();
+					var reduceKeyAndTypes = accessor.MapReduce.GetReduceKeysAndTypes(1, 0, 1).ToList();
 					Assert.Equal(1, reduceKeyAndTypes.Count);
 					var k1 = reduceKeyAndTypes[0];
 
-					reduceKeyAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view1", 1, 1).ToList();
+					reduceKeyAndTypes = accessor.MapReduce.GetReduceKeysAndTypes(1, 1, 1).ToList();
 					Assert.Equal(1, reduceKeyAndTypes.Count);
 					var k2 = reduceKeyAndTypes[0];
 
-					reduceKeyAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view1", 2, 1).ToList();
+					reduceKeyAndTypes = accessor.MapReduce.GetReduceKeysAndTypes(1, 2, 1).ToList();
 					Assert.Equal(1, reduceKeyAndTypes.Count);
 					var k3 = reduceKeyAndTypes[0];
 

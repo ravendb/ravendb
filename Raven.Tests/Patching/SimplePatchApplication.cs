@@ -8,11 +8,13 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Json.Linq;
 using Raven.Database.Json;
+using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Patching
 {
-	public class SimplePatchApplication
+	public class SimplePatchApplication : NoDisposalNeeded
 	{
 		private readonly RavenJObject doc = 
 			RavenJObject.Parse(@"{ title: ""A Blog Post"", body: ""html markup"", comments: [ {author: ""ayende"", text:""good post""}] }");
@@ -250,22 +252,6 @@ namespace Raven.Tests.Patching
 
 			Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}],""blog_id"":1}",
 				patchedDoc.ToString(Formatting.None));
-		}
-
-		[Fact]
-		public void PropertyAddition_WithConcurrently_NullValueOnMissingPropShouldThrow()
-		{
-			Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(
-			   new[]
-				{
-					new PatchRequest
-					{
-						Type = PatchCommandType.Set,
-						Name = "blog_id",
-						Value = new RavenJValue(1),
-						PrevVal = new RavenJValue((object)null)
-					},
-				}));
 		}
 
 		[Fact]

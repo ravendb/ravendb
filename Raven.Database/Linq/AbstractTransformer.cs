@@ -14,6 +14,7 @@ namespace Raven.Database.Linq
 		public IndexingFunc TransformResultsDefinition { get; set; }
 		public string SourceCode { get; set; }
 
+    public string Name { get { return transformerDefinition.Name; } }
 		public string ViewText { get; set; }
 
 		// ReSharper disable once InconsistentNaming
@@ -44,6 +45,18 @@ namespace Raven.Database.Linq
 	        return value;
 
 	    }
+
+        protected RavenJToken QueryOrDefault(string key, object val)
+        {
+            if (CurrentTransformationScope.Current == null)
+                throw new InvalidOperationException("Query was accessed without CurrentTransformationScope.Current being set");
+
+            RavenJToken value;
+            if (CurrentTransformationScope.Current.QueryInputs.TryGetValue(key, out value) == false)
+                return RavenJToken.FromObject(val);
+            return value;
+
+        }
 
 	    public object Include(object key)
 		{

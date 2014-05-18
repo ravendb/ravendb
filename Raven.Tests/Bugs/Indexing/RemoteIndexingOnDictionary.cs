@@ -2,12 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+
+using Raven.Tests.Common;
+
 using Xunit;
 using Raven.Client.Document;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class RemoteIndexingOnDictionary : RemoteClientTest
+	public class RemoteIndexingOnDictionary : RavenTest
 	{
 
 		[Fact]
@@ -30,7 +33,7 @@ namespace Raven.Tests.Bugs.Indexing
 
 				using (var s = store.OpenSession())
 				{
-					Assert.DoesNotThrow(() => s.Advanced.LuceneQuery<UserWithIDictionary>()
+                    Assert.DoesNotThrow(() => s.Advanced.DocumentQuery<UserWithIDictionary>()
 					                          	.WhereEquals("NestedItems,Key", "Color")
 					                          	.AndAlso()
 					                          	.WhereGreaterThan("NestedItems,Value.Value", 10)
