@@ -13,10 +13,10 @@ namespace Raven.Smuggler.Client
 {
 	public class ChunkedBulkInsertOperation : BulkInsertOperation
 	{
-		public ChunkedBulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners, BulkInsertOptions options, IDatabaseChanges changes, int chunkSize)
+		public ChunkedBulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners, BulkInsertOptions options, IDatabaseChanges changes, int chunkSize, long? documentSizeInChunkLimit = null)
 			: base(database, documentStore, listeners, options, changes)
 		{
-			Operation = new ChunkedRemoteBulkInsertOperation(options, (AsyncServerClient)DatabaseCommands, changes, chunkSize);
+			Operation = new ChunkedRemoteBulkInsertOperation(options, (AsyncServerClient)DatabaseCommands, changes, chunkSize, documentSizeInChunkLimit);
 		}
 
 		protected override ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes)
