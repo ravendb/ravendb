@@ -10,12 +10,17 @@ import getConfigurationCommand = require("commands/filesystem/getConfigurationCo
 import saveConfigurationCommand = require("commands/filesystem/saveConfigurationCommand");
 import configurationKey = require("models/filesystem/configurationKey");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
+import createConfigurationKey = require("viewmodels/filesystem/createConfigurationKey");
+import deleteConfigurationKeys = require("viewmodels/filesystem/deleteConfigurationKeys");
+import alertArgs = require("common/alertArgs");
+import alertType = require("common/alertType");
 
 class configuration extends viewModelBase {
 
     private router = router;
 
     keys = ko.observableArray<configurationKey>();
+    text: KnockoutComputed<string>;
     selectedKey = ko.observable<configurationKey>().subscribeTo("ActivateConfigurationKey").distinctUntilChanged();
     selectedKeyValue = ko.observable<Pair<string, string>>();
     currentKey = ko.observable<configurationKey>();
@@ -23,6 +28,7 @@ class configuration extends viewModelBase {
     configurationKeyText = ko.observable<string>();
     isBusy = ko.observable(false);
     isSaveEnabled: KnockoutComputed<boolean>;
+    loadedConfiguration = ko.observable('');
     subscription: any;
 
     constructor() {
@@ -31,7 +37,17 @@ class configuration extends viewModelBase {
         this.selectedKey.subscribe(k => this.selectedKeyChanged(k));
 
         // When we programmatically change a configuration doc, push it into the editor.
-        this.subscription = this.configurationKeyText.subscribe(() => this.updateConfigurationText());
+        //this.subscription = this.configurationKeyText.subscribe(() => this.updateConfigurationText());
+
+        this.text = ko.computed({
+            read: () => {
+                return this.configurationKeyText();
+            },
+            write: (text: string) => {
+                this.configurationKeyText(text);
+            },
+            owner: this
+        });
     }
 
     canActivate(args: any) {
@@ -40,6 +56,7 @@ class configuration extends viewModelBase {
 
     activate(navigationArgs) {
         super.activate(navigationArgs);
+        //this.loadedConfiguration(this.selectedKey().key);
 
         viewModelBase.dirtyFlag = new ko.DirtyFlag([this.configurationKeyText]);
 
@@ -68,19 +85,19 @@ class configuration extends viewModelBase {
         this.configurationEditor.setTheme("ace/theme/github");
         this.configurationEditor.setFontSize("16px");
         this.configurationEditor.getSession().setMode("ace/mode/json");
-        $("#configurationEditor").on('keyup', ".ace_text-input", () => this.storeEditorTextIntoObservable());
-        this.updateConfigurationText();
+        //$("#configurationEditor").on('keyup', ".ace_text-input", () => this.storeEditorTextIntoObservable());
+        //this.updateConfigurationText();
     }
 
-    storeEditorTextIntoObservable() {
-        if (this.configurationEditor) {
-            var text = this.configurationEditor.getSession().getValue();
+    //storeEditorTextIntoObservable() {
+    //    if (this.configurationEditor) {
+    //        var text = this.configurationEditor.getSession().getValue();
 
-            this.subscription.dispose();
-            this.configurationKeyText(text);
-            this.subscription = this.configurationKeyText.subscribe(() => this.updateConfigurationText());
-        }
-    }
+    //        this.subscription.dispose();
+    //        this.configurationKeyText(text);
+    //        this.subscription = this.configurationKeyText.subscribe(() => this.updateConfigurationText());
+    //    }
+    //}
 
     updateConfigurationText() {
         if (this.configurationEditor) {
@@ -109,7 +126,9 @@ class configuration extends viewModelBase {
             this.isBusy(true);
             selected.getValues().done(data => {
                 this.configurationKeyText(data);
+                //this.loadedConfiguration(this.selectedKey().key);
             }).always(() => {
+                viewModelBase.dirtyFlag().reset();
                 this.isBusy(false);
             });
 
@@ -132,11 +151,46 @@ class configuration extends viewModelBase {
     }
 
     refreshConfig() {
-        //this.selectKey(this.currentKey());
+        this.selectKey(this.currentKey());
     }
 
-    deleteKey() {
-        throw new Error("Not Implemented");
+    deleteConfiguration() {
+        require(["viewmodels/filesystem/deleteConfigurationKeys"], deleteConfigurationKey => {
+            var deleteConfigurationKeyViewModel: deleteConfigurationKeys = new deleteConfigurationKeys(this.activeFilesystem(), [this.currentKey()]);
+            deleteConfigurationKeyViewModel
+                .deletionTask
+                .done(() => {
+                    var currentIndex = this.keys.indexOf(this.currentKey());
+                    var newIndex = currentIndex;
+                    if (currentIndex + 1 == this.keys().length) {
+                        newIndex = currentIndex - 1;
+                    }
+
+                    this.keys.remove(this.currentKey());
+                    this.selectKey(this.keys[newIndex]);
+                });
+            app.showDialog(deleteConfigurationKeyViewModel);
+        });
+    }
+
+    newConfigurationKey() {
+        require(["viewmodels/filesystem/createConfigurationKey"], createFilesystem => {
+            var createConfigurationKeyViewModel: createConfigurationKey = new createConfigurationKey(this.keys());
+            createConfigurationKeyViewModel
+                .creationTask
+                .done((key: string) => {
+                    var newKey = new configurationKey(this.activeFilesystem(), key);
+                    new saveConfigurationCommand(this.activeFilesystem(), newKey, JSON.parse("{}")).execute()
+                        .done(() => {
+                            this.keys.push(newKey);
+                            this.selectKey(newKey);
+                        })
+                        .fail((qXHR, textStatus, errorThrown) => {
+                            ko.postbox.publish("Alert", new alertArgs(alertType.danger, "Could not create Configuration Key.", errorThrown));
+                        });
+                });
+            app.showDialog(createConfigurationKeyViewModel);
+        });
     }
 } 
 

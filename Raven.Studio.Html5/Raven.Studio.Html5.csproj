@@ -126,6 +126,7 @@
     <TypeScriptCompile Include="App\models\filesystem\synchronizationDestination.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationDetail.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationDetails.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\synchronizationReplicationSetup.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationReport.ts" />
     <TypeScriptCompile Include="App\models\index.ts" />
     <TypeScriptCompile Include="App\models\indexDefinition.ts" />
@@ -143,7 +144,9 @@
     <TypeScriptCompile Include="App\viewmodels\counters.ts" />
     <TypeScriptCompile Include="App\viewmodels\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteItems.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\createConfigurationKey.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\createFilesystem.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\deleteConfigurationKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemEditFile.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemAddDestination.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\configuration.ts" />
@@ -154,11 +157,14 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchHasMetadataClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemStatistics.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\status.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronization.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\filesystemUploadFile.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchFileSizeRangeClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchLastModifiedBetweenClause.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\searchSingleInputClause.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationConflicts.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\synchronizationDestinations.ts" />
     <TypeScriptCompile Include="App\viewmodels\licensingStatus.ts" />
     <TypeScriptCompile Include="App\viewmodels\queryStatsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\resetIndexConfirm.ts" />
@@ -275,7 +281,12 @@
     <TypeScriptCompile Include="App\viewmodels\statusDebugIdentities.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
+    <Content Include="App\views\filesystem\status.html" />
+    <Content Include="App\views\filesystem\synchronizationConflicts.html" />
+    <Content Include="App\views\filesystem\synchronizationDestinations.html" />
     <Content Include="App\views\statusDebugIdentities.html" />
+    <Content Include="App\views\filesystem\createConfigurationKey.html" />
+    <Content Include="App\views\filesystem\deleteConfigurationKeys.html" />
     <Content Include="App\views\statusDebugSlowDocCounts.html" />
     <Content Include="App\views\statusDebugIndexFields.html" />
     <Content Include="App\views\statusDebugSqlReplication.html" />

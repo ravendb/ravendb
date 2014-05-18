@@ -185,13 +185,14 @@ namespace Raven.Database.Server.Controllers
 				using (accessor)
 				using (var writer = GetOutputWriter(req, stream))
 				{
-					writer.WriteHeader();
+                    outputContentTypeSetter(writer.ContentType);
+
+                    writer.WriteHeader();
 					queryOp.Execute(o =>
 					{
 					    _timeout.Delay();
 					    writer.Write(o);
 					});
-					outputContentTypeSetter(writer.ContentType);
 				}
 
 				return Task.FromResult(true);

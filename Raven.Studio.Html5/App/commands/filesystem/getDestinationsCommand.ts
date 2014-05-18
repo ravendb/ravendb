@@ -2,45 +2,29 @@
 import filesystem = require("models/filesystem/filesystem");
 import synchronizationDestination = require("models/filesystem/synchronizationDestination");
 import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
+import document = require("models/document");
 
-class getFilesystemDestinationsCommand extends commandBase {
+class getDestinationsCommand extends commandBase {
 
-    constructor(private fs: filesystem) {
+    shouldResolveNotFoundAsNull: boolean;
+
+    constructor(private fs: filesystem, shouldResolveNotFoundAsNull?: boolean) {
         super();
+        if (!fs) {
+            throw new Error("Must specify filesystem");
+        }
+        this.shouldResolveNotFoundAsNull = shouldResolveNotFoundAsNull || false;
     }
 
-    execute(): JQueryPromise<synchronizationDestinationDto[]> {
-
+    execute(): JQueryPromise<any> {
+        
         var url = "/config";
         var args = {
-            name: "Raven/Synchronization/Destinations",
+            name: "Raven/Synchronization/Destinations"
         };
 
-        var task = $.Deferred();
-        this.query<any>(url, args, this.fs)
-            .done(data => {
-                if (data.hasOwnProperty('Destinations')) {
-
-                    var value = data['Destinations'];
-                    if (!(value instanceof Array))
-                        value = [value];
-
-                    var result = value.map(x => <synchronizationDestinationDto> x);
-                    task.resolve(result);
-                }
-                else {
-                    task.resolve([]);
-                }
-            })
-            .fail((qXHR, textStatus, errorThrown) => {
-                if (qXHR.status != "404") {
-                    this.reportError("Could not get synchronization destinations.", errorThrown, textStatus);
-                }
-                task.resolve([]);
-            });
-
-        return task;
+        return this.query<any>(url, args, this.fs);
     }
 }
 
-export = getFilesystemDestinationsCommand;
+export = getDestinationsCommand;

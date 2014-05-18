@@ -22,6 +22,7 @@ namespace Raven.Database.Embedded
         private SemaphoreSlim _readLock;
         private SemaphoreSlim _writeLock;
         private TaskCompletionSource<object> _readWaitingForData;
+        private object _signalReadLock;
 
         private Action _onFirstWrite;
         private bool _firstWrite;
@@ -39,6 +40,7 @@ namespace Raven.Database.Embedded
             _writeLock = new SemaphoreSlim(1, 1);
             _bufferedData = new ConcurrentQueue<byte[]>();
             _readWaitingForData = new TaskCompletionSource<object>();
+            _signalReadLock = new object();
         }
 
         public override bool CanRead
@@ -312,15 +314,19 @@ namespace Raven.Database.Embedded
 
         private Task WaitForDataAsync()
         {
-            _readWaitingForData = new TaskCompletionSource<object>();
-
-            if (!_bufferedData.IsEmpty || _disposed)
+            // Prevent race with Dispose
+            lock (_signalReadLock)
             {
-                // Race, data could have arrived before we created the TCS.
-                _readWaitingForData.TrySetResult(null);
-            }
+                _readWaitingForData = new TaskCompletionSource<object>();
 
-            return _readWaitingForData.Task;
+                if (!_bufferedData.IsEmpty || _disposed)
+                {
+                    // Race, data could have arrived before we created the TCS.
+                    _readWaitingForData.TrySetResult(null);
+                }
+
+                return _readWaitingForData.Task;
+            }
         }
 
         internal void Abort()
@@ -350,9 +356,13 @@ namespace Raven.Database.Embedded
         {
             if (disposing)
             {
-                // Throw for further writes, but not reads.  Allow reads to drain the buffered data and then return 0 for further reads.
-                _disposed = true;
-                _readWaitingForData.TrySetResult(null);
+                // Prevent race with WaitForDataAsync
+                lock (_signalReadLock)
+                {
+                    // Throw for further writes, but not reads.  Allow reads to drain the buffered data and then return 0 for further reads.
+                    _disposed = true;
+                    _readWaitingForData.TrySetResult(null);
+                }
             }
 
             base.Dispose(disposing);

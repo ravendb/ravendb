@@ -111,12 +111,16 @@ interface filesystemListPageDto<T> {
     Items: T[];
 }
 
+interface synchronizationReplicationsDto {
+    Destinations: synchronizationDestinationDto[];
+    Source: string;
+}
+
 interface synchronizationDestinationDto {
     ServerUrl: string;
-    FileSystem: string;
-    FileSystemUrl: string;
     Username: string;
     Password: string;
     Domain: string;
     ApiKey: string;
+    FileSystem: string;
 }
