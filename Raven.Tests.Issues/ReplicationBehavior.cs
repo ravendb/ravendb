@@ -21,7 +21,6 @@ namespace Raven.Tests.Issues
     public class ReplicationBehavior : ReplicationBase
     {
         private const int MaxNumber = 2048;
-        private const int Quantity = 24;
 
         [Fact]
         public void WillAutomaticallyFailOverToSecondayServerAndThenRealizeTheServerIsUp()
@@ -65,109 +64,10 @@ namespace Raven.Tests.Issues
             Assert.False(mres.Wait(5000));
         }
 
-        [Fact]
-        public void BackoffStrategy()
-        {
-            var replicationInformer = new ReplicationInformer(new DocumentConvention(), new HttpJsonRequestFactory(MaxNumber))
-            {
-                ReplicationDestinations =
-					{
-						new OperationMetadata("http://localhost:2")
-					}
-            };
-
-            var urlsTried = new List<Tuple<int, string>>();
-            for (int i = 0; i < Quantity; i++)
-            {
-                var req = i + 1;
-                replicationInformer.ExecuteWithReplicationAsync("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), req, 1, async url =>
-                {
-                    urlsTried.Add(Tuple.Create(req, url.Url));
-                    if (url.Url.EndsWith("1"))
-                        throw new WebException("bad", WebExceptionStatus.ConnectFailure);
-
-                    return 1;
-                }).Wait();
-            }
-            var expectedUrls = GetExpectedUrlForFailure().Take(urlsTried.Count).ToList();
-
-
-            Assert.Equal(expectedUrls, urlsTried);
-        }
+      
      
 
-        [Fact]
-        public void BackoffStrategyWithStopStartServer()
-        {
-            var replicationInformer = new ReplicationInformer(new DocumentConvention(), new HttpJsonRequestFactory(MaxNumber))
-            {
-                ReplicationDestinations =
-					{
-						new OperationMetadata("http://localhost:2")
-					}
-            };
-            int stopReq = Quantity / 2;
-            int startReq = stopReq + Quantity / 4;
-            var server1 = GetNewServer(8080);
-            server1.Url = "http://localhost:1";
-            var server2 = GetNewServer();
-            server2.Url = "http://localhost:2";
-
-            var urlsTried = new List<Tuple<int, string>>();
-            for (int i = 0; i < Quantity; i++)
-            {
-                var req = i + 1;
-                if (req == stopReq)
-                {
-                    StopDatabase(0);
-                }
-                if (req == startReq)
-                {
-                    StartDatabase(0);
-                    server1 = servers[0];
-                }
-                replicationInformer.ExecuteWithReplicationAsync("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), req, 1, async url =>
-                {
-                    urlsTried.Add(Tuple.Create(req, url.Url));
-                    if (url.Url == server1.Url && server1.DocumentStore.WasDisposed)
-                        throw new WebException("Timeout! ", WebExceptionStatus.Timeout);
-                    return 1;
-                }).Wait();
-            }
-            var expectedUrls = GetExpectedUrlForStopStartFailure(stopReq, startReq).Take(urlsTried.Count).ToList();
-
-            server1.Dispose();
-            server2.Dispose();
-            Assert.Equal(expectedUrls, urlsTried);
-        }
-        private IEnumerable<Tuple<int, string>> GetExpectedUrlForStopStartFailure(int stopReq, int startReq)
-        {
-            int reqCount = 1;
-            for (int i = 1; i <= Quantity; i++)
-            {
-
-                if (i < stopReq)
-                {
-                    yield return Tuple.Create(reqCount, "http://localhost:1");
-                    reqCount++;
-                }
-                if (i >= stopReq && i < startReq)
-                {
-                    yield return Tuple.Create(reqCount, "http://localhost:1");
-                    yield return Tuple.Create(reqCount, "http://localhost:2");
-                    reqCount++;
-
-                }
-                if (i >= startReq)
-                {
-                    yield return Tuple.Create(reqCount, "http://localhost:1");
-                    reqCount++;
-                }
-
-
-            }
-
-        }
+       
         [Fact]
         public void ReadStriping()
         {
@@ -220,25 +120,5 @@ namespace Raven.Tests.Issues
             }
         }
 
-        private IEnumerable<Tuple<int, string>> GetExpectedUrlForFailure()
-        {
-            int reqCount = 1;
-            var failCount = 0;
-            // first time, we check it twice
-            yield return Tuple.Create(reqCount, "http://localhost:1");
-            yield return Tuple.Create(reqCount, "http://localhost:1");
-            failCount++;
-            yield return Tuple.Create(reqCount, "http://localhost:2");
-
-            while (failCount < Quantity)
-            {
-                reqCount++;
-                yield return Tuple.Create(reqCount, "http://localhost:1");
-                failCount++;
-                yield return Tuple.Create(reqCount, "http://localhost:2");
-
-            }
-
-        }
     }
 }
