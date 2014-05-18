@@ -137,13 +137,22 @@ namespace Owin
 
 			public bool UseBufferedOutputStream(HttpResponseMessage response)
 			{
-				return (response.Content is ChangesPushContent ||
-						response.Content is StreamsController.StreamQueryContent ||
-						response.Content is StreamContent ||
-						response.Content is PushStreamContent ||
-						response.Content is JsonContent ||
-						response.Content is MultiGetController.MultiGetContent) == false;
+                var content = response.Content;
+			    var compressedContent = content as GZipToJsonAndCompressHandler.CompressedContent;
+			    if (compressedContent != null)
+                    return ShouldBuffer(compressedContent.OriginalContent);
+			    return ShouldBuffer(content);
 			}
+
+		    private bool ShouldBuffer(HttpContent content)
+		    {
+		        return (content is ChangesPushContent ||
+		                content is StreamsController.StreamQueryContent ||
+		                content is StreamContent ||
+		                content is PushStreamContent ||
+		                content is JsonContent ||
+		                content is MultiGetController.MultiGetContent) == false;
+		    }
 		}
 
 		private class InterceptMiddleware : OwinMiddleware

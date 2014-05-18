@@ -4,13 +4,16 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Security.Policy;
 using System.Text;
-using Amazon.EC2.Model;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
 using Voron;
-using Voron.Debugging;
 using Voron.Impl;
 using Voron.Trees;
 using Voron.Util;
@@ -61,7 +64,7 @@ namespace Raven.Database.Counters
 				var servers = storageEnvironment.CreateTree(tx, "servers");
 				var etags = storageEnvironment.CreateTree(tx, "etags->counters");
 				storageEnvironment.CreateTree(tx, "counters->etags");
-                storageEnvironment.CreateTree(tx, "servers->connectionStringOptions");
+                storageEnvironment.CreateTree(tx, "serversConnectionStringOptions");
 				var metadata = tx.State.GetTree(tx, "$metadata");
 				var id = metadata.Read(tx, "id");
 				if (id == null) // new db
@@ -202,7 +205,7 @@ namespace Raven.Database.Counters
                 countersGroups = transaction.State.GetTree(transaction, "countersGroups");
                 countersEtags = transaction.State.GetTree(transaction, "counters->etags");
                 etagsCounters = transaction.State.GetTree(transaction, "etags->counters");
-                serversConnectionStringOptions = transaction.State.GetTree(transaction, "servers->connectionStringOptions");
+                serversConnectionStringOptions = transaction.State.GetTree(transaction, "serversConnectionStringOptions");
             }
 
 			public IEnumerable<string> GetCounterNames(string prefix)
@@ -329,11 +332,22 @@ namespace Raven.Database.Counters
                 }
 		    }
 
-			public long GetLastEtagFor(string server)
+			private int GetServerId(string server)
 			{
 				int serverId;
-				long serverEtag = 0;
 				if (!parent.serverNamesToIds.TryGetValue(server, out serverId))
+				{
+					return -1;
+				}
+				return serverId;
+
+			}
+
+			public long GetLastEtagFor(string server)
+			{
+				long serverEtag = 0;
+				int serverId = GetServerId(server);
+				if (serverId == -1)
 				{
 					return serverEtag;
 				}
@@ -347,7 +361,31 @@ namespace Raven.Database.Counters
 				}
 
 				return serverEtag;
-			}	
+			}
+
+			public RavenConnectionStringOptions GetConnectionString(string server)
+			{
+				RavenConnectionStringOptions connectionStringOptions;
+				int serverId = GetServerId(server);
+
+				if (serverId == -1)
+				{
+					connectionStringOptions = new RavenConnectionStringOptions();
+				}
+				else
+				{
+					var key = EndianBitConverter.Big.GetBytes(serverId);
+					var slice = new Slice(key);
+					var result = serversConnectionStringOptions.Read(transaction, slice);
+					if (result != null && result.Version != 0)
+					{
+						connectionStringOptions = result.Reader.ReadBytes();
+					}
+				}
+				
+				
+				return new RavenConnectionStringOptions();
+			}
 
             public void Dispose()
 			{
@@ -375,7 +413,7 @@ namespace Raven.Database.Counters
 				countersGroups = transaction.State.GetTree(transaction, "countersGroups");
 				etagsCountersIx = transaction.State.GetTree(transaction, "etags->counters");
 				countersEtagIx = transaction.State.GetTree(transaction, "counters->etags");
-                serversConnectionStringOptions = transaction.State.GetTree(transaction, "servers->connectionStringOptions");
+                serversConnectionStringOptions = transaction.State.GetTree(transaction, "serversConnectionStringOptions");
 
 				storeBuffer = new byte[sizeof(long) + //positive
 									   sizeof(long)]; // negative
@@ -512,7 +550,27 @@ namespace Raven.Database.Counters
 				var key = EndianBitConverter.Big.GetBytes(serverId);
 				var serversLastEtag = transaction.State.GetTree(transaction, "serversLastEtag");
 				serversLastEtag.Add(transaction, new Slice(key), EndianBitConverter.Big.GetBytes(lastEtag));
-			}		    
+			}
+
+			public void CreateReplicationOptions(string url, string apiKey)
+			{
+				NetworkCredential networkCredentials = new NetworkCredential();
+
+				var connectionStringOptions = new RavenConnectionStringOptions
+				{
+					Url = url,
+					ApiKey = apiKey,
+				};
+
+				var key = Encoding.UTF8.GetBytes(url);
+
+				using (Stream stream = new MemoryStream())
+				{
+					IFormatter formatter = new BinaryFormatter();
+					formatter.Serialize(stream, connectionStringOptions);
+					serversConnectionStringOptions.Add(transaction, new Slice(key), stream);
+				}
+			}
 		}
 
 		public string ServerNameFor(int sourceId)

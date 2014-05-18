@@ -1,7 +1,7 @@
 ﻿import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
 
-class deleteFilesystemConfigurationKeyCommand extends commandBase {
+class deleteConfigurationKeyCommand extends commandBase {
 
     constructor(private fs: filesystem, private name: string) {
         super();
@@ -9,13 +9,9 @@ class deleteFilesystemConfigurationKeyCommand extends commandBase {
 
     execute(): JQueryPromise<any> {
 
-        var url = "/config";
-        var args = {
-            name: this.name
-        };
-
-        return this.del(url, args, this.fs);
+        var url = "/config?name="+this.name;
+        return this.del(url, null, this.fs);
     }
 }
 
-export = deleteFilesystemConfigurationKeyCommand; 
+export = deleteConfigurationKeyCommand; 

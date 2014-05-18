@@ -64,10 +64,10 @@ class appUrl {
         filesystemFiles: ko.computed(() => appUrl.forFilesystemFiles(appUrl.currentFilesystem())),
         filesystemSearch: ko.computed(() => appUrl.forFilesystemSearch(appUrl.currentFilesystem())),
         filesystemSynchronization: ko.computed(() => appUrl.forFilesystemSynchronization(appUrl.currentFilesystem())),
+        filesystemStatus: ko.computed(() => appUrl.forFilesystemStatus(appUrl.currentFilesystem())),
+        filesystemSynchronizationDestinations: ko.computed(() => appUrl.forFilesystemSynchronizationDestinations(appUrl.currentFilesystem())),
         filesystemConfiguration: ko.computed(() => appUrl.forFilesystemConfiguration(appUrl.currentFilesystem())),
     };
-
-  
 
     static checkIsAreaActive(routeRoot: string): boolean {
 
@@ -395,6 +395,16 @@ class appUrl {
         return "#filesystems/synchronization?" + filesystemPart;
     }
 
+    static forFilesystemSynchronizationDestinations(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/synchronization/destinations?" + filesystemPart;
+    }
+
+    static forFilesystemStatus(fs: filesystem): string {
+        var filesystemPart = appUrl.getEncodedFsPart(fs);
+        return "#filesystems/status?" + filesystemPart;
+    }
+
     static forFilesystemConfiguration(fs: filesystem): string {
         var filesystemPart = appUrl.getEncodedFsPart(fs);
         return "#filesystems/configuration?" + filesystemPart;
@@ -533,7 +543,11 @@ class appUrl {
 	*/
 	static forCurrentDatabase(): computedAppUrls {
 		return appUrl.currentDbComputeds;
-	}
+    }
+
+    static forCurrentFilesystem(): computedAppUrls {
+        return appUrl.currentDbComputeds; //This is all mixed. maybe there should be separate structures for Db and Fs.
+    }
 
     private static getEncodedResourcePart(res?: resource) {
         if (!res)
