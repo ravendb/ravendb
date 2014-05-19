@@ -7,7 +7,6 @@ using System;
 using System.Collections.Specialized;
 using System.Net;
 using System.Threading.Tasks;
-using Amazon.RDS.Model;
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection;

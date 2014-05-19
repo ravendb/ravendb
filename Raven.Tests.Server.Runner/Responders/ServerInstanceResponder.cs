@@ -9,224 +9,231 @@ using Raven.Json.Linq;
 
 namespace Raven.Tests.Server.Runner.Responders
 {
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Linq;
-    using System.Reflection;
-    using System.Threading;
+	using System;
+	using System.Collections.Generic;
+	using System.IO;
+	using System.Linq;
+	using System.Reflection;
+	using System.Threading;
 
-    using Raven.Database;
-    using Raven.Database.Config;
-    using Raven.Database.Extensions;
-    using Raven.Database.Server;
-    using Raven.Database.Server.Abstractions;
-    using Raven.Server;
+	using Raven.Database;
+	using Raven.Database.Config;
+	using Raven.Database.Extensions;
+	using Raven.Database.Server;
+	using Raven.Database.Server.Abstractions;
+	using Raven.Server;
 
-    public class ServerInstanceResponder : ResponderBase
-    {
-        protected readonly string DataDir = string.Format(@".\TestDatabase-{0}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"));
+	public class ServerInstanceResponder : ResponderBase
+	{
+		protected readonly string DataDir = string.Format(@".\TestDatabase-{0}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"));
 
-        private readonly IDictionary<int, RavenDbServer> servers;
+		private readonly IDictionary<int, RavenDbServer> servers;
 
-        public ServerInstanceResponder()
-        {
-            this.servers = new Dictionary<int, RavenDbServer>();
+		public ServerInstanceResponder()
+		{
+			servers = new Dictionary<int, RavenDbServer>();
 
-            ClearDatabaseDirectory();
-            Directory.CreateDirectory(DataDir);
-        }
+			ClearDataDirectory();
+			Directory.CreateDirectory(DataDir);
+		}
 
-        public override string UrlPattern
-        {
-            get { return "^/servers(.*)"; }
-        }
+		public override string UrlPattern
+		{
+			get { return "^/servers(.*)"; }
+		}
 
-        public override string[] SupportedVerbs
-        {
-            get
-            {
-                return new[] { "PUT", "DELETE", "GET" };
-            }
-        }
+		public override string[] SupportedVerbs
+		{
+			get
+			{
+				return new[] { "PUT", "DELETE", "GET" };
+			}
+		}
 
-        public override void Respond(IHttpContext context)
-        {
-            switch (context.Request.HttpMethod)
-            {
-                case "GET":
-                    OnGet(context);
-                    break;
-                case "PUT":
-                    OnPut(context);
-                    break;
-                case "DELETE":
-                    OnDelete(context);
-                    break;
-            }
-        }
+		public override void Respond(IHttpContext context)
+		{
+			switch (context.Request.HttpMethod)
+			{
+				case "GET":
+					OnGet(context);
+					break;
+				case "PUT":
+					OnPut(context);
+					break;
+				case "DELETE":
+					OnDelete(context);
+					break;
+			}
+		}
 
-        private void OnGet(IHttpContext context)
-        {
-            int port;
-            if (!int.TryParse(context.Request.QueryString["port"], out port))
-            {
-                context.SetStatusToBadRequest();
-                return;
-            }
+		private void OnGet(IHttpContext context)
+		{
+			int port;
+			if (!int.TryParse(context.Request.QueryString["port"], out port))
+			{
+				context.SetStatusToBadRequest();
+				return;
+			}
 
-            string action = context.Request.QueryString["action"];
+			string action = context.Request.QueryString["action"];
 
-            if (string.IsNullOrEmpty(action))
-            {
-                context.SetStatusToBadRequest();
-                return;
-            }
+			if (string.IsNullOrEmpty(action))
+			{
+				context.SetStatusToBadRequest();
+				return;
+			}
 
-            if (!servers.ContainsKey(port))
-            {
-                return;
-            }
+			if (!servers.ContainsKey(port))
+			{
+				return;
+			}
 
-            var server = servers[port];
+			var server = servers[port];
 
-            switch (action.ToLowerInvariant())
-            {
-                case "waitforallrequeststocomplete":
-                    SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15));
-                    break;
-                default:
-                    context.SetStatusToBadRequest();
-                    return;
-            }
-        }
+			switch (action.ToLowerInvariant())
+			{
+				case "waitforallrequeststocomplete":
+					SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15));
+					break;
+				default:
+					context.SetStatusToBadRequest();
+					return;
+			}
+		}
 
-        private void OnPut(IHttpContext context)
-        {
-            var serverConfiguration = context.ReadJsonObject<ServerConfiguration>();
-            if (serverConfiguration == null)
-            {
-                context.SetStatusToBadRequest();
-                return;
-            }
+		private void OnPut(IHttpContext context)
+		{
+			var serverConfiguration = context.ReadJsonObject<ServerConfiguration>();
+			if (serverConfiguration == null)
+			{
+				context.SetStatusToBadRequest();
+				return;
+			}
 
-            var configuration = serverConfiguration.ConvertToRavenConfiguration();
+			var configuration = serverConfiguration.ConvertToRavenConfiguration();
 
-            if (serverConfiguration.HasApiKey)
-            {
-                configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-                Authentication.EnableOnce();
-            }
+			if (serverConfiguration.HasApiKey)
+			{
+				configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+				Authentication.EnableOnce();
+			}
 
-            configuration.PostInit();
+			configuration.PostInit();
 
-            MaybeRemoveServer(configuration.Port);
-            var server = CreateNewServer(configuration, context);
+			MaybeRemoveServer(configuration.Port);
+			var server = CreateNewServer(configuration, context);
 
 			if (serverConfiguration.UseCommercialLicense)
 			{
 				EnableAuthentication(server.SystemDatabase);
 			}
 
-            if (serverConfiguration.HasApiKey)
-            {
-                server.SystemDatabase.Documents.Put("Raven/ApiKeys/" + serverConfiguration.ApiKeyName, null, RavenJObject.FromObject(new ApiKeyDefinition
-                {
-                    Name = serverConfiguration.ApiKeyName,
-                    Secret = serverConfiguration.ApiKeySecret,
-                    Enabled = true,
-                    Databases = new List<DatabaseAccess>
+			if (serverConfiguration.HasApiKey)
+			{
+				server.SystemDatabase.Documents.Put("Raven/ApiKeys/" + serverConfiguration.ApiKeyName, null, RavenJObject.FromObject(new ApiKeyDefinition
+				{
+					Name = serverConfiguration.ApiKeyName,
+					Secret = serverConfiguration.ApiKeySecret,
+					Enabled = true,
+					Databases = new List<DatabaseAccess>
 				{
 					new DatabaseAccess {TenantId = "*", Admin = true},
 					new DatabaseAccess {TenantId = Constants.SystemDatabase, Admin = true},
 				}
-                }), new RavenJObject(), null);
-            }
-        }
+				}), new RavenJObject(), null);
+			}
+		}
 
-        private RavenDbServer CreateNewServer(RavenConfiguration configuration, IHttpContext context)
-        {
-            configuration.DataDirectory = Path.Combine(DataDir, configuration.Port.ToString(), "System");
-            configuration.FileSystemDataDirectory = Path.Combine(DataDir, configuration.Port.ToString() + "\\",
-                                                                 "FileSystem");
-            configuration.AccessControlAllowOrigin = new HashSet<string>{"*"};
+		private RavenDbServer CreateNewServer(RavenConfiguration configuration, IHttpContext context)
+		{
+			var port = configuration.Port.ToString();
 
-            bool deleteData;
-            bool.TryParse(context.Request.QueryString["deleteData"], out deleteData);
+			configuration.DataDirectory = Path.Combine(DataDir, port, "System");
+			configuration.FileSystemDataDirectory = Path.Combine(DataDir, port, "FileSystem");
+			configuration.AccessControlAllowOrigin = new HashSet<string> { "*" };
 
-            if (configuration.RunInMemory == false && deleteData)
-            {
-                var pathToDelete = Path.Combine(DataDir, configuration.Port.ToString());
-                IOExtensions.DeleteDirectory(pathToDelete);
-            }
+			bool deleteData;
+			bool.TryParse(context.Request.QueryString["deleteData"], out deleteData);
 
-            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(configuration.Port);
-            var server = new RavenDbServer(configuration) { UseEmbeddedHttpServer = true };
+			if (configuration.RunInMemory == false && deleteData)
+			{
+				var pathToDelete = Path.Combine(DataDir, port);
+				DeleteDirectory(pathToDelete);
+			}
 
-            server.Initialize();
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(configuration.Port);
+			var server = new RavenDbServer(configuration) { UseEmbeddedHttpServer = true };
 
-            servers.Add(configuration.Port, server);
+			server.Initialize();
 
-            Console.WriteLine("Created a server (Port: {0}, RunInMemory: {1})", configuration.Port, configuration.RunInMemory);
+			servers.Add(configuration.Port, server);
 
-            return server;
-        }
+			Console.WriteLine("Created a server (Port: {0}, RunInMemory: {1})", configuration.Port, configuration.RunInMemory);
 
-        private void OnDelete(IHttpContext context)
-        {
-            int port;
-            if (!int.TryParse(context.Request.QueryString["port"], out port))
-            {
-                context.SetStatusToBadRequest();
-                return;
-            }
+			return server;
+		}
 
-            MaybeRemoveServer(port);
-        }
+		private void OnDelete(IHttpContext context)
+		{
+			int port;
+			if (!int.TryParse(context.Request.QueryString["port"], out port))
+			{
+				context.SetStatusToBadRequest();
+				return;
+			}
 
-        public override void Dispose()
-        {
-            foreach (var port in servers.Keys)
-                servers[port].Dispose();
+			MaybeRemoveServer(port);
+		}
 
-            GC.Collect(2);
-            GC.WaitForPendingFinalizers();
-            ClearDatabaseDirectory();
-        }
+		public override void Dispose()
+		{
+			foreach (var port in servers.Keys)
+				servers[port].Dispose();
 
-        private void MaybeRemoveServer(int port)
-        {
-            if (!servers.ContainsKey(port))
-                return;
+			GC.Collect(2);
+			GC.WaitForPendingFinalizers();
+			ClearDataDirectory();
+		}
 
-            servers[port].Dispose();
-            servers.Remove(port);
+		private void MaybeRemoveServer(int port)
+		{
+			if (!servers.ContainsKey(port))
+				return;
 
-            Console.WriteLine("Deleted a server at: " + port);
-        }
+			servers[port].Dispose();
+			servers.Remove(port);
 
-        private void ClearDatabaseDirectory()
-        {
-            bool isRetry = false;
+			Console.WriteLine("Deleted a server at: " + port);
+		}
 
-            while (true)
-            {
-                try
-                {
-                    IOExtensions.DeleteDirectory(DataDir);
-                    break;
-                }
-                catch (IOException)
-                {
-                    if (isRetry)
-                        throw;
+		private static void DeleteDirectory(string directory)
+		{
+			IOExtensions.DeleteDirectory(directory);
+			SpinWait.SpinUntil(() => Directory.Exists(directory) == false, TimeSpan.FromSeconds(5));
+		}
 
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-                    isRetry = true;
-                }
-            }
-        }
+		private void ClearDataDirectory()
+		{
+			var isRetry = false;
+
+			while (true)
+			{
+				try
+				{
+					DeleteDirectory(DataDir);
+					break;
+				}
+				catch (Exception)
+				{
+					if (isRetry)
+						throw;
+
+					GC.Collect();
+					GC.WaitForPendingFinalizers();
+					isRetry = true;
+				}
+			}
+		}
 
 		public static void EnableAuthentication(DocumentDatabase database)
 		{
@@ -237,7 +244,6 @@ namespace Raven.Tests.Server.Runner.Responders
 			// rerun this startup task
 			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
 		}
-
 
 		public static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
 		{
@@ -250,45 +256,45 @@ namespace Raven.Tests.Server.Runner.Responders
 
 			return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
 		}
-    }
+	}
 
-    [Serializable]
-    internal class ServerConfiguration
-    {
-        public ServerConfiguration()
-        {
-            this.Settings = new Dictionary<string, string>();
-        }
+	[Serializable]
+	internal class ServerConfiguration
+	{
+		public ServerConfiguration()
+		{
+			this.Settings = new Dictionary<string, string>();
+		}
 
-        public int Port { get; set; }
+		public int Port { get; set; }
 
-        public bool RunInMemory { get; set; }
+		public bool RunInMemory { get; set; }
 
 		public bool UseCommercialLicense { get; set; }
 
-        public string ApiKeyName { get; set; }
+		public string ApiKeyName { get; set; }
 
-        public string ApiKeySecret { get; set; }
+		public string ApiKeySecret { get; set; }
 
-        public IDictionary<string, string> Settings { get; set; }
+		public IDictionary<string, string> Settings { get; set; }
 
-        public bool HasApiKey { get { return !string.IsNullOrEmpty(ApiKeyName) && !string.IsNullOrEmpty(ApiKeySecret); } }
+		public bool HasApiKey { get { return !string.IsNullOrEmpty(ApiKeyName) && !string.IsNullOrEmpty(ApiKeySecret); } }
 
-        public RavenConfiguration ConvertToRavenConfiguration()
-        {
-            var configuration = new RavenConfiguration
-                                {
-                                    Port = Port,
-                                    RunInMemory = RunInMemory,
-                                    DefaultStorageTypeName = "esent"
-                                };
+		public RavenConfiguration ConvertToRavenConfiguration()
+		{
+			var configuration = new RavenConfiguration
+								{
+									Port = Port,
+									RunInMemory = RunInMemory,
+									DefaultStorageTypeName = "esent"
+								};
 
-            foreach (var key in Settings.Keys)
-            {
-                configuration.Settings.Add(key, Settings[key]);
-            }
+			foreach (var key in Settings.Keys)
+			{
+				configuration.Settings.Add(key, Settings[key]);
+			}
 
-            return configuration;
-        }
-    }
+			return configuration;
+		}
+	}
 }

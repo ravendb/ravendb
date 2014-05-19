@@ -5,15 +5,14 @@ using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Amazon;
-using Amazon.Glacier.Transfer;
-using Amazon.S3.Model;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler;
-using Raven.Database.Client;
+using Raven.Database.Client.Aws;
+using Raven.Database.Client.Azure;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
@@ -312,40 +311,33 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
         private void UploadToS3(string backupPath, PeriodicBackupSetup localBackupConfigs, bool isFullBackup)
 		{
-			var awsRegion = RegionEndpoint.GetBySystemName(localBackupConfigs.AwsRegionEndpoint) ?? RegionEndpoint.USEast1;
+	        using (var client = new RavenAwsS3Client(awsAccessKey, awsSecretKey, localBackupConfigs.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
+		    using (var fileStream = File.OpenRead(backupPath))
+		    {
+			    var key = Path.GetFileName(backupPath);
+			    client.PutObject(localBackupConfigs.S3BucketName, key, fileStream, new Dictionary<string, string>
+			                                                                       {
+				                                                                       { "Description", GetArchiveDescription(isFullBackup) }
+			                                                                       }, 60 * 60);
 
-			using (var client = new Amazon.S3.AmazonS3Client(awsAccessKey, awsSecretKey, awsRegion))
-			using (var fileStream = File.OpenRead(backupPath))
-			{
-				var key = Path.GetFileName(backupPath);
-				var request = new PutObjectRequest();
-                request.WithMetaData("Description", GetArchiveDescription(isFullBackup));
-				request.WithInputStream(fileStream);
-				request.WithBucketName(localBackupConfigs.S3BucketName);
-				request.WithKey(key);
-                request.WithTimeout(60 * 60 * 1000); // 1 hour
-                request.WithReadWriteTimeout(60 * 60 * 1000); // 1 hour
-
-				using (client.PutObject(request))
-				{
-					logger.Info(string.Format("Successfully uploaded backup {0} to S3 bucket {1}, with key {2}",
+				logger.Info(string.Format("Successfully uploaded backup {0} to S3 bucket {1}, with key {2}",
 											  Path.GetFileName(backupPath), localBackupConfigs.S3BucketName, key));
-				}
-			}
+		    }
 		}
 
         private void UploadToGlacier(string backupPath, PeriodicBackupSetup localBackupConfigs, bool isFullBackup)
 		{
-			var awsRegion = RegionEndpoint.GetBySystemName(localBackupConfigs.AwsRegionEndpoint) ?? RegionEndpoint.USEast1;
-			var manager = new ArchiveTransferManager(awsAccessKey, awsSecretKey, awsRegion);
-            var archiveId = manager.Upload(localBackupConfigs.GlacierVaultName, GetArchiveDescription(isFullBackup), backupPath).ArchiveId;
-			logger.Info(string.Format("Successfully uploaded backup {0} to Glacier, archive ID: {1}", Path.GetFileName(backupPath),
-									  archiveId));
+	        using (var client = new RavenAwsGlacierClient(awsAccessKey, awsSecretKey, localBackupConfigs.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
+			using (var fileStream = File.OpenRead(backupPath))
+			{
+				var archiveId = client.UploadArchive(localBackupConfigs.GlacierVaultName, fileStream, GetArchiveDescription(isFullBackup), 60 * 60);
+				logger.Info(string.Format("Successfully uploaded backup {0} to Glacier, archive ID: {1}", Path.GetFileName(backupPath), archiveId));
+			}
 		}
 
 		private void UploadToAzure(string backupPath, PeriodicBackupSetup localBackupConfigs, bool isFullBackup)
 		{
-			using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey, false))
+			using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey, true))
 			{
 				client.PutContainer(localBackupConfigs.AzureStorageContainer);
 				using (var fileStream = File.OpenRead(backupPath))

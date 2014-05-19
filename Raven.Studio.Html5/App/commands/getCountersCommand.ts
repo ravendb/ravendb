@@ -21,9 +21,8 @@ class getCountersCommand extends commandBase {
         };
 
         var url = "/counters/test/counters" + this.urlEncodeArgs(args);
-        //var selector = (dtos: counterDto[]) => dtos.map(d => new counter(d));
-        //return this.query(url, null, appUrl.getSystemDatabase(), selector);
-        return null;
+        var selector = (dtos: any/*counterDto[]*/) => dtos.map(d => new counter(d));
+        return this.query(url, null, appUrl.getSystemDatabase(), selector);
     }
 }
 

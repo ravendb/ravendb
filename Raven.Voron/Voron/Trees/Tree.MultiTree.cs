@@ -69,7 +69,17 @@ namespace Voron.Trees
 				return;
 			}
 
-			var nestedPagePtr = NodeHeader.DirectAccess(tx, item);
+			byte* nestedPagePtr;
+			if (item->Flags == NodeFlags.PageRef)
+			{
+				var overFlowPage = tx.ModifyPage(item->PageNumber, null);
+				nestedPagePtr = overFlowPage.Base + Constants.PageHeaderSize;
+			}
+			else
+			{
+				nestedPagePtr = NodeHeader.DirectAccess(tx, item);
+			}
+
 			var nestedPage = new Page(nestedPagePtr, "multi tree", (ushort) NodeHeader.GetDataSize(tx, item));
 
 			var existingItem = nestedPage.Search(value, NativeMethods.memcmp);
@@ -221,6 +231,19 @@ namespace Voron.Trees
 				var nestedItem = nestedPage.Search(value, NativeMethods.memcmp);
 				if (nestedItem == null) // value not found
 					return;
+
+				byte* nestedPagePtr;
+				if (item->Flags == NodeFlags.PageRef)
+				{
+					var overFlowPage = tx.ModifyPage(item->PageNumber, null);
+					nestedPagePtr = overFlowPage.Base + Constants.PageHeaderSize;
+				}
+				else
+				{
+					nestedPagePtr = NodeHeader.DirectAccess(tx, item);
+				}
+
+				nestedPage = new Page(nestedPagePtr, "multi tree", (ushort)NodeHeader.GetDataSize(tx, item));
 
 				CheckConcurrency(key, value, version, nestedItem->Version, TreeActionType.Delete);
 				nestedPage.RemoveNode(nestedPage.LastSearchPosition);
