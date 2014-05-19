@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using Raven.Abstractions.Util;
 #if !NETFX_CORE
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -344,8 +345,13 @@ namespace Raven.Client.Document
         {
             if (ids.Length == 0)
                 return new T[0];
-
+          
+            if (CheckIfIdAlreadyIncluded(ids, includes))
+            {
+                return ids.Select(Load<T>).ToArray();
+            }
             var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
+  
 
             IncrementRequestCount();
             var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
@@ -362,6 +368,10 @@ namespace Raven.Client.Document
             return multiLoadOperation.Complete<T>();
         }
 
+       
+       
+
+     
         public T[] LoadInternal<T>(string[] ids)
         {
             if (ids.Length == 0)
@@ -840,6 +850,21 @@ namespace Raven.Client.Document
             return lazyValue;
         }
 
+        internal Lazy<TTransformResult> AddLazyOperationWithTransform<TResult, TTransformResult>(ILazyOperation operation, Func<TResult, TTransformResult> transformFunc, Action<TResult> onEval)
+        {
+            pendingLazyOperations.Add(operation);
+            var lazyValue = new Lazy<TTransformResult>(() =>
+            {
+                ExecuteAllPendingLazyOperations();
+                return transformFunc((TResult)operation.Result);
+            });
+
+            if (onEval != null)
+                onEvaluateLazy[operation] = theResult => onEval((TResult)theResult);
+
+            return lazyValue;
+        }
+
         internal Lazy<int> AddLazyCountOperation(ILazyOperation operation)
         {
             pendingLazyOperations.Add(operation);
@@ -857,6 +882,10 @@ namespace Raven.Client.Document
         /// </summary>
         public Lazy<T[]> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
         {
+            if (CheckIfIdAlreadyIncluded(ids, includes))
+            {
+                return new Lazy<T[]>(() => ids.Select(Load<T>).ToArray());
+            }
             var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
             var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
             return AddLazyOperation(lazyOp, onEval);
