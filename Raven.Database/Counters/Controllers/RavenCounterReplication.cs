@@ -11,7 +11,6 @@ using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Threading;
 using System.Threading.Tasks;
-using Amazon.SimpleEmail.Model;
 using Jint.Native.Function;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
@@ -159,6 +158,50 @@ namespace Raven.Database.Counters.Controllers
             log.WarnException("Could not notify " + connectionStringOptions.Url + " about sibling server being up & running", e);
         }*/
 	    }
+
+
+	    public void HandleHeartbeat(string src)
+	    {
+	        ResetFailureForHeartbeat(src);
+	    }
+
+
+        private void ResetFailureForHeartbeat(string src)
+		{
+			RecordSuccess(src, lastHeartbeatReceived: SystemTime.UtcNow);
+			SignalCounterUpdate();
+		}
+
+        private void NotifySibling(BlockingCollection<RavenConnectionStringOptions> collection)
+        {
+           // using (LogContext.WithDatabase(docDb.Name)) todo:implement log context
+                while (true)
+                {
+                    RavenConnectionStringOptions connectionStringOptions;
+                    try
+                    {
+                        collection.TryTake(out connectionStringOptions, 15 * 1000, cancellation.Token);
+                        if (connectionStringOptions == null)
+                            return;
+                    }
+                    catch (Exception e)
+                    {
+                        log.ErrorException("Could not get connection string options to notify sibling servers about restart", e);
+                        return;
+                    }
+                    try
+                    {
+                        var url = connectionStringOptions.Url + "/counters/" + storage.CounterName +  "/replication/heartbeat?from=" +  Uri.EscapeDataString(storage.Name);
+                        var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
+                        request.WebRequest.ContentLength = 0;
+                        request.ExecuteRequest();
+                    }
+                    catch (Exception e)
+                    {
+                        log.WarnException("Could not notify " + connectionStringOptions.Url + " about sibling server being up & running", e);
+                    }
+                }
+        }
 		
 		private bool IsNotFailing(string destServerName, int currentReplicationAttempts)
         {
@@ -376,7 +419,7 @@ namespace Raven.Database.Counters.Controllers
 				}
 			}
 		}
-
+        
         private string HandleReplicationDistributionWebException(WebException e, string destinationUrl)
 	    {
             var response = e.Response as HttpWebResponse;

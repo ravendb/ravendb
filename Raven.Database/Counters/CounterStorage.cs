@@ -31,7 +31,7 @@ namespace Raven.Database.Counters
 	{
 	    public string Name { get; private set; }
         private readonly StorageEnvironment storageEnvironment;
-        private readonly RavenCounterReplication replication;
+        public readonly RavenCounterReplication ReplicationTask;
         public Guid Id { get; private set; }
 		public DateTime LastWrite { get; private set; }
 
@@ -44,18 +44,22 @@ namespace Raven.Database.Counters
 
         public int ReplicationTimeoutInMs { get; private set; }
 
-		public CounterStorage(string name, InMemoryRavenConfiguration configuration)
+	    public readonly string CounterName;
+
+		public CounterStorage(string serverUrl, string counterName, InMemoryRavenConfiguration configuration)
 		{
-		    Name = name;
+		    Name = String.Format("{0}counters/{1}", serverUrl, counterName);
+		    CounterName = counterName;
+                
 			var options = configuration.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
 				: CreateStorageOptionsFromConfiguration(configuration.CountersDataDirectory, configuration.Settings);
 
 			storageEnvironment = new StorageEnvironment(options);
-            replication = new RavenCounterReplication(this);
+            ReplicationTask = new RavenCounterReplication(this);
 		   
 		    ReplicationTimeoutInMs = configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 60*1000;
-            
-			Initialize(name);
+
+            Initialize(Name);
 		}
 
 		private void Initialize(string name)
@@ -147,7 +151,7 @@ namespace Raven.Database.Counters
 					}
 				}
 
-                replication.StartReplication();
+                ReplicationTask.StartReplication();
 			}
 		}
 
@@ -187,7 +191,7 @@ namespace Raven.Database.Counters
 
 		public void Dispose()
 		{
-            replication.Dispose();
+            ReplicationTask.Dispose();
 			if (storageEnvironment != null)
 				storageEnvironment.Dispose();
 		}

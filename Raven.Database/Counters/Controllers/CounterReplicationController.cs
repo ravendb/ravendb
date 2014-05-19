@@ -80,6 +80,26 @@ namespace Raven.Database.Counters.Controllers
             }
         }
 
+        [Route("counters/{counterName}/replication/heartbeat")]
+        public async Task<HttpResponseMessage> HeartbeatPost()
+        {
+            var src = GetQueryStringValue("from");
+
+            var replicationTask = Storage.ReplicationTask;
+            if (replicationTask == null)
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "Cannot find replication task setup in the database"
+                }, HttpStatusCode.NotFound);
+
+            }
+
+            replicationTask.HandleHeartbeat(src);
+
+            return GetEmptyMessage();
+        }
+
         [Route("counters/{counterName}/lastEtag/{server}")]
         public HttpResponseMessage GetLastEtag(string server)
         {
