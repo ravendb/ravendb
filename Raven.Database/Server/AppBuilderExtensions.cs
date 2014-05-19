@@ -93,7 +93,7 @@ namespace Owin
 			cfg.MapHttpAttributeRoutes();
 
 			cfg.Routes.MapHttpRoute(
-				"RavenFs", "ravenfs/{controller}/{action}",
+				"RavenFs", "fs/{controller}/{action}",
 				new {id = RouteParameter.Optional});
 
 			cfg.Routes.MapHttpRoute(
