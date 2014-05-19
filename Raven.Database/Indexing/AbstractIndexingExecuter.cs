@@ -78,7 +78,7 @@ namespace Raven.Database.Indexing
                             if (IsEsentOutOfMemory(actual))
                             {
 
-                                autoTuner.OutOfMemoryExceptionHappened();
+                                autoTuner.HandleOutOfMemory();
                             }
                             Log.ErrorException("Failed to execute indexing", ae);
                         }
@@ -102,7 +102,7 @@ namespace Raven.Database.Indexing
                         Log.ErrorException("Failed to execute indexing", e);
                         if (IsEsentOutOfMemory(e))
                         {
-                            autoTuner.OutOfMemoryExceptionHappened();
+                            autoTuner.HandleOutOfMemory();
                         }
                     }
                     if (foundWork == false && context.RunIndexing)
@@ -160,7 +160,7 @@ namespace Raven.Database.Indexing
             // memory, but we are actually aware that during indexing, the GC couldn't find garbage to clean,
             // but in here, we are AFTER the index was done, so there is likely to be a lot of garbage.
             RavenGC.CollectGarbage(GC.MaxGeneration);
-            autoTuner.OutOfMemoryExceptionHappened();
+            autoTuner.HandleOutOfMemory();
         }
 
         private bool ExecuteTasks()
