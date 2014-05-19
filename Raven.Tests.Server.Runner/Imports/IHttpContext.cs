@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="IHttpContext.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -6,10 +6,11 @@
 using System;
 using System.IO;
 using System.Security.Principal;
+
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 
-namespace Raven.Database.Server.Abstractions
+namespace Raven.Tests.Server.Runner.Imports
 {
 	public interface IHttpContext
 	{

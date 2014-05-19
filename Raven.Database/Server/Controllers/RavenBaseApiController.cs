@@ -30,7 +30,6 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
-using HttpExtensions = Raven.Database.Extensions.HttpExtensions;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -317,7 +316,7 @@ namespace Raven.Database.Server.Controllers
 
             bool metadataOnly;
             if (bool.TryParse(GetQueryStringValue("metadata-only"), out metadataOnly) && metadataOnly)
-                token = HttpExtensions.MinimizeToken(token);
+				token = Extensions.HttpExtensions.MinimizeToken(token);
             
 			var msg = new HttpResponseMessage(code)
 			{
@@ -505,7 +504,7 @@ namespace Raven.Database.Server.Controllers
 			byte[] bytes;
 			var resourceName = embeddedPath + "." + docPath.Replace("/", ".");
 
-			var resourceAssembly = typeof(IHttpContext).Assembly;
+			var resourceAssembly = typeof(RavenBaseApiController).Assembly;
 			var resourceNames = resourceAssembly.GetManifestResourceNames();
 			var lowercasedResourceName = resourceNames.FirstOrDefault(s => string.Equals(s, resourceName, StringComparison.OrdinalIgnoreCase));
 		    if (lowercasedResourceName == null)

@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="HttpListenerResponseAdapter.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -10,6 +10,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -18,7 +19,7 @@ using Raven.Abstractions.Util.Streams;
 using Raven.Database.Impl;
 using Raven.Database.Util.Streams;
 
-namespace Raven.Database.Server.Abstractions
+namespace Raven.Tests.Server.Runner.Imports
 {
 	public class HttpListenerResponseAdapter : IHttpResponse, IDisposable
 	{

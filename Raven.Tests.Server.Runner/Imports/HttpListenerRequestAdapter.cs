@@ -1,26 +1,27 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="HttpListenerRequestAdapter.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 
-namespace Raven.Database.Server.Abstractions
+namespace Raven.Tests.Server.Runner.Imports
 {
 	public class HttpListenerRequestAdapter : IHttpRequest
 	{
 		private readonly HttpListenerRequest request;
-	    private readonly NameValueCollection queryString;
+		private readonly NameValueCollection queryString;
 
-	    public HttpListenerRequestAdapter(HttpListenerRequest request)
+		public HttpListenerRequestAdapter(HttpListenerRequest request)
 		{
 			this.request = request;
-		    Url = this.request.Url;
-	        RawUrl = this.request.RawUrl;
-		    queryString = HttpRequestHelper.ParseQueryStringWithLegacySupport(request.Headers["Raven-Client-Version"], request.Url.Query);
+			Url = this.request.Url;
+			RawUrl = this.request.RawUrl;
+			queryString = HttpRequestHelper.ParseQueryStringWithLegacySupport(request.Headers["Raven-Client-Version"], request.Url.Query);
 		}
 
 		public bool IsLocal
@@ -49,14 +50,14 @@ namespace Raven.Database.Server.Abstractions
 			get { return queryString; }
 		}
 
-	    public Uri Url { get;  set; }
+		public Uri Url { get; set; }
 
-	    public string HttpMethod
+		public string HttpMethod
 		{
 			get { return request.HttpMethod; }
 		}
 
-	    public string RawUrl { get;  set; }
+		public string RawUrl { get; set; }
 
 		public Stream GetBufferLessInputStream()
 		{

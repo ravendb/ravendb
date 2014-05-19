@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="IHttpRequest.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -7,14 +7,13 @@ using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Web;
-using Microsoft.Isam.Esent.Interop;
 
-namespace Raven.Database.Server.Abstractions
+namespace Raven.Tests.Server.Runner.Imports
 {
 	public interface IHttpRequest
 	{
 		bool IsLocal { get; }
-		NameValueCollection Headers { get;  }
+		NameValueCollection Headers { get; }
 		Stream InputStream { get; }
 		long ContentLength { get; }
 		NameValueCollection QueryString { get; }
@@ -26,7 +25,7 @@ namespace Raven.Database.Server.Abstractions
 		string GetCookie(string name);
 	}
 
-	internal class HttpRequestHelper
+	internal static class HttpRequestHelper
 	{
 		public static NameValueCollection ParseQueryStringWithLegacySupport(string ravenClientVersion, string query)
 		{
@@ -34,6 +33,7 @@ namespace Raven.Database.Server.Abstractions
 			{
 				query = Uri.UnescapeDataString(query);
 			}
+
 			return HttpUtility.ParseQueryString(query);
 		}
 	}

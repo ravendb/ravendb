@@ -321,14 +321,5 @@ namespace Raven.Database.Server.Controllers
 
 	    }
 	}
-
-	public class SmugglerOptionsDto
-	{
-		public bool IncludeDocuments { get; set; }
-		public bool IncludeIndexes { get; set; }
-		public bool IncludeTransformers { get; set; }
-		public bool IncludeAttachments { get; set; }
-		public bool RemoveAnalyzers { get; set; }
-	}
 }
 

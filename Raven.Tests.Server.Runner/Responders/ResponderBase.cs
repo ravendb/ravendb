@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Tests.Server.Runner.Imports;
+
 namespace Raven.Tests.Server.Runner.Responders
 {
 	using System;

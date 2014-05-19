@@ -93,7 +93,6 @@
     <Compile Include="Connection\IDocumentStoreReplicationInformer.cs" />
     <Compile Include="Connection\IReplicationInformerBase.cs" />
     <Compile Include="Connection\Operation.cs" />
-    <Compile Include="Connection\NameValueCollectionExtensions.cs" />
     <Compile Include="Connection\OperationMetadata.cs" />
     <Compile Include="Connection\ReplicationInformer.cs" />
     <Compile Include="Document\Batches\LazyMoreLikeThisOperation.cs" />
@@ -126,7 +125,6 @@
     <Compile Include="RavenFS\ListenableStream.cs" />
     <Compile Include="RavenFS\ListPage.cs" />
     <Compile Include="RavenFS\NameValueCollectionJsonConverter.cs" />
-    <Compile Include="RavenFS\NotificationJSonUtilities.cs" />
     <Compile Include="RavenFS\RavenFileSystemClient.cs" />
     <Compile Include="RavenFS\Shard\DefaultShardResolutionStrategy.cs" />
     <Compile Include="RavenFS\Shard\IShardAccessStrategy.cs" />
@@ -243,7 +241,6 @@
     <Compile Include="Exceptions\NonAuthoritiveInformationException.cs" />
     <Compile Include="Exceptions\NonUniqueObjectException.cs" />
     <Compile Include="Exceptions\ReadVetoException.cs" />
-    <Compile Include="Extensions\DatabaseCommandsExtensions.cs" />
     <Compile Include="Extensions\MultiDatabase.cs" />
     <Compile Include="Extensions\MultiTenancyExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
@@ -309,10 +306,8 @@
     <Compile Include="Shard\ShardedObservableWithTask.cs" />
     <Compile Include="Shard\ShardRequestData.cs" />
     <Compile Include="Shard\ShardStrategy.cs" />
-    <Compile Include="StoredEntityEventArgs.cs" />
     <Compile Include="Util\GlobalLastEtagHolder.cs" />
     <Compile Include="Util\JSBeautify.cs" />
-    <Compile Include="Util\ConcatObservable.cs" />
     <Compile Include="Changes\TaskObservable.cs" />
     <Compile Include="Util\Inflector.cs" />
     <Compile Include="Util\LastEtagHolder.cs" />

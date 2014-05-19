@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="IHttpResponse.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -8,7 +8,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace Raven.Database.Server.Abstractions
+namespace Raven.Tests.Server.Runner.Imports
 {
 	public interface IHttpResponse
 	{
