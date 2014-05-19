@@ -821,7 +821,13 @@ namespace Raven.Client.Document.Async
 
 	    public Lazy<Task<T[]>> LazyAsyncLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
 	    {
-	        throw new NotImplementedException();
+            if (CheckIfIdAlreadyIncluded(ids, includes))
+            {
+                return new Lazy<Task<T[]>>(async () => await Task.WhenAll(ids.Select(LoadAsync<T>).ToArray()));
+            }
+            var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
+            var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
+            return AddLazyOperation(lazyOp, onEval);
 	    }
 
 	    /// <summary>
@@ -829,6 +835,13 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
 		{
+            if (CheckIfIdAlreadyIncluded(ids, includes))
+            {                
+                var loadTasks = ids.Select(LoadAsync<T>).ToArray();
+                var loadedData = await Task.WhenAll(loadTasks);
+                return loadedData;
+            }
+
 			IncrementRequestCount();
 			var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
 
