@@ -104,7 +104,7 @@ namespace Raven.Database.Counters.Controllers
                     return true;
                 }
 
-                log.Debug("No counter updates for counter storage {0} was found, will wait for updates", storage.Name);
+                log.Debug("No counter updates for counter storage {0} was found, will wait for updates", storage.CounterStorageUrl);
                 return Monitor.Wait(waitForCounterUpdate, timeout);
 	        }
 	    }
@@ -191,7 +191,7 @@ namespace Raven.Database.Counters.Controllers
                     }
                     try
                     {
-                        var url = connectionStringOptions.Url + "/counters/" + storage.CounterName +  "/replication/heartbeat?from=" +  Uri.EscapeDataString(storage.Name);
+                        var url = connectionStringOptions.Url + "/counters/" + storage.CounterStorageName + "/replication/heartbeat?from=" + Uri.EscapeDataString(storage.CounterStorageUrl);
                         var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
                         request.WebRequest.ContentLength = 0;
                         request.ExecuteRequest();
@@ -234,7 +234,7 @@ namespace Raven.Database.Counters.Controllers
 
 	    private ReplicationMessage GetCountersDataSinceEtag(long etag)
 	    {
-            var message = new ReplicationMessage { SendingServerName = storage.Name };
+            var message = new ReplicationMessage { SendingServerName = storage.CounterStorageUrl };
 
             using (var reader = storage.CreateReader())
             {
@@ -312,7 +312,7 @@ namespace Raven.Database.Counters.Controllers
             try
             {
                 long etag = 0;
-                var url = string.Format("{0}/lastEtag/{1}", destinationUrl, GetServerNameForWire(storage.Name));
+                var url = string.Format("{0}/lastEtag/{1}", destinationUrl, GetServerNameForWire(storage.CounterStorageUrl));
                 var request = httpRavenRequestFactory.Create(url, "GET", connectionStringOptions);
                 request.ExecuteRequest(etagString => etag = long.Parse(etagString.ReadToEnd()));
 
@@ -398,7 +398,7 @@ namespace Raven.Database.Counters.Controllers
 			{
 				try
 				{
-				    var destinations = storage.Servers.Where(serverName => serverName != storage.Name).ToList();
+                    var destinations = storage.Servers.Where(serverName => serverName != storage.CounterStorageUrl).ToList();
 
 				    if (destinations.Count > 0)
 				    {

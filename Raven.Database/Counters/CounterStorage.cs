@@ -29,7 +29,7 @@ namespace Raven.Database.Counters
 {
 	public class CounterStorage : IDisposable
 	{
-	    public string Name { get; private set; }
+        public string CounterStorageUrl { get; private set; }
         private readonly StorageEnvironment storageEnvironment;
         public readonly RavenCounterReplication ReplicationTask;
         public Guid Id { get; private set; }
@@ -44,12 +44,12 @@ namespace Raven.Database.Counters
 
         public int ReplicationTimeoutInMs { get; private set; }
 
-	    public readonly string CounterName;
+	    public readonly string CounterStorageName;
 
-		public CounterStorage(string serverUrl, string counterName, InMemoryRavenConfiguration configuration)
+		public CounterStorage(string serverUrl, string counterStorageStorageName, InMemoryRavenConfiguration configuration)
 		{
-		    Name = String.Format("{0}counters/{1}", serverUrl, counterName);
-		    CounterName = counterName;
+            CounterStorageUrl = String.Format("{0}counters/{1}", serverUrl, counterStorageStorageName);
+            CounterStorageName = counterStorageStorageName;
                 
 			var options = configuration.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
 				: CreateStorageOptionsFromConfiguration(configuration.CountersDataDirectory, configuration.Settings);
@@ -59,10 +59,10 @@ namespace Raven.Database.Counters
 		   
 		    ReplicationTimeoutInMs = configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 60*1000;
 
-            Initialize(Name);
+            Initialize();
 		}
 
-		private void Initialize(string name)
+		private void Initialize()
 		{
 			using (var tx = storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 			{
@@ -80,30 +80,30 @@ namespace Raven.Database.Counters
 				{
 					Id = Guid.NewGuid();
 					// local is always 0
-					servers.Add(tx, name, BitConverter.GetBytes(0));
-					serverNamesToIds[name] = 0;
-					serverIdstoName[0] = name;
+                    servers.Add(tx, CounterStorageUrl, BitConverter.GetBytes(0));
+                    serverNamesToIds[CounterStorageUrl] = 0;
+                    serverIdstoName[0] = CounterStorageUrl;
 					metadata.Add(tx, "id", Id.ToByteArray());
-					metadata.Add(tx, "name", Encoding.UTF8.GetBytes(name));
+                    metadata.Add(tx, "name", Encoding.UTF8.GetBytes(CounterStorageUrl));
 
 				    var name2 = "";
                     var name3 = "";
                     //Triple HACK: setup replication peer
                     // todo: remove this
-				    if (name.Contains(":8080"))
+                    if (CounterStorageUrl.Contains(":8080"))
 				    {
-				        name2 = name.Replace(":8080", ":8081");
-                        name3 = name.Replace(":8080", ":8082");
+                        name2 = CounterStorageUrl.Replace(":8080", ":8081");
+                        name3 = CounterStorageUrl.Replace(":8080", ":8082");
 				    }
-                    else if (name.Contains(":8081"))
+                    else if (CounterStorageUrl.Contains(":8081"))
                     {
-                        name2 = name.Replace(":8081", ":8080");
-                        name3 = name.Replace(":8081", ":8082");
+                        name2 = CounterStorageUrl.Replace(":8081", ":8080");
+                        name3 = CounterStorageUrl.Replace(":8081", ":8082");
                     }
                     else
                     {
-                        name2 = name.Replace(":8082", ":8080");
-                        name3 = name.Replace(":8082", ":8081");
+                        name2 = CounterStorageUrl.Replace(":8082", ":8080");
+                        name3 = CounterStorageUrl.Replace(":8082", ":8081");
                     }
 
 				    servers.Add(tx, name2, BitConverter.GetBytes(1));
@@ -125,7 +125,7 @@ namespace Raven.Database.Counters
 						throw new InvalidOperationException("Could not read name from the store, something bad happened");
 					var storedName = new StreamReader(nameResult.Reader.AsStream()).ReadToEnd();
 
-					if (storedName != name)
+                    if (storedName != CounterStorageUrl)
 						throw new InvalidOperationException("The stored name " + storedName + " does not match the given name " + name);
 
 
@@ -375,7 +375,7 @@ namespace Raven.Database.Counters
 			public RavenConnectionStringOptions GetConnectionString(string serverUrl)
 			{
 				ReplicationDocument replicationDocument = GetReplicationData();
-
+                ReplicationDestination x = new ReplicationDestination();
 				return replicationDocument
 					.Destinations
 					.Where(destination => !destination.Disabled && destination.Url == serverUrl)
