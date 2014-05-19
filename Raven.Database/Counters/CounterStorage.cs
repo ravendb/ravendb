@@ -363,30 +363,6 @@ namespace Raven.Database.Counters
 				return serverEtag;
 			}
 
-			public RavenConnectionStringOptions GetConnectionString(string server)
-			{
-				RavenConnectionStringOptions connectionStringOptions;
-				int serverId = GetServerId(server);
-
-				if (serverId == -1)
-				{
-					connectionStringOptions = new RavenConnectionStringOptions();
-				}
-				else
-				{
-					var key = EndianBitConverter.Big.GetBytes(serverId);
-					var slice = new Slice(key);
-					var result = serversConnectionStringOptions.Read(transaction, slice);
-					if (result != null && result.Version != 0)
-					{
-						connectionStringOptions = result.Reader.ReadBytes();
-					}
-				}
-				
-				
-				return new RavenConnectionStringOptions();
-			}
-
             public void Dispose()
 			{
 				if (transaction != null)
