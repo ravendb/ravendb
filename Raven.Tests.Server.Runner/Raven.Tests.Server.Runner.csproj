@@ -72,6 +72,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.1.2\lib\net45\System.Net.Http.Formatting.dll</HintPath>
     </Reference>
+    <Reference Include="System.Web" />
     <Reference Include="System.Web.Http, Version=5.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.1.2\lib\net45\System.Web.Http.dll</HintPath>
@@ -82,6 +83,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="FromMono\Options.cs" />
+    <Compile Include="Imports\HttpListenerResponseAdapter.cs" />
+    <Compile Include="Imports\HttpListenerContextAdpater.cs" />
+    <Compile Include="Imports\HttpExtensions.cs" />
+    <Compile Include="Imports\IHttpContext.cs" />
+    <Compile Include="Imports\IHttpRequest.cs" />
+    <Compile Include="Imports\IHttpResponse.cs" />
+    <Compile Include="Imports\HttpListenerRequestAdapter.cs" />
+    <Compile Include="Imports\UrlExtension.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Responders\ResponderBase.cs" />

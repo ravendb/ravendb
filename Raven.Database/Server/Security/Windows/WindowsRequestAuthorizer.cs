@@ -160,50 +160,6 @@ namespace Raven.Database.Server.Security.Windows
 			}
 		}
 
-		private bool TryCreateUser(IHttpContext ctx, string databaseName, out Action onRejectingRequest)
-		{
-			var invalidUser = (ctx.User == null || ctx.User.Identity.IsAuthenticated == false);
-			if (invalidUser)
-			{
-				onRejectingRequest = () =>
-				{
-					ProvideDebugAuthInfo(ctx, new
-					{
-						Reason = "User is null or not authenticated"
-					});
-					ctx.Response.AddHeader("Raven-Required-Auth", "Windows");
-					if (string.IsNullOrEmpty(Settings.OAuthTokenServer) == false)
-					{
-						ctx.Response.AddHeader("OAuth-Source", Settings.OAuthTokenServer);
-					}
-					ctx.SetStatusToUnauthorized();
-				};
-				return false;
-			}
-
-			var dbUsersIaAllowedAccessTo = requiredUsers
-				.Where(data => ctx.User.Identity.Name.Equals(data.Name, StringComparison.InvariantCultureIgnoreCase))
-				.SelectMany(source => source.Databases)
-				.Concat(requiredGroups.Where(data => ctx.User.IsInRole(data.Name)).SelectMany(x => x.Databases))
-				.ToList();
-			var user = UpdateUserPrincipal(ctx, dbUsersIaAllowedAccessTo);
-
-			onRejectingRequest = () =>
-			{
-				ctx.SetStatusToForbidden();
-
-				ProvideDebugAuthInfo(ctx, new
-				{
-					user.Identity.Name,
-					user.AdminDatabases,
-					user.ReadOnlyDatabases,
-					user.ReadWriteDatabases,
-					DatabaseName = databaseName
-				});
-			};
-			return true;
-		}
-
         private bool TryCreateUser(RavenBaseApiController controller, string databaseName, out Func<HttpResponseMessage> onRejectingRequest)
 		{
 			var invalidUser = (controller.User == null || controller.User.Identity.IsAuthenticated == false);
@@ -261,19 +217,6 @@ namespace Raven.Database.Server.Security.Windows
 			return true;
 		}
 
-		private static void ProvideDebugAuthInfo(IHttpContext ctx, object msg)
-		{
-			string debugAuth = ctx.Request.QueryString["debug-auth"];
-			if (debugAuth == null)
-				return;
-
-			bool shouldProvideDebugAuthInformation;
-			if (bool.TryParse(debugAuth, out shouldProvideDebugAuthInformation) && shouldProvideDebugAuthInformation)
-			{
-				ctx.WriteJson(msg);
-			}
-		}
-
         private static HttpResponseMessage ProvideDebugAuthInfo(RavenBaseApiController controller, object msg)
 		{
 			string debugAuth = controller.GetQueryStringValue("debug-auth");
@@ -287,28 +230,6 @@ namespace Raven.Database.Server.Security.Windows
 			}
 
 			return controller.GetEmptyMessage();
-		}
-
-		private PrincipalWithDatabaseAccess UpdateUserPrincipal(IHttpContext ctx, List<DatabaseAccess> databaseAccessLists)
-		{
-			var access = ctx.User as PrincipalWithDatabaseAccess;
-			if (access != null)
-				return access;
-
-			var user = new PrincipalWithDatabaseAccess((WindowsPrincipal)ctx.User);
-
-			foreach (var databaseAccess in databaseAccessLists)
-			{
-				if (databaseAccess.Admin)
-					user.AdminDatabases.Add(databaseAccess.TenantId);
-				else if (databaseAccess.ReadOnly)
-					user.ReadOnlyDatabases.Add(databaseAccess.TenantId);
-				else
-					user.ReadWriteDatabases.Add(databaseAccess.TenantId);
-			}
-
-			ctx.User = user;
-			return user;
 		}
 
         private PrincipalWithDatabaseAccess UpdateUserPrincipal(RavenBaseApiController controller, List<DatabaseAccess> databaseAccessLists,
@@ -374,14 +295,6 @@ namespace Raven.Database.Server.Security.Windows
 		public override void Dispose()
 		{
 			WindowsSettingsChanged -= UpdateSettings;
-		}
-
-		public IPrincipal GetUser(IHttpContext ctx)
-		{
-			Action onRejectingRequest;
-			var databaseName = TenantId ?? Constants.SystemDatabase;
-			var userCreated = TryCreateUser(ctx, databaseName, out onRejectingRequest);
-			return userCreated ? ctx.User : null;
 		}
 
 		public IPrincipal GetUser(RavenDbApiController controller)
