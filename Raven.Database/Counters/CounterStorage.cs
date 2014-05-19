@@ -9,16 +9,21 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Policy;
 using System.Text;
+using Jint.Native.Json;
+using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
+using Raven.Json.Linq;
 using Voron;
 using Voron.Impl;
 using Voron.Trees;
 using Voron.Util;
 using Voron.Util.Conversion;
 using Constants = Raven.Abstractions.Data.Constants;
+using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace Raven.Database.Counters
 {
@@ -192,7 +197,7 @@ namespace Raven.Database.Counters
 		{
 		    private readonly CounterStorage parent;
 		    private readonly Transaction transaction;
-            private readonly Tree counters, countersEtags, countersGroups, etagsCounters, serversConnectionStringOptions;
+			private readonly Tree counters, countersEtags, countersGroups, etagsCounters, metadata;
 			private readonly byte[] serverIdBytes = new byte[sizeof(int)];
 
             public Reader(CounterStorage parent, StorageEnvironment storageEnvironment)
@@ -206,7 +211,7 @@ namespace Raven.Database.Counters
                 countersGroups = transaction.State.GetTree(transaction, "countersGroups");
                 countersEtags = transaction.State.GetTree(transaction, "counters->etags");
                 etagsCounters = transaction.State.GetTree(transaction, "etags->counters");
-                serversConnectionStringOptions = transaction.State.GetTree(transaction, "serversConnectionStringOptions");
+				metadata = transaction.State.GetTree(transaction, "$metadata");
             }
 
 			public IEnumerable<string> GetCounterNames(string prefix)
@@ -366,25 +371,7 @@ namespace Raven.Database.Counters
 
 			public RavenConnectionStringOptions GetConnectionString(string server)
 			{
-				RavenConnectionStringOptions connectionStringOptions;
-				int serverId = GetServerId(server);
 
-				if (serverId == -1)
-				{
-					connectionStringOptions = new RavenConnectionStringOptions();
-				}
-				else
-				{
-					var key = EndianBitConverter.Big.GetBytes(serverId);
-					var slice = new Slice(key);
-					var result = serversConnectionStringOptions.Read(transaction, slice);
-					if (result != null && result.Version != 0)
-					{
-						connectionStringOptions = result.Reader.ReadBytes();
-					}
-				}
-				
-				
 				return new RavenConnectionStringOptions();
 			}
 
@@ -399,7 +386,7 @@ namespace Raven.Database.Counters
 		{
 			private readonly CounterStorage parent;
 			private readonly Transaction transaction;
-            private readonly Tree counters, etagsCountersIx, countersEtagIx, countersGroups, serversConnectionStringOptions;
+			private readonly Tree counters, etagsCountersIx, countersEtagIx, countersGroups, metadata;
             private readonly byte[] storeBuffer;
 			private byte[] buffer = new byte[0];
 			private readonly byte[] etagBuffer = new byte[sizeof(long)];
@@ -414,7 +401,7 @@ namespace Raven.Database.Counters
 				countersGroups = transaction.State.GetTree(transaction, "countersGroups");
 				etagsCountersIx = transaction.State.GetTree(transaction, "etags->counters");
 				countersEtagIx = transaction.State.GetTree(transaction, "counters->etags");
-                serversConnectionStringOptions = transaction.State.GetTree(transaction, "serversConnectionStringOptions");
+				metadata = transaction.State.GetTree(transaction, "$metadata");
 
 				storeBuffer = new byte[sizeof(long) + //positive
 									   sizeof(long)]; // negative
@@ -553,25 +540,18 @@ namespace Raven.Database.Counters
 				serversLastEtag.Add(transaction, new Slice(key), EndianBitConverter.Big.GetBytes(lastEtag));
 			}
 
-			public void CreateReplicationOptions(string url, string apiKey)
+			public void UpdateReplication(ReplicationDocument document)
 			{
-				NetworkCredential networkCredentials = new NetworkCredential();
-
-				var connectionStringOptions = new RavenConnectionStringOptions
+				using (var memoryStream = new MemoryStream())
+				using (var streamWriter = new StreamWriter(memoryStream))
+				using (var jsonTextWriter = new JsonTextWriter(streamWriter))
 				{
-					Url = url,
-					ApiKey = apiKey,
-				};
-
-				var key = Encoding.UTF8.GetBytes(url);
-
-				using (Stream stream = new MemoryStream())
-				{
-					IFormatter formatter = new BinaryFormatter();
-					formatter.Serialize(stream, connectionStringOptions);
-					serversConnectionStringOptions.Add(transaction, new Slice(key), stream);
+					new JsonSerializer().Serialize(jsonTextWriter, document);
+					memoryStream.Position = 0;
+					metadata.Add(transaction, "replication", memoryStream);
 				}
 			}
+
 		}
 
 		public string ServerNameFor(int sourceId)
