@@ -21,6 +21,7 @@ using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
 using Raven.Database.Server.WebApi.Filters;
 using Raven.Database.Server.WebApi.Handlers;
+using System.Net;
 
 // ReSharper disable once CheckNamespace
 namespace Owin
@@ -139,7 +140,7 @@ namespace Owin
 			{
                 var content = response.Content;
 			    var compressedContent = content as GZipToJsonAndCompressHandler.CompressedContent;
-			    if (compressedContent != null)
+			    if (compressedContent != null && response.StatusCode != HttpStatusCode.NoContent)
                     return ShouldBuffer(compressedContent.OriginalContent);
 			    return ShouldBuffer(content);
 			}
