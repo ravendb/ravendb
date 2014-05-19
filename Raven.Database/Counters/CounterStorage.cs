@@ -4,11 +4,9 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Text;
 using Newtonsoft.Json;
 using Raven.Abstractions;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
@@ -64,6 +62,59 @@ namespace Raven.Database.Counters
 				storageEnvironment.CreateTree(tx, "serversLastEtag");
 				storageEnvironment.CreateTree(tx, "counters");
 				storageEnvironment.CreateTree(tx, "countersGroups");
+				storageEnvironment.CreateTree(tx, "counters->etags");
+				var etags = storageEnvironment.CreateTree(tx, "etags->counters");
+				var servers = storageEnvironment.CreateTree(tx, "servers");
+				
+				var metadata = tx.State.GetTree(tx, "$metadata");
+				var id = metadata.Read(tx, "id");
+
+				if (id == null) // new db
+				{
+					servers.Add(tx, CounterStorageUrl, BitConverter.GetBytes(0)); // local is always 0
+
+					Id = Guid.NewGuid();
+					metadata.Add(tx, "id", Id.ToByteArray());
+					metadata.Add(tx, "name", Encoding.UTF8.GetBytes(CounterStorageUrl));
+				}
+				else // existing db
+				{
+					int used;
+					Id = new Guid(id.Reader.ReadBytes(16, out used));
+					var nameResult = metadata.Read(tx, "name");
+					if (nameResult == null)
+						throw new InvalidOperationException("Could not read name from the store, something bad happened");
+					var storedName = new StreamReader(nameResult.Reader.AsStream()).ReadToEnd();
+
+					if (storedName != CounterStorageUrl)
+						throw new InvalidOperationException("The stored name " + storedName + " does not match the given name " + CounterStorageUrl);
+
+
+					using (var it = servers.Iterate(tx))
+					{
+						if (it.Seek(Slice.BeforeAllKeys))
+						{
+							do
+							{
+								var serverId = it.CreateReaderForCurrent().ReadLittleEndianInt32();
+								var serverName = it.CurrentKey.ToString();
+								serverNamesToIds[serverName] = serverId;
+								serverIdstoName[serverId] = serverName;
+							} while (it.MoveNext());
+						}
+					}
+					using (var it = etags.Iterate(tx))
+					{
+						if (it.Seek(Slice.AfterAllKeys))
+						{
+							LastEtag = it.CurrentKey.CreateReader().ReadBigEndianInt64();
+						}
+					}
+				}
+				
+				/*storageEnvironment.CreateTree(tx, "serversLastEtag");
+				storageEnvironment.CreateTree(tx, "counters");
+				storageEnvironment.CreateTree(tx, "countersGroups");
 
 				var servers = storageEnvironment.CreateTree(tx, "servers");
 				var etags = storageEnvironment.CreateTree(tx, "etags->counters");
@@ -77,8 +128,8 @@ namespace Raven.Database.Counters
                     servers.Add(tx, CounterStorageUrl, BitConverter.GetBytes(0));
                     serverNamesToIds[CounterStorageUrl] = 0;
                     serverIdstoName[0] = CounterStorageUrl;
-					metadata.Add(tx, "id", Id.ToByteArray());
-                    metadata.Add(tx, "name", Encoding.UTF8.GetBytes(CounterStorageUrl));
+					//metadata.Add(tx, "id", Id.ToByteArray());
+                    //metadata.Add(tx, "name", Encoding.UTF8.GetBytes(CounterStorageUrl));
 
 				    var name2 = "";
                     var name3 = "";
@@ -143,7 +194,7 @@ namespace Raven.Database.Counters
 							LastEtag = it.CurrentKey.CreateReader().ReadBigEndianInt64();
 						}
 					}
-				}
+				}*/
 
                 ReplicationTask.StartReplication();
 			}
@@ -374,7 +425,7 @@ namespace Raven.Database.Counters
 
 			private ReplicationDocument GetReplicationData()
 			{
-				var readResult = metadata.Read(transaction, "replication");
+				var readResult = metadata.Read(transaction, "countersReplicationData");
 				var stream = readResult.Reader.AsStream();
 				using (var streamReader = new StreamReader(stream))
 				using (var jsonTextReader = new JsonTextReader(streamReader))

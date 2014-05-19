@@ -73,6 +73,8 @@ namespace Raven.Database.Counters.Controllers
 			using (var writer = Storage.CreateWriter())
 			{
 				writer.UpdateReplications(jsonDeserialization);
+				writer.Commit();
+
 				return Request.CreateResponse(HttpStatusCode.OK);
 			}
 		}
