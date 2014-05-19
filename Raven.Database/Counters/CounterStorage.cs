@@ -5,18 +5,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Security.Policy;
 using System.Text;
-using Jint.Native.Json;
 using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Database.Config;
 using Raven.Database.Counters.Controllers;
-using Raven.Json.Linq;
 using Voron;
 using Voron.Impl;
 using Voron.Trees;
@@ -69,7 +64,6 @@ namespace Raven.Database.Counters
 				var servers = storageEnvironment.CreateTree(tx, "servers");
 				var etags = storageEnvironment.CreateTree(tx, "etags->counters");
 				storageEnvironment.CreateTree(tx, "counters->etags");
-                storageEnvironment.CreateTree(tx, "serversConnectionStringOptions");
 				var metadata = tx.State.GetTree(tx, "$metadata");
 				var id = metadata.Read(tx, "id");
 				if (id == null) // new db
@@ -383,7 +377,7 @@ namespace Raven.Database.Counters
 			private ReplicationDocument GetReplicationData()
 			{
 				var readResult = metadata.Read(transaction, "replication");
-				Stream stream = readResult.Reader.AsStream();
+				var stream = readResult.Reader.AsStream();
 				using (var streamReader = new StreamReader(stream))
 				using (var jsonTextReader = new JsonTextReader(streamReader))
 				{
