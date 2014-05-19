@@ -66,10 +66,5 @@ namespace Raven.Database.Server.RavenFS.Storage.Voron.Impl
                 public const string Count = "count";
             }
 		}
-
-	    public class FileTombstones
-	    {
-            public const string TableName = "file_tombstones";
-	    }
 	}
 }

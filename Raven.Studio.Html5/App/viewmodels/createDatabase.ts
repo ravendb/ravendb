@@ -202,7 +202,7 @@ class createDatabase extends dialogViewModelBase {
         }
 
         if (this.isPeriodicBackupBundleEnabled()) {
-            activeBundles.push("PeriodicBackups");
+            activeBundles.push("PeriodicBackup");
         }
 
         if (this.isScriptedIndexBundleEnabled()) {

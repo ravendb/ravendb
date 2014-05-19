@@ -138,5 +138,8 @@ namespace Raven.Abstractions.Data
 	    public const string AssembliesDirectoryName = "Assemblies";
 
 		public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
+		
+		// Indexing
+		public const string MemoryLimitForIndexing = "Raven/MemoryLimitForIndexing";
 	}
 }

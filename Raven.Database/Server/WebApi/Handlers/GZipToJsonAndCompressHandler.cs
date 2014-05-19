@@ -89,8 +89,12 @@ namespace Raven.Database.Server.WebApi.Handlers
 		{
 			private readonly HttpContent originalContent;
 			private readonly string encodingType;
+		    public HttpContent OriginalContent
+		    {
+		        get { return originalContent; }
+		    }
 
-			public CompressedContent(HttpContent content, string encodingType)
+		    public CompressedContent(HttpContent content, string encodingType)
 			{
 				if (content == null)
 				{

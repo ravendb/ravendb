@@ -93,7 +93,6 @@
     <Compile Include="Security\OAuth\ReplicationWithOAuthMultipleKeys.cs" />
     <Compile Include="Storage\Voron\DocumentsStorageActionsTests.cs" />
     <Compile Include="Synchronization\IndexationTests.cs" />
-    <Compile Include="Syncronization\IndexationTests.cs" />
     <Compile Include="Voron\Class1.cs" />
   </ItemGroup>
   <ItemGroup>

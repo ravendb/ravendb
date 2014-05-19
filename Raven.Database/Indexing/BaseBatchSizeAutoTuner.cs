@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using Raven.Abstractions;
 using Raven.Database.Config;
 using System.Linq;
@@ -15,12 +16,16 @@ namespace Raven.Database.Indexing
 		private int currentNumber;
 
 		private DateTime lastIncrease;
+		private readonly ConcurrentDictionary<Guid, long> currentlyUsedBatchSizes;
+		private readonly long memoryLimitForIndexingInBytes;
 
 		protected BaseBatchSizeAutoTuner(WorkContext context)
 		{
 			this.context = context;
-			this.NumberOfItemsToIndexInSingleBatch = InitialNumberOfItems;
+			NumberOfItemsToIndexInSingleBatch = InitialNumberOfItems;
 			MemoryStatistics.RegisterLowMemoryHandler(this);
+			currentlyUsedBatchSizes = new ConcurrentDictionary<Guid, long>();
+			memoryLimitForIndexingInBytes = context.Configuration.MemoryLimitForIndexingInMB * 1024 * 1024;
 		}
 
 		public void HandleLowMemory()
@@ -56,7 +61,7 @@ namespace Raven.Database.Indexing
 
 		private bool ConsiderIncreasingBatchSize(int amountOfItemsToIndex, long size, TimeSpan indexingDuration)
 		{
-			if (amountOfItemsToIndex < NumberOfItemsToIndexInSingleBatch)
+			if (amountOfItemsToIndex < NumberOfItemsToIndexInSingleBatch || CurrentlyUsedBatchSizes.Values.Sum() > memoryLimitForIndexingInBytes)
 			{
 				return false;
 			}
@@ -114,9 +119,18 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		public bool IsIndexingUsingTooMuchMemory
+		{
+			get
+			{
+				return CurrentlyUsedBatchSizes.Values.Sum() * 4 > memoryLimitForIndexingInBytes;
+			}
+		}
+
 		private bool ReduceBatchSizeIfCloseToMemoryCeiling(bool forceReducing = false)
 		{
-			if (MemoryStatistics.AvailableMemory >= context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit && forceReducing == false)
+			if (MemoryStatistics.AvailableMemory >= context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit && forceReducing == false &&
+				IsIndexingUsingTooMuchMemory == false)
 			{
 				// there is enough memory available for the next indexing run
 				return false;
@@ -141,44 +155,43 @@ namespace Raven.Database.Indexing
 			}
 
 			// we are still too high, let us reduce the size and see what is going on.
+			NumberOfItemsToIndexInSingleBatch = CalculateReductionOfItemsInSingleBatch();
 
-			NumberOfItemsToIndexInSingleBatch = Math.Max(InitialNumberOfItems,
-														 NumberOfItemsToIndexInSingleBatch / 2);
 
 			return true;
 		}
 
 		private bool ConsiderDecreasingBatchSize(int amountOfItemsToIndex, TimeSpan indexingDuration)
 		{
-			if (
-				// we had as much work to do as we are currently capable of handling,
-				// we might need to increase, but certainly not decrease the batch size
-				amountOfItemsToIndex >= NumberOfItemsToIndexInSingleBatch ||
-				// we haven't gone over the max latency limit, no reason to decrease yet
-				indexingDuration < context.Configuration.MaxIndexingRunLatency)
+			var isIndexingUsingTooMuchMemory = IsIndexingUsingTooMuchMemory;
+			if (isIndexingUsingTooMuchMemory == false) //skip all other heuristics if indexing takes too much memory
 			{
-				return false;
+				if (
+					// we had as much work to do as we are currently capable of handling,
+					// we might need to increase, but certainly not decrease the batch size
+					amountOfItemsToIndex >= NumberOfItemsToIndexInSingleBatch ||
+					// we haven't gone over the max latency limit, no reason to decrease yet
+					indexingDuration < context.Configuration.MaxIndexingRunLatency)
+				{
+					return false;
+				}
+
+				if ((SystemTime.UtcNow - lastIncrease).TotalMinutes < 3)
+					return true;
+
+				// we didn't have a lot of work to do, so let us see if we can reduce the batch size
+
+				// we are at the configured minimum, nothing to do
+				if (NumberOfItemsToIndexInSingleBatch == InitialNumberOfItems)
+					return true;
+
+				// we were above the max/2 the last few times, we can't reduce the work load now
+				if (GetLastAmountOfItems().Any(x => x > NumberOfItemsToIndexInSingleBatch/2))
+					return true;
 			}
 
-			if ((SystemTime.UtcNow - lastIncrease).TotalMinutes < 3)
-				return true;
-
-			// we didn't have a lot of work to do, so let us see if we can reduce the batch size
-
-			// we are at the configured minimum, nothing to do
-			if (NumberOfItemsToIndexInSingleBatch == InitialNumberOfItems)
-				return true;
-
-			// we were above the max/2 the last few times, we can't reduce the work load now
-			if (GetLastAmountOfItems().Any(x => x > NumberOfItemsToIndexInSingleBatch/2))
-				return true;
-
 			var old = NumberOfItemsToIndexInSingleBatch;
-			// we have had a couple of times were we didn't get to the current max, so we can probably
-			// reduce the max again now, this will reduce the memory consumption eventually, and will cause 
-			// faster indexing times in case we get a big batch again
-			NumberOfItemsToIndexInSingleBatch = Math.Max(InitialNumberOfItems,
-														 NumberOfItemsToIndexInSingleBatch / 2);
+			NumberOfItemsToIndexInSingleBatch = CalculateReductionOfItemsInSingleBatch();
 
 			// we just reduced the batch size because we have two concurrent runs where we had
 			// less to do than the previous runs. That indicate the the busy period is over, maybe we
@@ -195,14 +208,32 @@ namespace Raven.Database.Indexing
 			return true;
 		}
 
+		private int CalculateReductionOfItemsInSingleBatch()
+		{
+			var minNumberOfItemsToIndex = InitialNumberOfItems;
+			if (IsIndexingUsingTooMuchMemory)
+				minNumberOfItemsToIndex /= 4;
+
+			// we have had a couple of times were we didn't get to the current max, so we can probably
+			// reduce the max again now, this will reduce the memory consumption eventually, and will cause 
+			// faster indexing times in case we get a big batch again
+			// * if indexing is using too much memory --> probably we have very large documents in the index, so let it reduce to 1 if needed
+			return Math.Max(minNumberOfItemsToIndex, NumberOfItemsToIndexInSingleBatch/2);
+		}
+
 		/// <summary>
 		/// This let us know that an OOME has happened, and we need to be much more
 		/// conservative with regards to how fast we can grow memory.
 		/// </summary>
-		public void OutOfMemoryExceptionHappened()
+		public void HandleOutOfMemory()
 		{
+			var newNumberOfItemsToIndex = InitialNumberOfItems;
+			if (IsIndexingUsingTooMuchMemory) //if using too much memory, decrease number of items in each batch
+				newNumberOfItemsToIndex /= 4;
+
+
 			// first thing to do, reset the number of items per batch
-			NumberOfItemsToIndexInSingleBatch = InitialNumberOfItems;
+			NumberOfItemsToIndexInSingleBatch = newNumberOfItemsToIndex > 0 ? newNumberOfItemsToIndex : 1;
 
 			// now, we need to be more conservative about how we are increasing memory usage, so instead of increasing
 			// every time we hit the limit twice, we will increase every time we hit it three times, then 5, 9, etc
@@ -215,7 +246,7 @@ namespace Raven.Database.Indexing
 		protected abstract int MaxNumberOfItems { get; }
 		protected abstract int CurrentNumberOfItems { get; set; }
 		protected abstract int LastAmountOfItemsToRemember { get; set; }
-		protected abstract void RecordAmountOfItems(int numberOfItems);
+		public ConcurrentDictionary<Guid, long> CurrentlyUsedBatchSizes { get { return currentlyUsedBatchSizes; } }		protected abstract void RecordAmountOfItems(int numberOfItems);
 		protected abstract IEnumerable<int> GetLastAmountOfItems();
 	}
 }

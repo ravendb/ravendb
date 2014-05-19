@@ -763,7 +763,6 @@
     <Compile Include="Indexes\ShoppingCartEventsToShopingCart.cs" />
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="Indexes\WithDecimalValue.cs" />
-    <Compile Include="IndexQueryUrl.cs" />
     <Compile Include="Linq\LongCount.cs" />
     <Compile Include="Json\CloningTests.cs" />
     <Compile Include="Json\JsonNetBugsTests.cs" />

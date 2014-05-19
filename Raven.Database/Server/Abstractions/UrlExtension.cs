@@ -4,26 +4,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Web.Http;
 using Raven.Database.Config;
-using Raven.Database.Server.Controllers;
 
 namespace Raven.Database.Server.Abstractions
 {
 	public static class UrlExtension
 	{
-		public static string GetRequestUrl(this IHttpContext context)
-		{
-			var rawUrl = context.Request.RawUrl;
-			return GetRequestUrlFromRawUrl(rawUrl, context.Configuration);
-		}
-
-		public static string GetRequestUrl(this RavenDbApiController controller)
-		{
-			var rawUrl = controller.InnerRequest.RequestUri.AbsoluteUri;
-			return GetRequestUrlFromRawUrl(rawUrl, controller.DatabasesLandlord.SystemConfiguration);
-		}
-
 		public static string GetRequestUrlFromRawUrl(string rawUrl, InMemoryRavenConfiguration configuration)
 		{
 			string localPath = rawUrl;

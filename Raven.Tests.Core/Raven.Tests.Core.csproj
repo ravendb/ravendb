@@ -68,6 +68,21 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.1.2\lib\net45\System.Net.Http.Formatting.dll</HintPath>
     </Reference>
+    <Reference Include="System.Reactive.Core, Version=2.2.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Rx-Core.2.2.4\lib\net45\System.Reactive.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Interfaces, Version=2.2.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Rx-Interfaces.2.2.4\lib\net45\System.Reactive.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Linq, Version=2.2.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Rx-Linq.2.2.4\lib\net45\System.Reactive.Linq.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.PlatformServices">
+      <HintPath>..\packages\Rx-PlatformServices.2.2.4\lib\net45\System.Reactive.PlatformServices.dll</HintPath>
+    </Reference>
     <Reference Include="System.Web.Http, Version=5.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.1.2\lib\net45\System.Web.Http.dll</HintPath>
@@ -85,13 +100,25 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ChangesApi\Subscribing.cs" />
+    <Compile Include="Querying\Intersection.cs" />
     <Compile Include="Querying\Searching.cs" />
+    <Compile Include="Shard\Sharding.cs" />
+    <Compile Include="Utils\Entities\Camera.cs" />
+    <Compile Include="Utils\Entities\Event.cs" />
+    <Compile Include="Utils\Entities\TShirt.cs" />
+    <Compile Include="Utils\Entities\TShirtType.cs" />
+    <Compile Include="Utils\Indexes\CameraCost.cs" />
+    <Compile Include="Utils\Indexes\Events_SpatialIndex.cs" />
     <Compile Include="Utils\Indexes\Post_LoadAttachment.cs" />
+    <Compile Include="Utils\Indexes\TShirtIndex.cs" />
     <Compile Include="Utils\Transformers\CompanyFullAddressTransformer.cs" />
     <Compile Include="Utils\Transformers\PostWithAsDocumentTransformer.cs" />
     <Compile Include="Utils\Transformers\PostWithMetadataForTransformer.cs" />
     <Compile Include="Utils\Transformers\PostWithContentTransformer.cs" />
     <Compile Include="Utils\Transformers\UserWithCustomDataAndAddressIncludeTransformer.cs" />
+    <Compile Include="Utils\Indexes\Companies_WithReferencedEmployees.cs" />
+    <Compile Include="Utils\Transformers\CompanyEmployeesTransformer.cs" />
     <None Include="app.config" />
     <None Include="packages.config" />
     <Compile Include="Commands\Admin.cs" />
@@ -126,10 +153,7 @@
   <ItemGroup>
     <Folder Include="Auth\" />
     <Folder Include="BackupRestore\" />
-    <Folder Include="ChangesApi\" />
-    <Folder Include="Facets\" />
     <Folder Include="Patching\" />
-    <Folder Include="Shard\" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs">

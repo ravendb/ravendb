@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.RavenFS;
 using Raven.Client.RavenFS.Extensions;
@@ -575,6 +576,43 @@ namespace RavenFS.Tests
 
             Assert.Null(stats);
 	    }
+
+		[Fact]
+		public async Task CanCreateAndDeleteFileSystem()
+		{
+			var client = NewClient();
+			var adminClient = client.Admin;
+
+			const string newFileSystemName = "testName_CanDeleteFileSystem";
+
+			await adminClient.CreateFileSystemAsync(new DatabaseDocument
+			{
+				Id = "Raven/FileSystem/" + newFileSystemName,
+				Settings =
+                 {
+                     {"Raven/FileSystem/DataDir", Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
+                 }
+			}, newFileSystemName);
+
+			using (var createdFsClient = new RavenFileSystemClient(client.ServerUrl, newFileSystemName))
+			{
+				await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] { 1 }));
+			}
+
+			var names = await adminClient.GetFileSystemsNames();
+
+			Assert.Contains(newFileSystemName, names);
+
+			var stats = await adminClient.GetFileSystemsStats();
+
+			Assert.NotNull(stats.FirstOrDefault(x => x.Name == newFileSystemName));
+
+			await adminClient.DeleteFileSystemAsync(newFileSystemName);
+
+			names = await adminClient.GetFileSystemsNames();
+
+			Assert.DoesNotContain(newFileSystemName, names);
+		}
 
 	    private static MemoryStream PrepareTextSourceStream()
 		{

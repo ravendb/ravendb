@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Json.Linq;
 
@@ -29,5 +30,30 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
             return GetEmptyMessage(HttpStatusCode.Created);
         }
+
+		[HttpDelete]
+		[Route("ravenfs/admin/{*id}")]
+		public HttpResponseMessage Delete(string id)
+		{
+			var docKey = "Raven/FileSystems/" + id;
+			var configuration = FileSystemsLandlord.CreateTenantConfiguration(id);
+
+			if (configuration == null)
+				return GetEmptyMessage();
+
+			Database.Documents.Delete(docKey, null, null);
+			bool result;
+
+			if (bool.TryParse(InnerRequest.RequestUri.ParseQueryString()["hard-delete"], out result) && result)
+			{
+				IOExtensions.DeleteDirectory(configuration.DataDirectory);
+				if (configuration.IndexStoragePath != null)
+					IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
+				if (configuration.JournalsStoragePath != null)
+					IOExtensions.DeleteDirectory(configuration.JournalsStoragePath);
+			}
+
+			return GetEmptyMessage();
+		}
     }
 }

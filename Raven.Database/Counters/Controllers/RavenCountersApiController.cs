@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -15,6 +16,7 @@ using System.Web;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using Raven.Abstractions;
+using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -22,6 +24,7 @@ using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
 {
@@ -44,7 +47,9 @@ namespace Raven.Database.Counters.Controllers
 				return (RequestManager)Configuration.Properties[typeof(RequestManager)];
 			}
 		}
-		
+
+
+       
 
 		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
 		{

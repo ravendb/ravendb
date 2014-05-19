@@ -5,13 +5,10 @@ class counter {
     servers = ko.observableArray<server>([]);
 
     //constructor(dto: counterDto) {
-    //    this.name(dto.Name);
-    //    this.overallTotal(dto.OverallTotal);
-    //    this.servers(dto.Servers.map(s => new server(s)));
-    //}
-
-    constructor(dto: string) {
-        
+    constructor(dto: any) {
+        this.name(dto.Name);
+        this.overallTotal(dto.OverallTotal);
+        this.servers(dto.Servers.map(s => new server(s)));
     }
 } 
 

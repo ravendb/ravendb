@@ -23,7 +23,11 @@ namespace Raven.Database.Config
 
 		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
-		    EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting],
+			MemoryLimitForIndexing = new IntegerSetting(settings[Constants.MemoryLimitForIndexing],
+				// we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
+				Math.Min(1024, (int)(MemoryStatistics.AvailableMemory * 0.75)));
+
+			EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting],
 		        Constants.DefaultKeySizeToUseInActualEncryptionInBits);
 			MaxPageSize =
 				new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
@@ -153,6 +157,8 @@ namespace Raven.Database.Config
             VoronMaxBufferPoolSize = new IntegerSetting(settings["Raven/Voron/MaxBufferPoolSize"], 4);
 			VoronInitialFileSize = new NullableIntegerSetting(settings["Raven/Voron/InitialFileSize"], (int?)null);
 		}
+
+		public IntegerSetting MemoryLimitForIndexing { get;private set; }
 
 		private string GetDefaultWebDir()
 		{
