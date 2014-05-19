@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
@@ -60,6 +61,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					ushort version;
 					var value = LoadJson(tableStorage.ReduceKeyCounts, iterator.CurrentKey, writeBatch.Value, out version);
 
+					Debug.Assert(value != null);
 					yield return new ReduceKeyAndCount
 								 {
 									 Count = value.Value<int>("mappedItemsCount"),
