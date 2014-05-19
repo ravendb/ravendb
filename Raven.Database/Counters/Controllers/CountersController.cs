@@ -1,8 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using System.Web.Http;
+using Raven.Abstractions.Replication;
 
 namespace Raven.Database.Counters.Controllers
 {
@@ -53,6 +56,26 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
+		[Route("counters/{counterName}/replications")]
+		[HttpPut]
+		public async Task<HttpResponseMessage> Replications()
+		{
+			ReplicationDocument jsonDeserialization;
+			try
+			{
+				jsonDeserialization = await ReadJsonObjectAsync<ReplicationDocument>();
+			}
+			catch (Exception e)
+			{
+				return Request.CreateResponse(HttpStatusCode.BadRequest, e.Message);
+			}
+
+			using (var writer = Storage.CreateWriter())
+			{
+				writer.UpdateReplications(jsonDeserialization);
+				return Request.CreateResponse(HttpStatusCode.OK);
+			}
+		}
 
 		public class CounterView
 		{

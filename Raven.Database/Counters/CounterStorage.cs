@@ -372,10 +372,55 @@ namespace Raven.Database.Counters
 				return serverEtag;
 			}
 
-			public RavenConnectionStringOptions GetConnectionString(string server)
+			public RavenConnectionStringOptions GetConnectionString(string serverUrl)
 			{
+				ReplicationDocument replicationDocument = GetReplicationData();
 
-				return new RavenConnectionStringOptions();
+				return replicationDocument
+					.Destinations
+					.Where(destination => !destination.Disabled && destination.Url == serverUrl)
+					.Select(GetConnectionOptionsSafe)
+					.FirstOrDefault();
+			}
+
+			private ReplicationDocument GetReplicationData()
+			{
+				var readResult = metadata.Read(transaction, "replication");
+				Stream stream = readResult.Reader.AsStream();
+				using (var streamReader = new StreamReader(stream))
+				using (var jsonTextReader = new JsonTextReader(streamReader))
+				{
+					return new JsonSerializer().Deserialize<ReplicationDocument>(jsonTextReader);
+				}
+			}
+
+			private RavenConnectionStringOptions GetConnectionOptionsSafe(ReplicationDestination destination)
+			{
+				try
+				{
+					var connectionStringOptions = new RavenConnectionStringOptions
+					{
+						Url = destination.Url,
+						ApiKey = destination.ApiKey,
+					};
+					if (string.IsNullOrEmpty(destination.Username) == false)
+					{
+						connectionStringOptions.Credentials = string.IsNullOrEmpty(destination.Domain)
+							? new NetworkCredential(destination.Username, destination.Password)
+							: new NetworkCredential(destination.Username, destination.Password, destination.Domain);
+					}
+					return connectionStringOptions;
+				}
+				catch (Exception e)
+				{
+					// TODO: log error
+					//log.ErrorException( 
+					//	string.Format("IGNORING BAD REPLICATION CONFIG!{0}Could not figure out connection options for [Url: {1}, ClientVisibleUrl: {2}]",
+					//	Environment.NewLine, destination.Url, destination.ClientVisibleUrl),
+					//	e);
+
+					return null;
+				}
 			}
 
             public void Dispose()
@@ -543,7 +588,7 @@ namespace Raven.Database.Counters
 				serversLastEtag.Add(transaction, new Slice(key), EndianBitConverter.Big.GetBytes(lastEtag));
 			}
 
-			public void UpdateReplication(ReplicationDocument document)
+			public void UpdateReplications(ReplicationDocument document)
 			{
 				using (var memoryStream = new MemoryStream())
 				using (var streamWriter = new StreamWriter(memoryStream))
