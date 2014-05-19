@@ -18,7 +18,7 @@ namespace Raven.Abstractions.Smuggler
     using System.Text.RegularExpressions;
     public class SmugglerOptions
     {
-	    private const int DefaultDocumentSizeInChunkLimitInBytes = 512 * 1024 * 1024;
+        public const int DefaultDocumentSizeInChunkLimitInBytes = 8 * 1024 * 1024;
 	    private int chunkSize;
         private int batchSize;
 	    private TimeSpan timeout;

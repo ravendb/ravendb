@@ -141,8 +141,5 @@ namespace Raven.Abstractions.Data
 		
 		// Indexing
 		public const string MemoryLimitForIndexing = "Raven/MemoryLimitForIndexing";
-		
-		//Smuggler
-		public const long DefaultDocumentSizeLimitInChunkInBytes = 8*1024*1024;
 	}
 }
