@@ -25,11 +25,11 @@ namespace RavenFS.Tests.Auth
 {
     public class ClientWindowsAuth : RavenFsTestBase
     {
-        private string username = "local_user_test";
+		private string username = "local_user_test";
 
-        private string password = "local_user_test";
+		private string password = "local_user_test";
 
-        private string domain = "local_machine_name_test";
+		private string domain = "local_machine_name_test";
 
         protected override void ConfigureServer(RavenDbServer server, string fileSystemName)
         {
@@ -108,7 +108,8 @@ namespace RavenFS.Tests.Auth
         [Fact(Skip = "This test rely on actual Windows Account name/password.")]
         public async Task AdminClientWorkWithWinAuthEnabled()
         {
-            var adminClient = NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain)).Admin;
+	        var client = NewClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
+	        var adminClient = client.Admin;
 
             await adminClient.CreateFileSystemAsync(new DatabaseDocument
             {
@@ -119,13 +120,24 @@ namespace RavenFS.Tests.Auth
                  }
             }, "testName");
 
+			using (var createdFsClient = new RavenFileSystemClient(client.ServerUrl, "testName", new NetworkCredential(username, password, domain)))
+	        {
+		        await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] {1}));
+	        }
+
             var names = await adminClient.GetFileSystemsNames();
 
-            Assert.Contains("AdminClientWorkWithWinAuthEnabled", names);
+            Assert.Contains("testName", names);
 
             var stats = await adminClient.GetFileSystemsStats();
 
-            Assert.NotNull(stats.FirstOrDefault(x => x.Name == "AdminClientWorkWithWinAuthEnabled"));
+			Assert.NotNull(stats.FirstOrDefault(x => x.Name == "testName"));
+
+	        await adminClient.DeleteFileSystemAsync("testName");
+
+			names = await adminClient.GetFileSystemsNames();
+
+			Assert.DoesNotContain("testName", names);
         }
 
         [Fact(Skip = "This test rely on actual Windows Account name/password.")]
