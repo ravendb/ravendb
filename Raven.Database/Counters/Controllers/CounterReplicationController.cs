@@ -13,7 +13,7 @@ namespace Raven.Database.Counters.Controllers
         [Route("counters/{counterName}/replication")]
         public async Task<HttpResponseMessage> Post()
         {
-            /*Read Current Counter Value for CounterName - Need ReaderWriter Lock
+            /*Read Current Counter Value for CounterStorageName - Need ReaderWriter Lock
              *If values are ABS larger
              *      Write delta
              *Store last ETag for servers we've successfully rpelicated to
@@ -76,11 +76,31 @@ namespace Raven.Database.Counters.Controllers
             }
         }
 
+        [Route("counters/{counterName}/replication/heartbeat")]
+        public async Task<HttpResponseMessage> HeartbeatPost()
+        {
+            var src = GetQueryStringValue("from");
+
+            var replicationTask = Storage.ReplicationTask;
+            if (replicationTask == null)
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "Cannot find replication task setup in the database"
+                }, HttpStatusCode.NotFound);
+
+            }
+
+            replicationTask.HandleHeartbeat(src);
+
+            return GetEmptyMessage();
+        }
+
         [Route("counters/{counterName}/lastEtag/{server}")]
         public HttpResponseMessage GetLastEtag(string server)
         {
 			//HACK: nned a wire firendly name or fix Owin impl to allow url on query string or just send back all etags
-            server = Storage.Name.Replace(RavenCounterReplication.GetServerNameForWire(Storage.Name), server);
+            server = Storage.CounterStorageUrl.Replace(RavenCounterReplication.GetServerNameForWire(Storage.CounterStorageUrl), server);
             var sourceId = Storage.SourceIdFor(server);
             using (var reader = Storage.CreateReader())
             {

@@ -17,7 +17,7 @@ namespace Raven.Database.Counters.Controllers
 		{
 			using (var writer = Storage.CreateWriter())
 			{
-				writer.Store(Storage.Name,counter, delta);
+                writer.Store(Storage.CounterStorageUrl, counter, delta);
 
 				writer.Commit();
 				return new HttpResponseMessage(HttpStatusCode.Accepted);
