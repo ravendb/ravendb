@@ -1,31 +1,22 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Data.Services.Client;
-using System.DirectoryServices.ActiveDirectory;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
-using System.Net.Http.Formatting;
 using System.Threading;
 using System.Threading.Tasks;
-using Jint.Native.Function;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
-using Raven.Abstractions.Util;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Counters.Controllers
 {
 	public class RavenCounterReplication:IDisposable
 	{
-        private static readonly ILog log = LogManager.GetCurrentClassLogger();
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         private readonly object waitForCounterUpdate = new object();
         private int actualWorkCounter = 0; // represents the number of changes in 
@@ -104,7 +95,7 @@ namespace Raven.Database.Counters.Controllers
                     return true;
                 }
 
-                log.Debug("No counter updates for counter storage {0} was found, will wait for updates", storage.CounterStorageUrl);
+                Log.Debug("No counter updates for counter storage {0} was found, will wait for updates", storage.CounterStorageUrl);
                 return Monitor.Wait(waitForCounterUpdate, timeout);
 	        }
 	    }
@@ -186,7 +177,7 @@ namespace Raven.Database.Counters.Controllers
                     }
                     catch (Exception e)
                     {
-                        log.ErrorException("Could not get connection string options to notify sibling servers about restart", e);
+                        Log.ErrorException("Could not get connection string options to notify sibling servers about restart", e);
                         return;
                     }
                     try
@@ -198,7 +189,7 @@ namespace Raven.Database.Counters.Controllers
                     }
                     catch (Exception e)
                     {
-                        log.WarnException("Could not notify " + connectionStringOptions.Url + " about sibling server being up & running", e);
+                        Log.WarnException("Could not notify " + connectionStringOptions.Url + " about sibling server being up & running", e);
                     }
                 }
         }
@@ -223,7 +214,7 @@ namespace Raven.Database.Counters.Controllers
 			    {
 			        shouldReplicateTo = currentReplicationAttempts%2 == 0;
 			    }
-			    log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
+			    Log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
 			        destServerName, failureCount, shouldReplicateTo == false);
 			    return shouldReplicateTo;
 	        }
@@ -251,23 +242,24 @@ namespace Raven.Database.Counters.Controllers
             NotReplicated = 2
 	    }
 
-	    private bool ReplicateTo(string destinationUrl)
+		private bool ReplicateTo(ReplicationDestination destination)
 	    {
 	        try
 	        {
 	            string lastError;
 	            bool result = false;
 
-	            switch (TryReplicate(destinationUrl, out lastError))
+				switch (TryReplicate(destination, out lastError))
 	            {
 	                case ReplicationResult.Success:
-                        RecordSuccess(destinationUrl);
+						RecordSuccess(destination.Url);
                         result = true;
 	                    break;
                     case ReplicationResult.NotReplicated:
+						//TODO: Record not replicated
                         break;
                     default:
-                        RecordFailure(destinationUrl,lastError);
+						RecordFailure(destination.Url, lastError);
 	                    break;
 	            }
 
@@ -275,29 +267,56 @@ namespace Raven.Database.Counters.Controllers
 	        }
 	        catch (Exception ex)
 	        {
-	            log.ErrorException("Error occured replicating to: " + destinationUrl, ex);
-                RecordFailure(destinationUrl, ex.Message);
+				Log.ErrorException("Error occured replicating to: " + destination.Url, ex);
+				RecordFailure(destination.Url, ex.Message);
 	            return false;
 	        }
 	        finally
 	        {
-                var holder = activeReplicationTasks.GetOrAdd(destinationUrl, s => new SemaphoreSlim(0, 1));
+				var holder = activeReplicationTasks.GetOrAdd(destination.Url, s => new SemaphoreSlim(0, 1));
                 holder.Release();
 	        }
 	    }
 
-        private ReplicationResult TryReplicate(string destinationUrl, out string lastError)
+		private RavenConnectionStringOptions GetConnectionOptionsSafe(ReplicationDestination destination, out string lastError)
+		{
+			try
+			{
+				var connectionStringOptions = new RavenConnectionStringOptions
+				{
+					Url = destination.Url,
+					ApiKey = destination.ApiKey,
+				};
+				if (string.IsNullOrEmpty(destination.Username) == false)
+				{
+					connectionStringOptions.Credentials = string.IsNullOrEmpty(destination.Domain)
+						? new NetworkCredential(destination.Username, destination.Password)
+						: new NetworkCredential(destination.Username, destination.Password, destination.Domain);
+				}
+				lastError = string.Empty;
+				return connectionStringOptions;
+			}
+			catch (Exception e)
+			{
+				lastError = e.Message;
+				Log.ErrorException(string.Format("Ignoring bad replication config!{0}Could not figure out connection options for [Url: {1}, ClientVisibleUrl: {2}]",
+					Environment.NewLine, destination.Url, destination.ClientVisibleUrl), e);
+				return null;
+			}
+		}
+
+		private ReplicationResult TryReplicate(ReplicationDestination destination, out string lastError)
         {
             long etag = 0;
-            var connectionStringOptions = new RavenConnectionStringOptions();
+            var connectionStringOptions = GetConnectionOptionsSafe(destination, out lastError);
 
-            if (GetLastReplicatedEtagFrom(destinationUrl, connectionStringOptions, out etag, out lastError))
+			if (connectionStringOptions != null && GetLastReplicatedEtagFrom(connectionStringOptions, out etag, out lastError))
             {
                 var replicationData = GetCountersDataSinceEtag(etag);
 
                 if (replicationData.Counters.Count > 0)
                 {
-                    return PerformReplicationToServer(destinationUrl, etag, replicationData, connectionStringOptions, out lastError) ?
+                    return PerformReplicationToServer(connectionStringOptions, etag, replicationData, out lastError) ?
                         ReplicationResult.Success : ReplicationResult.Failure;
                 }
 
@@ -306,13 +325,14 @@ namespace Raven.Database.Counters.Controllers
 
             return ReplicationResult.Failure;
         }
-	    private bool TryGetLastReplicatedEtagFrom(string destinationUrl,RavenConnectionStringOptions connectionStringOptions, out long lastEtag, out string lastError)
+
+	    private bool TryGetLastReplicatedEtagFrom(RavenConnectionStringOptions connectionStringOptions, out long lastEtag, out string lastError)
 	    {
             lastEtag = 0;
             try
             {
                 long etag = 0;
-                var url = string.Format("{0}/lastEtag/{1}", destinationUrl, GetServerNameForWire(storage.CounterStorageUrl));
+				var url = string.Format("{0}/lastEtag/{1}", connectionStringOptions.Url, GetServerNameForWire(storage.CounterStorageUrl));
                 var request = httpRavenRequestFactory.Create(url, "GET", connectionStringOptions);
                 request.ExecuteRequest(etagString => etag = long.Parse(etagString.ReadToEnd()));
 
@@ -322,7 +342,7 @@ namespace Raven.Database.Counters.Controllers
             }
             catch (WebException e)
             {
-                lastError = HandleReplicationDistributionWebException(e, destinationUrl);
+				lastError = HandleReplicationDistributionWebException(e, connectionStringOptions.Url);
                 return false;
             }
             catch (Exception e)
@@ -332,13 +352,13 @@ namespace Raven.Database.Counters.Controllers
             }
 	    }
         
-        private bool GetLastReplicatedEtagFrom(string destinationUrl, RavenConnectionStringOptions connectionStringOptions, out long lastEtag, out string lastError)
-	    {
-	        if (!TryGetLastReplicatedEtagFrom(destinationUrl, connectionStringOptions, out lastEtag, out lastError))
+        private bool GetLastReplicatedEtagFrom(RavenConnectionStringOptions connectionStringOptions, out long lastEtag, out string lastError)
+        {
+	        if (!TryGetLastReplicatedEtagFrom(connectionStringOptions, out lastEtag, out lastError))
 	        {
-	            if (IsFirstFailure(destinationUrl))
+				if (IsFirstFailure(connectionStringOptions.Url))
 	            {
-	                return TryGetLastReplicatedEtagFrom(destinationUrl, connectionStringOptions, out lastEtag, out lastError);
+	                return TryGetLastReplicatedEtagFrom(connectionStringOptions, out lastEtag, out lastError);
 	            }
                 return false;
 	        }
@@ -346,11 +366,11 @@ namespace Raven.Database.Counters.Controllers
 	        return true;
 	    }
 
-        private bool TryPerformReplicationToServer(string destinationUrl, long etag, ReplicationMessage message, RavenConnectionStringOptions connectionStringOptions, out string lastError)
+		private bool TryPerformReplicationToServer(RavenConnectionStringOptions connectionStringOptions, ReplicationMessage message, out string lastError)
         {
             try
             {
-                var url = string.Format("{0}/replication", destinationUrl);
+                var url = string.Format("{0}/replication", connectionStringOptions.Url);
                 lastError = string.Empty;
                 var request = httpRavenRequestFactory.Create(url, "POST", connectionStringOptions);
                 request.Write(message.GetRavenJObject());
@@ -360,24 +380,26 @@ namespace Raven.Database.Counters.Controllers
             }
             catch (WebException e)
             {
-                lastError = HandleReplicationDistributionWebException(e, destinationUrl);
+                lastError = HandleReplicationDistributionWebException(e, connectionStringOptions.Url);
                 return false;
             }
             catch (Exception e)
             {
-                log.ErrorException("Error occured replicating to: " + destinationUrl, e);
+                Log.ErrorException("Error occured replicating to: " + connectionStringOptions.Url, e);
                 lastError = e.Message;
                 return false;
             }
         }
 
-        private bool PerformReplicationToServer(string destinationUrl, long etag, ReplicationMessage message, RavenConnectionStringOptions connectionStringOptions, out string lastError)
-        {
-            if (!TryPerformReplicationToServer(destinationUrl, etag, message, connectionStringOptions, out lastError))
+		private bool PerformReplicationToServer(RavenConnectionStringOptions connectionStringOptions, long etag, ReplicationMessage message, out string lastError)
+		{
+			var destinationUrl = connectionStringOptions.Url;
+
+			if (!TryPerformReplicationToServer(connectionStringOptions, message, out lastError))
 	        {
 	            if (IsFirstFailure(destinationUrl))
 	            {
-                    return TryPerformReplicationToServer(destinationUrl, etag, message, connectionStringOptions, out lastError);
+					return TryPerformReplicationToServer(connectionStringOptions, message, out lastError);
 	            }
                 return false;
 	        }
@@ -398,24 +420,26 @@ namespace Raven.Database.Counters.Controllers
 			{
 				try
 				{
-                    var destinations = storage.Servers.Where(serverName => serverName != storage.CounterStorageUrl).ToList();
+					List<ReplicationDestination> destinations;
+					using (var reader = storage.CreateReader())
+						destinations = reader.GetReplicationDestinations();
 
 				    if (destinations.Count > 0)
 				    {
 				        var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
 
 				        var destinationForReplication = destinations.Where(
-				            serverName => !runningBecauseOfDataModifications || IsNotFailing(serverName, currentReplicationAttempts));
+							destination => !runningBecauseOfDataModifications || IsNotFailing(destination.Url, currentReplicationAttempts));
 						
-				        foreach (var destinationUrl in destinationForReplication)
+				        foreach (ReplicationDestination destination in destinationForReplication)
 				        {
-				            ReplicateToDestination(destinationUrl);
+							ReplicateToDestination(destination);
 				        }
 				    }
 				}
 				catch (Exception e)
 				{
-				    log.ErrorException("Failed to perform replication", e);
+					Log.ErrorException("Failed to perform replication", e);
 				}
 			}
 		}
@@ -431,25 +455,25 @@ namespace Raven.Database.Counters.Controllers
                     using (var streamReader = new StreamReader(responseStream))
                     {
                         var error = streamReader.ReadToEnd();
-                        log.WarnException("Replication to " + destinationUrl + " had failed\r\n" + error, e);
+						Log.WarnException("Replication to " + destinationUrl + " had failed\r\n" + error, e);
                     }
                 }
                 else
                 {
-                    log.WarnException("Replication to " + destinationUrl + " had failed", e);
+					Log.WarnException("Replication to " + destinationUrl + " had failed", e);
                 }
             }
             else
             {
-                log.WarnException("Replication to " + destinationUrl + " had failed", e);
+				Log.WarnException("Replication to " + destinationUrl + " had failed", e);
             }
 
             return e.Message;
 	    }
 
-		private void ReplicateToDestination(string destinationUrl)
+		private void ReplicateToDestination(ReplicationDestination destination)
 		{
-			var dest = destinationUrl;
+			var dest = destination.Url;
 			var holder = activeReplicationTasks.GetOrAdd(dest, s => new SemaphoreSlim(1));
 			if (holder.Wait(0) == false)
 				return;
@@ -460,11 +484,11 @@ namespace Raven.Database.Counters.Controllers
 					//{
 					try
 					{
-						if (ReplicateTo(dest)) SignalCounterUpdate();
+						if (ReplicateTo(destination)) SignalCounterUpdate();
 					}
 					catch (Exception e)
 					{
-						log.ErrorException("Could not replicate to " + dest, e);
+						Log.ErrorException("Could not replicate to " + dest, e);
 					}
 					//}
 				});

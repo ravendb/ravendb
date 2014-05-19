@@ -120,7 +120,7 @@ namespace Raven.Database.Counters
 					var storedName = new StreamReader(nameResult.Reader.AsStream()).ReadToEnd();
 
                     if (storedName != CounterStorageUrl)
-						throw new InvalidOperationException("The stored name " + storedName + " does not match the given name " + name);
+						throw new InvalidOperationException("The stored name " + storedName + " does not match the given name " + CounterStorageUrl);
 
 
 					using (var it = servers.Iterate(tx))
@@ -366,15 +366,10 @@ namespace Raven.Database.Counters
 				return serverEtag;
 			}
 
-			public RavenConnectionStringOptions GetConnectionString(string serverUrl)
+			public List<ReplicationDestination> GetReplicationDestinations()
 			{
 				ReplicationDocument replicationDocument = GetReplicationData();
-                ReplicationDestination x = new ReplicationDestination();
-				return replicationDocument
-					.Destinations
-					.Where(destination => !destination.Disabled && destination.Url == serverUrl)
-					.Select(GetConnectionOptionsSafe)
-					.FirstOrDefault();
+				return replicationDocument.Destinations;
 			}
 
 			private ReplicationDocument GetReplicationData()
@@ -385,35 +380,6 @@ namespace Raven.Database.Counters
 				using (var jsonTextReader = new JsonTextReader(streamReader))
 				{
 					return new JsonSerializer().Deserialize<ReplicationDocument>(jsonTextReader);
-				}
-			}
-
-			private RavenConnectionStringOptions GetConnectionOptionsSafe(ReplicationDestination destination)
-			{
-				try
-				{
-					var connectionStringOptions = new RavenConnectionStringOptions
-					{
-						Url = destination.Url,
-						ApiKey = destination.ApiKey,
-					};
-					if (string.IsNullOrEmpty(destination.Username) == false)
-					{
-						connectionStringOptions.Credentials = string.IsNullOrEmpty(destination.Domain)
-							? new NetworkCredential(destination.Username, destination.Password)
-							: new NetworkCredential(destination.Username, destination.Password, destination.Domain);
-					}
-					return connectionStringOptions;
-				}
-				catch (Exception e)
-				{
-					// TODO: log error
-					//log.ErrorException( 
-					//	string.Format("IGNORING BAD REPLICATION CONFIG!{0}Could not figure out connection options for [Url: {1}, ClientVisibleUrl: {2}]",
-					//	Environment.NewLine, destination.Url, destination.ClientVisibleUrl),
-					//	e);
-
-					return null;
 				}
 			}
 
