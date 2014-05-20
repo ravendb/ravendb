@@ -1,6 +1,6 @@
 ﻿import commandBase = require("commands/commandBase");
 import database = require("models/database");
-import counterGroup = require("models/counterGroup");
+import counterGroup = require("models/counter/counterGroup");
 import appUrl = require("common/appUrl");
 
 class getCounterGroupsCommand extends commandBase {

@@ -1,7 +1,7 @@
-﻿import counterGroup = require("models/counterGroup");
-import counter = require("models/counter");
-import getCountersCommand = require("commands/getCountersCommand");
-import getCounterGroupsCommand = require("commands/getCounterGroupsCommand");
+﻿import counterGroup = require("models/counter/counterGroup");
+import counter = require("models/counter/counter");
+import getCountersCommand = require("commands/counter/getCountersCommand");
+import getCounterGroupsCommand = require("commands/counter/getCounterGroupsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 class counters extends viewModelBase {

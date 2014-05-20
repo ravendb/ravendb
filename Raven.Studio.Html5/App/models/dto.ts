@@ -700,3 +700,23 @@ interface filterSettingDto {
     Values: string[];
     ShouldMatch: boolean;
 }
+
+interface counterStorageDto {
+    Name:string;
+}
+
+interface  counterDto {
+    Name: string;
+    Servers: counterServerValueDto[];
+    OverallTotal:number;
+}
+
+interface  counterServerValueDto {
+    /*this.name(dto.Name);
+        this.posCount(dto.Positive);
+        this.negCount(dto.Negative);*/
+    ServerUrl: string;
+    Positive: number;
+    Negative:number;
+
+}
