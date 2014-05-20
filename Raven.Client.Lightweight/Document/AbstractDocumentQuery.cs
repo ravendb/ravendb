@@ -343,6 +343,8 @@ namespace Raven.Client.Document
 			theAsyncDatabaseCommands = other.theAsyncDatabaseCommands;
 			indexName = other.indexName;
 			linqPathProvider = other.linqPathProvider;
+		    allowMultipleIndexEntriesForSameDocumentToResultTransformer =
+                other.allowMultipleIndexEntriesForSameDocumentToResultTransformer;
 			projectionFields = other.projectionFields;
 			theSession = other.theSession;
 			conventions = other.conventions;
@@ -835,6 +837,12 @@ namespace Raven.Client.Document
 			this.Highlight(fieldName, fragmentLength, fragmentCount, out fieldHighlightings);
 			return this;
 		}
+
+	    IDocumentQueryCustomization IDocumentQueryCustomization.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
+	    {
+	        this.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
+	        return this;
+	    }
 
 		IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string preTag, string postTag)
 		{
@@ -1831,6 +1839,7 @@ If you really want to do in memory filtering on the data returned from the query
 					HighlighterPreTags = highlighterPreTags.ToArray(),
 					HighlighterPostTags = highlighterPostTags.ToArray(),
                     ResultsTransformer = resultsTransformer,
+                    AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
                     QueryInputs  = queryInputs,
 					DisableCaching = disableCaching,
 					ExplainScores = shouldExplainScores
@@ -1855,8 +1864,8 @@ If you really want to do in memory filtering on the data returned from the query
 				HighlighterPostTags = highlighterPostTags.ToArray(),
                 ResultsTransformer = this.resultsTransformer,
                 QueryInputs = queryInputs,
-				DisableCaching = disableCaching,
-				ExplainScores = shouldExplainScores
+                AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
+				DisableCaching = disableCaching
 			};
 
 			if (pageSize != null)
@@ -1875,6 +1884,7 @@ If you really want to do in memory filtering on the data returned from the query
 			);
 		protected QueryOperator defaultOperator;
 		protected bool isDistinct;
+	    protected bool allowMultipleIndexEntriesForSameDocumentToResultTransformer;
 
 		/// <summary>
 		/// Perform a search for documents which fields that match the searchTerms.
@@ -2228,9 +2238,16 @@ If you really want to do in memory filtering on the data returned from the query
 			return propertyName;
 		}
 
-        public void SetResultTransformer(string resultsTransformer)
+	    public void SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(
+	        bool val)
 	    {
-            this.resultsTransformer = resultsTransformer;
+	        this.allowMultipleIndexEntriesForSameDocumentToResultTransformer =
+	            val;
+	    }
+
+        public void SetResultTransformer(string transformer)
+	    {
+            this.resultsTransformer = transformer;
 	    }
 
 		public void Distinct()
