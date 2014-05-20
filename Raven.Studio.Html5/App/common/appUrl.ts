@@ -309,7 +309,7 @@ class appUrl {
             return appUrl.baseUrl + "/databases/" + res.name;
         }
         else if (res && res instanceof filesystem) {
-            return appUrl.baseUrl + "/ravenfs/" + res.name;
+            return appUrl.baseUrl + "/fs/" + res.name;
         }
 
         return this.baseUrl;

@@ -58,7 +58,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 		public string FileSystemUrl
 		{
-			get { return string.Format("{0}/ravenfs/{1}", systemConfiguration.ServerUrl.TrimEnd('/'), systemConfiguration.FileSystemName); }
+			get { return string.Format("{0}/fs/{1}", systemConfiguration.ServerUrl.TrimEnd('/'), systemConfiguration.FileSystemName); }
 		}
 
 		public SynchronizationQueue Queue

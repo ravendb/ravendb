@@ -42,7 +42,7 @@ namespace RavenFS.Tests
             if (url.StartsWith("/"))
                 url = url.Trim('/');
 
-            return string.Format("/ravenfs/{0}/{1}", WebApiTestName, url);
+            return string.Format("/fs/{0}/{1}", WebApiTestName, url);
         }
     }
 }

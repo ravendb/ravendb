@@ -21,7 +21,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/rdc/Signatures/{*id}")]
+        [Route("fs/{fileSystemName}/rdc/Signatures/{*id}")]
 		public HttpResponseMessage Signatures(string id)
 		{
 			var filename = Uri.UnescapeDataString(id);
@@ -37,7 +37,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/rdc/Stats")]
+        [Route("fs/{fileSystemName}/rdc/Stats")]
 		public HttpResponseMessage Stats()
 		{
 			using (var rdcVersionChecker = new RdcVersionChecker())
@@ -55,7 +55,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/rdc/Manifest/{*id}")]
+        [Route("fs/{fileSystemName}/rdc/Manifest/{*id}")]
 		public async Task<HttpResponseMessage> Manifest(string id)
 		{
 			var filename = Uri.UnescapeDataString(id);

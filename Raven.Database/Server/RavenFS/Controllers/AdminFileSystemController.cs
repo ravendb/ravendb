@@ -17,7 +17,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
     public class AdminFileSystemController : BaseAdminController
     {
         [HttpPut]
-        [Route("ravenfs/admin/{*id}")]
+        [Route("fs/admin/{*id}")]
         public async Task<HttpResponseMessage> Put(string id)
         {
             var docKey = "Raven/FileSystems/" + id;
@@ -32,7 +32,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
         }
 
 		[HttpDelete]
-		[Route("ravenfs/admin/{*id}")]
+		[Route("fs/admin/{*id}")]
 		public HttpResponseMessage Delete(string id)
 		{
 			var docKey = "Raven/FileSystems/" + id;

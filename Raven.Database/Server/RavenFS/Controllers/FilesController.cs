@@ -33,7 +33,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/files")]
+        [Route("fs/{fileSystemName}/files")]
         public HttpResponseMessage Get()
 		{
             int results;
@@ -46,7 +46,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-        [Route("ravenfs/{fileSystemName}/files/{*name}")]
+        [Route("fs/{fileSystemName}/files/{*name}")]
         public HttpResponseMessage Get(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
@@ -74,7 +74,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpDelete]
-        [Route("ravenfs/{fileSystemName}/files/{*name}")]
+        [Route("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Delete(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
@@ -135,7 +135,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpHead]
-        [Route("ravenfs/{fileSystemName}/files/{*name}")]
+        [Route("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Head(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
@@ -162,7 +162,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPost]
-        [Route("ravenfs/{fileSystemName}/files/{*name}")]
+        [Route("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Post(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
@@ -200,7 +200,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPatch]
-        [Route("ravenfs/{fileSystemName}/files/{*name}")]
+        [Route("fs/{fileSystemName}/files/{*name}")]
 		public HttpResponseMessage Patch(string name, string rename)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
@@ -256,7 +256,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPut]
-        [Route("ravenfs/{fileSystemName}/files/{*name}")]
+        [Route("fs/{fileSystemName}/files/{*name}")]
 		public async Task<HttpResponseMessage> Put(string name, string uploadId = null)
 		{
 			try

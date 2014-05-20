@@ -700,3 +700,12 @@ interface filterSettingDto {
     Values: string[];
     ShouldMatch: boolean;
 }
+
+enum ImportItemType {
+    Documents = 0x1,
+    Indexes = 0x2,
+    Attachments = 0x4,
+    Transformers = 0x8,
+
+    RemoveAnalyzers = 0x8000
+}
