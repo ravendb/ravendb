@@ -34,15 +34,18 @@ namespace Raven.Database.Counters.Controllers
                         Counter.PerServerValue currentServerValue;
 		                if (currentCounter != null)
 		                {
-		                    currentServerValue = currentCounter.ServerValues
-		                        .FirstOrDefault(x => x.SourceId == Storage.SourceIdFor(serverValue.ServerName)) ??
-		                                         new Counter.PerServerValue
-		                                         {
-		                                             Negative = 0,
-		                                             Positive = 0,
-		                                         };
+			                using (var reader = Storage.CreateReader())
+			                {
+				                currentServerValue = currentCounter.ServerValues
+									.FirstOrDefault(x => x.SourceId == reader.SourceIdFor(serverValue.ServerName)) ??
+				                                     new Counter.PerServerValue
+				                                     {
+					                                     Negative = 0,
+					                                     Positive = 0,
+				                                     };
+			                }
 
-                            // old update, have updates after it already
+			                // old update, have updates after it already
 		                    if (serverValue.Positive <= currentServerValue.Positive &&
 		                        serverValue.Negative <= currentServerValue.Negative)
 		                        continue;
@@ -99,11 +102,11 @@ namespace Raven.Database.Counters.Controllers
         [Route("counters/{counterName}/lastEtag/{server}")]
         public HttpResponseMessage GetLastEtag(string server)
         {
-			//HACK: nned a wire firendly name or fix Owin impl to allow url on query string or just send back all etags
+			//HACK: need a wire friendly name or fix Owin impl to allow url on query string or just send back all etags
             server = Storage.CounterStorageUrl.Replace(RavenCounterReplication.GetServerNameForWire(Storage.CounterStorageUrl), server);
-            var sourceId = Storage.SourceIdFor(server);
             using (var reader = Storage.CreateReader())
             {
+				var sourceId = reader.SourceIdFor(server);
                 var result = reader.GetServerEtags().FirstOrDefault(x => x.SourceId == sourceId) ?? new CounterStorage.ServerEtag();
                 return Request.CreateResponse(HttpStatusCode.OK, result.Etag);
             }

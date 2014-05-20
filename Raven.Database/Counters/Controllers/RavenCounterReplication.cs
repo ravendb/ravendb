@@ -420,15 +420,15 @@ namespace Raven.Database.Counters.Controllers
 			{
 				try
 				{
-					List<ReplicationDestination> destinations;
+					ReplicationDocument replicationData;
 					using (var reader = storage.CreateReader())
-						destinations = reader.GetReplicationDestinations();
+						replicationData = reader.GetReplicationData();
 
-				    if (destinations.Count > 0)
+					if (replicationData != null && replicationData.Destinations.Count > 0)
 				    {
 				        var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
 
-				        var destinationForReplication = destinations.Where(
+						var destinationForReplication = replicationData.Destinations.Where(
 							destination => !runningBecauseOfDataModifications || IsNotFailing(destination.Url, currentReplicationAttempts));
 						
 				        foreach (ReplicationDestination destination in destinationForReplication)
