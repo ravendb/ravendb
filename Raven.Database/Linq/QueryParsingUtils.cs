@@ -282,6 +282,11 @@ namespace Raven.Database.Linq
 		{
 			source = source.Replace("AbstractIndexCreationTask.SpatialGenerate", "SpatialGenerate"); // HACK, should probably be on the client side
 			var indexCacheDir = GetIndexCacheDir(configuration);
+			if (Directory.Exists(indexCacheDir) == false)
+			{
+				Directory.CreateDirectory(indexCacheDir);
+			}
+
 			var indexFilePath = GetIndexFilePath(source, indexCacheDir);
 
 			var shouldCachedIndexBeRecompiled = ShouldIndexCacheBeRecompiled(indexFilePath);
