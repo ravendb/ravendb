@@ -3,7 +3,6 @@ using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Tests.Helpers;
-using Rhino.Mocks;
 using Xunit;
 
 namespace Raven.Tests.MailingList

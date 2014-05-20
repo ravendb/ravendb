@@ -15,7 +15,7 @@ namespace Raven.Database.Indexing
 		public bool FetchAllStoredFields { get; set; }
 
 	
-        public FieldsToFetch(IndexQuery query, bool isDistinct, string additionalField) 
+        public FieldsToFetch(IndexQuery query, string additionalField) 
              :this(query.FieldsToFetch, query.IsDistinct, additionalField)
         {
             this.Query = query;

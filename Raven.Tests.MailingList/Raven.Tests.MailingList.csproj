@@ -403,6 +403,7 @@
     <Compile Include="tcoonfield.cs" />
     <Compile Include="TermVectorsInMultiMapIndexes.cs" />
     <Compile Include="TertiaryOperator.cs" />
+    <Compile Include="TestIndexAndTransforSubcollections.cs" />
     <Compile Include="TestRavenIncludes.cs" />
     <Compile Include="ThorTimeRange\Repro.cs" />
     <Compile Include="Thor\Child.cs" />

@@ -138,8 +138,6 @@ namespace Raven.Client.Document
 				orderByFields = orderByFields,
 				isDistinct = isDistinct,
                 allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
-				groupByFields = groupByFields,
-				aggregationOp = aggregationOp,
 				negate = negate,
 				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
