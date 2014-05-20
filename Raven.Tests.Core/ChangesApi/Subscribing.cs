@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Data;
+﻿using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Tests.Core.Replication;
 using Raven.Tests.Core.Utils.Entities;
@@ -11,29 +12,30 @@ namespace Raven.Tests.Core.ChangesApi
 {
     public class Subscribing : RavenReplicationCoreTest
     {
+        private volatile string output, output2;
         [Fact]
         public void CanSubscribeToDocumentChanges()
         {
             using (var store = GetDocumentStore())
             {
-                var output = "";
 
-                store.Changes()
-                    .ForAllDocuments()
+                store.Changes().Task.Result
+                    .ForAllDocuments().Task.Result
                     .Subscribe(change =>
                     {
-                        output = "passed_foralldocuments";
+                        if (output == null)
+                            output = "passed_foralldocuments";
                     });
 
-                store.Changes()
-                    .ForDocumentsStartingWith("companies")
+                store.Changes().Task.Result
+                    .ForDocumentsStartingWith("companies").Task.Result
                     .Subscribe(change => 
                     {
                         output = "passed_forfordocumentsstartingwith";
                     });
 
-                store.Changes()
-                    .ForDocument("companies/1")
+                store.Changes().Task.Result
+                    .ForDocument("companies/1").Task.Result
                     .Subscribe(change => 
                     {
                         if (change.Type == DocumentChangeTypes.Delete)
@@ -49,20 +51,30 @@ namespace Raven.Tests.Core.ChangesApi
                         Id = "users/1"
                     });
                     session.SaveChanges();
-                    Assert.Equal("passed_foralldocuments", output);
+                    WaitUntilOutput("passed_foralldocuments");
 
                     session.Store(new Company
                     {
                         Id = "companies/1"
                     });
                     session.SaveChanges();
-                    Assert.Equal("passed_forfordocumentsstartingwith", output);
+                    WaitUntilOutput("passed_forfordocumentsstartingwith");
 
                     session.Delete("companies/1");
                     session.SaveChanges();
-                    Assert.Equal("passed_fordocumentdelete", output);
+                    WaitUntilOutput("passed_fordocumentdelete");
                 }
             }
+        }
+
+        private void WaitUntilOutput(string expected)
+        {
+            Assert.True(SpinWait.SpinUntil(() => output == expected, 5000));
+        }
+
+        private void WaitUntilOutput2(string expected)
+        {
+            Assert.True(SpinWait.SpinUntil(() => output2 == expected, 5000));
         }
 
         [Fact]
@@ -70,9 +82,6 @@ namespace Raven.Tests.Core.ChangesApi
         {
             using (var store = GetDocumentStore())
             {
-                var output = "";
-                var output2 = "";
-
                 store.Changes()
                     .ForAllIndexes()
                     .Subscribe(change => 
@@ -85,7 +94,7 @@ namespace Raven.Tests.Core.ChangesApi
 
                 new Companies_CompanyByType().Execute(store);
                 WaitForIndexing(store);
-                Assert.Equal("passed_forallindexesadded", output);
+                WaitUntilOutput("passed_forallindexesadded");
 
                 var usersByName = new Users_ByName();
                 usersByName.Execute(store);
@@ -122,17 +131,17 @@ namespace Raven.Tests.Core.ChangesApi
                     session.Store(new User { Name = "user", LastName = "user" });
                     session.SaveChanges();
                     WaitForIndexing(store);
-                    Assert.Equal("passed_forindexmapcompleted", output);
+                    WaitUntilOutput("passed_forindexmapcompleted");
 
                     session.Store(new Company { Id = "companies/1", Name = "company", Type = Company.CompanyType.Public });
                     session.SaveChanges();
                     WaitForIndexing(store);
-                    Assert.Equal("passed_forindexreducecompleted", output);
+                    WaitUntilOutput("passed_forindexreducecompleted");
 
                     session.Delete("companies/1");
                     session.SaveChanges();
                     WaitForIndexing(store);
-                    Assert.Equal("passed_forindexremovecompleted", output2);
+                    WaitUntilOutput2("passed_forindexremovecompleted");
                 }
 
 
@@ -157,8 +166,6 @@ namespace Raven.Tests.Core.ChangesApi
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
             {
-                var output = "";
-
                 source.DatabaseCommands.Put("docs/1", null, new RavenJObject() { { "Key", "Value" } }, new RavenJObject());
                 destination.DatabaseCommands.Put("docs/1", null, new RavenJObject() { { "Key", "Value" } }, new RavenJObject());
 
@@ -174,7 +181,7 @@ namespace Raven.Tests.Core.ChangesApi
                 SetupReplication(source, destinations: destination);
                 source.Replication.WaitAsync(eTag, replicas: 1).Wait();
 
-                Assert.Equal("conflict", output);
+                WaitUntilOutput("conflict");
             }
         }
     }

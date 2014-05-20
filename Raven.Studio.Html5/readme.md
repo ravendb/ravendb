@@ -27,7 +27,7 @@ The application code is written in <a href="http://typescriptlang.org">TypeScrip
 -	For LESS compilation, install the <a href="http://visualstudiogallery.msdn.microsoft.com/07d54d12-7133-4e15-becb-6f451ea3bea6">Web Essentials</a> plugin.
 
 ## Running the app
-<b>For development</b>, run a Raven 2.5 server, then run index.html. This requires 2 prereqs:
+<b>For development</b>, run a Raven 3.0 server, then run index.html. This requires 2 prereqs:
 - The Raven.Server.exe.config must have <code>&lt;add key="Raven/AccessControlAllowOrigin" value="*" /&gt;</code>
 - If the server is running somewhere besides http://localhost:8080, change <a href="https://github.com/JudahGabriel/ravendb/blob/Raven.Studio.Html5/Raven.Studio.Html5/App/common/raven.ts#L9">/App/common/Raven.ts <b>baseUrl</b> field</a> accordingly.
 

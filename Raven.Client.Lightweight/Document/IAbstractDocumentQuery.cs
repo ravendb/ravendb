@@ -350,5 +350,7 @@ namespace Raven.Client.Document
         /// Performs a query matching ALL of the provided values against the given field (AND)
         /// </summary>
         void ContainsAll(string fieldName, IEnumerable<object> values);
+
+	    void SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
 	}
 }

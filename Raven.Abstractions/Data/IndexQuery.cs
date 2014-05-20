@@ -147,6 +147,13 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public bool SkipTransformResults { get; set; }
 
+        /// <summary>
+        /// If set to true, this property will send multiple index entries from the same document (assuming the index project them)
+        /// to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be 
+        /// called just once for each document in the result set
+        /// </summary>
+        public bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer { get; set; }
+
 		/// <summary>
 		/// Gets or sets the number of skipped results.
 		/// </summary>
@@ -178,7 +185,7 @@ namespace Raven.Abstractions.Data
         /// </summary>
 	    public string ResultsTransformer { get; set; }
 
-		/// <summary>
+        /// <summary>
 		/// Whatever we should disable caching of query results
 		/// </summary>
 		public bool DisableCaching { get; set; }
