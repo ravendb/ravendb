@@ -19,22 +19,23 @@ namespace Raven.Tests.Core.ChangesApi
             using (var store = GetDocumentStore())
             {
 
-                store.Changes()
-                    .ForAllDocuments()
+                store.Changes().Task.Result
+                    .ForAllDocuments().Task.Result
                     .Subscribe(change =>
                     {
-                        output = "passed_foralldocuments";
+                        if (output == null)
+                            output = "passed_foralldocuments";
                     });
 
-                store.Changes()
-                    .ForDocumentsStartingWith("companies")
+                store.Changes().Task.Result
+                    .ForDocumentsStartingWith("companies").Task.Result
                     .Subscribe(change => 
                     {
                         output = "passed_forfordocumentsstartingwith";
                     });
 
-                store.Changes()
-                    .ForDocument("companies/1")
+                store.Changes().Task.Result
+                    .ForDocument("companies/1").Task.Result
                     .Subscribe(change => 
                     {
                         if (change.Type == DocumentChangeTypes.Delete)
@@ -68,12 +69,12 @@ namespace Raven.Tests.Core.ChangesApi
 
         private void WaitUntilOutput(string expected)
         {
-            Assert.True(SpinWait.SpinUntil(() => output == expected, 1000));
+            Assert.True(SpinWait.SpinUntil(() => output == expected, 5000));
         }
 
         private void WaitUntilOutput2(string expected)
         {
-            Assert.True(SpinWait.SpinUntil(() => output2 == expected, 1000));
+            Assert.True(SpinWait.SpinUntil(() => output2 == expected, 5000));
         }
 
         [Fact]
@@ -165,8 +166,6 @@ namespace Raven.Tests.Core.ChangesApi
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
             {
-                var output = "";
-
                 source.DatabaseCommands.Put("docs/1", null, new RavenJObject() { { "Key", "Value" } }, new RavenJObject());
                 destination.DatabaseCommands.Put("docs/1", null, new RavenJObject() { { "Key", "Value" } }, new RavenJObject());
 
