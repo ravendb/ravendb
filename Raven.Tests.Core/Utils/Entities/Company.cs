@@ -15,6 +15,7 @@ namespace Raven.Tests.Core.Utils.Entities
 		public List<Contact> Contacts { get; set; }
 		public int Phone { get; set; }
 		public CompanyType Type { get; set; }
+        public List<string> EmployeesIds { get; set; }
 
 		public enum CompanyType
 		{
@@ -30,4 +31,11 @@ namespace Raven.Tests.Core.Utils.Entities
 		public string Surname { get; set; }
 		public string Email { get; set; }
 	}
+
+    public class Employee
+    {
+        public string Id { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+    }
 }

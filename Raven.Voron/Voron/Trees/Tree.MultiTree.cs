@@ -243,7 +243,10 @@ namespace Voron.Trees
 					nestedPagePtr = NodeHeader.DirectAccess(tx, item);
 				}
 
-				nestedPage = new Page(nestedPagePtr, "multi tree", (ushort)NodeHeader.GetDataSize(tx, item));
+				nestedPage = new Page(nestedPagePtr, "multi tree", (ushort)NodeHeader.GetDataSize(tx, item))
+				{
+					LastSearchPosition = nestedPage.LastSearchPosition
+				};
 
 				CheckConcurrency(key, value, version, nestedItem->Version, TreeActionType.Delete);
 				nestedPage.RemoveNode(nestedPage.LastSearchPosition);

@@ -1439,7 +1439,7 @@ namespace Raven.Client.RavenFS
                 }
             }
 
-            public Task CreateFileSystemAsync(DatabaseDocument databaseDocument, string newFileSystemName = null)
+            public async Task CreateFileSystemAsync(DatabaseDocument databaseDocument, string newFileSystemName = null)
             {
                 var requestUriString = string.Format("{0}/ravenfs/admin/{1}", ravenFileSystemClient.ServerUrl,
                                                      newFileSystemName ?? ravenFileSystemClient.FileSystemName);
@@ -1450,13 +1450,31 @@ namespace Raven.Client.RavenFS
 
                 try
                 {
-                    return request.WriteAsync(JsonConvert.SerializeObject(databaseDocument));
+                    await request.WriteAsync(JsonConvert.SerializeObject(databaseDocument));
                 }
                 catch (Exception e)
                 {
                     throw e.TryThrowBetterError();
                 }
             }
+
+			public async Task DeleteFileSystemAsync(string fileSystemName = null, bool hardDelete = false)
+			{
+				var requestUriString = string.Format("{0}/ravenfs/admin/{1}?hard-delete={2}", ravenFileSystemClient.ServerUrl, fileSystemName ?? ravenFileSystemClient.FileSystemName, hardDelete);
+
+				var request = ravenFileSystemClient.jsonRequestFactory.CreateHttpJsonRequest(
+										new CreateHttpJsonRequestParams(this, requestUriString,
+																		"DELETE", ravenFileSystemClient.PrimaryCredentials, convention));
+
+				try
+				{
+					await request.ExecuteRequestAsync();
+				}
+				catch (Exception e)
+				{
+					throw e.TryThrowBetterError();
+				}
+			}
 
             public ProfilingInformation ProfilingInformation { get; private set; }
         }
